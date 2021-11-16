@@ -8,15 +8,13 @@
     "strict": true,
     "outDir": "dist",
     "sourceMap": true,
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "module": "commonjs",
     "target": "es5",
     "noImplicitAny": true,
     "strictNullChecks": true,
     "allowJs": false,
     "lib": ["ES6"],
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true
   },
   "include": [
