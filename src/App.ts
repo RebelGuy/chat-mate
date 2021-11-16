@@ -1,9 +1,9 @@
 import express from "express"
 import { GET, Path, QueryParam, Server } from "typescript-rest"
-import {ChatController} from "./controllers/ChatController"
-import env from "./globals"
+import {ChatController} from "./controllers/ChatController.js"
+import env from "./globals.js"
 
-export const app = express()
+const app = express()
 const port = env('port')
 
 
