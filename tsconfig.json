@@ -1,23 +1,21 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "ES6"
-    ],
-    "allowJs": false,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+
+    // this is required, else decorated controller params result in a crash
+    "emitDecoratorMetadata": true,
+    "rootDir": "src",
     "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
+    "outDir": "dist",
     "sourceMap": true,
-    "outDir": "dist"
+    "module": "commonjs",
+    "target": "es5",
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "allowJs": false,
+    "lib": ["ES6"],
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
   "include": [
     "src"

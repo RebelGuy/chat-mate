@@ -7,7 +7,9 @@
     "rules": {
       "semicolon": false,
       "whitespace": false,
-      "space-before-function-paren": true  
+      "space-before-function-paren": true,
+      "prefer-const": false,
+      "no-console": false
     },
     "rulesDirectory": []
 }

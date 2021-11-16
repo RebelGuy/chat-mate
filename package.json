@@ -1,17 +1,22 @@
 {
-  "name": "chat-overlay",
+  "name": "chat-overlay-server",
   "version": "0.1.0",
   "private": true,
+  "main": "dist/app.js",
+  "exports": "./dist/app.js",
   "dependencies": {
     "@types/node": "^16.11.7",
     "dotenv": "^10.0.0",
+    "express": "^4.17.1",
     "masterchat": "^0.13.0",
     "nodemon": "^2.0.15",
-    "typescript": "^4.4.4"
+    "tslib": "^2.3.1",
+    "typescript": "^4.4.4",
+    "typescript-rest": "^1.6.2"
   },
   "scripts": {
     "watch": "tsc --watch",
-    "start": "nodemon dist/App.js",
+    "start": "nodemon dist/app.js",
     "auth": "cd node_modules/masterchat/extra/credential-fetcher && npm run start"
   },
   "devDependencies": {
