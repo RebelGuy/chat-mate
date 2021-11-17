@@ -15,7 +15,12 @@
     "allowJs": false,
     "lib": ["ES6"],
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@controllers/*": ["controllers/"],
+      "@models/*": ["models/"]
+    }
   },
   "include": [
     "src"

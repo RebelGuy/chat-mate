@@ -1,7 +1,10 @@
 import express from "express"
 import { GET, Path, QueryParam, Server } from "typescript-rest"
+import ChatStore from "./ChatStore"
+import ContextProvider, { setContextProvider } from "./ContextProvider"
 import {ChatController} from "./controllers/ChatController"
 import env from "./globals"
+import ServiceFactory from "./ServiceFactory"
 
 export const app = express()
 const port = env('port')
@@ -17,9 +20,16 @@ const port = env('port')
 //   next()
 // })
 
-// Server.registerServiceFactory(null as any)
+app.use((req, res, next) => {
+  setContextProvider(req, new ContextProvider().withClass(ChatStore).withClass(ChatController))
+  next()
+})
 
-Server.buildServices(app, ChatController)
+Server.registerServiceFactory(new ServiceFactory())
+
+Server.buildServices(app,
+  ChatController,
+)
 // Server.loadControllers(app, './src/controllers/ChatController.ts')
 
 app.listen(port, () => {
