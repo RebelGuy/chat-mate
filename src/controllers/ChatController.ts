@@ -1,7 +1,7 @@
-import { Dependencies } from '@context/ContextProvider'
-import { buildPath } from '@controllers/BaseEndpoint'
+import { Dependencies } from '@rebel/context/ContextProvider'
+import { buildPath } from '@rebel/controllers/BaseEndpoint'
+import ChatStore from '@rebel/stores/ChatStore'
 import { GET, Path, QueryParam } from "typescript-rest"
-import ChatStore from "../stores/ChatStore"
 
 @Path(buildPath('chat'))
 export class ChatController {
@@ -9,7 +9,8 @@ export class ChatController {
 
   constructor (dependencies: Dependencies) {
     console.log(dependencies)
-    this.chatStore = dependencies.getInstance<ChatStore>(ChatStore.name)
+    this.chatStore = dependencies.resolve<ChatStore>(ChatStore.name)
+    console.log('port:', dependencies.resolve<number>('port'))
   }
 
   @GET

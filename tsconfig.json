@@ -4,7 +4,6 @@
 
     // this is required, else decorated controller params result in a crash
     "emitDecoratorMetadata": true,
-    "rootDir": "src",
     "strict": true,
     "outDir": "dist",
     "sourceMap": true,
@@ -12,18 +11,16 @@
     "target": "es5",
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "declaration": true,
+    "declarationMap": true,
     "allowJs": false,
     "lib": ["ES6"],
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "moduleResolution": "node",
     "baseUrl": "./src",
     "paths": {
-      "@controllers/*": ["controllers/*"],
-      "@models/*": ["models/*"],
-      "@context/*": ["context/*"],
-      "@stores/*": ["stores/*"],
-      "@services/*": ["servers/*"],
-      "@factories/*": ["factories/*"],
+      "@rebel/*": ["./*"]
     }
   },
   "include": [

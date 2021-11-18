@@ -1,4 +1,4 @@
-import { Dependencies, ContextProvider } from '@context/ContextProvider'
+import { Dependencies, ContextProvider } from '@rebel/context/ContextProvider'
 
 class TestA {
   constructor () {
@@ -10,7 +10,7 @@ class TestB {
   readonly testA: TestA
 
   constructor (dependencies: Dependencies) {
-    this.testA = dependencies.getInstance(TestA.name)
+    this.testA = dependencies.resolve(TestA.name)
     console.log('B constructed')
   }
 }
@@ -20,8 +20,8 @@ class TestC {
   readonly testB: TestB
 
   constructor (dependencies: Dependencies) {
-    this.testA = dependencies.getInstance(TestA.name)
-    this.testB = dependencies.getInstance(TestB.name)
+    this.testA = dependencies.resolve(TestA.name)
+    this.testB = dependencies.resolve(TestB.name)
     console.log('C constructed')
   }
 }

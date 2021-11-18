@@ -1,5 +1,29 @@
 // make sure we don't accidentally override non-context-related properties when assigning the context to an object
 const CONTEXT_SYMBOL = Symbol('context')
+const NAME_SYMBOL = Symbol('propertyName')
+
+export type Injectable = {}
+
+type NamedInjectable<T extends Injectable> = T & { readonly [NAME_SYMBOL]: string }
+
+// note that the original object is not modified, but a new object is constructed.
+function nameInjectable<T extends Injectable> (obj: T, name: string) {
+  if (isNamedInjectable(obj)) {
+    throw new Error(`Injectable of type ${typeof obj} cannot be named '${name}' because it already has the name '${getName(obj)}'`)
+  }
+
+  const copy = { ...obj }
+  Object.defineProperty(copy, NAME_SYMBOL, { value: name, writable: false })
+  return copy as NamedInjectable<T>
+}
+
+function getName<T extends Injectable> (obj: NamedInjectable<T>): string {
+  return obj[NAME_SYMBOL]
+}
+
+function isNamedInjectable<T extends Injectable> (maybeNamed: T | NamedInjectable<T>): maybeNamed is NamedInjectable<T> {
+  return Object.getOwnPropertySymbols(maybeNamed).includes(NAME_SYMBOL)
+}
 
 export class ContextProvider {
   public readonly name: string
@@ -18,12 +42,22 @@ export class ContextProvider {
     return this
   }
 
+  public withObject<T extends Injectable> (name: string, object: T) {
+    this.builder = this.builder.withObject(nameInjectable(object, name))
+    return this
+  }
+
+  public withProperty<T extends string | boolean | number> (name: string, prop: T) {
+    this.builder = this.builder.withProperty(name, prop)
+    return this
+  }
+
   // todo: there should then be a buildClasses method which does all of the instantiation
 
   // retrieve the instance of the given class name (use the `Class.name` API to get a class' name).
   // throws if the class is not instantiated
   public getInstance<C = any> (serviceClass: Function): C {
-    return this.builder.getDependencies().getInstance<C>(serviceClass.name)
+    return this.builder.getDependencies().resolve<C>(serviceClass.name)
   }
 }
 
@@ -35,13 +69,13 @@ export class Dependencies {
     this.dependencies = dependencies
   }
 
-  // throws if the class is not instantiated
-  public getInstance<C = any> (name: string): C {
-    const instance = this.dependencies[name]
-    if (instance == null) {
-      throw new Error(`Could not resolve dependency for ${name}`)
+  // throws if the name doesn't exist
+  public resolve<C = any> (name: string): C {
+    if (!Object.keys(this.dependencies).includes(name)) {
+      throw new Error(`Could not resolve dependency '${name}''`)
     }
-    return instance
+
+    return this.dependencies[name]
   }
 }
 
@@ -75,14 +109,34 @@ class ServiceBuilder<D> {
 
   // instantiate the class using the current dependencies and add the new instance to the dependencies
   public withClass<Ctor extends new (dep: Dependencies) => any> (classObject: Ctor) {
-    const newDependencies = {
-      ...this.dependencies,
-      [classObject.name]: new classObject (this.getDependencies())
-    }
+    const instance = new classObject(this.getDependencies())
+    const newDependencies = this.extendDependencies(classObject.name, instance)
+    return new ServiceBuilder(newDependencies)
+  }
+
+  public withObject<T extends Injectable> (object: NamedInjectable<T>) {
+    // i'm wondering why didn't we just pass in the name into this function?
+    const newDependencies = this.extendDependencies(getName(object), object)
+    return new ServiceBuilder(newDependencies)
+  }
+
+  public withProperty<T extends string | number | boolean> (name: string, prop: T) {
+    const newDependencies = this.extendDependencies(name, prop)
     return new ServiceBuilder(newDependencies)
   }
 
   public getDependencies (): Dependencies {
     return new Dependencies(this.dependencies)
+  }
+
+  private extendDependencies (name: string, value: any) {
+    if (Object.keys(this.dependencies).includes(name)) {
+      throw new Error(`Cannot add dependency with name ${name} because it already exists`)
+    }
+
+    return {
+      ...this.dependencies,
+      [name]: value
+    }
   }
 }

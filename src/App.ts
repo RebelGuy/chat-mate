@@ -1,10 +1,12 @@
+// tslint:disable-next-line:no-var-requires
+require('module-alias/register')
 import express from "express"
 import { Server } from "typescript-rest"
 import ChatStore from "./stores/ChatStore"
-import { ChatController } from "@controllers/ChatController"
+import { ChatController } from "@rebel/controllers/ChatController"
 import env from "./globals"
 import ServiceFactory from "./context/ServiceFactory"
-import { ContextProvider, setContextProvider } from '@context/ContextProvider'
+import { ContextProvider, setContextProvider } from '@rebel/context/ContextProvider'
 
 export const app = express()
 const port = env('port')
@@ -23,7 +25,7 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   // todo: allow a context to depend on another one (optional contextProvider object in contextProvider constructor) (we don't need this actually)
   // todo: make a persistent context that doens't reset on every request (i.e. i.e. not like the controllers)
-  setContextProvider(req, new ContextProvider().withClass(ChatStore))
+  setContextProvider(req, new ContextProvider().withClass(ChatStore).withProperty('port', port))
   next()
 })
 

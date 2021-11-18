@@ -1,5 +1,5 @@
-import { Dependencies } from '@context/ContextProvider';
-import IFactory from '@factories/IFactory';
+import { Dependencies } from '@rebel/context/ContextProvider';
+import IFactory from '@rebel/factories/IFactory';
 import { Masterchat } from 'masterchat';
 
 export default class MasterchatFactory implements IFactory<Masterchat> {
