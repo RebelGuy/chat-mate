@@ -8,10 +8,14 @@ import env from "./globals"
 import ServiceFactory from "./context/ServiceFactory"
 import { ContextProvider, setContextProvider } from '@rebel/context/ContextProvider'
 
-export const app = express()
 const port = env('port')
+const globalContext = ContextProvider.create()
+  .withProperty('port', port)
+  .withClass(ChatStore)
+  .build()
 
 
+const app = express()
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it
 // reaches the controllers.
@@ -23,9 +27,10 @@ app.use((req, res, next) => {
 })
 
 app.use((req, res, next) => {
-  // todo: allow a context to depend on another one (optional contextProvider object in contextProvider constructor) (we don't need this actually)
-  // todo: make a persistent context that doens't reset on every request (i.e. i.e. not like the controllers)
-  setContextProvider(req, new ContextProvider().withClass(ChatStore).withProperty('port', port))
+  const context = globalContext.asParent()
+    .withClass(ChatController)
+    .build()
+  setContextProvider(req, context)
   next()
 })
 

@@ -26,9 +26,10 @@ class TestC {
   }
 }
 
-const prov = new ContextProvider()
+const prov = ContextProvider.create()
   .withClass(TestA)
   .withClass(TestB)
   .withClass(TestC)
+  .build()
 
 console.log()

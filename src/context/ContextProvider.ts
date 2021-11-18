@@ -25,39 +25,81 @@ function isNamedInjectable<T extends Injectable> (maybeNamed: T | NamedInjectabl
   return Object.getOwnPropertySymbols(maybeNamed).includes(NAME_SYMBOL)
 }
 
+export type Branded<T, BrandingEnum> = T & { brand: BrandingEnum }
+
+export enum _BuiltContextBrand { }
+export type BuiltContext = Branded<ContextProvider, _BuiltContextBrand>
+
 export class ContextProvider {
-  public readonly name: string
+  private built: boolean
   private builder: ServiceBuilder<any>
 
-  constructor (name: string = 'context') {
-    this.name = name
-    this.builder = new ServiceBuilder({})
+  constructor (baseDependencies: any) {
+    this.built = false
+    this.builder = new ServiceBuilder(baseDependencies)
+  }
+
+  public static create (): ContextProvider {
+    return new ContextProvider({})
+  }
+
+  // use the current context as a parent content. note that this will create a
+  // new context, leaving the old one unaffected.
+  public asParent (): this extends BuiltContext ? ContextProvider : never {
+    // it is utterly amazing that this works!! (even with the any typing)
+    if (this.isBuiltContext()) {
+      return new ContextProvider(this.builder.clone().dependencies) as any
+    }
+    throw new Error(`Cannot use this context as a parent because it hasn't been built yet`)
   }
 
   // add the given class to the context. note that its dependencies can only depend on classes
   // that are already part of the context (will throw otherwise).
-  public withClass<Ctor extends new (dep: any) => any> (classObject: Ctor) {
+  public withClass<Ctor extends new (dep: any) => any> (classObject: Ctor): this extends BuiltContext ? never : ContextProvider {
     // todo: this should just extend the types, but not do any instantiation...
     this.builder = this.builder.withClass(classObject)
-    return this
+    return this.returnMutableContext()
   }
 
-  public withObject<T extends Injectable> (name: string, object: T) {
+  public withObject<T extends Injectable> (name: string, object: T): this extends BuiltContext ? never : ContextProvider {
+    this.assertMutable()
     this.builder = this.builder.withObject(nameInjectable(object, name))
-    return this
+    return this.returnMutableContext()
   }
 
-  public withProperty<T extends string | boolean | number> (name: string, prop: T) {
+  public withProperty<T extends string | boolean | number> (name: string, prop: T): this extends BuiltContext ? never : ContextProvider {
+    this.assertMutable()
     this.builder = this.builder.withProperty(name, prop)
-    return this
+    return this.returnMutableContext()
   }
 
-  // todo: there should then be a buildClasses method which does all of the instantiation
+  public build (): BuiltContext {
+    this.built = true
+    return this as any as BuiltContext
+  }
+
+  public isBuiltContext (): this is BuiltContext {
+    return this.built
+  }
 
   // retrieve the instance of the given class name (use the `Class.name` API to get a class' name).
   // throws if the class is not instantiated
   public getInstance<C = any> (serviceClass: Function): C {
     return this.builder.getDependencies().resolve<C>(serviceClass.name)
+  }
+
+  private assertMutable () {
+    if (this.built) {
+      throw new Error('Cannot change a context once it has been built')
+    }
+  }
+
+  private returnMutableContext (): this extends BuiltContext ? never : ContextProvider {
+    if (this.isBuiltContext()) {
+      throw new Error('This should not happen')
+    } else {
+      return this as any
+    }
   }
 }
 
@@ -80,31 +122,34 @@ export class Dependencies {
 }
 
 // add the given context provider to the request
-export function setContextProvider (req: Express.Request, context: ContextProvider) {
-  const contextObj = (req as any)[CONTEXT_SYMBOL]
-  if (contextObj == null) {
-    (req as any)[CONTEXT_SYMBOL] = { }
+export function setContextProvider (req: Express.Request, context: BuiltContext) {
+  if (Object.getOwnPropertySymbols(req).includes(CONTEXT_SYMBOL)) {
+    throw new Error('A context has already been set on the Request object')
   }
 
-  (req as any)[CONTEXT_SYMBOL][context.name] = context
+  Object.defineProperty(req, CONTEXT_SYMBOL, { value: context, writable: false })
+  return req
 }
 
 // retrieve the context provider with the given name from the request. throws if it doesn't exist
-export function getContextProvider (req: Express.Request, name: string = 'context'): ContextProvider {
-  const context = (req as any)[CONTEXT_SYMBOL]?.context ?? null as ContextProvider | null
-  if (context == null) {
-    throw new Error(`Context '${name}' could not be found on the request`)
+export function getContextProvider (req: Express.Request): BuiltContext {
+  if (!Object.getOwnPropertySymbols(req).includes(CONTEXT_SYMBOL)) {
+    throw new Error('A context could not be found on the Request object')
   }
 
-  return context
+  return (req as any)[CONTEXT_SYMBOL] as BuiltContext
 }
 
 // used internally for connecting classes
 class ServiceBuilder<D> {
-  readonly dependencies: D
+  public readonly dependencies: D
 
   constructor (dependencies: D) {
     this.dependencies = dependencies
+  }
+
+  public clone () {
+    return new ServiceBuilder(this.dependencies)
   }
 
   // instantiate the class using the current dependencies and add the new instance to the dependencies
