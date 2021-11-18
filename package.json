@@ -8,6 +8,7 @@
     "@types/node": "^16.11.7",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
+    "immutable": "^4.0.0",
     "masterchat": "^0.13.0",
     "module-alias": "^2.2.2",
     "nodemon": "^2.0.15",
@@ -17,7 +18,7 @@
   },
   "scripts": {
     "watch": "tsc --watch",
-    "start": "nodemon dist/app.js",
+    "start": "nodemon --watch dist --inspect dist/app.js",
     "auth": "cd node_modules/masterchat/extra/credential-fetcher && npm run start"
   },
   "devDependencies": {

@@ -2,16 +2,27 @@
 require('module-alias/register')
 import express from "express"
 import { Server } from "typescript-rest"
-import ChatStore from "./stores/ChatStore"
 import { ChatController } from "@rebel/controllers/ChatController"
 import env from "./globals"
-import ServiceFactory from "./context/ServiceFactory"
 import { ContextProvider, setContextProvider } from '@rebel/context/ContextProvider'
+import ChatService from '@rebel/services/ChatService'
+import ServiceFactory from '@rebel/context/ServiceFactory'
+import ChatStore from '@rebel/stores/ChatStore'
+import MasterchatFactory from '@rebel/factories/MasterchatFactory'
+import path from 'node:path'
+import FileService from '@rebel/services/FileService'
 
 const port = env('port')
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
+  .withProperty('auth', env('auth'))
+  .withProperty('channelId', env('channelId'))
+  .withProperty('liveId', env('liveId'))
+  .withProperty('dataPath', path.resolve(__dirname, '../data/'))
+  .withClass(FileService)
+  .withClass(MasterchatFactory)
   .withClass(ChatStore)
+  .withClass(ChatService)
   .build()
 
 

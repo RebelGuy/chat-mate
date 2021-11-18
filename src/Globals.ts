@@ -4,6 +4,12 @@ dotenv.config()
 
 type EnvironmentVariables = {
   port: number,
+
+  // authentication token passed into Masterchat
+  auth: string
+
+  channelId: string
+  liveId: string
 }
 
 export default function env<V extends keyof EnvironmentVariables> (variable: V): EnvironmentVariables[V] {
@@ -22,8 +28,10 @@ export default function env<V extends keyof EnvironmentVariables> (variable: V):
   let envName = variable as string
   for (let i = underscores.length - 1; i >= 0; i--) {
     const pos = underscores[i]!
-    envName = envName.substring(0, pos - 1) + '_' + envName.substring(pos)
+    envName = envName.substring(0, pos ) + '_' + envName.substring(pos)
   }
+
+  envName = envName.toUpperCase()
 
   const result: EnvironmentVariables[V] | undefined = process.env[envName] as any as EnvironmentVariables[V] | undefined
   if (result == null) {

@@ -84,6 +84,7 @@ export class ContextProvider {
 
   // retrieve the instance of the given class name (use the `Class.name` API to get a class' name).
   // throws if the class is not instantiated
+  // tslint:disable-next-line:ban-types
   public getInstance<C = any> (serviceClass: Function): C {
     return this.builder.getDependencies().resolve<C>(serviceClass.name)
   }

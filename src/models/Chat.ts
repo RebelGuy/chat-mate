@@ -1,9 +1,14 @@
 export type ChatItem = {
   internalId: number,
   id: string,
-  timestamp: Date,
+
+  // unix timestamp (in milliseconds)
+  timestamp: number,
   author: Author,
-  message: PartialChatMessage[]
+  messageParts: PartialChatMessage[],
+
+  // the message conversion to pure text
+  renderedText: string
 }
 
 export type Author = {
@@ -31,8 +36,12 @@ export type PartialTextChatMessage = {
 
 export type PartialEmojiChatMessage = {
   type: 'emoji',
-  // the emoji id
-  text: string,
+
+  // the hover-over name
+  name: string,
+
+  // short emoji label (e.g. shortcut text/search term)
+  label: string,
   image: ChatImage
 }
 
@@ -43,5 +52,5 @@ export type ChatImage = {
 }
 
 export function getChatText (message: PartialChatMessage[]) {
-  return message.map(m => m.text).join()
+  return message.map(m => m.type === 'text' ? m.text : `[${m.name}]`).join("")
 }
