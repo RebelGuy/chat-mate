@@ -1,5 +1,5 @@
 export default class ChatStore {
-  constructor () {
+  constructor (dep: any) {
 
   }
 

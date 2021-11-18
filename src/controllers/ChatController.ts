@@ -1,8 +1,7 @@
-import { Request, Response, Router } from "express"
-import { GET, Path, PathParam, QueryParam } from "typescript-rest"
-import ChatStore from "../ChatStore"
-import { Dependencies } from "../ContextProvider"
-import Endpoint, { BASE_PATH, buildPath } from "./BaseEndpoint"
+import { Dependencies } from '@context/ContextProvider'
+import { buildPath } from '@controllers/BaseEndpoint'
+import { GET, Path, QueryParam } from "typescript-rest"
+import ChatStore from "../stores/ChatStore"
 
 @Path(buildPath('chat'))
 export class ChatController {
@@ -10,7 +9,7 @@ export class ChatController {
 
   constructor (dependencies: Dependencies) {
     console.log(dependencies)
-    this.chatStore = dependencies.getInstance(ChatStore.name)
+    this.chatStore = dependencies.getInstance<ChatStore>(ChatStore.name)
   }
 
   @GET

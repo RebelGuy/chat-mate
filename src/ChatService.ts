@@ -12,8 +12,7 @@ type ChatEvents = {
   }
 }
 
-// todo: rename to ChatService
-export default class ChatWrapper {
+export default class ChatService {
   private listeners: Map<keyof ChatEvents, ((data: any) => void)[]> = new Map()
 
   // todo: persist messages and last token

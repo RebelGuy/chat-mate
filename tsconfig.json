@@ -18,8 +18,12 @@
     "skipLibCheck": true,
     "baseUrl": "./src",
     "paths": {
-      "@controllers/*": ["controllers/"],
-      "@models/*": ["models/"]
+      "@controllers/*": ["controllers/*"],
+      "@models/*": ["models/*"],
+      "@context/*": ["context/*"],
+      "@stores/*": ["stores/*"],
+      "@services/*": ["servers/*"],
+      "@factories/*": ["factories/*"],
     }
   },
   "include": [
