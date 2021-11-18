@@ -2,8 +2,20 @@
 import { Dependencies } from '@rebel/context/ContextProvider'
 import MasterchatFactory from '@rebel/factories/MasterchatFactory'
 import ChatStore from '@rebel/stores/ChatStore'
-import { Action, AddChatItemAction, Masterchat, stringify, YTEmojiRun, YTRun, YTTextRun } from "masterchat"
-import { ChatItem, getChatText, PartialChatMessage, PartialTextChatMessage } from "@rebel/models/chat"
+import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
+import { ChatItem, getChatText, PartialChatMessage } from "@rebel/models/chat"
+import { isList, List } from 'immutable'
+import { clamp, clampNormFn, sum } from '@rebel/util'
+
+const MIN_INTERVAL = 500
+const MAX_INTERVAL = 10_000
+
+// this can approximately be interpreted as the number of chat messages per minute
+const MIN_CHAT_RATE = 0.5 / 60
+const MAX_CHAT_RATE = 10 / 60
+
+// how far back we will look to determine the dynamic refresh rates
+const LIMIT = 120_000
 
 type ChatEvents = {
   newChatItem: {
@@ -19,7 +31,7 @@ export default class ChatService {
   private readonly chat: Masterchat
 
   private listeners: Map<keyof ChatEvents, ((data: any) => void)[]> = new Map()
-  private interval: NodeJS.Timer | null = null
+  private timeout: NodeJS.Timeout | null = null
 
   constructor (deps: Dependencies) {
     this.chatStore = deps.resolve<ChatStore>(ChatStore.name)
@@ -29,21 +41,19 @@ export default class ChatService {
   }
 
   start () {
-    if (this.interval) {
+    if (this.timeout) {
       return
     }
 
-    // todo: can add dynamic timeout that adjusts for busy periods, up to twice per second
-    this.interval = setInterval(() => this.updateMessages(), 2000)
     this.updateMessages()
   }
 
   stop () {
-    if (!this.interval) {
+    if (!this.timeout) {
       return
     }
 
-    clearInterval(this.interval)
+    clearTimeout(this.timeout)
   }
 
   on<E extends keyof ChatEvents> (type: E, callback: (data: ChatEvents[E]) => void) {
@@ -62,6 +72,10 @@ export default class ChatService {
   }
 
   private updateMessages = async () => {
+    if (this.timeout) {
+      clearTimeout(this.timeout)
+    }
+
     const response = await this.fetchLatest()
     if (!response.continuation?.token) {
       throw new Error('No continuation token is present')
@@ -72,6 +86,10 @@ export default class ChatService {
       .filter(action => isAddChatAction(action))
       .map(item => this.toChatItem(item as AddChatItemAction))
     this.chatStore.addChat(token, chatItems)
+
+    // if we received a new message, immediately start checking for another one
+    const nextInterval = chatItems.length === 0 ? getNextInterval(new Date().getTime(), this.chatStore.chatItems.map(c => c.timestamp)) : MIN_INTERVAL
+    this.timeout = setTimeout(this.updateMessages, nextInterval)
   }
 
   private toChatItem (item: AddChatItemAction): ChatItem {
@@ -120,4 +138,26 @@ function isTextRun (run: YTRun): run is YTTextRun {
 
 function isAddChatAction (action: Action): action is AddChatItemAction {
   return action.type === 'addChatItemAction'
+}
+
+function getNextInterval (currentTime: number, timestamps: List<number> | number[]): number {
+  if (!isList(timestamps)) {
+    timestamps = List(timestamps)
+  }
+
+  const startTimestamp = currentTime - LIMIT
+
+  const weightFn = clampNormFn(t => Math.sqrt(t), startTimestamp, currentTime)
+  const weights = timestamps.filter(t => t >= startTimestamp).map(t => weightFn(t))
+  console.log('weights', weights.toArray())
+
+  // pretend each message was the only one sent in the period, and scale the average based on the weight. then add all.
+  // this has the effect that, if there is a quick burst of messages, it won't increase the refresh rate for the whole
+  // `limit` interval, but smoothly return back to normal over time.
+  const chatRate = sum(weights.map(w => w / (LIMIT / 1000)))
+  console.log('chatRate', chatRate)
+
+  const nextInterval = (1 - clamp(0, (chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
+  console.log(nextInterval)
+  return nextInterval
 }

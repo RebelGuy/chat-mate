@@ -30,19 +30,22 @@ export default class ChatStore {
     this._continuationToken = content?.continuationToken ?? null
   }
 
+  // appends the new chat to the stored chat. throws if the new chat overlaps in time with the existing chat.
   public addChat (token: string, newChat: ChatItem[]) {
     this._continuationToken = token
     console.log(`adding ${newChat.length} new chat items`)
 
     if (newChat.length > 0) {
       const sorted = List(newChat).sort((c1, c2) => c1.timestamp - c2.timestamp)
-      const latestSavedTime = this._chatItems.last()?.timestamp ?? new Date(0)
-      if (sorted.first()!.timestamp < latestSavedTime) {
-        // this should never happen
-        throw new Error('Cannot add chat item(s) because their timestamps are later than one or more saved items')
+      const latestSavedTime = this._chatItems.last()?.timestamp ?? 0
+      const validNewChat = newChat.filter(c => c.timestamp > latestSavedTime)
+      if (newChat.length !== validNewChat.length) {
+        // this should never happen, but we should still handle it gracefully
+        // todo: add logging to file
+        console.warn(`[ChatStore] Cannot add ${newChat.length - validNewChat.length} chat item(s) because their timestamps are earlier than the last saved item - discarding those items`)
       }
 
-      this._chatItems = this._chatItems.push(...newChat)
+      this._chatItems = this._chatItems.push(...validNewChat)
     }
 
     this.save()

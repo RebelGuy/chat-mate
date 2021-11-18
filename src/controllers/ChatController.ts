@@ -5,6 +5,8 @@ import ChatStore from '@rebel/stores/ChatStore'
 import { GET, Path, QueryParam } from "typescript-rest"
 
 type GetChatResponse = {
+  liveId: string
+
   // include the timestamp so it can easily be used for the next request
   lastTimestamp: number
 
@@ -15,9 +17,11 @@ type GetChatResponse = {
 
 @Path(buildPath('chat'))
 export class ChatController {
+  readonly liveId: string
   readonly chatStore: ChatStore
 
   constructor (dependencies: Dependencies) {
+    this.liveId = dependencies.resolve<string>('liveId')
     this.chatStore = dependencies.resolve<ChatStore>(ChatStore.name)
   }
 
@@ -32,6 +36,7 @@ export class ChatController {
     const items = this.chatStore.chatItems.filter(c => c.timestamp > newerThan).takeLast(limit)
 
     return {
+      liveId: this.liveId,
       lastTimestamp: items.last()?.timestamp ?? newerThan,
       isPartial: items.size !== this.chatStore.chatItems.size,
       chat: items.toArray()
