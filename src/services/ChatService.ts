@@ -68,7 +68,12 @@ export default class ChatService {
 
   private fetchLatest = () => {
     const token = this.chatStore.continuationToken
-    return token ? this.chat.fetch(token) : this.chat.fetch()
+    try {
+      return token ? this.chat.fetch(token) : this.chat.fetch()
+    } catch (e: any) {
+      console.log('Fetch failed:', e.message)
+      return null
+    }
   }
 
   private updateMessages = async () => {
@@ -77,18 +82,24 @@ export default class ChatService {
     }
 
     const response = await this.fetchLatest()
-    if (!response.continuation?.token) {
-      throw new Error('No continuation token is present')
+
+    let hasNewChat: boolean = false
+    if (response != null) {
+      if (!response.continuation?.token) {
+        throw new Error('No continuation token is present')
+      }
+
+      const token = response.continuation.token
+      const chatItems = response.actions
+        .filter(action => isAddChatAction(action))
+        .map(item => this.toChatItem(item as AddChatItemAction))
+      this.chatStore.addChat(token, chatItems)
+
+      hasNewChat = chatItems.length > 0
     }
 
-    const token = response.continuation.token
-    const chatItems = response.actions
-      .filter(action => isAddChatAction(action))
-      .map(item => this.toChatItem(item as AddChatItemAction))
-    this.chatStore.addChat(token, chatItems)
-
     // if we received a new message, immediately start checking for another one
-    const nextInterval = chatItems.length === 0 ? getNextInterval(new Date().getTime(), this.chatStore.chatItems.map(c => c.timestamp)) : MIN_INTERVAL
+    const nextInterval = hasNewChat ? MIN_INTERVAL : getNextInterval(new Date().getTime(), this.chatStore.chatItems.map(c => c.timestamp))
     this.timeout = setTimeout(this.updateMessages, nextInterval)
   }
 

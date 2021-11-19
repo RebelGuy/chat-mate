@@ -9,7 +9,7 @@
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "immutable": "^4.0.0",
-    "masterchat": "^0.13.0",
+    "masterchat": "file:../masterchat",
     "module-alias": "^2.2.2",
     "nodemon": "^2.0.15",
     "tslib": "^2.3.1",
@@ -17,9 +17,11 @@
     "typescript-rest": "^1.6.2"
   },
   "scripts": {
+    "build": "npm run build:dependencies && tsc",
+    "build:dependencies": "cd ../masterchat && npm i && npm run build",
     "watch": "tsc --watch",
     "start": "nodemon --watch dist --inspect dist/app.js",
-    "auth": "cd node_modules/masterchat/extra/credential-fetcher && npm run start"
+    "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start"
   },
   "devDependencies": {
     "@types/express": "^4.17.13"
