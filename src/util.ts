@@ -1,4 +1,5 @@
 import { isList, List } from 'immutable';
+import { URL } from 'node:url';
 
 export function clamp (min: number, value: number, max: number) {
   return value < min ? min : value > max ? max : value
@@ -35,5 +36,37 @@ export function clampNormFn (fn: (x: number) => number, minX: number, maxX: numb
 
     const normY = (y - minY) / (maxY - minY)
     return normY
+  }
+}
+
+// extracts the video/livestream ID from the given string
+export function getLiveId (linkOrId: string): string {
+  const ID_LENGTH = 11
+
+  if (linkOrId == null || linkOrId.trim().length === 0) {
+    throw new Error('A link or ID must be provided.')
+  }
+
+  linkOrId = linkOrId.trim()
+
+  if (linkOrId.length === ID_LENGTH) {
+    // provided string is a video ID
+    return linkOrId
+  }
+
+  if (linkOrId.includes('watch?v=') && linkOrId.includes('youtu')) {
+    const url = new URL(linkOrId)
+    const id = url.searchParams.get('v')
+
+    if (id == null || id.length === 0) {
+      throw new Error(`The provided link ${linkOrId} does not contain a video ID.`)
+    } else if (id.length !== ID_LENGTH) {
+      throw new Error(`A video/livestream ID was able to be found on the link ${linkOrId}, but it wasn malformed.`)
+    } else {
+      return id
+    }
+
+  } else {
+    throw new Error(`The provided link ${linkOrId} is malformed.`)
   }
 }
