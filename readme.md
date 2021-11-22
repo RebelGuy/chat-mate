@@ -4,7 +4,7 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 
 # Project Details
 
-To start off, you must first obtain credentials using `npm run auth` and set them in the `.env` file.
+To start off, you must first obtain credentials using `npm run auth` and set them in the [`.env`](#.env) file.
 
 If running the `Masterchat` package locally, ensure it is built by doing `npm run build:dependencies`.
 
@@ -92,7 +92,10 @@ Returns an object with the following properties:
 
 # Change Log
 
-## V1.0
+## v1.1
+- Added docs
+
+## v1.0
 - Initial release
 - Simple fetching and saving of chat messages
 - Added `GET /chat` endpoint
