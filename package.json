@@ -17,8 +17,9 @@
     "typescript-rest": "^1.6.2"
   },
   "scripts": {
-    "build": "npm run build:dependencies && tsc",
+    "build": "npm run build:dependencies && npm run build:project",
     "build:dependencies": "cd ../masterchat && npm i && npm run build",
+    "build:project": "tsc",
     "watch": "tsc --watch",
     "start": "nodemon --watch dist --inspect dist/app.js",
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start"
