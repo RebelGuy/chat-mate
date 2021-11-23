@@ -66,10 +66,10 @@ export default class ChatService {
     this.listeners.set(type, listeners.filter(cb => cb !== callback))
   }
 
-  private fetchLatest = () => {
+  private fetchLatest = async () => {
     const token = this.chatStore.continuationToken
     try {
-      return token ? this.chat.fetch(token) : this.chat.fetch()
+      return token ? await this.chat.fetch(token) : await this.chat.fetch()
     } catch (e: any) {
       console.log('Fetch failed:', e.message)
       return null
@@ -85,17 +85,17 @@ export default class ChatService {
 
     let hasNewChat: boolean = false
     if (response != null) {
-      if (!response.continuation?.token) {
-        throw new Error('No continuation token is present')
-      }
-
-      const token = response.continuation.token
       const chatItems = response.actions
         .filter(action => isAddChatAction(action))
         .map(item => this.toChatItem(item as AddChatItemAction))
-      this.chatStore.addChat(token, chatItems)
 
-      hasNewChat = chatItems.length > 0
+      if (response.continuation?.token == null) {
+        console.warn(`Fetched ${chatItems.length} new chat items but continuation token is null. Ignoring chat items.`)
+      } else {
+        const token = response.continuation.token
+        this.chatStore.addChat(token, chatItems)
+        hasNewChat = chatItems.length > 0
+      }
     }
 
     // if we received a new message, immediately start checking for another one
