@@ -54,19 +54,25 @@ export function getLiveId (linkOrId: string): string {
     return linkOrId
   }
 
+  let id: string | null
+  const url = new URL(linkOrId)
   if (linkOrId.includes('watch?v=') && linkOrId.includes('youtu')) {
-    const url = new URL(linkOrId)
-    const id = url.searchParams.get('v')
+    id = url.searchParams.get('v')
 
-    if (id == null || id.length === 0) {
-      throw new Error(`The provided link ${linkOrId} does not contain a video ID.`)
-    } else if (id.length !== ID_LENGTH) {
-      throw new Error(`A video/livestream ID was able to be found on the link ${linkOrId}, but it wasn malformed.`)
-    } else {
-      return id
-    }
+  } else if (linkOrId.includes('studio.youtube.com')) {
+    const path = url.pathname.split('/').filter(p => p.length > 0)
+    id = path[1]
 
   } else {
     throw new Error(`The provided link ${linkOrId} is malformed.`)
+  }
+
+  if (id == null || id.length === 0) {
+    throw new Error(`The provided link ${linkOrId} does not contain a video ID.`)
+  } else if (id.length !== ID_LENGTH) {
+    throw new Error(`A video/livestream ID (${id}) was able to be found on the link ${linkOrId}, but it wasn malformed.`)
+  } else {
+    console.log(`Using live ID ${id}`)
+    return id
   }
 }
