@@ -71,7 +71,7 @@ export default class ChatService {
     try {
       return token ? await this.chat.fetch(token) : await this.chat.fetch()
     } catch (e: any) {
-      console.log('Fetch failed:', e.message)
+      console.warn('Fetch failed:', e.message)
       return null
     }
   }
@@ -160,15 +160,13 @@ function getNextInterval (currentTime: number, timestamps: List<number> | number
 
   const weightFn = clampNormFn(t => Math.sqrt(t), startTimestamp, currentTime)
   const weights = timestamps.filter(t => t >= startTimestamp).map(t => weightFn(t))
-  console.log('weights', weights.toArray())
 
   // pretend each message was the only one sent in the period, and scale the average based on the weight. then add all.
   // this has the effect that, if there is a quick burst of messages, it won't increase the refresh rate for the whole
   // `limit` interval, but smoothly return back to normal over time.
   const chatRate = sum(weights.map(w => w / (LIMIT / 1000)))
-  console.log('chatRate', chatRate)
-
   const nextInterval = (1 - clamp(0, (chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
-  console.log(nextInterval)
+
+  console.log(`Chat rate: ${chatRate.toFixed(4)} | Next interval: ${nextInterval}`)
   return nextInterval
 }
