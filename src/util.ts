@@ -55,7 +55,13 @@ export function getLiveId (linkOrId: string): string {
   }
 
   let id: string | null
-  const url = new URL(linkOrId)
+  let url: URL
+  try {
+    url = new URL(linkOrId)
+  } catch (e) {
+    throw new Error(`The provided link is ${linkOrId} is malformed.`)
+  }
+
   if (linkOrId.includes('watch?v=') && linkOrId.includes('youtu')) {
     id = url.searchParams.get('v')
 
