@@ -54,12 +54,12 @@ export function getLiveId (linkOrId: string): string {
     return linkOrId
   }
 
-  let id: string | null
+  let id: string | null = null
   let url: URL
   try {
     url = new URL(linkOrId)
-  } catch (e) {
-    throw new Error(`The provided link is ${linkOrId} is malformed.`)
+  } catch (e: any) {
+    throw new Error(`The provided link is ${linkOrId} is malformed: ${e.message}`)
   }
 
   if (linkOrId.includes('watch?v=') && linkOrId.includes('youtu')) {
@@ -69,6 +69,13 @@ export function getLiveId (linkOrId: string): string {
     const path = url.pathname.split('/').filter(p => p.length > 0)
     id = path[1]
 
+  } else if (linkOrId.includes('youtu')) {
+    const path = url.pathname.split('/').filter(p => p.length > 0)
+
+    // direct link (e.g. https://youtu.be/VTriRgpNd-s)
+    if (path.length === 1) {
+      id = path[0]
+    }
   } else {
     throw new Error(`The provided link ${linkOrId} is malformed.`)
   }
