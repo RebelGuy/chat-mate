@@ -94,6 +94,8 @@ Returns an object with the following properties:
 
 ## v1.1
 - Added docs
+- LiveId can now be any YouTube link to the livestream
+- Fixed error handling
 
 ## v1.0
 - Initial release
