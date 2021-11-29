@@ -1,5 +1,5 @@
 {
-  "name": "chat-overlay-server",
+  "name": "chat-mate-server",
   "version": "1.1",
   "private": true,
   "main": "dist/app.js",
