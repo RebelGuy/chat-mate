@@ -4,15 +4,13 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 
 # Project Details
 
-To start off, you must first obtain credentials using `npm run auth` and set them in the [`.env`](#.env) file.
+Ensure Node 16 is installed.
 
-If running the `Masterchat` package locally, ensure it is built by doing `npm run build:dependencies`.
-
-To generate a complete build, use `npm run build`, or to generate only a build of the project, use `npm run build:project`.
-
-To build the project and watch for changes, use `npm run watch`.
-
-To start the server, use `npm run start`.
+1. `npm install`.
+2. `npm run build` to generate the a full build, including the local `Masterchat` project.
+3. `npm run auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
+4. `npm run watch` while devloping
+5. `npm run start` to run the server
 
 
 
