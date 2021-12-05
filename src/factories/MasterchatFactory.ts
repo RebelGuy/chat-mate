@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/context/ContextProvider';
+import { Dependencies } from '@rebel/context/context';
 import IFactory from '@rebel/factories/IFactory';
 import { Masterchat } from 'masterchat';
 

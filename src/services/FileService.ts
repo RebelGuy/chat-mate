@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/context/ContextProvider'
+import { Dependencies } from '@rebel/context/context'
 import { GenericObject } from '@rebel/types'
 import * as fs from 'fs'
 import path from 'node:path'
