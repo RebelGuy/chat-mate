@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/context/ContextProvider'
+import { Dependencies } from '@rebel/context/context'
 import { buildPath } from '@rebel/controllers/BaseEndpoint'
 import { ChatItem } from '@rebel/models/chat'
 import ChatStore from '@rebel/stores/ChatStore'

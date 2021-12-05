@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/context/ContextProvider';
+import { Dependencies } from '@rebel/context/context';
 import { ChatItem } from '@rebel/models/chat';
 import FileService from '@rebel/services/FileService';
 import { List } from 'immutable';

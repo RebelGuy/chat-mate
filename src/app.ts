@@ -4,9 +4,9 @@ import express from "express"
 import { Server } from "typescript-rest"
 import { ChatController } from "@rebel/controllers/ChatController"
 import env from "./globals"
-import { ContextProvider, setContextProvider } from '@rebel/context/ContextProvider'
+import { ContextProvider, setContextProvider } from '@rebel/context/context'
 import ChatService from '@rebel/services/ChatService'
-import ServiceFactory from '@rebel/context/ServiceFactory'
+import ServiceFactory from '@rebel/context/CustomServiceFactory'
 import ChatStore from '@rebel/stores/ChatStore'
 import MasterchatFactory from '@rebel/factories/MasterchatFactory'
 import path from 'node:path'

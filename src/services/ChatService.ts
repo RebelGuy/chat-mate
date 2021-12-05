@@ -1,5 +1,5 @@
 
-import { Dependencies } from '@rebel/context/ContextProvider'
+import { Dependencies } from '@rebel/context/context'
 import MasterchatFactory from '@rebel/factories/MasterchatFactory'
 import ChatStore from '@rebel/stores/ChatStore'
 import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
