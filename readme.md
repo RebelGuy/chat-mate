@@ -10,17 +10,21 @@ Ensure Node 16 is installed.
 2. `npm run build` to generate the a full build, including the local `Masterchat` project.
 3. `npm run auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
 4. `npm run watch` while devloping
-5. `npm run start` to run the server
+5. `npm run start:debug` to run the debug server, or `npm run start:release` to run the release server
 
 
 
 # .env
-The following environment variables can be set in the `.env` file:
+Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`.
+
+The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `npm run auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `LIVE_ID`: The video ID of the livestream.
 
+In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
+- `NODE_ENV`: Either `debug` or `release` to indicate whether we are running a live server or not
 
 
 # API Endpoints

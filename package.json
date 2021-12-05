@@ -21,11 +21,13 @@
     "build:dependencies": "cd ../masterchat && npm i && npm run build",
     "build:project": "tsc",
     "watch": "tsc --watch",
-    "start": "nodemon --watch dist --inspect dist/app.js",
+    "start:debug": "cross-env NODE_ENV=debug nodemon --watch dist --inspect dist/app.js",
+    "start:release": "cross-env NODE_ENV=release node dist/app.js",
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start"
   },
   "devDependencies": {
-    "@types/express": "^4.17.13"
+    "@types/express": "^4.17.13",
+    "cross-env": "^7.0.3"
   },
   "_moduleAliases": {
     "@rebel": "dist"

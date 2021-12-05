@@ -1,5 +1,6 @@
 import { isList, List } from 'immutable';
 import { URL } from 'node:url';
+import { ConditionalExpression } from 'typescript';
 
 export function clamp (min: number, value: number, max: number) {
   return value < min ? min : value > max ? max : value
@@ -88,4 +89,34 @@ export function getLiveId (linkOrId: string): string {
     console.log(`Using live ID ${id}`)
     return id
   }
+}
+
+export function assert(condition: any, msg: string): asserts condition {
+  if (!condition) {
+    throw new Error(msg);
+  }
+}
+
+// converts a camelCase or PascalCase word to CONSTANT_CASE.
+// short sequential characters like 'ID' are treated as a single part of the word. 
+export function toConstCase (word: string): string {
+  let lastCapital = 0
+  let underscores: number[] = []
+  for (let i = 1; i < word.length; i++) {
+    const char = word[i]!
+    const isCapital = char === char.toUpperCase()
+
+    if (isCapital && i - lastCapital > 1) {
+      lastCapital = i
+      underscores.push(i)
+    }
+  }
+
+  let constName = word as string
+  for (let i = underscores.length - 1; i >= 0; i--) {
+    const pos = underscores[i]!
+    constName = constName.substring(0, pos ) + '_' + constName.substring(pos)
+  }
+
+  return constName.toUpperCase()
 }

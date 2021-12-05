@@ -1,9 +1,10 @@
+import { assert, toConstCase } from '@rebel/util'
 import dotenv from 'dotenv'
 
-dotenv.config()
-
+// these can be set either statically in the .env file, or dynamically within the npm script using the `cross-env` package.
 type EnvironmentVariables = {
-  port: number,
+  nodeEnv: 'debug' | 'release'
+  port: number
 
   // authentication token passed into Masterchat
   auth: string
@@ -12,30 +13,25 @@ type EnvironmentVariables = {
   liveId: string
 }
 
+// if an environment variable is included in this list, it must be set using the `cross-env` package.
+const injectedEnvironmentVariables: (keyof EnvironmentVariables)[] = [
+  'nodeEnv'
+]
+
+injectedEnvironmentVariables.map(variable => {
+  const envName = toConstCase(variable)
+  assert(Object.keys(process.env).includes(envName), `Environment variable '${envName}' must be injected`)
+})
+
+// separate debug/release .env files
+dotenv.config({ path: `./${env('nodeEnv')}.env`})
+
 export default function env<V extends keyof EnvironmentVariables> (variable: V): EnvironmentVariables[V] {
-  let lastCapital = 0
-  let underscores: number[] = []
-  for (let i = 1; i < variable.length; i++) {
-    const char = variable[i]!
-    const isCapital = char === char.toUpperCase()
+  const envName = toConstCase(variable)
 
-    if (isCapital && i - lastCapital > 1) {
-      lastCapital = i
-      underscores.push(i)
-    }
-  }
-
-  let envName = variable as string
-  for (let i = underscores.length - 1; i >= 0; i--) {
-    const pos = underscores[i]!
-    envName = envName.substring(0, pos ) + '_' + envName.substring(pos)
-  }
-
-  envName = envName.toUpperCase()
-
-  const result: EnvironmentVariables[V] | undefined = process.env[envName] as any as EnvironmentVariables[V] | undefined
-  if (result == null) {
+  if (Object.keys(process.env).includes(envName)) {
+    return process.env[envName] as EnvironmentVariables[V]
+  } else {
     throw new Error(`Cannot find environment variable ${envName}`)
   }
-  return result
 }
