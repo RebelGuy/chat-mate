@@ -14,12 +14,15 @@ import FileService from '@rebel/services/FileService'
 import { getLiveId } from '@rebel/util'
 
 const port = env('port')
+const dataPath = path.resolve(__dirname, `../data/${env('nodeEnv')}/`)
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
   .withProperty('auth', env('auth'))
   .withProperty('channelId', env('channelId'))
   .withProperty('liveId', getLiveId(env('liveId')))
-  .withProperty('dataPath', path.resolve(__dirname, `../data/${env('nodeEnv')}/`))
+  .withProperty('dataPath', dataPath)
+  .withProperty('mockData', env('mockData') == null ? null : path.resolve(dataPath, env('mockData')!))
+  .withProperty('disableSaving', env('disableSaving') ?? false)
   .withClass(FileService)
   .withClass(MasterchatFactory)
   .withClass(ChatStore)

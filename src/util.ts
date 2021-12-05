@@ -120,3 +120,9 @@ export function toConstCase (word: string): string {
 
   return constName.toUpperCase()
 }
+
+// blocks the thread
+export function sleepSync(ms: number) {
+  const start = Date.now()
+  while (Date.now() < start + 1000) {}
+}

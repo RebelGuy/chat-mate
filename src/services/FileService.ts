@@ -4,9 +4,11 @@ import * as fs from 'fs'
 import path from 'node:path'
 
 export default class FileService {
+  private readonly disableSaving: boolean
   private readonly dataPath: string
 
   constructor (deps: Dependencies) {
+    this.disableSaving = deps.resolve<boolean>('disableSaving')
     this.dataPath = deps.resolve<string>('dataPath')
   }
 
@@ -15,6 +17,11 @@ export default class FileService {
   }
 
   public save (filePath: string, contents: string) {
+    if (this.disableSaving) {
+      console.log('Using read-only FileService')
+      return
+    }
+
     const directory = path.dirname(filePath)
     if (!fs.existsSync(directory)) {
       fs.mkdirSync(directory, { recursive: true })

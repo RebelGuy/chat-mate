@@ -3,7 +3,7 @@ import { ChatItem } from '@rebel/models/chat';
 import FileService from '@rebel/services/FileService';
 import { List } from 'immutable';
 
-type ChatSave = {
+export type ChatSave = {
   continuationToken: string | null
   chat: ChatItem[]
 }

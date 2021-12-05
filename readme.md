@@ -9,9 +9,10 @@ Ensure Node 16 is installed.
 1. `npm install`.
 2. `npm run build` to generate the a full build, including the local `Masterchat` project.
 3. `npm run auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
-4. `npm run watch` while devloping
+4. `npm run watch` while developing
 5. `npm run start:debug` to run the debug server, or `npm run start:release` to run the release server
 
+A mock server can be started using `npm run start:mock` which will automatically feed through new messages for easy client-side testing.
 
 
 # .env
@@ -22,9 +23,11 @@ The following environment variables must be set in the `.env` file:
 - `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `npm run auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `LIVE_ID`: The video ID of the livestream.
+- `MOCK_DATA`: [Optional, debug only] The JSON file containing the `ChatSave` data that the `ChatStore` can load. If set, the server will use a mocked Masterchat to "auto-play" chat events, and no longer connect to YouTube.
+- `DISABLE_SAVING`: [Optional, debug only] Whether the debug server should be run in a "read-only" mode, recommended when `MOCK_DATA` is set.
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
-- `NODE_ENV`: Either `debug` or `release` to indicate whether we are running a live server or not
+- `NODE_ENV`: Either `debug` or `release` to indicate whether we are running a live server or not.
 
 
 # API Endpoints

@@ -4,3 +4,17 @@ export type GenericObject = { [key: string]: any };
 // to the api response schema should be accompanied by a bump of the schema version -
 // this way the consumers can easily detect potential bugs.
 export type ApiSchema<Schema extends number, T> = T & { schema: Schema }
+
+// from https://stackoverflow.com/questions/50490773/why-doesnt-typescript-undefined-type-behave-same-as-optional
+// gets the keys of T that are optional
+export type OptionalKeys<T> = ({
+  // for some reason the ordering has to be this way
+  [V in keyof T]-?: undefined extends T[V] ? V : never
+})[keyof T] // gets all the keys, automatically discarding those of type `never`
+
+export type Optionals<T> = Pick<T, OptionalKeys<T>>
+
+// converts { foo?: bar } to { foo: bar | undefined }
+type MakeRequired<T> = {
+  [P in keyof Required<T>]: Pick<T, P> extends Required<Pick<T, P>> ? T[P] : (T[P] | undefined);
+}

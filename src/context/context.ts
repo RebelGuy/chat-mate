@@ -67,7 +67,7 @@ export class ContextProvider {
     return this.returnMutableContext()
   }
 
-  public withProperty<T extends string | boolean | number> (name: string, prop: T): this extends BuiltContext ? never : ContextProvider {
+  public withProperty<T extends string | boolean | number | null> (name: string, prop: T): this extends BuiltContext ? never : ContextProvider {
     this.assertMutable()
     this.builder = this.builder.withProperty(name, prop)
     return this.returnMutableContext()
@@ -115,7 +115,7 @@ export class Dependencies {
   // throws if the name doesn't exist
   public resolve<C = any> (name: string): C {
     if (!Object.keys(this.dependencies).includes(name)) {
-      throw new Error(`Could not resolve dependency '${name}''`)
+      throw new Error(`Could not resolve dependency '${name}'`)
     }
 
     return this.dependencies[name]
@@ -166,7 +166,7 @@ class ServiceBuilder<D> {
     return new ServiceBuilder(newDependencies)
   }
 
-  public withProperty<T extends string | number | boolean> (name: string, prop: T) {
+  public withProperty<T extends string | number | boolean | null> (name: string, prop: T) {
     const newDependencies = this.extendDependencies(name, prop)
     return new ServiceBuilder(newDependencies)
   }

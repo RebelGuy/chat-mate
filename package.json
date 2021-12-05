@@ -22,6 +22,7 @@
     "build:project": "tsc",
     "watch": "tsc --watch",
     "start:debug": "cross-env NODE_ENV=debug nodemon --watch dist --inspect dist/app.js",
+    "start:mock": "cross-env NODE_ENV=debug DISABLE_SAVING=true MOCK_DATA=mockData.json nodemon --watch dist --inspect dist/app.js",
     "start:release": "cross-env NODE_ENV=release node dist/app.js",
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start"
   },

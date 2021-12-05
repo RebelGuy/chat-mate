@@ -6,6 +6,7 @@ import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterc
 import { ChatItem, getChatText, PartialChatMessage } from "@rebel/models/chat"
 import { isList, List } from 'immutable'
 import { clamp, clampNormFn, sum } from '@rebel/util'
+import { IMasterchat } from '@rebel/interfaces'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -28,7 +29,7 @@ export default class ChatService {
 
   // note: there is a bug where the "live chat" (as opposed to "top chat") option doesn't work, so any
   // messages that might be spammy/inappropriate will not show up.
-  private readonly chat: Masterchat
+  private readonly chat: IMasterchat
 
   private listeners: Map<keyof ChatEvents, ((data: any) => void)[]> = new Map()
   private timeout: NodeJS.Timeout | null = null

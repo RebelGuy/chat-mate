@@ -5,20 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "pwa-node",
-      "request": "launch",
-      "name": "Launch Program",
-      "sourceMaps": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "program": "${workspaceFolder}/dist/app.js",
-      "outFiles": [
-        "${workspaceFolder}/dist/*"
-      ]
-    },
-    {
-      "name": "Attach to Process",
+      "name": "Attach",
       "type": "node",
       "protocol": "inspector",
       "request": "attach",
@@ -26,7 +13,33 @@
       "port": 9229,
       "localRoot": "${workspaceRoot}/dist/",
       "remoteRoot": "${workspaceRoot}/dist/",
-      "sourceMaps": true
-  }
+      "sourceMaps": true,
+    },
+    {
+      "name": "start:debug",
+      "request": "launch",
+      "runtimeArgs": [
+        "run-script",
+        "start:debug"
+      ],
+      "runtimeExecutable": "npm",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "pwa-node",
+    },
+    {
+      "name": "start:mock",
+      "request": "launch",
+      "runtimeArgs": [
+        "run-script",
+        "start:mock"
+      ],
+      "runtimeExecutable": "npm",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "pwa-node",
+    }
   ]
 }
