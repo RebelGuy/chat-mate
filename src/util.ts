@@ -126,3 +126,14 @@ export function sleepSync(ms: number) {
   const start = Date.now()
   while (Date.now() < start + 1000) {}
 }
+
+// formats to YYYY-MM-dd
+export function formatDate(date?: Date, utc?: boolean) {
+  const dateToFormat = date ?? new Date()
+
+  const year = utc ? String(dateToFormat.getUTCFullYear()) : String(dateToFormat.getFullYear())
+  // months start at zero...
+  const month = utc ? String(dateToFormat.getUTCMonth() + 1) : String(dateToFormat.getMonth() + 1)
+  const day = utc ? String(dateToFormat.getUTCDate()) : String(dateToFormat.getDate())
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}

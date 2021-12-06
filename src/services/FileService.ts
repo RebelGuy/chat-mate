@@ -16,6 +16,10 @@ export default class FileService {
     return path.resolve(this.dataPath, fileName)
   }
 
+  public getDataFiles (): string[] {
+    return fs.readdirSync(this.dataPath)
+  }
+
   public save (filePath: string, contents: string) {
     if (this.disableSaving) {
       console.log('Using read-only FileService')

@@ -1,6 +1,7 @@
 import { Dependencies } from '@rebel/context/context';
 import { ChatItem } from '@rebel/models/chat';
 import FileService from '@rebel/services/FileService';
+import { formatDate } from '@rebel/util'
 import { List } from 'immutable';
 
 export type ChatSave = {
@@ -23,7 +24,14 @@ export default class ChatStore {
   constructor (dep: Dependencies) {
     this.liveId = dep.resolve<string>('liveId')
     this.fileService = dep.resolve<FileService>(FileService.name)
-    this.fileName = this.fileService.getDataFilePath(`chat_${this.liveId}.json`)
+
+    // every live ID is associated with its own file - find it, or create a new one if one doesn't exist yet
+    const existingFile = this.fileService.getDataFiles().find(file => file.includes(this.liveId))
+    if (existingFile) {
+      this.fileName = existingFile
+    } else {
+      this.fileName = this.fileService.getDataFilePath(`chat_${formatDate()}_${this.liveId}.json`)
+    }
 
     const content: ChatSave | null = this.fileService.loadObject<ChatSave>(this.fileName)
     this._chatItems = List(content?.chat ?? [])
