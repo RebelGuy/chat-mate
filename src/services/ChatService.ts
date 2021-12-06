@@ -7,6 +7,7 @@ import { ChatItem, getChatText, PartialChatMessage } from "@rebel/models/chat"
 import { isList, List } from 'immutable'
 import { clamp, clampNormFn, sum } from '@rebel/util/math'
 import { IMasterchat } from '@rebel/interfaces'
+import LogService, { createLogContext, LogContext } from '@rebel/services/LogService'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -25,10 +26,9 @@ type ChatEvents = {
 }
 
 export default class ChatService {
+  readonly name = ChatService.name
   private readonly chatStore: ChatStore
-
-  // note: there is a bug where the "live chat" (as opposed to "top chat") option doesn't work, so any
-  // messages that might be spammy/inappropriate will not show up.
+  private readonly logService: LogService
   private readonly chat: IMasterchat
 
   private listeners: Map<keyof ChatEvents, ((data: any) => void)[]> = new Map()
@@ -37,6 +37,7 @@ export default class ChatService {
   constructor (deps: Dependencies) {
     this.chatStore = deps.resolve<ChatStore>(ChatStore.name)
     this.chat = deps.resolve<MasterchatFactory>(MasterchatFactory.name).create()
+    this.logService = deps.resolve<LogService>(LogService.name)
 
     this.start()
   }
@@ -72,7 +73,7 @@ export default class ChatService {
     try {
       return token ? await this.chat.fetch(token) : await this.chat.fetch()
     } catch (e: any) {
-      console.warn('Fetch failed:', e.message)
+      this.logService.logWarning(this, 'Fetch failed:', e.message)
       return null
     }
   }
@@ -91,7 +92,7 @@ export default class ChatService {
         .map(item => this.toChatItem(item as AddChatItemAction))
 
       if (response.continuation?.token == null) {
-        console.warn(`Fetched ${chatItems.length} new chat items but continuation token is null. Ignoring chat items.`)
+        this.logService.logWarning(this, `Fetched ${chatItems.length} new chat items but continuation token is null. Ignoring chat items.`)
       } else {
         const token = response.continuation.token
         this.chatStore.addChat(token, chatItems)
@@ -100,7 +101,7 @@ export default class ChatService {
     }
 
     // if we received a new message, immediately start checking for another one
-    const nextInterval = hasNewChat ? MIN_INTERVAL : getNextInterval(new Date().getTime(), this.chatStore.chatItems.map(c => c.timestamp))
+    const nextInterval = hasNewChat ? MIN_INTERVAL : getNextInterval(Date.now(), this.chatStore.chatItems.map(c => c.timestamp), createLogContext(this.logService, this))
     this.timeout = setTimeout(this.updateMessages, nextInterval)
   }
 
@@ -152,7 +153,7 @@ function isAddChatAction (action: Action): action is AddChatItemAction {
   return action.type === 'addChatItemAction'
 }
 
-function getNextInterval (currentTime: number, timestamps: List<number> | number[]): number {
+function getNextInterval (currentTime: number, timestamps: List<number> | number[], logContext: LogContext): number {
   if (!isList(timestamps)) {
     timestamps = List(timestamps)
   }
@@ -168,6 +169,6 @@ function getNextInterval (currentTime: number, timestamps: List<number> | number
   const chatRate = sum(weights.map(w => w / (LIMIT / 1000)))
   const nextInterval = (1 - clamp(0, (chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
 
-  console.log(`Chat rate: ${chatRate.toFixed(4)} | Next interval: ${nextInterval}`)
+  logContext.logDebug(`Chat rate: ${chatRate.toFixed(4)} | Next interval: ${nextInterval}`)
   return nextInterval
 }

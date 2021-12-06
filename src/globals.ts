@@ -7,9 +7,11 @@ import assert from 'node:assert'
 // always returns T if in a debug enviroment, otherwise always returns null
 type DebugVariable<T> = T | null
 
+export type NodeEnv = 'debug' | 'release'
+
 // these can be set either statically in the .env file, or dynamically within the npm script using the `cross-env` package.
 type EnvironmentVariables = {
-  nodeEnv: 'debug' | 'release'
+  nodeEnv: NodeEnv
   port: number
 
   // authentication token passed into Masterchat

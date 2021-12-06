@@ -18,7 +18,7 @@ export default class MockMasterchat implements IMasterchat {
     this.fileService = fileService
     this.mockData = mockData
 
-    const loadedItems = this.fileService.loadObject<ChatSave>(mockData)?.chat
+    const loadedItems = this.fileService.readObject<ChatSave>(mockData)?.chat
     if (loadedItems == null || loadedItems.length === 0) {
       throw new Error('Could not instantiate MockMasterchat because no mock data exists.')
     }

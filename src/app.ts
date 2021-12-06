@@ -18,23 +18,29 @@ import MasterchatFactory from '@rebel/factories/MasterchatFactory'
 import path from 'node:path'
 import FileService from '@rebel/services/FileService'
 import { getLiveId } from '@rebel/util/text'
+import LogService, { createLogContext } from '@rebel/services/LogService'
 
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
+const liveId = getLiveId(env('liveId'))
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
   .withProperty('auth', env('auth'))
   .withProperty('channelId', env('channelId'))
-  .withProperty('liveId', getLiveId(env('liveId')))
+  .withProperty('liveId', liveId)
   .withProperty('dataPath', dataPath)
   .withProperty('mockData', env('mockData') == null ? null : path.resolve(dataPath, env('mockData')!))
   .withProperty('disableSaving', env('disableSaving') ?? false)
+  .withProperty('isLive', env('nodeEnv') === 'release')
   .withClass(FileService)
+  .withClass(LogService)
   .withClass(MasterchatFactory)
   .withClass(ChatStore)
   .withClass(ChatService)
   .build()
 
+const logContext = createLogContext(globalContext.getInstance<LogService>(LogService), { name: 'App' })
+logContext.logInfo(`Using live ID ${liveId}`)
 
 const app = express()
 // this is middleware - we can supply an ordered collection of such functions,
@@ -66,5 +72,5 @@ Server.buildServices(app,
 
 // start
 app.listen(port, () => {
-  console.log(`Server is listening on ${port}`)
+  logContext.logInfo(`Server is listening on ${port}`)
 })

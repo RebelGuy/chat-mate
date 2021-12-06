@@ -1,6 +1,7 @@
 import { Dependencies } from '@rebel/context/context';
 import { ChatItem } from '@rebel/models/chat';
 import FileService from '@rebel/services/FileService';
+import LogService from '@rebel/services/LogService'
 import { formatDate } from '@rebel/util/datetime'
 import { List } from 'immutable';
 
@@ -10,8 +11,10 @@ export type ChatSave = {
 }
 
 export default class ChatStore {
+  readonly name = ChatStore.name
   private readonly liveId: string
   private readonly fileService: FileService
+  private readonly logService: LogService
   private readonly fileName: string
 
   // what happens if the token is very old? can we get ALL messages until now in a single request, or what happens?
@@ -24,16 +27,17 @@ export default class ChatStore {
   constructor (dep: Dependencies) {
     this.liveId = dep.resolve<string>('liveId')
     this.fileService = dep.resolve<FileService>(FileService.name)
+    this.logService = dep.resolve<LogService>(LogService.name)
 
     // every live ID is associated with its own file - find it, or create a new one if one doesn't exist yet
-    const existingFile = this.fileService.getDataFiles().find(file => file.includes(this.liveId))
+    const existingFile = this.fileService.getDataFiles().find(file => file.startsWith('chat_') && file.includes(this.liveId))
     if (existingFile) {
       this.fileName = this.fileService.getDataFilePath(existingFile)
     } else {
       this.fileName = this.fileService.getDataFilePath(`chat_${formatDate()}_${this.liveId}.json`)
     }
 
-    const content: ChatSave | null = this.fileService.loadObject<ChatSave>(this.fileName)
+    const content: ChatSave | null = this.fileService.readObject<ChatSave>(this.fileName)
     this._chatItems = List(content?.chat ?? [])
     this._continuationToken = content?.continuationToken ?? null
   }
@@ -41,7 +45,7 @@ export default class ChatStore {
   // appends the new chat to the stored chat. throws if the new chat overlaps in time with the existing chat.
   public addChat (token: string, newChat: ChatItem[]) {
     this._continuationToken = token
-    console.log(`adding ${newChat.length} new chat items`)
+    this.logService.logDebug(this, `Adding ${newChat.length} new chat items`)
 
     if (newChat.length > 0) {
       const sorted = List(newChat).sort((c1, c2) => c1.timestamp - c2.timestamp)
@@ -49,8 +53,7 @@ export default class ChatStore {
       const validNewChat = newChat.filter(c => c.timestamp > latestSavedTime)
       if (newChat.length !== validNewChat.length) {
         // this should never happen, but we should still handle it gracefully
-        // todo: add logging to file
-        console.warn(`[ChatStore] Cannot add ${newChat.length - validNewChat.length} chat item(s) because their timestamps are earlier than the last saved item - discarding those items`)
+        this.logService.logWarning(this, `Cannot add ${newChat.length - validNewChat.length} chat item(s) because their timestamps are earlier than the last saved item - discarding those items`)
       }
 
       this._chatItems = this._chatItems.push(...validNewChat)
@@ -60,7 +63,7 @@ export default class ChatStore {
   }
 
   private save () {
-    this.fileService.saveObject<ChatSave>(this.fileName, {
+    this.fileService.writeObject<ChatSave>(this.fileName, {
       chat: this._chatItems.toArray(),
       continuationToken: this._continuationToken
     })

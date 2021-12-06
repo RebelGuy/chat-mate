@@ -3,6 +3,11 @@ import { GenericObject } from '@rebel/types'
 import * as fs from 'fs'
 import path from 'node:path'
 
+export type WriteOptions = {
+  // defaults to false
+  append: boolean
+}
+
 export default class FileService {
   private readonly disableSaving: boolean
   private readonly dataPath: string
@@ -13,6 +18,7 @@ export default class FileService {
     this.ensureDir(this.dataPath)
 
     if (this.disableSaving) {
+      // can't use logService here yet
       console.log('Using read-only FileService')
     }
   }
@@ -25,21 +31,29 @@ export default class FileService {
     return fs.readdirSync(this.dataPath)
   }
 
-  public save (filePath: string, contents: string) {
+  public writeLine (filePath: string, contents: string, options?: WriteOptions) {
+    this.write(filePath, contents + '\n', options)
+  }
+
+  public write (filePath: string, contents: string, options?: WriteOptions) {
     if (this.disableSaving) {
       return
     }
 
     const directory = path.dirname(filePath)
     this.ensureDir(directory)
-    fs.writeFileSync(filePath, contents)
+    if (options?.append) {
+      fs.appendFileSync(filePath, contents)
+    } else {
+      fs.writeFileSync(filePath, contents)
+    }
   }
 
-  public saveObject<T extends GenericObject> (filePath: string, object: T) {
-    this.save(filePath, JSON.stringify(object))
+  public writeObject<T extends GenericObject> (filePath: string, object: T) {
+    this.write(filePath, JSON.stringify(object))
   }
 
-  public load (filePath: string): string | null {
+  public read (filePath: string): string | null {
     if (fs.existsSync(filePath)) {
       return fs.readFileSync(filePath).toString()
     } else {
@@ -47,8 +61,8 @@ export default class FileService {
     }
   }
 
-  public loadObject<T extends GenericObject> (filePath: string): T | null {
-    const contents = this.load(filePath)
+  public readObject<T extends GenericObject> (filePath: string): T | null {
+    const contents = this.read(filePath)
     return contents ? JSON.parse(contents) as T : null
   }
 

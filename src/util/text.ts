@@ -46,7 +46,6 @@ export function getLiveId (linkOrId: string): string {
   } else if (id.length !== ID_LENGTH) {
     throw new Error(`A video/livestream ID (${id}) was able to be found on the link ${linkOrId}, but it wasn malformed.`)
   } else {
-    console.log(`Using live ID ${id}`)
     return id
   }
 }

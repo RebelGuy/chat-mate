@@ -82,7 +82,7 @@ export class ContextProvider {
     return this.built
   }
 
-  // retrieve the instance of the given class name (use the `Class.name` API to get a class' name).
+  // retrieve the instance of the given class.
   // throws if the class is not instantiated
   // tslint:disable-next-line:ban-types
   public getInstance<C = any> (serviceClass: Function): C {
@@ -112,7 +112,7 @@ export class Dependencies {
     this.dependencies = dependencies
   }
 
-  // throws if the name doesn't exist
+  // throws if the name doesn't exist. For classes, use the `class.name` API
   public resolve<C = any> (name: string): C {
     if (!Object.keys(this.dependencies).includes(name)) {
       throw new Error(`Could not resolve dependency '${name}'`)

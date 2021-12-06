@@ -2,7 +2,7 @@
 export function formatDate (date?: Date, utc?: boolean) {
   const dateToFormat = date ?? new Date()
   const { year, month, day } = deconstructDate(dateToFormat, utc ?? false)
-  return `${year}-${num2str(month)}-${num2str(day)}`
+  return `${year}-${num2str(month, 2)}-${num2str(day, 2)}`
 }
 
 // formats to HH:mm:ss.fff
@@ -17,7 +17,7 @@ function deconstructDate (date: Date, utc: boolean) {
     year: utc ? date.getUTCFullYear() : date.getFullYear(),
     // months start at zero...
     month: utc ? date.getUTCMonth() + 1 : date.getMonth() + 1,
-    day: utc ? date.getUTCDay() : date.getDay(),
+    day: utc ? date.getUTCDate() : date.getDate(),
     hours: utc ? date.getUTCHours() : date.getHours(),
     minutes: utc ? date.getUTCMinutes() : date.getMinutes(),
     seconds: utc ? date.getUTCSeconds() : date.getSeconds(),
