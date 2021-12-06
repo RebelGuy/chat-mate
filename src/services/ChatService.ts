@@ -5,7 +5,7 @@ import ChatStore from '@rebel/stores/ChatStore'
 import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
 import { ChatItem, getChatText, PartialChatMessage } from "@rebel/models/chat"
 import { isList, List } from 'immutable'
-import { clamp, clampNormFn, sum } from '@rebel/util'
+import { clamp, clampNormFn, sum } from '@rebel/util/math'
 import { IMasterchat } from '@rebel/interfaces'
 
 const MIN_INTERVAL = 500

@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/context/context';
 import { ChatItem } from '@rebel/models/chat';
 import FileService from '@rebel/services/FileService';
-import { formatDate } from '@rebel/util'
+import { formatDate } from '@rebel/util/datetime'
 import { List } from 'immutable';
 
 export type ChatSave = {

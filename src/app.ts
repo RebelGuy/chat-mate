@@ -17,7 +17,7 @@ import ChatStore from '@rebel/stores/ChatStore'
 import MasterchatFactory from '@rebel/factories/MasterchatFactory'
 import path from 'node:path'
 import FileService from '@rebel/services/FileService'
-import { getLiveId } from '@rebel/util'
+import { getLiveId } from '@rebel/util/text'
 
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
