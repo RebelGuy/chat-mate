@@ -6,13 +6,21 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 
 Ensure Node 16 is installed.
 
+Debug and release environments have both their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
+
+Note that, until Webpack bundles the dependencies (node_modules) as well, we will need to copy the node_modules folder manually for a release build.
+
+## Scripts for development:
 1. `npm install`.
 2. `npm run build` to generate the a full build, including the local `Masterchat` project.
 3. `npm run auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
 4. `npm run watch` while developing
-5. `npm run start:debug` to run the debug server, or `npm run start:release` to run the release server
+5. `npm run start:debug` to run the debug server, or `npm run start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing
 
-A mock server can be started using `npm run start:mock` which will automatically feed through new messages for easy client-side testing.
+## Scripts for production:
+Assumes that steps 1-3 of the previous section have been run.
+1. `npm run build:release` will copy `node_modules` to the `./dist/release` folder and use webpack to bundle up the application
+2. `npm run start:release` to run the release server
 
 
 # .env

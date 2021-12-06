@@ -10,6 +10,11 @@ export default class FileService {
   constructor (deps: Dependencies) {
     this.disableSaving = deps.resolve<boolean>('disableSaving')
     this.dataPath = deps.resolve<string>('dataPath')
+    this.ensureDir(this.dataPath)
+
+    if (this.disableSaving) {
+      console.log('Using read-only FileService')
+    }
   }
 
   public getDataFilePath (fileName: string) {
@@ -22,14 +27,11 @@ export default class FileService {
 
   public save (filePath: string, contents: string) {
     if (this.disableSaving) {
-      console.log('Using read-only FileService')
       return
     }
 
     const directory = path.dirname(filePath)
-    if (!fs.existsSync(directory)) {
-      fs.mkdirSync(directory, { recursive: true })
-    }
+    this.ensureDir(directory)
     fs.writeFileSync(filePath, contents)
   }
 
@@ -48,5 +50,11 @@ export default class FileService {
   public loadObject<T extends GenericObject> (filePath: string): T | null {
     const contents = this.load(filePath)
     return contents ? JSON.parse(contents) as T : null
+  }
+
+  private ensureDir(dir: string) {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
   }
 }

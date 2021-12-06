@@ -1,5 +1,11 @@
-// tslint:disable-next-line:no-var-requires
-require('module-alias/register')
+// we can't use `env()` because it requires dependencies that use aliases
+if (process.env.NODE_ENV === 'debug') {
+  // webpack doesn't like this and handles the alias resolving itself, but in debug mode
+  // the alias is defined manually (see the _moduleAliases entry in the package.json).
+  // tslint:disable-next-line:no-var-requires
+  require('module-alias/register')
+}
+
 import express from "express"
 import { Server } from "typescript-rest"
 import { ChatController } from "@rebel/controllers/ChatController"
@@ -14,7 +20,7 @@ import FileService from '@rebel/services/FileService'
 import { getLiveId } from '@rebel/util'
 
 const port = env('port')
-const dataPath = path.resolve(__dirname, `../data/${env('nodeEnv')}/`)
+const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
   .withProperty('auth', env('auth'))

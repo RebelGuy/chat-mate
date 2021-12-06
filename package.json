@@ -6,12 +6,15 @@
   "exports": "./dist/app.js",
   "dependencies": {
     "@types/node": "^16.11.7",
+    "dir-compare": "^3.3.0",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
+    "fs-extra": "^10.0.0",
     "immutable": "^4.0.0",
     "masterchat": "file:../masterchat",
     "module-alias": "^2.2.2",
     "nodemon": "^2.0.15",
+    "ts-loader": "^9.2.6",
     "tslib": "^2.3.1",
     "typescript": "^4.4.4",
     "typescript-rest": "^1.6.2"
@@ -20,17 +23,22 @@
     "build": "npm run build:dependencies && npm run build:project",
     "build:dependencies": "cd ../masterchat && npm i && npm run build",
     "build:project": "tsc",
+    "build:release": "tsc --outDir ./dist/release/ref && node src/scripts/copyNodeModules.js && webpack",
     "watch": "tsc --watch",
-    "start:debug": "cross-env NODE_ENV=debug nodemon --watch dist --inspect dist/app.js",
-    "start:mock": "cross-env NODE_ENV=debug DISABLE_SAVING=true MOCK_DATA=mockData.json nodemon --watch dist --inspect dist/app.js",
-    "start:release": "cross-env NODE_ENV=release node dist/app.js",
-    "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start"
+    "start:debug": "cross-env NODE_ENV=debug nodemon --watch dist/debug/ --inspect dist/debug/app.js",
+    "start:mock": "cross-env NODE_ENV=debug DISABLE_SAVING=true MOCK_DATA=mockData.json nodemon --watch dist/debug --inspect dist/debug/app.js",
+    "start:release": "cross-env NODE_ENV=release node dist/release/app.js",
+    "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
+    "webpack": "webpack"
   },
   "devDependencies": {
     "@types/express": "^4.17.13",
-    "cross-env": "^7.0.3"
+    "@types/fs-extra": "^9.0.13",
+    "cross-env": "^7.0.3",
+    "webpack": "^5.64.4",
+    "webpack-cli": "^4.9.1"
   },
   "_moduleAliases": {
-    "@rebel": "dist"
+    "@rebel": "dist/debug"
   }
 }

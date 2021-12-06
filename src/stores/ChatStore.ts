@@ -28,7 +28,7 @@ export default class ChatStore {
     // every live ID is associated with its own file - find it, or create a new one if one doesn't exist yet
     const existingFile = this.fileService.getDataFiles().find(file => file.includes(this.liveId))
     if (existingFile) {
-      this.fileName = existingFile
+      this.fileName = this.fileService.getDataFilePath(existingFile)
     } else {
       this.fileName = this.fileService.getDataFilePath(`chat_${formatDate()}_${this.liveId}.json`)
     }
