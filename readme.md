@@ -4,23 +4,23 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 
 # Project Details
 
-Ensure Node 16 is installed.
+Ensure Node 16 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`.
 
 Debug and release environments have both their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
 
 Note that, until Webpack bundles the dependencies (node_modules) as well, we will need to copy the node_modules folder manually for a release build.
 
 ## Scripts for development:
-1. `npm install`.
-2. `npm run build` to generate the a full build, including the local `Masterchat` project.
-3. `npm run auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
-4. `npm run watch` while developing
-5. `npm run start:debug` to run the debug server, or `npm run start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing
+1. `yarn install`.
+2. `yarn build` to generate the a full build, including the local `Masterchat` project.
+3. `yarn auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
+4. `yarn watch` while developing
+5. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing
 
 ## Scripts for production:
 Assumes that steps 1-3 of the previous section have been run.
-1. `npm run build:release` will copy `node_modules` to the `./dist/release` folder and use webpack to bundle up the application
-2. `npm run start:release` to run the release server
+1. `yarn build:release` will copy `node_modules` to the `./dist/release` folder and use webpack to bundle up the application
+2. `yarn start:release` to run the release server
 
 
 # .env
@@ -28,7 +28,7 @@ Define a `debug.env` and `release.env` file that sets the following environment 
 
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
-- `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `npm run auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
+- `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `yarn auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `LIVE_ID`: The video ID of the livestream.
 - `MOCK_DATA`: [Optional, debug only] The JSON file containing the `ChatSave` data that the `ChatStore` can load. If set, the server will use a mocked Masterchat to "auto-play" chat events, and no longer connect to YouTube.
