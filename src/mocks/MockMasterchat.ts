@@ -14,6 +14,9 @@ export default class MockMasterchat implements IMasterchat {
   private counter: number = 0
   private lastFetch: number = Date.now()
 
+  // for debugging - if set, messages will cycle in the given order
+  private mockMessages: string[] | null = null
+
   constructor (fileService: FileService, mockData: string) {
     this.fileService = fileService
     this.mockData = mockData
@@ -58,7 +61,7 @@ export default class MockMasterchat implements IMasterchat {
       message: item.messageParts.map(part => {
         if (part.type === 'text') {
           return {
-            text: part.text,
+            text: this.mockMessages?.length ? this.mockMessages[this.counter % this.mockMessages.length] : part.text,
             bold: part.isBold,
             italics: part.isItalics
           } as YTRun
