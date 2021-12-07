@@ -8,14 +8,14 @@ Ensure Node 16 is installed, and a global version of yarn exists (`npm install -
 
 Debug and release environments have both their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
 
-Note that, until Webpack bundles the dependencies (node_modules) as well, we will need to copy the node_modules folder manually for a release build.
+Note that, until Webpack bundles the dependencies (node_modules) as well, we will need to copy the node_modules folder for a release build (this is done automatically as part of the [release build script](#scripts-for-development)).
 
 ## Scripts for development:
 1. `yarn install`.
 2. `yarn build` to generate the a full build, including the local `Masterchat` project.
 3. `yarn auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
 4. `yarn watch` while developing
-5. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing
+5. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options.
 
 ## Scripts for production:
 Assumes that steps 1-3 of the previous section have been run.
@@ -105,7 +105,13 @@ Returns an object with the following properties:
 
 # Change Log
 
-## v1.1
+## v1.2 - The Development Update
+- Added separate debug/release environments (.env file, /data folder, and build output)
+- Added `MockMasterchat` for more convenient testing
+- Added `LogService`
+- Project now uses yarn
+
+## v1.1 - The Encoding Update
 - Added docs
 - LiveId can now be any YouTube link to the livestream
 - Fixed error handling
