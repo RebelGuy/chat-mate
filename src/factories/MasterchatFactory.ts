@@ -27,7 +27,7 @@ export default class MasterchatFactory implements IFactory<IMasterchat> {
   public create (): IMasterchat {
     if (this.mockData) {
       this.logService.logInfo(this, 'Using MockMasterchat for auto-playing data')
-      return new MockMasterchat(this.fileService, this.mockData)
+      return new MockMasterchat(this.fileService, this.logService, this.mockData)
     } else {
       // note: there is a bug where the "live chat" (as opposed to "top chat") option in FetchChatOptions doesn't work,
       // so any messages that might be spammy/inappropriate will not show up.

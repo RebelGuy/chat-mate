@@ -169,6 +169,6 @@ function getNextInterval (currentTime: number, timestamps: List<number> | number
   const chatRate = sum(weights.map(w => w / (LIMIT / 1000)))
   const nextInterval = (1 - clamp(0, (chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
 
-  logContext.logDebug(`Chat rate: ${chatRate.toFixed(4)} | Next interval: ${nextInterval}`)
+  logContext.logDebug(`Chat rate: ${chatRate.toFixed(4)} | Next interval: ${nextInterval.toFixed(0)}`)
   return nextInterval
 }
