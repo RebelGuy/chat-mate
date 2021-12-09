@@ -4,7 +4,10 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 
 # Project Details
 
-Ensure Node 16 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`.
+Ensure Node 16 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]`
+
+Recommended extensions:
+- `Prisma`
 
 Debug and release environments have both their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
 
@@ -24,18 +27,35 @@ Assumes that steps 1-3 of the previous section have been run.
 
 
 # .env
-Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`.
+Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template.
 
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `yarn auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `LIVE_ID`: The video ID of the livestream.
+- `DATABASE_CONNECTION`: The connection string to the MySQL database that Prisma should use.
 - `MOCK_DATA`: [Optional, debug only] The JSON file containing the `ChatSave` data that the `ChatStore` can load. If set, the server will use a mocked Masterchat to "auto-play" chat events, and no longer connect to YouTube.
 - `DISABLE_SAVING`: [Optional, debug only] Whether the debug server should be run in a "read-only" mode, recommended when `MOCK_DATA` is set.
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
 - `NODE_ENV`: Either `debug` or `release` to indicate whether we are running a live server or not.
+
+
+## Database
+
+We use MySQL databases. The `debug` database is named `chat_mate_debug`, while the `release` database is named `chat_mate`. Ensure the `DATABASE_URL` connection strings is set in the respective [`.env`](#.env) file.
+
+`Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
+
+At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately update the Prisma Client for up-to-date typings. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, see https://www.prisma.io/docs/concepts/components/prisma-client.
+
+Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:debug`.
+
+During a migration, ensure that the `.sql` is edited to avoid data loss, but avoid making changes that affect the database schema, other than the ones already present.
+
+`prisma migrate deploy` deploys changes to the production environment. Only uses migration files, NOT the Prisma schema file.
+
 
 
 # API Endpoints

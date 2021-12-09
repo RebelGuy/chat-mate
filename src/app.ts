@@ -19,7 +19,9 @@ import path from 'node:path'
 import FileService from '@rebel/services/FileService'
 import { getLiveId } from '@rebel/util/text'
 import LogService, { createLogContext } from '@rebel/services/LogService'
+import { PrismaClient } from '@prisma/client'
 
+const prisma = new PrismaClient()
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
 const liveId = getLiveId(env('liveId'))

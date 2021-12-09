@@ -57,7 +57,8 @@ export function toConstCase (word: string): string {
   let underscores: number[] = []
   for (let i = 1; i < word.length; i++) {
     const char = word[i]!
-    const isCapital = char === char.toUpperCase()
+    // this excludes things like numbers
+    const isCapital = char !== char.toLowerCase() && char === char.toUpperCase()
 
     if (isCapital && i - lastCapital > 1) {
       lastCapital = i
@@ -72,4 +73,14 @@ export function toConstCase (word: string): string {
   }
 
   return constName.toUpperCase()
+}
+
+// converts the string to param_case
+export function toParamCase(text: string): string {
+  return text
+    .replace(/[-.,]/, ' ')
+    .split(' ')
+    .map(t => toConstCase(t))
+    .join('_')
+    .toLowerCase()
 }
