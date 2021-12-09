@@ -4,7 +4,7 @@ import { copyFileSync } from 'fs-extra'
 import { join as pathJoin } from 'node:path'
 import { toParamCase } from '../../util/text'
 
-// "inspired" by https://github.com/redwoodjs/redwood/blob/main/packages/cli/src/commands/generate/dataMigration/dataMigration.js
+// "inspired" by https://redwoodjs.com/docs/data-migrations (https://github.com/redwoodjs/redwood/blob/main/packages/cli/src/commands/generate/dataMigration/dataMigration.js)
 throw new Error('Not yet supported')
 
 // the problem here is that everything seems to work, except the Prisma client may not be up-to-date.
@@ -35,6 +35,9 @@ model DataMigration {
   @@map("_data_migrations")
 }
 */
+
+// It may be worth manually creating the schema folder and .sql file so that unapplied migrations are not automatically run
+// when adding a new schema migration.
 
 const main = async () => {
   const name = await promptInput('? Enter a name for the new data migration: » ')
