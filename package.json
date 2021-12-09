@@ -5,22 +5,26 @@
   "main": "dist/app.js",
   "exports": "./dist/app.js",
   "scripts": {
+    "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
     "build": "npm run build:dependencies && npm run build:project",
     "build:dependencies": "cd ../masterchat && npm i && npm run build",
     "build:project": "tsc",
-    "build:release": "tsc --outDir ./dist/release/ref && node src/scripts/copyNodeModules.js && webpack",
     "watch": "tsc --watch",
     "start:debug": "cross-env NODE_ENV=debug nodemon --watch dist/debug/ --inspect dist/debug/app.js",
     "start:mock": "cross-env NODE_ENV=debug DISABLE_SAVING=true MOCK_DATA=mockData.json nodemon --watch dist/debug --inspect dist/debug/app.js",
-    "start:release": "cross-env NODE_ENV=release node dist/release/app.js",
-    "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
     "webpack": "webpack",
+    
     "generate": "dotenv -e debug.env npx prisma generate",
-    "migrate:debug": "dotenv -e debug.env npx prisma migrate dev",
-    "migrate:release": "dotenv -e release.env npx prisma migrate deploy",
-    "migrate:schema": "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true dotenv -e debug.env ts-node src/scripts/migrations/migrateSchema.ts",
+    "db:push": "dotenv -e debug.env npx prisma db push",
+    "db:pull": "dotenv -e debug.env npx prisma db pull",
+    "migrate:debug":            "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true NODE_ENV=debug dotenv -e debug.env ts-node src/scripts/migrations/applySchemaMigrations.ts",
+    "migrate:schema":           "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true NODE_ENV=debug dotenv -e debug.env ts-node src/scripts/migrations/migrateSchema.ts",
     "migrate:debug_deprecated": "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true NODE_ENV=debug dotenv -e debug.env ts-node src/scripts/migrations/applyMigrations",
-    "migrate:data_deprecated": "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true dotenv -e debug.env ts-node src/scripts/migrations/migrateData.ts"
+    "migrate:data_deprecated":  "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true NODE_ENV=debug dotenv -e debug.env ts-node src/scripts/migrations/migrateData.ts",
+    
+    "migrate:release": "dotenv -e release.env npx prisma migrate deploy",
+    "build:release": "tsc --outDir ./dist/release/ref && node src/scripts/copyNodeModules.js && webpack",
+    "start:release": "cross-env NODE_ENV=release node dist/release/app.js"
   },
   "dependencies": {
     "@prisma/client": "^3.6.0",
