@@ -19,6 +19,7 @@ type EnvironmentVariables = {
 
   channelId: string
   liveId: string
+  databaseUrl: string
 
   // file for auto-playing chat messages
   mockData?: DebugVariable<string>

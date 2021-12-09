@@ -14,12 +14,13 @@ import { ContextProvider, setContextProvider } from '@rebel/context/context'
 import ChatService from '@rebel/services/ChatService'
 import ServiceFactory from '@rebel/context/CustomServiceFactory'
 import ChatStore from '@rebel/stores/ChatStore'
-import MasterchatFactory from '@rebel/factories/MasterchatFactory'
+import MasterchatProvider from '@rebel/providers/MasterchatProvider'
 import path from 'node:path'
 import FileService from '@rebel/services/FileService'
 import { getLiveId } from '@rebel/util/text'
 import LogService, { createLogContext } from '@rebel/services/LogService'
 import { PrismaClient } from '@prisma/client'
+import PrismaClientProvider from '@rebel/providers/PrismaClientProvider'
 
 const prisma = new PrismaClient()
 const port = env('port')
@@ -34,9 +35,11 @@ const globalContext = ContextProvider.create()
   .withProperty('mockData', env('mockData') == null ? null : path.resolve(dataPath, env('mockData')!))
   .withProperty('disableSaving', env('disableSaving') ?? false)
   .withProperty('isLive', env('nodeEnv') === 'release')
+  .withProperty('databaseUrl', env('databaseUrl'))
+  .withClass(PrismaClientProvider)
   .withClass(FileService)
   .withClass(LogService)
-  .withClass(MasterchatFactory)
+  .withClass(MasterchatProvider)
   .withClass(ChatStore)
   .withClass(ChatService)
   .build()

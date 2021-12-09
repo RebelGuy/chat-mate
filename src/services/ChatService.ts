@@ -1,6 +1,6 @@
 
 import { Dependencies } from '@rebel/context/context'
-import MasterchatFactory from '@rebel/factories/MasterchatFactory'
+import MasterchatProvider from '@rebel/providers/MasterchatProvider'
 import ChatStore from '@rebel/stores/ChatStore'
 import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
 import { ChatItem, getChatText, PartialChatMessage } from "@rebel/models/chat"
@@ -36,7 +36,7 @@ export default class ChatService {
 
   constructor (deps: Dependencies) {
     this.chatStore = deps.resolve<ChatStore>(ChatStore.name)
-    this.chat = deps.resolve<MasterchatFactory>(MasterchatFactory.name).create()
+    this.chat = deps.resolve<MasterchatProvider>(MasterchatProvider.name).get()
     this.logService = deps.resolve<LogService>(LogService.name)
 
     this.start()
