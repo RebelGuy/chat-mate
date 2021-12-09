@@ -13,8 +13,26 @@ For new projects: https://www.prisma.io/docs/getting-started/setup-prisma/start-
 
 
 ## Schema
+https://www.prisma.io/docs/concepts/components/prisma-schema/data-model
 - can create and use `enum`s in the `schema.prisma` file
 
 ## Querying
+Create a type that only `select`s certain columns of a table:
+```typescript
+const userPersonalData = Prisma.validator<Prisma.UserArgs>()({
+  select: { email: true, name: true },
+})
+type UserPersonalData = Prisma.UserGetPayload<typeof userPersonalData>
+```
+
+`include` relations of a model:
+```typescript
+async function getUsersWithPosts() {
+  const users = await prisma.user.findMany({ include: { posts: true } })
+  return users
+}
+```
+
+
 
 ## Migration problems and resolutions

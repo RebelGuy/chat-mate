@@ -9,3 +9,107 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+model Livestream {
+  id        Int      @id @default(autoincrement())
+  liveId    String   @unique @db.VarChar(11)
+  createdAt DateTime @default(now())
+
+  // for fetching the chat of this livestream
+  continuationToken String?
+
+  chatMessages ChatMessage[]
+}
+
+// for tracking history
+model ChannelInfo {
+  id          Int     @id @default(autoincrement())
+  name        String
+  imageUrl    String
+  isOwner     Boolean
+  isModerator Boolean
+  IsVerified  Boolean
+
+  /// first seen with this info
+  time DateTime
+
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
+
+  @@map("channel_info")
+}
+
+model Channel {
+  id        Int    @id @default(autoincrement())
+  youtubeId String @unique
+
+  chatMessages ChatMessage[]
+  infoHistory  ChannelInfo[]
+}
+
+// CHAT
+
+/// Unlike text, emoji objects are finite and can be referenced
+model ChatEmoji {
+  id            Int     @id @default(autoincrement())
+  youtubeId     String  @unique
+  imageUrl      String?
+  imageWidth    Int?    @db.SmallInt
+  imageHeight   Int?    @db.SmallInt
+  name          String? @db.VarChar(127)
+  label         String? @db.VarChar(127)
+  isCustomEmoji Boolean
+
+  messageParts ChatMessagePart[]
+
+  @@map("chat_emoji")
+}
+
+model ChatText {
+  id        Int     @id @default(autoincrement())
+  isBold    Boolean
+  isItalics Boolean
+  // YouTube imposes a chat message limit of 200 characters
+  text      String  @db.VarChar(200)
+
+  // have to set it to optional to make the compiler happy, but should be 1-to-1 exactly
+  messagePart       ChatMessagePart?
+  chatMessagePartId Int              @unique
+
+  @@map("chat_text")
+}
+
+/// has either a text or emoji component attached, but never none or both
+model ChatMessagePart {
+  id    Int @id @default(autoincrement())
+  order Int
+
+  chatMessageId Int
+  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])
+
+  textId Int       @unique
+  text   ChatText? @relation(fields: [textId], references: [id])
+
+  emojiId Int
+  emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
+
+  // all message parts of the chat message must have a different ordering
+  @@unique([order, chatMessageId])
+  @@map("chat_message_part")
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  youtubeId String
+  time      DateTime
+
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
+
+  livestreamId Int
+  livestream   Livestream @relation(fields: [livestreamId], references: [id])
+
+  chatMessageParts ChatMessagePart[]
+
+  @@map("chat_message")
+}
