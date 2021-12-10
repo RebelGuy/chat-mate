@@ -33,10 +33,12 @@ export type BuiltContext = Branded<ContextProvider, _BuiltContextBrand>
 export class ContextProvider {
   private built: boolean
   private builder: ServiceBuilder<any>
+  private isDisposed: boolean
 
   constructor (baseDependencies: any) {
     this.built = false
     this.builder = new ServiceBuilder(baseDependencies)
+    this.isDisposed = false
   }
 
   public static create (): ContextProvider {
@@ -86,7 +88,18 @@ export class ContextProvider {
   // throws if the class is not instantiated
   // tslint:disable-next-line:ban-types
   public getInstance<C = any> (serviceClass: Function): C {
+    if (this.isDisposed) {
+      throw new Error('Cannot use the context because it has been disposed')
+    }
     return this.builder.getDependencies().resolve<C>(serviceClass.name)
+  }
+
+  public dispose() {
+    if (this.isBuiltContext()) {
+      this.builder.dispose()
+      this.isDisposed = true
+    }
+    throw new Error(`Cannot dispose a context that hasn't been built yet`)
   }
 
   private assertMutable () {
@@ -173,6 +186,12 @@ class ServiceBuilder<D> {
 
   public getDependencies (): Dependencies {
     return new Dependencies(this.dependencies)
+  }
+
+  public dispose () {
+    for (const key in Object.keys(this.dependencies)) {
+      Object.defineProperty(this.dependencies, key, { value: null, writable: false })
+    }
   }
 
   private extendDependencies (name: string, value: any) {

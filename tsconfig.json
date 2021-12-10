@@ -28,7 +28,11 @@
   ],
   "exclude": [
     "./node_modules",
-    "./src/scripts",
-    "./prisma"
+    "./prisma",
+
+    // related to data migrations - ignore for now
+    "./src/scripts/migrations/_dataMigrationTemplate.ts",
+    "./src/scripts/migrations/applyMigrations.ts",
+    "./src/scripts/migrations/migrateData.ts"
   ]
 }

@@ -1,11 +1,4 @@
-// we can't use `env()` because it requires dependencies that use aliases
-if (process.env.NODE_ENV === 'debug') {
-  // webpack doesn't like this and handles the alias resolving itself, but in debug mode
-  // the alias is defined manually (see the _moduleAliases entry in the package.json).
-  // tslint:disable-next-line:no-var-requires
-  require('module-alias/register')
-}
-
+require('.config')
 import express from "express"
 import { Server } from "typescript-rest"
 import { ChatController } from "@rebel/controllers/ChatController"
@@ -19,10 +12,8 @@ import path from 'node:path'
 import FileService from '@rebel/services/FileService'
 import { getLiveId } from '@rebel/util/text'
 import LogService, { createLogContext } from '@rebel/services/LogService'
-import { PrismaClient } from '@prisma/client'
-import PrismaClientProvider from '@rebel/providers/PrismaClientProvider'
+import DbProvider from '@rebel/providers/DbProvider'
 
-const prisma = new PrismaClient()
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
 const liveId = getLiveId(env('liveId'))
@@ -36,9 +27,9 @@ const globalContext = ContextProvider.create()
   .withProperty('disableSaving', env('disableSaving') ?? false)
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
-  .withClass(PrismaClientProvider)
   .withClass(FileService)
   .withClass(LogService)
+  .withClass(DbProvider)
   .withClass(MasterchatProvider)
   .withClass(ChatStore)
   .withClass(ChatService)

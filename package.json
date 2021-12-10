@@ -2,8 +2,8 @@
   "name": "chat-mate-server",
   "version": "1.2.0",
   "private": true,
-  "main": "dist/app.js",
-  "exports": "./dist/app.js",
+  "main": "dist/debug/app.js",
+  "exports": "./dist/debug/app.js",
   "scripts": {
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
     "build": "npm run build:dependencies && npm run build:project",

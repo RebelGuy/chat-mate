@@ -26,7 +26,7 @@ const main = async () => {
   await execAsync(command)
 
   // open the migration file for editing
-  const migration = getAvailableMigrationsSorted().at(-1)
+  const migration = getAvailableMigrationsSorted().at(-1)!
   const sqlFile = path.join(migration.path, 'migration.sql')
   await execAsync(`code -r ${sqlFile}`)
 

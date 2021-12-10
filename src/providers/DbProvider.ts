@@ -1,22 +1,21 @@
-import { Dependencies } from '@rebel/context/context';
-import IProvider from '@rebel/providers/IProvider';
-import { IMasterchat } from '@rebel/interfaces';
-import MockMasterchat from '@rebel/mocks/MockMasterchat'
-import FileService from '@rebel/services/FileService'
+import { Dependencies } from '@rebel/context/context'
+import IProvider from '@rebel/providers/IProvider'
 import LogService from '@rebel/services/LogService'
-import { Masterchat } from 'masterchat';
-import { Prisma, PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
-export default class PrismaClientProvider implements IProvider<PrismaClient> {
-  readonly name = PrismaClientProvider.name
+// remove properties from PrismaClient that we will never need
+type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
 
-  private readonly fileService: FileService
+export type Db = Omit<PrismaClient, UnusedPrismaProperties>
+
+export default class DbProvider implements IProvider<Db> {
+  readonly name = DbProvider.name
+
   private readonly logService: LogService
   private readonly databaseUrl: string
   private readonly prismaClient: PrismaClient
 
   constructor (deps: Dependencies) {
-    this.fileService = deps.resolve<FileService>(FileService.name)
     this.logService = deps.resolve<LogService>(LogService.name)
     this.databaseUrl = deps.resolve<string>('databaseUrl')
 
@@ -48,7 +47,7 @@ export default class PrismaClientProvider implements IProvider<PrismaClient> {
     this.prismaClient = client
   }
 
-  public get (): PrismaClient {
-    return this.prismaClient
+  public get (): Db {
+    return this.prismaClient as Db
   }
 }
