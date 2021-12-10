@@ -1,19 +1,22 @@
+require('../_config')
 import * as fs from 'fs'
-import env from '../globals'
+import env from '@rebel/globals'
 import path from 'node:path'
-import { ContextProvider } from '../context/context'
-import FileService from '../services/FileService'
-import LogService, { createLogContext } from '../services/LogService'
-import DbProvider from '../providers/DbProvider'
-import { ChatSave } from '../stores/ChatStore'
+import { ContextProvider } from '@rebel/context/context'
+import FileService from '@rebel/services/FileService'
+import LogService, { createLogContext } from '@rebel/services/LogService'
+import DbProvider from '@rebel/providers/DbProvider'
+import { ChatSave } from '@rebel/stores/ChatStore'
+import { Prisma } from '@prisma/client'
 
 // run using
-//   cross-env NODE_ENV=debug dotenv -e debug.env ts-node src/scripts/migrations/applySchemaMigrations.ts
+//   yarn cross-env NODE_ENV=debug node --inspect dist/debug/scripts/fillDatabaseWithJsonData.js
 
 const main = async () => {
-    const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
+    const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)
 
     const dataFiles = fs.readdirSync(dataPath)
+      .sort((a, b) => fs.statSync(path.join(dataPath, a)).birthtimeMs - fs.statSync(path.join(dataPath, b)).birthtimeMs)
     for (const file of dataFiles) {
       if (path.extname(file).toLowerCase() !== '.json' || !file.startsWith('chat_')) {
         continue
@@ -32,6 +35,7 @@ const main = async () => {
         liveId = parts[2].substring(0, 11)
       } else {
         console.log(`Could not parse liveId for the file ${file}... skipping`)
+        continue
       }
       console.log(`Using liveId ${liveId}`)
 
@@ -50,16 +54,99 @@ const main = async () => {
       const fileService = context.getInstance<FileService>(FileService)
       const db = context.getInstance<DbProvider>(DbProvider).get()
 
-      const data: ChatSave = fileService.readObject<ChatSave>(filePath)
+      const data: ChatSave = fileService.readObject<ChatSave>(filePath)!
 
+      // get or create livestream
       let livestream = await db.livestream.findUnique({ where: { liveId }})
-      break
-      // livestream = await db.livestream.create({ data: {
-      //   liveId,
-      //   continuationToken: data.continuationToken,
-      //   createdAt: fs.statSync(filePath).birthtime
-      // }})
+      if (!livestream) {
+        livestream = await db.livestream.create({ data: {
+          liveId,
+          continuationToken: data.continuationToken,
+          createdAt: fs.statSync(filePath).birthtime
+        }})
+      }
 
+      for (const { timestamp, id: chatId, author, messageParts } of data.chat) {
+        // get/update or create channel
+        let channel = await db.channel.findUnique({
+          where: { youtubeId: author.channelId },
+          include: { infoHistory: true }
+        })
+        const updatedInfo = {
+          time: new Date(timestamp),
+          name: author.name!,
+          imageUrl: author.image,
+          isOwner: author.attributes.isOwner,
+          isModerator: author.attributes.isModerator,
+          IsVerified: author.attributes.isVerified
+        }
+
+        if (channel) {
+          // todo: ensure the info hasn't changed, and update it otherwise
+        } else {
+          channel = await db.channel.create({
+            data: {
+              youtubeId: author.channelId,
+              infoHistory: { create: updatedInfo }
+            },
+            include: { infoHistory: true }
+          })
+        }
+
+        // create chat message
+        const chatMessage = await db.chatMessage.create({
+          data: {
+            time: new Date(timestamp),
+            youtubeId: chatId,
+            channel: { connect: { id: channel.id }},
+            livestream: { connect: { id: livestream.id }}
+          }
+        })
+
+        for (let i = 0; i < messageParts.length; i++) {
+          const part = messageParts[i]
+
+          const newMessagePart = {
+            order: i,
+            chatMessage: { connect: { id: chatMessage.id }}
+          }
+
+          if (part.type === 'emoji') {
+            const youtubeId = `Unknown-${part.name}`
+            await db.chatMessagePart.create({ data: {
+              order: i,
+              chatMessage: { connect: { id: chatMessage.id }},
+              emoji: { connectOrCreate: {
+                create: {
+                  youtubeId: youtubeId,
+                  imageUrl: part.image.url,
+                  imageHeight: part.image.height ?? null,
+                  imageWidth: part.image.width ?? null,
+                  label: part.label,
+                  name: part.name,
+                  isCustomEmoji: false
+                },
+                // this is used to find an existing record to connect to the message part - if none is found, creates a new one (defined above)
+                where: { youtubeId: youtubeId }
+              }}
+            }})
+
+          } else {
+            await db.chatMessagePart.create({ data: {
+              order: i,
+              chatMessage: { connect: { id: chatMessage.id }},
+              text: { create: {
+                isBold: part.isBold,
+                isItalics: part.isItalics,
+                text: part.text
+              }}
+            }})
+          }
+        }
+
+        return
+      }
+      return
       console.log(`Completed liveId ${liveId} successfully\n\n`)
     }
 

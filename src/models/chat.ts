@@ -47,8 +47,10 @@ export type PartialEmojiChatMessage = {
 
 export type ChatImage = {
   url: string,
-  width: number,
-  height: number
+
+  // dimensions not set if the image is an SVG
+  width?: number,
+  height?: number
 }
 
 export function getChatText (message: PartialChatMessage[]) {

@@ -49,7 +49,7 @@ model Channel {
 
 // CHAT
 
-/// Unlike text, emoji objects are finite and can be referenced
+/// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
   id            Int     @id @default(autoincrement())
   youtubeId     String  @unique @db.VarChar(255)
@@ -72,8 +72,8 @@ model ChatText {
   // YouTube imposes a chat message limit of 200 characters
   text      String  @db.VarChar(200)
 
-  messagePart       ChatMessagePart @relation(fields: [chatMessagePartId], references: [id])
-  chatMessagePartId Int             @unique
+  // technically messagePart should always be defined
+  messagePart ChatMessagePart?
 
   @@map("chat_text")
 }
@@ -87,7 +87,7 @@ model ChatMessagePart {
   chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])
 
   textId Int?      @unique
-  text   ChatText?
+  text   ChatText? @relation(fields: [textId], references: [id])
 
   emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])

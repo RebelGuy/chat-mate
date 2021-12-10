@@ -33,6 +33,8 @@ async function getUsersWithPosts() {
 }
 ```
 
+Using nested queries to create objects is recommended as they operate on an all-or-none basis.
+See https://www.prisma.io/docs/concepts/components/prisma-client/relation-queries for examples.
 
 
 ## Migration problems and resolutions
