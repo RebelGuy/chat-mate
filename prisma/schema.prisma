@@ -16,7 +16,7 @@ model Livestream {
   createdAt DateTime @default(now())
 
   // for fetching the chat of this livestream
-  continuationToken String?
+  continuationToken String? @db.VarChar(1023)
 
   chatMessages ChatMessage[]
 }
@@ -24,8 +24,8 @@ model Livestream {
 // for tracking history
 model ChannelInfo {
   id          Int     @id @default(autoincrement())
-  name        String
-  imageUrl    String
+  name        String  @db.VarChar(255)
+  imageUrl    String  @db.VarChar(511)
   isOwner     Boolean
   isModerator Boolean
   IsVerified  Boolean
@@ -41,7 +41,7 @@ model ChannelInfo {
 
 model Channel {
   id        Int    @id @default(autoincrement())
-  youtubeId String @unique
+  youtubeId String @unique @db.VarChar(63)
 
   chatMessages ChatMessage[]
   infoHistory  ChannelInfo[]
@@ -52,8 +52,8 @@ model Channel {
 /// Unlike text, emoji objects are finite and can be referenced
 model ChatEmoji {
   id            Int     @id @default(autoincrement())
-  youtubeId     String  @unique
-  imageUrl      String?
+  youtubeId     String  @unique @db.VarChar(255)
+  imageUrl      String? @db.VarChar(511)
   imageWidth    Int?    @db.SmallInt
   imageHeight   Int?    @db.SmallInt
   name          String? @db.VarChar(127)
@@ -100,7 +100,7 @@ model ChatMessagePart {
 
 model ChatMessage {
   id        Int      @id @default(autoincrement())
-  youtubeId String
+  youtubeId String   @db.VarChar(255)
   time      DateTime
 
   channelId Int
