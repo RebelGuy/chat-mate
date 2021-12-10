@@ -1,4 +1,4 @@
-require('.config')
+require('_config')
 import express from "express"
 import { Server } from "typescript-rest"
 import { ChatController } from "@rebel/controllers/ChatController"

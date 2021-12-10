@@ -23,7 +23,7 @@ export default class DbProvider implements IProvider<Db> {
     const client = new PrismaClient({
       datasources: { db: { url: this.databaseUrl }},
       errorFormat: 'pretty',
-      rejectOnNotFound: true,
+      rejectOnNotFound: false,
       log: [
         { level: 'query', emit: 'event' },
         { level: 'info', emit: 'event' },
@@ -32,7 +32,7 @@ export default class DbProvider implements IProvider<Db> {
       ]
     })
     client.$on('query', e => {
-      this.logService.logDebug(this, `(${e.duration} ms)`, e.query)
+      this.logService.logDebug(this, `(${e.duration} ms)`, e.query, e.params)
     })
     client.$on('info', e => {
       this.logService.logInfo(this, e.message)

@@ -1,3 +1,5 @@
+// `require()` this file at the very top of any entry-level files
+
 // we can't use `env()` because it requires dependencies that use aliases
 if (process.env.NODE_ENV === 'debug') {
   // webpack doesn't like this and handles the alias resolving itself, but in debug mode
