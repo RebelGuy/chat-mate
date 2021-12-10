@@ -1,8 +1,10 @@
+require('../../_config')
 import { promptInput } from '../../util/input'
 import { toParamCase } from '../../util/text'
 import { execAsync } from '../../util/node'
 import path from 'node:path'
 import { getAvailableMigrationsSorted, getOutstandingMigrationNames } from './util'
+import env from '@rebel/globals'
 
 // for some reason dotenv scripts don't propagate the --create-only parameter
 
@@ -22,8 +24,22 @@ const main = async () => {
   }
 
   const name = await promptInput('? Enter a name for the new schema migration: » ')
-  const command = `yarn prisma migrate dev --create-only --name ${toParamCase(name)}`
-  await execAsync(command)
+
+  // there is supposed to be a --force flag that skips any prompts for when Prisma thinks the migration might
+  // cause data loss. it is currently disabled, and since we are "in an interactive environment" there will be a crash.
+  // https://github.com/prisma/prisma/blob/231670c50daa9d48b1f098b221e82c2e259c7748/packages/migrate/src/commands/MigrateDev.ts
+  const command = `prisma migrate dev --create-only --name ${toParamCase(name)}`
+  try {
+    await execAsync(`yarn ${command}`)
+  } catch (e) {
+    console.log('')
+    console.log('There was a problem, try running the command manually in the terminal:')
+
+    // don't use dotenv -e because for some reason it ignores the --create-only flag
+    console.log(`  yarn cross-env NODE_ENV=debug DATABASE_URL=${env('databaseUrl')} ${command}`)
+    console.log('')
+    process.exit(0)
+  }
 
   // open the migration file for editing
   const migration = getAvailableMigrationsSorted().at(-1)!

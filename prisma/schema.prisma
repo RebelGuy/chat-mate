@@ -72,9 +72,8 @@ model ChatText {
   // YouTube imposes a chat message limit of 200 characters
   text      String  @db.VarChar(200)
 
-  // have to set it to optional to make the compiler happy, but should be 1-to-1 exactly
-  messagePart       ChatMessagePart?
-  chatMessagePartId Int              @unique
+  messagePart       ChatMessagePart @relation(fields: [chatMessagePartId], references: [id])
+  chatMessagePartId Int             @unique
 
   @@map("chat_text")
 }
@@ -87,10 +86,10 @@ model ChatMessagePart {
   chatMessageId Int
   chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])
 
-  textId Int       @unique
-  text   ChatText? @relation(fields: [textId], references: [id])
+  textId Int?      @unique
+  text   ChatText?
 
-  emojiId Int
+  emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
 
   // all message parts of the chat message must have a different ordering
@@ -100,7 +99,7 @@ model ChatMessagePart {
 
 model ChatMessage {
   id        Int      @id @default(autoincrement())
-  youtubeId String   @db.VarChar(255)
+  youtubeId String   @unique @db.VarChar(255)
   time      DateTime
 
   channelId Int
