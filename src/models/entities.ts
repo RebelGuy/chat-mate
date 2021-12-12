@@ -61,4 +61,6 @@ export namespace Entity {
 }
 
 // wraps Entity.Object, for creating new entities
+// note that `undefined` is interpreted as "not set" (for example in the context of updating a record)
+// while `null` is interpreted as the "value null"
 export type New<E> = NullableToOptional<Omit<E, 'id'>>

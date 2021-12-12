@@ -27,7 +27,7 @@ export default class LivestreamStore {
     return this.createOrUpdateLivestream({ createdAt: new Date(), liveId: this.liveId })
   }
 
-  public async setContinuationToken (continuationToken: string): Promise<Livestream> {
+  public async setContinuationToken (continuationToken: string | null): Promise<Livestream> {
     if (!this._currentLivestream) {
       throw new Error('No current livestream exists')
     } else {

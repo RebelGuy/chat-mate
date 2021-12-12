@@ -75,6 +75,7 @@ export default class ChatService {
       return token ? await this.masterchat.fetch(token) : await this.masterchat.fetch()
     } catch (e: any) {
       this.logService.logWarning(this, 'Fetch failed:', e.message)
+      await this.livestreamStore.setContinuationToken(null)
       return null
     }
   }
