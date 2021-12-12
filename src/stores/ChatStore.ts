@@ -14,16 +14,12 @@ export type ChatSave = {
 
 export default class ChatStore {
   readonly name = ChatStore.name
-  private readonly disableSaving: boolean
   private readonly db: Db
   private readonly logService: LogService
   private readonly livestreamStore: LivestreamStore
   private readonly channelStore: ChannelStore
 
-  // what happens if the token is very old? can we get ALL messages until now in a single request, or what happens?
-
   constructor (dep: Dependencies) {
-    this.disableSaving = dep.resolve<boolean>('disableSaving')
     this.db = dep.resolve<DbProvider>(DbProvider.name).get()
     this.logService = dep.resolve<LogService>(LogService.name)
     this.livestreamStore = dep.resolve<LivestreamStore>(LivestreamStore.name)
@@ -71,15 +67,12 @@ export default class ChatStore {
   }
 
   public getContinuationToken (): string | null {
+    // what happens if the token is very old? can we get ALL messages until now in a single request, or what happens?
     return this.livestreamStore.currentLivestream.continuationToken
   }
 
   // quietly ignore duplicates
   private async addChatItem (chatItem: ChatItem) {
-    if (this.disableSaving) {
-      return
-    }
-
     const author = chatItem.author
     const timestamp = chatItem.timestamp
     const channelInfo: CreateOrUpdateChannelArgs = {

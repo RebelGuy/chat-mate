@@ -8,11 +8,9 @@ import { compare } from '@rebel/util/typescript'
 export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 
 export default class ChannelStore {
-  private readonly disableSaving: boolean
   private readonly db: Db
   
   constructor(deps: Dependencies) {
-    this.disableSaving = deps.resolve<boolean>('disableSaving')
     this.db = deps.resolve<DbProvider>(DbProvider.name).get()
   }
 
@@ -42,14 +40,6 @@ export default class ChannelStore {
   public async createOrUpdate (channelId: string, channelInfo: CreateOrUpdateChannelArgs): Promise<Omit<Entity.Channel, 'chatMessages'>> {
     const currentChannel = await this.tryGetChannelWithLatestInfo(channelId)
     const storedInfo = currentChannel?.infoHistory[0]
-
-    if (this.disableSaving) {
-      return {
-        id: currentChannel?.id ?? 1,
-        youtubeId: channelId,
-        infoHistory: storedInfo ? [storedInfo] : [{ ...channelInfo, id: 1, channelId: 1 }]
-      }
-    }
 
     let channel: Omit<Entity.Channel, 'chatMessages'>
     if (storedInfo && storedInfo.time < channelInfo.time) {

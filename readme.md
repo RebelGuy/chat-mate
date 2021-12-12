@@ -36,8 +36,7 @@ The following environment variables must be set in the `.env` file:
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `LIVE_ID`: The video ID of the livestream.
 - `DATABASE_CONNECTION`: The connection string to the MySQL database that Prisma should use.
-- `MOCK_DATA`: [Optional, debug only] The JSON file containing the `ChatSave` data that the `ChatStore` can load. If set, the server will use a mocked Masterchat to "auto-play" chat events, and no longer connect to YouTube.
-- `DISABLE_SAVING`: [Optional, debug only] Whether the debug server should be run in a "read-only" mode, recommended when `MOCK_DATA` is set.
+- `IS_MOCK_LIVESTREAM`: [Optional, debug only] If true, uses the chat data of the `LIVE_ID` to replay its chat events, and no longer connect to YouTube. See `MockMasterchat` for more options, such as hardcoding the set of messages to send, or taking console user input for specifying the next message text.
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
 - `NODE_ENV`: Either `debug` or `release` to indicate whether we are running a live server or not.

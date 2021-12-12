@@ -23,7 +23,6 @@ type EnvironmentVariables = {
 
   // id for auto-replaying chat messages
   isMockLivestream?: DebugVariable<boolean>
-  disableSaving?: DebugVariable<boolean>
 }
 
 // if an environment variable is included in this list, it must be set using the `cross-env` package.
@@ -38,14 +37,12 @@ injectedVariables.map(variable => {
 
 // debug variables can only be accessed in a debug environment, and return null otherwise.
 const debugVariables: (keyof EnvironmentVariables)[] = [
-  'isMockLivestream',
-  'disableSaving'
+  'isMockLivestream'
 ]
 
 // optional variables resolve to a value of null if they are not included in the environment definition.
 const optionalVariables: Record<OptionalKeys<EnvironmentVariables>, true> = {
-  isMockLivestream: true,
-  disableSaving: true
+  isMockLivestream: true
 }
 
 function isOptional<V extends keyof EnvironmentVariables> (variable: V): boolean {

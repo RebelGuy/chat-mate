@@ -42,7 +42,6 @@ const main = async () => {
       const context = ContextProvider.create()
         .withProperty('liveId', liveId)
         .withProperty('dataPath', dataPath)
-        .withProperty('disableSaving', false)
         .withProperty('isLive', env('nodeEnv') === 'release')
         .withProperty('databaseUrl', env('databaseUrl'))
         .withClass(FileService)

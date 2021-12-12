@@ -9,18 +9,11 @@ export type WriteOptions = {
 }
 
 export default class FileService {
-  private readonly disableSaving: boolean
   private readonly dataPath: string
 
   constructor (deps: Dependencies) {
-    this.disableSaving = deps.resolve<boolean>('disableSaving')
     this.dataPath = deps.resolve<string>('dataPath')
     this.ensureDir(this.dataPath)
-
-    if (this.disableSaving) {
-      // can't use logService here yet
-      console.log('Using read-only FileService')
-    }
   }
 
   public getDataFilePath (fileName: string) {
@@ -36,10 +29,6 @@ export default class FileService {
   }
 
   public write (filePath: string, contents: string, options?: WriteOptions) {
-    if (this.disableSaving) {
-      return
-    }
-
     const directory = path.dirname(filePath)
     this.ensureDir(directory)
     if (options?.append) {

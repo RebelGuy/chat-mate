@@ -6,7 +6,6 @@ import DbProvider, { Db } from '@rebel/providers/DbProvider'
 export default class LivestreamStore {
   private readonly liveId: string
   private readonly db: Db
-  private readonly disableSaving: boolean
   
   private _currentLivestream: Livestream | null = null
   public get currentLivestream() {
@@ -20,7 +19,6 @@ export default class LivestreamStore {
   constructor(deps: Dependencies) {
     this.liveId = deps.resolve<string>('liveId')
     this.db = deps.resolve<DbProvider>(DbProvider.name).get()
-    this.disableSaving = deps.resolve<boolean>('disableSaving')
   }
 
   public async createLivestream (): Promise<Livestream> {
@@ -36,11 +34,6 @@ export default class LivestreamStore {
   }
 
   private async createOrUpdateLivestream (livestream: New<Livestream>): Promise<Livestream> {
-    if (this.disableSaving) {
-      this._currentLivestream = { ...livestream, continuationToken: livestream.continuationToken ?? null, id: 1 }
-      return this._currentLivestream
-    }
-
     this._currentLivestream = await this.db.livestream.upsert({ 
       create: { ...livestream },
       where: { liveId: livestream.liveId },
