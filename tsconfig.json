@@ -11,6 +11,7 @@
     "target": "es5",
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "downlevelIteration": true,
     "declaration": true,
     "declarationMap": true,
     "allowJs": false,

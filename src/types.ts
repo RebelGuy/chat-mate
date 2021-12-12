@@ -14,7 +14,28 @@ export type OptionalKeys<T> = ({
 
 export type Optionals<T> = Pick<T, OptionalKeys<T>>
 
+export type NullableKeys<T> = ({
+  [V in keyof T]: null extends T[V] ? V : never
+})[keyof T]
+
+// this intermediate step results in the union of objects of non-nullable and nullable properties,
+// but we want a single object.
+type NullableToOptional_<T> = Omit<T, NullableKeys<T>> & {
+  [key in NullableKeys<T>]?: Exclude<T[key], null>
+}
+
+// converts { a: b, c: d | null } to { a: b, c?: d | undefined }
+export type NullableToOptional<T> = {
+  [key in keyof NullableToOptional_<T>]: NullableToOptional_<T>[key]
+}
+
 // converts { foo?: bar } to { foo: bar | undefined }
-type MakeRequired<T> = {
+export type MakeRequired<T> = {
   [P in keyof Required<T>]: Pick<T, P> extends Required<Pick<T, P>> ? T[P] : (T[P] | undefined);
 }
+
+export type ObjectComparator<T> = {
+  [key in keyof T]: ValueComparator<T[key]>
+}
+
+export type ValueComparator<V> = null | 'default' | ((a: V, b: V) => boolean)

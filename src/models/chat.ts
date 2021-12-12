@@ -1,3 +1,5 @@
+import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '.prisma/client'
+
 export type ChatItem = {
   internalId: number,
   id: string,
@@ -6,9 +8,10 @@ export type ChatItem = {
   timestamp: number,
   author: Author,
   messageParts: PartialChatMessage[],
+}
 
-  // the message conversion to pure text
-  renderedText: string
+export type PublicChatItem = Omit<ChatItem, 'author'> & {
+  author: PublicAuthor
 }
 
 export type Author = {
@@ -17,6 +20,10 @@ export type Author = {
   channelId: string,
   image: string,
   attributes: AuthorAttributes
+}
+
+export type PublicAuthor = Author & {
+  lastUpdate: number
 }
 
 export type AuthorAttributes = {
@@ -53,6 +60,65 @@ export type ChatImage = {
   height?: number
 }
 
-export function getChatText (message: PartialChatMessage[]) {
-  return message.map(m => m.type === 'text' ? m.text : `[${m.name}]`).join("")
+export type ChatItemWithRelations = (ChatMessage & {
+  channel: Channel & {
+      infoHistory: ChannelInfo[];
+  };
+  chatMessageParts: (ChatMessagePart & {
+      emoji: ChatEmoji | null;
+      text: ChatText | null;
+  })[];
+})
+
+export function privateToPublicItems(chatItems: ChatItemWithRelations[]): PublicChatItem[] {
+  return chatItems.map(item => {
+    const channelInfo = item.channel.infoHistory[0]
+    const result: PublicChatItem = {
+      internalId: item.id,
+      id: item.youtubeId,
+      timestamp: item.time.getTime(),
+      author: {
+        internalId: item.channel.id,
+        channelId: item.channel.youtubeId,
+        lastUpdate: channelInfo.time.getTime(),
+        name: channelInfo.name,
+        image: channelInfo.imageUrl,
+        attributes: {
+          isOwner: channelInfo.isOwner,
+          isModerator: channelInfo.isModerator,
+          isVerified: channelInfo.IsVerified
+        }
+      },
+      messageParts: item.chatMessageParts.map(part => {
+        let partResult: PartialChatMessage
+        if (part.text != null && part.emoji == null) {
+          const text = part.text!
+          partResult = {
+            type: 'text',
+            text: text.text,
+            isBold: text.isBold,
+            isItalics: text.isItalics
+          }
+        } else if (part.text == null && part.emoji != null) {
+          const emoji = part.emoji!
+          partResult = {
+            type: 'emoji',
+            name: emoji.name!,
+            label: emoji.label!,
+            image: {
+              url: emoji.imageUrl!,
+              height: emoji.imageHeight ?? undefined,
+              width: emoji.imageWidth ?? undefined
+            }
+          }
+        } else {
+          throw new Error('ChatMessagePart must have the text or emoji component defined.')
+        }
+
+        return partResult
+      })
+    }
+
+    return result
+  })
 }

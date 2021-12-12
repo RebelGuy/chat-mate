@@ -22,8 +22,9 @@ Note that, until Webpack bundles the dependencies (node_modules) as well, we wil
 
 ## Scripts for production:
 Assumes that steps 1-3 of the previous section have been run.
-1. `yarn build:release` will copy `node_modules` to the `./dist/release` folder and use webpack to bundle up the application
-2. `yarn start:release` to run the release server
+4. `yarn build:release` will copy `node_modules` to the `./dist/release` folder and use webpack to bundle up the application
+5. `yarn migrate:release` migrate the database to the latest schema
+6. `yarn start:release` to run the release server
 
 
 # .env
@@ -44,17 +45,17 @@ In addition, the following environment variables must be injected into the node 
 
 ## Database
 
-We use MySQL databases. The `debug` database is named `chat_mate_debug`, while the `release` database is named `chat_mate`. Ensure the `DATABASE_URL` connection strings is set in the respective [`.env`](#.env) file.
+The `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
-At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately update the Prisma Client for up-to-date typings. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, see https://www.prisma.io/docs/concepts/components/prisma-client.
+At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, see https://www.prisma.io/docs/concepts/components/prisma-client.
 
 Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:debug`.
 
-During a migration, ensure that the `.sql` is edited to avoid data loss, but avoid making changes that affect the database schema, other than the ones already present.
+During a migration, ensure that the `.sql` is checked and edited to avoid data loss, but avoid making manual changes that affect the database schema, other than the ones already present.
 
-`prisma migrate deploy` deploys changes to the production environment. Only uses migration files, NOT the Prisma schema file.
+`yarn migrate:release` deploys changes to the production environment. Only uses migration files, NOT the Prisma schema file.
 
 
 

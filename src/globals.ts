@@ -21,8 +21,8 @@ type EnvironmentVariables = {
   liveId: string
   databaseUrl: string
 
-  // file for auto-playing chat messages
-  mockData?: DebugVariable<string>
+  // id for auto-replaying chat messages
+  isMockLivestream?: DebugVariable<boolean>
   disableSaving?: DebugVariable<boolean>
 }
 
@@ -38,13 +38,13 @@ injectedVariables.map(variable => {
 
 // debug variables can only be accessed in a debug environment, and return null otherwise.
 const debugVariables: (keyof EnvironmentVariables)[] = [
-  'mockData',
+  'isMockLivestream',
   'disableSaving'
 ]
 
 // optional variables resolve to a value of null if they are not included in the environment definition.
 const optionalVariables: Record<OptionalKeys<EnvironmentVariables>, true> = {
-  mockData: true,
+  isMockLivestream: true,
   disableSaving: true
 }
 

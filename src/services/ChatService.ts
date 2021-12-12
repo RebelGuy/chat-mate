@@ -3,11 +3,12 @@ import { Dependencies } from '@rebel/context/context'
 import MasterchatProvider from '@rebel/providers/MasterchatProvider'
 import ChatStore from '@rebel/stores/ChatStore'
 import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
-import { ChatItem, getChatText, PartialChatMessage } from "@rebel/models/chat"
+import { ChatItem, PartialChatMessage } from "@rebel/models/chat"
 import { isList, List } from 'immutable'
 import { clamp, clampNormFn, sum } from '@rebel/util/math'
 import { IMasterchat } from '@rebel/interfaces'
 import LogService, { createLogContext, LogContext } from '@rebel/services/LogService'
+import LivestreamStore from '@rebel/stores/LivestreamStore'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -28,18 +29,18 @@ type ChatEvents = {
 export default class ChatService {
   readonly name = ChatService.name
   private readonly chatStore: ChatStore
+  private readonly livestreamStore: LivestreamStore
   private readonly logService: LogService
-  private readonly chat: IMasterchat
+  private readonly masterchat: IMasterchat
 
   private listeners: Map<keyof ChatEvents, ((data: any) => void)[]> = new Map()
   private timeout: NodeJS.Timeout | null = null
 
   constructor (deps: Dependencies) {
     this.chatStore = deps.resolve<ChatStore>(ChatStore.name)
-    this.chat = deps.resolve<MasterchatProvider>(MasterchatProvider.name).get()
+    this.livestreamStore = deps.resolve<LivestreamStore>(LivestreamStore.name)
+    this.masterchat = deps.resolve<MasterchatProvider>(MasterchatProvider.name).get()
     this.logService = deps.resolve<LogService>(LogService.name)
-
-    this.start()
   }
 
   start () {
@@ -69,9 +70,9 @@ export default class ChatService {
   }
 
   private fetchLatest = async () => {
-    const token = this.chatStore.continuationToken
+    const token = this.livestreamStore.currentLivestream.continuationToken
     try {
-      return token ? await this.chat.fetch(token) : await this.chat.fetch()
+      return token ? await this.masterchat.fetch(token) : await this.masterchat.fetch()
     } catch (e: any) {
       this.logService.logWarning(this, 'Fetch failed:', e.message)
       return null
@@ -101,7 +102,15 @@ export default class ChatService {
     }
 
     // if we received a new message, immediately start checking for another one
-    const nextInterval = hasNewChat ? MIN_INTERVAL : getNextInterval(Date.now(), this.chatStore.chatItems.map(c => c.timestamp), createLogContext(this.logService, this))
+    let nextInterval
+    if (hasNewChat) {
+      nextInterval = MIN_INTERVAL
+    } else {
+      const now = Date.now()
+      const chat = await this.chatStore.getChatSince(now - LIMIT)
+      const timestamps = chat.map(c => c.time.getTime())
+      nextInterval = getNextInterval(now, timestamps, createLogContext(this.logService, this))
+    }
     this.timeout = setTimeout(this.updateMessages, nextInterval)
   }
 
@@ -139,8 +148,7 @@ export default class ChatService {
           isVerified: item.isVerified
         }
       },
-      messageParts,
-      renderedText: getChatText(messageParts)
+      messageParts
     }
   }
 }

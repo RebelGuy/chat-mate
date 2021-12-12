@@ -1,8 +1,10 @@
+import { Prisma } from '.prisma/client'
 import { Dependencies } from '@rebel/context/context';
-import { ChatItem } from '@rebel/models/chat';
-import FileService from '@rebel/services/FileService';
+import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/models/chat';
+import DbProvider, { Db } from '@rebel/providers/DbProvider'
 import LogService from '@rebel/services/LogService'
-import { formatDate } from '@rebel/util/datetime'
+import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/stores/ChannelStore'
+import LivestreamStore from '@rebel/stores/LivestreamStore'
 import { List } from 'immutable';
 
 export type ChatSave = {
@@ -12,60 +14,142 @@ export type ChatSave = {
 
 export default class ChatStore {
   readonly name = ChatStore.name
-  private readonly liveId: string
-  private readonly fileService: FileService
+  private readonly disableSaving: boolean
+  private readonly db: Db
   private readonly logService: LogService
-  private readonly fileName: string
+  private readonly livestreamStore: LivestreamStore
+  private readonly channelStore: ChannelStore
 
   // what happens if the token is very old? can we get ALL messages until now in a single request, or what happens?
-  private _continuationToken: string | null
-  public get continuationToken () { return this._continuationToken }
-
-  private _chatItems: List<ChatItem>
-  public get chatItems () { return this._chatItems }
 
   constructor (dep: Dependencies) {
-    this.liveId = dep.resolve<string>('liveId')
-    this.fileService = dep.resolve<FileService>(FileService.name)
+    this.disableSaving = dep.resolve<boolean>('disableSaving')
+    this.db = dep.resolve<DbProvider>(DbProvider.name).get()
     this.logService = dep.resolve<LogService>(LogService.name)
-
-    // every live ID is associated with its own file - find it, or create a new one if one doesn't exist yet
-    const existingFile = this.fileService.getDataFiles().find(file => file.startsWith('chat_') && file.includes(this.liveId))
-    if (existingFile) {
-      this.fileName = this.fileService.getDataFilePath(existingFile)
-    } else {
-      this.fileName = this.fileService.getDataFilePath(`chat_${formatDate()}_${this.liveId}.json`)
-    }
-
-    const content: ChatSave | null = this.fileService.readObject<ChatSave>(this.fileName)
-    this._chatItems = List(content?.chat ?? [])
-    this._continuationToken = content?.continuationToken ?? null
+    this.livestreamStore = dep.resolve<LivestreamStore>(LivestreamStore.name)
+    this.channelStore = dep.resolve<ChannelStore>(ChannelStore.name)
   }
 
-  // appends the new chat to the stored chat. throws if the new chat overlaps in time with the existing chat.
-  public addChat (token: string, newChat: ChatItem[]) {
-    this._continuationToken = token
+  public async addChat (token: string, newChat: ChatItem[]) {
     this.logService.logDebug(this, `Adding ${newChat.length} new chat items`)
 
-    if (newChat.length > 0) {
-      const sorted = List(newChat).sort((c1, c2) => c1.timestamp - c2.timestamp)
-      const latestSavedTime = this._chatItems.last()?.timestamp ?? 0
-      const validNewChat = newChat.filter(c => c.timestamp > latestSavedTime)
-      if (newChat.length !== validNewChat.length) {
-        // this should never happen, but we should still handle it gracefully
-        this.logService.logWarning(this, `Cannot add ${newChat.length - validNewChat.length} chat item(s) because their timestamps are earlier than the last saved item - discarding those items`)
-      }
-
-      this._chatItems = this._chatItems.push(...validNewChat)
+    const sorted = List(newChat).sort((c1, c2) => c1.timestamp - c2.timestamp)
+    for (const item of sorted) {
+      await this.addChatItem(item)
     }
 
-    this.save()
+    await this.livestreamStore.setContinuationToken(token)
   }
 
-  private save () {
-    this.fileService.writeObject<ChatSave>(this.fileName, {
-      chat: this._chatItems.toArray(),
-      continuationToken: this._continuationToken
+  // returns ordered chat items
+  public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
+    return this.db.chatMessage.findMany({
+      where: {
+        // same as using AND: {[...]}
+        livestreamId: this.livestreamStore.currentLivestream.id,
+        time: { gt: new Date(since) }
+      },
+      orderBy: {
+        time: 'asc'
+      },
+      include: {
+        chatMessageParts: {
+          orderBy: { order: 'asc' },
+          include: { emoji: true, text: true },
+        },
+        channel: {
+          include: {
+            infoHistory: { 
+              orderBy: { time: 'desc' },
+              take: 1
+            }
+          }
+        }
+      },
+      take: limit
+    })
+  }
+
+  public getContinuationToken (): string | null {
+    return this.livestreamStore.currentLivestream.continuationToken
+  }
+
+  // quietly ignore duplicates
+  private async addChatItem (chatItem: ChatItem) {
+    if (this.disableSaving) {
+      return
+    }
+
+    const author = chatItem.author
+    const timestamp = chatItem.timestamp
+    const channelInfo: CreateOrUpdateChannelArgs = {
+      name: author.name ?? '',
+      time: new Date(timestamp),
+      imageUrl: author.image,
+      isOwner: author.attributes.isOwner,
+      isModerator: author.attributes.isModerator,
+      IsVerified: author.attributes.isVerified
+    }
+    const channel = await this.channelStore.createOrUpdate(author.channelId, channelInfo)
+
+    const chatMessage = await this.db.chatMessage.upsert({
+      create: { 
+        time: new Date(timestamp),
+        youtubeId: chatItem.id,
+        channel: { connect: { id: channel.id }},
+        livestream: { connect: { id: this.livestreamStore.currentLivestream.id }}
+      },
+      update: {},
+      where: { youtubeId: chatItem.id },
+      include: { chatMessageParts: true }
+    })
+
+    // add the records individually because we can't access relations (emoji/text) in a createMany() query
+    for (let i = 0; i < chatItem.messageParts.length; i++) {
+      const part = chatItem.messageParts[i]
+      if (chatMessage.chatMessageParts.find(existing => existing.order === i)) {
+        // message part already exists
+        continue
+      }
+      await this.db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) })
+    }
+  }
+
+  private createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {
+    return Prisma.validator<Prisma.ChatMessagePartCreateInput>()({
+      order: index,
+      chatMessage: { connect: { id: chatMessageId }},
+      text: part.type === 'text' ? { create: this.createText(part) } : undefined,
+      emoji: part.type === 'emoji' ? { connectOrCreate: this.connectOrCreate(part) } : undefined
+    })
+  }
+
+  private connectOrCreate (part: PartialEmojiChatMessage) {
+    const youtubeId = this.getEmojiYoutubeId(part)
+    return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
+      create: {
+        youtubeId,
+        imageUrl: part.image.url,
+        imageHeight: part.image.height ?? null,
+        imageWidth: part.image.width ?? null,
+        label: part.label,
+        name: part.name,
+        isCustomEmoji: false
+      },
+      where: { youtubeId }
+    })
+  }
+
+  private getEmojiYoutubeId (part: PartialEmojiChatMessage) {
+    // remove in CHAT-79
+    return `Unknown-${part.name ?? part.label}`
+  }
+
+  private createText (part: PartialTextChatMessage) {
+    return Prisma.validator<Prisma.ChatTextCreateInput>()({
+      isBold: part.isBold,
+      isItalics: part.isItalics,
+      text: part.text
     })
   }
 }

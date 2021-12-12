@@ -1,19 +1,17 @@
 import { Dependencies } from '@rebel/context/context'
 import { buildPath } from '@rebel/controllers/BaseEndpoint'
-import { ChatItem } from '@rebel/models/chat'
+import { privateToPublicItems, PublicChatItem } from '@rebel/models/chat'
 import ChatStore from '@rebel/stores/ChatStore'
 import { ApiSchema } from '@rebel/types'
 import { GET, Path, QueryParam } from "typescript-rest"
 
-type GetChatResponse = ApiSchema<1, {
+type GetChatResponse = ApiSchema<2, {
   liveId: string
 
   // include the timestamp so it can easily be used for the next request
   lastTimestamp: number
 
-  // whether the response contains partial chat data or all available chat data
-  isPartial: boolean
-  chat: ChatItem[]
+  chat: PublicChatItem[]
 }>
 
 @Path(buildPath('chat'))
@@ -27,21 +25,19 @@ export class ChatController {
   }
 
   @GET
-  public getChat (
+  public async getChat (
     // unix timestamp (milliseconds)
     @QueryParam('since') since?: number,
     @QueryParam('limit') limit?: number
-  ): GetChatResponse {
-    limit = limit ?? Number.MAX_VALUE
-    const newerThan = since ?? 0
-    const items = this.chatStore.chatItems.filter(c => c.timestamp > newerThan).takeLast(limit)
+  ): Promise<GetChatResponse> {
+    since = since ?? 0
+    const items = await this.chatStore.getChatSince(since, limit)
 
     return {
-      schema: 1,
+      schema: 2,
       liveId: this.liveId,
-      lastTimestamp: items.last()?.timestamp ?? newerThan,
-      isPartial: items.size !== this.chatStore.chatItems.size,
-      chat: items.toArray()
+      lastTimestamp: items.at(-1)?.time.getTime() ?? since,
+      chat: privateToPublicItems(items)
     }
   }
 }

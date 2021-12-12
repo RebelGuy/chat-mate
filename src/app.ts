@@ -1,4 +1,4 @@
-require('_config')
+require('./_config')
 import express from "express"
 import { Server } from "typescript-rest"
 import { ChatController } from "@rebel/controllers/ChatController"
@@ -13,6 +13,8 @@ import FileService from '@rebel/services/FileService'
 import { getLiveId } from '@rebel/util/text'
 import LogService, { createLogContext } from '@rebel/services/LogService'
 import DbProvider from '@rebel/providers/DbProvider'
+import LivestreamStore from '@rebel/stores/LivestreamStore'
+import ChannelStore from '@rebel/stores/ChannelStore'
 
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
@@ -23,15 +25,17 @@ const globalContext = ContextProvider.create()
   .withProperty('channelId', env('channelId'))
   .withProperty('liveId', liveId)
   .withProperty('dataPath', dataPath)
-  .withProperty('mockData', env('mockData') == null ? null : path.resolve(dataPath, env('mockData')!))
+  .withProperty('isMockLivestream', env('isMockLivestream'))
   .withProperty('disableSaving', env('disableSaving') ?? false)
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
   .withClass(FileService)
   .withClass(LogService)
   .withClass(DbProvider)
-  .withClass(MasterchatProvider)
+  .withClass(LivestreamStore)
+  .withClass(ChannelStore)
   .withClass(ChatStore)
+  .withClass(MasterchatProvider)
   .withClass(ChatService)
   .build()
 
@@ -70,3 +74,8 @@ Server.buildServices(app,
 app.listen(port, () => {
   logContext.logInfo(`Server is listening on ${port}`)
 })
+
+const livestreamStore = globalContext.getInstance<LivestreamStore>(LivestreamStore)
+const chatService = globalContext.getInstance<ChatService>(ChatService)
+
+livestreamStore.createLivestream().then(() => chatService.start())

@@ -1,9 +1,9 @@
 import { Action, AddChatItemAction, ChatResponse, YTRun } from '@rebel/../../masterchat/lib/masterchat'
 import { IMasterchat } from '@rebel/interfaces'
-import { ChatItem } from '@rebel/models/chat'
-import FileService from '@rebel/services/FileService'
+import { ChatItemWithRelations } from '@rebel/models/chat'
 import LogService from '@rebel/services/LogService'
-import { ChatSave } from '@rebel/stores/ChatStore'
+import ChatStore from '@rebel/stores/ChatStore'
+import { MakeRequired } from '@rebel/types'
 import { listenForUserInput } from '@rebel/util/input'
 
 const CHAT_RATE = 0.5
@@ -11,34 +11,25 @@ const CHAT_RATE = 0.5
 export default class MockMasterchat implements IMasterchat {
   readonly name = MockMasterchat.name
 
-  readonly fileService: FileService
   readonly logService: LogService
-  readonly mockData: string
+  readonly chatStore: ChatStore
 
-  // the chat items loaded from the mockData file will be used as a base for emitted messages
-  readonly chatItems: ChatItem[]
-
+  // the chat items loaded from the livestream will be used as a base for emitted messages
+  private chatItems: ChatItemWithRelations[] | null = null
   private counter: number = 0
   private lastFetch: number = Date.now()
 
   // for debugging:
-  // - `file`: load messages from the `mockData` file and cycle through them
+  // - `data`: load messages from the database and cycle through them
   // - `static`: manually set the `this.mockMessages` array, and cycle through them
   // - `input`: can add new messages live via the terminal window
-  //   IMPORTANT: this only works if running the process manually in the terminal
-  private mockType: 'file' | 'static' | 'input' = 'input'
+  //   IMPORTANT: this only works if running the process manually in the terminal, NOT via the VSCode debugger
+  private mockType: 'data' | 'static' | 'input' = 'data'
   private mockMessages: string[] | null = null
 
-  constructor (fileService: FileService, logService: LogService, mockData: string) {
-    this.fileService = fileService
+  constructor (logService: LogService, chatStore: ChatStore) {
     this.logService = logService
-    this.mockData = mockData
-
-    const loadedItems = this.fileService.readObject<ChatSave>(mockData)?.chat
-    if (loadedItems == null || loadedItems.length === 0) {
-      throw new Error('Could not instantiate MockMasterchat because no mock data exists.')
-    }
-    this.chatItems = loadedItems
+    this.chatStore = chatStore
 
     if (this.mockType === 'input') {
       this.mockMessages = []
@@ -48,19 +39,27 @@ export default class MockMasterchat implements IMasterchat {
     }
   }
 
-  public fetch (): Promise<ChatResponse> {
+  public async fetch (): Promise<ChatResponse> {
+    if (this.chatItems == null) {
+      this.chatItems = await this.chatStore.getChatSince(0)
+      if (this.chatItems.length === 0) {
+        throw new Error('MockMasterchat cannot continue because no mock data exists.')
+      }
+    }
+
     const now = Date.now()
     const elapsed = now - this.lastFetch
     this.lastFetch = now
 
-    if (elapsed / 1000 < 1 / CHAT_RATE || this.mockMessages?.length === 0) {
+    if (elapsed / 1000 < 1 / CHAT_RATE || this.mockType !== 'data' && this.mockMessages?.length === 0) {
       return MockMasterchat.buildResponse()
     }
 
     let item = this.chatItems[this.counter % this.chatItems.length]
     item = {
       ...item,
-      timestamp: new Date().getTime()
+      youtubeId: `mock_${now}`,
+      time: new Date()
     }
 
     let customMessage: string | null = null
@@ -74,34 +73,38 @@ export default class MockMasterchat implements IMasterchat {
       }
     }
 
-    const action: AddChatItemAction = {
+    const channelInfo = item.channel.infoHistory[0]!
+    const action: MakeRequired<AddChatItemAction> = {
       type: 'addChatItemAction',
-      id: item.id,
-      timestamp: new Date(item.timestamp),
-      timestampUsec: `${item.timestamp * 1000}`,
-      authorName: item.author.name,
-      authorChannelId: item.author.channelId,
-      authorPhoto: item.author.image,
-      isOwner: item.author.attributes.isOwner,
-      isModerator: item.author.attributes.isModerator,
-      isVerified: item.author.attributes.isVerified,
-      message: item.messageParts.map(part => {
-        if (part.type === 'text') {
+      id: item.youtubeId,
+      timestamp: item.time,
+      timestampUsec: `${item.time.getTime() * 1000}`,
+      authorName: channelInfo.name,
+      authorChannelId: item.channel.youtubeId,
+      authorPhoto: channelInfo.imageUrl,
+      membership: undefined,
+      isOwner: channelInfo.isOwner,
+      isModerator: channelInfo.isModerator,
+      isVerified: channelInfo.IsVerified,
+      message: item.chatMessageParts.map(part => {
+        if (part.text && !part.emoji) {
           return {
-            text: customMessage ?? part.text,
-            bold: part.isBold,
-            italics: part.isItalics
+            text: customMessage ?? part.text.text,
+            bold: part.text.isBold,
+            italics: part.text.isItalics
           } as YTRun
-        } else {
+        } else if (!part.text && part.emoji) {
           return {
             emoji: {
               image: {
-                accessibility: { accessibilityData: { label: part.name }},
-                thumbnails: [part.image]
+                accessibility: { accessibilityData: { label: part.emoji.name }},
+                thumbnails: [{ url: part.emoji.imageUrl, width: part.emoji.imageWidth, height: part.emoji.imageHeight }]
               },
-              shortcuts: [part.label],
+              shortcuts: [part.emoji.label],
             }
           } as YTRun
+        } else {
+          throw new Error('ChatMessageParts must have either the text or the emoji component defined')
         }
       }),
       contextMenuEndpointParams: '',
@@ -115,7 +118,7 @@ export default class MockMasterchat implements IMasterchat {
   private static buildResponse(action?: Action): Promise<ChatResponse> {
     return new Promise((resolve, _) => resolve({
       actions: action ? [action] : [],
-      continuation: { timeoutMs: 10000, token: 'continuationToken' },
+      continuation: { timeoutMs: 10000, token: 'mock_continuationToken' },
       error: null
     }))
   }

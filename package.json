@@ -11,7 +11,7 @@
     "build:project": "tsc",
     "watch": "tsc --watch",
     "start:debug": "cross-env NODE_ENV=debug nodemon --watch dist/debug/ --inspect dist/debug/app.js",
-    "start:mock": "cross-env NODE_ENV=debug DISABLE_SAVING=true MOCK_DATA=mockData.json nodemon --watch dist/debug --inspect dist/debug/app.js",
+    "start:mock": "cross-env NODE_ENV=debug DISABLE_SAVING=false IS_MOCK_LIVESTREAM=true nodemon --watch dist/debug --inspect dist/debug/app.js",
     "webpack": "webpack",
     
     "generate": "dotenv -e debug.env npx prisma generate",
