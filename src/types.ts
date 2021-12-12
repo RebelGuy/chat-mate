@@ -21,10 +21,10 @@ export type NullableKeys<T> = ({
 // this intermediate step results in the union of objects of non-nullable and nullable properties,
 // but we want a single object.
 type NullableToOptional_<T> = Omit<T, NullableKeys<T>> & {
-  [key in NullableKeys<T>]?: Exclude<T[key], null>
+  [key in NullableKeys<T>]?: T[key]
 }
 
-// converts { a: b, c: d | null } to { a: b, c?: d | undefined }
+// converts { a: b, c: d | null } to { a: b, c?: d | null }
 export type NullableToOptional<T> = {
   [key in keyof NullableToOptional_<T>]: NullableToOptional_<T>[key]
 }
