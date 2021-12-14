@@ -1,4 +1,4 @@
-import { Prisma } from '.prisma/client'
+import { Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/context/context';
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/models/chat';
 import DbProvider, { Db } from '@rebel/providers/DbProvider'

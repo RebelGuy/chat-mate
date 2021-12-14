@@ -1,4 +1,4 @@
-import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '.prisma/client'
+import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '@prisma/client'
 
 export type ChatItem = {
   internalId: number,

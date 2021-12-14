@@ -1,4 +1,4 @@
-import { Prisma } from '.prisma/client'
+import { Prisma } from '@prisma/client'
 import * as fs from 'node:fs'
 import * as fsx from 'fs-extra'
 import path from 'node:path'
