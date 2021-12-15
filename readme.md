@@ -7,6 +7,7 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 Ensure Node 16 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]`
 
 Recommended extensions:
+- `Gitlens`
 - `Prisma`
 
 Debug and release environments have both their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
@@ -35,7 +36,7 @@ The following environment variables must be set in the `.env` file:
 - `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `yarn auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `LIVE_ID`: The video ID of the livestream.
-- `DATABASE_CONNECTION`: The connection string to the MySQL database that Prisma should use.
+- `DATABASE_URL`: The connection string to the MySQL database that Prisma should use.
 - `IS_MOCK_LIVESTREAM`: [Optional, debug only] If true, uses the chat data of the `LIVE_ID` to replay its chat events, and no longer connect to YouTube. See `MockMasterchat` for more options, such as hardcoding the set of messages to send, or taking console user input for specifying the next message text.
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
@@ -74,11 +75,10 @@ Query parameters:
 - `limit` (number): Limits the number of returned chat items (see below).
 
 Returns an object with the following properties:
-- `schema` (1): The current schema of the return object.
-- `liveId` (string): The livestream ID to which the chat items belong. Currently, this is the liveId specified in the [`.env`](#env) file.
-- `lastTimestamp` (number): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow.
-- `isPartial` (boolean): Whether the chat items returned in this request represent only a subset of the total chat data we have. If no query parameters are provided, this will always return be `true`.
-- `chat` ([ChatItem](#ChatItem)[]): The chat data that satisfy the request filter.
+- `schema` (`2`): The current schema of the return object.
+- `liveId` (`string`): The livestream ID to which the chat items belong. Currently, this is the liveId specified in the [`.env`](#env) file.
+- `lastTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+- `chat` ([`ChatItem`](#ChatItem)[]): The chat data that satisfy the request filter.
 
 
 
@@ -86,44 +86,50 @@ Returns an object with the following properties:
 
 
 ## ChatItem
-- `internalId` (number): Currently unused.
-- `id` (string): YouTube's ID.
-- `timestamp` (number): Unix timestamp in milliseconds.
-- `author` ([Author](#Author)): The author of the chat item.
-- `messageParts` ([PartialChatMessage](#PartialChatMessage)): The partial messages that make up the contents of this chat item.
-- `renderedText` (string): The message conversion to pure text. Note that information about emojis or other special items may be lost.
+- `internalId` (`number`): Currently unused.
+- `id` (`string`): YouTube's ID.
+- `timestamp` (`number`): Unix timestamp in milliseconds.
+- `author` ([`Author`](#Author)): The author of the chat item.
+- `messageParts` ([`PartialChatMessage`](#PartialChatMessage)): The partial messages that make up the contents of this chat item.
 
 ## Author
-- `internalId` (number): Currently unused.
-- `name` (string): The author name (channel name).
-- `channelId` (string): The unique YouTube channel ID.
-- `image` (string): The image URL of the author's channel.
-- `attributes` ([AuthorAttributes](#AuthorAttributes)): Flags relating to the author's status in regards to the livestream.
+- `internalId` (`number`): Currently unused.
+- `name` (`string?`): The author name (channel name).
+- `channelId` (`string`): The unique YouTube channel ID.
+- `image` (`string`): The image URL of the author's channel.
+- `attributes` ([`AuthorAttributes`](#AuthorAttributes)): Flags relating to the author's status in regards to the livestream.
+- `lastUpdate` (`number`): Timestamp of the last time the author's info was updated.
 
 ## AuthorAttributes
-- `isOwner` (boolean): Whether the user is the channel owner of the livestreamer's channel.
-- `isModerator` (boolean): Whether the user is a moderator on the livestream.
-- `isVerified` (boolean): Whether the user has a YouTube verified checkmark.
+- `isOwner` (`boolean`): Whether the user is the channel owner of the livestreamer's channel.
+- `isModerator` (`boolean`): Whether the user is a moderator on the livestream.
+- `isVerified` (`boolean`): Whether the user has a YouTube verified checkmark.
 
 ## PartialChatMessage
-- `type` (string): The type of partial message.
-  - `text`: The message part consists purely of text.
-  - `emoji`: The message part consists purely of a single emoji.
-- `text` (string): The text of a message part of type `text`.
-- `isBold` (boolean): Whether the text of a message of type `text` is bold.
-- `isItalics` (boolean): Whether the text of a message of type `text` is in italics.
-- `name` (string): The emoji name, only for a message part of type `emoji`. It is the same name that is shown when hovering over the emoji.
-- `label` (string): The emoji label, only for a message part of type `emoji`. It is either the shortcut text (e.g. `:yt:`, or the first search term used for this emoji).
-- `image` ([ChatImage](#ChatImage)): The image representing the emoji, only for a message part of type `emoji`.
+- `type` (`string`): The type of partial message.
+  - `text` (`string`): The message part consists purely of text.
+  - `emoji` (`string`): The message part consists purely of a single emoji.
+- `text` (`string`): The text of a message part of type `text`.
+- `isBold` (`boolean`): Whether the text of a message of type `text` is bold.
+- `isItalics` (`boolean`): Whether the text of a message of type `text` is in italics.
+- `name` (`string`): The emoji name, only for a message part of type `emoji`. It is the same name that is shown when hovering over the emoji.
+- `label` (`string`): The emoji label, only for a message part of type `emoji`. It is either the shortcut text (e.g. `:yt:`, or the first search term used for this emoji).
+- `image` ([`ChatImage`](#ChatImage)): The image representing the emoji, only for a message part of type `emoji`.
 
 ## ChatImage
-- `url` (string): The image URL for the emoji.
-- `width` (number): The pixel width of the emoji image.
-- `height` (number): The pixel height of the emoji image.
+- `url` (`string`): The image URL for the emoji.
+- `width` (`number?`): The pixel width of the emoji image.
+- `height` (`number?`): The pixel height of the emoji image.
 
 
 
 # Change Log
+
+## v1.3 - The Database Update
+- Added Prisma and MySQL database
+- Added database migration scripts
+- Fixed Webpack bundling
+- Updated ChatController return model
 
 ## v1.2 - The Development Update
 - Added separate debug/release environments (.env file, /data folder, and build output)
