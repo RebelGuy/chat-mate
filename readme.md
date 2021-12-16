@@ -23,7 +23,7 @@ Note that, until Webpack bundles the dependencies (node_modules) as well, we wil
 
 ## Scripts for production:
 Assumes that steps 1-3 of the previous section have been run.
-4. `yarn build:release` will copy `node_modules` to the `./dist/release` folder and use webpack to bundle up the application
+4. `yarn build:release` bundles the application as `./dist/release/app.js`. The individual .js files are copied to the `/ref` folder for reference.
 5. `yarn migrate:release` migrate the database to the latest schema
 6. `yarn start:release` to run the release server
 
