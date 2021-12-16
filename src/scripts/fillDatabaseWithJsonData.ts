@@ -1,4 +1,4 @@
-require('../_config')
+require('module-alias/register') // don't use _config so this works on NODE_ENV=release too
 import * as fs from 'fs'
 import env from '@rebel/globals'
 import path from 'node:path'
