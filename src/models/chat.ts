@@ -1,7 +1,6 @@
 import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '@prisma/client'
 
 export type ChatItem = {
-  internalId: number,
   id: string,
 
   // unix timestamp (in milliseconds)
@@ -11,11 +10,11 @@ export type ChatItem = {
 }
 
 export type PublicChatItem = Omit<ChatItem, 'author'> & {
+  internalId: number
   author: PublicAuthor
 }
 
 export type Author = {
-  internalId: number,
   name?: string,
   channelId: string,
   image: string,
@@ -23,6 +22,7 @@ export type Author = {
 }
 
 export type PublicAuthor = Author & {
+  internalId: number
   lastUpdate: number
 }
 

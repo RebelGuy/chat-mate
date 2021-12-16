@@ -135,11 +135,9 @@ export default class ChatService {
     })
 
     return {
-      internalId: 0, // todo
       id: item.id,
       timestamp: item.timestamp.getTime(),
       author: {
-        internalId: 0, // todo
         name: item.authorName,
         channelId: item.authorChannelId,
         image: item.authorPhoto,
