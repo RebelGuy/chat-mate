@@ -42,9 +42,9 @@ export default class ChannelStore {
     const storedInfo = currentChannel?.infoHistory[0]
 
     let channel: Omit<Entity.Channel, 'chatMessages'>
-    if (storedInfo && storedInfo.time < channelInfo.time) {
+    if (currentChannel != null) {
       // if anything has changed, create a new ChannelInfo object and link it to the channel
-      if (!compare(storedInfo, channelInfo, channelInfoComparator)) {
+      if (storedInfo!.time < channelInfo.time && !compare(storedInfo!, channelInfo, channelInfoComparator)) {
         channel = await this.db.channel.update({
           where: { youtubeId: channelId },
           data: {
