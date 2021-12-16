@@ -98,13 +98,10 @@ Returns an object with the following properties:
 - `name` (`string?`): The author name (channel name).
 - `channelId` (`string`): The unique YouTube channel ID.
 - `image` (`string`): The image URL of the author's channel.
-- `attributes` ([`AuthorAttributes`](#AuthorAttributes)): Flags relating to the author's status in regards to the livestream.
-- `lastUpdate` (`number`): Timestamp of the last time the author's info was updated.
-
-## AuthorAttributes
 - `isOwner` (`boolean`): Whether the user is the channel owner of the livestreamer's channel.
 - `isModerator` (`boolean`): Whether the user is a moderator on the livestream.
 - `isVerified` (`boolean`): Whether the user has a YouTube verified checkmark.
+- `lastUpdate` (`number`): Timestamp of the last time the author's info was updated.
 
 ## PartialChatMessage
 - `type` (`string`): The type of partial message.

@@ -85,27 +85,31 @@ export default class ChatStore {
     }
     const channel = await this.channelStore.createOrUpdate(author.channelId, channelInfo)
 
-    const chatMessage = await this.db.chatMessage.upsert({
-      create: {
-        time: new Date(timestamp),
-        youtubeId: chatItem.id,
-        channel: { connect: { id: channel.id }},
-        livestream: { connect: { id: this.livestreamStore.currentLivestream.id }}
-      },
-      update: {},
-      where: { youtubeId: chatItem.id },
-      include: { chatMessageParts: true }
-    })
+    // there is a race condition where the client may request messages whose message parts haven't yet been
+    // completely written to the DB. bundle everything into a single transaction to solve this.
+    await this.db.$transaction(async (db) => {
+      const chatMessage = await db.chatMessage.upsert({
+        create: {
+          time: new Date(timestamp),
+          youtubeId: chatItem.id,
+          channel: { connect: { id: channel.id }},
+          livestream: { connect: { id: this.livestreamStore.currentLivestream.id }}
+        },
+        update: {},
+        where: { youtubeId: chatItem.id },
+        include: { chatMessageParts: true }
+      })
 
-    // add the records individually because we can't access relations (emoji/text) in a createMany() query
-    for (let i = 0; i < chatItem.messageParts.length; i++) {
-      const part = chatItem.messageParts[i]
-      if (chatMessage.chatMessageParts.find(existing => existing.order === i)) {
-        // message part already exists
-        continue
+      // add the records individually because we can't access relations (emoji/text) in a createMany() query
+      for (let i = 0; i < chatItem.messageParts.length; i++) {
+        const part = chatItem.messageParts[i]
+        if (chatMessage.chatMessageParts.find(existing => existing.order === i)) {
+          // message part already exists
+          continue
+        }
+        await db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) })
       }
-      await this.db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) })
-    }
+    })
   }
 
   private createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {

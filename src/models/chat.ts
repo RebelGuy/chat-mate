@@ -22,7 +22,7 @@ export type Author = {
   attributes: AuthorAttributes
 }
 
-export type PublicAuthor = Author & {
+export type PublicAuthor = Omit<Author, 'attributes'> & AuthorAttributes & {
   internalId: number
   lastUpdate: number
 }
@@ -105,11 +105,9 @@ export function privateToPublicItems (chatItems: ChatItemWithRelations[]): Publi
         lastUpdate: channelInfo.time.getTime(),
         name: channelInfo.name,
         image: channelInfo.imageUrl,
-        attributes: {
-          isOwner: channelInfo.isOwner,
-          isModerator: channelInfo.isModerator,
-          isVerified: channelInfo.IsVerified
-        }
+        isOwner: channelInfo.isOwner,
+        isModerator: channelInfo.isModerator,
+        isVerified: channelInfo.IsVerified
       },
       messageParts: item.chatMessageParts.map(part => {
         let partResult: PartialChatMessage
