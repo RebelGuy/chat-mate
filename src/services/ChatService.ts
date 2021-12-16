@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/context/context'
 import MasterchatProvider from '@rebel/providers/MasterchatProvider'
 import ChatStore from '@rebel/stores/ChatStore'
 import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
-import { ChatItem, PartialChatMessage } from "@rebel/models/chat"
+import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from "@rebel/models/chat"
 import { isList, List } from 'immutable'
 import { clamp, clampNormFn, sum } from '@rebel/util/math'
 import { IMasterchat } from '@rebel/interfaces'
@@ -72,7 +72,9 @@ export default class ChatService {
   private fetchLatest = async () => {
     const token = this.livestreamStore.currentLivestream.continuationToken
     try {
-      return token ? await this.masterchat.fetch(token) : await this.masterchat.fetch()
+      const result = token ? await this.masterchat.fetch(token) : await this.masterchat.fetch()
+      this.logService.logApi(this, 'masterchat.fetch', { chatToken: token }, result)
+      return result
     } catch (e: any) {
       this.logService.logWarning(this, 'Fetch failed:', e.message)
       await this.livestreamStore.setContinuationToken(null)
@@ -127,8 +129,9 @@ export default class ChatService {
       } else {
         return {
           type: 'emoji',
+          emojiId: getUniqueEmojiId(run.emoji),
           name: run.emoji.image.accessibility!.accessibilityData.label,
-          label: run.emoji.shortcuts[0] ?? run.emoji.searchTerms[0],
+          label: getEmojiLabel(run.emoji),
           image: run.emoji.image.thumbnails[0]!
         }
       }

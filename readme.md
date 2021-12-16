@@ -7,6 +7,7 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 Ensure Node 16 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]`
 
 Recommended extensions:
+- `TSLint (deprecated)`
 - `Gitlens`
 - `Prisma`
 
@@ -75,7 +76,7 @@ Query parameters:
 - `limit` (number): Limits the number of returned chat items (see below).
 
 Returns an object with the following properties:
-- `schema` (`2`): The current schema of the return object.
+- `schema` (`3`): The current schema of the return object.
 - `liveId` (`string`): The livestream ID to which the chat items belong. Currently, this is the liveId specified in the [`.env`](#env) file.
 - `lastTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `chat` ([`ChatItem`](#ChatItem)[]): The chat data that satisfy the request filter.
@@ -112,6 +113,7 @@ Returns an object with the following properties:
 - `text` (`string`): The text of a message part of type `text`.
 - `isBold` (`boolean`): Whether the text of a message of type `text` is bold.
 - `isItalics` (`boolean`): Whether the text of a message of type `text` is in italics.
+- `emojiId` (`string`): A unique ID for this emoji.
 - `name` (`string`): The emoji name, only for a message part of type `emoji`. It is the same name that is shown when hovering over the emoji.
 - `label` (`string`): The emoji label, only for a message part of type `emoji`. It is either the shortcut text (e.g. `:yt:`, or the first search term used for this emoji).
 - `image` ([`ChatImage`](#ChatImage)): The image representing the emoji, only for a message part of type `emoji`.

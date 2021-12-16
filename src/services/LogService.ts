@@ -4,7 +4,7 @@ import { ILoggable } from '@rebel/interfaces'
 import FileService from '@rebel/services/FileService'
 import { formatDate, formatTime } from '@rebel/util/datetime'
 
-type LogType = 'info' | 'debug' | 'warning' | 'error'
+type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
 export default class LogService {
   private readonly liveId: string
@@ -24,13 +24,18 @@ export default class LogService {
       this.logFile = this.fileService.getDataFilePath(`log_${formatDate()}_${this.liveId}.txt`)
     }
   }
-  
+
   public logDebug (logger: ILoggable, ...args: any[]) {
     this.log(logger, 'debug', args)
   }
 
   public logInfo (logger: ILoggable, ...args: any[]) {
     this.log(logger, 'info', args)
+  }
+
+  public logApi (logger: ILoggable, request: string, params: Record<string, any> | null, response: any) {
+    let stringifiedParams = params ? ` with params: ${JSON.stringify(params)}` : ''
+    this.log(logger, 'api',  [`API request '${request}'${stringifiedParams} received response`, response])
   }
 
   public logWarning (logger: ILoggable, ...args: any[]) {
@@ -63,6 +68,7 @@ export default class LogService {
 export type LogContext = {
   logDebug: (...args: any[]) => void
   logInfo: (...args: any[]) => void
+  logApi: (request: string, params: Record<string, any> | null, response: any) => void
   logWarning: (...args: any[]) => void
   logError: (...args: any[]) => void
 }
@@ -71,6 +77,7 @@ export function createLogContext (logService: LogService, logger: ILoggable): Lo
   return {
     logDebug: (...args: any[]) => logService.logDebug(logger, ...args),
     logInfo: (...args: any[]) => logService.logInfo(logger, ...args),
+    logApi: (request: string, params: Record<string, any> | null, response: any) => logService.logApi(logger, request, params, response),
     logWarning: (...args: any[]) => logService.logWarning(logger, ...args),
     logError: (...args: any[]) => logService.logError(logger, ...args)
   }

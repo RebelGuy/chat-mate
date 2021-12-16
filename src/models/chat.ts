@@ -1,4 +1,5 @@
 import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '@prisma/client'
+import { YTEmoji } from '@rebel/../../masterchat/lib/masterchat'
 
 export type ChatItem = {
   id: string,
@@ -44,6 +45,9 @@ export type PartialTextChatMessage = {
 export type PartialEmojiChatMessage = {
   type: 'emoji',
 
+  // youtube's ID
+  emojiId: string,
+
   // the hover-over name
   name: string,
 
@@ -70,7 +74,25 @@ export type ChatItemWithRelations = (ChatMessage & {
   })[];
 })
 
-export function privateToPublicItems(chatItems: ChatItemWithRelations[]): PublicChatItem[] {
+export function getUniqueEmojiId (emoji: YTEmoji): string {
+  if (emoji.image.thumbnails[0].height && emoji.image.thumbnails[0].width && emoji.emojiId.length > 24) {
+    // emojis with images already have a unique ids in the form UCkszU2WH9gy1mb0dV-11UJg/xxxxxxxxxxxxxxxxxxxxxx
+    return emoji.emojiId
+  } else {
+    // SVG emojis seem to be those that can be encoding in text directly, and their ID is just the emoji itself.
+    // the problem is that, while technically the ids are unique, MySQL seems to have trouble differentiating them.
+    // so we force the string to be unique by combining it with the label.
+    return `${emoji.emojiId}-${getEmojiLabel(emoji)}`
+  }
+}
+
+// this is unique, and of the form :emoji_description:
+// it is NEVER the emoji symbol itself, which may not be unique
+export function getEmojiLabel (emoji: YTEmoji): string {
+  return emoji.shortcuts[0] ?? emoji.searchTerms[0]
+}
+
+export function privateToPublicItems (chatItems: ChatItemWithRelations[]): PublicChatItem[] {
   return chatItems.map(item => {
     const channelInfo = item.channel.infoHistory[0]
     const result: PublicChatItem = {
@@ -103,6 +125,7 @@ export function privateToPublicItems(chatItems: ChatItemWithRelations[]): Public
           const emoji = part.emoji!
           partResult = {
             type: 'emoji',
+            emojiId: emoji.youtubeId,
             name: emoji.name!,
             label: emoji.label!,
             image: {

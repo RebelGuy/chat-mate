@@ -55,7 +55,7 @@ export default class ChatStore {
         },
         channel: {
           include: {
-            infoHistory: { 
+            infoHistory: {
               orderBy: { time: 'desc' },
               take: 1
             }
@@ -86,7 +86,7 @@ export default class ChatStore {
     const channel = await this.channelStore.createOrUpdate(author.channelId, channelInfo)
 
     const chatMessage = await this.db.chatMessage.upsert({
-      create: { 
+      create: {
         time: new Date(timestamp),
         youtubeId: chatItem.id,
         channel: { connect: { id: channel.id }},
@@ -118,10 +118,9 @@ export default class ChatStore {
   }
 
   private connectOrCreate (part: PartialEmojiChatMessage) {
-    const youtubeId = this.getEmojiYoutubeId(part)
     return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
       create: {
-        youtubeId,
+        youtubeId: part.emojiId,
         imageUrl: part.image.url,
         imageHeight: part.image.height ?? null,
         imageWidth: part.image.width ?? null,
@@ -129,13 +128,8 @@ export default class ChatStore {
         name: part.name,
         isCustomEmoji: false
       },
-      where: { youtubeId }
+      where: { youtubeId: part.emojiId }
     })
-  }
-
-  private getEmojiYoutubeId (part: PartialEmojiChatMessage) {
-    // remove in CHAT-79
-    return `Unknown-${part.name ?? part.label}`
   }
 
   private createText (part: PartialTextChatMessage) {

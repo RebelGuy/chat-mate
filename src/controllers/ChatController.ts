@@ -5,7 +5,7 @@ import ChatStore from '@rebel/stores/ChatStore'
 import { ApiSchema } from '@rebel/types'
 import { GET, Path, QueryParam } from "typescript-rest"
 
-type GetChatResponse = ApiSchema<2, {
+type GetChatResponse = ApiSchema<3, {
   liveId: string
 
   // include the timestamp so it can easily be used for the next request
@@ -34,7 +34,7 @@ export class ChatController {
     const items = await this.chatStore.getChatSince(since, limit)
 
     return {
-      schema: 2,
+      schema: 3,
       liveId: this.liveId,
       lastTimestamp: items.at(-1)?.time.getTime() ?? since,
       chat: privateToPublicItems(items)

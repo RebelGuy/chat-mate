@@ -9,8 +9,8 @@ export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 
 export default class ChannelStore {
   private readonly db: Db
-  
-  constructor(deps: Dependencies) {
+
+  constructor (deps: Dependencies) {
     this.db = deps.resolve<DbProvider>(DbProvider.name).get()
   }
 
@@ -26,8 +26,8 @@ export default class ChannelStore {
   public async getHistory (channelId: string): Promise<Entity.ChannelInfo[] | null> {
     const channel = await this.db.channel.findUnique({
       where: { youtubeId: channelId },
-      include: { 
-        infoHistory: { 
+      include: {
+        infoHistory: {
           orderBy: { time: 'desc' },
           include: { channel: true }
         }
