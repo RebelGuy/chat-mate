@@ -1,7 +1,8 @@
 import { Dependencies } from '@rebel/context/context'
 import IProvider from '@rebel/providers/IProvider'
 import LogService from '@rebel/services/LogService'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
+import { PrismaClientKnownRequestError, PrismaClientRustPanicError, PrismaClientUnknownRequestError, PrismaClientValidationError } from '@prisma/client/runtime'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
@@ -46,13 +47,28 @@ export default class DbProvider implements IProvider<Db> {
       this.logService.logError(this, e.message)
     })
 
+    // middleware for logging errors - this way we don't have to care about errors manually every time we use the client
+    // https://www.prisma.io/docs/reference/api-reference/error-reference
+    client.$use(async (params: Prisma.MiddlewareParams, next) => {
+      try {
+        return await next(params)
+      } catch (e: any) {
+        this.logService.logError(this, 'Prisma encountered an error while trying to execute a request.')
+        this.logService.logError(this, 'PARAMS:', params)
+        this.logService.logError(this, 'ERROR:', e)
+        this.logService.logError(this, 'MESSAGE:', e.message)
+        this.logService.logError(this, 'STACK:', e.stack)
+        throw e
+      }
+    })
+
     this.prismaClient = client
   }
 
   public get (): Db {
     if (!this.connected) {
       // don't wait until the first query to connect, in case there is an issue
-      this.connected
+      this.connected = true
       this.prismaClient.$connect()
     }
     return this.prismaClient as Db

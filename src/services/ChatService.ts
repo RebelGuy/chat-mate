@@ -99,7 +99,7 @@ export default class ChatService {
         this.logService.logWarning(this, `Fetched ${chatItems.length} new chat items but continuation token is null. Ignoring chat items.`)
       } else {
         const token = response.continuation.token
-        this.chatStore.addChat(token, chatItems)
+        await this.chatStore.addChat(token, chatItems)
         hasNewChat = chatItems.length > 0
       }
     }

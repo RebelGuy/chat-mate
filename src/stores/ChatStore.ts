@@ -34,6 +34,8 @@ export default class ChatStore {
       await this.addChatItem(item)
     }
 
+    // purposefully only set this AFTER everything has been added. if we set it before,
+    // and something goes wrong with adding chat, the chat messages will be lost forever.
     await this.livestreamStore.setContinuationToken(token)
   }
 

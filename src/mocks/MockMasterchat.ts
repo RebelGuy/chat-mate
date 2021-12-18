@@ -116,7 +116,7 @@ export default class MockMasterchat implements IMasterchat {
     return MockMasterchat.buildResponse(action)
   }
 
-  private static buildResponse(action?: Action): Promise<ChatResponse> {
+  private static buildResponse (action?: Action): Promise<ChatResponse> {
     return new Promise((resolve, _) => resolve({
       actions: action ? [action] : [],
       continuation: { timeoutMs: 10000, token: 'mock_continuationToken' },
