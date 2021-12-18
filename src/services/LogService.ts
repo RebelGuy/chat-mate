@@ -47,16 +47,15 @@ export default class LogService {
   }
 
   private log (logger: ILoggable, logType: LogType, args: any[]) {
-    if (this.isLive && logType === 'debug') {
-      return
-    }
-
     const prefix = `${formatTime()} ${logType.toUpperCase()} > [${logger.name}]`
-    const consoleLogger = logType === 'error' ? console.error
-      : logType === 'warning' ? console.warn
-      : logType === 'info' ? console.info
-      : console.debug
-    consoleLogger(prefix, ...args)
+    if (!(logType === 'api' || logType === 'debug')) {
+      // don't print api or debug logs to the console as they are very verbose
+      const consoleLogger = logType === 'error' ? console.error
+        : logType === 'warning' ? console.warn
+        : logType === 'info' ? console.info
+        : console.debug
+      consoleLogger(prefix, ...args)
+    }
 
     // convert the args to strings, stripping away the `"` that are created along the way
     const content = args.map(a => { const str = JSON.stringify(a); return str.substring(1, str.length - 1) }).join(' ')

@@ -27,7 +27,7 @@ export default class ChatStore {
   }
 
   public async addChat (token: string, newChat: ChatItem[]) {
-    this.logService.logDebug(this, `Adding ${newChat.length} new chat items`)
+    this.logService.logInfo(this, `Adding ${newChat.length} new chat items`)
 
     const sorted = List(newChat).sort((c1, c2) => c1.timestamp - c2.timestamp)
     for (const item of sorted) {

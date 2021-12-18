@@ -86,16 +86,17 @@ export default class MockMasterchat implements IMasterchat {
       isOwner: channelInfo.isOwner,
       isModerator: channelInfo.isModerator,
       isVerified: channelInfo.IsVerified,
-      message: item.chatMessageParts.map(part => {
-        if (part.text && !part.emoji) {
+      message: item.chatMessageParts.map((part, i) => {
+        if (part.text && !part.emoji || customMessage && i === 0) {
           return {
-            text: customMessage ?? part.text.text,
-            bold: part.text.isBold,
-            italics: part.text.isItalics
+            text: customMessage ?? part.text!.text,
+            bold: part.text?.isBold ?? false,
+            italics: part.text?.isItalics ?? false
           } as YTRun
         } else if (!part.text && part.emoji) {
           return {
             emoji: {
+              emojiId: part.emoji.youtubeId!,
               image: {
                 accessibility: { accessibilityData: { label: part.emoji.name }},
                 thumbnails: [{ url: part.emoji.imageUrl, width: part.emoji.imageWidth, height: part.emoji.imageHeight }]
