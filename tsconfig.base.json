@@ -1,0 +1,10 @@
+{
+  // when adding more projects that depend on each other, see
+  // https://stackoverflow.com/questions/57679322/how-to-use-yarn-workspaces-with-typescript-and-out-folders
+  "references": [
+    { "path": "./projects/server" },
+  ],
+  "files": [],
+  "include": [],
+  "exclude": ["**/node_modules"]
+}

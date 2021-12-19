@@ -5,7 +5,7 @@
     // this is required, else decorated controller params result in a crash
     "emitDecoratorMetadata": true,
     "strict": true,
-    "outDir": "./dist/debug",
+    "outDir": "../../dist/debug/server",
     "sourceMap": true,
     "module": "commonjs",
     "target": "es5",
@@ -21,11 +21,11 @@
     "moduleResolution": "node",
     "baseUrl": "./src",
     "paths": {
-      "@rebel/*": ["./*"]
+      "@rebel/*": ["../../projects/*"]
     }
   },
   "include": [
-    "src"
+    "./src"
   ],
   "exclude": [
     "./node_modules",

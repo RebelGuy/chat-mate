@@ -1,5 +1,6 @@
 {
   "name": "server",
+  "main": "./dist/server/app.js",
   "scripts": {
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
     "build": "npm run build:dependencies && npm run build:project",
