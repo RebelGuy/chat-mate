@@ -80,16 +80,24 @@ export function getUniqueEmojiId (emoji: YTEmoji): string {
     return emoji.emojiId
   } else {
     // SVG emojis seem to be those that can be encoding in text directly, and their ID is just the emoji itself.
-    // the problem is that, while technically the ids are unique, MySQL seems to have trouble differentiating them.
+    // the problem is that, while technically the ids are unique, MySQL seems to have trouble differentiating some of them.
     // so we force the string to be unique by combining it with the label.
-    return `${emoji.emojiId}-${getEmojiLabel(emoji)}`
+
+    // in rare cases (e.g. 🙌🏻) we only have the accessability data, which is the same as the id. here, we just
+    // hope that it can be differentiated by MySQL (another option may be to concatenate the URL, but that might be mutable).
+    const label = getEmojiLabel(emoji)
+    if (emoji.emojiId === label) {
+      return emoji.emojiId
+    } else {
+      return `${emoji.emojiId}-${getEmojiLabel(emoji)}`
+    }
   }
 }
 
-// this is unique, and of the form :emoji_description:
-// it is NEVER the emoji symbol itself, which may not be unique
+// this is unique, and usually of the form :emoji_description:
+// it MAY be the emoji symbol itself if no further information is available
 export function getEmojiLabel (emoji: YTEmoji): string {
-  return emoji.shortcuts[0] ?? emoji.searchTerms[0]
+  return emoji.shortcuts?.at(0) ?? emoji.searchTerms?.at(0) ?? emoji.emojiId
 }
 
 export function privateToPublicItems (chatItems: ChatItemWithRelations[]): PublicChatItem[] {
