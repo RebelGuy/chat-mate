@@ -1,10 +1,10 @@
 import { Prisma } from '@prisma/client'
-import { Dependencies } from '@rebel/context/context';
-import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/models/chat';
-import DbProvider, { Db } from '@rebel/providers/DbProvider'
-import LogService from '@rebel/services/LogService'
-import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/stores/ChannelStore'
-import LivestreamStore from '@rebel/stores/LivestreamStore'
+import { Dependencies } from '@rebel/server/context/context';
+import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat';
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import LogService from '@rebel/server/services/LogService'
+import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { List } from 'immutable';
 
 export type ChatSave = {

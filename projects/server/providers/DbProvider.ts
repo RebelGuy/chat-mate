@@ -1,6 +1,6 @@
-import { Dependencies } from '@rebel/context/context'
-import IProvider from '@rebel/providers/IProvider'
-import LogService from '@rebel/services/LogService'
+import { Dependencies } from '@rebel/server/context/context'
+import IProvider from '@rebel/server/providers/IProvider'
+import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
 import { PrismaClientKnownRequestError, PrismaClientRustPanicError, PrismaClientUnknownRequestError, PrismaClientValidationError } from '@prisma/client/runtime'
 

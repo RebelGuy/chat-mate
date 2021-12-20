@@ -1,10 +1,10 @@
-import { Action, AddChatItemAction, ChatResponse, YTRun } from '@rebel/../../masterchat/lib/masterchat'
-import { IMasterchat } from '@rebel/interfaces'
-import { ChatItemWithRelations } from '@rebel/models/chat'
-import LogService from '@rebel/services/LogService'
-import ChatStore from '@rebel/stores/ChatStore'
-import { MakeRequired } from '@rebel/types'
-import { listenForUserInput } from '@rebel/util/input'
+import { Action, AddChatItemAction, ChatResponse, YTRun } from '@rebel/server/../../masterchat/lib/masterchat'
+import { IMasterchat } from '@rebel/server/interfaces'
+import { ChatItemWithRelations } from '@rebel/server/models/chat'
+import LogService from '@rebel/server/services/LogService'
+import ChatStore from '@rebel/server/stores/ChatStore'
+import { MakeRequired } from '@rebel/server/types'
+import { listenForUserInput } from '@rebel/server/util/input'
 
 const CHAT_RATE = 0.5
 

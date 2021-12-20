@@ -1,12 +1,12 @@
 require('module-alias/register') // don't use _config so this works on NODE_ENV=release too
 import * as fs from 'fs'
-import env from '@rebel/globals'
+import env from '@rebel/server/globals'
 import path from 'node:path'
-import { ContextProvider } from '@rebel/context/context'
-import FileService from '@rebel/services/FileService'
-import LogService, { createLogContext } from '@rebel/services/LogService'
-import DbProvider from '@rebel/providers/DbProvider'
-import { ChatSave } from '@rebel/stores/ChatStore'
+import { ContextProvider } from '@rebel/server/context/context'
+import FileService from '@rebel/server/services/FileService'
+import LogService, { createLogContext } from '@rebel/server/services/LogService'
+import DbProvider from '@rebel/server/providers/DbProvider'
+import { ChatSave } from '@rebel/server/stores/ChatStore'
 import { Prisma } from '@prisma/client'
 
 // run using

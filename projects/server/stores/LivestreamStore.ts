@@ -1,7 +1,7 @@
 import { Livestream } from '@prisma/client'
-import { Dependencies } from '@rebel/context/context'
-import { New } from '@rebel/models/entities'
-import DbProvider, { Db } from '@rebel/providers/DbProvider'
+import { Dependencies } from '@rebel/server/context/context'
+import { New } from '@rebel/server/models/entities'
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 
 export default class LivestreamStore {
   private readonly liveId: string

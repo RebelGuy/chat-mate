@@ -1,8 +1,8 @@
-import { Dependencies } from '@rebel/context/context'
-import { NodeEnv } from '@rebel/globals'
-import { ILoggable } from '@rebel/interfaces'
-import FileService from '@rebel/services/FileService'
-import { formatDate, formatTime } from '@rebel/util/datetime'
+import { Dependencies } from '@rebel/server/context/context'
+import { NodeEnv } from '@rebel/server/globals'
+import { ILoggable } from '@rebel/server/interfaces'
+import FileService from '@rebel/server/services/FileService'
+import { formatDate, formatTime } from '@rebel/server/util/datetime'
 
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 

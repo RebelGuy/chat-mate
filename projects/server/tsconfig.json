@@ -1,35 +1,19 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "experimentalDecorators": true,
-
-    // this is required, else decorated controller params result in a crash
-    "emitDecoratorMetadata": true,
-    "strict": true,
     "outDir": "../../dist/debug/server",
-    "sourceMap": true,
     "module": "commonjs",
     "target": "es5",
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "downlevelIteration": true,
-    "declaration": true,
-    "declarationMap": true,
-    "allowJs": false,
     "lib": ["ES6"],
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "moduleResolution": "node",
-    "baseUrl": "./src",
-    "paths": {
-      "@rebel/*": ["../../projects/*"]
-    }
+    "moduleResolution": "node"
   },
   "include": [
-    "./src"
+    "./*"
   ],
   "exclude": [
-    "./node_modules",
-    "./prisma",
+    "./projects/server/node_modules",
+    "./projects/server/prisma",
 
     // related to data migrations - ignore for now
     "./src/scripts/migrations/_dataMigrationTemplate.ts",

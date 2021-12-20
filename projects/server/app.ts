@@ -1,20 +1,20 @@
 require('./_config')
 import express from "express"
 import { Server } from "typescript-rest"
-import { ChatController } from "@rebel/controllers/ChatController"
+import { ChatController } from "@rebel/server/controllers/ChatController"
 import env from "./globals"
-import { ContextProvider, setContextProvider } from '@rebel/context/context'
-import ChatService from '@rebel/services/ChatService'
-import ServiceFactory from '@rebel/context/CustomServiceFactory'
-import ChatStore from '@rebel/stores/ChatStore'
-import MasterchatProvider from '@rebel/providers/MasterchatProvider'
+import { ContextProvider, setContextProvider } from '@rebel/server/context/context'
+import ChatService from '@rebel/server/services/ChatService'
+import ServiceFactory from '@rebel/server/context/CustomServiceFactory'
+import ChatStore from '@rebel/server/stores/ChatStore'
+import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import path from 'node:path'
-import FileService from '@rebel/services/FileService'
-import { getLiveId } from '@rebel/util/text'
-import LogService, { createLogContext } from '@rebel/services/LogService'
-import DbProvider from '@rebel/providers/DbProvider'
-import LivestreamStore from '@rebel/stores/LivestreamStore'
-import ChannelStore from '@rebel/stores/ChannelStore'
+import FileService from '@rebel/server/services/FileService'
+import { getLiveId } from '@rebel/server/util/text'
+import LogService, { createLogContext } from '@rebel/server/services/LogService'
+import DbProvider from '@rebel/server/providers/DbProvider'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
 
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)

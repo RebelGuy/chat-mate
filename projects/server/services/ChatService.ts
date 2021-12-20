@@ -1,14 +1,14 @@
 
-import { Dependencies } from '@rebel/context/context'
-import MasterchatProvider from '@rebel/providers/MasterchatProvider'
-import ChatStore from '@rebel/stores/ChatStore'
+import { Dependencies } from '@rebel/server/context/context'
+import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
-import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from "@rebel/models/chat"
+import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from "@rebel/server/models/chat"
 import { isList, List } from 'immutable'
-import { clamp, clampNormFn, sum } from '@rebel/util/math'
-import { IMasterchat } from '@rebel/interfaces'
-import LogService, { createLogContext, LogContext } from '@rebel/services/LogService'
-import LivestreamStore from '@rebel/stores/LivestreamStore'
+import { clamp, clampNormFn, sum } from '@rebel/server/util/math'
+import { IMasterchat } from '@rebel/server/interfaces'
+import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000

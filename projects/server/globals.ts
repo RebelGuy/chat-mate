@@ -1,7 +1,7 @@
-import { OptionalKeys, Optionals } from '@rebel/types'
+import { OptionalKeys, Optionals } from '@rebel/server/types'
 import { URL } from 'node:url'
 import dotenv from 'dotenv'
-import { toConstCase } from '@rebel/util/text'
+import { toConstCase } from '@rebel/server/util/text'
 import assert from 'node:assert'
 
 // always returns T if in a debug enviroment, otherwise always returns null

@@ -1,4 +1,4 @@
-import { Dependencies, ContextProvider } from '@rebel/context/context'
+import { Dependencies, ContextProvider } from '@rebel/server/context/context'
 
 class TestA {
   constructor () {

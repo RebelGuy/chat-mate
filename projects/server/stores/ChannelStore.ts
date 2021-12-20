@@ -1,9 +1,9 @@
 import { Channel, ChannelInfo, Prisma } from '@prisma/client'
-import { Dependencies } from '@rebel/context/context'
-import { New, Entity } from '@rebel/models/entities'
-import DbProvider, { Db } from '@rebel/providers/DbProvider'
-import { ObjectComparator } from '@rebel/types'
-import { compare } from '@rebel/util/typescript'
+import { Dependencies } from '@rebel/server/context/context'
+import { New, Entity } from '@rebel/server/models/entities'
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { ObjectComparator } from '@rebel/server/types'
+import { compare } from '@rebel/server/util/typescript'
 
 export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 

@@ -1,5 +1,5 @@
-import { Dependencies } from '@rebel/context/context'
-import { GenericObject } from '@rebel/types'
+import { Dependencies } from '@rebel/server/context/context'
+import { GenericObject } from '@rebel/server/types'
 import * as fs from 'fs'
 import path from 'node:path'
 

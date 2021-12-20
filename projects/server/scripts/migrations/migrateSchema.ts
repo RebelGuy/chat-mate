@@ -4,7 +4,7 @@ import { toParamCase } from '../../util/text'
 import { execAsync } from '../../util/node'
 import path from 'node:path'
 import { getAvailableMigrationsSorted, getOutstandingMigrationNames } from './util'
-import env from '@rebel/globals'
+import env from '@rebel/server/globals'
 
 // for some reason dotenv scripts don't propagate the --create-only parameter
 

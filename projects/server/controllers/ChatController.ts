@@ -1,8 +1,8 @@
-import { Dependencies } from '@rebel/context/context'
-import { buildPath } from '@rebel/controllers/BaseEndpoint'
-import { privateToPublicItems, PublicChatItem } from '@rebel/models/chat'
-import ChatStore from '@rebel/stores/ChatStore'
-import { ApiSchema } from '@rebel/types'
+import { Dependencies } from '@rebel/server/context/context'
+import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
+import { privateToPublicItems, PublicChatItem } from '@rebel/server/models/chat'
+import ChatStore from '@rebel/server/stores/ChatStore'
+import { ApiSchema } from '@rebel/server/types'
 import { GET, Path, QueryParam } from "typescript-rest"
 
 type GetChatResponse = ApiSchema<3, {

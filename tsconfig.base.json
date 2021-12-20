@@ -4,7 +4,23 @@
   "references": [
     { "path": "./projects/server" },
   ],
-  "files": [],
-  "include": [],
-  "exclude": ["**/node_modules"]
+  "compilerOptions": {
+    "experimentalDecorators": true,
+
+    // this is required, else decorated controller params result in a crash
+    "emitDecoratorMetadata": true,
+    "strict": true,
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "downlevelIteration": true,
+    "declaration": true,
+    "declarationMap": true,
+    "allowJs": false,
+    "skipLibCheck": true,
+    "baseUrl": "./",
+    "paths": {
+      "@rebel/*": ["./projects/*"]
+    }
+  }
 }

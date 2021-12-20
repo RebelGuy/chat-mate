@@ -1,11 +1,11 @@
-import { Dependencies } from '@rebel/context/context';
-import IProvider from '@rebel/providers/IProvider';
-import { IMasterchat } from '@rebel/interfaces';
-import MockMasterchat from '@rebel/mocks/MockMasterchat'
-import FileService from '@rebel/services/FileService'
-import LogService from '@rebel/services/LogService'
+import { Dependencies } from '@rebel/server/context/context';
+import IProvider from '@rebel/server/providers/IProvider';
+import { IMasterchat } from '@rebel/server/interfaces';
+import MockMasterchat from '@rebel/server/mocks/MockMasterchat'
+import FileService from '@rebel/server/services/FileService'
+import LogService from '@rebel/server/services/LogService'
 import { Masterchat } from 'masterchat';
-import ChatStore from '@rebel/stores/ChatStore'
+import ChatStore from '@rebel/server/stores/ChatStore'
 
 export default class MasterchatProvider implements IProvider<IMasterchat> {
   readonly name = MasterchatProvider.name

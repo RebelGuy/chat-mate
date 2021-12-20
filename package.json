@@ -2,8 +2,8 @@
   "name": "chat-mate",
   "version": "1.4.0",
   "private": true,
-  "workspaces": ["./projects/server"],
+  "workspaces": { "packages": ["./projects/*"]},
   "_moduleAliases": {
-    "@rebel": "dist/debug"
+    "@rebel/*": "./dist/debug/*"
   }
 }

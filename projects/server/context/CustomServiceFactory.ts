@@ -1,5 +1,5 @@
 import { ServiceContext, ServiceFactory } from 'typescript-rest'
-import { getContextProvider } from '@rebel/context/context'
+import { getContextProvider } from '@rebel/server/context/context'
 
 export default class CustomServiceFactory implements ServiceFactory {
   // Create a new service object. Called before each request handling, for each registered Controller.

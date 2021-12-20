@@ -1,4 +1,4 @@
-import { ObjectComparator, ValueComparator } from '@rebel/types'
+import { ObjectComparator, ValueComparator } from '@rebel/server/types'
 
 export function assert(condition: any, msg: string): asserts condition {
   if (!condition) {
