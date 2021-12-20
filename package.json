@@ -4,6 +4,6 @@
   "private": true,
   "workspaces": { "packages": ["./projects/*"]},
   "_moduleAliases": {
-    "@rebel/*": "./dist/debug/*"
+    "@rebel": "./dist/debug"
   }
 }

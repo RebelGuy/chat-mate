@@ -9,9 +9,12 @@ type DebugVariable<T> = T | null
 
 export type NodeEnv = 'debug' | 'release'
 
+export type BuildType = 'tsc' | 'webpack'
+
 // these can be set either statically in the .env file, or dynamically within the npm script using the `cross-env` package.
 type EnvironmentVariables = {
   nodeEnv: NodeEnv
+  build: BuildType
   port: number
 
   // authentication token passed into Masterchat
@@ -27,7 +30,8 @@ type EnvironmentVariables = {
 
 // if an environment variable is included in this list, it must be set using the `cross-env` package.
 const injectedVariables: (keyof EnvironmentVariables)[] = [
-  'nodeEnv'
+  'nodeEnv',
+  'build'
 ]
 
 injectedVariables.map(variable => {
