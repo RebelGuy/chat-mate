@@ -7,18 +7,17 @@ const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().
 
 module.exports = (env) => {
   env.BUILD = 'webpack'
-  console.log('__dirname:', __dirname)
 
   return {
     // this opts out of automatic optimisations - do NOT set this to production as the app
     // will crash and the error message is so big it lags out everything
     mode: 'none',
-    entry: 'app.ts',
+    entry: './app.ts',
     resolve: {
       extensions: ['.js', '.ts'],
-      modules: [path.resolve(__dirname, 'node_modules')],
+      modules: [path.resolve(__dirname, 'node_modules'), path.resolve(__dirname, '../../node_modules')],
       alias: {
-        "@rebel/*": path.resolve(__dirname, 'projects/*'),
+        "@rebel": path.resolve(__dirname, '../../projects'),
       }
     },
 
@@ -32,7 +31,7 @@ module.exports = (env) => {
       'typescript-ioc/es6': 'typescript-ioc/es6',
 
       // we don't use it in webpack builds, but not marking it as an external here will cause a 'Module not found' error
-      'module-alias/register': 'ModuleAlias'
+      'module-alias/register': {}
     },
     target: 'node',
 
@@ -40,8 +39,9 @@ module.exports = (env) => {
     devtool: 'source-map',
 
     output: {
+      path: path.resolve(__dirname, `../../dist/${env.NODE_ENV}/server`),
       // output path is already dist somehow
-      filename: `./${env.NODE_ENV}/server/app.js`
+      filename: `./app.js`
     },
     module: {
       rules: [
@@ -54,7 +54,15 @@ module.exports = (env) => {
       ]
     },
     plugins: [
-      new webpack.BannerPlugin(banner)
+      new webpack.BannerPlugin(banner),
+      new webpack.DefinePlugin({
+        'process.env':{
+          // in the built file, webpack will replace `process.env.[variable]` with the
+          // provided string value, unwrapping one layer of quotation marks
+          'NODE_ENV': `"${env.NODE_ENV}"`,
+          'BUILD': `"webpack"`
+        }
+      })
     ]
   }
 }

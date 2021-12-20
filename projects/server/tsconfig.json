@@ -10,7 +10,7 @@
   },
   "include": [
     "./*"
-, "../../webpack.config.js"  ],
+, "webpack.config.js"  ],
   "exclude": [
     "./projects/server/node_modules",
     "./projects/server/prisma",

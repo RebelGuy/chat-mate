@@ -54,18 +54,34 @@ function isOptional<V extends keyof EnvironmentVariables> (variable: V): boolean
 }
 
 // separate debug/release .env files
-dotenv.config({ path: `./${env('nodeEnv')}.env`})
+const dotenvFile = `./${process.env.NODE_ENV}.env`
+const dotenvResult = dotenv.config({ path: dotenvFile})
+if (dotenvResult.error) {
+  throw new Error(`Unable to load dot-env file at ${dotenvFile} : ` + dotenvResult.error.message)
+} else if (dotenvResult.parsed == null) {
+  throw new Error(`Managed to load dot-env file at ${dotenvFile} but result was null`)
+}
+
+// we can't just read everything off process.env
+// because webpack thinks it knows what env variables
+// we will have and over-optimises the code.
+const allEnvVariables: Record<string, string | undefined> = {
+  ...dotenvResult.parsed,
+
+  // injected variables take precedence
+  ...process.env
+}
 
 // returns the set value, or null
 export default function env<V extends keyof EnvironmentVariables> (variable: V): Required<EnvironmentVariables>[V] {
   const envName = toConstCase(variable)
 
   let value: string | null
-  if (Object.keys(process.env).includes(envName)) {
+  if (Object.keys(allEnvVariables).includes(envName)) {
     if (debugVariables.includes(variable) && env('nodeEnv') === 'release') {
       value = null
     } else {
-      value = process.env[envName]!
+      value = allEnvVariables[envName]!
     }
   } else if (isOptional(variable)) {
     value = null
