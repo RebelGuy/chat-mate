@@ -1,7 +1,7 @@
 // `require()` this file at the very top of any entry-level files
 
 // we can't use `env()` because it requires dependencies that use aliases
-if (process.env.BUILD === 'webpack') {
+if (process.env.BUILD === 'tsc') {
   // webpack doesn't like this and handles the alias resolving itself, but in debug mode
   // the alias is defined manually (see the _moduleAliases entry in the package.json).
   // tslint:disable-next-line:no-var-requires

@@ -18,11 +18,9 @@
     {
       "name": "start:debug",
       "request": "launch",
-      "runtimeArgs": [
-        "run-script",
-        "start:debug"
-      ],
-      "runtimeExecutable": "npm",
+      "cwd": "${workspaceFolder}/projects/server",
+      "runtimeArgs": ["start:debug"],
+      "runtimeExecutable": "yarn",
       "skipFiles": [
         "<node_internals>/**"
       ],
@@ -31,11 +29,9 @@
     {
       "name": "start:mock",
       "request": "launch",
-      "runtimeArgs": [
-        "run-script",
-        "start:mock"
-      ],
-      "runtimeExecutable": "npm",
+      "cwd": "${workspaceFolder}/projects/server",
+      "runtimeArgs": ["start:mock"],
+      "runtimeExecutable": "yarn",
       "skipFiles": [
         "<node_internals>/**"
       ],
