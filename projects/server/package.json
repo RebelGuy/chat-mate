@@ -21,12 +21,13 @@
     "db:dump": "C:/\"Program Files\"/MySQL/\"MySQL Server 8.0\"/bin/mysqldump chat_mate > \"../../data/release/dump.sql\" --user root --password",
     "migrate:release": "yarn run db:dump && dotenv -e release.env npx prisma migrate deploy",
     "build:debug": "tsc --outDir ../../dist/debug/ref --declaration false --declarationMap false --sourceMap false && webpack --env NODE_ENV=debug",
-    "build:release": "tsc --outDir ../../dist/release/ref --declaration false --declarationMap false --sourceMap false && webpack --env NODE_ENV=release",
-    "start:release": "cross-env NODE_ENV=release node ../../dist/release/app.js"
+    "build:release": "tsc --outDir ../../dist/release/server/ref --declaration false --declarationMap false --sourceMap false && webpack --env NODE_ENV=release",
+    "start:release": "cross-env NODE_ENV=release node ../../dist/release/server/app.js"
   },
   "dependencies": {
     "@prisma/client": "^3.6.0",
     "@types/node": "^16.11.7",
+    "copy-webpack-plugin": "^10.2.0",
     "dotenv": "^10.0.0",
     "encoding": "^0.1.13",
     "express": "^4.17.1",
@@ -36,7 +37,9 @@
     "module-alias": "^2.2.2",
     "tslib": "^2.3.1",
     "typescript": "^4.4.4",
-    "typescript-rest": "^1.6.2"
+    "typescript-rest": "^1.6.2",
+    "webpack-node-externals": "^3.0.0",
+    "webpack-shell-plugin-next": "^2.2.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.13",

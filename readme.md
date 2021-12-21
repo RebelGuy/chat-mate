@@ -50,7 +50,7 @@ The `debug` MySQL database is named `chat_mate_debug`, while the `release` datab
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
-At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, see https://www.prisma.io/docs/concepts/components/prisma-client.
+At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. This should also be run if the project structure changes in some way. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, see https://www.prisma.io/docs/concepts/components/prisma-client.
 
 Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:debug`.
 

@@ -1,5 +1,8 @@
 const path = require('path')
 const webpack = require('webpack')
+const nodeExternals = require('webpack-node-externals');
+const CopyWebpackPlugin = require('copy-webpack-plugin')
+const WebpackShellPluginNext = require('webpack-shell-plugin-next')
 
 // add the version number to the top of the app.js file
 const PACKAGE = require('./package.json')
@@ -23,6 +26,9 @@ module.exports = (env) => {
 
     // required to surpress some module errors
     externals: {
+      // e.g. fs
+      ...nodeExternals(),
+
       // https://github.com/prisma/prisma/issues/6564#issuecomment-899013495
       '_http_common': 'commonjs2 _http_common',
 
@@ -62,6 +68,14 @@ module.exports = (env) => {
           'NODE_ENV': `"${env.NODE_ENV}"`,
           'BUILD': `"webpack"`
         }
+      }),
+
+      // required for prisma to find the schema file
+      new CopyWebpackPlugin({ patterns: ['./prisma/schema.prisma'] }),
+
+      // required for prisma to get an updated generated client
+      new WebpackShellPluginNext({
+        onBuildStart: ['yarn migrate:release']
       })
     ]
   }
