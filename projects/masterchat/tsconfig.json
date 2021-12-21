@@ -1,0 +1,19 @@
+{
+  "exclude": ["tools", "lib"],
+  "compilerOptions": {
+    /* https://www.typescriptlang.org/docs/handbook/project-references.html */
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "declaration": true,
+    "sourceMap": true,
+    "noEmit": true,
+    "outDir": "./lib",
+    "sourceRoot": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    // "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}
