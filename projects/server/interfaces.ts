@@ -1,4 +1,4 @@
-import { ChatResponse } from '@rebel/server/../../masterchat/lib/masterchat';
+import { ChatResponse } from '@rebel/masterchat'
 
 export interface IMasterchat {
   fetch(chatToken?: string): Promise<ChatResponse>

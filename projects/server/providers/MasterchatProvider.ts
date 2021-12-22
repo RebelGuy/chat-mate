@@ -4,7 +4,7 @@ import { IMasterchat } from '@rebel/server/interfaces';
 import MockMasterchat from '@rebel/server/mocks/MockMasterchat'
 import FileService from '@rebel/server/services/FileService'
 import LogService from '@rebel/server/services/LogService'
-import { Masterchat } from 'masterchat';
+import { Masterchat } from '@rebel/masterchat';
 import ChatStore from '@rebel/server/stores/ChatStore'
 
 export default class MasterchatProvider implements IProvider<IMasterchat> {

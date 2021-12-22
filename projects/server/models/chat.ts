@@ -1,5 +1,5 @@
 import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '@prisma/client'
-import { YTEmoji } from '@rebel/server/../../masterchat/lib/masterchat'
+import { YTEmoji } from '@rebel/masterchat'
 
 export type ChatItem = {
   id: string,

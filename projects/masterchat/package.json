@@ -13,9 +13,6 @@
     "prepublishOnly": "npm run clean && npm run build",
     "test": "npm run build && cross-env DEBUG=masterchat jest"
   },
-  "main": "./lib/masterchat.js",
-  "module": "./lib/masterchat.mjs",
-  "types": "./lib/masterchat.d.ts",
   "files": [
     "lib"
   ],

@@ -2,7 +2,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { Action, AddChatItemAction, Masterchat, YTRun, YTTextRun } from "masterchat"
+import { Action, AddChatItemAction, YTRun, YTTextRun } from "@rebel/masterchat"
 import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from "@rebel/server/models/chat"
 import { isList, List } from 'immutable'
 import { clamp, clampNormFn, sum } from '@rebel/server/util/math'

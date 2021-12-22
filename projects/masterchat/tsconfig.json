@@ -1,19 +1,24 @@
 {
+  "extends": "../../tsconfig.base.json",
   "exclude": ["tools", "lib"],
   "compilerOptions": {
     /* https://www.typescriptlang.org/docs/handbook/project-references.html */
+    "composite": true,
     "target": "es2020",
     "module": "esnext",
     "moduleResolution": "node",
     "declaration": true,
     "sourceMap": true,
-    "noEmit": true,
+    "noEmit": false,
     "outDir": "./lib",
     "sourceRoot": "./src",
     "strict": true,
     "esModuleInterop": true,
     // "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  }
+    "forceConsistentCasingInFileNames": true,
+  },
+  "include": [
+    "./**/*"
+  ]
 }

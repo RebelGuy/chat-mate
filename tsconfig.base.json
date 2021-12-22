@@ -3,6 +3,7 @@
   // https://stackoverflow.com/questions/57679322/how-to-use-yarn-workspaces-with-typescript-and-out-folders
   "references": [
     { "path": "./projects/server" },
+    { "path": "./projects/masterchat" },
   ],
   "compilerOptions": {
     "experimentalDecorators": true,
@@ -20,7 +21,9 @@
     "skipLibCheck": true,
     "baseUrl": "./",
     "paths": {
-      "@rebel/*": ["./projects/*"]
+      "@rebel/server/*": ["./projects/server/*"],
+      "@rebel/masterchat": ["./projects/masterchat/src/index.ts"],
+      "@rebel/masterchat/*": ["./projects/masterchat/src/*"]
     }
   }
 }

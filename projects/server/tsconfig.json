@@ -1,6 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "references": [
+    { "path": "../masterchat" }
+  ],
   "compilerOptions": {
+    "composite": true,
     "outDir": "../../dist/debug/server",
     "module": "commonjs",
     "target": "es5",
@@ -9,15 +13,15 @@
     "moduleResolution": "node"
   },
   "include": [
-    "./*"
+    "./**/*"
 , "webpack.config.js"  ],
   "exclude": [
-    "./projects/server/node_modules",
-    "./projects/server/prisma",
+    "./node_modules",
+    "./prisma",
 
     // related to data migrations - ignore for now
-    "./src/scripts/migrations/_dataMigrationTemplate.ts",
-    "./src/scripts/migrations/applyMigrations.ts",
-    "./src/scripts/migrations/migrateData.ts"
+    "./scripts/migrations/_dataMigrationTemplate.ts",
+    "./scripts/migrations/applyMigrations.ts",
+    "./scripts/migrations/migrateData.ts"
   ]
 }

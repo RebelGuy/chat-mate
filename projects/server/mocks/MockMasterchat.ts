@@ -1,4 +1,4 @@
-import { Action, AddChatItemAction, ChatResponse, YTRun } from '@rebel/server/../../masterchat/lib/masterchat'
+import { Action, AddChatItemAction, ChatResponse, YTRun } from '@rebel/masterchat'
 import { IMasterchat } from '@rebel/server/interfaces'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import LogService from '@rebel/server/services/LogService'
