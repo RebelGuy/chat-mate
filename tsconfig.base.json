@@ -19,6 +19,13 @@
     "declarationMap": true,
     "allowJs": false,
     "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+
     "baseUrl": "./",
     "paths": {
       "@rebel/server/*": ["./projects/server/*"],

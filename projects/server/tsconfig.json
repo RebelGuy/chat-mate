@@ -7,14 +7,10 @@
     "composite": true,
     "outDir": "../../dist/debug/server",
     "module": "commonjs",
-    "target": "es5",
+    "target": "es2020", // required because masterchat uses BigInt
     "lib": ["ES6"],
-    "esModuleInterop": true,
-    "moduleResolution": "node"
   },
-  "include": [
-    "./**/*"
-, "webpack.config.js"  ],
+  "include": ["./**/*"],
   "exclude": [
     "./node_modules",
     "./prisma",

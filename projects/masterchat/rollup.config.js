@@ -3,6 +3,7 @@ import { nodeResolve } from "@rollup/plugin-node-resolve";
 import dts from "rollup-plugin-dts";
 import { terser } from "rollup-plugin-terser";
 import typescript from "rollup-plugin-typescript2";
+import * as path from "node:path"
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -11,12 +12,12 @@ export default [
     input: "./src/index.ts",
     output: [
       {
-        file: "./lib/masterchat.js",
+        file: path.resolve(__dirname, "../../dist/debug/masterchat/masterchat.js"),
         sourcemap: !isProd,
         format: "cjs",
       },
       {
-        file: "./lib/masterchat.mjs",
+        file: path.resolve(__dirname, "../../dist/debug/masterchat/masterchat.mjs"),
         sourcemap: !isProd,
         format: "es",
       },
@@ -37,9 +38,9 @@ export default [
     external: ["cross-fetch", "debug"],
   },
   {
-    input: "./lib/index.d.ts",
+    input: path.resolve(__dirname, "../../dist/debug/masterchat/index.d.ts"),
     output: {
-      file: "./lib/masterchat.d.ts",
+      file: path.resolve(__dirname, "../../dist/debug/masterchat/masterchat.d.ts"),
       format: "es",
     },
     plugins: [dts()],

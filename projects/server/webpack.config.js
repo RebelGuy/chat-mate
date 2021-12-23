@@ -10,6 +10,8 @@ const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().
 
 module.exports = (env) => {
   env.BUILD = 'webpack'
+  const isDebug = env.NODE_ENV === 'debug'
+  const outPath = path.resolve(__dirname, `../../dist/${env.NODE_ENV}/server`)
 
   return {
     // this opts out of automatic optimisations - do NOT set this to production as the app
@@ -18,9 +20,9 @@ module.exports = (env) => {
     entry: './app.ts',
     resolve: {
       extensions: ['.js', '.ts'],
-      modules: [path.resolve(__dirname, 'node_modules'), path.resolve(__dirname, '../../node_modules')],
       alias: {
-        "@rebel": path.resolve(__dirname, '../../projects'),
+        "@rebel/server": path.resolve(__dirname, '../../projects/server'),
+        "@rebel/masterchat": path.resolve(__dirname, '../../projects/masterchat/src')
       }
     },
 
@@ -44,8 +46,10 @@ module.exports = (env) => {
     // better stack traces in production errors, but slow builds
     devtool: 'source-map',
 
+    ignoreWarnings: [/Critical dependency: the request of a dependency is an expression/],
+
     output: {
-      path: path.resolve(__dirname, `../../dist/${env.NODE_ENV}/server`),
+      path: outPath,
       // output path is already dist somehow
       filename: `./app.js`
     },
@@ -53,9 +57,14 @@ module.exports = (env) => {
       rules: [
         {
           test: /\.ts$/,
-          use: [
-            'ts-loader',
-          ]
+          use: { 
+            'loader': 'ts-loader',
+            'options': {
+              // this is the equivalent of adding the --build flag to tsc.
+              // see https://medium.com/@nickexcell/using-typescript-project-references-with-ts-loader-and-webpack-part-1-5d0c3cd7c603
+              'projectReferences': true
+            }
+          }
         }
       ]
     },
@@ -71,11 +80,24 @@ module.exports = (env) => {
       }),
 
       // required for prisma to find the schema file
-      new CopyWebpackPlugin({ patterns: ['./prisma/schema.prisma'] }),
+      // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: path.resolve(__dirname, './node_modules/.prisma/client/query_engine-windows.dll.node'),
+            to: outPath,
+          },
+          {
+            from: path.resolve(__dirname, './node_modules/.prisma/client/schema.prisma'),
+            to: outPath,
+          },
+        ],
+      }),
 
       // required for prisma to get an updated generated client
+      // this doesn't seem to do anything...
       new WebpackShellPluginNext({
-        onBuildStart: ['yarn migrate:release']
+        onBuildEnd: [isDebug ? 'yarn generate' : 'yarn migrate:release']
       })
     ]
   }

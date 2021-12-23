@@ -4,8 +4,8 @@
   "version": "0.13.0",
   "author": "Yasuaki Uechi <y@uechi.io> (https://uechi.io/)",
   "scripts": {
-    "build": "cross-env NODE_ENV=production rollup -c && shx rm -rf lib/{modules,protobuf} lib/{auth,errors,constants,index,pool,utils}.d.ts",
-    "clean": "shx rm -rf lib",
+    "build": "cross-env NODE_ENV=production rollup -c && shx rm -rf ../../dist/debug/masterchat/{modules,protobuf} ../../dist/debug/masterchat/{auth,errors,constants,index,pool,utils}.d.ts",
+    "clean": "shx rm -rf ../../dist/debug/masterchat",
     "dev": "rollup -c -w",
     "docs": "shx rm -rf docs && typedoc --out ./docs --excludeExternals --excludePrivate --excludeProtected --exclude '**/__tests__/*,**/*.test.ts' src && shx touch docs/.nojekyll",
     "format": "pretty-quick --staged",
@@ -14,7 +14,7 @@
     "test": "npm run build && cross-env DEBUG=masterchat jest"
   },
   "files": [
-    "lib"
+    "../../dist/debug/masterchat"
   ],
   "dependencies": {
     "cross-fetch": "^3.1.4",

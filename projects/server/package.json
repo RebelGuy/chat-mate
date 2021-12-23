@@ -6,8 +6,8 @@
     "auth": "cd ../../../masterchat/extra/credential-fetcher && npm i && npm run start",
     "build": "npm run build:dependencies && npm run build:project",
     "build:dependencies": "cd ../../../masterchat && npm i && npm run build",
-    "build:project": "tsc",
-    "watch": "tsc --watch",
+    "build:project": "tsc --build",
+    "watch": "tsc --build --watch",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/debug/ --inspect ../../dist/debug/server/app.js",
     "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true nodemon --watch ../../dist/debug --inspect ../../dist/debug/server/app.js",
     "generate": "dotenv -e debug.env npx prisma generate",
@@ -19,8 +19,8 @@
     "migrate:data_deprecated":  "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true NODE_ENV=debug dotenv -e debug.env ts-node scripts/migrations/migrateData.ts",
     "db:dump": "C:/\"Program Files\"/MySQL/\"MySQL Server 8.0\"/bin/mysqldump chat_mate > \"../../data/release/dump.sql\" --user root --password",
     "migrate:release": "yarn run db:dump && dotenv -e release.env npx prisma migrate deploy",
-    "build:debug": "tsc --outDir ../../dist/debug/server/ref --declaration false --declarationMap false --sourceMap false && webpack --env NODE_ENV=debug",
-    "build:release": "tsc --outDir ../../dist/release/server/ref --declaration false --declarationMap false --sourceMap false && webpack --env NODE_ENV=release",
+    "build:debug": "webpack --env NODE_ENV=debug",
+    "build:release": "webpack --env NODE_ENV=release",
     "start:release": "cross-env NODE_ENV=release node ../../dist/release/server/app.js"
   },
   "dependencies": {

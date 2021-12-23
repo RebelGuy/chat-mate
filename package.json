@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": { "packages": ["./projects/*"]},
   "_moduleAliases": {
-    "@rebel": "./dist/debug"
+    "@rebel/server": "./dist/debug/server",
+    "@rebel/masterchat": "./dist/debug/masterchat/src"
   }
 }
