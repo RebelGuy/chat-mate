@@ -612,6 +612,8 @@ export class Masterchat extends EventEmitter {
     const item = res.actions?.[0].addChatItemAction?.item;
     if (!(item && "liveChatTextMessageRenderer" in item)) {
       throw new Error(`Invalid response: ` + item);
+    } else if (item.liveChatTextMessageRenderer == null) {
+      throw new Error(`LiveChatTextMessageRenderer cannot be null`)
     }
     return item.liveChatTextMessageRenderer;
   }

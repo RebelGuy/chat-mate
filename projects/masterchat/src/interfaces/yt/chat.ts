@@ -301,7 +301,7 @@ export interface YTCloseLiveChatActionPanelAction {
 // Containers
 
 export interface YTLiveChatTextMessageRendererContainer {
-  liveChatTextMessageRenderer: YTLiveChatTextMessageRenderer;
+  liveChatTextMessageRenderer?: YTLiveChatTextMessageRenderer;
 }
 
 export interface YTLiveChatPaidMessageRendererContainer {

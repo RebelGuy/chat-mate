@@ -43,7 +43,13 @@ export function parseAction(action: YTAction): Action | UnknownAction {
       return parseReplaceChatItemAction(action[type]!);
 
     case "addBannerToLiveChatCommand":
-      return parseAddBannerToLiveChatCommand(action[type]!);
+      return (
+        parseAddBannerToLiveChatCommand(action[type]!) ??
+        ({
+          type: "unknown",
+          payload: "addBannerToLiveChatCommand is broken at the moment",
+        } as UnknownAction)
+      );
 
     case "removeBannerForLiveChatCommand":
       return parseRemoveBannerForLiveChatCommand(action[type]!);

@@ -17,6 +17,10 @@ export function parseAddBannerToLiveChatCommand(
     );
   }
 
+  if (bannerRdr.contents.liveChatTextMessageRenderer == null) {
+    return null
+  }
+
   const title = bannerRdr.header.liveChatBannerHeaderRenderer.text.runs;
   const message = bannerRdr.contents.liveChatTextMessageRenderer.message.runs;
   const liveChatRdr = bannerRdr.contents.liveChatTextMessageRenderer;
