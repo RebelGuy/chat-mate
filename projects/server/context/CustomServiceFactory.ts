@@ -1,5 +1,6 @@
 import { ServiceContext, ServiceFactory } from 'typescript-rest'
 import { getContextProvider } from '@rebel/server/context/context'
+import { toCamelCase } from '@rebel/server/util/text'
 
 export default class CustomServiceFactory implements ServiceFactory {
   // Create a new service object. Called before each request handling, for each registered Controller.
@@ -9,7 +10,7 @@ export default class CustomServiceFactory implements ServiceFactory {
     // `this` won't bind correctly and we won't be able to actually assign the dependencies to class fields.
     // Instead, we must preemptively create the Controller class using the ClassBuilder, and retrive its instance here.
     const contextProvider = getContextProvider(context.request)
-    return contextProvider.getInstance(serviceClass)
+    return contextProvider.getClassInstance(toCamelCase(serviceClass.name))
   }
 
   // Return the type used to handle requests to the target service.

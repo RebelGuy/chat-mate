@@ -7,6 +7,16 @@ import LogService from '@rebel/server/services/LogService'
 import { Masterchat } from '@rebel/masterchat';
 import ChatStore from '@rebel/server/stores/ChatStore'
 
+type Deps = Dependencies<{
+  liveId: string,
+  channelId: string,
+  auth: string,
+  isMockLivestream: boolean | null,
+  fileService: FileService,
+  logService: LogService,
+  chatStore: ChatStore 
+}>
+
 export default class MasterchatProvider implements IProvider<IMasterchat> {
   readonly name = MasterchatProvider.name
 
@@ -19,14 +29,14 @@ export default class MasterchatProvider implements IProvider<IMasterchat> {
   private readonly masterChat: IMasterchat
   private readonly chatStore: ChatStore
 
-  constructor (deps: Dependencies) {
-    this.liveId = deps.resolve<string>('liveId')
-    this.channelId = deps.resolve<string>('channelId')
-    this.auth = deps.resolve<string>('auth')
-    this.isMockLivestream = deps.resolve<boolean | null>('isMockLivestream')
-    this.fileService = deps.resolve<FileService>(FileService.name)
-    this.logService = deps.resolve<LogService>(LogService.name)
-    this.chatStore = deps.resolve<ChatStore>(ChatStore.name)
+  constructor (deps: Deps) {
+    this.liveId = deps.resolve('liveId')
+    this.channelId = deps.resolve('channelId')
+    this.auth = deps.resolve('auth')
+    this.isMockLivestream = deps.resolve('isMockLivestream')
+    this.fileService = deps.resolve('fileService')
+    this.logService = deps.resolve('logService')
+    this.chatStore = deps.resolve('chatStore')
 
     if (this.isMockLivestream) {
       this.logService.logInfo(this, 'Using MockMasterchat for auto-playing data')

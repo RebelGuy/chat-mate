@@ -2,12 +2,16 @@ import { Dependencies } from '@rebel/server/context/context'
 import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
-import { PrismaClientKnownRequestError, PrismaClientRustPanicError, PrismaClientUnknownRequestError, PrismaClientValidationError } from '@prisma/client/runtime'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
 
 export type Db = Omit<PrismaClient, UnusedPrismaProperties>
+
+type Deps = Dependencies<{
+  logService: LogService
+  databaseUrl: string
+}>
 
 export default class DbProvider implements IProvider<Db> {
   readonly name = DbProvider.name
@@ -18,9 +22,9 @@ export default class DbProvider implements IProvider<Db> {
 
   private connected: boolean = false
 
-  constructor (deps: Dependencies) {
-    this.logService = deps.resolve<LogService>(LogService.name)
-    this.databaseUrl = deps.resolve<string>('databaseUrl')
+  constructor (deps: Deps) {
+    this.logService = deps.resolve('logService')
+    this.databaseUrl = deps.resolve('databaseUrl')
 
     // inline options and definition required to enable event subscription below
     const client = new PrismaClient({

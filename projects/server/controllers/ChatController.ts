@@ -14,14 +14,19 @@ type GetChatResponse = ApiSchema<3, {
   chat: PublicChatItem[]
 }>
 
+type Deps = Dependencies<{
+  liveId: string,
+  chatStore: ChatStore
+}>
+
 @Path(buildPath('chat'))
 export class ChatController {
   readonly liveId: string
   readonly chatStore: ChatStore
 
-  constructor (dependencies: Dependencies) {
-    this.liveId = dependencies.resolve<string>('liveId')
-    this.chatStore = dependencies.resolve<ChatStore>(ChatStore.name)
+  constructor (dependencies: Deps) {
+    this.liveId = dependencies.resolve('liveId')
+    this.chatStore = dependencies.resolve('chatStore')
   }
 
   @GET

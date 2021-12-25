@@ -76,11 +76,24 @@ export function toConstCase (word: string): string {
 }
 
 // converts the string to param_case
-export function toParamCase(text: string): string {
+export function toParamCase (text: string): string {
   return text
     .replace(/[-.,]/, ' ')
     .split(' ')
     .map(t => toConstCase(t))
     .join('_')
     .toLowerCase()
+}
+
+// converts the word to pascalCase
+export function toCamelCase (word: string): string {
+  return toConstCase(word)
+    .split('_')
+    .map(part => part.toLowerCase())
+    .map((part, i) => i === 0 ? part : capitaliseWord(part))
+    .join('')
+}
+
+export function capitaliseWord (word: string): string {
+  return word.substring(0, 1).toUpperCase() + word.substring(1)
 }

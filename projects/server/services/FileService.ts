@@ -8,11 +8,15 @@ export type WriteOptions = {
   append: boolean
 }
 
+type Deps = Dependencies<{
+  dataPath: string
+}>
+
 export default class FileService {
   private readonly dataPath: string
 
-  constructor (deps: Dependencies) {
-    this.dataPath = deps.resolve<string>('dataPath')
+  constructor (deps: Deps) {
+    this.dataPath = deps.resolve('dataPath')
     this.ensureDir(this.dataPath)
   }
 

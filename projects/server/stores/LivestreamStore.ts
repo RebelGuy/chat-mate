@@ -3,6 +3,11 @@ import { Dependencies } from '@rebel/server/context/context'
 import { New } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 
+type Deps = Dependencies<{
+  liveId: string,
+  dbProvider: DbProvider
+}>
+
 export default class LivestreamStore {
   private readonly liveId: string
   private readonly db: Db
@@ -16,9 +21,9 @@ export default class LivestreamStore {
     }
   }
 
-  constructor(deps: Dependencies) {
-    this.liveId = deps.resolve<string>('liveId')
-    this.db = deps.resolve<DbProvider>(DbProvider.name).get()
+  constructor(deps: Deps) {
+    this.liveId = deps.resolve('liveId')
+    this.db = deps.resolve('dbProvider').get()
   }
 
   public async createLivestream (): Promise<Livestream> {

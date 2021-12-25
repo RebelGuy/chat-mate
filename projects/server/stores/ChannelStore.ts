@@ -7,11 +7,15 @@ import { compare } from '@rebel/server/util/typescript'
 
 export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 
+type Deps = Dependencies<{
+  dbProvider: DbProvider
+}>
+
 export default class ChannelStore {
   private readonly db: Db
 
-  constructor (deps: Dependencies) {
-    this.db = deps.resolve<DbProvider>(DbProvider.name).get()
+  constructor (deps: Deps) {
+    this.db = deps.resolve('dbProvider').get()
   }
 
   public async exists (channelId: string): Promise<boolean> {

@@ -6,16 +6,22 @@ import { formatDate, formatTime } from '@rebel/server/util/datetime'
 
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
+type Deps = Dependencies<{
+  liveId: string
+  isLive: boolean
+  fileService: FileService
+}>
+
 export default class LogService {
   private readonly liveId: string
   private readonly isLive: boolean
   private readonly fileService: FileService
   private readonly logFile: string
 
-  constructor (deps: Dependencies) {
-    this.liveId = deps.resolve<string>('liveId')
-    this.isLive = deps.resolve<boolean>('isLive')
-    this.fileService = deps.resolve<FileService>(FileService.name)
+  constructor (deps: Deps) {
+    this.liveId = deps.resolve('liveId')
+    this.isLive = deps.resolve('isLive')
+    this.fileService = deps.resolve('fileService')
 
     const existingFile = this.fileService.getDataFiles().find(file => file.startsWith('log_') && file.includes(this.liveId))
     if (existingFile) {

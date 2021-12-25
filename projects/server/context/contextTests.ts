@@ -9,8 +9,8 @@ class TestA {
 class TestB {
   readonly testA: TestA
 
-  constructor (dependencies: Dependencies) {
-    this.testA = dependencies.resolve(TestA.name)
+  constructor (dependencies: Dependencies<{ testA: TestA }>) {
+    this.testA = dependencies.resolve('testA')
     console.log('B constructed')
   }
 }
@@ -19,17 +19,17 @@ class TestC {
   readonly testA: TestA
   readonly testB: TestB
 
-  constructor (dependencies: Dependencies) {
-    this.testA = dependencies.resolve(TestA.name)
-    this.testB = dependencies.resolve(TestB.name)
+  constructor (dependencies: Dependencies<{ testA: TestA, testB: TestB }>) {
+    this.testA = dependencies.resolve('testA')
+    this.testB = dependencies.resolve('testB')
     console.log('C constructed')
   }
 }
 
 const prov = ContextProvider.create()
-  .withClass(TestA)
-  .withClass(TestB)
-  .withClass(TestC)
+  .withClass('testA', TestA)
+  .withClass('testB', TestB)
+  .withClass('testC', TestC)
   .build()
 
 console.log()

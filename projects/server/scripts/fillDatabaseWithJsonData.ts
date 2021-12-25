@@ -44,14 +44,14 @@ const main = async () => {
         .withProperty('dataPath', dataPath)
         .withProperty('isLive', env('nodeEnv') === 'release')
         .withProperty('databaseUrl', env('databaseUrl'))
-        .withClass(FileService)
-        .withClass(LogService)
-        .withClass(DbProvider)
+        .withClass('fileService', FileService)
+        .withClass('logService', LogService)
+        .withClass('dbProvider', DbProvider)
         .build()
 
-      const logContext = createLogContext(context.getInstance<LogService>(LogService), { name: 'fillDatabaseWithJsonData.ts' })
-      const fileService = context.getInstance<FileService>(FileService)
-      const db = context.getInstance<DbProvider>(DbProvider).get()
+      const logContext = createLogContext(context.getClassInstance('logService'), { name: 'fillDatabaseWithJsonData.ts' })
+      const fileService = context.getClassInstance('fileService')
+      const db = context.getClassInstance('dbProvider').get()
 
       const data: ChatSave = fileService.readObject<ChatSave>(filePath)!
 

@@ -26,6 +26,13 @@ type ChatEvents = {
   }
 }
 
+type Deps = Dependencies<{
+  chatStore: ChatStore,
+  livestreamStore: LivestreamStore,
+  logService: LogService,
+  masterchatProvider: MasterchatProvider
+}>
+
 export default class ChatService {
   readonly name = ChatService.name
   private readonly chatStore: ChatStore
@@ -36,11 +43,11 @@ export default class ChatService {
   private listeners: Map<keyof ChatEvents, ((data: any) => void)[]> = new Map()
   private timeout: NodeJS.Timeout | null = null
 
-  constructor (deps: Dependencies) {
-    this.chatStore = deps.resolve<ChatStore>(ChatStore.name)
-    this.livestreamStore = deps.resolve<LivestreamStore>(LivestreamStore.name)
-    this.masterchat = deps.resolve<MasterchatProvider>(MasterchatProvider.name).get()
-    this.logService = deps.resolve<LogService>(LogService.name)
+  constructor (deps: Deps) {
+    this.chatStore = deps.resolve('chatStore')
+    this.livestreamStore = deps.resolve('livestreamStore')
+    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.logService = deps.resolve('logService')
   }
 
   start () {

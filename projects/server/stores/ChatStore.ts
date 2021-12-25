@@ -12,6 +12,13 @@ export type ChatSave = {
   chat: ChatItem[]
 }
 
+type Deps = Dependencies<{
+  dbProvider: DbProvider,
+  logService: LogService,
+  livestreamStore: LivestreamStore,
+  channelStore: ChannelStore
+}>
+
 export default class ChatStore {
   readonly name = ChatStore.name
   private readonly db: Db
@@ -19,11 +26,11 @@ export default class ChatStore {
   private readonly livestreamStore: LivestreamStore
   private readonly channelStore: ChannelStore
 
-  constructor (dep: Dependencies) {
-    this.db = dep.resolve<DbProvider>(DbProvider.name).get()
-    this.logService = dep.resolve<LogService>(LogService.name)
-    this.livestreamStore = dep.resolve<LivestreamStore>(LivestreamStore.name)
-    this.channelStore = dep.resolve<ChannelStore>(ChannelStore.name)
+  constructor (dep: Deps) {
+    this.db = dep.resolve('dbProvider').get()
+    this.logService = dep.resolve('logService')
+    this.livestreamStore = dep.resolve('livestreamStore')
+    this.channelStore = dep.resolve('channelStore')
   }
 
   public async addChat (token: string, newChat: ChatItem[]) {
