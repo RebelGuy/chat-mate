@@ -5,3 +5,4 @@ dist/
 data/
 debug.env
 release.env
+projects/server/test.env

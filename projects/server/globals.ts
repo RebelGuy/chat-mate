@@ -36,7 +36,8 @@ const injectedVariables: (keyof EnvironmentVariables)[] = [
 
 injectedVariables.map(variable => {
   const envName = toConstCase(variable)
-  assert(Object.keys(process.env).includes(envName), `Environment variable '${envName}' must be injected`)
+  const keys = Object.keys(process.env).filter(key => !key.startsWith("npm_"))
+  assert(keys.includes(envName), `Environment variable '${envName}' must be injected. Process.env keys: ${keys.join(', ')}`)
 })
 
 // debug variables can only be accessed in a debug environment, and return null otherwise.

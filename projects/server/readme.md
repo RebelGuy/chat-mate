@@ -36,10 +36,12 @@ In addition, the following environment variables must be injected into the node 
 - `NODE_ENV`: Either `debug` or `release` to indicate whether we are running a live server or not.
 - `BUILD`: Either `tsc` or `webpack` to indicate the build method. This is used for some module resolution workarounds at runtime.
 
+For testing, define a `test.env` file that sets only a subset of the above variables:
+- `DATABASE_URL`
 
 ## Database
 
-The `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
+The `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` database is named `chat_mate_test`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
@@ -51,6 +53,10 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 `yarn migrate:release` deploys changes to the production environment. Only uses migration files, NOT the Prisma schema file.
 
+
+## Testing
+`yarn test` performs the test suite, including setting up and utilising the test database.
+`yarn <regex>` tests only files matching the expression.
 
 
 # API Endpoints

@@ -6,6 +6,11 @@ module.exports = {
   testRegex: '(test|spec)\\.ts',
   testEnvironment: 'node',
   moduleFileExtensions: ['ts', 'js'],
+  moduleNameMapper: {
+    // tell ts-jest how to resolve the path alias
+    // https://github.com/kulshekhar/ts-jest/issues/2709
+    '@rebel/server/(.*)$': '<rootDir>/$1'
+  },
   globals: {
     'ts-jest': {
       diagnostics: false,
