@@ -53,6 +53,15 @@ export function getLiveId (linkOrId: string): string {
 // converts a camelCase or PascalCase word to CONSTANT_CASE.
 // short sequential characters like 'ID' are treated as a single part of the word. 
 export function toConstCase (word: string): string {
+  word = word.trim()
+  if (word.includes(' ')) {
+    throw new Error('Input has to be a single word')
+  } else if (isConstCase(word)) {
+    return word
+  } else if (word.includes('_')) {
+    return word.split('_').map(w => toConstCase(w)).join('_')
+  }
+
   let lastCapital = 0
   let underscores: number[] = []
   for (let i = 1; i < word.length; i++) {
@@ -75,7 +84,11 @@ export function toConstCase (word: string): string {
   return constName.toUpperCase()
 }
 
-// converts the string to param_case
+function isConstCase (word: string): boolean {
+  return word.toUpperCase() === word
+}
+
+// converts the words to param_case
 export function toParamCase (text: string): string {
   return text
     .replace(/[-.,]/, ' ')
@@ -85,7 +98,7 @@ export function toParamCase (text: string): string {
     .toLowerCase()
 }
 
-// converts the word to pascalCase
+// converts the word to cascalCase
 export function toCamelCase (word: string): string {
   return toConstCase(word)
     .split('_')
@@ -94,6 +107,6 @@ export function toCamelCase (word: string): string {
     .join('')
 }
 
-export function capitaliseWord (word: string): string {
+function capitaliseWord (word: string): string {
   return word.substring(0, 1).toUpperCase() + word.substring(1)
 }
