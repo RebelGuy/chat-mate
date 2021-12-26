@@ -13,8 +13,6 @@
   "include": ["./**/*"],
   "exclude": [
     "./node_modules",
-    "**/*.spec.ts",
-    "**/*.test.ts",
     "./prisma",
 
     // related to data migrations - ignore for now
