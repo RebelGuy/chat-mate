@@ -80,7 +80,10 @@ Key:
   - 🟢 exists
   - 🔴 getCurrent
   - 🔴 getHistory
-- 🔴 ChatStore
+- 🟢 ChatStore
+  - 🟢 addChat
+  - 🟢 getChatSince
+  - 🟢 getContinuationToken
 - 🟢 LivestreamStore
   - 🟢 createLivestream
   - 🟢 currentLivestream

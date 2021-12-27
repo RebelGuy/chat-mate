@@ -36,7 +36,7 @@ async function clearDatabase (client: PrismaClient) {
   await client.$transaction(transactions)
 }
 
-// can be chained directly with toBe(), and the whole chain must be awaited
+// can be chained directly with toEqual(), and the whole chain must be awaited
 export function expectRowCount<Tables extends any[]>(...tables: Tables)
   : jest.AndNot<jest.Matchers<Promise<void>, Promise<Tables['length'] extends 1 ? number : number[]>>>
   {
