@@ -66,16 +66,6 @@ export default class ChatService {
     clearTimeout(this.timeout)
   }
 
-  on<E extends keyof ChatEvents> (type: E, callback: (data: ChatEvents[E]) => void) {
-    let listeners = this.listeners.get(type) ?? []
-    listeners.push(callback)
-  }
-
-  off<E extends keyof ChatEvents> (type: E, callback: (data: ChatEvents[E]) => void) {
-    let listeners = this.listeners.get(type) ?? []
-    this.listeners.set(type, listeners.filter(cb => cb !== callback))
-  }
-
   private fetchLatest = async () => {
     const token = this.livestreamStore.currentLivestream.continuationToken
     try {

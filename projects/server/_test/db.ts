@@ -1,21 +1,29 @@
 import { PrismaClient, PrismaPromise } from '@prisma/client'
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended'
-import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { mockDeep } from 'jest-mock-extended'
+import DbProvider from '@rebel/server/providers/DbProvider'
 import env from '@rebel/server/globals'
 import { Dependencies } from '@rebel/server/context/context'
 import LogService from '@rebel/server/services/LogService'
+import Semaphore from '@rebel/server/util/Semaphore'
 
-export async function setupTestDb (): Promise<DbProvider> {
-  const dbProvider = new DbProvider(new Dependencies({
-    logService: mockDeep<LogService>(),
-    databaseUrl: env('databaseUrl')
-  }))
+const semaphore: Semaphore = new Semaphore()
+const dbProvider = new DbProvider(new Dependencies({
+  logService: mockDeep<LogService>(),
+  databaseUrl: env('databaseUrl')
+}))
+
+export async function startTestDb (): Promise<DbProvider> {
+  await semaphore.enter()
 
   // casting is fine because dbProvider actually returns the full object
   const client = dbProvider.get() as PrismaClient
   await clearDatabase(client)
 
   return dbProvider
+}
+
+export function stopTestDb (): void {
+  semaphore.exit()
 }
 
 async function clearDatabase (client: PrismaClient) {
