@@ -1,4 +1,4 @@
-import { formatDate, formatTime } from './datetime'
+import { formatDate, formatTime } from '@rebel/server/util/datetime'
 
 describe(formatDate, () => {
   test('local date formats correctly', () => expect(formatDate(new Date(2021, 1, 2, 7, 43, 1), false)).toBe("2021-02-02"))

@@ -18,7 +18,7 @@ export async function setupTestDb (): Promise<DbProvider> {
   return dbProvider
 }
 
-async function clearDatabase(client: PrismaClient) {
+async function clearDatabase (client: PrismaClient) {
   // from https://www.prisma.io/docs/concepts/components/prisma-client/crud#deleting-all-data-with-raw-sql--truncate
   const transactions: PrismaPromise<any>[] = []
   transactions.push(client.$executeRaw`SET FOREIGN_KEY_CHECKS = 0;`)
@@ -36,6 +36,18 @@ async function clearDatabase(client: PrismaClient) {
   await client.$transaction(transactions)
 }
 
+// can be chained directly with toBe(), and the whole chain must be awaited
+export function expectRowCount<Tables extends any[]>(...tables: Tables)
+  : jest.AndNot<jest.Matchers<Promise<void>, Promise<Tables['length'] extends 1 ? number : number[]>>>
+  {
+  const getRowCount = (table: any): number => table.count()
+
+  if (tables.length === 1) {
+    return expect(getRowCount(tables[0])).resolves
+  } else {
+    return expect(Promise.all(tables.map(table => getRowCount(table)))).resolves
+  }
+}
 
 /*
 

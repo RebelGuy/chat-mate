@@ -55,9 +55,33 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 
 ## Testing
-`yarn test` performs the test suite, including setting up and utilising the test database.
-`yarn <regex>` tests only files matching the expression.
+`yarn test` performs the test suite, including setting up and utilising the test database and schema.
+`yarn test:dev` performs the test suite without checking the database schema first.
+`yarn test <file regex>` includes only tests within files matching the expression.
 
+Further, to filter individual tests, temporarily replace `test()` with `test.only()`. All `test()`s will then be skipped.
+
+### Current test coverage
+Over time, aim to add tests to all public methods of all services and stores.
+Key:
+- 🔴: No tests
+- 🟡: In progress/incomplete tests
+- 🟢: Full test coverage
+- ⚪: Won't do
+
+**Services**
+- 🔴 ChatService 
+- ⚪ FileService
+- ⚪ LogService
+
+**Stores**
+- 🟡 ChannelStore
+  - 🟢 createOrUpdate
+  - 🟢 exists
+  - 🔴 getCurrent
+  - 🔴 getHistory
+- 🔴 ChatStore
+- 🔴 LivestreamStore
 
 # API Endpoints
 
