@@ -81,7 +81,10 @@ Key:
   - 🔴 getCurrent
   - 🔴 getHistory
 - 🔴 ChatStore
-- 🔴 LivestreamStore
+- 🟢 LivestreamStore
+  - 🟢 createLivestream
+  - 🟢 currentLivestream
+  - 🟢 setContinuationToken
 
 # API Endpoints
 

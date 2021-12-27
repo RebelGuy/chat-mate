@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
 import { expectRowCount, setupTestDb } from '@rebel/server/_test/db'
-import { single } from '@rebel/server/_test/utils'
+import { nameof, single } from '@rebel/server/_test/utils'
 
 const channelInfo1: CreateOrUpdateChannelArgs = {
   time: new Date(2021, 1, 1),
@@ -45,7 +45,7 @@ beforeEach(async () => {
   db = dbProvider.get()
 })
 
-describe(ChannelStore.prototype.exists, () => {
+describe(nameof(ChannelStore, 'exists'), () => {
   test('existing returns true', async () => {
     await db.channel.create({ data: { youtubeId: 'mockId' }})
 
@@ -61,7 +61,7 @@ describe(ChannelStore.prototype.exists, () => {
   })
 })
 
-describe(ChannelStore.prototype.createOrUpdate, () => {
+describe(nameof(ChannelStore, 'createOrUpdate'), () => {
   // set up the database with sample data
   const nChannel = 2
   const nInfo = 3
