@@ -61,7 +61,7 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 Further, to filter individual tests, temporarily replace `test()` with `test.only()`. All `test()`s will then be skipped.
 
-Due to concurrency issues, all tests using the test database will need to be run from the `_test/stores.test.ts` file.
+Due to concurrency issues, all tests using the test database will need to be run from the central `_test/stores.test.ts` file. It imports the `<StoreName>.suite.ts` files which contain the actual test, then run them one-by-one.
 
 ### Current test coverage
 Over time, aim to add tests to all public methods of all services and stores.

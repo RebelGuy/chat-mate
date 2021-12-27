@@ -1,6 +1,6 @@
-import ChannelStoreSuite from '@rebel/server/stores/ChannelStore.suite'
-import ChatStoreSuite from '@rebel/server/stores/ChatStore.suite'
-import LivestreamStoreSuite from '@rebel/server/stores/LivestreamStore.suite'
+import ChannelStoreSuite from '@rebel/server/stores/ChannelStore.test'
+import ChatStoreSuite from '@rebel/server/stores/ChatStore.test'
+import LivestreamStoreSuite from '@rebel/server/stores/LivestreamStore.test'
 
 describe('ChannelStore Suite', ChannelStoreSuite)
 
