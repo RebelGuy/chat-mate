@@ -50,12 +50,13 @@ export default class ChatService {
     this.logService = deps.resolve('logService')
   }
 
-  start () {
+  // await this method when initialising the service to guarantee an initial fetch
+  start (): Promise<void> {
     if (this.timeout) {
-      return
+      throw new Error('Cannot start ChatService because it has already been started')
     }
 
-    this.updateMessages()
+    return this.updateMessages()
   }
 
   stop () {

@@ -200,20 +200,4 @@ export default () => {
       expect(result.map(r => r.youtubeId)).toEqual([chatItem2.id, chatItem3.id])
     })
   })
-
-  describe(nameof(ChatStore, 'getContinuationToken'), () => {
-    test('uses livestream store', () => {
-      const livestream = {
-        id: 1,
-        liveId: 'liveId',
-        continuationToken: 'token',
-        createdAt: new Date()
-      }
-
-      const token = chatStore.getContinuationToken()
-
-      expect(token).toBe('token') 
-      expect(getMockGetterMock(mockLivestreamStore, 'currentLivestream').calls.length).toBe(1)
-    })
-  })
 }

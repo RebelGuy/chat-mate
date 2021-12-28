@@ -4,6 +4,9 @@ import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/Ch
 import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof, single } from '@rebel/server/_test/utils'
 
+const channelId1 = 'channelId1'
+const channelId2 = 'channelId2'
+
 const channelInfo1: CreateOrUpdateChannelArgs = {
   time: new Date(2021, 1, 1),
   name: 'User 1 A',
@@ -70,11 +73,11 @@ export default () => {
     const nInfo = 3
     beforeEach(async () => {
       await db.channel.create({ data: {
-        youtubeId: 'channel1',
-        infoHistory: { createMany: { data: [channelInfo1, channelInfo2]} } 
+        youtubeId: channelId1,
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
       }})
       await db.channel.create({ data: {
-        youtubeId: 'channel2',
+        youtubeId: channelId2,
         infoHistory: { createMany: { data: [channelInfo3]} } 
       }})
     })
@@ -88,9 +91,9 @@ export default () => {
     })
 
     test('updating existing channel works', async () => {
-      const result = await channelStore.createOrUpdate('channel2', channelInfo4)
+      const result = await channelStore.createOrUpdate(channelId2, channelInfo4)
       
-      expect(result.youtubeId).toBe('channel2')
+      expect(result.youtubeId).toBe(channelId2)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo4))
       await expectRowCount(db.channel, db.channelInfo).toEqual([nChannel, nInfo + 1])
     })
@@ -101,11 +104,50 @@ export default () => {
         time: new Date(2021, 1, 3)
       }
 
-      const result = await channelStore.createOrUpdate('channel1', modifiedInfo2)
+      const result = await channelStore.createOrUpdate(channelId1, modifiedInfo2)
 
-      expect(result.youtubeId).toBe('channel1')
+      expect(result.youtubeId).toBe(channelId1)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo2))
       await expectRowCount(db.channel, db.channelInfo).toEqual([nChannel, nInfo])
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getCurrent'), () => {
+    test(`returns null if channel doesn't exist`, async () => {
+      await expect(channelStore.getCurrent('bad id')).resolves.toEqual(null)
+    })
+
+    test('returns channel with latest info', async () => {
+      await db.channel.create({ data: {
+        youtubeId: channelId1,
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
+      }})
+
+      const result = (await channelStore.getCurrent(channelId1))!
+
+      expect(result.youtubeId).toBe(channelId1)
+      expect(single(result.infoHistory).time).toEqual(channelInfo2.time)
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getHistory'), () => {
+    test(`returns null if channel doesn't exist`, async () => {
+      await expect(channelStore.getHistory('bad id')).resolves.toEqual(null)
+    })
+
+    test('returns ordered list of channel history', async () => {
+      await db.channel.create({ data: {
+        youtubeId: channelId1,
+        infoHistory: { createMany: { data: [channelInfo1, channelInfo2]} } 
+      }})
+      
+      const result = (await channelStore.getHistory(channelId1))!
+
+      expect(result.length).toBe(2)
+
+      // ordered from newest to oldest
+      expect(result[0].time).toEqual(channelInfo2.time)
+      expect(result[1].time).toEqual(channelInfo1.time)
     })
   })
 }

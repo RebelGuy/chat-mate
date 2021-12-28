@@ -6,7 +6,6 @@ export default class Semaphore {
   }
 
   public async enter (): Promise<void> {
-    console.log(this.current)
     if (this.current === 0) {
       this.current++
       return

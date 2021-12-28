@@ -72,16 +72,16 @@ Key:
 - ⚪: Won't do
 
 **Services**
-- 🔴 ChatService 
+- 🟢 ChatService 
 - ⚪ FileService
 - ⚪ LogService
 
 **Stores**
-- 🟡 ChannelStore
+- 🟢 ChannelStore
   - 🟢 createOrUpdate
   - 🟢 exists
-  - 🔴 getCurrent
-  - 🔴 getHistory
+  - 🟢 getCurrent
+  - 🟢 getHistory
 - 🟢 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince

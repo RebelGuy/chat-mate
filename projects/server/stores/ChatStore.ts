@@ -75,11 +75,6 @@ export default class ChatStore {
     })
   }
 
-  public getContinuationToken (): string | null {
-    // what happens if the token is very old? can we get ALL messages until now in a single request, or what happens?
-    return this.livestreamStore.currentLivestream.continuationToken
-  }
-
   // quietly ignore duplicates
   private async addChatItem (chatItem: ChatItem) {
     const author = chatItem.author
