@@ -17,7 +17,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 
 const port = env('port')
-const dataPath = path.resolve(__dirname, `../../data/${env('nodeEnv')}/`)
+const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)
 const liveId = getLiveId(env('liveId'))
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
