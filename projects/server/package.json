@@ -3,10 +3,7 @@
   "version": "1.4.0",
   "main": "../../dist/release/server/app.js",
   "scripts": {
-    "auth": "cd ../../../masterchat/extra/credential-fetcher && npm i && npm run start",
-    "build": "npm run build:dependencies && npm run build:project",
-    "build:dependencies": "cd ../../../masterchat && npm i && npm run build",
-    "build:project": "tsc --build",
+    "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
     "watch": "tsc --build --watch",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/debug/ --inspect ../../dist/debug/server/app.js",
     "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true nodemon --watch ../../dist/debug --inspect ../../dist/debug/server/app.js",

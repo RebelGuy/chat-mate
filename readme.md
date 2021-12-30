@@ -11,6 +11,9 @@ Recommended extensions:
 ## v1.4 - The Test Update
 - Server
   - Added yarn workspaces and webpack bundling
+  - Added unit/integration tests
+- Masterchat
+  - Added to chat-mate repository
 
 ## v1.3 - The Database Update
 - Server

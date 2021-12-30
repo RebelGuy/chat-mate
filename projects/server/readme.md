@@ -5,20 +5,21 @@ The server is responsible for fetching data from YouTube, and (in the future) se
 # Project Details
 Debug and release environments both have their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
 
-Note that, until Webpack bundles the dependencies (node_modules) as well, we will need to copy the node_modules folder for a release build (this is done automatically as part of the [release build script](#scripts-for-development)).
 
 ## Scripts for development:
 1. `yarn install`.
-2. `yarn build` to generate the a full build, including the local `Masterchat` project.
-3. `yarn auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
-4. `yarn watch` while developing
-5. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options. Note that this does not bundle up the application. For a debug bundle that mirrors the release build, use `yarn build:debug`.
+2. `yarn auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
+3. `yarn watch` while developing
+4. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options. Note that this does not bundle up the application. For a debug bundle that mirrors the release build, use `yarn build:debug`.
+
+Alternatively, run `yarn build:debug` to bundle the debug app to the same format as what is used in release.
+If building fails because the Prisma client could not be found, please run `yarn generate`.
 
 ## Scripts for production:
 Assumes that steps 1-3 of the previous section have been run.
-4. `yarn build:release` bundles the application as `./dist/release/server/app.js`. The individual .js files are copied to the `/ref` folder for reference.
-5. `yarn migrate:release` migrate the database to the latest schema
-6. `yarn start:release` to run the release server
+3. `yarn build:release` bundles the application as `./dist/release/server/app.js`.
+4. `yarn migrate:release` migrate the database to the latest schema
+5. `yarn start:release` to run the release server
 
 
 # .env
