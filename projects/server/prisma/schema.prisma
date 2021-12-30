@@ -45,8 +45,10 @@ model Channel {
   id        Int    @id @default(autoincrement())
   youtubeId String @unique @db.VarChar(63)
 
-  chatMessages ChatMessage[]
-  infoHistory  ChannelInfo[]
+  chatMessages          ChatMessage[]
+  infoHistory           ChannelInfo[]
+  ExperienceTransaction ExperienceTransaction[]
+  ExperienceSnapshot    ExperienceSnapshot[]
 }
 
 // CHAT
@@ -80,7 +82,7 @@ model ChatText {
   @@map("chat_text")
 }
 
-/// has either a text or emoji component attached, but never none or both
+/// Has either a text or emoji component attached, but never none or both
 model ChatMessagePart {
   id    Int @id @default(autoincrement())
   order Int
@@ -112,5 +114,47 @@ model ChatMessage {
 
   chatMessageParts ChatMessagePart[]
 
+  experienceDataChatMessage ExperienceDataChatMessage?
+
   @@map("chat_message")
+}
+
+// Experience
+
+/// Holds individual changes in a person's experience.
+model ExperienceTransaction {
+  id    Int      @id @default(autoincrement())
+  time  DateTime
+  delta Int
+
+  // Exactly one of the below experience data columns will always be defined,
+  // depending on what kind of event triggered this transaction.
+  experienceDataChatMessage ExperienceDataChatMessage?
+
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
+
+  @@map("experience_transaction")
+}
+
+/// Holds snapshots of a person's experience at certaint points in time.
+model ExperienceSnapshot {
+  id         Int      @id @default(autoincrement())
+  time       DateTime
+  experience Int
+
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
+
+  @@map("experience_snapshot")
+}
+
+model ExperienceDataChatMessage {
+  id Int @id @default(autoincrement())
+
+  chatMessageId Int         @unique
+  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])
+
+  experienceTransactionId Int                   @unique
+  experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id])
 }
