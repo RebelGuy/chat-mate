@@ -10,7 +10,7 @@ import { ChatSave } from '@rebel/server/stores/ChatStore'
 import { Prisma } from '@prisma/client'
 
 // run using
-//   yarn cross-env NODE_ENV=debug node --inspect dist/debug/scripts/fillDatabaseWithJsonData.js
+//   yarn cross-env NODE_ENV=debug node --inspect dist/debug/server/scripts/fillDatabaseWithJsonData.js
 
 const main = async () => {
     const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)

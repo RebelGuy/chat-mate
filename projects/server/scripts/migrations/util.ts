@@ -20,7 +20,7 @@ export async function getAppliedMigrations (): Promise<string[]> {
 
 export function getAvailableMigrationsSorted (): MigrationFile[] {
   if (!fs.existsSync(MIGRATIONS_FOLDER)) {
-    console.log('Migrations folder does not exist')
+    console.log(`Migrations folder ${MIGRATIONS_FOLDER} does not exist`)
     console.log('')
     return []
   }

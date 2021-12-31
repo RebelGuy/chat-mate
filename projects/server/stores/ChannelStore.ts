@@ -7,6 +7,8 @@ import { compare } from '@rebel/server/util/typescript'
 
 export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 
+export type ChannelWithLatestInfo = Omit<Entity.Channel, 'chatMessages' | 'experienceTransactions' | 'experienceSnapshots' | 'viewingBlocks'>
+
 type Deps = Dependencies<{
   dbProvider: DbProvider
 }>
@@ -22,7 +24,7 @@ export default class ChannelStore {
     return (await this.db.channel.findUnique({ where: { youtubeId: channelId }})) != null
   }
 
-  public async getCurrent (channelId: string): Promise<Omit<Entity.Channel, 'chatMessages'> | null> {
+  public async getCurrent (channelId: string): Promise<ChannelWithLatestInfo | null> {
     return this.tryGetChannelWithLatestInfo(channelId)
   }
 
@@ -41,11 +43,11 @@ export default class ChannelStore {
     return channel?.infoHistory ?? null
   }
 
-  public async createOrUpdate (channelId: string, channelInfo: CreateOrUpdateChannelArgs): Promise<Omit<Entity.Channel, 'chatMessages'>> {
+  public async createOrUpdate (channelId: string, channelInfo: CreateOrUpdateChannelArgs): Promise<ChannelWithLatestInfo> {
     const currentChannel = await this.tryGetChannelWithLatestInfo(channelId)
     const storedInfo = currentChannel?.infoHistory[0]
 
-    let channel: Omit<Entity.Channel, 'chatMessages'>
+    let channel: ChannelWithLatestInfo
     if (currentChannel != null) {
       // if anything has changed, create a new ChannelInfo object and link it to the channel
       if (storedInfo!.time < channelInfo.time && !compare(storedInfo!, channelInfo, channelInfoComparator)) {
