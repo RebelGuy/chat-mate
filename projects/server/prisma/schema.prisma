@@ -20,7 +20,8 @@ model Livestream {
   // for fetching the chat of this livestream
   continuationToken String? @db.VarChar(1023)
 
-  chatMessages ChatMessage[]
+  chatMessages  ChatMessage[]
+  viewingBlocks ViewingBlock[]
 }
 
 // for tracking history
@@ -45,10 +46,11 @@ model Channel {
   id        Int    @id @default(autoincrement())
   youtubeId String @unique @db.VarChar(63)
 
-  chatMessages          ChatMessage[]
-  infoHistory           ChannelInfo[]
-  ExperienceTransaction ExperienceTransaction[]
-  ExperienceSnapshot    ExperienceSnapshot[]
+  chatMessages           ChatMessage[]
+  infoHistory            ChannelInfo[]
+  experienceTransactions ExperienceTransaction[]
+  experienceSnapshots    ExperienceSnapshot[]
+  viewingBlocks          ViewingBlock[]
 }
 
 // CHAT
@@ -149,6 +151,7 @@ model ExperienceSnapshot {
   @@map("experience_snapshot")
 }
 
+/// Data for an experience transaction triggered by a chat message
 model ExperienceDataChatMessage {
   id Int @id @default(autoincrement())
 
@@ -157,4 +160,23 @@ model ExperienceDataChatMessage {
 
   experienceTransactionId Int                   @unique
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id])
+
+  @@map("experience_data_chat_message")
+}
+
+/// Represents a continuous period of time in which a channel has been viewing a livestream.
+model ViewingBlock {
+  id Int @id @default(autoincrement())
+
+  startTime  DateTime
+  lastUpdate DateTime
+  isComplete Boolean  @default(false)
+
+  livestreamId Int
+  livestream   Livestream @relation(fields: [livestreamId], references: [id])
+
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
+
+  @@map("viewing_block")
 }
