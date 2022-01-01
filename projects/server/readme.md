@@ -56,8 +56,8 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 
 ## Testing
-`yarn test` performs the test suite, including setting up and utilising the test database and schema.
-`yarn test:dev` performs the test suite without checking the database schema first.
+`yarn test` performs the test suite.
+`yarn test:db` Sets up the test database.
 `yarn test <file regex>` includes only tests within files matching the expression.
 
 Further, to filter individual tests, temporarily replace `test()` with `test.only()`. All `test()`s will then be skipped.

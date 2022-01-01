@@ -73,8 +73,9 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
     if (this.isBuiltContext()) {
       this.builder.dispose()
       this.isDisposed = true
+    } else {
+      throw new Error(`Cannot dispose a context that hasn't been built yet`)
     }
-    throw new Error(`Cannot dispose a context that hasn't been built yet`)
   }
 
   private assertMutable () {

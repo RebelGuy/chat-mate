@@ -2,7 +2,7 @@ import { ObjectComparator, ValueComparator } from '@rebel/server/types'
 
 export function assert(condition: any, msg: string): asserts condition {
   if (!condition) {
-    throw new Error(msg);
+    throw new Error(msg)
   }
 }
 
@@ -64,4 +64,8 @@ export function compare<T>(a: T, b: T, comparator: ObjectComparator<T>) {
   }
 
   return true
+}
+
+export function assertUnreachable (x: never): never {
+  throw new Error('This should not happen')
 }
