@@ -1,11 +1,11 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
-import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { getMockGetterMock, mockGetter, nameof, resolveValue, single } from '@rebel/server/_test/utils'
+import { mockGetter, nameof, promised, single } from '@rebel/server/_test/utils'
 import { DeepMockProxy, mock, mockDeep, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import { ChannelInfo, Livestream } from '@prisma/client'
@@ -103,7 +103,7 @@ export default () => {
     mockChannelStore = mockDeep<ChannelStore>()
     mockChannelStore.createOrUpdate.mockImplementation((channelId, args) => {
       if (channelId === author.channelId) {
-        return resolveValue({
+        return promised({
           id: 1,
           youtubeId: author.channelId,
           infoHistory: [authorToFullChannelInfo(author)]

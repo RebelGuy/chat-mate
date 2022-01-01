@@ -1,3 +1,4 @@
+import { Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import { IMasterchat } from '@rebel/server/interfaces'
 import { Db } from '@rebel/server/providers/DbProvider'
@@ -7,6 +8,14 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof } from '@rebel/server/_test/utils'
 import { mock, mockDeep, MockProxy } from 'jest-mock-extended'
+
+const metadataInProgress: Metadata = {
+  channelId: 'mock channel id',
+  videoId: 'mock video id',
+  channelName: 'mock channel name',
+  isLive: true,
+  title: 'mock title'
+}
 
 export default () => {
   const liveId = 'id1'
@@ -18,6 +27,8 @@ export default () => {
   beforeEach(async () => {
     const dbProvider = await startTestDb()
     mockMasterchat = mock<IMasterchat>()
+    mockMasterchat.fetchMetadata.mockResolvedValue(metadataInProgress)
+
     mockLogService = mock<LogService>()
 
     const mockMasterchatProvider = mockDeep<MasterchatProvider>({
@@ -30,11 +41,18 @@ export default () => {
       masterchatProvider: mockMasterchatProvider,
       logService: mockLogService }))
     db = dbProvider.get()
+
+    // for some reason we have to use the `legacy` option, else tests will time out.
+    // it seems like jest doesn't like setInterval() very much...
+    jest.useFakeTimers('legacy')
   })
 
-  afterEach(stopTestDb)
+  afterEach(() => {
+    jest.clearAllTimers()
+    stopTestDb()
+  })
 
-  describe(nameof(LivestreamStore, 'createLivestream'), () => {
+  describe.only(nameof(LivestreamStore, 'createLivestream'), () => {
     test('new livestream added to database', async () => {
       const stream = await livestreamStore.createLivestream()
 
@@ -48,6 +66,59 @@ export default () => {
 
       expect(stream.liveId).toBe(liveId)
       await expectRowCount(db.livestream).toBe(1)
+    })
+
+    test('not started status inferred from metadata', async () => {
+      await db.livestream.create({ data: { liveId } })
+      mockMasterchat.fetchMetadata.mockClear()
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: false })
+
+      const stream = await livestreamStore.createLivestream()
+
+      expect(stream.start).toBeNull()
+      expect(stream.end).toBeNull()
+    })
+
+    test('in progress status inferred from metadata', async () => {
+      await db.livestream.create({ data: { liveId } })
+      mockMasterchat.fetchMetadata.mockClear()
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: true })
+
+      const stream = await livestreamStore.createLivestream()
+
+      expect(stream.start).not.toBeNull()
+      expect(stream.end).toBeNull()
+    })
+
+    test('finished status inferred from metadata', async () => {
+      await db.livestream.create({ data: { liveId, start: new Date() } })
+      mockMasterchat.fetchMetadata.mockClear()
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: false })
+
+      const stream = await livestreamStore.createLivestream()
+
+      expect(stream.start).not.toBeNull()
+      expect(stream.end).not.toBeNull()
+    })
+
+    test('throws if invalid inferred status', async () => {
+      await db.livestream.create({ data: { liveId, start: new Date(), end: new Date() } })
+      mockMasterchat.fetchMetadata.mockClear()
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: true })
+
+      await expect(livestreamStore.createLivestream()).rejects.toThrow()
+    })
+
+    test('updates metadata regularly', async () => {
+      await livestreamStore.createLivestream()
+      expect(mockMasterchat.fetchMetadata).toBeCalledTimes(1)
+
+      // don't use `runAllTimers`, as it will run into infinite recursion
+      jest.runOnlyPendingTimers()
+      expect(mockMasterchat.fetchMetadata).toBeCalledTimes(2)
+
+      jest.runOnlyPendingTimers()
+      expect(mockMasterchat.fetchMetadata).toBeCalledTimes(3)
     })
   })
 

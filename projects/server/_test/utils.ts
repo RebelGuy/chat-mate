@@ -38,6 +38,6 @@ export function getMockGetterMock<T, GetterName extends NonFunctionPropertyNames
   return mockedGetter.mock
 }
 
-export function resolveValue<T> (value: T): Promise<T> {
+export function promised<T> (value: T): Promise<T> {
   return new Promise(res => res(value))
 }

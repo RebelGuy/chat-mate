@@ -6,7 +6,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 
-const METADATA_SYNC_INTERVAL_MS = 60_000
+export const METADATA_SYNC_INTERVAL_MS = 60_000
 
 type Deps = Dependencies<{
   liveId: string,
@@ -46,22 +46,25 @@ export default class LivestreamStore {
     const metadata = await this.masterchat.fetchMetadata()
     const existingLivestream = await existingLivestreamPromise
 
-    this.syncTimer = setInterval(this.updateLivestreamMetadata, METADATA_SYNC_INTERVAL_MS)
+    this.syncTimer = setInterval(() => this.updateLivestreamMetadata(), METADATA_SYNC_INTERVAL_MS)
 
+    let updatedLivestreamPromise
     if (existingLivestream) {
       const updatedTimes = LivestreamStore.getUpdatedLivestreamTimes(existingLivestream, metadata)
-      return this.db.livestream.update({
+      updatedLivestreamPromise = this.db.livestream.update({
         where: { liveId: this.liveId },
         data: { ...updatedTimes }
       })
     } else {
-      return this.db.livestream.create({ data: {
+      updatedLivestreamPromise = this.db.livestream.create({ data: {
         createdAt: new Date(),
         liveId: this.liveId,
         start: metadata.isLive ? new Date() : null,
         end: null
       }})
     }
+
+    return this._currentLivestream = await updatedLivestreamPromise
   }
 
   public async update (continuationToken: string | null): Promise<Livestream> {
