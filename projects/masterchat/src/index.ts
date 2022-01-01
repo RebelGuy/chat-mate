@@ -556,7 +556,7 @@ export class Masterchat extends EventEmitter {
    */
 
   async populateMetadata(): Promise<void> {
-    const metadata = await this.fetchMetadataFromWatch(this.videoId);
+    const metadata = await this.fetchMetadata();
 
     this.title = metadata.title;
     this.channelId = metadata.channelId;
@@ -564,7 +564,7 @@ export class Masterchat extends EventEmitter {
     this.isLive = metadata.isLive;
   }
 
-  async fetchMetadataFromWatch(id: string) {
+  async fetchMetadata(): Promise<Metadata> {
     const res = await this.get("/watch?v=" + this.videoId);
 
     // Check ban status
@@ -573,7 +573,10 @@ export class Masterchat extends EventEmitter {
     }
 
     const html = await res.text();
-    return parseMetadataFromWatch(html);
+    return {
+      ...parseMetadataFromWatch(html),
+      videoId: this.videoId
+    };
   }
 
   async fetchMetadataFromEmbed(id: string) {

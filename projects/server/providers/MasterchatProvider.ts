@@ -13,8 +13,7 @@ type Deps = Dependencies<{
   auth: string,
   isMockLivestream: boolean | null,
   fileService: FileService,
-  logService: LogService,
-  chatStore: ChatStore 
+  logService: LogService
 }>
 
 export default class MasterchatProvider implements IProvider<IMasterchat> {
@@ -27,7 +26,6 @@ export default class MasterchatProvider implements IProvider<IMasterchat> {
   private readonly fileService: FileService
   private readonly logService: LogService
   private readonly masterChat: IMasterchat
-  private readonly chatStore: ChatStore
 
   constructor (deps: Deps) {
     this.liveId = deps.resolve('liveId')
@@ -36,11 +34,10 @@ export default class MasterchatProvider implements IProvider<IMasterchat> {
     this.isMockLivestream = deps.resolve('isMockLivestream')
     this.fileService = deps.resolve('fileService')
     this.logService = deps.resolve('logService')
-    this.chatStore = deps.resolve('chatStore')
 
     if (this.isMockLivestream) {
       this.logService.logInfo(this, 'Using MockMasterchat for auto-playing data')
-      this.masterChat = new MockMasterchat(this.logService, this.chatStore)
+      this.masterChat = new MockMasterchat(this.logService)
     } else {
       // note: there is a bug where the "live chat" (as opposed to "top chat") option in FetchChatOptions doesn't work,
       // so any messages that might be spammy/inappropriate will not show up.

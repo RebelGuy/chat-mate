@@ -1,19 +1,32 @@
 import { Livestream } from '@prisma/client'
+import { Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
-import { New } from '@rebel/server/models/entities'
+import { IMasterchat } from '@rebel/server/interfaces'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import LogService from '@rebel/server/services/LogService'
+
+const METADATA_SYNC_INTERVAL_MS = 60_000
 
 type Deps = Dependencies<{
   liveId: string,
-  dbProvider: DbProvider
+  dbProvider: DbProvider,
+  masterchatProvider: MasterchatProvider,
+  logService: LogService
 }>
 
 export default class LivestreamStore {
+  readonly name: string = LivestreamStore.name
+
   private readonly liveId: string
   private readonly db: Db
+  private readonly masterchat: IMasterchat
+  private readonly logService: LogService
+
+  private syncTimer: NodeJS.Timer | null = null
   
   private _currentLivestream: Livestream | null = null
-  public get currentLivestream() {
+  public get currentLivestream () {
     if (this._currentLivestream) {
       return this._currentLivestream
     } else {
@@ -21,30 +34,102 @@ export default class LivestreamStore {
     }
   }
 
-  constructor(deps: Deps) {
+  constructor (deps: Deps) {
     this.liveId = deps.resolve('liveId')
     this.db = deps.resolve('dbProvider').get()
+    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.logService = deps.resolve('logService')
   }
 
   public async createLivestream (): Promise<Livestream> {
-    return this.createOrUpdateLivestream({ createdAt: new Date(), liveId: this.liveId })
-  }
+    const existingLivestreamPromise = this.db.livestream.findUnique({ where: { liveId: this.liveId }})
+    const metadata = await this.masterchat.fetchMetadata()
+    const existingLivestream = await existingLivestreamPromise
 
-  public async setContinuationToken (continuationToken: string | null): Promise<Livestream> {
-    if (!this._currentLivestream) {
-      throw new Error('No current livestream exists')
+    this.syncTimer = setInterval(this.updateLivestreamMetadata, METADATA_SYNC_INTERVAL_MS)
+
+    if (existingLivestream) {
+      const updatedTimes = LivestreamStore.getUpdatedLivestreamTimes(existingLivestream, metadata)
+      return this.db.livestream.update({
+        where: { liveId: this.liveId },
+        data: { ...updatedTimes }
+      })
     } else {
-      return this.createOrUpdateLivestream({ ...this._currentLivestream, continuationToken })
+      return this.db.livestream.create({ data: {
+        createdAt: new Date(),
+        liveId: this.liveId,
+        start: metadata.isLive ? new Date() : null,
+        end: null
+      }})
     }
   }
 
-  private async createOrUpdateLivestream (livestream: New<Livestream>): Promise<Livestream> {
-    this._currentLivestream = await this.db.livestream.upsert({ 
-      create: { ...livestream },
-      where: { liveId: livestream.liveId },
-      update: { continuationToken: livestream.continuationToken }
-    })
+  public async update (continuationToken: string | null): Promise<Livestream> {
+    if (!this._currentLivestream) {
+      throw new Error('No current livestream exists')
+    }
 
-    return this._currentLivestream
+    return this._currentLivestream = await this.db.livestream.update({
+      where: { liveId: this._currentLivestream.liveId! },
+      data: { ...this._currentLivestream, continuationToken }
+    })
+  }
+
+  public dispose () {
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer)
+    }
+  }
+
+  private async updateLivestreamMetadata () {
+    this.logService.logDebug(this, 'Syncing metadata')
+    const metadata = await this.masterchat.fetchMetadata()
+
+    const updatedTimes = LivestreamStore.getUpdatedLivestreamTimes(this._currentLivestream!, metadata)
+    return this._currentLivestream = await this.db.livestream.update({
+      where: { liveId: this.liveId },
+      data: { ...updatedTimes }
+    })
+  }
+
+  private static getUpdatedLivestreamTimes (existingLivestream: Livestream, metadata: Metadata): Pick<Livestream, 'start' | 'end'> {
+    const isLive = metadata.isLive
+    const existingStatus = LivestreamStore.getLivestreamStatus(existingLivestream)
+      if (existingStatus === 'finished' && isLive) {
+        // invalid status
+        throw new Error('Unable to create livestream because it is finished, but masterchat claims it is ongoing.')
+      } else if ((existingStatus === 'not_started' || existingStatus === 'finished') && !isLive || existingStatus === 'live' && isLive) {
+        // status has not changed
+        return {
+          start: existingLivestream.start,
+          end: existingLivestream.end
+        }
+      } else if (existingStatus === 'not_started' && isLive) {
+        // just started
+        return {
+          start: new Date(),
+          end: existingLivestream.end
+        }
+      } else if (existingStatus === 'live' && !isLive) {
+        // just finished
+        return {
+          start: existingLivestream.start,
+          end: new Date()
+        }
+      } else {
+        throw new Error('Did not expect to get here')
+      }
+  }
+
+  private static getLivestreamStatus (livestream: Livestream): 'not_started' | 'live' | 'finished' {
+    if (livestream.start == null && livestream.end == null) {
+      return 'not_started'
+    } else if (livestream.start != null && livestream.end == null) {
+      return 'live'
+    } else if (livestream.start != null && livestream.end != null && livestream.start < livestream.end) {
+      return 'finished'
+    } else {
+      throw new Error(`Could not determine livestream status based on start time ${livestream.start} and end time ${livestream.end}`)
+    }
   }
 }

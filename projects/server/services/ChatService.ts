@@ -40,7 +40,6 @@ export default class ChatService {
   private readonly logService: LogService
   private readonly masterchat: IMasterchat
 
-  private listeners: Map<keyof ChatEvents, ((data: any) => void)[]> = new Map()
   private timeout: NodeJS.Timeout | null = null
 
   constructor (deps: Deps) {
@@ -59,12 +58,10 @@ export default class ChatService {
     return this.updateMessages()
   }
 
-  stop () {
-    if (!this.timeout) {
-      return
+  dispose () {
+    if (this.timeout) {
+      clearTimeout(this.timeout)
     }
-
-    clearTimeout(this.timeout)
   }
 
   private fetchLatest = async () => {
@@ -75,7 +72,7 @@ export default class ChatService {
       return result
     } catch (e: any) {
       this.logService.logWarning(this, 'Fetch failed:', e.message)
-      await this.livestreamStore.setContinuationToken(null)
+      await this.livestreamStore.update(null)
       return null
     }
   }

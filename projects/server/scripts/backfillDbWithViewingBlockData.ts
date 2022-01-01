@@ -1,7 +1,9 @@
 require('module-alias/register')
 import { Livestream, Prisma, PrismaClient } from '@prisma/client'
 import { ContextProvider } from '@rebel/server/context/context'
+import env from '@rebel/server/globals'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import { DATABASE_URL, DATA_PATH, DB_NAME, IS_LIVE } from '@rebel/server/scripts/consts'
 import FileService from '@rebel/server/services/FileService'
 import LogService from '@rebel/server/services/LogService'
@@ -34,9 +36,13 @@ const main = async () => {
       .withProperty('liveId', livestream.liveId)
       .withProperty('dataPath', DATA_PATH)
       .withProperty('databaseUrl', DATABASE_URL)
+      .withProperty('auth', env('auth'))
+      .withProperty('isMockLivestream', env('isMockLivestream'))
+      .withProperty('channelId', env('channelId'))
       .withClass('fileService', FileService)
       .withClass('logService', LogService)
       .withClass('dbProvider', DbProvider)
+      .withClass('masterchatProvider', MasterchatProvider)
       .withClass('livestreamStore', LivestreamStore)
       .withClass('channelStore', ChannelStore)
       .withClass('chatStore', ChatStore)

@@ -13,9 +13,11 @@ datasource db {
 }
 
 model Livestream {
-  id        Int      @id @default(autoincrement())
-  liveId    String   @unique @db.VarChar(11)
-  createdAt DateTime @default(now())
+  id        Int       @id @default(autoincrement())
+  liveId    String    @unique @db.VarChar(11)
+  createdAt DateTime  @default(now())
+  start     DateTime?
+  end       DateTime?
 
   // for fetching the chat of this livestream
   continuationToken String? @db.VarChar(1023)

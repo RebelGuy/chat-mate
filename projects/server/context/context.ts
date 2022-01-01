@@ -204,6 +204,9 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
 
   public dispose () {
     for (const key in Object.keys(this.dependencies)) {
+      if (this.dependencies[key]?.dispose) {
+        this.dependencies[key].dispose()
+      }
       Object.defineProperty(this.dependencies, key, { value: null, writable: false })
     }
   }

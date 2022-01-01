@@ -1,4 +1,4 @@
-import { Action, AddChatItemAction, ChatResponse, YTRun } from '@rebel/masterchat'
+import { Action, AddChatItemAction, ChatResponse, Metadata, YTRun } from '@rebel/masterchat'
 import { IMasterchat } from '@rebel/server/interfaces'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import LogService from '@rebel/server/services/LogService'
@@ -12,24 +12,19 @@ export default class MockMasterchat implements IMasterchat {
   readonly name = MockMasterchat.name
 
   readonly logService: LogService
-  readonly chatStore: ChatStore
 
-  // the chat items loaded from the livestream will be used as a base for emitted messages
-  private chatItems: ChatItemWithRelations[] | null = null
   private counter: number = 0
   private lastFetch: number = Date.now()
 
   // for debugging:
-  // - `data`: load messages from the database and cycle through them
   // - `static`: manually set the `this.mockMessages` array, and cycle through them
   // - `input`: can add new messages live via the terminal window
   //   IMPORTANT: this only works if running the process manually in the terminal, NOT via the VSCode debugger
-  private mockType: 'data' | 'static' | 'input' = 'data'
+  private mockType: 'static' | 'input' = 'input'
   private mockMessages: string[] | null = null
 
-  constructor (logService: LogService, chatStore: ChatStore) {
+  constructor (logService: LogService) {
     this.logService = logService
-    this.chatStore = chatStore
 
     if (this.mockType === 'input') {
       this.mockMessages = []
@@ -40,29 +35,16 @@ export default class MockMasterchat implements IMasterchat {
   }
 
   public async fetch (): Promise<ChatResponse> {
-    if (this.chatItems == null) {
-      this.chatItems = await this.chatStore.getChatSince(0)
-      if (this.chatItems.length === 0) {
-        throw new Error('MockMasterchat cannot continue because no mock data exists.')
-      }
-    }
-
     const now = Date.now()
     const elapsed = now - this.lastFetch
     this.lastFetch = now
 
-    if (elapsed / 1000 < 1 / CHAT_RATE || this.mockType !== 'data' && this.mockMessages?.length === 0) {
+    if (elapsed / 1000 < 1 / CHAT_RATE || this.mockMessages?.length === 0) {
       return MockMasterchat.buildResponse()
     }
 
-    let item = this.chatItems[this.counter % this.chatItems.length]
-    item = {
-      ...item,
-      youtubeId: `mock_${now}`,
-      time: new Date()
-    }
-
-    let customMessage: string | null = null
+    
+    let customMessage: string = 'Message'
     if (this.mockType === 'static' && this.mockMessages != null && this.mockMessages.length > 0) {
       customMessage = this.mockMessages[this.counter % this.mockMessages.length]
     } else if (this.mockType === 'input') {
@@ -73,6 +55,7 @@ export default class MockMasterchat implements IMasterchat {
       }
     }
 
+    let item: ChatItemWithRelations = generateFakeChatItem(customMessage)
     const channelInfo = item.channel.infoHistory[0]!
     const action: MakeRequired<AddChatItemAction> = {
       type: 'addChatItemAction',
@@ -116,11 +99,71 @@ export default class MockMasterchat implements IMasterchat {
     return MockMasterchat.buildResponse(action)
   }
 
+  public async fetchMetadata(): Promise<Metadata> {
+    return {
+      channelId: 'mock channel id',
+      videoId: 'mock video id',
+      channelName: 'mock channel name',
+      isLive: true,
+      title: 'mock title'
+    }
+  }
+
   private static buildResponse (action?: Action): Promise<ChatResponse> {
     return new Promise((resolve, _) => resolve({
       actions: action ? [action] : [],
       continuation: { timeoutMs: 10000, token: 'mock_continuationToken' },
       error: null
     }))
+  }
+}
+function generateFakeChatItem (text: string): ChatItemWithRelations {
+  return {
+    youtubeId: randomString(10),
+    time: new Date(),
+    id: 1,
+    livestreamId: 1,
+    channelId: 1,
+    channel: {
+      id: 1,
+      youtubeId: randomString(10),
+      infoHistory: [{
+        IsVerified: randomBoolean(),
+        isModerator: randomBoolean(),
+        isOwner: randomBoolean(),
+        name: randomString(['A name', 'Some user', 'asdfaklsjdf']),
+        channelId: 1,
+        id: 1,
+        imageUrl: 'www.image.com',
+        time: new Date()
+      }]
+    },
+    chatMessageParts: [{
+      id: 1,
+      chatMessageId: 1,
+      emoji: null,
+      emojiId: null,
+      order: 0,
+      textId: 1,
+      text: {
+        id: 1,
+        isBold: randomBoolean(),
+        isItalics: randomBoolean(),
+        text
+      }
+    }]
+  }
+}
+
+function randomBoolean () {
+  return Math.random() < 0.5
+}
+
+function randomString(options: string[] | number) {
+  if (typeof options === 'number') {
+    // returns a random string (found somewhere on SO)
+    return Math.random().toString(36).substring(2, 10)
+  } else {
+    return options[Math.floor(Math.random() * options.length)]
   }
 }

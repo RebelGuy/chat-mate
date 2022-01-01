@@ -1,16 +1,34 @@
 import { Dependencies } from '@rebel/server/context/context'
+import { IMasterchat } from '@rebel/server/interfaces'
 import { Db } from '@rebel/server/providers/DbProvider'
+import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof } from '@rebel/server/_test/utils'
+import { mock, mockDeep, MockProxy } from 'jest-mock-extended'
 
 export default () => {
   const liveId = 'id1'
   let livestreamStore: LivestreamStore
   let db: Db
+  let mockMasterchat: MockProxy<IMasterchat>
+  let mockLogService: MockProxy<LogService>
+
   beforeEach(async () => {
     const dbProvider = await startTestDb()
-    livestreamStore = new LivestreamStore(new Dependencies({ dbProvider, liveId }))
+    mockMasterchat = mock<IMasterchat>()
+    mockLogService = mock<LogService>()
+
+    const mockMasterchatProvider = mockDeep<MasterchatProvider>({
+      get: () => mockMasterchat
+    })
+
+    livestreamStore = new LivestreamStore(new Dependencies({
+      dbProvider,
+      liveId,
+      masterchatProvider: mockMasterchatProvider,
+      logService: mockLogService }))
     db = dbProvider.get()
   })
 
@@ -33,19 +51,19 @@ export default () => {
     })
   })
 
-  describe(nameof(LivestreamStore, 'setContinuationToken'), () => {
+  describe(nameof(LivestreamStore, 'update'), () => {
     test('continuation token is updated', async () => {
       await db.livestream.create({ data: { liveId } })
       await livestreamStore.createLivestream()
 
-      const stream = await livestreamStore.setContinuationToken('token')
+      const stream = await livestreamStore.update('token')
 
       expect(stream.continuationToken).toBe('token')
       expect((await db.livestream.findFirst())?.continuationToken).toBe('token')
     })
 
     test('throws if livestream not yet created', async () => {
-      await expect(livestreamStore.setContinuationToken('test')).rejects.toThrow()
+      await expect(livestreamStore.update('test')).rejects.toThrow()
     })
   })
 
@@ -63,7 +81,7 @@ export default () => {
       await db.livestream.create({ data: { liveId, continuationToken: 'token1' } })
       await livestreamStore.createLivestream()
 
-      await livestreamStore.setContinuationToken('token2')
+      await livestreamStore.update('token2')
       const stream = livestreamStore.currentLivestream
 
       expect(stream).toEqual(expect.objectContaining({ liveId, continuationToken: 'token2' }))
