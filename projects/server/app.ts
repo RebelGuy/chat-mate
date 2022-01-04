@@ -15,6 +15,15 @@ import LogService, { createLogContext } from '@rebel/server/services/LogService'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
+import ExperienceStore from '@rebel/server/stores/ExperienceStore'
+import ExperienceService from '@rebel/server/services/ExperienceService'
+import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+
+//
+// "Over-engineering is the best thing since sliced bread."
+//   - some Rebel Guy
+//
 
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)
@@ -28,11 +37,15 @@ const globalContext = ContextProvider.create()
   .withProperty('isMockLivestream', env('isMockLivestream'))
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
+  .withHelpers('experienceHelpers', ExperienceHelpers)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('livestreamStore', LivestreamStore)
+  .withClass('experienceStore', ExperienceStore)
+  .withClass('viewershipStore', ViewershipStore)
+  .withClass('experienceService', ExperienceService)
   .withClass('channelStore', ChannelStore)
   .withClass('chatStore', ChatStore)
   .withClass('chatService', ChatService)

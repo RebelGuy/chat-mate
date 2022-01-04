@@ -4,6 +4,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import { IMasterchat } from '@rebel/server/interfaces'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import ChatService from '@rebel/server/services/ChatService'
+import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -40,6 +41,7 @@ let mockChatStore: MockProxy<ChatStore>
 let mockLivestreamStore: MockProxy<LivestreamStore>
 let mockMasterchat: MockProxy<IMasterchat>
 let mockLogService: MockProxy<LogService>
+let mockExperienceService: MockProxy<ExperienceService>
 let chatService: ChatService
 
 beforeEach(() => {
@@ -61,6 +63,7 @@ beforeEach(() => {
     chatStore: mockChatStore,
     livestreamStore: mockLivestreamStore,
     logService: mockLogService,
+    experienceService: mockExperienceService,
     masterchatProvider: mockMasterchatProvider
   }))
 })

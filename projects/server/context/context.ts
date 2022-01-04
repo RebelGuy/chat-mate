@@ -1,9 +1,9 @@
+import { Branded } from '@rebel/server/types'
+
 // make sure we don't accidentally override non-context-related properties when assigning the context to an object
 const CONTEXT_SYMBOL = Symbol('context')
 
 export type Injectable = {}
-
-export type Branded<T, BrandingEnum> = T & { brand: BrandingEnum }
 
 export enum _BuiltContextBrand { }
 export type BuiltContext<TClasses, TObjects, TProperties> = Branded<ContextProvider<TClasses, TObjects, TProperties>, _BuiltContextBrand>
@@ -38,6 +38,12 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
   public withClass<Name extends DepName, ClassType> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType) {
     this.assertMutable()
     // todo: this should just extend the types, but not do any instantiation...
+    return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
+  }
+
+  // add the given helper class to the context. it should not have ANY dependencies
+  public withHelpers<Name extends DepName, HelperClassType> (name: Name, ctor: new () => HelperClassType) {
+    this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
 

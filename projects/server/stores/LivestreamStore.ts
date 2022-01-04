@@ -50,7 +50,7 @@ export default class LivestreamStore {
 
     let updatedLivestreamPromise
     if (existingLivestream) {
-      const updatedTimes = LivestreamStore.getUpdatedLivestreamTimes(existingLivestream, metadata)
+      const updatedTimes = this.getUpdatedLivestreamTimes(existingLivestream, metadata)
       updatedLivestreamPromise = this.db.livestream.update({
         where: { liveId: this.liveId },
         data: { ...updatedTimes }
@@ -88,14 +88,14 @@ export default class LivestreamStore {
     this.logService.logDebug(this, 'Syncing metadata')
     const metadata = await this.masterchat.fetchMetadata()
 
-    const updatedTimes = LivestreamStore.getUpdatedLivestreamTimes(this._currentLivestream!, metadata)
+    const updatedTimes = this.getUpdatedLivestreamTimes(this._currentLivestream!, metadata)
     return this._currentLivestream = await this.db.livestream.update({
       where: { liveId: this.liveId },
       data: { ...updatedTimes }
     })
   }
 
-  private static getUpdatedLivestreamTimes (existingLivestream: Livestream, metadata: Metadata): Pick<Livestream, 'start' | 'end'> {
+  private getUpdatedLivestreamTimes (existingLivestream: Livestream, metadata: Metadata): Pick<Livestream, 'start' | 'end'> {
     const isLive = metadata.isLive
     const existingStatus = LivestreamStore.getLivestreamStatus(existingLivestream)
       if (existingStatus === 'finished' && isLive) {
@@ -109,12 +109,14 @@ export default class LivestreamStore {
         }
       } else if (existingStatus === 'not_started' && isLive) {
         // just started
+        this.logService.logInfo(this, 'Livestream has started')
         return {
           start: new Date(),
           end: existingLivestream.end
         }
       } else if (existingStatus === 'live' && !isLive) {
         // just finished
+        this.logService.logInfo(this, 'Livestream has finished')
         return {
           start: existingLivestream.start,
           end: new Date()

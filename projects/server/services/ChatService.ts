@@ -9,6 +9,7 @@ import { clamp, clampNormFn, sum } from '@rebel/server/util/math'
 import { IMasterchat } from '@rebel/server/interfaces'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import ExperienceService from '@rebel/server/services/ExperienceService'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -30,7 +31,8 @@ type Deps = Dependencies<{
   chatStore: ChatStore,
   livestreamStore: LivestreamStore,
   logService: LogService,
-  masterchatProvider: MasterchatProvider
+  masterchatProvider: MasterchatProvider,
+  experienceService: ExperienceService
 }>
 
 export default class ChatService {
@@ -39,6 +41,7 @@ export default class ChatService {
   private readonly livestreamStore: LivestreamStore
   private readonly logService: LogService
   private readonly masterchat: IMasterchat
+  private readonly experienceService: ExperienceService
 
   private timeout: NodeJS.Timeout | null = null
 
@@ -47,6 +50,7 @@ export default class ChatService {
     this.livestreamStore = deps.resolve('livestreamStore')
     this.masterchat = deps.resolve('masterchatProvider').get()
     this.logService = deps.resolve('logService')
+    this.experienceService = deps.resolve('experienceService')
   }
 
   // await this method when initialising the service to guarantee an initial fetch
@@ -95,6 +99,7 @@ export default class ChatService {
       } else {
         const token = response.continuation.token
         await this.chatStore.addChat(token, chatItems)
+        await this.experienceService.addExperienceForChat(chatItems)
         hasNewChat = chatItems.length > 0
       }
     }
@@ -172,7 +177,7 @@ function getNextInterval (currentTime: number, timestamps: List<number> | number
   // this has the effect that, if there is a quick burst of messages, it won't increase the refresh rate for the whole
   // `limit` interval, but smoothly return back to normal over time.
   const chatRate = sum(weights.map(w => w / (LIMIT / 1000)))
-  const nextInterval = (1 - clamp(0, (chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
+  const nextInterval = (1 - clamp((chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 0, 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
 
   logContext.logDebug(`Chat rate: ${chatRate.toFixed(4)} | Next interval: ${nextInterval.toFixed(0)}`)
   return nextInterval

@@ -22,8 +22,9 @@ model Livestream {
   // for fetching the chat of this livestream
   continuationToken String? @db.VarChar(1023)
 
-  chatMessages  ChatMessage[]
-  viewingBlocks ViewingBlock[]
+  chatMessages           ChatMessage[]
+  experienceTransactions ExperienceTransaction[]
+  viewingBlocks          ViewingBlock[]
 }
 
 // for tracking history
@@ -135,6 +136,9 @@ model ExperienceTransaction {
   // depending on what kind of event triggered this transaction.
   experienceDataChatMessage ExperienceDataChatMessage?
 
+  livestreamId Int
+  livestream   Livestream @relation(fields: [livestreamId], references: [id])
+
   channelId Int
   channel   Channel @relation(fields: [channelId], references: [id])
 
@@ -156,6 +160,12 @@ model ExperienceSnapshot {
 /// Data for an experience transaction triggered by a chat message
 model ExperienceDataChatMessage {
   id Int @id @default(autoincrement())
+
+  baseExperience                Int
+  viewershipStreakMultiplier    Float
+  participationStreakMultiplier Float
+  spamMultiplier                Float
+  messageQualityMultiplier      Float
 
   chatMessageId Int         @unique
   chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])

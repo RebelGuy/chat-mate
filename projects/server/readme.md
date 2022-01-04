@@ -73,7 +73,11 @@ Key:
 - ⚪: Won't do
 
 **Services**
-- 🟢 ChatService 
+- 🟢 ChatService
+- 🔴 ExperienceService
+  - 🔴 addExperienceForChat
+  - 🔴 getLevel
+  - 🔴 getTotalExperience
 - ⚪ FileService
 - ⚪ LogService
 
@@ -87,10 +91,33 @@ Key:
   - 🟢 addChat
   - 🟢 getChatSince
   - 🟢 getContinuationToken
+- 🔴 ExperienceStore
+  - 🔴 addChatExperience
+  - 🔴 getLatestSnapshot
+  - 🔴 getPreviousChatExperience
+  - 🔴 getTransactionsStartingAt
 - 🟢 LivestreamStore
   - 🟢 createLivestream
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
+- 🔴 ViewershipStore
+  - 🔴 getLivestreamParticipation
+  - 🔴 getLivestreamViewership
+  - 🔴 lastSeen
+
+**Helpers**
+- 🔴 ExperienceHelpers
+  - 🔴 calculateSpamMultiplier
+  - 🔴 calculateChatMessageQuality
+  - 🔴 calculateParticipationMultiplier
+  - 🔴 calculateViewershipMultiplier
+  - 🔴 calculateQualityMultiplier
+  - 🔴 calculateLevel
+
+**Misc
+- 🔴 util/math
+- 🔴 util/score
+
 
 # API Endpoints
 

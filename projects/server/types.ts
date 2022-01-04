@@ -1,3 +1,5 @@
+import { PositiveInfinity } from '@rebel/server/util/math'
+
 export type GenericObject = { [key: string]: any };
 
 // to ensure that the type definitions across different consumers are synced, any changes
@@ -34,8 +36,14 @@ export type MakeRequired<T> = {
   [P in keyof Required<T>]: Pick<T, P> extends Required<Pick<T, P>> ? T[P] : (T[P] | undefined);
 }
 
+export type NoNulls<T> = {
+  [P in keyof T]: Exclude<T[P], null>
+}
+
 export type ObjectComparator<T> = {
   [key in keyof T]: ValueComparator<T[key]>
 }
 
 export type ValueComparator<V> = null | 'default' | ((a: V, b: V) => boolean)
+
+export type Branded<T, BrandingEnum> = T & { brand: BrandingEnum }
