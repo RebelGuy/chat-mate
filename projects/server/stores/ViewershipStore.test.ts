@@ -1,0 +1,124 @@
+import { Dependencies } from '@rebel/server/context/context'
+import { Db } from '@rebel/server/providers/DbProvider'
+import { startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import { nameof } from '@rebel/server/_test/utils'
+import * as data from '@rebel/server/_test/testData'
+import { addTime } from '@rebel/server/util/datetime'
+
+export default () => {
+  let viewershipStore: ViewershipStore
+  let db: Db
+
+  beforeEach(async () => {
+    const dbProvider = await startTestDb()
+    viewershipStore = new ViewershipStore(new Dependencies({
+      dbProvider
+    }))
+    db = dbProvider.get()
+
+    await db.livestream.createMany({ data: [
+      { liveId: 'id1', continuationToken: null, start: data.time1, createdAt: data.time1 },
+      { liveId: 'id2', continuationToken: null, start: data.time2, createdAt: data.time2 },
+      { liveId: 'id3', continuationToken: null, start: data.time3, createdAt: data.time3 }
+    ]})
+    await db.channel.createMany({ data: [{ youtubeId: data.channel1 }, { youtubeId: data.channel2 }]})
+
+    // irrelevant data to make for more realistic setup - we only test things relating to channel1
+    await db.viewingBlock.createMany({ data: [
+      { channelId: 2, livestreamId: 2, startTime: data.time2, lastUpdate: data.time2, isComplete: true },
+      { channelId: 2, livestreamId: 3, startTime: data.time3, lastUpdate: data.time3, isComplete: false },
+    ]})
+    await db.chatMessage.createMany({ data: [
+      { channelId: 2, livestreamId: 1, time: data.time1, youtubeId: 'id1.1' },
+      { channelId: 2, livestreamId: 2, time: data.time2, youtubeId: 'id2.1' },
+      { channelId: 2, livestreamId: 2, time: addTime(data.time2, 'seconds', 1), youtubeId: 'id3.1' },
+    ]})
+  })
+
+  afterEach(stopTestDb)
+
+  describe(nameof(ViewershipStore, 'getLastSeen'), () => {
+    test('returns null if never seen', async () => {
+      const result = await viewershipStore.getLastSeen(data.channel1, false)
+
+      expect(result).toBeNull()
+    })
+
+    test('returns time of correct viewing block', async () => {
+      // 3 streams. viewer block in stream 1 and two in stream 3
+      const time1 = data.time1
+      const time2 = addTime(time1, 'seconds', 1)
+      const time3 = data.time3
+      const time4 = addTime(time3, 'seconds', 1)
+      const time5 = addTime(time4, 'seconds', 1)
+      const time6 = addTime(time5, 'seconds', 1)
+      await db.viewingBlock.createMany({ data: [
+        { channelId: 1, livestreamId: 1, startTime: time1, lastUpdate: time2, isComplete: true },
+        { channelId: 1, livestreamId: 3, startTime: time3, lastUpdate: time4, isComplete: true },
+        { channelId: 1, livestreamId: 3, startTime: time5, lastUpdate: time6, isComplete: false },
+      ]})
+
+      const resultIncludeCurrent = (await viewershipStore.getLastSeen(data.channel1, false))!
+      const resultIgnoreCurrent = (await viewershipStore.getLastSeen(data.channel1, true))!
+
+      expect(resultIncludeCurrent.livestream.id).toBe(3)
+      expect(resultIncludeCurrent.time).toEqual(time6)
+      expect(resultIgnoreCurrent.livestream.id).toBe(3)
+      expect(resultIgnoreCurrent.time).toEqual(time4)
+    })
+  })
+
+  describe(nameof(ViewershipStore, 'getLivestreamParticipation'), () => {
+    test('returns empty array if no participation', async () => {
+      const result = await viewershipStore.getLivestreamParticipation(data.channel1)
+
+      expect(result.length).toBe(3)
+      expect(result.filter(ls => ls.participated).length).toBe(0)
+    })
+
+    test('returns ordered streams where user participated', async () => {
+      // 2 messages in stream 1, 0 messages in stream 2, 1 message in stream 3
+      await db.chatMessage.createMany({ data: [
+        { channelId: 1, livestreamId: 1, time: data.time1, youtubeId: 'id1' },
+        { channelId: 1, livestreamId: 1, time: addTime(data.time1, 'seconds', 1), youtubeId: 'id2' },
+        { channelId: 1, livestreamId: 3, time: data.time3, youtubeId: 'id3' },
+      ]})
+
+      const result = await viewershipStore.getLivestreamParticipation(data.channel1)
+
+      expect(result.length).toBe(3)
+      expect(result.filter(ls => ls.participated).length).toBe(2)
+      expect(result[0]).toEqual(expect.objectContaining({ participated: true, id: 1}))
+      expect(result[2]).toEqual(expect.objectContaining({ participated: true, id: 3}))
+    })
+  })
+
+  describe(nameof(ViewershipStore, 'getLivestreamViewership'), () => {
+    test('returns empty array if no viewership', async () => {
+      const result = await viewershipStore.getLivestreamViewership(data.channel1)
+
+      expect(result.length).toBe(3)
+      expect(result.filter(ls => ls.viewed).length).toBe(0)
+    })
+
+    test('returns ordered streams where user participated', async () => {
+      // 2 viewing blocks in stream 1, 0 blocks in stream 2, 1 block in stream 3
+      const time1 = data.time1
+      const time2 = addTime(data.time1, 'seconds', 1)
+      const time3 = data.time3
+      await db.viewingBlock.createMany({ data: [
+        { channelId: 1, livestreamId: 1, startTime: time1, lastUpdate: time1, isComplete: true },
+        { channelId: 1, livestreamId: 1, startTime: time2, lastUpdate: time2, isComplete: true },
+        { channelId: 1, livestreamId: 3, startTime: time3, lastUpdate: time3, isComplete: false },
+      ]})
+
+      const result = await viewershipStore.getLivestreamViewership(data.channel1)
+
+      expect(result.length).toBe(3)
+      expect(result.filter(ls => ls.viewed).length).toBe(2)
+      expect(result[0]).toEqual(expect.objectContaining({ viewed: true, id: 1}))
+      expect(result[2]).toEqual(expect.objectContaining({ viewed: true, id: 3}))
+    })
+  })
+}

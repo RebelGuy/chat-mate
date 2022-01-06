@@ -100,10 +100,10 @@ Key:
   - 🟢 createLivestream
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
-- 🔴 ViewershipStore
-  - 🔴 getLivestreamParticipation
-  - 🔴 getLivestreamViewership
-  - 🔴 lastSeen
+- 🟢 ViewershipStore
+  - 🟢 getLastSeen
+  - 🟢 getLivestreamParticipation
+  - 🟢 getLivestreamViewership
 
 **Helpers**
 - 🔴 ExperienceHelpers
