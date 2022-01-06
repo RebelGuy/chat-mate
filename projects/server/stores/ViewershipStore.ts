@@ -1,10 +1,6 @@
 import { Livestream } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
-import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { NoNulls } from '@rebel/server/types'
-
-export type ChatExperience = NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'channel' | 'experienceDataChatMessage'>>
 
 export type LivestreamParticipation = Livestream & { channelId: string, participated: boolean }
 

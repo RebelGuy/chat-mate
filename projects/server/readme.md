@@ -74,10 +74,9 @@ Key:
 
 **Services**
 - 🟢 ChatService
-- 🔴 ExperienceService
-  - 🔴 addExperienceForChat
-  - 🔴 getLevel
-  - 🔴 getTotalExperience
+- 🟢 ExperienceService
+  - 🟢 addExperienceForChat
+  - 🟢 getLevel
 - ⚪ FileService
 - ⚪ LogService
 

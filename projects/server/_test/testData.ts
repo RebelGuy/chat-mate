@@ -2,37 +2,66 @@ import { ChannelInfo, ChatMessage, Livestream } from '@prisma/client'
 import { Author } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
+import { addTime } from '@rebel/server/util/datetime'
 ``
 export const time1 = new Date(2022, 0, 3)
 export const time2 = new Date(2022, 0, 4)
 export const time3 = new Date(2022, 0, 5)
 
-export const livestream: Livestream = {
+export const livestream1: Livestream = {
   id: 1,
-  liveId: 'liveId',
-  continuationToken: 'token',
-  createdAt: new Date(),
-  start: new Date(),
+  liveId: 'liveId1',
+  continuationToken: 'token1',
+  createdAt: time1,
+  start: time1,
+  end: addTime(time1, 'seconds', 1)
+}
+export const livestream2: Livestream = {
+  id: 2,
+  liveId: 'liveId2',
+  continuationToken: null,
+  createdAt: time2,
+  start: time2,
+  end: addTime(time2, 'seconds', 1)
+}
+export const livestream3: Livestream = {
+  id: 3,
+  liveId: 'liveId3',
+  continuationToken: 'token3',
+  createdAt: time3,
+  start: time3,
   end: null
 }
 
 export const channel1 = 'channel1'
+export const author1: Author = {
+  attributes: { isModerator: true, isOwner: false, isVerified: false },
+  channelId: channel1,
+  image: 'author1.image',
+  name: 'author1.name'
+}
 export const channelInfo1: Omit<ChannelInfo, 'id' | 'channelId'> = {
-  isModerator: true,
-  isOwner: false,
-  IsVerified: false,
-  imageUrl: 'author1.image',
-  name: 'author1.name',
+  isModerator: author1.attributes.isModerator,
+  isOwner: author1.attributes.isOwner,
+  IsVerified: author1.attributes.isVerified,
+  imageUrl: author1.image,
+  name: author1.name!,
   time: time1
 }
 
 export const channel2 = 'channel2'
+export const author2: Author = {
+  attributes: { isModerator: false, isOwner: false, isVerified: true },
+  channelId: channel2,
+  image: 'author2.image',
+  name: 'author2.name'
+}
 export const channelInfo2: Omit<ChannelInfo, 'id' | 'channelId'> = {
-  isModerator: false,
-  isOwner: false,
-  IsVerified: true,
-  imageUrl: 'author2.image',
-  name: 'author2.name',
+  isModerator: author2.attributes.isModerator,
+  isOwner: author2.attributes.isOwner,
+  IsVerified: author2.attributes.isVerified,
+  imageUrl: author2.image,
+  name: author2.name!,
   time: time1
 }
 

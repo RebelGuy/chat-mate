@@ -7,6 +7,11 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { Eps, GreaterThanOrEqual, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 
+export type Level = {
+  level: GreaterThanOrEqual<0>,
+  totalExperience: GreaterThanOrEqual<0>
+}
+
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
   experienceStore: ExperienceStore
@@ -63,12 +68,16 @@ export default class ExperienceService {
     }
   }
 
-  public async getLevel (channelId: string): Promise<GreaterThanOrEqual<0>> {
+  public async getLevel (channelId: string): Promise<Level> {
     const totalExperience = await this.getTotalExperience(channelId)
-    return this.experienceHelpers.calculateLevel(totalExperience)
+    const level = this.experienceHelpers.calculateLevel(totalExperience)
+    return {
+      totalExperience,
+      level
+    }
   }
 
-  public async getTotalExperience (channelId: string): Promise<GreaterThanOrEqual<0>> {
+  private async getTotalExperience (channelId: string): Promise<GreaterThanOrEqual<0>> {
     const latestSnapshot = await this.experienceStore.getLatestSnapshot(channelId)
     if (latestSnapshot == null) {
       return 0

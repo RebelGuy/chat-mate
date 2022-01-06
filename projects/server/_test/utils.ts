@@ -32,10 +32,10 @@ export function mockGetter<T, GetterName extends NonFunctionPropertyNames<T>> (o
   return mockedGetter
 }
 
-// gets the jes.fn().mock object of the mocked getter
-export function getMockGetterMock<T, GetterName extends NonFunctionPropertyNames<T>> (obj: MockProxy<T>, getterName: GetterName) {
+// gets the jes.fn() object of the mocked getter
+export function getGetterMock<T, GetterName extends NonFunctionPropertyNames<T>> (obj: MockProxy<T>, getterName: GetterName) {
   const mockedGetter = Object.getOwnPropertyDescriptor(obj, getterName)!.get as jest.Mock<T[GetterName], []>
-  return mockedGetter.mock
+  return mockedGetter
 }
 
 export function promised<T> (value: T): Promise<T> {

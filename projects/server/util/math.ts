@@ -21,6 +21,36 @@ type _LessThanBrand<Value> = { lessThan?: Value }
 export type LessThan<N extends number> = Branded<number, _LessThanBrand<N>>
 export type LessThanOrEqual<N extends number> = N | LessThan<N>
 
+export function asLte<N extends number> (value: number, constraint: N): LessThanOrEqual<N> {
+  return assertConstraint(value <= constraint, value, constraint, 'less than or equal to')
+}
+
+export function asLt<N extends number> (value: number, constraint: N): LessThan<N> {
+  return assertConstraint(value < constraint, value, constraint, 'less than')
+}
+
+export function asGte<N extends number> (value: number, constraint: N): GreaterThanOrEqual<N> {
+  return assertConstraint(value >= constraint, value, constraint, 'greater than or equal to')
+}
+
+export function asGt<N extends number> (value: number, constraint: N): GreaterThan<N> {
+  return assertConstraint(value > constraint, value, constraint, 'greater than')
+}
+
+export function asRange<Min extends number, Max extends number> (value: number, min: Min, max: Max): NumRange<Min, Max> {
+  asGte(value, min)
+  asLte(value, max)
+  return value as any
+}
+
+function assertConstraint (condition: boolean, value: number, constraint: number, constraintDescription: string): any {
+  if (condition) {
+    return value
+  } else {
+    throw new Error(`Expected value ${value} to be ${constraintDescription} ${constraint}`)
+  }
+}
+
 
 // there is a proposal for inequality types which is exactly what we need.
 // this way we will be able to implicitly cast 0.5 to NumRange<0, 1>
