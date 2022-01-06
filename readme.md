@@ -7,6 +7,21 @@ Recommended extensions:
 - `Gitlens`
 - `Prisma`
 
+## Adding the `masterchat` Subtree link
+
+By default, the `masterchat` subtree link is not shown in Sourcetree when cloning the project to a fresh folder.
+A manual fix is to add the following property to the JSON object in `.git/sourcetreeconfig.json`:
+```JSON
+"SubtreeLinks": [
+  {
+    "$id": "386",
+    "SourcePathUrl": "https://github.com/holodata/masterchat.git",
+    "Prefix": "projects/masterchat",
+    "Refspec": "master"
+  }
+]
+```
+
 # Change Log
 ## v1.4 - The Test Update
 - Server

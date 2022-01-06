@@ -49,6 +49,7 @@ beforeEach(() => {
   mockLivestreamStore = mock<LivestreamStore>()
   mockMasterchat = mock<IMasterchat>()
   mockLogService = mock<LogService>()
+  mockExperienceService = mock<ExperienceService>()
   
   mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(currentLivestream)
   mockChatStore.getChatSince.mockResolvedValue([])
@@ -98,14 +99,17 @@ describe(nameof(ChatService, 'start'), () => {
     expect(single(single(mockLivestreamStore.update.mock.calls))).toBe(null)
   })
 
-  test('passes chat items to ChatStore', async () => {
+  test('passes chat items to ChatStore and ExperienceService', async () => {
     mockMasterchat.fetch.mockResolvedValue(createChatResponse([chatAction1]))
 
     await chatService.start()
 
-    const [passedToken, passedItem] = single(mockChatStore.addChat.mock.calls)
+    const [passedToken, passedChatItems] = single(mockChatStore.addChat.mock.calls)
     expect(passedToken).toBe(token2)
-    expect(single(passedItem).id).toBe(chatAction1.id)
+    expect(single(passedChatItems).id).toBe(chatAction1.id)
+
+    const [passedXpItems] = single(mockExperienceService.addExperienceForChat.mock.calls)
+    expect(single(passedXpItems).id).toBe(chatAction1.id)
   })
 })
 

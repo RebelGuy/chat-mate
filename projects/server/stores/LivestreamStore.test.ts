@@ -52,7 +52,7 @@ export default () => {
     stopTestDb()
   })
 
-  describe.only(nameof(LivestreamStore, 'createLivestream'), () => {
+  describe(nameof(LivestreamStore, 'createLivestream'), () => {
     test('new livestream added to database', async () => {
       const stream = await livestreamStore.createLivestream()
 

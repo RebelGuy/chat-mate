@@ -4,7 +4,6 @@ import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { NoNulls } from '@rebel/server/types'
-import HydroMap from '@rebel/server/util/HydroMap'
 
 export type ChatExperience = NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'channel' | 'experienceDataChatMessage' | 'livestream'>>
 
@@ -22,30 +21,40 @@ export default class ExperienceStore {
   private readonly livestreamStore: LivestreamStore
 
   // key is channelId
-  private readonly chatExperienceMap: HydroMap<string, ChatExperience>
+  // value is null if we know there is no data for a particular channel
+  private readonly chatExperienceMap: Map<string, ChatExperience | null>
 
   constructor (deps: Deps) {
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.chatExperienceMap = new HydroMap()
+    this.chatExperienceMap = new Map()
   }
 
   // returns the previous chat experience, may not be for the current livestream
   public async getPreviousChatExperience (channelId: string): Promise<ChatExperience | null> {
+    if (this.chatExperienceMap.has(channelId)) {
+      return this.chatExperienceMap.get(channelId)!
+    }
+
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
       where: { channel: { youtubeId: channelId }, experienceDataChatMessage: { isNot: null }},
       orderBy: { time: 'desc' },
       include: { livestream: true, experienceDataChatMessage: true, channel: true }
     })
 
+    let result: ChatExperience | null
     if (experienceTransaction) {
-      return {
+      result = {
         ...experienceTransaction,
+        // no way to narrow this down using type guards... thanks typescript!
         experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
       }
     } else {
-      return null
+      result = null
     }
+
+    this.chatExperienceMap.set(channelId, result)
+    return result
   }
 
   public async addChatExperience (channelId: string, timestamp: number, xp: number, data: ChatExperienceData) {
@@ -85,7 +94,7 @@ export default class ExperienceStore {
   }
 
   private async initialiseSnapshotIfRequired (channelId: string, timestamp: number) {
-    // the existence of a previous experience entry imply that a snapshot already exists
+    // the existence of a previous experience entry implies that a snapshot already exists
     if (this.chatExperienceMap.has(channelId)) {
       return
     }

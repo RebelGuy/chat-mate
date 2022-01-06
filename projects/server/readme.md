@@ -91,11 +91,11 @@ Key:
   - 🟢 addChat
   - 🟢 getChatSince
   - 🟢 getContinuationToken
-- 🔴 ExperienceStore
-  - 🔴 addChatExperience
-  - 🔴 getLatestSnapshot
-  - 🔴 getPreviousChatExperience
-  - 🔴 getTransactionsStartingAt
+- 🟢 ExperienceStore
+  - 🟢 addChatExperience
+  - 🟢 getLatestSnapshot
+  - 🟢 getPreviousChatExperience
+  - 🟢 getTransactionsStartingAt
 - 🟢 LivestreamStore
   - 🟢 createLivestream
   - 🟢 currentLivestream
