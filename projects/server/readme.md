@@ -105,13 +105,13 @@ Key:
   - 🟢 getLivestreamViewership
 
 **Helpers**
-- 🔴 ExperienceHelpers
-  - 🔴 calculateSpamMultiplier
-  - 🔴 calculateChatMessageQuality
-  - 🔴 calculateParticipationMultiplier
-  - 🔴 calculateViewershipMultiplier
-  - 🔴 calculateQualityMultiplier
-  - 🔴 calculateLevel
+- 🟢 ExperienceHelpers
+  - 🟢 calculateChatMessageQuality
+  - 🟢 calculateLevel
+  - 🟢 calculateParticipationMultiplier
+  - 🟢 calculateQualityMultiplier
+  - 🟢 calculateSpamMultiplier
+  - 🟢 calculateViewershipMultiplier
 
 **Misc
 - 🔴 util/math

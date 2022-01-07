@@ -1,9 +1,9 @@
 import { ChannelInfo, ChatMessage, Livestream } from '@prisma/client'
-import { Author } from '@rebel/server/models/chat'
+import { Author, ChatItem } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import { addTime } from '@rebel/server/util/datetime'
-``
+
 export const time1 = new Date(2022, 0, 3)
 export const time2 = new Date(2022, 0, 4)
 export const time3 = new Date(2022, 0, 5)
@@ -63,6 +63,14 @@ export const channelInfo2: Omit<ChannelInfo, 'id' | 'channelId'> = {
   imageUrl: author2.image,
   name: author2.name!,
   time: time1
+}
+
+/** By channel1 at time1 with empty message */
+export const chatItem1: ChatItem = {
+  id: 'chat_id1',
+  author: author1,
+  timestamp: time1.getTime(),
+  messageParts: []
 }
 
 export const chatExperienceData1: ChatExperienceData = {

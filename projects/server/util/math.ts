@@ -127,7 +127,7 @@ export function clampNorm (value: number, min: number, max: number, centre?: num
   } else if (value >= max) {
     returnValue = 1
   } else if (value > centre) {
-    returnValue = (value - centre) / (max - centre) / 2
+    returnValue = 0.5 + (value - centre) / (max - centre) / 2
   } else {
     returnValue = 0.5
   }

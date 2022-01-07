@@ -1,16 +1,16 @@
 import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
 import { unique } from '@rebel/server/util/arrays'
-import { NumRange, Eps, clampNorm, scaleNorm, clamp, eps, avg, sum, GreaterThanOrEqual } from '@rebel/server/util/math'
+import { NumRange, Eps, clampNorm, scaleNorm, clamp, eps, avg, sum, GreaterThanOrEqual, asRange, asGte } from '@rebel/server/util/math'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
 // the increase/decrease is scaled linearly, and is applied to the *previous* chat multiplier.
-const TARGET_CHAT_PERIOD_MIN = 4 * 60 * 1000
-const TARGET_CHAT_PERIOD_MAX = 6 * 60 * 1000
-const LOWEST_CHAT_PERIOD = 6 * 1000
-const HIGHEST_CHAT_PERIOD = 20 * 60 * 1000
-const MULTIPLIER_CHANGE_AT_MIN = 0.95
-const MULTIPLIER_CHANGE_AT_MAX = 1.05
+export const TARGET_CHAT_PERIOD_MIN = 4 * 60 * 1000
+export const TARGET_CHAT_PERIOD_MAX = 6 * 60 * 1000
+export const LOWEST_CHAT_PERIOD = 6 * 1000
+export const HIGHEST_CHAT_PERIOD = 20 * 60 * 1000
+export const MULTIPLIER_CHANGE_AT_MIN = 0.95
+export const MULTIPLIER_CHANGE_AT_MAX = 1.05
 
 export default class ExperienceHelpers {
   // Returns 0 < x <= 1 that depends on the previous multiplier, and is intended
@@ -45,21 +45,16 @@ export default class ExperienceHelpers {
     // immediately we can filter out spammy messages
     if (text.length === 0 && emojis.length === 0) {
       // empty message
-      return 0 as NumRange<0, 2>
+      return asRange(0, 0, 2)
     } else if (text.length === 0) {
       // emoji only
-      return 0.5 as NumRange<0, 2>
-    } else if (msg.length <= 3) {
-      // low effort text
-      if (msg === 'gg' || msg === 'wtf' || msg === 'lol') {
-        return 0.5 as NumRange<0, 2>
-      } else {
-        return 0.2 as NumRange<0, 2>
-      }
+      const uniqueEmojis = unique(emojis.map(e => e.name)).length
+      const emojiQuality = clampNorm(uniqueEmojis, 0, 10, 0) * 0.8
+      return asRange(emojiQuality, 0, 2)
     }
 
     // between 1 and 2. 2 if the maximum character limit of 200 is hit
-    const lengthQuality = clampNorm(msg.length, 1, 200, 20) * 2
+    const lengthQuality = clampNorm(msg.length, 1, 200, 20) + 1
 
     // let's say 30 words is maximum "quality"
     const wordCountQuality = clampNorm(words.length, 1, 30, 8) * 2
@@ -69,21 +64,21 @@ export default class ExperienceHelpers {
     const wordLengthQuality = clampNorm(avgWordLength, 1, 10) * 2
 
     // let's say anything under 5 unique characters is "bad", and 15 unique characters is maximum "quality"
-    const uniqueCharacters = unique(Array.from(msg.replace(" ", ""))).length
-    const uniqueCharactersQuality = clampNorm(uniqueCharacters, 1, 15, 5) * 2
+    const uniqueCharacters = unique(Array.from(msg.replace(" ", "").toLowerCase())).length
+    const uniqueCharactersQuality = clampNorm(uniqueCharacters, 1, 20, 8) * 2
 
     const uniqueEmojis = unique(emojis.map(e => e.name)).length
-    const emojiQuality = clampNorm(uniqueEmojis, 0, 0, 10) * 2
+    const emojiQuality = clampNorm(uniqueEmojis, 0, 10, 0) * 2
 
-    return avg(lengthQuality, wordCountQuality, wordLengthQuality, uniqueCharactersQuality, emojiQuality) as NumRange<0, 2>
+    return asRange(avg(lengthQuality, wordCountQuality, wordLengthQuality, uniqueCharactersQuality, emojiQuality), 0, 2)
   }
   
   public calculateParticipationMultiplier (participationWalkingScore: GreaterThanOrEqual<0>): GreaterThanOrEqual<1> {
-    return 1 + 0.1 * participationWalkingScore as GreaterThanOrEqual<1>
+    return asGte(1 + 0.1 * participationWalkingScore, 1)
   }
 
   public calculateViewershipMultiplier (viewershipWalkingScore: GreaterThanOrEqual<0>): GreaterThanOrEqual<1> {
-    return 1 + 0.05 * viewershipWalkingScore as GreaterThanOrEqual<1>
+    return asGte(1 + 0.05 * viewershipWalkingScore, 1)
   }
 
   public calculateQualityMultiplier (messageQuality: NumRange<0, 2>): NumRange<0, 2> {
@@ -114,10 +109,10 @@ export default class ExperienceHelpers {
 
     const a = 6_000
     const b = 10_000
-    const c = experience
+    const c = -experience
 
     // can disregard the `-` case because it would lead to a negative numerator, and the denominator is always positive
     const levelFrac = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
-    return Math.floor(levelFrac) as GreaterThanOrEqual<0>
+    return asGte(Math.floor(levelFrac), 0)
   }
 }

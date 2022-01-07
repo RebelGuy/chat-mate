@@ -51,7 +51,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
 
-  test.only('calls ExperienceHelper calculation methods and submits result to ExperienceStore', async () => {
+  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore', async () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       timestamp: addTime(data.livestream3.start!, 'seconds', 5).getTime(),

@@ -49,3 +49,9 @@ export function deleteProps<T, Prop extends keyof T>(obj: T, ...props: Prop[]): 
   }
   return result
 }
+
+export function expectStrictIncreasing (...values: number[]) {
+  for (let i = 1; i < values.length; i++) {
+    expect(values[i - 1]).toBeLessThan(values[i])
+  }
+}
