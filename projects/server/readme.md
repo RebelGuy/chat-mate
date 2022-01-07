@@ -135,7 +135,7 @@ Query parameters:
 - `limit` (number): Limits the number of returned chat items (see below).
 
 Returns an object with the following properties:
-- `schema` (`3`): The current schema of the return object.
+- `schema` (`4`): The current schema of the return object.
 - `liveId` (`string`): The livestream ID to which the chat items belong. Currently, this is the liveId specified in the [`.env`](#env) file.
 - `lastTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `chat` ([`ChatItem`](#ChatItem)[]): The chat data that satisfy the request filter.
@@ -161,6 +161,8 @@ Returns an object with the following properties:
 - `isModerator` (`boolean`): Whether the user is a moderator on the livestream.
 - `isVerified` (`boolean`): Whether the user has a YouTube verified checkmark.
 - `lastUpdate` (`number`): Timestamp of the last time the author's info was updated.
+- `level` (`number`): The current integer level of the author.
+- `levelProgress` (`number`): The normalised (0 <= x < 1) value representing the progress until the next level.
 
 ## PartialChatMessage
 - `type` (`string`): The type of partial message.

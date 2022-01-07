@@ -1,6 +1,6 @@
 import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
 import { unique } from '@rebel/server/util/arrays'
-import { NumRange, Eps, clampNorm, scaleNorm, clamp, eps, avg, sum, GreaterThanOrEqual, asRange, asGte } from '@rebel/server/util/math'
+import { NumRange, Eps, clampNorm, scaleNorm, clamp, eps, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt } from '@rebel/server/util/math'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
@@ -11,6 +11,8 @@ export const LOWEST_CHAT_PERIOD = 6 * 1000
 export const HIGHEST_CHAT_PERIOD = 20 * 60 * 1000
 export const MULTIPLIER_CHANGE_AT_MIN = 0.95
 export const MULTIPLIER_CHANGE_AT_MAX = 1.05
+
+export type LevelData = { level: GreaterThanOrEqual<0>, levelProgress: GreaterThanOrEqual<0> & LessThan<1> }
 
 export default class ExperienceHelpers {
   // Returns 0 < x <= 1 that depends on the previous multiplier, and is intended
@@ -30,7 +32,7 @@ export default class ExperienceHelpers {
     }
 
     return clamp(prevMultiplier * multiplierMultiplier, eps, 1)
-  } 
+  }
 
   // Returns 0 <= x < 1 for low-quality messages, and 1 < x <= 2 for high quality messages. 1 is "normal" quality.
   public calculateChatMessageQuality (chatItem: ChatItem): NumRange<0, 2> {
@@ -48,9 +50,9 @@ export default class ExperienceHelpers {
       return asRange(0, 0, 2)
     } else if (text.length === 0) {
       // emoji only
-      const uniqueEmojis = unique(emojis.map(e => e.name)).length
-      const emojiQuality = clampNorm(uniqueEmojis, 0, 10, 0) * 0.8
-      return asRange(emojiQuality, 0, 2)
+      const uniqueEmojiCount = unique(emojis.map(e => e.name)).length
+      const quality = clampNorm(uniqueEmojiCount, 0, 10, 0) * 0.8
+      return asRange(quality, 0, 2)
     }
 
     // between 1 and 2. 2 if the maximum character limit of 200 is hit
@@ -72,7 +74,7 @@ export default class ExperienceHelpers {
 
     return asRange(avg(lengthQuality, wordCountQuality, wordLengthQuality, uniqueCharactersQuality, emojiQuality), 0, 2)
   }
-  
+
   public calculateParticipationMultiplier (participationWalkingScore: GreaterThanOrEqual<0>): GreaterThanOrEqual<1> {
     return asGte(1 + 0.1 * participationWalkingScore, 1)
   }
@@ -85,7 +87,7 @@ export default class ExperienceHelpers {
     return messageQuality
   }
 
-  public calculateLevel (experience: GreaterThanOrEqual<0>): GreaterThanOrEqual<0> {
+  public calculateLevel (experience: GreaterThanOrEqual<0>): LevelData {
     // We want to go for a quadratic increase.
     // 10 per second, 2 hours livestream ~ 100k
     // 100 "good" messages per livestream ~ 100k
@@ -113,6 +115,12 @@ export default class ExperienceHelpers {
 
     // can disregard the `-` case because it would lead to a negative numerator, and the denominator is always positive
     const levelFrac = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
-    return asGte(Math.floor(levelFrac), 0)
+    const roundedLevel = asGte(Math.floor(levelFrac), 0)
+    const thisLevelXp = a * roundedLevel * roundedLevel + b * roundedLevel
+    const nextLevelXp = a * (roundedLevel + 1) * (roundedLevel + 1) + b * (roundedLevel + 1)
+    return {
+      level: roundedLevel,
+      levelProgress: asLt(asGte((experience - thisLevelXp) / (nextLevelXp - thisLevelXp), 0), 1)
+    }
   }
 }

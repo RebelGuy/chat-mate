@@ -5,7 +5,7 @@ import { ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatM
 import { asGte, asRange, eps } from '@rebel/server/util/math'
 import { addTime } from '@rebel/server/util/datetime'
 
-const experienceHelpers = new ExperienceHelpers() 
+const experienceHelpers = new ExperienceHelpers()
 
 describe(nameof(ExperienceHelpers, 'calculateChatMessageQuality'), () => {
   test('empty chat leads to zero quality', () => {
@@ -19,7 +19,7 @@ describe(nameof(ExperienceHelpers, 'calculateChatMessageQuality'), () => {
     const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(emoji('id1')))
     const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(emoji('id1'), emoji('id2')))
     const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(emoji('id1'), emoji('id2'), emoji('id3')))
-    
+
     expectStrictIncreasing(r0, r1, r2, r3)
   })
 
@@ -66,16 +66,25 @@ describe(nameof(ExperienceHelpers, 'calculateLevel'), () => {
   test('0 xp returns level 0', () => {
     const level = experienceHelpers.calculateLevel(0)
 
-    expect(level).toBe(0)
+    expect(level).toEqual({ level: 0, levelProgress: 0 })
   })
 
   test('higher xp returns higher levels', () => {
-    const level0 = experienceHelpers.calculateLevel(asGte(10000, 0))
-    const level1 = experienceHelpers.calculateLevel(asGte(100000, 0))
-    const level2 = experienceHelpers.calculateLevel(asGte(1000000, 0))
-    const level3 = experienceHelpers.calculateLevel(asGte(10000000, 0))
+    const level0 = experienceHelpers.calculateLevel(asGte(10000, 0)).level
+    const level1 = experienceHelpers.calculateLevel(asGte(100000, 0)).level
+    const level2 = experienceHelpers.calculateLevel(asGte(1000000, 0)).level
+    const level3 = experienceHelpers.calculateLevel(asGte(10000000, 0)).level
 
     expectStrictIncreasing(level0, level1, level2, level3)
+  })
+
+  test('higher xp in a level returns higher progress', () => {
+    const progress0 = experienceHelpers.calculateLevel(asGte(12500, 0)).levelProgress
+    const progress1 = experienceHelpers.calculateLevel(asGte(12600, 0)).levelProgress
+    const progress2 = experienceHelpers.calculateLevel(asGte(12700, 0)).levelProgress
+    const progress3 = experienceHelpers.calculateLevel(asGte(12800, 0)).levelProgress
+
+    expectStrictIncreasing(progress0, progress1, progress2, progress3)
   })
 })
 
@@ -191,10 +200,10 @@ describe(nameof(ExperienceHelpers, 'calculateViewershipMultiplier'), () => {
   })
 })
 
-function text (text: string): PartialTextChatMessage {
+function text (txt: string): PartialTextChatMessage {
   return {
     type: 'text',
-    text,
+    text: txt,
     isBold: false,
     isItalics: false,
   }

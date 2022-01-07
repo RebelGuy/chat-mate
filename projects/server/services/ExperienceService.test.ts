@@ -7,7 +7,7 @@ import { getGetterMock, mockGetter, nameof, single } from '@rebel/server/_test/u
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { asGte, asRange, eps } from '@rebel/server/util/math'
+import { asGte, asLt, asRange, eps } from '@rebel/server/util/math'
 import { ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
 import { addTime } from '@rebel/server/util/datetime'
 import { ChatItem, PartialChatMessage } from '@rebel/server/models/chat'
@@ -118,13 +118,14 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 
 describe(nameof(ExperienceService, 'getLevel'), () => {
   test('returns 0 for new user', async () => {
-    mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue(0)
+    mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue({ level: 0, levelProgress: asLt(asGte(0), 1) })
 
     const result = await experienceService.getLevel(data.channel1)
 
     const expected: Level = {
       level: 0,
-      totalExperience: 0
+      totalExperience: 0,
+      levelProgress: asLt(asGte(0), 1)
     }
     expect(result).toEqual(expected)
   })
@@ -152,10 +153,10 @@ describe(nameof(ExperienceService, 'getLevel'), () => {
     const expectedTotalXp = 100 + 5 + 10
     mockExperienceStore.getLatestSnapshot.calledWith(data.channel1).mockResolvedValue(experienceSnapshot)
     mockExperienceStore.getTransactionsStartingAt.calledWith(data.channel1, data.time1.getTime()).mockResolvedValue(transactions)
-    mockExperienceHelpers.calculateLevel.calledWith(asGte(expectedTotalXp, 0)).mockReturnValue(asGte(2, 0))
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(expectedTotalXp, 0)).mockReturnValue({ level: asGte(2, 0), levelProgress: asLt(asGte(0.1, 0), 1) })
 
     const result = await experienceService.getLevel(data.channel1)
 
-    expect(result).toEqual({ level: 2, totalExperience: expectedTotalXp})
+    expect(result).toEqual({ level: 2, levelProgress: 0.1, totalExperience: expectedTotalXp})
   })
 })

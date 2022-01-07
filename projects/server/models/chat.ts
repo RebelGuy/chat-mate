@@ -1,5 +1,6 @@
 import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
+import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 
 export type ChatItem = {
   id: string,
@@ -22,7 +23,7 @@ export type Author = {
   attributes: AuthorAttributes
 }
 
-export type PublicAuthor = Omit<Author, 'attributes'> & AuthorAttributes & {
+export type PublicAuthor = Omit<Author, 'attributes'> & AuthorAttributes & LevelData & {
   internalId: number
   lastUpdate: number
 }
@@ -100,7 +101,7 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   return emoji.shortcuts?.at(0) ?? emoji.searchTerms?.at(0) ?? emoji.emojiId
 }
 
-export function privateToPublicItems (chatItems: ChatItemWithRelations[]): PublicChatItem[] {
+export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelData: Map<string, LevelData>): PublicChatItem[] {
   return chatItems.map(item => {
     const channelInfo = item.channel.infoHistory[0]
     const result: PublicChatItem = {
@@ -115,7 +116,8 @@ export function privateToPublicItems (chatItems: ChatItemWithRelations[]): Publi
         image: channelInfo.imageUrl,
         isOwner: channelInfo.isOwner,
         isModerator: channelInfo.isModerator,
-        isVerified: channelInfo.IsVerified
+        isVerified: channelInfo.IsVerified,
+        ...levelData.get(item.channel.youtubeId)!
       },
       messageParts: item.chatMessageParts.map(part => {
         let partResult: PartialChatMessage

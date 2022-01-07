@@ -21,19 +21,23 @@ type _LessThanBrand<Value> = { lessThan?: Value }
 export type LessThan<N extends number> = Branded<number, _LessThanBrand<N>>
 export type LessThanOrEqual<N extends number> = N | LessThan<N>
 
-export function asLte<N extends number> (value: number, constraint: N): LessThanOrEqual<N> {
-  return assertConstraint(value <= constraint, value, constraint, 'less than or equal to')
+export function asLte<N extends number> (value: N): LessThanOrEqual<N>
+export function asLte<N extends number, C extends number> (value: N, constraint: C): N & LessThanOrEqual<C>
+export function asLte<N extends number, C extends number> (value: N, constraint?: C): N & LessThanOrEqual<C> {
+  return assertConstraint(value <= (constraint ?? value), value, constraint ?? value, 'less than or equal to')
 }
 
-export function asLt<N extends number> (value: number, constraint: N): LessThan<N> {
+export function asLt<N extends number, C extends number> (value: N, constraint: C): N & LessThan<C> {
   return assertConstraint(value < constraint, value, constraint, 'less than')
 }
 
-export function asGte<N extends number> (value: number, constraint: N): GreaterThanOrEqual<N> {
-  return assertConstraint(value >= constraint, value, constraint, 'greater than or equal to')
+export function asGte<N extends number> (value: N): GreaterThanOrEqual<N>
+export function asGte<N extends number, C extends number> (value: N, constraint: C): N & GreaterThanOrEqual<C>
+export function asGte<N extends number, C extends number> (value: N, constraint?: C): N & GreaterThanOrEqual<C> {
+  return assertConstraint(value >= (constraint ?? value), value, constraint ?? value, 'greater than or equal to')
 }
 
-export function asGt<N extends number> (value: number, constraint: N): GreaterThan<N> {
+export function asGt<N extends number, C extends number> (value: N, constraint: C): N & GreaterThan<C> {
   return assertConstraint(value > constraint, value, constraint, 'greater than')
 }
 
@@ -61,7 +65,7 @@ export function clamp<Min extends number, Max extends number> (value: number, mi
 export function clamp<Min extends null, Max extends number> (value: number, min: Min, max: Max): NumRange<NegativeInfinity, Max>
 export function clamp<Min extends number, Max extends null> (value: number, min: Min, max: Max): NumRange<Min, PositiveInfinity>
 export function clamp<Min extends null, Max extends null> (value: number, min: Min, max: Max): NumRange<NegativeInfinity, PositiveInfinity>
-export function clamp<Min extends number | null, Max extends number | null>(value: number, min: Min, max: Max)
+export function clamp<Min extends number | null, Max extends number | null> (value: number, min: Min, max: Max)
   : NumRange<null extends Min ? NegativeInfinity : Exclude<Min, null>, null extends Max ? PositiveInfinity : Exclude<Max, null>> {
   let _min = min == null ? negativeInfinity : min
   let _max = max == null ? positiveInfinity : max

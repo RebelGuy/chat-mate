@@ -4,12 +4,13 @@ import { ChatItem } from '@rebel/server/models/chat'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { Eps, GreaterThanOrEqual, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
+import { Eps, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
-  totalExperience: GreaterThanOrEqual<0>
+  totalExperience: GreaterThanOrEqual<0>,
+  levelProgress: GreaterThanOrEqual<0> & LessThan<1>
 }
 
 type Deps = Dependencies<{
@@ -74,7 +75,7 @@ export default class ExperienceService {
     const level = this.experienceHelpers.calculateLevel(totalExperience)
     return {
       totalExperience,
-      level
+      ...level
     }
   }
 
@@ -119,10 +120,10 @@ export default class ExperienceService {
 
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
-  
+
   private async getSpamMultiplier (chatItem: ChatItem): Promise<NumRange<Eps, 1>> {
     const prev = await this.experienceStore.getPreviousChatExperience(chatItem.author.channelId)
-    if (prev == null || prev.livestream.id != this.livestreamStore.currentLivestream.id) {
+    if (prev == null || prev.livestream.id !== this.livestreamStore.currentLivestream.id) {
       // always start with a multiplier of 1 at the start of the livestream
       return 1 as NumRange<Eps, 1>
     }
