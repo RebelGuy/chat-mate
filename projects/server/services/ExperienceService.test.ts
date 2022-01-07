@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
-import ExperienceService from '@rebel/server/services/ExperienceService'
+import ExperienceService, { Level } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { getGetterMock, mockGetter, nameof, single } from '@rebel/server/_test/utils'
@@ -51,7 +51,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
 
-  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore', async () => {
+  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, notifies ViewershipStore', async () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       timestamp: addTime(data.livestream3.start!, 'seconds', 5).getTime(),
@@ -108,18 +108,25 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 
     await experienceService.addExperienceForChat([chatItem])
 
-    const expectedArgs: [channelId: string, timestamp: number, xp: number, data: ChatExperienceData] = [
+    const expectedChatStoreArgs: [channelId: string, timestamp: number, xp: number, data: ChatExperienceData] = [
       chatItem.author.channelId, chatItem.timestamp, expectedExperienceToAdd, experienceData
     ]
-    expect(single(mockExperienceStore.addChatExperience.mock.calls)).toEqual(expectedArgs)
+    expect(single(mockExperienceStore.addChatExperience.mock.calls)).toEqual(expectedChatStoreArgs)
+    expect(single(mockViewershipStore.addViewershipForChannel.mock.calls)).toEqual([chatItem.author.channelId, chatItem.timestamp])
   })
 })
 
 describe(nameof(ExperienceService, 'getLevel'), () => {
-  test('returns 0 for new user', async () => {  
+  test('returns 0 for new user', async () => {
+    mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue(0)
+
     const result = await experienceService.getLevel(data.channel1)
 
-    expect(result).toBe(0)
+    const expected: Level = {
+      level: 0,
+      totalExperience: 0
+    }
+    expect(result).toEqual(expected)
   })
 
   test('uses results from ExperienceHelper and ExperienceStore', async () => {

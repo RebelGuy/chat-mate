@@ -91,8 +91,7 @@ async function commitBlocks (db: Db, livestreamId: number, orderedViewingBlocks:
     channelId: block.channelId,
     startTime: block.startTime,
     lastUpdate: block.lastUpdate,
-    livestreamId,
-    isComplete: true
+    livestreamId
   }) as Prisma.ViewingBlockCreateManyInput)})
 }
 

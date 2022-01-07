@@ -12,4 +12,4 @@ describe('LivestreamStore Suite', LivestreamStoreSuite)
 
 describe('ExperienceStore Suite', ExperienceStoreSuite)
 
-describe('ExperienceStore Suite', ViewershipStoreSuite)
+describe('ViewershipStore Suite', ViewershipStoreSuite)

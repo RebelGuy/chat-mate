@@ -10,7 +10,8 @@
       "space-before-function-paren": true,
       "prefer-const": false,
       "no-console": false,
-      "max-classes-per-file": false
+      "max-classes-per-file": false,
+      "no-async-without-await": true
     },
     "rulesDirectory": []
 }

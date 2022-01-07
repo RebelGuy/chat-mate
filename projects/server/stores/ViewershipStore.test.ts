@@ -1,19 +1,26 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import { startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { nameof } from '@rebel/server/_test/utils'
+import { mockGetter, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
+import { mock, MockProxy } from 'jest-mock-extended'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 
 export default () => {
+  let mockLivestreamStore: MockProxy<LivestreamStore>
   let viewershipStore: ViewershipStore
   let db: Db
 
   beforeEach(async () => {
+    mockLivestreamStore = mock<LivestreamStore>()
+    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(data.livestream3)
+
     const dbProvider = await startTestDb()
     viewershipStore = new ViewershipStore(new Dependencies({
-      dbProvider
+      dbProvider,
+      livestreamStore: mockLivestreamStore
     }))
     db = dbProvider.get()
 
@@ -26,8 +33,8 @@ export default () => {
 
     // irrelevant data to make for more realistic setup - we only test things relating to channel1
     await db.viewingBlock.createMany({ data: [
-      { channelId: 2, livestreamId: 2, startTime: data.time2, lastUpdate: data.time2, isComplete: true },
-      { channelId: 2, livestreamId: 3, startTime: data.time3, lastUpdate: data.time3, isComplete: false },
+      { channelId: 2, livestreamId: 2, startTime: data.time2, lastUpdate: data.time2 },
+      { channelId: 2, livestreamId: 3, startTime: data.time3, lastUpdate: data.time3 },
     ]})
     await db.chatMessage.createMany({ data: [
       { channelId: 2, livestreamId: 1, time: data.time1, youtubeId: 'id1.1' },
@@ -38,9 +45,80 @@ export default () => {
 
   afterEach(stopTestDb)
 
+  describe(nameof(ViewershipStore, 'addViewershipForChannel'), () => {
+    test('adds new viewing block if user not seen before', async () => {
+      await viewershipStore.addViewershipForChannel(data.channel1, data.time1.getTime())
+
+      await expectRowCount(db.viewingBlock).toBe(3)
+      const block = (await db.viewingBlock.findFirst({ where: { channel: { youtubeId: data.channel1 }}}))!
+      expect(block.startTime).toEqual(data.time1)
+      expect(block.lastUpdate).toEqual(data.time1)
+    })
+
+    test('extends previous viewing block if recent', async () => {
+      const currentTime = data.time3
+      const prevUpdate = addTime(currentTime, 'seconds', -30)
+      const startTime = addTime(prevUpdate, 'minutes', -1)
+      await db.viewingBlock.create({ data: {
+        livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
+        channel: { connect: { youtubeId: data.channel1 }},
+        startTime,
+        lastUpdate: prevUpdate
+      }})
+
+      await viewershipStore.addViewershipForChannel(data.channel1, currentTime.getTime())
+
+      await expectRowCount(db.viewingBlock).toBe(3)
+      const block = (await db.viewingBlock.findFirst({ where: { channel: { youtubeId: data.channel1 }}}))!
+      expect(block.startTime).toEqual(startTime)
+      expect(block.lastUpdate).toEqual(currentTime)
+    })
+
+    test('adds new viewing block if previous block is too long ago', async () => {
+      const currentTime = data.time3
+      const prevUpdate = addTime(currentTime, 'seconds', -200)
+      const startTime = addTime(prevUpdate, 'minutes', -1)
+      await db.viewingBlock.create({ data: {
+        livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
+        channel: { connect: { youtubeId: data.channel1 }},
+        startTime,
+        lastUpdate: prevUpdate
+      }})
+
+      await viewershipStore.addViewershipForChannel(data.channel1, currentTime.getTime())
+
+      await expectRowCount(db.viewingBlock).toBe(4)
+      const block = (await db.viewingBlock.findFirst({
+        where: { channel: { youtubeId: data.channel1 }},
+        orderBy: { lastUpdate: 'desc' }
+      }))!
+      expect(block.startTime).toEqual(currentTime)
+      expect(block.lastUpdate).toEqual(currentTime)
+    })
+
+    test('ignores if before lastUpdate of most recent viewing block', async () => {
+      const currentTime = data.time3
+      const prevUpdate = addTime(currentTime, 'seconds', 200)
+      const startTime = addTime(prevUpdate, 'minutes', -1)
+      await db.viewingBlock.create({ data: {
+        livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
+        channel: { connect: { youtubeId: data.channel1 }},
+        startTime,
+        lastUpdate: prevUpdate
+      }})
+
+      await viewershipStore.addViewershipForChannel(data.channel1, currentTime.getTime())
+
+      await expectRowCount(db.viewingBlock).toBe(4)
+      const block = (await db.viewingBlock.findFirst({ where: { channel: { youtubeId: data.channel1 }}}))!
+      expect(block.startTime).toEqual(startTime)
+      expect(block.lastUpdate).toEqual(prevUpdate)
+    })
+  })
+
   describe(nameof(ViewershipStore, 'getLastSeen'), () => {
     test('returns null if never seen', async () => {
-      const result = await viewershipStore.getLastSeen(data.channel1, false)
+      const result = await viewershipStore.getLastSeen(data.channel1)
 
       expect(result).toBeNull()
     })
@@ -54,18 +132,15 @@ export default () => {
       const time5 = addTime(time4, 'seconds', 1)
       const time6 = addTime(time5, 'seconds', 1)
       await db.viewingBlock.createMany({ data: [
-        { channelId: 1, livestreamId: 1, startTime: time1, lastUpdate: time2, isComplete: true },
-        { channelId: 1, livestreamId: 3, startTime: time3, lastUpdate: time4, isComplete: true },
-        { channelId: 1, livestreamId: 3, startTime: time5, lastUpdate: time6, isComplete: false },
+        { channelId: 1, livestreamId: 1, startTime: time1, lastUpdate: time2 },
+        { channelId: 1, livestreamId: 3, startTime: time3, lastUpdate: time4 },
+        { channelId: 1, livestreamId: 3, startTime: time5, lastUpdate: time6 },
       ]})
 
-      const resultIncludeCurrent = (await viewershipStore.getLastSeen(data.channel1, false))!
-      const resultIgnoreCurrent = (await viewershipStore.getLastSeen(data.channel1, true))!
+      const result = (await viewershipStore.getLastSeen(data.channel1))!
 
-      expect(resultIncludeCurrent.livestream.id).toBe(3)
-      expect(resultIncludeCurrent.time).toEqual(time6)
-      expect(resultIgnoreCurrent.livestream.id).toBe(3)
-      expect(resultIgnoreCurrent.time).toEqual(time4)
+      expect(result.livestream.id).toBe(3)
+      expect(result.time).toEqual(time6)
     })
   })
 
@@ -108,9 +183,9 @@ export default () => {
       const time2 = addTime(data.time1, 'seconds', 1)
       const time3 = data.time3
       await db.viewingBlock.createMany({ data: [
-        { channelId: 1, livestreamId: 1, startTime: time1, lastUpdate: time1, isComplete: true },
-        { channelId: 1, livestreamId: 1, startTime: time2, lastUpdate: time2, isComplete: true },
-        { channelId: 1, livestreamId: 3, startTime: time3, lastUpdate: time3, isComplete: false },
+        { channelId: 1, livestreamId: 1, startTime: time1, lastUpdate: time1 },
+        { channelId: 1, livestreamId: 1, startTime: time2, lastUpdate: time2 },
+        { channelId: 1, livestreamId: 3, startTime: time3, lastUpdate: time3 },
       ]})
 
       const result = await viewershipStore.getLivestreamViewership(data.channel1)

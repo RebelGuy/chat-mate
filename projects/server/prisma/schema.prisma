@@ -182,7 +182,6 @@ model ViewingBlock {
 
   startTime  DateTime
   lastUpdate DateTime
-  isComplete Boolean  @default(false)
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])

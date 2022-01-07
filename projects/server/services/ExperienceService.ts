@@ -65,7 +65,7 @@ export default class ExperienceService {
       const totalMultiplier = viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier * messageQualityMultiplier
       const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
       await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
-      // todo: should also tell the viewership store to add a viewing event at the timestamp. it will then decide whether to create a new block or extend the current (if any) block
+      await this.viewershipStore.addViewershipForChannel(channelId, chatItem.timestamp)
     }
   }
 
