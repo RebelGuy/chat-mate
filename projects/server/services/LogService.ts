@@ -63,8 +63,7 @@ export default class LogService {
       consoleLogger(prefix, ...args)
     }
 
-    // convert the args to strings, stripping away the `"` that are created along the way
-    const content = args.map(a => { const str = JSON.stringify(a) ?? 'undefined'; return str.substring(1, str.length - 1) }).join(' ')
+    const content = args.map(a => JSON.stringify(a) ?? 'undefined').join(' ')
     const message = `${prefix} ${content}`
     this.fileService.writeLine(this.logFile, message, { append: true })
   }

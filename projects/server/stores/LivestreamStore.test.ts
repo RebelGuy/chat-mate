@@ -13,7 +13,7 @@ const metadataInProgress: Metadata = {
   channelId: 'mock channel id',
   videoId: 'mock video id',
   channelName: 'mock channel name',
-  isLive: true,
+  liveStatus: 'live',
   title: 'mock title'
 }
 
@@ -68,10 +68,10 @@ export default () => {
       await expectRowCount(db.livestream).toBe(1)
     })
 
-    test('not started status inferred from metadata', async () => {
+    test('not started status from metadata', async () => {
       await db.livestream.create({ data: { liveId } })
       mockMasterchat.fetchMetadata.mockClear()
-      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: false })
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, liveStatus: 'not_started' })
 
       const stream = await livestreamStore.createLivestream()
 
@@ -79,10 +79,10 @@ export default () => {
       expect(stream.end).toBeNull()
     })
 
-    test('in progress status inferred from metadata', async () => {
+    test('in progress status from metadata', async () => {
       await db.livestream.create({ data: { liveId } })
       mockMasterchat.fetchMetadata.mockClear()
-      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: true })
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, liveStatus: 'live' })
 
       const stream = await livestreamStore.createLivestream()
 
@@ -90,10 +90,10 @@ export default () => {
       expect(stream.end).toBeNull()
     })
 
-    test('finished status inferred from metadata', async () => {
+    test('finished status from metadata', async () => {
       await db.livestream.create({ data: { liveId, start: new Date() } })
       mockMasterchat.fetchMetadata.mockClear()
-      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: false })
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, liveStatus: 'finished' })
 
       const stream = await livestreamStore.createLivestream()
 
@@ -101,10 +101,10 @@ export default () => {
       expect(stream.end).not.toBeNull()
     })
 
-    test('throws if invalid inferred status', async () => {
+    test('throws if invalid status', async () => {
       await db.livestream.create({ data: { liveId, start: new Date(), end: new Date() } })
       mockMasterchat.fetchMetadata.mockClear()
-      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, isLive: true })
+      mockMasterchat.fetchMetadata.mockResolvedValueOnce({ ...metadataInProgress, liveStatus: 'live' })
 
       await expect(livestreamStore.createLivestream()).rejects.toThrow()
     })

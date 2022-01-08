@@ -1,5 +1,5 @@
 import { Livestream } from '@prisma/client'
-import { Metadata } from '@rebel/masterchat'
+import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import { IMasterchat } from '@rebel/server/interfaces'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
@@ -24,7 +24,7 @@ export default class LivestreamStore {
   private readonly logService: LogService
 
   private syncTimer: NodeJS.Timer | null = null
-  
+
   private _currentLivestream: Livestream | null = null
   public get currentLivestream () {
     if (this._currentLivestream) {
@@ -59,7 +59,7 @@ export default class LivestreamStore {
       updatedLivestreamPromise = this.db.livestream.create({ data: {
         createdAt: new Date(),
         liveId: this.liveId,
-        start: metadata.isLive ? new Date() : null,
+        start: metadata.liveStatus === 'live' ? new Date() : null,
         end: null
       }})
     }
@@ -96,25 +96,39 @@ export default class LivestreamStore {
   }
 
   private getUpdatedLivestreamTimes (existingLivestream: Livestream, metadata: Metadata): Pick<Livestream, 'start' | 'end'> {
-    const isLive = metadata.isLive
+    const newStatus = metadata.liveStatus
+    if (newStatus === 'unknown') {
+      this.logService.logWarning(this, `Tried to update livestream times, but current live status was reported as 'unkown'. Won't attempt to update livestream times.`)
+      return {
+        start: existingLivestream.start,
+        end: existingLivestream.end
+      }
+    }
+
     const existingStatus = LivestreamStore.getLivestreamStatus(existingLivestream)
-      if (existingStatus === 'finished' && isLive) {
+      if (existingStatus === 'finished' && newStatus !== 'finished' || existingStatus === 'live' && newStatus === 'not_started') {
         // invalid status
-        throw new Error('Unable to create livestream because it is finished, but masterchat claims it is ongoing.')
-      } else if ((existingStatus === 'not_started' || existingStatus === 'finished') && !isLive || existingStatus === 'live' && isLive) {
-        // status has not changed
+        throw new Error(`Unable to update livestream times because current status '${existingStatus}' is incompatible with new status '${newStatus}'.`)
+      } else if (existingStatus === newStatus) {
         return {
           start: existingLivestream.start,
           end: existingLivestream.end
         }
-      } else if (existingStatus === 'not_started' && isLive) {
+      } else if (existingStatus === 'not_started' && newStatus === 'live') {
         // just started
         this.logService.logInfo(this, 'Livestream has started')
         return {
           start: new Date(),
           end: existingLivestream.end
         }
-      } else if (existingStatus === 'live' && !isLive) {
+      } else if (existingStatus === 'not_started' && newStatus === 'finished') {
+        // should not happen, but not impossible
+        this.logService.logWarning(this, 'Livestream has finished before it started')
+        return {
+          start: new Date(),
+          end: new Date()
+        }
+      } else if (existingStatus === 'live' && newStatus === 'finished') {
         // just finished
         this.logService.logInfo(this, 'Livestream has finished')
         return {
@@ -126,7 +140,7 @@ export default class LivestreamStore {
       }
   }
 
-  private static getLivestreamStatus (livestream: Livestream): 'not_started' | 'live' | 'finished' {
+  private static getLivestreamStatus (livestream: Livestream): Exclude<LiveStatus, 'unknown'> {
     if (livestream.start == null && livestream.end == null) {
       return 'not_started'
     } else if (livestream.start != null && livestream.end == null) {

@@ -6,6 +6,7 @@ import {
 } from "../errors";
 import { runsToString } from "../utils";
 import { YTInitialData, YTPlayabilityStatus } from "../interfaces/yt/context";
+import { LiveStatus } from '@rebel/masterchat'
 
 // OK duration=">0" => Archived (replay chat may be available)
 // OK duration="0" => Live (chat may be available)
@@ -122,10 +123,27 @@ export function parseMetadataFromWatch(html: string) {
   const channelName = runsToString(videoOwner.title.runs);
   const isLive = primaryInfo.viewCount!.videoViewCountRenderer.isLive ?? false;
 
+  const dateText = primaryInfo.dateText.simpleText.toLowerCase().trim()
+  let liveStatus: LiveStatus
+  // 'Live stream currently offline'
+  // 'Scheduled for <date>'
+  // 'Started streaming <time> ago'
+  // 'Streamed <time> ago'
+  if (dateText.endsWith('offline') || dateText.startsWith('scheduled')) {
+    liveStatus = 'not_started'
+  } else if (dateText.startsWith('started streaming')) {
+    liveStatus = 'live'
+  } else if (dateText.startsWith('streamed')) {
+    liveStatus = 'finished'
+  } else {
+    liveStatus = 'unknown'
+  }
+
   return {
     title,
     channelId,
     channelName,
     isLive,
+    liveStatus
   };
 }

@@ -60,10 +60,15 @@ export {
 export interface Metadata {
   videoId: string;
   channelId: string;
+  liveStatus: LiveStatus
   channelName?: string;
   title?: string;
+  /** @deprecated **Do not use this for checking if the stream is currently live of not, as it is bugged.**
+   * Use `liveStatus` instead. */
   isLive?: boolean;
 }
+
+export type LiveStatus = 'not_started' | 'live' | 'finished' | 'unknown'
 
 export interface ChatResponse {
   actions: Action[];

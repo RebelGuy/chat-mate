@@ -43,7 +43,6 @@ export default class MockMasterchat implements IMasterchat {
       return MockMasterchat.buildResponse()
     }
 
-    
     let customMessage: string = 'Message'
     if (this.mockType === 'static' && this.mockMessages != null && this.mockMessages.length > 0) {
       customMessage = this.mockMessages[this.counter % this.mockMessages.length]
@@ -99,12 +98,12 @@ export default class MockMasterchat implements IMasterchat {
     return MockMasterchat.buildResponse(action)
   }
 
-  public async fetchMetadata(): Promise<Metadata> {
+  public async fetchMetadata (): Promise<Metadata> {
     return {
       channelId: 'mock channel id',
       videoId: 'mock video id',
       channelName: 'mock channel name',
-      isLive: true,
+      liveStatus: 'live',
       title: 'mock title'
     }
   }
@@ -159,7 +158,7 @@ function randomBoolean () {
   return Math.random() < 0.5
 }
 
-function randomString(options: string[] | number) {
+function randomString (options: string[] | number) {
   if (typeof options === 'number') {
     // returns a random string (found somewhere on SO)
     return Math.random().toString(36).substring(2, 10)
