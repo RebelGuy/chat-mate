@@ -110,8 +110,10 @@ export default class ExperienceHelpers {
     // 100: 305
     // Actually legitimate, considering there will also be bonuses over time!
 
-    const a = 6_000
-    const b = 10_000
+    // turns out as at v1.5 the highest experience collected is only about 150k
+    const scale = 1 / 20
+    const a = 6_000 * scale
+    const b = 10_000 * scale
     const c = -experience
 
     // can disregard the `-` case because it would lead to a negative numerator, and the denominator is always positive

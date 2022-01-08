@@ -43,7 +43,7 @@ export class ChatController {
   ): Promise<GetChatResponse> {
     since = since ?? 0
     const items = await this.chatStore.getChatSince(since, limit)
-    const levelData = await this.getLevelData(items.map(c => c.youtubeId))
+    const levelData = await this.getLevelData(items.map(c => c.channel.youtubeId))
 
     return {
       schema: 4,
