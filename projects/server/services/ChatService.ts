@@ -10,6 +10,7 @@ import { IMasterchat } from '@rebel/server/interfaces'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
+import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -32,7 +33,8 @@ type Deps = Dependencies<{
   livestreamStore: LivestreamStore,
   logService: LogService,
   masterchatProvider: MasterchatProvider,
-  experienceService: ExperienceService
+  experienceService: ExperienceService,
+  viewershipStore: ViewershipStore
 }>
 
 export default class ChatService {
@@ -42,6 +44,7 @@ export default class ChatService {
   private readonly logService: LogService
   private readonly masterchat: IMasterchat
   private readonly experienceService: ExperienceService
+  private readonly viewershipStore: ViewershipStore
 
   private timeout: NodeJS.Timeout | null = null
 
@@ -51,6 +54,7 @@ export default class ChatService {
     this.masterchat = deps.resolve('masterchatProvider').get()
     this.logService = deps.resolve('logService')
     this.experienceService = deps.resolve('experienceService')
+    this.viewershipStore = deps.resolve('viewershipStore')
   }
 
   // await this method when initialising the service to guarantee an initial fetch
@@ -99,6 +103,7 @@ export default class ChatService {
       } else {
         const token = response.continuation.token
         await this.chatStore.addChat(token, chatItems)
+        await Promise.all(chatItems.map(c => this.viewershipStore.addViewershipForChannel(c.author.channelId, c.timestamp)))
         await this.experienceService.addExperienceForChat(chatItems)
         hasNewChat = chatItems.length > 0
       }

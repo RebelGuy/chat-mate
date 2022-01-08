@@ -8,6 +8,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { mockGetter, nameof, single } from '@rebel/server/_test/utils'
 import { mock, mockDeep, MockProxy } from 'jest-mock-extended'
 
@@ -42,6 +43,7 @@ let mockLivestreamStore: MockProxy<LivestreamStore>
 let mockMasterchat: MockProxy<IMasterchat>
 let mockLogService: MockProxy<LogService>
 let mockExperienceService: MockProxy<ExperienceService>
+let mockViewershipStore: MockProxy<ViewershipStore>
 let chatService: ChatService
 
 beforeEach(() => {
@@ -50,7 +52,8 @@ beforeEach(() => {
   mockMasterchat = mock<IMasterchat>()
   mockLogService = mock<LogService>()
   mockExperienceService = mock<ExperienceService>()
-  
+  mockViewershipStore = mock<ViewershipStore>()
+
   mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(currentLivestream)
   mockChatStore.getChatSince.mockResolvedValue([])
 
@@ -65,6 +68,7 @@ beforeEach(() => {
     livestreamStore: mockLivestreamStore,
     logService: mockLogService,
     experienceService: mockExperienceService,
+    viewershipStore: mockViewershipStore,
     masterchatProvider: mockMasterchatProvider
   }))
 })
@@ -107,6 +111,10 @@ describe(nameof(ChatService, 'start'), () => {
     const [passedToken, passedChatItems] = single(mockChatStore.addChat.mock.calls)
     expect(passedToken).toBe(token2)
     expect(single(passedChatItems).id).toBe(chatAction1.id)
+
+    const [passedChannel, passedTimestamp] = single(mockViewershipStore.addViewershipForChannel.mock.calls)
+    expect(passedChannel).toBe(chatAction1.authorChannelId)
+    expect(passedTimestamp).toBe(chatAction1.timestamp.getTime())
 
     const [passedXpItems] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(single(passedXpItems).id).toBe(chatAction1.id)

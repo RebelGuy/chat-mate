@@ -51,7 +51,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
 
-  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, notifies ViewershipStore', async () => {
+  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, does not notify ViewershipStore', async () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       timestamp: addTime(data.livestream3.start!, 'seconds', 5).getTime(),
@@ -79,7 +79,8 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
         id: 1,
         chatMessageId: 1,
         experienceTransactionId: 1,
-        spamMultiplier: 0.8
+        spamMultiplier: 0.8,
+        chatMessage: null!
       }
     }
 
@@ -112,7 +113,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       chatItem.author.channelId, chatItem.timestamp, expectedExperienceToAdd, experienceData
     ]
     expect(single(mockExperienceStore.addChatExperience.mock.calls)).toEqual(expectedChatStoreArgs)
-    expect(single(mockViewershipStore.addViewershipForChannel.mock.calls)).toEqual([chatItem.author.channelId, chatItem.timestamp])
+    expect(mockViewershipStore.addViewershipForChannel.mock.calls.length).toEqual(0)
   })
 })
 

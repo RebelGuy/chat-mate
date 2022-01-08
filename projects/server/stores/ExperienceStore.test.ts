@@ -1,8 +1,7 @@
-import { ChatMessage, Livestream } from '@prisma/client'
+import { ChatMessage } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
-import { Author } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
+import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { deleteProps, mockGetter, nameof } from '@rebel/server/_test/utils'
@@ -27,7 +26,7 @@ export default () => {
   beforeEach(async () => {
     mockLivestreamStore = mock<LivestreamStore>()
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(data.livestream1)
-    
+
     const dbProvider = await startTestDb()
     experienceStore = new ExperienceStore(new Dependencies({
       livestreamStore: mockLivestreamStore,
@@ -37,7 +36,7 @@ export default () => {
 
     await db.channel.createMany({ data: [{ youtubeId: data.channel1 }, { youtubeId: data.channel2}] })
     const livestream = await db.livestream.create({ data: { ...data.livestream1 }})
-    
+
     chatMessage1 = await data.addChatMessage(db, data.time1, livestream.id, data.channel1)
     chatMessage2 = await data.addChatMessage(db, data.time2, livestream.id, data.channel1)
     chatMessage3 = await data.addChatMessage(db, data.time3, livestream.id, data.channel2)
@@ -81,6 +80,25 @@ export default () => {
       expect(added.livestream.liveId).toBe(data.livestream1.liveId)
       expect(added.experienceDataChatMessage).toEqual(expect.objectContaining(data1))
       expect(added.experienceDataChatMessage!.chatMessage!.youtubeId).toBe(chatMessage1.youtubeId)
+    })
+
+    test('does not add data if trying to backfill or duplicate', async () => {
+      await db.experienceTransaction.create({ data: {
+        delta: 100,
+        time: chatMessage2.time,
+        channel: { connect: { youtubeId: data.channel1 }},
+        livestream: { connect: { id: chatMessage2.livestreamId }},
+        experienceDataChatMessage: { create: {
+          ...chatExperienceData2,
+          chatMessage: { connect: { youtubeId: chatMessage2.youtubeId }}
+        }}
+      }})
+
+      await experienceStore.addChatExperience(data.channel1, chatMessage1.time.getTime(), 20, { ...data.chatExperienceData1, chatMessageYtId: chatMessage1.youtubeId })
+      await experienceStore.addChatExperience(data.channel1, chatMessage2.time.getTime(), 30, { ...data.chatExperienceData2, chatMessageYtId: chatMessage2.youtubeId })
+
+      const dbRecords = await db.experienceTransaction.count({ where: { channel: { youtubeId: data.channel1 }}})
+      expect(dbRecords).toBe(1)
     })
   })
 

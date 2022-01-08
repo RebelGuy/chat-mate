@@ -1,11 +1,13 @@
-import { ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
+import { ChatMessage, ExperienceDataChatMessage, ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { NoNulls } from '@rebel/server/types'
 
-export type ChatExperience = NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'channel' | 'experienceDataChatMessage' | 'livestream'>>
+export type ChatExperience =
+  NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'channel' | 'experienceDataChatMessage' | 'livestream'>>
+  & { experienceDataChatMessage: { chatMessage: ChatMessage} }
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
   'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier'>
@@ -39,40 +41,39 @@ export default class ExperienceStore {
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
       where: { channel: { youtubeId: channelId }, experienceDataChatMessage: { isNot: null }},
       orderBy: { time: 'desc' },
-      include: { livestream: true, experienceDataChatMessage: true, channel: true }
+      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, channel: true }
     })
 
-    let result: ChatExperience | null
-    if (experienceTransaction) {
-      result = {
-        ...experienceTransaction,
-        // no way to narrow this down using type guards... thanks typescript!
-        experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
-      }
-    } else {
-      result = null
-    }
-
-    this.chatExperienceMap.set(channelId, result)
-    return result
+    return this.cacheChatExperience(channelId, experienceTransaction)
   }
 
   public async addChatExperience (channelId: string, timestamp: number, xp: number, data: ChatExperienceData) {
+    // don't allow backfilling or duplicates
+    const prev = await this.getPreviousChatExperience(channelId)
+    if (prev && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.youtubeId === data.chatMessageYtId)) {
+      return
+    }
+
     await this.initialiseSnapshotIfRequired(channelId, timestamp)
-    await this.db.experienceTransaction.create({ data: {
-      time: new Date(timestamp),
-      channel: { connect: { youtubeId: channelId }},
-      livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
-      delta: xp,
-      experienceDataChatMessage: { create: {
-        baseExperience: data.baseExperience,
-        viewershipStreakMultiplier: data.viewershipStreakMultiplier,
-        participationStreakMultiplier: data.participationStreakMultiplier,
-        spamMultiplier: data.spamMultiplier,
-        messageQualityMultiplier: data.messageQualityMultiplier,
-        chatMessage: { connect: { youtubeId: data.chatMessageYtId }}
-      }}
-    }})
+    const experienceTransaction = await this.db.experienceTransaction.create({
+      data: {
+        time: new Date(timestamp),
+        channel: { connect: { youtubeId: channelId }},
+        livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+        delta: xp,
+        experienceDataChatMessage: { create: {
+          baseExperience: data.baseExperience,
+          viewershipStreakMultiplier: data.viewershipStreakMultiplier,
+          participationStreakMultiplier: data.participationStreakMultiplier,
+          spamMultiplier: data.spamMultiplier,
+          messageQualityMultiplier: data.messageQualityMultiplier,
+          chatMessage: { connect: { youtubeId: data.chatMessageYtId }}
+        }}
+      },
+      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, channel: true }
+    })
+
+    this.cacheChatExperience(channelId, experienceTransaction)
   }
 
   public async getLatestSnapshot (channelId: string): Promise<ExperienceSnapshot | null> {
@@ -93,9 +94,26 @@ export default class ExperienceStore {
     })
   }
 
+  private cacheChatExperience (channelId: string, experienceTransaction: (Omit<ChatExperience, 'experienceDataChatMessage'> & { experienceDataChatMessage: (ExperienceDataChatMessage & { chatMessage: ChatMessage }) | null }) | null)
+    : ChatExperience | null {
+    let result: ChatExperience | null
+    if (experienceTransaction) {
+      result = {
+        ...experienceTransaction,
+        // no way to narrow this down using type guards... thanks typescript!
+        experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
+      }
+    } else {
+      result = null
+    }
+
+    this.chatExperienceMap.set(channelId, result)
+    return result
+  }
+
   private async initialiseSnapshotIfRequired (channelId: string, timestamp: number) {
     // the existence of a previous experience entry implies that a snapshot already exists
-    if (this.chatExperienceMap.has(channelId)) {
+    if (this.chatExperienceMap.get(channelId)) {
       return
     }
 

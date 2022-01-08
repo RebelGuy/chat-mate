@@ -66,7 +66,6 @@ export default class ExperienceService {
       const totalMultiplier = viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier * messageQualityMultiplier
       const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
       await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
-      await this.viewershipStore.addViewershipForChannel(channelId, chatItem.timestamp)
     }
   }
 
