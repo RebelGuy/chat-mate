@@ -100,7 +100,7 @@ Key:
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
 - 🟢 ViewershipStore
-  - 🟢 addViewershipForChannel
+  - 🟢 addViewershipForChatParticipation
   - 🟢 getLastSeen
   - 🟢 getLivestreamParticipation
   - 🟢 getLivestreamViewership

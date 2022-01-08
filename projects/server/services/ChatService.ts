@@ -103,7 +103,7 @@ export default class ChatService {
       } else {
         const token = response.continuation.token
         await this.chatStore.addChat(token, chatItems)
-        await Promise.all(chatItems.map(c => this.viewershipStore.addViewershipForChannel(c.author.channelId, c.timestamp)))
+        await Promise.all(chatItems.map(c => this.viewershipStore.addViewershipForChatParticipation(c.author.channelId, c.timestamp)))
         await this.experienceService.addExperienceForChat(chatItems)
         hasNewChat = chatItems.length > 0
       }

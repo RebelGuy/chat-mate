@@ -112,7 +112,7 @@ describe(nameof(ChatService, 'start'), () => {
     expect(passedToken).toBe(token2)
     expect(single(passedChatItems).id).toBe(chatAction1.id)
 
-    const [passedChannel, passedTimestamp] = single(mockViewershipStore.addViewershipForChannel.mock.calls)
+    const [passedChannel, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
     expect(passedChannel).toBe(chatAction1.authorChannelId)
     expect(passedTimestamp).toBe(chatAction1.timestamp.getTime())
 

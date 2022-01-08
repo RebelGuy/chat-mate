@@ -1,8 +1,8 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { mockGetter, nameof } from '@rebel/server/_test/utils'
+import ViewershipStore, { VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER, VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE } from '@rebel/server/stores/ViewershipStore'
+import { getGetterMock, mockGetter, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
 import { mock, MockProxy } from 'jest-mock-extended'
@@ -12,6 +12,9 @@ export default () => {
   let mockLivestreamStore: MockProxy<LivestreamStore>
   let viewershipStore: ViewershipStore
   let db: Db
+
+  /** Well outside the livestream 3 start/end boundaries */
+  const safeMsgTime3 = addTime(data.time3, 'minutes', 45)
 
   beforeEach(async () => {
     mockLivestreamStore = mock<LivestreamStore>()
@@ -45,20 +48,35 @@ export default () => {
 
   afterEach(stopTestDb)
 
-  describe(nameof(ViewershipStore, 'addViewershipForChannel'), () => {
+  describe(nameof(ViewershipStore, 'addViewershipForChatParticipation'), () => {
     test('adds new viewing block if user not seen before', async () => {
-      await viewershipStore.addViewershipForChannel(data.channel1, data.time1.getTime())
+      await viewershipStore.addViewershipForChatParticipation(data.channel1, safeMsgTime3.getTime())
 
       await expectRowCount(db.viewingBlock).toBe(3)
       const block = (await db.viewingBlock.findFirst({ where: { channel: { youtubeId: data.channel1 }}}))!
-      expect(block.startTime).toEqual(data.time1)
-      expect(block.lastUpdate).toEqual(data.time1)
+      expect(block.startTime).toEqual(addTime(safeMsgTime3, 'minutes', -VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE))
+      expect(block.lastUpdate).toEqual(addTime(safeMsgTime3, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER))
+    })
+
+    test('trims viewing block to fit into livestream times', async () => {
+      const start = addTime(data.time3, 'minutes', -1)
+      const end = addTime(data.time3, 'minutes', 1)
+      const livestreamGetter = getGetterMock(mockLivestreamStore, 'currentLivestream')
+      livestreamGetter.mockClear()
+      livestreamGetter.mockReturnValue({ ...data.livestream3, start, end })
+
+      await viewershipStore.addViewershipForChatParticipation(data.channel1, data.time3.getTime())
+
+      await expectRowCount(db.viewingBlock).toBe(3)
+      const block = (await db.viewingBlock.findFirst({ where: { channel: { youtubeId: data.channel1 }}}))!
+      expect(block.startTime).toEqual(start)
+      expect(block.lastUpdate).toEqual(end)
     })
 
     test('extends previous viewing block if recent', async () => {
-      const currentTime = data.time3
-      const prevUpdate = addTime(currentTime, 'seconds', -30)
-      const startTime = addTime(prevUpdate, 'minutes', -1)
+      const currentTime = safeMsgTime3
+      const prevUpdate = addTime(currentTime, 'minutes', -2)
+      const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
         livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
         channel: { connect: { youtubeId: data.channel1 }},
@@ -66,18 +84,18 @@ export default () => {
         lastUpdate: prevUpdate
       }})
 
-      await viewershipStore.addViewershipForChannel(data.channel1, currentTime.getTime())
+      await viewershipStore.addViewershipForChatParticipation(data.channel1, currentTime.getTime())
 
       await expectRowCount(db.viewingBlock).toBe(3)
       const block = (await db.viewingBlock.findFirst({ where: { channel: { youtubeId: data.channel1 }}}))!
       expect(block.startTime).toEqual(startTime)
-      expect(block.lastUpdate).toEqual(currentTime)
+      expect(block.lastUpdate).toEqual(addTime(currentTime, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER))
     })
 
     test('adds new viewing block if previous block is too long ago', async () => {
-      const currentTime = data.time3
-      const prevUpdate = addTime(currentTime, 'seconds', -200)
-      const startTime = addTime(prevUpdate, 'minutes', -1)
+      const currentTime = safeMsgTime3
+      const prevUpdate = addTime(currentTime, 'minutes', -30)
+      const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
         livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
         channel: { connect: { youtubeId: data.channel1 }},
@@ -85,21 +103,21 @@ export default () => {
         lastUpdate: prevUpdate
       }})
 
-      await viewershipStore.addViewershipForChannel(data.channel1, currentTime.getTime())
+      await viewershipStore.addViewershipForChatParticipation(data.channel1, currentTime.getTime())
 
       await expectRowCount(db.viewingBlock).toBe(4)
       const block = (await db.viewingBlock.findFirst({
         where: { channel: { youtubeId: data.channel1 }},
         orderBy: { lastUpdate: 'desc' }
       }))!
-      expect(block.startTime).toEqual(currentTime)
-      expect(block.lastUpdate).toEqual(currentTime)
+      expect(block.startTime).toEqual(addTime(currentTime, 'minutes', -VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE))
+      expect(block.lastUpdate).toEqual(addTime(currentTime, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER))
     })
 
     test('ignores if before lastUpdate of most recent viewing block', async () => {
-      const currentTime = data.time3
-      const prevUpdate = addTime(currentTime, 'seconds', 200)
-      const startTime = addTime(prevUpdate, 'minutes', -1)
+      const currentTime = safeMsgTime3
+      const prevUpdate = addTime(currentTime, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER + 5)
+      const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
         livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
         channel: { connect: { youtubeId: data.channel1 }},
@@ -107,9 +125,9 @@ export default () => {
         lastUpdate: prevUpdate
       }})
 
-      await viewershipStore.addViewershipForChannel(data.channel1, currentTime.getTime())
+      await viewershipStore.addViewershipForChatParticipation(data.channel1, currentTime.getTime())
 
-      await expectRowCount(db.viewingBlock).toBe(4)
+      await expectRowCount(db.viewingBlock).toBe(3)
       const block = (await db.viewingBlock.findFirst({ where: { channel: { youtubeId: data.channel1 }}}))!
       expect(block.startTime).toEqual(startTime)
       expect(block.lastUpdate).toEqual(prevUpdate)

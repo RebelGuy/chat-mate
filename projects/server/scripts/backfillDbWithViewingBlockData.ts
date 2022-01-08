@@ -10,15 +10,12 @@ import LogService from '@rebel/server/services/LogService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import { VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER, VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE } from '@rebel/server/stores/ViewershipStore'
 import { addTime } from '@rebel/server/util/datetime'
 
 // CHAT-103
 // run using
 //   yarn workspace server cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/debug/server/scripts/backfillDbWithViewingBlockData.js --inspect
-
-// padding are in minutes
-const PADDING_BEFORE = 1
-const PADDING_AFTER = 10
 
 type ViewingBlock = {
   channelId: number
@@ -57,8 +54,8 @@ const main = async () => {
     const completedViewingBlocks: ViewingBlock[] = []
     const currentViewingBlocks: Map<number, { startTime: Date, lastUpdate: Date }> = new Map()
     for (const msg of allChat) {
-      const startTime = addTime(msg.time, 'minutes', -PADDING_BEFORE)
-      const lastUpdate = addTime(msg.time, 'minutes', PADDING_AFTER)
+      const startTime = addTime(msg.time, 'minutes', -VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE)
+      const lastUpdate = addTime(msg.time, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER)
 
       const existingBlock = currentViewingBlocks.get(msg.channelId)
       if (existingBlock) {

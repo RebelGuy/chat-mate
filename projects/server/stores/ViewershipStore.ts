@@ -2,15 +2,17 @@ import { Livestream, ViewingBlock } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import { addTime, maxTime, MAX_DATE, minTime } from '@rebel/server/util/datetime'
+
+// padding are in minutes
+export const VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE = 5
+export const VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER = 10
 
 export type LivestreamParticipation = Livestream & { channelId: string, participated: boolean }
 
 export type LivestreamViewership = Livestream & { channelId: string, viewed: boolean }
 
 export type LastSeen = { livestream: Livestream, time: Date, viewingBlockId: number }
-
-/** The maximum time between two viewership events such that they can still be merged into a single viewing block */
-export const VIEWERSHIP_SNAPPING_MS = 90 * 1000
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -30,24 +32,36 @@ export default class ExperienceStore {
     this.lastSeenMap = new Map()
   }
 
-  /** Adds/extends a viewing block for this channel for the given time. Ignores if there is viewing data AFTER the given time. (do not use for backfilling) */
-  public async addViewershipForChannel (channelId: string, timestamp: number): Promise<void> {
-    let cachedLastSeen = this.lastSeenMap.get(channelId)
-    const time = new Date(timestamp)
-
-    if (cachedLastSeen && cachedLastSeen.time >= time) {
+  /** Adds/extends a viewing block for this channel for the given time. Ignores if there is viewing data AFTER the given time. (do not use for backfilling).
+   * Adds generous padding on the left and right
+   */
+  public async addViewershipForChatParticipation (channelId: string, timestamp: number): Promise<void> {
+    const startTime = this.livestreamStore.currentLivestream.start
+    if (startTime == null) {
+      // livestream hasn't started yet
       return
-    } else if (cachedLastSeen === undefined) {
+    }
+    const endTime = this.livestreamStore.currentLivestream.end ?? MAX_DATE
+
+    // get the viewing block range
+    const _time = new Date(timestamp)
+    const lowerTime = maxTime(addTime(_time, 'minutes', -VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE), startTime)
+    const upperTime = minTime(addTime(_time, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER), endTime)
+
+    let cachedLastSeen = this.lastSeenMap.get(channelId)
+    if (cachedLastSeen === undefined) {
       cachedLastSeen = await this.getLastSeen(channelId)
+    }
+    if (cachedLastSeen && cachedLastSeen.time >= upperTime) {
+      return
     }
 
     // create or update
     let block: ViewingBlock & { livestream: Livestream }
-    if (cachedLastSeen && time > cachedLastSeen.time &&
-      time.getTime() - cachedLastSeen.time.getTime() <= VIEWERSHIP_SNAPPING_MS
-    ) {
+    if (cachedLastSeen && cachedLastSeen.time >= lowerTime) {
+      // there is overlap - combine
       block = await this.db.viewingBlock.update({
-        data: { lastUpdate: time },
+        data: { lastUpdate: upperTime },
         where: { id: cachedLastSeen.viewingBlockId},
         include: { livestream: true }
       })
@@ -55,8 +69,8 @@ export default class ExperienceStore {
       block = await this.db.viewingBlock.create({ data: {
         channel: { connect: { youtubeId: channelId }},
         livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
-        startTime: time,
-        lastUpdate: time
+        startTime: lowerTime,
+        lastUpdate: upperTime
         },
         include: { livestream: true }
       })

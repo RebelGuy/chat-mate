@@ -1,5 +1,7 @@
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
+export const MAX_DATE = new Date(8640000000000000)
+
 // formats to YYYY-MM-dd
 export function formatDate (date?: Date, utc?: boolean) {
   const dateToFormat = date ?? new Date()
@@ -55,4 +57,24 @@ export function addTime (date: Date,  unit: 'seconds' | 'minutes' | 'hours' | 'd
   }
 
   return new Date(date.getTime() + msPerUnit * amount)
+}
+
+export function maxTime (...times: Date[]): Date {
+  let max: Date = times[0]
+  for (const time of times) {
+    if (time > max) {
+      max = time
+    }
+  }
+  return max
+}
+
+export function minTime (...times: Date[]): Date {
+  let min: Date = times[0]
+  for (const time of times) {
+    if (time < min) {
+      min = time
+    }
+  }
+  return min
 }

@@ -113,7 +113,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       chatItem.author.channelId, chatItem.timestamp, expectedExperienceToAdd, experienceData
     ]
     expect(single(mockExperienceStore.addChatExperience.mock.calls)).toEqual(expectedChatStoreArgs)
-    expect(mockViewershipStore.addViewershipForChannel.mock.calls.length).toEqual(0)
+    expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toEqual(0)
   })
 })
 
