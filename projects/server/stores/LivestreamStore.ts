@@ -6,7 +6,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 
-export const METADATA_SYNC_INTERVAL_MS = 60_000
+export const METADATA_SYNC_INTERVAL_MS = 12_000
 
 type Deps = Dependencies<{
   liveId: string,

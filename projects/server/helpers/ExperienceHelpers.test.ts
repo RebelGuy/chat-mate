@@ -90,10 +90,10 @@ describe(nameof(ExperienceHelpers, 'calculateLevel'), () => {
 
 describe(nameof(ExperienceHelpers, 'calculateParticipationMultiplier'), () => {
   test('higher participation streaks lead to higher multipliers', () => {
-    const m0 = experienceHelpers.calculateParticipationMultiplier(asGte(0, 0))
-    const m1 = experienceHelpers.calculateParticipationMultiplier(asGte(1, 0))
-    const m2 = experienceHelpers.calculateParticipationMultiplier(asGte(2, 0))
-    const m3 = experienceHelpers.calculateParticipationMultiplier(asGte(3, 0))
+    const m0 = experienceHelpers.calculateParticipationMultiplier(asGte(1, 0))
+    const m1 = experienceHelpers.calculateParticipationMultiplier(asGte(2, 0))
+    const m2 = experienceHelpers.calculateParticipationMultiplier(asGte(3, 0))
+    const m3 = experienceHelpers.calculateParticipationMultiplier(asGte(4, 0))
 
     expectStrictIncreasing(m0, m1, m2, m3)
   })
@@ -189,10 +189,10 @@ describe(nameof(ExperienceHelpers, 'calculateSpamMultiplier'), () => {
 
 describe(nameof(ExperienceHelpers, 'calculateViewershipMultiplier'), () => {
   test('higher viewership streaks lead to higher multipliers', () => {
-    const m0 = experienceHelpers.calculateViewershipMultiplier(asGte(0, 0))
-    const m1 = experienceHelpers.calculateViewershipMultiplier(asGte(1, 0))
-    const m2 = experienceHelpers.calculateViewershipMultiplier(asGte(2, 0))
-    const m3 = experienceHelpers.calculateViewershipMultiplier(asGte(3, 0))
+    const m0 = experienceHelpers.calculateViewershipMultiplier(asGte(1, 0))
+    const m1 = experienceHelpers.calculateViewershipMultiplier(asGte(2, 0))
+    const m2 = experienceHelpers.calculateViewershipMultiplier(asGte(3, 0))
+    const m3 = experienceHelpers.calculateViewershipMultiplier(asGte(4, 0))
 
     expectStrictIncreasing(m0, m1, m2, m3)
   })
