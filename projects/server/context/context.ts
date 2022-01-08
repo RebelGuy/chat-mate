@@ -75,9 +75,9 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
     return this.builder.getDependencies().resolve(name)
   }
 
-  public dispose() {
+  public async dispose () {
     if (this.isBuiltContext()) {
-      this.builder.dispose()
+      await this.builder.dispose()
       this.isDisposed = true
     } else {
       throw new Error(`Cannot dispose a context that hasn't been built yet`)
@@ -208,10 +208,10 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
     return new Dependencies(this.dependencies)
   }
 
-  public dispose () {
-    for (const key in Object.keys(this.dependencies)) {
+  public async dispose () {
+    for (const key of Object.keys(this.dependencies)) {
       if (this.dependencies[key]?.dispose) {
-        this.dependencies[key].dispose()
+        await this.dependencies[key].dispose()
       }
       Object.defineProperty(this.dependencies, key, { value: null, writable: false })
     }

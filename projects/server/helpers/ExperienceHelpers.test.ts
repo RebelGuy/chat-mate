@@ -1,4 +1,4 @@
-import ExperienceHelpers, { MULTIPLIER_CHANGE_AT_MAX, MULTIPLIER_CHANGE_AT_MIN, TARGET_CHAT_PERIOD_MAX, TARGET_CHAT_PERIOD_MIN } from '@rebel/server/helpers/ExperienceHelpers'
+import ExperienceHelpers, { MULTIPLIER_CHANGE_AT_MAX, MULTIPLIER_CHANGE_AT_MIN, SpamMult, TARGET_CHAT_PERIOD_MAX, TARGET_CHAT_PERIOD_MIN } from '@rebel/server/helpers/ExperienceHelpers'
 import { expectStrictIncreasing, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -112,8 +112,9 @@ describe(nameof(ExperienceHelpers, 'calculateQualityMultiplier'), () => {
 })
 
 describe(nameof(ExperienceHelpers, 'calculateSpamMultiplier'), () => {
+  const prevMult = 0.5 as SpamMult
+
   test('multiplier reduced more in negative window', () => {
-    const prevMult = asRange(0.5, eps, 1)
     const time0 = data.time1.getTime()
     const time1 = addTime(data.time1, 'seconds', TARGET_CHAT_PERIOD_MIN / 1000 - 1).getTime()
     const time2 = addTime(data.time1, 'seconds', TARGET_CHAT_PERIOD_MIN / 1000 - 2).getTime()
@@ -127,7 +128,6 @@ describe(nameof(ExperienceHelpers, 'calculateSpamMultiplier'), () => {
   })
 
   test('multiplier remains same in static window', () => {
-    const prevMult = asRange(0.5, eps, 1)
     const time0 = data.time1.getTime()
     const time1 = addTime(data.time1, 'seconds', TARGET_CHAT_PERIOD_MIN / 1000).getTime()
     // centre of static window
@@ -144,7 +144,6 @@ describe(nameof(ExperienceHelpers, 'calculateSpamMultiplier'), () => {
   })
 
   test('multiplier increases more in positive window', () => {
-    const prevMult = asRange(0.5, eps, 1)
     const time0 = data.time1.getTime()
     const time1 = addTime(data.time1, 'seconds', TARGET_CHAT_PERIOD_MAX / 1000 + 1).getTime()
     const time2 = addTime(data.time1, 'seconds', TARGET_CHAT_PERIOD_MAX / 1000 + 2).getTime()
@@ -158,7 +157,6 @@ describe(nameof(ExperienceHelpers, 'calculateSpamMultiplier'), () => {
   })
 
   test('multiplier delta is bounded', () => {
-    const prevMult = asRange(0.5, eps, 1)
     const time0 = data.time1.getTime()
     const time1 = addTime(data.time1, 'hours', 10).getTime()
 
@@ -170,22 +168,22 @@ describe(nameof(ExperienceHelpers, 'calculateSpamMultiplier'), () => {
   })
 
   test('multiplier is bounded on lower end', () => {
-    const prevMult = asRange(eps, eps, 1)
+    const prevMultLow = asRange(0.1, 0.1, 1.5)
     const time0 = data.time1.getTime()
 
-    const result = experienceHelpers.calculateSpamMultiplier(time0, time0, prevMult)
+    const result = experienceHelpers.calculateSpamMultiplier(time0, time0, prevMultLow)
 
-    expect(result).toBe(prevMult)
+    expect(result).toBe(prevMultLow)
   })
 
   test('multiplier is bounded on lower end', () => {
-    const prevMult = asRange(1, eps, 1)
+    const prevMultHigh = asRange(1.5, 0.1, 1.5)
     const time0 = data.time1.getTime()
     const time1 = addTime(data.time1, 'hours', 10).getTime()
 
-    const result = experienceHelpers.calculateSpamMultiplier(time1, time0, prevMult)
+    const result = experienceHelpers.calculateSpamMultiplier(time1, time0, prevMultHigh)
 
-    expect(result).toBe(prevMult)
+    expect(result).toBe(prevMultHigh)
   })
 })
 

@@ -19,7 +19,7 @@ type Deps = Dependencies<{
   livestreamStore: LivestreamStore
 }>
 
-export default class ExperienceStore {
+export default class ViewershipStore {
   private readonly db: Db
   private readonly livestreamStore: LivestreamStore
 

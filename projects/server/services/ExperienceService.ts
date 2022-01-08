@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
-import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
+import ExperienceHelpers, { SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem } from '@rebel/server/models/chat'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -97,7 +97,7 @@ export default class ExperienceService {
       streams,
       0,
       stream => stream.viewed,
-      (score, participated) => participated ? score + 1 : score - 1,
+      (score, viewed) => viewed ? score + 1 : score - 1,
       0,
       positiveInfinity
     )
@@ -120,16 +120,16 @@ export default class ExperienceService {
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
 
-  private async getSpamMultiplier (chatItem: ChatItem): Promise<NumRange<Eps, 1>> {
+  private async getSpamMultiplier (chatItem: ChatItem): Promise<SpamMult> {
     const prev = await this.experienceStore.getPreviousChatExperience(chatItem.author.channelId)
     if (prev == null || prev.livestream.id !== this.livestreamStore.currentLivestream.id) {
       // always start with a multiplier of 1 at the start of the livestream
-      return 1 as NumRange<Eps, 1>
+      return 1 as SpamMult
     }
 
     const currentTimestamp = chatItem.timestamp
     const prevTimestamp = prev.time.getTime()
-    const prevSpamMultiplier = prev.experienceDataChatMessage.spamMultiplier as NumRange<Eps, 1>
+    const prevSpamMultiplier = prev.experienceDataChatMessage.spamMultiplier as SpamMult
     return this.experienceHelpers.calculateSpamMultiplier(currentTimestamp, prevTimestamp, prevSpamMultiplier)
   }
 

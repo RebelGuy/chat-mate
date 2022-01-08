@@ -77,4 +77,8 @@ export default class DbProvider implements IProvider<Db> {
     }
     return this.prismaClient as Db
   }
+
+  public async dispose () {
+    await this.prismaClient.$disconnect()
+  }
 }

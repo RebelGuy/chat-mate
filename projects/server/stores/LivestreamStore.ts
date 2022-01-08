@@ -59,8 +59,8 @@ export default class LivestreamStore {
       updatedLivestreamPromise = this.db.livestream.create({ data: {
         createdAt: new Date(),
         liveId: this.liveId,
-        start: metadata.liveStatus === 'live' ? new Date() : null,
-        end: null
+        start: metadata.liveStatus === 'not_started' ? null : new Date(),
+        end: metadata.liveStatus === 'finished' ? new Date() : null
       }})
     }
 
@@ -85,14 +85,18 @@ export default class LivestreamStore {
   }
 
   private async updateLivestreamMetadata () {
-    this.logService.logDebug(this, 'Syncing metadata')
-    const metadata = await this.masterchat.fetchMetadata()
+    try {
+      this.logService.logDebug(this, 'Syncing metadata')
+      const metadata = await this.masterchat.fetchMetadata()
 
-    const updatedTimes = this.getUpdatedLivestreamTimes(this._currentLivestream!, metadata)
-    return this._currentLivestream = await this.db.livestream.update({
-      where: { liveId: this.liveId },
-      data: { ...updatedTimes }
-    })
+      const updatedTimes = this.getUpdatedLivestreamTimes(this._currentLivestream!, metadata)
+      this._currentLivestream = await this.db.livestream.update({
+        where: { liveId: this.liveId },
+        data: { ...updatedTimes }
+      })
+    } catch (e) {
+      this.logService.logWarning(this, 'Encountered error while syncing metadata:', e)
+    }
   }
 
   private getUpdatedLivestreamTimes (existingLivestream: Livestream, metadata: Metadata): Pick<Livestream, 'start' | 'end'> {
@@ -123,7 +127,7 @@ export default class LivestreamStore {
         }
       } else if (existingStatus === 'not_started' && newStatus === 'finished') {
         // should not happen, but not impossible
-        this.logService.logWarning(this, 'Livestream has finished before it started')
+        this.logService.logWarning(this, 'Livestream has finished before it started - 0 duration')
         return {
           start: new Date(),
           end: new Date()

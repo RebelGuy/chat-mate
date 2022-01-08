@@ -14,13 +14,14 @@ export const MULTIPLIER_CHANGE_AT_MAX = 1.05
 
 export type LevelData = { level: GreaterThanOrEqual<0>, levelProgress: GreaterThanOrEqual<0> & LessThan<1> }
 
+export type SpamMult = NumRange<0.1, 1.5>
+
 export default class ExperienceHelpers {
-  // Returns 0 < x <= 1 that depends on the previous multiplier, and is intended
-  // as a safeguard against people trying to spam messages for XP.
+  // intedned as a safeguard against people trying to spam messages for XP.
   // If chat messages are too fast, the multiplier will tend towards zero.
   // If chat messages are slow enough, the multiplier will slowly regenerate back to 1.
   // It uses only messages times, no contents (see getChatMessageQuality).
-  public calculateSpamMultiplier (currentTimestamp: number, prevTimestamp: number, prevMultiplier: NumRange<Eps, 1>): NumRange<Eps, 1> {
+  public calculateSpamMultiplier (currentTimestamp: number, prevTimestamp: number, prevMultiplier: SpamMult): SpamMult {
     const deltaT = currentTimestamp - prevTimestamp
     let multiplierMultiplier = 1
     if (deltaT < TARGET_CHAT_PERIOD_MIN) {
@@ -31,7 +32,7 @@ export default class ExperienceHelpers {
       multiplierMultiplier = scaleNorm(norm, 1, MULTIPLIER_CHANGE_AT_MAX)
     }
 
-    return clamp(prevMultiplier * multiplierMultiplier, eps, 1)
+    return clamp(prevMultiplier * multiplierMultiplier, 0.1, 1.5)
   }
 
   // Returns 0 <= x < 1 for low-quality messages, and 1 < x <= 2 for high quality messages. 1 is "normal" quality.
@@ -76,11 +77,11 @@ export default class ExperienceHelpers {
   }
 
   public calculateParticipationMultiplier (participationWalkingScore: GreaterThanOrEqual<0>): GreaterThanOrEqual<1> {
-    return asGte(1 + 0.1 * participationWalkingScore, 1)
+    return asGte(1 + 0.05 * Math.max(0, participationWalkingScore - 1), 1)
   }
 
   public calculateViewershipMultiplier (viewershipWalkingScore: GreaterThanOrEqual<0>): GreaterThanOrEqual<1> {
-    return asGte(1 + 0.05 * viewershipWalkingScore, 1)
+    return asGte(1 + 0.05 * Math.max(0, viewershipWalkingScore - 1), 1)
   }
 
   public calculateQualityMultiplier (messageQuality: NumRange<0, 2>): NumRange<0, 2> {

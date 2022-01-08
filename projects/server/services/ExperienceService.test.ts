@@ -104,8 +104,8 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockExperienceHelpers.calculateViewershipMultiplier.calledWith(asGte(2, 0)).mockReturnValue(asGte(experienceData.viewershipStreakMultiplier, 1))
     mockExperienceHelpers.calculateQualityMultiplier.calledWith(msgQuality).mockReturnValue(asRange(experienceData.messageQualityMultiplier, 0, 2))
     mockExperienceHelpers.calculateSpamMultiplier
-      .calledWith(chatItem.timestamp, prevData.time.getTime(), asRange(prevData.experienceDataChatMessage.spamMultiplier, eps, 1))
-      .mockReturnValue(asRange(experienceData.spamMultiplier, eps, 1))
+      .calledWith(chatItem.timestamp, prevData.time.getTime(), asRange(prevData.experienceDataChatMessage.spamMultiplier, 0.1, 1.5))
+      .mockReturnValue(asRange(experienceData.spamMultiplier, 0.1, 1.5))
 
     await experienceService.addExperienceForChat([chatItem])
 
