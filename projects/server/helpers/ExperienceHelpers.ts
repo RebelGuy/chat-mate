@@ -5,11 +5,11 @@ import { NumRange, Eps, clampNorm, scaleNorm, clamp, eps, avg, sum, GreaterThanO
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
 // the increase/decrease is scaled linearly, and is applied to the *previous* chat multiplier.
-export const TARGET_CHAT_PERIOD_MIN = 4 * 60 * 1000
-export const TARGET_CHAT_PERIOD_MAX = 6 * 60 * 1000
-export const LOWEST_CHAT_PERIOD = 6 * 1000
-export const HIGHEST_CHAT_PERIOD = 20 * 60 * 1000
-export const MULTIPLIER_CHANGE_AT_MIN = 0.95
+export const TARGET_CHAT_PERIOD_MIN = 3 * 60 * 1000
+export const TARGET_CHAT_PERIOD_MAX = 3.5 * 60 * 1000
+export const LOWEST_CHAT_PERIOD = 1 * 1000
+export const HIGHEST_CHAT_PERIOD = 6 * 60 * 1000
+export const MULTIPLIER_CHANGE_AT_MIN = 0.975
 export const MULTIPLIER_CHANGE_AT_MAX = 1.05
 
 export type LevelData = { level: GreaterThanOrEqual<0>, levelProgress: GreaterThanOrEqual<0> & LessThan<1> }
@@ -56,8 +56,10 @@ export default class ExperienceHelpers {
       return asRange(quality, 0, 2)
     }
 
-    // between 1 and 2. 2 if the maximum character limit of 200 is hit
-    const lengthQuality = clampNorm(msg.length, 1, 200, 20) + 1
+    // the upper end should not be growing linearly so it is easier to get higher length points.
+    // upper end goes from log(1) to log(e).
+    const lengthQualityRaw = clampNorm(msg.length, 1, 200, 10) * 2
+    const lengthQuality = lengthQualityRaw < 1 ? lengthQualityRaw : Math.log(1 + (Math.exp(1) - 1) * (lengthQualityRaw - 1));
 
     // let's say 30 words is maximum "quality"
     const wordCountQuality = clampNorm(words.length, 1, 30, 8) * 2

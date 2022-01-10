@@ -44,10 +44,10 @@ describe(nameof(ExperienceHelpers, 'calculateChatMessageQuality'), () => {
   })
 
   test('higher average word length leads to higher quality', () => {
-    const r0 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('a a a a')))
-    const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaa aaa aaa aaa')))
-    const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaaa aaaaa aaaaa aaaaa')))
-    const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaaaaa aaaaaaa aaaaaaa aaaaaaa')))
+    const r0 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aa aa aa aa')))
+    const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaa aaaa aaaa aaaa')))
+    const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaaaa aaaaaa aaaaaa aaaaaa')))
+    const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaaaaaa aaaaaaaa aaaaaaaa aaaaaaaa')))
 
     expectStrictIncreasing(r0, r1, r2, r3)
   })
