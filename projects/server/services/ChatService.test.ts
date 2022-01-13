@@ -100,7 +100,7 @@ describe(nameof(ChatService, 'start'), () => {
 
     await chatService.start()
 
-    expect(single(single(mockLivestreamStore.update.mock.calls))).toBe(null)
+    expect(single(single(mockLivestreamStore.setContinuationToken.mock.calls))).toBe(null)
   })
 
   test('passes chat items to ChatStore and ExperienceService', async () => {

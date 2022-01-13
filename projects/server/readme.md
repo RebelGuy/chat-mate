@@ -77,6 +77,8 @@ Key:
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
   - 🟢 getLevel
+- 🟢 LivestreamService
+  - 🟢 start
 - ⚪ FileService
 - ⚪ LogService
 
@@ -99,6 +101,7 @@ Key:
   - 🟢 createLivestream
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
+  - 🟢 setTimes
 - 🟢 ViewershipStore
   - 🟢 addViewershipForChatParticipation
   - 🟢 getLastSeen

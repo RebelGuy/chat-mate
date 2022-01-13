@@ -19,6 +19,7 @@ import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import LivestreamService from '@rebel/server/services/LivestreamService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -43,6 +44,7 @@ const globalContext = ContextProvider.create()
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('livestreamStore', LivestreamStore)
+  .withClass('livestreamService', LivestreamService)
   .withClass('experienceStore', ExperienceStore)
   .withClass('viewershipStore', ViewershipStore)
   .withClass('experienceService', ExperienceService)
@@ -88,6 +90,10 @@ app.listen(port, () => {
 })
 
 const livestreamStore = globalContext.getClassInstance('livestreamStore')
+const livestreamService = globalContext.getClassInstance('livestreamService')
 const chatService = globalContext.getClassInstance('chatService')
 
-livestreamStore.createLivestream().then(() => chatService.start())
+livestreamStore.createLivestream().then(async () => {
+  await livestreamService.start()
+  await chatService.start()
+})

@@ -43,7 +43,7 @@ export default class ChatStore {
 
     // purposefully only set this AFTER everything has been added. if we set it before,
     // and something goes wrong with adding chat, the chat messages will be lost forever.
-    await this.livestreamStore.update(token)
+    await this.livestreamStore.setContinuationToken(token)
   }
 
   // returns ordered chat items

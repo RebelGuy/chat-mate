@@ -69,6 +69,7 @@ export default class ChatService {
   dispose () {
     if (this.timeout) {
       clearTimeout(this.timeout)
+      this.timeout = null
     }
   }
 
@@ -80,7 +81,7 @@ export default class ChatService {
       return result
     } catch (e: any) {
       this.logService.logWarning(this, 'Fetch failed:', e.message)
-      await this.livestreamStore.update(null)
+      await this.livestreamStore.setContinuationToken(null)
       return null
     }
   }
