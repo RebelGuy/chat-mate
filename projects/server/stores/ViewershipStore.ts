@@ -32,6 +32,13 @@ export default class ViewershipStore {
     this.lastSeenMap = new Map()
   }
 
+  public async addLiveViewCount (count: number): Promise<void> {
+    await this.db.liveViewers.create({ data: {
+      livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+      viewCount: count
+    }})
+  }
+
   /** Adds/extends a viewing block for this channel for the given time. Ignores if there is viewing data AFTER the given time. (do not use for backfilling).
    * Adds generous padding on the left and right
    */

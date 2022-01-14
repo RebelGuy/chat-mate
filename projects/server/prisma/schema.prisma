@@ -22,9 +22,19 @@ model Livestream {
   // for fetching the chat of this livestream
   continuationToken String? @db.VarChar(1023)
 
+  liveViewers            LiveViewers[]
   chatMessages           ChatMessage[]
   experienceTransactions ExperienceTransaction[]
   viewingBlocks          ViewingBlock[]
+}
+
+model LiveViewers {
+  id        Int      @id @default(autoincrement())
+  time      DateTime @default(now())
+  viewCount Int
+
+  livestreamId Int
+  livestream   Livestream @relation(fields: [livestreamId], references: [id])
 }
 
 // for tracking history

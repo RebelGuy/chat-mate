@@ -103,6 +103,7 @@ Key:
   - 🟢 setContinuationToken
   - 🟢 setTimes
 - 🟢 ViewershipStore
+  - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation
   - 🟢 getLastSeen
   - 🟢 getLivestreamParticipation
@@ -116,6 +117,9 @@ Key:
   - 🟢 calculateQualityMultiplier
   - 🟢 calculateSpamMultiplier
   - 🟢 calculateViewershipMultiplier
+- 🟢 TimerHelpers
+  - 🟢 createRepeatingTimer
+  - 🟢 dispose
 
 **Misc
 - 🔴 util/math

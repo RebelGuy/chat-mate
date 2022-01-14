@@ -7,6 +7,7 @@ import {
 import { runsToString } from "../utils";
 import { YTInitialData, YTPlayabilityStatus } from "../interfaces/yt/context";
 import { LiveStatus } from '@rebel/masterchat'
+import { YTSimpleTextContainer } from '@rebel/masterchat/interfaces/yt/chat'
 
 // OK duration=">0" => Archived (replay chat may be available)
 // OK duration="0" => Live (chat may be available)
@@ -123,6 +124,10 @@ export function parseMetadataFromWatch(html: string) {
   const channelName = runsToString(videoOwner.title.runs);
   const isLive = primaryInfo.viewCount!.videoViewCountRenderer.isLive ?? false;
 
+  const rawViewCount = primaryInfo.viewCount?.videoViewCountRenderer.viewCount as YTSimpleTextContainer | undefined;
+  const viewCountStr = rawViewCount?.simpleText ?? undefined;
+  const viewCountNum = viewCountStr === undefined ? undefined : Number(viewCountStr);
+
   const dateText = primaryInfo.dateText.simpleText.toLowerCase().trim()
   let liveStatus: LiveStatus
   // 'Live stream currently offline'
@@ -144,6 +149,7 @@ export function parseMetadataFromWatch(html: string) {
     channelId,
     channelName,
     isLive,
-    liveStatus
+    liveStatus,
+    viewCount: viewCountNum
   };
 }

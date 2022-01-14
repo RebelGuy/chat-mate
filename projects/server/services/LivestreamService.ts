@@ -6,6 +6,7 @@ import { IMasterchat } from '@rebel/server/interfaces'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
@@ -13,7 +14,8 @@ type Deps = Dependencies<{
   livestreamStore: LivestreamStore
   masterchatProvider: MasterchatProvider,
   logService: LogService,
-  timerHelpers: TimerHelpers
+  timerHelpers: TimerHelpers,
+  viewershipStore: ViewershipStore
 }>
 
 export default class LivestreamService {
@@ -23,12 +25,14 @@ export default class LivestreamService {
   private readonly masterchat: IMasterchat
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
+  private readonly viewershipStore: ViewershipStore
 
   constructor (deps: Deps) {
     this.livestreamStore = deps.resolve('livestreamStore')
     this.masterchat = deps.resolve('masterchatProvider').get()
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
+    this.viewershipStore = deps.resolve('viewershipStore')
   }
 
   public async start (): Promise<void> {
@@ -47,7 +51,11 @@ export default class LivestreamService {
       const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, metadata)
 
       if (updatedTimes) {
-        this.livestreamStore.setTimes(updatedTimes)
+        await this.livestreamStore.setTimes(updatedTimes)
+      }
+
+      if (metadata.liveStatus === 'live' && metadata.viewerCount != null) {
+        await this.viewershipStore.addLiveViewCount(metadata.viewerCount)
       }
     } catch (e) {
       this.logService.logWarning(this, 'Encountered error while syncing metadata:', e)

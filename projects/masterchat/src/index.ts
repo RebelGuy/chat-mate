@@ -66,6 +66,9 @@ export interface Metadata {
   /** @deprecated **Do not use this for checking if the stream is currently live of not, as it is bugged.**
    * Use `liveStatus` instead. */
   isLive?: boolean;
+
+  /** Undefined if we don't know. */
+  viewerCount?: number
 }
 
 export type LiveStatus = 'not_started' | 'live' | 'finished' | 'unknown'

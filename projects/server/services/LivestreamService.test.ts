@@ -10,6 +10,7 @@ import * as data from '@rebel/server/_test/testData'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Livestream } from '@prisma/client'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
+import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 
 function makeMetadata (status: LiveStatus): Metadata {
   return {
@@ -33,6 +34,7 @@ let mockLivestreamStore: MockProxy<LivestreamStore>
 let mockMasterchat: MockProxy<IMasterchat>
 let mockLogService: MockProxy<LogService>
 let mockTimerHelpers: MockProxy<TimerHelpers>
+let mockViewershipStore: MockProxy<ViewershipStore>
 let livestreamService: LivestreamService
 
 beforeEach(() => {
@@ -40,6 +42,7 @@ beforeEach(() => {
   mockMasterchat = mock<IMasterchat>()
   mockLogService = mock<LogService>()
   mockTimerHelpers = mock<TimerHelpers>()
+  mockViewershipStore = mock<ViewershipStore>()
 
   // automatically execute callback passed to TimerHelpers
   mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
@@ -54,18 +57,20 @@ beforeEach(() => {
     livestreamStore: mockLivestreamStore,
     logService: mockLogService,
     masterchatProvider: mockMasterchatProvider,
-    timerHelpers: mockTimerHelpers
+    timerHelpers: mockTimerHelpers,
+    viewershipStore: mockViewershipStore
   }))
 })
 
 describe(nameof(LivestreamService, 'start'), () => {
-  test('ignores if receives `not_started` status from metadata', async () => {
+  test('ignores times and views if receives `not_started` status from metadata', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
-    mockMasterchat.fetchMetadata.mockResolvedValue(makeMetadata('not_started'))
+    mockMasterchat.fetchMetadata.mockResolvedValue({ ...makeMetadata('not_started'), viewerCount: 2 })
 
     await livestreamService.start()
 
     expect(mockLivestreamStore.setTimes.mock.calls.length).toBe(0)
+    expect(mockViewershipStore.addLiveViewCount.mock.calls.length).toBe(0)
   })
 
   test('passes to LivestreamStore if receives `live` status from metadata', async () => {
@@ -106,5 +111,16 @@ describe(nameof(LivestreamService, 'start'), () => {
     await livestreamService.start()
 
     expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expect.anything(), true])
+  })
+
+  test('passes to ViewershipStore if receives live viewer count from metadata', async () => {
+    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
+    const metadata: Metadata = { ...makeMetadata('live'), viewerCount: 10 }
+    mockMasterchat.fetchMetadata.mockResolvedValue(metadata)
+
+    await livestreamService.start()
+
+    const receivedCount = single(mockViewershipStore.addLiveViewCount.mock.calls)[0]
+    expect(receivedCount).toBe(metadata.viewerCount)
   })
 })

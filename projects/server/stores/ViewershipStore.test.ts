@@ -48,6 +48,17 @@ export default () => {
 
   afterEach(stopTestDb)
 
+  describe(nameof(ViewershipStore, 'addLiveViewCount'), () => {
+    test('correctly adds live viewer count', async () => {
+      const viewCount = 5
+
+      await viewershipStore.addLiveViewCount(viewCount)
+
+      const dbContents = (await db.liveViewers.findFirst())!
+      expect(dbContents).toEqual(expect.objectContaining({ livestreamId: data.livestream3.id, viewCount, time: expect.any(Date) }))
+    })
+  })
+
   describe(nameof(ViewershipStore, 'addViewershipForChatParticipation'), () => {
     test('adds new viewing block if user not seen before', async () => {
       await viewershipStore.addViewershipForChatParticipation(data.channel1, safeMsgTime3.getTime())
