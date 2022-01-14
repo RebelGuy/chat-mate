@@ -11,6 +11,7 @@ import LogService, { createLogContext, LogContext } from '@rebel/server/services
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -34,7 +35,8 @@ type Deps = Dependencies<{
   logService: LogService,
   masterchatProvider: MasterchatProvider,
   experienceService: ExperienceService,
-  viewershipStore: ViewershipStore
+  viewershipStore: ViewershipStore,
+  timerHelpers: TimerHelpers
 }>
 
 export default class ChatService {
@@ -45,8 +47,9 @@ export default class ChatService {
   private readonly masterchat: IMasterchat
   private readonly experienceService: ExperienceService
   private readonly viewershipStore: ViewershipStore
+  private readonly timerHelpers: TimerHelpers
 
-  private timeout: NodeJS.Timeout | null = null
+  private initialised: boolean = false
 
   constructor (deps: Deps) {
     this.chatStore = deps.resolve('chatStore')
@@ -55,22 +58,21 @@ export default class ChatService {
     this.logService = deps.resolve('logService')
     this.experienceService = deps.resolve('experienceService')
     this.viewershipStore = deps.resolve('viewershipStore')
+    this.timerHelpers = deps.resolve('timerHelpers')
   }
 
   // await this method when initialising the service to guarantee an initial fetch
-  start (): Promise<void> {
-    if (this.timeout) {
+  public async start (): Promise<void> {
+    if (this.initialised) {
       throw new Error('Cannot start ChatService because it has already been started')
     }
+    this.initialised = true
 
-    return this.updateMessages()
-  }
-
-  dispose () {
-    if (this.timeout) {
-      clearTimeout(this.timeout)
-      this.timeout = null
+    const timerOptions: TimerOptions = {
+      behaviour: 'dynamicEnd',
+      callback: this.updateMessages
     }
+    await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
   private fetchLatest = async () => {
@@ -87,10 +89,6 @@ export default class ChatService {
   }
 
   private updateMessages = async () => {
-    if (this.timeout) {
-      clearTimeout(this.timeout)
-    }
-
     const response = await this.fetchLatest()
 
     let hasNewChat: boolean = false
@@ -111,16 +109,14 @@ export default class ChatService {
     }
 
     // if we received a new message, immediately start checking for another one
-    let nextInterval
     if (hasNewChat) {
-      nextInterval = MIN_INTERVAL
+      return MIN_INTERVAL
     } else {
       const now = Date.now()
       const chat = await this.chatStore.getChatSince(now - LIMIT)
       const timestamps = chat.map(c => c.time.getTime())
-      nextInterval = getNextInterval(now, timestamps, createLogContext(this.logService, this))
+      return getNextInterval(now, timestamps, createLogContext(this.logService, this))
     }
-    this.timeout = setTimeout(this.updateMessages, nextInterval)
   }
 
   private toChatItem (item: AddChatItemAction): ChatItem {

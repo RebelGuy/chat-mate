@@ -20,6 +20,7 @@ import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import LivestreamService from '@rebel/server/services/LivestreamService'
+import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -39,6 +40,7 @@ const globalContext = ContextProvider.create()
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
   .withHelpers('experienceHelpers', ExperienceHelpers)
+  .withHelpers('timerHelpers', TimerHelpers)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
   .withClass('dbProvider', DbProvider)

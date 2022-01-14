@@ -1,6 +1,7 @@
 import { Livestream } from '@prisma/client'
 import { Action, AddChatItemAction, ChatResponse } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
+import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat } from '@rebel/server/interfaces'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import ChatService from '@rebel/server/services/ChatService'
@@ -44,6 +45,7 @@ let mockMasterchat: MockProxy<IMasterchat>
 let mockLogService: MockProxy<LogService>
 let mockExperienceService: MockProxy<ExperienceService>
 let mockViewershipStore: MockProxy<ViewershipStore>
+let mockTimerHelpers: MockProxy<TimerHelpers>
 let chatService: ChatService
 
 beforeEach(() => {
@@ -53,15 +55,19 @@ beforeEach(() => {
   mockLogService = mock<LogService>()
   mockExperienceService = mock<ExperienceService>()
   mockViewershipStore = mock<ViewershipStore>()
+  mockTimerHelpers = mock<TimerHelpers>()
 
   mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(currentLivestream)
   mockChatStore.getChatSince.mockResolvedValue([])
 
+  // automatically execute callback passed to TimerHelpers
+  mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
+    await options.callback()
+  })
+
   const mockMasterchatProvider = mockDeep<MasterchatProvider>({
     get: () => mockMasterchat
   })
-
-  jest.useFakeTimers()
 
   chatService = new ChatService(new Dependencies({
     chatStore: mockChatStore,
@@ -69,12 +75,9 @@ beforeEach(() => {
     logService: mockLogService,
     experienceService: mockExperienceService,
     viewershipStore: mockViewershipStore,
-    masterchatProvider: mockMasterchatProvider
+    masterchatProvider: mockMasterchatProvider,
+    timerHelpers: mockTimerHelpers
   }))
-})
-
-afterEach(() => {
-  jest.clearAllTimers()
 })
 
 describe(nameof(ChatService, 'start'), () => {
@@ -83,7 +86,7 @@ describe(nameof(ChatService, 'start'), () => {
 
     await chatService.start()
 
-    expect(() => chatService.start()).toThrow()
+    await expect(() => chatService.start()).rejects.toThrow()
   })
 
   test('uses continuation token when fetching and schedules new fetch', async () => {
@@ -91,8 +94,11 @@ describe(nameof(ChatService, 'start'), () => {
 
     await chatService.start()
 
+    // don't need to explicitly check return type of the callback because the type guard already checks this
+    const expectedTimerOptions: TimerOptions = { behaviour: 'dynamicEnd', callback: expect.any(Function) }
+    expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expectedTimerOptions, true])
+
     expect(single(single(mockMasterchat.fetch.mock.calls))).toBe(token1)
-    expect(jest.getTimerCount()).toBe(1)
   })
 
   test('quietly handles fetching error and reset continuation token', async () => {

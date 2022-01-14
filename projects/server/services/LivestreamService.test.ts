@@ -9,6 +9,7 @@ import { mock, mockDeep, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Livestream } from '@prisma/client'
+import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 
 function makeMetadata (status: LiveStatus): Metadata {
   return {
@@ -31,30 +32,30 @@ function makeStream (start: Date | null, end: Date | null): Livestream {
 let mockLivestreamStore: MockProxy<LivestreamStore>
 let mockMasterchat: MockProxy<IMasterchat>
 let mockLogService: MockProxy<LogService>
+let mockTimerHelpers: MockProxy<TimerHelpers>
 let livestreamService: LivestreamService
 
 beforeEach(() => {
   mockLivestreamStore = mock<LivestreamStore>()
   mockMasterchat = mock<IMasterchat>()
   mockLogService = mock<LogService>()
+  mockTimerHelpers = mock<TimerHelpers>()
+
+  // automatically execute callback passed to TimerHelpers
+  mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
+    return options.callback()
+  })
 
   const mockMasterchatProvider = mockDeep<MasterchatProvider>({
     get: () => mockMasterchat
   })
 
-  // for some reason we have to use the `legacy` option, else tests will time out.
-  // it seems like jest doesn't like setInterval() very much...
-  jest.useFakeTimers('legacy')
-
   livestreamService = new LivestreamService(new Dependencies({
     livestreamStore: mockLivestreamStore,
     logService: mockLogService,
-    masterchatProvider: mockMasterchatProvider
+    masterchatProvider: mockMasterchatProvider,
+    timerHelpers: mockTimerHelpers
   }))
-})
-
-afterEach(() => {
-  jest.clearAllTimers()
 })
 
 describe(nameof(LivestreamService, 'start'), () => {
@@ -103,13 +104,7 @@ describe(nameof(LivestreamService, 'start'), () => {
     mockMasterchat.fetchMetadata.mockResolvedValue(makeMetadata('not_started'))
 
     await livestreamService.start()
-    expect(mockMasterchat.fetchMetadata).toBeCalledTimes(1)
 
-    // don't use `runAllTimers`, as it will run into infinite recursion
-    jest.runOnlyPendingTimers()
-    expect(mockMasterchat.fetchMetadata).toBeCalledTimes(2)
-
-    jest.runOnlyPendingTimers()
-    expect(mockMasterchat.fetchMetadata).toBeCalledTimes(3)
+    expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expect.anything(), true])
   })
 })

@@ -1,6 +1,7 @@
 import { Livestream } from '@prisma/client'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
+import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat } from '@rebel/server/interfaces'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
@@ -11,7 +12,8 @@ export const METADATA_SYNC_INTERVAL_MS = 12_000
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
   masterchatProvider: MasterchatProvider,
-  logService: LogService
+  logService: LogService,
+  timerHelpers: TimerHelpers
 }>
 
 export default class LivestreamService {
@@ -20,34 +22,28 @@ export default class LivestreamService {
   private readonly livestreamStore: LivestreamStore
   private readonly masterchat: IMasterchat
   private readonly logService: LogService
-
-  private syncTimer: NodeJS.Timer | null = null
+  private readonly timerHelpers: TimerHelpers
 
   constructor (deps: Deps) {
     this.livestreamStore = deps.resolve('livestreamStore')
     this.masterchat = deps.resolve('masterchatProvider').get()
     this.logService = deps.resolve('logService')
+    this.timerHelpers = deps.resolve('timerHelpers')
   }
 
-  public async start () {
-    await this.updateLivestreamMetadata()
-
-    // IMPORTANT: notice that we are passing a sync function to setInterval - do not change this,
-    // otherwise fake timer tests break with no clear error message
-    this.syncTimer = setInterval(() => this.updateLivestreamMetadata(), METADATA_SYNC_INTERVAL_MS)
-  }
-
-  public dispose () {
-    if (this.syncTimer) {
-      clearInterval(this.syncTimer)
-      this.syncTimer = null
+  public async start (): Promise<void> {
+    const timerOptions: TimerOptions = {
+      behaviour: 'start',
+      callback: () => this.updateLivestreamMetadata(),
+      interval: METADATA_SYNC_INTERVAL_MS
     }
+    await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
   private async updateLivestreamMetadata () {
     try {
-      this.logService.logDebug(this, 'Syncing metadata')
       const metadata = await this.masterchat.fetchMetadata()
+      this.logService.logApi(this, 'masterchat.fetchMetadata', null, metadata)
       const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, metadata)
 
       if (updatedTimes) {
