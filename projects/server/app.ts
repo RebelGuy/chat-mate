@@ -21,6 +21,8 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
+import ChatMateController from '@rebel/server/controllers/ChatMateController'
+import StatusService from '@rebel/server/services/StatusService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -43,6 +45,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('timerHelpers', TimerHelpers)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
+  .withClass('statusService', StatusService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('livestreamStore', LivestreamStore)
@@ -71,6 +74,7 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const context = globalContext.asParent()
+    .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
     .build()
   setContextProvider(req, context)

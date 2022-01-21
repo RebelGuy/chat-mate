@@ -47,7 +47,6 @@ export default class LivestreamService {
   private async updateLivestreamMetadata () {
     try {
       const metadata = await this.masterchat.fetchMetadata()
-      this.logService.logApi(this, 'masterchat.fetchMetadata', null, metadata)
       const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, metadata)
 
       if (updatedTimes) {
@@ -57,8 +56,8 @@ export default class LivestreamService {
       if (metadata.liveStatus === 'live' && metadata.viewerCount != null) {
         await this.viewershipStore.addLiveViewCount(metadata.viewerCount)
       }
-    } catch (e) {
-      this.logService.logWarning(this, 'Encountered error while syncing metadata:', e)
+    } catch (e: any) {
+      this.logService.logWarning(this, 'Encountered error while syncing metadata:', e.message)
     }
   }
 

@@ -128,7 +128,7 @@ Key:
 
 # API Endpoints
 
-Use the API endpoints to communicate with the server while it is running.
+Use the API endpoints to communicate with the server while it is running. The API base URL is `http://localhost:3010/api`
 
 
 ## Chat Endpoints
@@ -147,7 +147,17 @@ Returns an object with the following properties:
 - `lastTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `chat` ([`ChatItem`](#ChatItem)[]): The chat data that satisfy the request filter.
 
+## ChatMate Endpoints
 
+### `GET /status`
+
+Gets the latest status information.
+
+Returns an object with the following properties:
+- `schema` (`1`): The current schema of the return object.
+- `timestamp` (`number`): The response timestamp.
+- `livestreamStatus` ([`LivestreamStatus`](#LivestreamStatus)): Status information relating to the current livestream.
+- `apiStatus` ([`ApiStatus`](#ApiStatus)): Status information relating to the YouTube API.
 
 # Data Types
 
@@ -187,3 +197,21 @@ Returns an object with the following properties:
 - `url` (`string`): The image URL for the emoji.
 - `width` (`number?`): The pixel width of the emoji image.
 - `height` (`number?`): The pixel height of the emoji image.
+
+## LivestreamStatus
+- `livestreamLink` (`string`): The public URL to the current livestream on YouTube.
+- `status` (`string`): The current livestream status.
+  - `not_started`: The livestream hasn't started yet.
+  - `live`: The livestream is currently ongoing.
+  - `finished`: The livestream has concluded.
+- `liveViewers` (`number | null`): The number of viewers currently watching the livestream. Set to `null` if `status` is not `live`, or if no information is available.
+- `startTime` (`number | null`): The timestamp at which the livestream has started. Set to `null` if `status` is `not_started`.
+- `endTime` (`number | null`): Time timestamp at which the livestream has finished. Set to `null` if `status` is not `finished`.
+
+## ApiStatus
+- `status` (`string | null`): The current status of the YouTube API.
+  - `null`: No information is available yet.
+  - `'ok'`: Everything is working correctly.
+  - `'error'`: Unable to reach the YouTube servers.
+- `lastOk` (`number | null`): The timestamp of the last time we have been able to successfully reach the YouTube servers. Set to `null` if no information is available yet.
+- `avgRoundtrip` (`number | null`): The average number milliseconds it has taken recent requests to receive a response. Set to `null` if no information is available yet.

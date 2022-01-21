@@ -75,7 +75,7 @@ export default class ExperienceHelpers {
     const uniqueEmojis = unique(emojis.map(e => e.name)).length
     const emojiQuality = clampNorm(uniqueEmojis, 0, 10, 0) * 2
 
-    return asRange(avg(lengthQuality, wordCountQuality, wordLengthQuality, uniqueCharactersQuality, emojiQuality), 0, 2)
+    return asRange(avg(lengthQuality, wordCountQuality, wordLengthQuality, uniqueCharactersQuality, emojiQuality)!, 0, 2)
   }
 
   public calculateParticipationMultiplier (participationWalkingScore: GreaterThanOrEqual<0>): GreaterThanOrEqual<1> {

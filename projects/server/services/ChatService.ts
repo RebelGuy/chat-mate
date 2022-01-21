@@ -79,10 +79,9 @@ export default class ChatService {
     const token = this.livestreamStore.currentLivestream.continuationToken
     try {
       const result = token ? await this.masterchat.fetch(token) : await this.masterchat.fetch()
-      this.logService.logApi(this, 'masterchat.fetch', { chatToken: token }, result)
       return result
     } catch (e: any) {
-      this.logService.logWarning(this, 'Fetch failed:', e.message)
+      this.logService.logWarning(this, 'Encountered error while fetching chat:', e.message)
       await this.livestreamStore.setContinuationToken(null)
       return null
     }

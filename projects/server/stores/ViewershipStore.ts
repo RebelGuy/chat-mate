@@ -1,4 +1,4 @@
-import { Livestream, ViewingBlock } from '@prisma/client'
+import { Livestream, LiveViewers, ViewingBlock } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -115,6 +115,13 @@ export default class ViewershipStore {
 
     this.lastSeenMap.set(channelId, result)
     return result
+  }
+
+  public async getLatestLiveCount (): Promise<{ time: Date, viewCount: number } | null> {
+    return this.db.liveViewers.findFirst({
+      where: { livestreamId: this.livestreamStore.currentLivestream.id },
+      orderBy: { time: 'desc' }
+    })
   }
 
   // returns streams in ascending order.
