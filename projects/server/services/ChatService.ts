@@ -1,6 +1,5 @@
 
 import { Dependencies } from '@rebel/server/context/context'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from "@rebel/masterchat"
 import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from "@rebel/server/models/chat"
@@ -12,6 +11,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -33,7 +33,7 @@ type Deps = Dependencies<{
   chatStore: ChatStore,
   livestreamStore: LivestreamStore,
   logService: LogService,
-  masterchatProvider: MasterchatProvider,
+  masterchatProxyService: MasterchatProxyService,
   experienceService: ExperienceService,
   viewershipStore: ViewershipStore,
   timerHelpers: TimerHelpers
@@ -54,7 +54,7 @@ export default class ChatService {
   constructor (deps: Deps) {
     this.chatStore = deps.resolve('chatStore')
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.masterchat = deps.resolve('masterchatProxyService')
     this.logService = deps.resolve('logService')
     this.experienceService = deps.resolve('experienceService')
     this.viewershipStore = deps.resolve('viewershipStore')

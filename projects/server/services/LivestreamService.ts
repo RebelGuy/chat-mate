@@ -3,8 +3,8 @@ import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 
@@ -12,7 +12,7 @@ export const METADATA_SYNC_INTERVAL_MS = 12_000
 
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
-  masterchatProvider: MasterchatProvider,
+  masterchatProxyService: MasterchatProxyService,
   logService: LogService,
   timerHelpers: TimerHelpers,
   viewershipStore: ViewershipStore
@@ -29,7 +29,7 @@ export default class LivestreamService {
 
   constructor (deps: Deps) {
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.masterchat = deps.resolve('masterchatProxyService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')

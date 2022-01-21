@@ -23,6 +23,7 @@ import LivestreamService from '@rebel/server/services/LivestreamService'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import ChatMateController from '@rebel/server/controllers/ChatMateController'
 import StatusService from '@rebel/server/services/StatusService'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -48,6 +49,7 @@ const globalContext = ContextProvider.create()
   .withClass('statusService', StatusService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
+  .withClass('masterchatProxyService', MasterchatProxyService)
   .withClass('livestreamStore', LivestreamStore)
   .withClass('viewershipStore', ViewershipStore)
   .withClass('livestreamService', LivestreamService)

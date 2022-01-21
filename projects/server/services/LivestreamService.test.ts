@@ -1,16 +1,15 @@
 import { Dependencies } from '@rebel/server/context/context'
-import { IMasterchat } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { mockGetter, nameof, single } from '@rebel/server/_test/utils'
-import { mock, mockDeep, MockProxy } from 'jest-mock-extended'
+import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Livestream } from '@prisma/client'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 
 function makeMetadata (status: LiveStatus): Metadata {
   return {
@@ -31,7 +30,7 @@ function makeStream (start: Date | null, end: Date | null): Livestream {
 }
 
 let mockLivestreamStore: MockProxy<LivestreamStore>
-let mockMasterchat: MockProxy<IMasterchat>
+let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
 let mockLogService: MockProxy<LogService>
 let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockViewershipStore: MockProxy<ViewershipStore>
@@ -39,7 +38,7 @@ let livestreamService: LivestreamService
 
 beforeEach(() => {
   mockLivestreamStore = mock<LivestreamStore>()
-  mockMasterchat = mock<IMasterchat>()
+  mockMasterchatProxyService = mock<MasterchatProxyService>()
   mockLogService = mock<LogService>()
   mockTimerHelpers = mock<TimerHelpers>()
   mockViewershipStore = mock<ViewershipStore>()
@@ -49,14 +48,10 @@ beforeEach(() => {
     return options.callback()
   })
 
-  const mockMasterchatProvider = mockDeep<MasterchatProvider>({
-    get: () => mockMasterchat
-  })
-
   livestreamService = new LivestreamService(new Dependencies({
     livestreamStore: mockLivestreamStore,
     logService: mockLogService,
-    masterchatProvider: mockMasterchatProvider,
+    masterchatProxyService: mockMasterchatProxyService,
     timerHelpers: mockTimerHelpers,
     viewershipStore: mockViewershipStore
   }))
@@ -65,7 +60,7 @@ beforeEach(() => {
 describe(nameof(LivestreamService, 'start'), () => {
   test('ignores times and views if receives `not_started` status from metadata', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
-    mockMasterchat.fetchMetadata.mockResolvedValue({ ...makeMetadata('not_started'), viewerCount: 2 })
+    mockMasterchatProxyService.fetchMetadata.mockResolvedValue({ ...makeMetadata('not_started'), viewerCount: 2 })
 
     await livestreamService.start()
 
@@ -75,7 +70,7 @@ describe(nameof(LivestreamService, 'start'), () => {
 
   test('passes to LivestreamStore if receives `live` status from metadata', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
-    mockMasterchat.fetchMetadata.mockResolvedValue(makeMetadata('live'))
+    mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('live'))
 
     await livestreamService.start()
 
@@ -86,7 +81,7 @@ describe(nameof(LivestreamService, 'start'), () => {
 
   test('passes to LivestreamStore if receives `finished` status from metadata', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
-    mockMasterchat.fetchMetadata.mockResolvedValue(makeMetadata('finished'))
+    mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('finished'))
 
     await livestreamService.start()
 
@@ -97,7 +92,7 @@ describe(nameof(LivestreamService, 'start'), () => {
 
   test('ignores if invalid status', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), new Date()))
-    mockMasterchat.fetchMetadata.mockResolvedValue(makeMetadata('live'))
+    mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('live'))
 
     await livestreamService.start()
 
@@ -106,7 +101,7 @@ describe(nameof(LivestreamService, 'start'), () => {
 
   test('updates metadata regularly', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
-    mockMasterchat.fetchMetadata.mockResolvedValue(makeMetadata('not_started'))
+    mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('not_started'))
 
     await livestreamService.start()
 
@@ -116,7 +111,7 @@ describe(nameof(LivestreamService, 'start'), () => {
   test('passes to ViewershipStore if receives live viewer count from metadata', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
     const metadata: Metadata = { ...makeMetadata('live'), viewerCount: 10 }
-    mockMasterchat.fetchMetadata.mockResolvedValue(metadata)
+    mockMasterchatProxyService.fetchMetadata.mockResolvedValue(metadata)
 
     await livestreamService.start()
 
