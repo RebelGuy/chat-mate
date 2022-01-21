@@ -118,10 +118,19 @@ export default class ViewershipStore {
   }
 
   public async getLatestLiveCount (): Promise<{ time: Date, viewCount: number } | null> {
-    return this.db.liveViewers.findFirst({
+    const result = await this.db.liveViewers.findFirst({
       where: { livestreamId: this.livestreamStore.currentLivestream.id },
       orderBy: { time: 'desc' }
     })
+
+    if (result) {
+      return {
+        time: result.time,
+        viewCount: result.viewCount
+      }
+    } else {
+      return null
+    }
   }
 
   // returns streams in ascending order.

@@ -173,6 +173,38 @@ export default () => {
     })
   })
 
+  describe(nameof(ViewershipStore, 'getLatestLiveCount'), () => {
+    test('returns null if no data exists for current livestream', async () => {
+      await db.liveViewers.create({ data: {
+        livestream: { connect: { liveId: 'id1' }},
+        viewCount: 2
+      }})
+
+      const result = await viewershipStore.getLatestLiveCount()
+
+      expect(result).toBeNull()
+    })
+
+    test('returns correct count and time for current livestream', async () => {
+      const data1 = { time: data.time1, viewCount: 1 }
+      const data2 = { time: data.time2, viewCount: 2 }
+      await db.liveViewers.create({ data: {
+        livestream: { connect: { liveId: 'id3' }},
+        viewCount: data1.viewCount,
+        time: data1.time
+      }})
+      await db.liveViewers.create({ data: {
+        livestream: { connect: { liveId: 'id3' }},
+        viewCount: data2.viewCount,
+        time: data2.time
+      }})
+
+      const result = await viewershipStore.getLatestLiveCount()
+
+      expect(result).toEqual(data2)
+    })
+  })
+
   describe(nameof(ViewershipStore, 'getLivestreamParticipation'), () => {
     test('returns empty array if no participation', async () => {
       const result = await viewershipStore.getLivestreamParticipation(data.channel1)

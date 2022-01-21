@@ -106,6 +106,7 @@ Key:
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation
   - 🟢 getLastSeen
+  - 🟢 getLatestLiveCount
   - 🟢 getLivestreamParticipation
   - 🟢 getLivestreamViewership
 
