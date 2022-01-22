@@ -138,7 +138,11 @@ export function clampNorm (value: number, min: number, max: number, centre?: num
   return returnValue as Norm
 }
 
-export function avg (...values: number[]): number {
+export function avg (...values: number[]): number | null {
+  if (values.length === 0) {
+    return null
+  }
+
   return sum(values) / values.length
 }
 

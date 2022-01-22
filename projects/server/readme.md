@@ -79,6 +79,9 @@ Key:
   - 🟢 getLevel
 - 🟢 LivestreamService
   - 🟢 start
+- 🟢 StatusService
+  - 🟢 getApiStatus
+  - 🟢 onMasterchatRequest
 - ⚪ FileService
 - ⚪ LogService
 
@@ -102,6 +105,9 @@ Key:
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
   - 🟢 setTimes
+- 🟢 MasterchatProxyService
+  - 🟢 fetch
+  - 🟢 fetchMetadata
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation

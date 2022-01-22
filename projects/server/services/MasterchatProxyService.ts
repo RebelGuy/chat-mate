@@ -66,7 +66,7 @@ export default class MasterchatProxyService implements IMasterchat {
         this.logService.logApiResponse(this, id, false, response)
       } catch (e) {
         error = e
-        this.logService.logApiResponse(this, id, false, e)
+        this.logService.logApiResponse(this, id, true, e)
       }
       const finishTime = Date.now()
 
