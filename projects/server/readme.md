@@ -128,7 +128,7 @@ Key:
   - 🟢 createRepeatingTimer
   - 🟢 dispose
 
-**Misc
+**Misc**
 - 🔴 util/math
 - 🔴 util/score
 

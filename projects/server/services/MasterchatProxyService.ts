@@ -41,9 +41,11 @@ export default class MasterchatProxyService implements IMasterchat {
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
-  private createWrapper (): IMasterchat {
-    const fetch = this.wrapRequest(this.masterchat.fetch, 'masterchat.fetch')
-    const fetchMetadata = this.wrapRequest(this.masterchat.fetchMetadata, 'masterchat.fetchMetadata')
+  private createWrapper = (): IMasterchat => {
+    // it is important that we wrap the `request` param as an anonymous function itself, because
+    // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
+    const fetch = this.wrapRequest((...args) => this.masterchat.fetch(...args), 'masterchat.fetch')
+    const fetchMetadata = this.wrapRequest(() => this.masterchat.fetchMetadata(), 'masterchat.fetchMetadata')
 
     return { fetch, fetchMetadata }
   }

@@ -1,17 +1,12 @@
 import { LiveStatus } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
-import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
-import { privateToPublicItems, PublicChatItem } from '@rebel/server/models/chat'
-import ExperienceService from '@rebel/server/services/ExperienceService'
 import StatusService, { ApiStatus } from '@rebel/server/services/StatusService'
-import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { ApiSchema } from '@rebel/server/types'
-import { unique } from '@rebel/server/util/arrays'
 import { getLivestreamLink } from '@rebel/server/util/text'
-import { GET, Path, QueryParam } from "typescript-rest"
+import { GET, Path } from "typescript-rest"
 
 type GetStatusResponse = ApiSchema<1, {
   // the timestamp at which the response was generated
@@ -55,7 +50,7 @@ export default class ChatMateController {
   }
 
   @GET
-  @Path('status')
+  @Path('/status')
   public async getStatus (): Promise<GetStatusResponse> {
     const livestreamStatus = await this.getLivestreamStatus()
     const apiStatus = this.statusService.getApiStatus()

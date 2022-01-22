@@ -89,13 +89,9 @@ Server.registerServiceFactory(new ServiceFactory())
 
 // tells the server which classes to use as Controllers
 Server.buildServices(app,
+  ChatMateController,
   ChatController,
 )
-
-// start
-app.listen(port, () => {
-  logContext.logInfo(`Server is listening on ${port}`)
-})
 
 const livestreamStore = globalContext.getClassInstance('livestreamStore')
 const livestreamService = globalContext.getClassInstance('livestreamService')
@@ -104,4 +100,9 @@ const chatService = globalContext.getClassInstance('chatService')
 livestreamStore.createLivestream().then(async () => {
   await livestreamService.start()
   await chatService.start()
+
+  // start
+  app.listen(port, () => {
+    logContext.logInfo(`Server is listening on ${port}`)
+  })
 })
