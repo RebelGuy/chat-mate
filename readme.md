@@ -34,6 +34,14 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.6 - The Dashboard Update [28/1/2022]
+- Server
+  - Added status endpoint
+  - Live viewer counts are now tracked
+  - Improved testability of services involving timers
+- Masterchat
+  - Now returns live viewer counts
+
 ## v1.5 - The Experience Update [8/1/2022]
 - Server
   - Added levelling - viewers gain levels by participating in the chat
