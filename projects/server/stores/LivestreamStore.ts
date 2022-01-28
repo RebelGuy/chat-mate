@@ -62,7 +62,7 @@ export default class LivestreamStore {
       throw new Error('No current livestream exists')
     }
 
-    return this.db.livestream.update({
+    return this._currentLivestream = await this.db.livestream.update({
       where: { liveId: this.liveId },
       data: { ...updatedTimes }
     })

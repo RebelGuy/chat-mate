@@ -79,8 +79,8 @@ export default class ChatMateController {
     }
 
     return {
-      startTime: livestream.start?.getDate() ?? null,
-      endTime: livestream.end?.getDate() ?? null,
+      startTime: livestream.start?.getTime() ?? null,
+      endTime: livestream.end?.getTime() ?? null,
       liveViewers: viewers?.viewCount ?? null,
       livestreamLink: link,
       status
