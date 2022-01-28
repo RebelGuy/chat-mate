@@ -1,16 +1,16 @@
 import { Livestream } from '@prisma/client'
-import { Action, AddChatItemAction, ChatResponse } from '@rebel/masterchat'
+import { AddChatItemAction, ChatResponse } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
-import { IMasterchat } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { mockGetter, nameof, single } from '@rebel/server/_test/utils'
-import { mock, mockDeep, MockProxy } from 'jest-mock-extended'
+import { mock, MockProxy } from 'jest-mock-extended'
 
 const token1 = 'token1'
 const token2 = 'token2'
@@ -40,28 +40,29 @@ const chatAction1: AddChatItemAction = {
 
 let mockChatStore: MockProxy<ChatStore>
 let mockLivestreamStore: MockProxy<LivestreamStore>
-let mockMasterchat: MockProxy<IMasterchat>
+let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
 let mockLogService: MockProxy<LogService>
 let mockExperienceService: MockProxy<ExperienceService>
 let mockViewershipStore: MockProxy<ViewershipStore>
+let mockTimerHelpers: MockProxy<TimerHelpers>
 let chatService: ChatService
 
 beforeEach(() => {
   mockChatStore = mock<ChatStore>()
   mockLivestreamStore = mock<LivestreamStore>()
-  mockMasterchat = mock<IMasterchat>()
+  mockMasterchatProxyService = mock<MasterchatProxyService>()
   mockLogService = mock<LogService>()
   mockExperienceService = mock<ExperienceService>()
   mockViewershipStore = mock<ViewershipStore>()
+  mockTimerHelpers = mock<TimerHelpers>()
 
   mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(currentLivestream)
   mockChatStore.getChatSince.mockResolvedValue([])
 
-  const mockMasterchatProvider = mockDeep<MasterchatProvider>({
-    get: () => mockMasterchat
+  // automatically execute callback passed to TimerHelpers
+  mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
+    await options.callback()
   })
-
-  jest.useFakeTimers()
 
   chatService = new ChatService(new Dependencies({
     chatStore: mockChatStore,
@@ -69,42 +70,42 @@ beforeEach(() => {
     logService: mockLogService,
     experienceService: mockExperienceService,
     viewershipStore: mockViewershipStore,
-    masterchatProvider: mockMasterchatProvider
+    masterchatProxyService: mockMasterchatProxyService,
+    timerHelpers: mockTimerHelpers
   }))
-})
-
-afterEach(() => {
-  jest.clearAllTimers()
 })
 
 describe(nameof(ChatService, 'start'), () => {
   test('throws when starting twice', async () => {
-    mockMasterchat.fetch.mockResolvedValue(createChatResponse())
+    mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse())
 
     await chatService.start()
 
-    expect(() => chatService.start()).toThrow()
+    await expect(() => chatService.start()).rejects.toThrow()
   })
 
   test('uses continuation token when fetching and schedules new fetch', async () => {
-    mockMasterchat.fetch.mockResolvedValue(createChatResponse())
+    mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse())
 
     await chatService.start()
 
-    expect(single(single(mockMasterchat.fetch.mock.calls))).toBe(token1)
-    expect(jest.getTimerCount()).toBe(1)
+    // don't need to explicitly check return type of the callback because the type guard already checks this
+    const expectedTimerOptions: TimerOptions = { behaviour: 'dynamicEnd', callback: expect.any(Function) }
+    expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expectedTimerOptions, true])
+
+    expect(single(single(mockMasterchatProxyService.fetch.mock.calls))).toBe(token1)
   })
 
   test('quietly handles fetching error and reset continuation token', async () => {
-    mockMasterchat.fetch.mockRejectedValue(new Error('Fetching failed'))
+    mockMasterchatProxyService.fetch.mockRejectedValue(new Error('Fetching failed'))
 
     await chatService.start()
 
-    expect(single(single(mockLivestreamStore.update.mock.calls))).toBe(null)
+    expect(single(single(mockLivestreamStore.setContinuationToken.mock.calls))).toBe(null)
   })
 
   test('passes chat items to ChatStore and ExperienceService', async () => {
-    mockMasterchat.fetch.mockResolvedValue(createChatResponse([chatAction1]))
+    mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse([chatAction1]))
 
     await chatService.start()
 

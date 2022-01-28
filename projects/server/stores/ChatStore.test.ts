@@ -146,7 +146,7 @@ export default () => {
     test('passes continuation token to livestream store', async () => {
       await chatStore.addChat('token', [])
 
-      expect(single(mockLivestreamStore.update.mock.calls)[0]).toBe('token')
+      expect(single(mockLivestreamStore.setContinuationToken.mock.calls)[0]).toBe('token')
     })
 
     test('adds chat item with ordered text message parts', async () => {

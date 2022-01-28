@@ -48,6 +48,17 @@ export default () => {
 
   afterEach(stopTestDb)
 
+  describe(nameof(ViewershipStore, 'addLiveViewCount'), () => {
+    test('correctly adds live viewer count', async () => {
+      const viewCount = 5
+
+      await viewershipStore.addLiveViewCount(viewCount)
+
+      const dbContents = (await db.liveViewers.findFirst())!
+      expect(dbContents).toEqual(expect.objectContaining({ livestreamId: data.livestream3.id, viewCount, time: expect.any(Date) }))
+    })
+  })
+
   describe(nameof(ViewershipStore, 'addViewershipForChatParticipation'), () => {
     test('adds new viewing block if user not seen before', async () => {
       await viewershipStore.addViewershipForChatParticipation(data.channel1, safeMsgTime3.getTime())
@@ -159,6 +170,38 @@ export default () => {
 
       expect(result.livestream.id).toBe(3)
       expect(result.time).toEqual(time6)
+    })
+  })
+
+  describe(nameof(ViewershipStore, 'getLatestLiveCount'), () => {
+    test('returns null if no data exists for current livestream', async () => {
+      await db.liveViewers.create({ data: {
+        livestream: { connect: { liveId: 'id1' }},
+        viewCount: 2
+      }})
+
+      const result = await viewershipStore.getLatestLiveCount()
+
+      expect(result).toBeNull()
+    })
+
+    test('returns correct count and time for current livestream', async () => {
+      const data1 = { time: data.time1, viewCount: 1 }
+      const data2 = { time: data.time2, viewCount: 2 }
+      await db.liveViewers.create({ data: {
+        livestream: { connect: { liveId: 'id3' }},
+        viewCount: data1.viewCount,
+        time: data1.time
+      }})
+      await db.liveViewers.create({ data: {
+        livestream: { connect: { liveId: 'id3' }},
+        viewCount: data2.viewCount,
+        time: data2.time
+      }})
+
+      const result = await viewershipStore.getLatestLiveCount()
+
+      expect(result).toEqual(data2)
     })
   })
 

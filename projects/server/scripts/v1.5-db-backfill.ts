@@ -20,6 +20,10 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { addTime } from '@rebel/server/util/datetime'
 
+// ************************************
+// ************ DEPRECATED ************
+// ************************************
+
 // CHAT-110, CHAT-103, CHAT-107
 // run using
 //   yarn workspace server cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/debug/server/scripts/v1.5-db-backfill.js --inspect

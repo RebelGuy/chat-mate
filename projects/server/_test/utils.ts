@@ -42,7 +42,7 @@ export function promised<T> (value: T): Promise<T> {
   return new Promise(res => res(value))
 }
 
-export function deleteProps<T, Prop extends keyof T>(obj: T, ...props: Prop[]): Omit<T, Prop> {
+export function deleteProps<T, Prop extends keyof T> (obj: T, ...props: Prop[]): Omit<T, Prop> {
   const result = { ...obj }
   for (const prop of props) {
     delete result[prop]

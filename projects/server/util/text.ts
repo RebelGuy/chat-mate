@@ -50,6 +50,10 @@ export function getLiveId (linkOrId: string): string {
   }
 }
 
+export function getLivestreamLink (liveId: string) {
+  return `https://youtu.be/${liveId}`
+}
+
 // converts a camelCase or PascalCase word to CONSTANT_CASE.
 // short sequential characters like 'ID' are treated as a single part of the word. 
 export function toConstCase (word: string): string {

@@ -1,6 +1,5 @@
 
 import { Dependencies } from '@rebel/server/context/context'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from "@rebel/masterchat"
 import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from "@rebel/server/models/chat"
@@ -11,6 +10,8 @@ import LogService, { createLogContext, LogContext } from '@rebel/server/services
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -32,9 +33,10 @@ type Deps = Dependencies<{
   chatStore: ChatStore,
   livestreamStore: LivestreamStore,
   logService: LogService,
-  masterchatProvider: MasterchatProvider,
+  masterchatProxyService: MasterchatProxyService,
   experienceService: ExperienceService,
-  viewershipStore: ViewershipStore
+  viewershipStore: ViewershipStore,
+  timerHelpers: TimerHelpers
 }>
 
 export default class ChatService {
@@ -45,51 +47,47 @@ export default class ChatService {
   private readonly masterchat: IMasterchat
   private readonly experienceService: ExperienceService
   private readonly viewershipStore: ViewershipStore
+  private readonly timerHelpers: TimerHelpers
 
-  private timeout: NodeJS.Timeout | null = null
+  private initialised: boolean = false
 
   constructor (deps: Deps) {
     this.chatStore = deps.resolve('chatStore')
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.masterchat = deps.resolve('masterchatProxyService')
     this.logService = deps.resolve('logService')
     this.experienceService = deps.resolve('experienceService')
     this.viewershipStore = deps.resolve('viewershipStore')
+    this.timerHelpers = deps.resolve('timerHelpers')
   }
 
   // await this method when initialising the service to guarantee an initial fetch
-  start (): Promise<void> {
-    if (this.timeout) {
+  public async start (): Promise<void> {
+    if (this.initialised) {
       throw new Error('Cannot start ChatService because it has already been started')
     }
+    this.initialised = true
 
-    return this.updateMessages()
-  }
-
-  dispose () {
-    if (this.timeout) {
-      clearTimeout(this.timeout)
+    const timerOptions: TimerOptions = {
+      behaviour: 'dynamicEnd',
+      callback: this.updateMessages
     }
+    await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
   private fetchLatest = async () => {
     const token = this.livestreamStore.currentLivestream.continuationToken
     try {
       const result = token ? await this.masterchat.fetch(token) : await this.masterchat.fetch()
-      this.logService.logApi(this, 'masterchat.fetch', { chatToken: token }, result)
       return result
     } catch (e: any) {
-      this.logService.logWarning(this, 'Fetch failed:', e.message)
-      await this.livestreamStore.update(null)
+      this.logService.logWarning(this, 'Encountered error while fetching chat:', e.message)
+      await this.livestreamStore.setContinuationToken(null)
       return null
     }
   }
 
   private updateMessages = async () => {
-    if (this.timeout) {
-      clearTimeout(this.timeout)
-    }
-
     const response = await this.fetchLatest()
 
     let hasNewChat: boolean = false
@@ -110,16 +108,14 @@ export default class ChatService {
     }
 
     // if we received a new message, immediately start checking for another one
-    let nextInterval
     if (hasNewChat) {
-      nextInterval = MIN_INTERVAL
+      return MIN_INTERVAL
     } else {
       const now = Date.now()
       const chat = await this.chatStore.getChatSince(now - LIMIT)
       const timestamps = chat.map(c => c.time.getTime())
-      nextInterval = getNextInterval(now, timestamps, createLogContext(this.logService, this))
+      return getNextInterval(now, timestamps, createLogContext(this.logService, this))
     }
-    this.timeout = setTimeout(this.updateMessages, nextInterval)
   }
 
   private toChatItem (item: AddChatItemAction): ChatItem {

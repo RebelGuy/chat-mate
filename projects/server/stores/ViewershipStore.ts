@@ -1,4 +1,4 @@
-import { Livestream, ViewingBlock } from '@prisma/client'
+import { Livestream, LiveViewers, ViewingBlock } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -30,6 +30,13 @@ export default class ViewershipStore {
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.lastSeenMap = new Map()
+  }
+
+  public async addLiveViewCount (count: number): Promise<void> {
+    await this.db.liveViewers.create({ data: {
+      livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+      viewCount: count
+    }})
   }
 
   /** Adds/extends a viewing block for this channel for the given time. Ignores if there is viewing data AFTER the given time. (do not use for backfilling).
@@ -108,6 +115,22 @@ export default class ViewershipStore {
 
     this.lastSeenMap.set(channelId, result)
     return result
+  }
+
+  public async getLatestLiveCount (): Promise<{ time: Date, viewCount: number } | null> {
+    const result = await this.db.liveViewers.findFirst({
+      where: { livestreamId: this.livestreamStore.currentLivestream.id },
+      orderBy: { time: 'desc' }
+    })
+
+    if (result) {
+      return {
+        time: result.time,
+        viewCount: result.viewCount
+      }
+    } else {
+      return null
+    }
   }
 
   // returns streams in ascending order.

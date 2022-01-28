@@ -5,8 +5,9 @@ import {
   UnavailableError,
 } from "../errors";
 import { runsToString } from "../utils";
-import { YTInitialData, YTPlayabilityStatus } from "../interfaces/yt/context";
-import { LiveStatus } from '@rebel/masterchat'
+import { VideoPrimaryInfoRenderer, YTInitialData, YTPlayabilityStatus } from "../interfaces/yt/context";
+import { LiveStatus, Metadata } from '@rebel/masterchat'
+import { YTRunContainer, YTSimpleTextContainer, YTText, YTTextRun } from '@rebel/masterchat/interfaces/yt/chat'
 
 // OK duration=">0" => Archived (replay chat may be available)
 // OK duration="0" => Live (chat may be available)
@@ -69,7 +70,7 @@ export function findPlayabilityStatus(
 // private video https://www.youtube.com/embed/UUjdYGda4N4
 // 200 OK
 
-export async function parseMetadataFromEmbed(html: string) {
+export async function parseMetadataFromEmbed (html: string) {
   const epr = findEPR(html);
 
   const ps = epr.previewPlayabilityStatus;
@@ -104,7 +105,7 @@ export async function parseMetadataFromEmbed(html: string) {
   };
 }
 
-export function parseMetadataFromWatch(html: string) {
+export function parseMetadataFromWatch (html: string): Omit<Metadata, 'videoId'> {
   const initialData = findInitialData(html)!;
 
   const playabilityStatus = findPlayabilityStatus(html);
@@ -122,6 +123,8 @@ export function parseMetadataFromWatch(html: string) {
   const channelId = videoOwner.navigationEndpoint.browseEndpoint.browseId;
   const channelName = runsToString(videoOwner.title.runs);
   const isLive = primaryInfo.viewCount!.videoViewCountRenderer.isLive ?? false;
+
+  const viewCount = parseViewCount(primaryInfo)
 
   const dateText = primaryInfo.dateText.simpleText.toLowerCase().trim()
   let liveStatus: LiveStatus
@@ -144,6 +147,44 @@ export function parseMetadataFromWatch(html: string) {
     channelId,
     channelName,
     isLive,
-    liveStatus
+    liveStatus,
+
+    // undefined view count can be interpreted as zero viewers if we are live
+    viewerCount: viewCount ?? (liveStatus === 'live' ? 0 : undefined)
   };
+}
+
+function parseViewCount (primaryInfo: VideoPrimaryInfoRenderer): number | undefined {
+  // when viewers are watching, there is a "n watching now" message under the livestream.
+  // for some reason, this can be broken up into multiple runs
+  const viewCountContainer = primaryInfo.viewCount?.videoViewCountRenderer.viewCount as YTText | {};
+
+  let viewCountText: string | null = null
+  if (isYtSimpleTextContainer(viewCountContainer)) {
+    viewCountText = viewCountContainer.simpleText.split(' ')[0]
+  } else if (isYtRunContainer(viewCountContainer)) {
+    const runs = viewCountContainer.runs
+    if (runs.length > 0 && isYtTextRun(runs[0])) {
+      viewCountText = runs[0].text.split(' ')[0]
+    }
+  }
+
+  if (viewCountText == null) {
+    return undefined
+  } else {
+    const parsed = Number(viewCountText.replace(',', ''))
+    return parsed == null || isNaN(parsed) ? undefined : parsed
+  }
+}
+
+function isYtSimpleTextContainer (obj: unknown): obj is YTSimpleTextContainer {
+  return Object.getOwnPropertyNames(obj).includes('simpleText')
+}
+
+function isYtRunContainer (obj: unknown): obj is YTRunContainer {
+  return Object.getOwnPropertyNames(obj).includes('runs')
+}
+
+function isYtTextRun (obj: unknown): obj is YTTextRun {
+  return Object.getOwnPropertyNames(obj).includes('text')
 }

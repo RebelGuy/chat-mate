@@ -18,6 +18,9 @@
     // related to data migrations - ignore for now
     "./scripts/migrations/_dataMigrationTemplate.ts",
     "./scripts/migrations/applyMigrations.ts",
-    "./scripts/migrations/migrateData.ts"
+    "./scripts/migrations/migrateData.ts",
+
+    // old scripts we don't want to continue maintaining
+    "./scripts/v1.5-db-backfill.ts"
   ]
 }

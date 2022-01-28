@@ -19,6 +19,11 @@ import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import LivestreamService from '@rebel/server/services/LivestreamService'
+import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
+import ChatMateController from '@rebel/server/controllers/ChatMateController'
+import StatusService from '@rebel/server/services/StatusService'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -38,13 +43,17 @@ const globalContext = ContextProvider.create()
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
   .withHelpers('experienceHelpers', ExperienceHelpers)
+  .withHelpers('timerHelpers', TimerHelpers)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
+  .withClass('statusService', StatusService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
+  .withClass('masterchatProxyService', MasterchatProxyService)
   .withClass('livestreamStore', LivestreamStore)
-  .withClass('experienceStore', ExperienceStore)
   .withClass('viewershipStore', ViewershipStore)
+  .withClass('livestreamService', LivestreamService)
+  .withClass('experienceStore', ExperienceStore)
   .withClass('experienceService', ExperienceService)
   .withClass('channelStore', ChannelStore)
   .withClass('chatStore', ChatStore)
@@ -67,6 +76,7 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const context = globalContext.asParent()
+    .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
     .build()
   setContextProvider(req, context)
@@ -79,15 +89,20 @@ Server.registerServiceFactory(new ServiceFactory())
 
 // tells the server which classes to use as Controllers
 Server.buildServices(app,
+  ChatMateController,
   ChatController,
 )
 
-// start
-app.listen(port, () => {
-  logContext.logInfo(`Server is listening on ${port}`)
-})
-
 const livestreamStore = globalContext.getClassInstance('livestreamStore')
+const livestreamService = globalContext.getClassInstance('livestreamService')
 const chatService = globalContext.getClassInstance('chatService')
 
-livestreamStore.createLivestream().then(() => chatService.start())
+livestreamStore.createLivestream().then(async () => {
+  await livestreamService.start()
+  await chatService.start()
+
+  // start
+  app.listen(port, () => {
+    logContext.logInfo(`Server is listening on ${port}`)
+  })
+})

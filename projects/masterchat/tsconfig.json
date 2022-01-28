@@ -1,12 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
-  "exclude": ["tools", "lib"],
+  "exclude": ["**/__tests__", "**/*.test.ts", "tools", "lib"],
   "compilerOptions": {
     "composite": true,
     "target": "es2020",
     "module": "commonjs",
-    "outDir": "../../dist/debug/masterchat",
-    "sourceRoot": "./src"
+    "outDir": "../../dist/debug/masterchat"
   },
   "include": [
     "./**/*"
