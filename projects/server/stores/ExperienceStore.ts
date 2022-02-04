@@ -76,7 +76,7 @@ export default class ExperienceStore {
     this.cacheChatExperience(channelId, experienceTransaction)
   }
 
-  public async getLatestSnapshot (channelId: string): Promise<ExperienceSnapshot | null> {
+  public getLatestSnapshot (channelId: string): Promise<ExperienceSnapshot | null> {
     return this.db.experienceSnapshot.findFirst({
       where: { channel: { youtubeId: channelId }},
       orderBy: { time: 'desc' }
@@ -84,7 +84,7 @@ export default class ExperienceStore {
   }
 
   // in ascending order
-  public async getTransactionsStartingAt (channelId: string, timestamp: number): Promise<ExperienceTransaction[]> {
+  public getTransactionsStartingAt (channelId: string, timestamp: number): Promise<ExperienceTransaction[]> {
     return this.db.experienceTransaction.findMany({
       where: {
         channel: { youtubeId: channelId },

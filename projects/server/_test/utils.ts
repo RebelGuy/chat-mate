@@ -34,6 +34,7 @@ export function mockGetter<T, GetterName extends NonFunctionPropertyNames<T>> (o
 
 // gets the jes.fn() object of the mocked getter
 export function getGetterMock<T, GetterName extends NonFunctionPropertyNames<T>> (obj: MockProxy<T>, getterName: GetterName) {
+  // eslint-disable-next-line @typescript-eslint/unbound-method
   const mockedGetter = Object.getOwnPropertyDescriptor(obj, getterName)!.get as jest.Mock<T[GetterName], []>
   return mockedGetter
 }

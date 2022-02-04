@@ -2,9 +2,11 @@ import { Branded } from '@rebel/server/types'
 import { List, isList } from 'immutable'
 
 // hack: https://github.com/microsoft/TypeScript/issues/31752
+// eslint-disable-next-line @typescript-eslint/no-loss-of-precision
 export const negativeInfinity = -1e999
+// eslint-disable-next-line @typescript-eslint/no-loss-of-precision
 export const positiveInfinity = 1e999
-export const eps: 1e-10 = 1e-10
+export const eps = 1e-10 as const
 export type NegativeInfinity = typeof negativeInfinity
 export type PositiveInfinity = typeof positiveInfinity
 export type Eps = typeof eps
@@ -67,8 +69,8 @@ export function clamp<Min extends number, Max extends null> (value: number, min:
 export function clamp<Min extends null, Max extends null> (value: number, min: Min, max: Max): NumRange<NegativeInfinity, PositiveInfinity>
 export function clamp<Min extends number | null, Max extends number | null> (value: number, min: Min, max: Max)
   : NumRange<null extends Min ? NegativeInfinity : Exclude<Min, null>, null extends Max ? PositiveInfinity : Exclude<Max, null>> {
-  let _min = min == null ? negativeInfinity : min
-  let _max = max == null ? positiveInfinity : max
+  const _min = min == null ? negativeInfinity : min
+  const _max = max == null ? positiveInfinity : max
 
   // ugly `as` typing because typescript keeps casting to `number`
   return (value < _min ? _min : value > _max ? _max : value) as NumRange<null extends Min ? NegativeInfinity : Exclude<Min, null>, null extends Max ? PositiveInfinity : Exclude<Max, null>>

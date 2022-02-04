@@ -2,7 +2,6 @@ import { Action, AddChatItemAction, ChatResponse, Metadata, YTRun } from '@rebel
 import { IMasterchat } from '@rebel/server/interfaces'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import LogService from '@rebel/server/services/LogService'
-import ChatStore from '@rebel/server/stores/ChatStore'
 import { MakeRequired } from '@rebel/server/types'
 import { listenForUserInput } from '@rebel/server/util/input'
 
@@ -54,7 +53,7 @@ export default class MockMasterchat implements IMasterchat {
       }
     }
 
-    let item: ChatItemWithRelations = generateFakeChatItem(customMessage)
+    const item: ChatItemWithRelations = generateFakeChatItem(customMessage)
     const channelInfo = item.channel.infoHistory[0]!
     const action: MakeRequired<AddChatItemAction> = {
       type: 'addChatItemAction',
@@ -98,6 +97,7 @@ export default class MockMasterchat implements IMasterchat {
     return MockMasterchat.buildResponse(action)
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   public async fetchMetadata (): Promise<Metadata> {
     return {
       channelId: 'mock channel id',

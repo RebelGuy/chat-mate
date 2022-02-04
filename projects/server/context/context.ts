@@ -1,9 +1,9 @@
-import { Branded } from '@rebel/server/types'
+import { Branded, GenericObject } from '@rebel/server/types'
 
 // make sure we don't accidentally override non-context-related properties when assigning the context to an object
 const CONTEXT_SYMBOL = Symbol('context')
 
-export type Injectable = {}
+export type Injectable = GenericObject
 
 export enum _BuiltContextBrand { }
 export type BuiltContext<TClasses, TObjects, TProperties> = Branded<ContextProvider<TClasses, TObjects, TProperties>, _BuiltContextBrand>
@@ -19,7 +19,7 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
     this.isDisposed = false
   }
 
-  public static create (): ContextProvider<{}, {}, {}> {
+  public static create (): ContextProvider<GenericObject, GenericObject, GenericObject> {
     return new ContextProvider({}, false)
   }
 
@@ -157,7 +157,7 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
   // instantiate the class using the current dependencies and add the new instance to the dependencies
   public withClass<Name extends DepName, ClassType> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType)
     : ServiceBuilder<TClasses & StoredClass<Name, ClassType>, TObjects, TProperties>
-    {
+  {
     this.assertUniqueDependency(name)
 
     const newStoredClass = {
@@ -172,7 +172,7 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
     return new ServiceBuilder(newDependencies)
   }
 
-  public withObject<Name extends DepName, ObjType extends Injectable>(name: Name, object: ObjType)
+  public withObject<Name extends DepName, ObjType extends Injectable> (name: Name, object: ObjType)
     : ServiceBuilder<TClasses, TObjects & StoredObject<Name, ObjType>, TProperties> {
     this.assertUniqueDependency(name)
 
@@ -188,7 +188,7 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
     return new ServiceBuilder(newDependencies)
   }
 
-  public withProperty<Name extends DepName, PropType extends string | number | boolean | null>(name: Name, prop: PropType)
+  public withProperty<Name extends DepName, PropType extends string | number | boolean | null> (name: Name, prop: PropType)
     : ServiceBuilder<TClasses, TObjects, TProperties & StoredProperty<Name, PropType>> {
     this.assertUniqueDependency(name)
 
@@ -217,7 +217,7 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
     }
   }
 
-  private assertUniqueDependency(name: DepName) {
+  private assertUniqueDependency (name: DepName) {
     if (Object.keys(this.dependencies).includes(name)) {
       throw new Error(`Cannot add dependency with name ${name} because it already exists`)
     }

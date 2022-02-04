@@ -2,9 +2,23 @@
   "name": "chat-mate",
   "version": "1.6.0",
   "private": true,
-  "workspaces": { "packages": ["./projects/*"]},
+  "workspaces": {
+    "packages": [
+      "./projects/*"
+    ]
+  },
   "_moduleAliases": {
     "@rebel/server": "./dist/debug/server",
     "@rebel/masterchat": "./dist/debug/masterchat/src"
+  },
+  "devDependencies": {
+    "@types/eslint": "^8.4.1",
+    "@typescript-eslint/eslint-plugin": "^5.10.2",
+    "@typescript-eslint/parser": "^5.10.2",
+    "eslint": "^8.8.0"
+  },
+  "scripts": {
+    "lint-server": "eslint ./projects/server/**/*.ts",
+    "lint-server-error": "eslint ./projects/server/**/*.ts --quiet"
   }
 }

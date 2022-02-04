@@ -1,5 +1,4 @@
-import { OptionalKeys, Optionals } from '@rebel/server/types'
-import { URL } from 'node:url'
+import { OptionalKeys } from '@rebel/server/types'
 import dotenv from 'dotenv'
 import { toConstCase } from '@rebel/server/util/text'
 import assert from 'node:assert'
@@ -36,7 +35,7 @@ const injectedVariables: (keyof EnvironmentVariables)[] = [
 
 injectedVariables.map(variable => {
   const envName = toConstCase(variable)
-  const keys = Object.keys(process.env).filter(key => !key.startsWith("npm_"))
+  const keys = Object.keys(process.env).filter(key => !key.startsWith('npm_'))
   assert(keys.includes(envName), `Environment variable '${envName}' must be injected. Process.env keys: ${keys.join(', ')}`)
 })
 
@@ -91,7 +90,7 @@ export default function env<V extends keyof EnvironmentVariables> (variable: V):
   }
 
   let result
-  if (value === null || value!.length === 0) {
+  if (value === null || value.length === 0) {
     result = null
   } else {
     const processedValue = value.trim().toLowerCase()

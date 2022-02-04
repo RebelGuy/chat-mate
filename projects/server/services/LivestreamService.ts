@@ -69,35 +69,35 @@ export default class LivestreamService {
     }
 
     const existingStatus = LivestreamService.getLivestreamStatus(existingLivestream)
-      if (existingStatus === 'finished' && newStatus !== 'finished' || existingStatus === 'live' && newStatus === 'not_started') {
-        // invalid status
-        throw new Error(`Unable to update livestream times because current status '${existingStatus}' is incompatible with new status '${newStatus}'.`)
-      } else if (existingStatus === newStatus) {
-        return null
-      } else if (existingStatus === 'not_started' && newStatus === 'live') {
-        // just started
-        this.logService.logInfo(this, 'Livestream has started')
-        return {
-          start: new Date(),
-          end: existingLivestream.end
-        }
-      } else if (existingStatus === 'not_started' && newStatus === 'finished') {
-        // should not happen, but not impossible
-        this.logService.logWarning(this, 'Livestream has finished before it started - 0 duration')
-        return {
-          start: new Date(),
-          end: new Date()
-        }
-      } else if (existingStatus === 'live' && newStatus === 'finished') {
-        // just finished
-        this.logService.logInfo(this, 'Livestream has finished')
-        return {
-          start: existingLivestream.start,
-          end: new Date()
-        }
-      } else {
-        throw new Error('Did not expect to get here')
+    if (existingStatus === 'finished' && newStatus !== 'finished' || existingStatus === 'live' && newStatus === 'not_started') {
+      // invalid status
+      throw new Error(`Unable to update livestream times because current status '${existingStatus}' is incompatible with new status '${newStatus}'.`)
+    } else if (existingStatus === newStatus) {
+      return null
+    } else if (existingStatus === 'not_started' && newStatus === 'live') {
+      // just started
+      this.logService.logInfo(this, 'Livestream has started')
+      return {
+        start: new Date(),
+        end: existingLivestream.end
       }
+    } else if (existingStatus === 'not_started' && newStatus === 'finished') {
+      // should not happen, but not impossible
+      this.logService.logWarning(this, 'Livestream has finished before it started - 0 duration')
+      return {
+        start: new Date(),
+        end: new Date()
+      }
+    } else if (existingStatus === 'live' && newStatus === 'finished') {
+      // just finished
+      this.logService.logInfo(this, 'Livestream has finished')
+      return {
+        start: existingLivestream.start,
+        end: new Date()
+      }
+    } else {
+      throw new Error('Did not expect to get here')
+    }
   }
 
   private static getLivestreamStatus (livestream: Livestream): Exclude<LiveStatus, 'unknown'> {

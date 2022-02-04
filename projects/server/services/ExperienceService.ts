@@ -4,7 +4,7 @@ import { ChatItem } from '@rebel/server/models/chat'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { Eps, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
+import { GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 
 export type Level = {

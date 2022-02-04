@@ -44,6 +44,7 @@ beforeEach(() => {
   mockViewershipStore = mock<ViewershipStore>()
 
   // automatically execute callback passed to TimerHelpers
+  // eslint-disable-next-line @typescript-eslint/require-await
   mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
     return options.callback()
   })

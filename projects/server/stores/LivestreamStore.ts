@@ -52,7 +52,7 @@ export default class LivestreamStore {
     }
 
     return this._currentLivestream = await this.db.livestream.update({
-      where: { liveId: this._currentLivestream.liveId! },
+      where: { liveId: this._currentLivestream.liveId },
       data: { ...this._currentLivestream, continuationToken }
     })
   }

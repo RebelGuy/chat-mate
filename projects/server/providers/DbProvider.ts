@@ -20,8 +20,6 @@ export default class DbProvider implements IProvider<Db> {
   private readonly databaseUrl: string
   private readonly prismaClient: PrismaClient
 
-  private connected: boolean = false
-
   constructor (deps: Deps) {
     this.logService = deps.resolve('logService')
     this.databaseUrl = deps.resolve('databaseUrl')
@@ -70,12 +68,11 @@ export default class DbProvider implements IProvider<Db> {
   }
 
   public get (): Db {
-    if (!this.connected) {
-      // don't wait until the first query to connect, in case there is an issue
-      this.connected = true
-      this.prismaClient.$connect()
-    }
     return this.prismaClient as Db
+  }
+
+  public async start () {
+    await this.prismaClient.$connect()
   }
 
   public async dispose () {

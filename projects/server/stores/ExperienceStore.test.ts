@@ -73,6 +73,7 @@ export default () => {
         channel: true,
         livestream: true
       }}))!
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       delete (data1 as any).chatMessageYtId // hehe <:
       expect(added.delta).toBe(10)
       expect(added.time).toEqual(data.time1)

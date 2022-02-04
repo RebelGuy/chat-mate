@@ -1,5 +1,5 @@
-import { Request, Response } from "express"
-import { URLSearchParams } from "url"
+import { Request, Response } from 'express'
+import { URLSearchParams } from 'url'
 
 export const BASE_PATH = '/api'
 
@@ -13,7 +13,7 @@ export type QueryParams = {
   [p: string]: string | undefined;
 }
 
-export default async function Endpoint<Q extends QueryParams, R extends EndpointResponse> (handler: (queryParams: Q) => R | null) {
+export default function Endpoint<Q extends QueryParams, R extends EndpointResponse> (handler: (queryParams: Q) => R | null) {
   return (req: Request, res: Response) => {
     const urlParams = new URLSearchParams(req.url)
     const params = Object.fromEntries(urlParams) as Q

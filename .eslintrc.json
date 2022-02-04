@@ -1,0 +1,60 @@
+{
+  "root": true,
+  "env": { "node": true },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    // the parse is having trouble detecting which files to look for, so explicitly tell it using this special tsconfig.
+    // see https://github.com/typescript-eslint/typescript-eslint/issues/967
+    // and https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/parser/README.md#configuration
+    "project": [
+      "./tsconfig.eslint.json"
+    ],
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "ignorePatterns": [
+    "node_modules/*",
+    "dist/*",
+    "data/*"
+  ],
+  "rules": {
+    // see https://eslint.org/docs/rules/
+    "indent": ["warn", 2, { "flatTernaryExpressions": true } ],
+    "quotes": "off", // handled by ts
+    "semi": "off", // handled by ts
+    "space-before-function-paren": "warn",
+    "require-await": "off", // handled by ts
+    "no-unused-vars": "off", // handled by ts
+    "class-methods-use-this": "off", // not all members of a class should have to access `this,
+    "prefer-const": "warn",
+    "no-empty-function": "warn",
+    
+    // see https://typescript-eslint.io/rules
+    "@typescript-eslint/unbound-method": "error",
+    "@typescript-eslint/no-confusing-void-expression": ["warn", { "ignoreArrowShorthand": true }],
+    "@typescript-eslint/no-shadow": "warn",
+    "@typescript-eslint/require-await": "error",
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
+    "@typescript-eslint/no-unsafe-argument": "off",
+    "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unnecessary-type-assertion": "off",
+    "@typescript-eslint/restrict-template-expressions": "off",
+    "@typescript-eslint/restrict-plus-operands": "off",
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-unsafe-return": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/semi": ["warn", "never"],
+    "@typescript-eslint/quotes": ["warn", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
+    "@typescript-eslint/no-inferrable-types": "off",
+    "@typescript-eslint/no-namespace": "off"
+  }
+}

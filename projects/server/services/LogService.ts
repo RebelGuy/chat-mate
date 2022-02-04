@@ -40,7 +40,7 @@ export default class LogService {
   }
 
   public logApiRequest (logger: ILoggable, requestId: number, request: string, params: Record<string, any> | null) {
-    let stringifiedParams = params ? ` with params: ${JSON.stringify(params)}` : ''
+    const stringifiedParams = params ? ` with params: ${JSON.stringify(params)}` : ''
     this.log(logger, 'api',  [`Id #${requestId}`, `API request '${request}'${stringifiedParams} dispatched`])
   }
 

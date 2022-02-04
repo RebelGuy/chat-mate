@@ -11,8 +11,13 @@ const dbProvider = new DbProvider(new Dependencies({
   logService: mockDeep<LogService>(),
   databaseUrl: env('databaseUrl')
 }))
+let connected = false
 
 export async function startTestDb (): Promise<DbProvider> {
+  if (!connected) {
+    await dbProvider.start()
+    connected = true
+  }
   await semaphore.enter()
 
   // casting is fine because dbProvider actually returns the full object
@@ -45,9 +50,9 @@ async function clearDatabase (client: PrismaClient) {
 }
 
 // can be chained directly with toEqual(), and the whole chain must be awaited
-export function expectRowCount<Tables extends any[]>(...tables: Tables)
+export function expectRowCount<Tables extends any[]> (...tables: Tables)
   : jest.AndNot<jest.Matchers<Promise<void>, Promise<Tables['length'] extends 1 ? number : number[]>>>
-  {
+{
   const getRowCount = (table: any): number => table.count()
 
   if (tables.length === 1) {

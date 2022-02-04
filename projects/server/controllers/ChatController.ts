@@ -6,7 +6,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { ApiSchema } from '@rebel/server/types'
 import { unique } from '@rebel/server/util/arrays'
-import { GET, Path, QueryParam } from "typescript-rest"
+import { GET, Path, QueryParam } from 'typescript-rest'
 
 type GetChatResponse = ApiSchema<4, {
   liveId: string
@@ -57,7 +57,7 @@ export class ChatController {
     const uniqueIds = unique(channelIds)
 
     // since this is only a fetch request, we can run everything in parallel safely
-    let promises = uniqueIds.map(id => this.experienceService.getLevel(id))
+    const promises = uniqueIds.map(id => this.experienceService.getLevel(id))
     const results = await Promise.all(promises)
 
     const map: Map<string, LevelData> = new Map(

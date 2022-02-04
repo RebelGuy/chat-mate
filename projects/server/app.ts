@@ -1,8 +1,8 @@
 require('./_config')
-import express from "express"
-import { Server } from "typescript-rest"
-import { ChatController } from "@rebel/server/controllers/ChatController"
-import env from "./globals"
+import express from 'express'
+import { Server } from 'typescript-rest'
+import { ChatController } from '@rebel/server/controllers/ChatController'
+import env from './globals'
 import { ContextProvider, setContextProvider } from '@rebel/server/context/context'
 import ChatService from '@rebel/server/services/ChatService'
 import ServiceFactory from '@rebel/server/context/CustomServiceFactory'
@@ -93,11 +93,14 @@ Server.buildServices(app,
   ChatController,
 )
 
+const dbProvider = globalContext.getClassInstance('dbProvider')
 const livestreamStore = globalContext.getClassInstance('livestreamStore')
 const livestreamService = globalContext.getClassInstance('livestreamService')
 const chatService = globalContext.getClassInstance('chatService')
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 livestreamStore.createLivestream().then(async () => {
+  await dbProvider.start()
   await livestreamService.start()
   await chatService.start()
 

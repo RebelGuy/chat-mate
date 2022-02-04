@@ -39,6 +39,7 @@ export default class TimerHelpers {
     if (runImmediately) {
       // we can't make the function implementation async without making all overloads async as well,
       // so we have to add this little hack :)
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises, no-async-promise-executor
       return new Promise(async (resolve, reject) => {
         try {
           await timer.next()
@@ -55,7 +56,7 @@ export default class TimerHelpers {
   }
 
   public dispose () {
-    this.timers.forEach(t => t.dispose())
+    this.timers.forEach(t => { t.dispose() })
   }
 }
 
@@ -119,6 +120,7 @@ class Timer {
 
   private startTimer (interval: number) {
     // must pass in the anonymous function so `this` refers to the class instance.
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.timerObject = setTimeout(() => this.next(), interval)
   }
 

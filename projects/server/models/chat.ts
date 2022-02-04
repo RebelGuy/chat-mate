@@ -122,7 +122,7 @@ export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelD
       messageParts: item.chatMessageParts.map(part => {
         let partResult: PartialChatMessage
         if (part.text != null && part.emoji == null) {
-          const text = part.text!
+          const text = part.text
           partResult = {
             type: 'text',
             text: text.text,
@@ -130,7 +130,7 @@ export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelD
             isItalics: text.isItalics
           }
         } else if (part.text == null && part.emoji != null) {
-          const emoji = part.emoji!
+          const emoji = part.emoji
           partResult = {
             type: 'emoji',
             emojiId: emoji.youtubeId,

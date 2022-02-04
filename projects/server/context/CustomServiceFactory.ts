@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { ServiceContext, ServiceFactory } from 'typescript-rest'
 import { getContextProvider } from '@rebel/server/context/context'
 import { toCamelCase } from '@rebel/server/util/text'
 
 export default class CustomServiceFactory implements ServiceFactory {
   // Create a new service object. Called before each request handling, for each registered Controller.
-  // tslint:disable-next-line:ban-types
   public create (serviceClass: Function, context: ServiceContext) {
     // note: we can't simply instantiate the serviceClass and pass the dependencies to its constructor, because
     // `this` won't bind correctly and we won't be able to actually assign the dependencies to class fields.
@@ -16,7 +16,6 @@ export default class CustomServiceFactory implements ServiceFactory {
   // Return the type used to handle requests to the target service.
   // By default, returns the serviceClass received, but you can use this
   // to implement IoC integrations.
-  // tslint:disable-next-line:ban-types
   public getTargetClass (serviceClass: Function): FunctionConstructor {
     // pass through the default constructor
     return serviceClass as FunctionConstructor

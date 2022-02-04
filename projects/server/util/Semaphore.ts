@@ -2,9 +2,6 @@ export default class Semaphore {
   private current: number = 0
   private queue: (() => void)[] = []
 
-  constructor () {
-  }
-
   public async enter (): Promise<void> {
     if (this.current === 0) {
       this.current++
@@ -14,7 +11,7 @@ export default class Semaphore {
     }
   }
 
-  public async exit () {
+  public exit () {
     this.current--
     this.next()
   }

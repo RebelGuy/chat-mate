@@ -5,7 +5,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { List } from 'immutable';
+import { List } from 'immutable'
 
 export type ChatSave = {
   continuationToken: string | null
@@ -47,7 +47,7 @@ export default class ChatStore {
   }
 
   // returns ordered chat items
-  public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
+  public getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
     return this.db.chatMessage.findMany({
       where: {
         // same as using AND: {[...]}

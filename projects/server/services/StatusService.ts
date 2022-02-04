@@ -1,4 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
+import { GenericObject } from '@rebel/server/types'
 import { avg } from '@rebel/server/util/math'
 
 export type ApiStatus = {
@@ -12,9 +13,7 @@ export type ApiStatus = {
   avgRoundtrip: number | null
 }
 
-type Deps = Dependencies<{
-
-}>
+type Deps = Dependencies<GenericObject>
 
 export default class StatusService {
   private masterchatResponseTimes: number[]

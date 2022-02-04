@@ -1,6 +1,4 @@
-import { PositiveInfinity } from '@rebel/server/util/math'
-
-export type GenericObject = { [key: string]: any };
+export type GenericObject = Record<string, any>
 
 // to ensure that the type definitions across different consumers are synced, any changes
 // to the api response schema should be accompanied by a bump of the schema version -
