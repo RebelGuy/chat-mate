@@ -106,26 +106,27 @@ export default class ExperienceService {
 
     const diffs: LevelDiff[] = []
     for (const [channelId, txs] of channelTxs) {
-      if (txs.length <= 1) {
+      if (txs.length === 0) {
         continue
       }
 
       const endXp = await this.getTotalExperience(channelId)
-      const startXp = asGte(endXp - sum(txs.map(tx => tx.delta)) + txs[0].delta, 0)
+      // this was the experience *before the starting tx*
+      const startXp = asGte(endXp - sum(txs.map(tx => tx.delta)), 0)
       const startLevel = this.experienceHelpers.calculateLevel(startXp)
       const endLevel = this.experienceHelpers.calculateLevel(endXp)
-      
-      if (startLevel.level === endLevel.level) {
+      console.log(startXp, endXp)
+      if (startLevel.level >= endLevel.level) {
         continue
       }
 
-      // find the time at which the level transaction occurred. it must be between the first and second-last tx
+      // find the time at which the level transaction occurred.
       let transitionTime: number
-      let runningXp = endXp - txs.at(-1)!.delta
-      for (let i = txs.length - 2; i >= 0; i--) {
+      let runningXp = endXp
+      for (let i = txs.length - 1; i >= 0; i--) {
         runningXp -= txs[i].delta
-        if (i === 0 || this.experienceHelpers.calculateLevel(asGte(runningXp, 0)) < endLevel) {
-          transitionTime = txs[i + 1].time.getTime()
+        if (i === 0 || this.experienceHelpers.calculateLevel(asGte(runningXp, 0)).level < endLevel.level) {
+          transitionTime = txs[i].time.getTime()
           break
         }
       }
