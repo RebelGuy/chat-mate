@@ -33,14 +33,14 @@
     "require-await": "off", // handled by ts
     "no-unused-vars": "off", // handled by ts
     "class-methods-use-this": "off", // not all members of a class should have to access `this,
-    "prefer-const": "warn",
+    "prefer-const": "off",
     "no-empty-function": "warn",
     
     // see https://typescript-eslint.io/rules
     "@typescript-eslint/unbound-method": "error",
     "@typescript-eslint/no-confusing-void-expression": ["warn", { "ignoreArrowShorthand": true }],
     "@typescript-eslint/no-shadow": "warn",
-    "@typescript-eslint/require-await": "error",
+    "@typescript-eslint/require-await": "warn",
     "@typescript-eslint/no-unsafe-assignment": "off",
     "@typescript-eslint/no-unsafe-call": "off",
     "@typescript-eslint/no-unsafe-argument": "off",

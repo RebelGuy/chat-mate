@@ -1,16 +1,24 @@
+import { ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ExperienceHelpers, { SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem } from '@rebel/server/models/chat'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
+import { asGte, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
   totalExperience: GreaterThanOrEqual<0>,
   levelProgress: GreaterThanOrEqual<0> & LessThan<1>
+}
+
+export type LevelDiff = {
+  timestamp: number // at what time the last level transition occurred
+  channelId: string
+  startLevel: Level
+  endLevel: Level
 }
 
 type Deps = Dependencies<{
@@ -76,6 +84,61 @@ export default class ExperienceService {
       totalExperience,
       ...level
     }
+  }
+
+  /** Returns the level difference between now and the start time (inclusive) for
+   * each channel, where there is a difference of at least 1. */
+  public async getLevelDiffs (startTime: number): Promise<LevelDiff[]> {
+    const transactions = await this.experienceStore.getAllTransactionsStartingAt(startTime)
+    if (transactions.length === 0) {
+      return []
+    }
+
+    const channelTxs: Map<string, ExperienceTransaction[]> = new Map()
+    for (const tx of transactions) {
+      const channelId = tx.channel.youtubeId
+      if (!channelTxs.has(channelId)) {
+        channelTxs.set(channelId, [])
+      }
+
+      channelTxs.get(channelId)!.push(tx)
+    }
+
+    const diffs: LevelDiff[] = []
+    for (const [channelId, txs] of channelTxs) {
+      if (txs.length <= 1) {
+        continue
+      }
+
+      const endXp = await this.getTotalExperience(channelId)
+      const startXp = asGte(endXp - sum(txs.map(tx => tx.delta)) + txs[0].delta, 0)
+      const startLevel = this.experienceHelpers.calculateLevel(startXp)
+      const endLevel = this.experienceHelpers.calculateLevel(endXp)
+      
+      if (startLevel.level === endLevel.level) {
+        continue
+      }
+
+      // find the time at which the level transaction occurred. it must be between the first and second-last tx
+      let transitionTime: number
+      let runningXp = endXp - txs.at(-1)!.delta
+      for (let i = txs.length - 2; i >= 0; i--) {
+        runningXp -= txs[i].delta
+        if (i === 0 || this.experienceHelpers.calculateLevel(asGte(runningXp, 0)) < endLevel) {
+          transitionTime = txs[i + 1].time.getTime()
+          break
+        }
+      }
+
+      diffs.push({
+        channelId: channelId,
+        timestamp: transitionTime!,
+        startLevel: { ...startLevel, totalExperience: startXp },
+        endLevel: { ...endLevel, totalExperience: endXp }
+      })
+    }
+
+    return diffs
   }
 
   private async getTotalExperience (channelId: string): Promise<GreaterThanOrEqual<0>> {

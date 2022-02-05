@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
-import ExperienceService, { Level } from '@rebel/server/services/ExperienceService'
+import ExperienceService, { Level, LevelDiff } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { getGetterMock, mockGetter, nameof, single } from '@rebel/server/_test/utils'
@@ -159,5 +159,54 @@ describe(nameof(ExperienceService, 'getLevel'), () => {
     const result = await experienceService.getLevel(data.channel1)
 
     expect(result).toEqual({ level: 2, levelProgress: 0.1, totalExperience: expectedTotalXp})
+  })
+})
+
+describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
+  test('returns empty array if there are no xp transactions', async () => {
+    const time = data.time1.getTime()
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time).mockResolvedValue([])
+
+    const result = await experienceService.getLevelDiffs(time)
+
+    expect(result.length).toBe(0)
+  })
+
+  test.only('returns correct diffs', async () => {
+    const time1 = new Date()
+    const time2 = addTime(time1, 'seconds', 1)
+    const time3 = addTime(time1, 'seconds', 2)
+    const time4 = addTime(time1, 'seconds', 3)
+    const time5 = addTime(time1, 'seconds', 4)
+    const time6 = addTime(time1, 'seconds', 5)
+    const time7 = addTime(time1, 'seconds', 6)
+    const channel1 = { channel: { youtubeId: data.channel1 }}
+    const channel2 = { channel: { youtubeId: data.channel2 }}
+
+    const experienceSnapshot1: ExperienceSnapshot = { id: 1, channelId: 1, experience: 100, time: time1 }
+    const experienceSnapshot2: ExperienceSnapshot = { id: 2, channelId: 2, experience: 500, time: time2 }
+    
+    const transactions: (ExperienceTransaction & { channel: { youtubeId: string }})[] = [
+      { id: 1, channelId: 1, livestreamId: 1, time: time3, delta: 10, ...channel1 },
+      { id: 2, channelId: 1, livestreamId: 1, time: time4, delta: 20, ...channel1 },
+      { id: 3, channelId: 2, livestreamId: 1, time: time5, delta: 150, ...channel2 },
+      { id: 4, channelId: 2, livestreamId: 1, time: time6, delta: 160, ...channel2 },
+      { id: 5, channelId: 2, livestreamId: 1, time: time7, delta: 1, ...channel2 },
+    ]
+
+    mockExperienceStore.getLatestSnapshot.calledWith(data.channel1).mockResolvedValue(experienceSnapshot1)
+    mockExperienceStore.getLatestSnapshot.calledWith(data.channel2).mockResolvedValue(experienceSnapshot2)
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time3.getTime()).mockResolvedValue(transactions)
+    mockExperienceStore.getTransactionsStartingAt.calledWith(data.channel1, experienceSnapshot1.time.getTime()).mockResolvedValue(transactions.filter(tx => tx.channelId === 1))
+    mockExperienceStore.getTransactionsStartingAt.calledWith(data.channel2, experienceSnapshot2.time.getTime()).mockResolvedValue(transactions.filter(tx => tx.channelId === 2))
+    mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
+
+    const result = await experienceService.getLevelDiffs(time3.getTime())
+
+    const diff = single(result)
+    expect(diff.channelId).toBe(channel2.channel.youtubeId)
+    expect(diff.timestamp).toBe(time6.getTime())
+    expect(diff.startLevel).toEqual(expect.objectContaining({ level: 6, totalExperience: 650 }))
+    expect(diff.endLevel).toEqual(expect.objectContaining({ level: 8, totalExperience: 811 }))
   })
 })

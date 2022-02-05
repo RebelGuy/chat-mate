@@ -77,6 +77,7 @@ Key:
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
   - 🟢 getLevel
+  - 🟢 getLevelDiffs
 - 🟢 LivestreamService
   - 🟢 start
 - 🟢 StatusService
@@ -99,6 +100,7 @@ Key:
   - 🟢 addChatExperience
   - 🟢 getLatestSnapshot
   - 🟢 getPreviousChatExperience
+  - 🟢 getAllTransactionsStartingAt
   - 🟢 getTransactionsStartingAt
 - 🟢 LivestreamStore
   - 🟢 createLivestream
@@ -166,6 +168,18 @@ Returns an object with the following properties:
 - `livestreamStatus` ([`LivestreamStatus`](#LivestreamStatus)): Status information relating to the current livestream.
 - `apiStatus` ([`ApiStatus`](#ApiStatus)): Status information relating to the YouTube API.
 
+### `GET /events`
+
+Gets the events since the specified time.
+
+Query parameters:
+- `since` (number): Gets only events **after** the given time (unix ms).
+
+Returns an object with the following properties:
+- `schema` (`1`): The current schema of the return object.
+- `timestamp` (`number`): The response timestamp. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+- `events` ([`Event`](#event)`[]`): The list of events that have occurred since the given timestamp.
+
 # Data Types
 
 
@@ -222,3 +236,17 @@ Returns an object with the following properties:
   - `'error'`: Unable to reach the YouTube servers.
 - `lastOk` (`number | null`): The timestamp of the last time we have been able to successfully reach the YouTube servers. Set to `null` if no information is available yet.
 - `avgRoundtrip` (`number | null`): The average number milliseconds it has taken recent requests to receive a response. Set to `null` if no information is available yet.
+
+## Event
+
+- `type` (`string`): The event type. Must be one of the following values:
+  - `levelUp`: A [level up event](#levelup-event).
+- `timestamp` (`number`): The timestamp at which this event occurred.
+- `data` (`object`): Data for the event. The shape depends on the event type.
+
+### `levelUp` Event
+Occurrs when the experience level of a user changes by at least 1.
+
+- `author` (`string`): The name of the channel that levelled up.
+- `oldLevel` (`number`): The experience level at the beginning of the event check period.
+- `newLevel` (`number`): The current experience level.

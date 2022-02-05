@@ -26,10 +26,14 @@ export default class ExperienceStore {
   // value is null if we know there is no data for a particular channel
   private readonly chatExperienceMap: Map<string, ChatExperience | null>
 
+  // the timestamp cache of the last experience transaction, if known
+  private lastTransactionTime: number | null
+
   constructor (deps: Deps) {
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.chatExperienceMap = new Map()
+    this.lastTransactionTime = null
   }
 
   // returns the previous chat experience, may not be for the current livestream
@@ -84,7 +88,12 @@ export default class ExperienceStore {
   }
 
   // in ascending order
-  public getTransactionsStartingAt (channelId: string, timestamp: number): Promise<ExperienceTransaction[]> {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  public async getTransactionsStartingAt (channelId: string, timestamp: number): Promise<ExperienceTransaction[]> {
+    if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
+      return []
+    }
+
     return this.db.experienceTransaction.findMany({
       where: {
         channel: { youtubeId: channelId },
@@ -92,6 +101,29 @@ export default class ExperienceStore {
       },
       orderBy: { time: 'asc' }
     })
+  }
+
+  /** Returns the transactions in ascending order. */
+  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { channel: { youtubeId: string }})[]> {
+    if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
+      return []
+    }
+
+    const transactions = await this.db.experienceTransaction.findMany({
+      where: { time: { gte: new Date(timestamp) }},
+      orderBy: { time: 'asc' },
+      include: { channel: { select: { youtubeId: true }}}
+    })
+
+    // update cache
+    if (transactions.length > 0) {
+      const time = transactions.at(-1)!.time.getTime()
+      if (this.lastTransactionTime == null || time > this.lastTransactionTime) {
+        this.lastTransactionTime = time
+      }
+    }
+
+    return transactions
   }
 
   private cacheChatExperience (channelId: string, experienceTransaction: (Omit<ChatExperience, 'experienceDataChatMessage'> & { experienceDataChatMessage: (ExperienceDataChatMessage & { chatMessage: ChatMessage }) | null }) | null)

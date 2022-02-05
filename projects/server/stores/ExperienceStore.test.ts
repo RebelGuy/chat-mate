@@ -7,6 +7,7 @@ import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { deleteProps, mockGetter, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
+import { addTime } from '@rebel/server/util/datetime'
 
 export default () => {
   const chatExperienceData1 = deleteProps(data.chatExperienceData1, 'chatMessageYtId')
@@ -187,6 +188,59 @@ export default () => {
       expect(result.time).toEqual(data.time2)
       expect(result.livestream.id).toBe(data.livestream1.id)
       expect(result.experienceDataChatMessage).toEqual(expect.objectContaining(chatExperienceData2))
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'getAllTransactionsStartingAt'), () => {
+    test('returns empty array if no transactions at/after specified time', async () => {
+      await db.experienceTransaction.create({ data: {
+        delta: 10,
+        time: data.time1,
+        channel: { connect: { youtubeId: data.channel1 }},
+        livestream: { connect: { liveId: data.livestream1.liveId }}
+      }})
+      await db.experienceTransaction.create({ data: {
+        delta: 20,
+        time: data.time2,
+        channel: { connect: { youtubeId: data.channel2 }},
+        livestream: { connect: { liveId: data.livestream1.liveId }}
+      }})
+
+      const result = await experienceStore.getAllTransactionsStartingAt(data.time3.getTime())
+
+      expect(result.length).toBe(0)
+    })
+
+    test('returns array of correct transactions, including the one starting on the same time', async () => {
+      await db.experienceTransaction.create({ data: {
+        delta: 10,
+        time: data.time1,
+        channel: { connect: { youtubeId: data.channel1 }},
+        livestream: { connect: { liveId: data.livestream1.liveId }}
+      }})
+      await db.experienceTransaction.create({ data: {
+        delta: 20,
+        time: data.time2,
+        channel: { connect: { youtubeId: data.channel1 }},
+        livestream: { connect: { liveId: data.livestream1.liveId }}
+      }})
+      await db.experienceTransaction.create({ data: {
+        delta: 30,
+        time: data.time3,
+        channel: { connect: { youtubeId: data.channel2 }},
+        livestream: { connect: { liveId: data.livestream1.liveId }}
+      }})
+
+      const result = await experienceStore.getAllTransactionsStartingAt(data.time2.getTime())
+
+      expect(result.length).toBe(2)
+      expect(result[0].time).toEqual(data.time2)
+      expect(result[1].time).toEqual(data.time3)
+
+      // make sure caching doesn't do anything funny
+      const result2 = await experienceStore.getTransactionsStartingAt(data.channel1, addTime(data.time3, 'seconds', 1).getTime())
+
+      expect(result2.length).toBe(0)
     })
   })
 
