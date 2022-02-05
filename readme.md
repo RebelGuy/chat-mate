@@ -34,6 +34,12 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.7 - The Dashboard Update v2 [5/2/2022]
+- Server
+  - Added a new `GET /event` endpoint
+    - At the moment, returns level-up events since the given time
+  - Migrated to ESLint
+
 ## v1.6 - The Dashboard Update [28/1/2022]
 - Server
   - Added status endpoint
