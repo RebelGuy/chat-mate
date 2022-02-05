@@ -247,6 +247,6 @@ Returns an object with the following properties:
 ### `levelUp` Event
 Occurrs when the experience level of a user changes by at least 1.
 
-- `author` (`string`): The name of the channel that levelled up.
+- `channelName` (`string`): The name of the channel that levelled up.
 - `oldLevel` (`number`): The experience level at the beginning of the event check period.
 - `newLevel` (`number`): The current experience level.

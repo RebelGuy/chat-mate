@@ -172,7 +172,7 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     expect(result.length).toBe(0)
   })
 
-  test.only('returns correct diffs', async () => {
+  test('returns correct diffs', async () => {
     const time1 = new Date()
     const time2 = addTime(time1, 'seconds', 1)
     const time3 = addTime(time1, 'seconds', 2)

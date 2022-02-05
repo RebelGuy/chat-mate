@@ -46,7 +46,7 @@ type ChatMateEvent = {
   // the time at which the event occurred
   timestamp: number,
   data: {
-    author: string,
+    channelName: string,
     oldLevel: number,
     newLevel: number
   }
@@ -107,13 +107,12 @@ export default class ChatMateController {
         type: 'levelUp',
         timestamp: diff.timestamp,
         data: {
-          author: channel!.infoHistory[0].name,
+          channelName: channel!.infoHistory[0].name,
           newLevel: diff.endLevel.level,
           oldLevel: diff.startLevel.level
         }
       })
     }
-
 
     return {
       schema: 1,
