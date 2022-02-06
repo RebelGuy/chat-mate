@@ -135,6 +135,11 @@ export default class ExperienceStore {
         // no way to narrow this down using type guards... thanks typescript!
         experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
       }
+
+      const timestamp = experienceTransaction.time.getTime()
+      if (this.lastTransactionTime == null || timestamp > this.lastTransactionTime) {
+        this.lastTransactionTime = timestamp
+      }
     } else {
       result = null
     }

@@ -115,7 +115,6 @@ export default class ExperienceService {
       const startXp = asGte(endXp - sum(txs.map(tx => tx.delta)), 0)
       const startLevel = this.experienceHelpers.calculateLevel(startXp)
       const endLevel = this.experienceHelpers.calculateLevel(endXp)
-      console.log(startXp, endXp)
       if (startLevel.level >= endLevel.level) {
         continue
       }
