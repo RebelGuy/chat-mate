@@ -25,6 +25,7 @@ import ChatMateController from '@rebel/server/controllers/ChatMateController'
 import StatusService from '@rebel/server/services/StatusService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ChannelService from '@rebel/server/services/ChannelService'
+import { ExperienceController } from '@rebel/server/controllers/ExperienceController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -80,6 +81,7 @@ app.use((req, res, next) => {
   const context = globalContext.asParent()
     .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
+    .withClass('experienceController', ExperienceController)
     .build()
   setContextProvider(req, context)
   next()
@@ -93,6 +95,7 @@ Server.registerServiceFactory(new ServiceFactory())
 Server.buildServices(app,
   ChatMateController,
   ChatController,
+  ExperienceController
 )
 
 const dbProvider = globalContext.getClassInstance('dbProvider')

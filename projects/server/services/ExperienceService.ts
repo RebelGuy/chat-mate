@@ -23,10 +23,9 @@ export type LevelDiff = {
   endLevel: Level
 }
 
-export type RankedEntry = {
+export type RankedEntry = LevelData & {
   rank: number
   channelName: string
-  level: LevelData
 }
 
 type Deps = Dependencies<{
@@ -96,10 +95,8 @@ export default class ExperienceService {
     return ordered.map((item, i) => ({
       rank: i + 1,
       channelName: item.name,
-      level: {
-        level: item.level,
-        levelProgress: item.levelProgress
-      }
+      level: item.level,
+      levelProgress: item.levelProgress
     }))
   }
 

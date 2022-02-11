@@ -177,12 +177,36 @@ Returns an object with the following properties:
 Gets the events since the specified time.
 
 Query parameters:
-- `since` (number): Gets only events **after** the given time (unix ms).
+- `since` (`number`): Gets only events **after** the given time (unix ms).
 
 Returns an object with the following properties:
 - `schema` (`1`): The current schema of the return object.
 - `timestamp` (`number`): The response timestamp. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `events` ([`Event`](#event)`[]`): The list of events that have occurred since the given timestamp.
+
+## Experience Endpoints
+
+### `GET /leaderboard`
+
+Gets the ranked experience list of all channels.
+
+Returns an object with the following properties:
+- `schema` (`1`): The current schema of the return object.
+- `timestamp` (`number`): The response timestamp.
+- `entries` ([`RankedEntry`](#rankedentry)`[]`): The array of every channel's experience, in ascending order.
+
+### `GET /rank`
+
+Gets the rank of a specific channel, as well as some context. Essentially, it returns a section of the data from `GET /leaderboard`.
+
+Query parameters:
+- `name` (`string`): The name of the channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
+
+Returns an object with the following properties:
+- `schema` (`1`): The current schema of the return object.
+- `timestamp` (`number`): The response timestamp.
+- `relevantIndex` (`number`): The index of the entry in `entries` that belongs to the matched channel. `-1` if no channel could be matched.
+- `entries` ([`RankedEntry`](#rankedentry)`[]`): The partial leaderboard in ascending order, which includes the matched channel. Empty if no channel could be matched.
 
 # Data Types
 
@@ -254,3 +278,10 @@ Occurrs when the experience level of a user changes by at least 1.
 - `channelName` (`string`): The name of the channel that levelled up.
 - `oldLevel` (`number`): The experience level at the beginning of the event check period.
 - `newLevel` (`number`): The current experience level.
+
+## RankedEntry
+
+- `rank` (`number`): The experience rank of this entry. The highest rank possible is `1`.
+- `channelName` (`string`): The current name of the channel holding this rank.
+- `level` (`number`): The current integer level of the channel.
+- `levelProgress` (`number`): The normalised (0 <= x < 1) value representing the progress until the next level.

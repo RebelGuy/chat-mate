@@ -148,8 +148,8 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
 
     const leaderboard = await experienceService.getLeaderboard()
 
-    const expectedEntry1: RankedEntry = { channelName: 'channel 2', rank: 1, level: { level: asGte(8, 0), levelProgress: asLt(0, 1) }}
-    const expectedEntry2: RankedEntry = { channelName: 'channel 1', rank: 2, level: { level: asGte(1, 0), levelProgress: asLt(0, 1) }}
+    const expectedEntry1: RankedEntry = { channelName: 'channel 2', rank: 1, level: asGte(8, 0), levelProgress: asLt(0, 1) }
+    const expectedEntry2: RankedEntry = { channelName: 'channel 1', rank: 2, level: asGte(1, 0), levelProgress: asLt(0, 1) }
     expect(leaderboard).toEqual([expectedEntry1, expectedEntry2])
   })
 })
