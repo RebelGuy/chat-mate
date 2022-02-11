@@ -73,10 +73,12 @@ Key:
 - ⚪: Won't do
 
 **Services**
+- 🟢 ChannelService
+  - 🟢 getChannelByName
 - 🟢 ChatService
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
-  - 🔴 getLeaderboard
+  - 🟢 getLeaderboard
   - 🟢 getLevel
   - 🟢 getLevelDiffs
 - 🟢 LivestreamService
@@ -92,7 +94,7 @@ Key:
   - 🟢 createOrUpdate
   - 🟢 exists
   - 🟢 getCurrent
-  - 🔴 getCurrentChannelNames
+  - 🟢 getCurrentChannelNames
   - 🟢 getHistory
 - 🟢 ChatStore
   - 🟢 addChat

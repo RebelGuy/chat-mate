@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { ChannelName, CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
 import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof, single } from '@rebel/server/_test/utils'
 
@@ -127,6 +127,23 @@ export default () => {
 
       expect(result.youtubeId).toBe(channelId1)
       expect(single(result.infoHistory).time).toEqual(channelInfo2.time)
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getCurrentChannelNames'), () => {
+    test('returns most up-to-date name of each channel', async () => {
+      await db.channel.create({ data: {
+        youtubeId: channelId1,
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
+      }})
+      await db.channel.create({ data: {
+        youtubeId: channelId2,
+        infoHistory: { createMany: { data: [channelInfo3]} } 
+      }})
+
+      const result = await channelStore.getCurrentChannelNames()
+
+      expect(result).toEqual<ChannelName[]>([{ youtubeId: channelId2, name: channelInfo3.name }, { youtubeId: channelId1, name: channelInfo2.name }])
     })
   })
 
