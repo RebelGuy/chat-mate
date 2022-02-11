@@ -87,20 +87,21 @@ export default class ExperienceStore {
     })
   }
 
-  // in ascending order
-  // eslint-disable-next-line @typescript-eslint/require-await
-  public async getTransactionsStartingAt (channelId: string, timestamp: number): Promise<ExperienceTransaction[]> {
+  /** Returns the sum of all of the channel's experience deltas between now and the given timestamp. */
+  public async getTotalDeltaStartingAt (channelId: string, timestamp: number): Promise<number> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
-      return []
+      return 0
     }
 
-    return this.db.experienceTransaction.findMany({
+    const result = await this.db.experienceTransaction.aggregate({
       where: {
         channel: { youtubeId: channelId },
         time: { gte: new Date(timestamp) }
       },
-      orderBy: { time: 'asc' }
+      _sum: { delta: true }
     })
+
+    return result._sum?.delta ?? 0
   }
 
   /** Returns the transactions in ascending order. */

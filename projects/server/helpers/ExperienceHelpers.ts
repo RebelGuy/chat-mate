@@ -59,7 +59,7 @@ export default class ExperienceHelpers {
     // the upper end should not be growing linearly so it is easier to get higher length points.
     // upper end goes from log(1) to log(e).
     const lengthQualityRaw = clampNorm(msg.length, 1, 200, 10) * 2
-    const lengthQuality = lengthQualityRaw < 1 ? lengthQualityRaw : Math.log(1 + (Math.exp(1) - 1) * (lengthQualityRaw - 1));
+    const lengthQuality = lengthQualityRaw < 1 ? lengthQualityRaw : Math.log(1 + (Math.exp(1) - 1) * (lengthQualityRaw - 1))
 
     // let's say 30 words is maximum "quality"
     const wordCountQuality = clampNorm(words.length, 1, 30, 8) * 2
@@ -69,7 +69,7 @@ export default class ExperienceHelpers {
     const wordLengthQuality = clampNorm(avgWordLength, 1, 10) * 2
 
     // let's say anything under 5 unique characters is "bad", and 15 unique characters is maximum "quality"
-    const uniqueCharacters = unique(Array.from(msg.replace(" ", "").toLowerCase())).length
+    const uniqueCharacters = unique(Array.from(msg.replace(' ', '').toLowerCase())).length
     const uniqueCharactersQuality = clampNorm(uniqueCharacters, 1, 20, 8) * 2
 
     const uniqueEmojis = unique(emojis.map(e => e.name)).length

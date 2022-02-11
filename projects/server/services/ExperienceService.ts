@@ -1,10 +1,12 @@
 import { ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
-import ExperienceHelpers, { SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
+import ExperienceHelpers, { LevelData, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem } from '@rebel/server/models/chat'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import { sortBy, zip } from '@rebel/server/util/arrays'
 import { asGte, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 
@@ -21,11 +23,18 @@ export type LevelDiff = {
   endLevel: Level
 }
 
+export type RankedEntry = {
+  rank: number
+  channelName: string
+  level: LevelData
+}
+
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
   experienceStore: ExperienceStore
   experienceHelpers: ExperienceHelpers
   viewershipStore: ViewershipStore
+  channelStore: ChannelStore
 }>
 
 export default class ExperienceService {
@@ -33,6 +42,7 @@ export default class ExperienceService {
   private readonly experienceStore: ExperienceStore
   private readonly experienceHelpers: ExperienceHelpers
   private readonly viewershipStore: ViewershipStore
+  private readonly channelStore: ChannelStore
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -41,6 +51,7 @@ export default class ExperienceService {
     this.experienceStore = deps.resolve('experienceStore')
     this.experienceHelpers = deps.resolve('experienceHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')
+    this.channelStore = deps.resolve('channelStore')
   }
 
   // adds experience only for chat messages sent during the live chat
@@ -75,6 +86,21 @@ export default class ExperienceService {
       const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
       await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
     }
+  }
+
+  /** Sorted in ascending order. */
+  public async getLeaderboard (): Promise<RankedEntry[]> {
+    const allChannels = await this.channelStore.getCurrentChannelNames()
+    const allLevels = await Promise.all(allChannels.map(channel => this.getLevel(channel.youtubeId)))
+    const ordered = sortBy(zip(allChannels, allLevels), item => item.totalExperience, 'desc')
+    return ordered.map((item, i) => ({
+      rank: i + 1,
+      channelName: item.name,
+      level: {
+        level: item.level,
+        levelProgress: item.levelProgress
+      }
+    }))
   }
 
   public async getLevel (channelId: string): Promise<Level> {
@@ -147,8 +173,7 @@ export default class ExperienceService {
       return 0
     }
 
-    const transactions = await this.experienceStore.getTransactionsStartingAt(channelId, latestSnapshot.time.getTime())
-    const totalDelta = sum(transactions.map(tx => tx.delta))
+    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(channelId, latestSnapshot.time.getTime())
     const total = latestSnapshot.experience + totalDelta
     return total >= 0 ? total as GreaterThanOrEqual<0> : 0
   }

@@ -45,3 +45,9 @@ export type ObjectComparator<T> = {
 export type ValueComparator<V> = null | 'default' | ((a: V, b: V) => boolean)
 
 export type Branded<T, BrandingEnum> = T & { brand: BrandingEnum }
+
+type NumberOnlyKeys<T> = {
+  [K in keyof T]: number extends T[K] ? K : never
+}[keyof T]
+
+export type NumberOnly<T extends GenericObject> = Pick<T, NumberOnlyKeys<T>>

@@ -76,6 +76,7 @@ Key:
 - 🟢 ChatService
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
+  - 🔴 getLeaderboard
   - 🟢 getLevel
   - 🟢 getLevelDiffs
 - 🟢 LivestreamService
@@ -91,6 +92,7 @@ Key:
   - 🟢 createOrUpdate
   - 🟢 exists
   - 🟢 getCurrent
+  - 🔴 getCurrentChannelNames
   - 🟢 getHistory
 - 🟢 ChatStore
   - 🟢 addChat
@@ -101,7 +103,7 @@ Key:
   - 🟢 getLatestSnapshot
   - 🟢 getPreviousChatExperience
   - 🟢 getAllTransactionsStartingAt
-  - 🟢 getTransactionsStartingAt
+  - 🟢 getTotalDeltaStartingAt
 - 🟢 LivestreamStore
   - 🟢 createLivestream
   - 🟢 currentLivestream
