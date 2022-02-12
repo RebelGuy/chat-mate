@@ -84,6 +84,23 @@ export function sum (numbers: number[] | List<number>) {
   return numbers.reduce((s, x) => s + x, 0)
 }
 
+export function min (numbers: number[]): [minValue: number | null, index: number] {
+  if (numbers.length === 0) {
+    return [null, -1]
+  }
+
+  let minValue = Number.MAX_VALUE
+  let index = -1
+  for (let i = 0; i < numbers.length; i++) {
+    if (numbers[i] < minValue) {
+      minValue = numbers[i]
+      index = i
+    }
+  }
+
+  return [minValue, index]
+}
+
 // clamps and normalises the function across the given domain, i.e. return a value between 0 and 1 scaled according to the values at the domain boundaries.
 // note that function values will be clipped by the rect [minX, fn(minX)], [maxX, fn(maxX)], so monotonic functions are preferred.
 export function clampNormFn (fn: (x: number) => number, minX: number, maxX: number): (x: number) => number {

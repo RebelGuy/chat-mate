@@ -9,6 +9,8 @@ export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 
 export type ChannelWithLatestInfo = Omit<Entity.Channel, 'chatMessages' | 'experienceTransactions' | 'experienceSnapshots' | 'viewingBlocks'>
 
+export type ChannelName = { youtubeId: string, name: string }
+
 type Deps = Dependencies<{
   dbProvider: DbProvider
 }>
@@ -74,6 +76,20 @@ export default class ChannelStore {
     }
 
     return channel
+  }
+
+  /** Returns all channels with their current names. */
+  public async getCurrentChannelNames (): Promise<ChannelName[]> {
+    const currentChannelInfos = await this.db.channelInfo.findMany({
+      distinct: ['channelId'],
+      orderBy: { time: 'desc' },
+      select: { name: true, channel: { select: { youtubeId: true }} }
+    })
+
+    return currentChannelInfos.map(info => ({
+      name: info.name,
+      youtubeId: info.channel.youtubeId
+    }))
   }
 
   private async tryGetChannelWithLatestInfo (channelId: string) {
