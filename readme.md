@@ -34,6 +34,14 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.8 - The Housekeeping Update [12/2/2022]
+- Server
+  - Added a new `/experience` endpoint
+    - `GET /leaderboard` returns the complete experience leaderboard
+    - `GET /rank` returns a partial leaderboard, highlighting a specific channel
+  - Improved the context provider - it now automatically initialises and disposes its classes
+  - Fixed many caching issues and a database connection issue
+
 ## v1.7 - The Dashboard Update v2 [5/2/2022]
 - Server
   - Added a new `GET /event` endpoint
