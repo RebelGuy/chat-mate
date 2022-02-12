@@ -15,7 +15,7 @@ let connected = false
 
 export async function startTestDb (): Promise<DbProvider> {
   if (!connected) {
-    await dbProvider.start()
+    await dbProvider.initialise()
     connected = true
   }
   await semaphore.enter()

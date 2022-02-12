@@ -1,4 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { GenericObject } from '@rebel/server/types'
 import { avg } from '@rebel/server/util/math'
 
@@ -15,12 +16,13 @@ export type ApiStatus = {
 
 type Deps = Dependencies<GenericObject>
 
-export default class StatusService {
+export default class StatusService extends ContextClass {
   private masterchatResponseTimes: number[]
   private lastMasterchatOk: number | null
   private lastMasterchatStatus: 'ok' | 'error' | null
 
   constructor (deps: Deps) {
+    super()
     this.masterchatResponseTimes = []
     this.lastMasterchatOk = null
     this.lastMasterchatStatus = null

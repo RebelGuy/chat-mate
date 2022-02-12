@@ -1,5 +1,6 @@
 import { Livestream, LiveViewers, ViewingBlock } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime, maxTime, MAX_DATE, minTime } from '@rebel/server/util/datetime'
@@ -19,7 +20,7 @@ type Deps = Dependencies<{
   livestreamStore: LivestreamStore
 }>
 
-export default class ViewershipStore {
+export default class ViewershipStore extends ContextClass {
   private readonly db: Db
   private readonly livestreamStore: LivestreamStore
 
@@ -27,6 +28,7 @@ export default class ViewershipStore {
   private readonly lastSeenMap: Map<string, LastSeen | null>
 
   constructor (deps: Deps) {
+    super()
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.lastSeenMap = new Map()
@@ -73,11 +75,12 @@ export default class ViewershipStore {
         include: { livestream: true }
       })
     } else {
-      block = await this.db.viewingBlock.create({ data: {
-        channel: { connect: { youtubeId: channelId }},
-        livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
-        startTime: lowerTime,
-        lastUpdate: upperTime
+      block = await this.db.viewingBlock.create({
+        data: {
+          channel: { connect: { youtubeId: channelId }},
+          livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+          startTime: lowerTime,
+          lastUpdate: upperTime
         },
         include: { livestream: true }
       })
@@ -90,7 +93,7 @@ export default class ViewershipStore {
     })
   }
 
-  // returns the time of the previous viewing block
+  /** Returns the time of the previous viewing block. */
   public async getLastSeen (channelId: string): Promise<LastSeen | null> {
     if (this.lastSeenMap.has(channelId)) {
       return this.lastSeenMap.get(channelId)!
@@ -133,9 +136,9 @@ export default class ViewershipStore {
     }
   }
 
-  // returns streams in ascending order.
-  // the following actions are considered participation:
-  // - sending a message in chat
+  /** Returns streams in ascending order.
+   * The following actions are considered participation:
+   * - sending a message in chat */
   public async getLivestreamParticipation (channelId: string): Promise<LivestreamParticipation[]> {
     const livestreams = await this.db.livestream.findMany({
       include: {
@@ -154,7 +157,7 @@ export default class ViewershipStore {
     }))
   }
 
-  // returns streams in ascending order
+  /** Returns streams in ascending order. */
   public async getLivestreamViewership (channelId: string): Promise<LivestreamViewership[]> {
     const livestreams = await this.db.livestream.findMany({
       include: {

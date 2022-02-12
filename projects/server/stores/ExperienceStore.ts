@@ -1,5 +1,6 @@
 import { ChatMessage, ExperienceDataChatMessage, ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -18,7 +19,7 @@ type Deps = Dependencies<{
   livestreamStore: LivestreamStore
 }>
 
-export default class ExperienceStore {
+export default class ExperienceStore extends ContextClass {
   private readonly db: Db
   private readonly livestreamStore: LivestreamStore
 
@@ -30,6 +31,7 @@ export default class ExperienceStore {
   private lastTransactionTime: number | null
 
   constructor (deps: Deps) {
+    super()
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.chatExperienceMap = new Map()

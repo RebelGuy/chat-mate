@@ -2,6 +2,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
+import ContextClass from '@rebel/server/context/ContextClass'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
@@ -13,7 +14,7 @@ type Deps = Dependencies<{
   databaseUrl: string
 }>
 
-export default class DbProvider implements IProvider<Db> {
+export default class DbProvider extends ContextClass implements IProvider<Db> {
   readonly name = DbProvider.name
 
   private readonly logService: LogService
@@ -21,6 +22,7 @@ export default class DbProvider implements IProvider<Db> {
   private readonly prismaClient: PrismaClient
 
   constructor (deps: Deps) {
+    super()
     this.logService = deps.resolve('logService')
     this.databaseUrl = deps.resolve('databaseUrl')
 
@@ -71,11 +73,11 @@ export default class DbProvider implements IProvider<Db> {
     return this.prismaClient as Db
   }
 
-  public async start () {
+  public override async initialise () {
     await this.prismaClient.$connect()
   }
 
-  public async dispose () {
+  public override async dispose () {
     await this.prismaClient.$disconnect()
   }
 }

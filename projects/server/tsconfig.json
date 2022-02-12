@@ -9,6 +9,7 @@
     "module": "commonjs",
     "target": "es2020", // required because masterchat uses BigInt
     "lib": ["ES6"],
+    "noImplicitOverride": true
   },
   "include": ["./**/*"],
   "exclude": [

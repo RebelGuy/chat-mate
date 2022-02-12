@@ -12,6 +12,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import ContextClass from '@rebel/server/context/ContextClass'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -39,7 +40,7 @@ type Deps = Dependencies<{
   timerHelpers: TimerHelpers
 }>
 
-export default class ChatService {
+export default class ChatService extends ContextClass {
   readonly name = ChatService.name
   private readonly chatStore: ChatStore
   private readonly livestreamStore: LivestreamStore
@@ -52,6 +53,7 @@ export default class ChatService {
   private initialised: boolean = false
 
   constructor (deps: Deps) {
+    super()
     this.chatStore = deps.resolve('chatStore')
     this.livestreamStore = deps.resolve('livestreamStore')
     this.masterchat = deps.resolve('masterchatProxyService')
@@ -62,7 +64,7 @@ export default class ChatService {
   }
 
   // await this method when initialising the service to guarantee an initial fetch
-  public async start (): Promise<void> {
+  public override async initialise (): Promise<void> {
     if (this.initialised) {
       throw new Error('Cannot start ChatService because it has already been started')
     }

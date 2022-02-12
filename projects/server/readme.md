@@ -76,13 +76,14 @@ Key:
 - 🟢 ChannelService
   - 🟢 getChannelByName
 - 🟢 ChatService
+  - 🟢 initialise
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
   - 🟢 getLeaderboard
   - 🟢 getLevel
   - 🟢 getLevelDiffs
 - 🟢 LivestreamService
-  - 🟢 start
+  - 🟢 initialise
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onMasterchatRequest
@@ -107,7 +108,7 @@ Key:
   - 🟢 getAllTransactionsStartingAt
   - 🟢 getTotalDeltaStartingAt
 - 🟢 LivestreamStore
-  - 🟢 createLivestream
+  - 🟢 initialise
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
   - 🟢 setTimes

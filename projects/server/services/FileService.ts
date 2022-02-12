@@ -1,4 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { GenericObject } from '@rebel/server/types'
 import * as fs from 'fs'
 import path from 'node:path'
@@ -12,10 +13,11 @@ type Deps = Dependencies<{
   dataPath: string
 }>
 
-export default class FileService {
+export default class FileService extends ContextClass {
   private readonly dataPath: string
 
   constructor (deps: Deps) {
+    super()
     this.dataPath = deps.resolve('dataPath')
     this.ensureDir(this.dataPath)
   }
@@ -59,7 +61,7 @@ export default class FileService {
     return contents ? JSON.parse(contents) as T : null
   }
 
-  private ensureDir(dir: string) {
+  private ensureDir (dir: string) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true })
     }

@@ -58,12 +58,12 @@ beforeEach(() => {
   }))
 })
 
-describe(nameof(LivestreamService, 'start'), () => {
+describe(nameof(LivestreamService, 'initialise'), () => {
   test('ignores times and views if receives `not_started` status from metadata', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue({ ...makeMetadata('not_started'), viewerCount: 2 })
 
-    await livestreamService.start()
+    await livestreamService.initialise()
 
     expect(mockLivestreamStore.setTimes.mock.calls.length).toBe(0)
     expect(mockViewershipStore.addLiveViewCount.mock.calls.length).toBe(0)
@@ -73,7 +73,7 @@ describe(nameof(LivestreamService, 'start'), () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('live'))
 
-    await livestreamService.start()
+    await livestreamService.initialise()
 
     const { start, end } = single(mockLivestreamStore.setTimes.mock.calls)[0]
     expect(start).not.toBeNull()
@@ -84,7 +84,7 @@ describe(nameof(LivestreamService, 'start'), () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('finished'))
 
-    await livestreamService.start()
+    await livestreamService.initialise()
 
     const { start, end } = single(mockLivestreamStore.setTimes.mock.calls)[0]
     expect(start).not.toBeNull()
@@ -95,7 +95,7 @@ describe(nameof(LivestreamService, 'start'), () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), new Date()))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('live'))
 
-    await livestreamService.start()
+    await livestreamService.initialise()
 
     expect(mockLivestreamStore.setTimes.mock.calls.length).toBe(0)
   })
@@ -104,7 +104,7 @@ describe(nameof(LivestreamService, 'start'), () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeMetadata('not_started'))
 
-    await livestreamService.start()
+    await livestreamService.initialise()
 
     expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expect.anything(), true])
   })
@@ -114,7 +114,7 @@ describe(nameof(LivestreamService, 'start'), () => {
     const metadata: Metadata = { ...makeMetadata('live'), viewerCount: 10 }
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(metadata)
 
-    await livestreamService.start()
+    await livestreamService.initialise()
 
     const receivedCount = single(mockViewershipStore.addLiveViewCount.mock.calls)[0]
     expect(receivedCount).toBe(metadata.viewerCount)

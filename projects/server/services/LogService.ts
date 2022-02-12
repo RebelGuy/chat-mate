@@ -1,4 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { NodeEnv } from '@rebel/server/globals'
 import { ILoggable } from '@rebel/server/interfaces'
 import FileService from '@rebel/server/services/FileService'
@@ -12,13 +13,14 @@ type Deps = Dependencies<{
   fileService: FileService
 }>
 
-export default class LogService {
+export default class LogService extends ContextClass {
   private readonly liveId: string
   private readonly isLive: boolean
   private readonly fileService: FileService
   private readonly logFile: string
 
   constructor (deps: Deps) {
+    super()
     this.liveId = deps.resolve('liveId')
     this.isLive = deps.resolve('isLive')
     this.fileService = deps.resolve('fileService')

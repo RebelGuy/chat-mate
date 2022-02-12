@@ -1,4 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService, { RankedEntry } from '@rebel/server/services/ExperienceService'
@@ -27,11 +28,12 @@ type Deps = Dependencies<{
 }>
 
 @Path(buildPath('experience'))
-export class ExperienceController {
+export default class ExperienceController extends ContextClass {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
 
   constructor (dependencies: Deps) {
+    super()
     this.channelService = dependencies.resolve('channelService')
     this.experienceService = dependencies.resolve('experienceService')
   }

@@ -75,19 +75,19 @@ beforeEach(() => {
   }))
 })
 
-describe(nameof(ChatService, 'start'), () => {
-  test('throws when starting twice', async () => {
+describe(nameof(ChatService, 'initialise'), () => {
+  test('throws when initialising twice', async () => {
     mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse())
 
-    await chatService.start()
+    await chatService.initialise()
 
-    await expect(() => chatService.start()).rejects.toThrow()
+    await expect(() => chatService.initialise()).rejects.toThrow()
   })
 
   test('uses continuation token when fetching and schedules new fetch', async () => {
     mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse())
 
-    await chatService.start()
+    await chatService.initialise()
 
     // don't need to explicitly check return type of the callback because the type guard already checks this
     const expectedTimerOptions: TimerOptions = { behaviour: 'dynamicEnd', callback: expect.any(Function) }
@@ -99,7 +99,7 @@ describe(nameof(ChatService, 'start'), () => {
   test('quietly handles fetching error and reset continuation token', async () => {
     mockMasterchatProxyService.fetch.mockRejectedValue(new Error('Fetching failed'))
 
-    await chatService.start()
+    await chatService.initialise()
 
     expect(single(single(mockLivestreamStore.setContinuationToken.mock.calls))).toBe(null)
   })
@@ -107,7 +107,7 @@ describe(nameof(ChatService, 'start'), () => {
   test('passes chat items to ChatStore and ExperienceService', async () => {
     mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse([chatAction1]))
 
-    await chatService.start()
+    await chatService.initialise()
 
     const [passedToken, passedChatItems] = single(mockChatStore.addChat.mock.calls)
     expect(passedToken).toBe(token2)

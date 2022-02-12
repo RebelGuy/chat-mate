@@ -1,5 +1,6 @@
 import { Livestream } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 
@@ -9,7 +10,7 @@ type Deps = Dependencies<{
   logService: LogService
 }>
 
-export default class LivestreamStore {
+export default class LivestreamStore extends ContextClass {
   readonly name: string = LivestreamStore.name
 
   private readonly liveId: string
@@ -26,24 +27,14 @@ export default class LivestreamStore {
   }
 
   constructor (deps: Deps) {
+    super()
     this.liveId = deps.resolve('liveId')
     this.db = deps.resolve('dbProvider').get()
     this.logService = deps.resolve('logService')
   }
 
-  public async createLivestream (): Promise<Livestream> {
-    const existingLivestream = await this.db.livestream.findUnique({ where: { liveId: this.liveId }})
-
-    if (!existingLivestream) {
-      this._currentLivestream = await this.db.livestream.create({ data: {
-        createdAt: new Date(),
-        liveId: this.liveId
-      }})
-    } else {
-      this._currentLivestream = existingLivestream
-    }
-
-    return this._currentLivestream
+  public override async initialise () {
+    await this.createLivestream()
   }
 
   public async setContinuationToken (continuationToken: string | null): Promise<Livestream> {
@@ -66,5 +57,20 @@ export default class LivestreamStore {
       where: { liveId: this.liveId },
       data: { ...updatedTimes }
     })
+  }
+
+  private async createLivestream (): Promise<Livestream> {
+    const existingLivestream = await this.db.livestream.findUnique({ where: { liveId: this.liveId }})
+
+    if (!existingLivestream) {
+      this._currentLivestream = await this.db.livestream.create({ data: {
+        createdAt: new Date(),
+        liveId: this.liveId
+      }})
+    } else {
+      this._currentLivestream = existingLivestream
+    }
+
+    return this._currentLivestream
   }
 }

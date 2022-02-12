@@ -1,7 +1,7 @@
 require('./_config')
 import express from 'express'
 import { Server } from 'typescript-rest'
-import { ChatController } from '@rebel/server/controllers/ChatController'
+import ChatController from '@rebel/server/controllers/ChatController'
 import env from './globals'
 import { ContextProvider, setContextProvider } from '@rebel/server/context/context'
 import ChatService from '@rebel/server/services/ChatService'
@@ -25,7 +25,7 @@ import ChatMateController from '@rebel/server/controllers/ChatMateController'
 import StatusService from '@rebel/server/services/StatusService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ChannelService from '@rebel/server/services/ChannelService'
-import { ExperienceController } from '@rebel/server/controllers/ExperienceController'
+import ExperienceController from '@rebel/server/controllers/ExperienceController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -63,9 +63,6 @@ const globalContext = ContextProvider.create()
   .withClass('chatService', ChatService)
   .build()
 
-const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
-logContext.logInfo(`Using live ID ${liveId}`)
-
 const app = express()
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it
@@ -77,13 +74,19 @@ app.use((req, res, next) => {
   next()
 })
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const context = globalContext.asParent()
     .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
     .withClass('experienceController', ExperienceController)
     .build()
+  await context.initialise()
   setContextProvider(req, context)
+
+  res.on('finish', async () => {
+    await context.dispose()
+  })
+
   next()
 })
 
@@ -98,18 +101,10 @@ Server.buildServices(app,
   ExperienceController
 )
 
-const dbProvider = globalContext.getClassInstance('dbProvider')
-const livestreamStore = globalContext.getClassInstance('livestreamStore')
-const livestreamService = globalContext.getClassInstance('livestreamService')
-const chatService = globalContext.getClassInstance('chatService')
+const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
+logContext.logInfo(`Using live ID ${liveId}`)
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-livestreamStore.createLivestream().then(async () => {
-  await dbProvider.start()
-  await livestreamService.start()
-  await chatService.start()
-
-  // start
+globalContext.initialise().then(() => {
   app.listen(port, () => {
     logContext.logInfo(`Server is listening on ${port}`)
   })

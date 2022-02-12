@@ -1,5 +1,6 @@
 import { Channel, ChannelInfo, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { New, Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ObjectComparator } from '@rebel/server/types'
@@ -15,10 +16,11 @@ type Deps = Dependencies<{
   dbProvider: DbProvider
 }>
 
-export default class ChannelStore {
+export default class ChannelStore extends ContextClass {
   private readonly db: Db
 
   constructor (deps: Deps) {
+    super()
     this.db = deps.resolve('dbProvider').get()
   }
 

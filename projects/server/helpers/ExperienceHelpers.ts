@@ -1,6 +1,7 @@
+import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
 import { unique } from '@rebel/server/util/arrays'
-import { NumRange, Eps, clampNorm, scaleNorm, clamp, eps, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt } from '@rebel/server/util/math'
+import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt } from '@rebel/server/util/math'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
@@ -16,7 +17,7 @@ export type LevelData = { level: GreaterThanOrEqual<0>, levelProgress: GreaterTh
 
 export type SpamMult = NumRange<0.1, 1.5>
 
-export default class ExperienceHelpers {
+export default class ExperienceHelpers extends ContextClass {
   // intedned as a safeguard against people trying to spam messages for XP.
   // If chat messages are too fast, the multiplier will tend towards zero.
   // If chat messages are slow enough, the multiplier will slowly regenerate back to 1.

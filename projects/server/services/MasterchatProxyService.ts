@@ -1,5 +1,6 @@
 import { ChatResponse, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { IMasterchat } from '@rebel/server/interfaces'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
@@ -11,7 +12,7 @@ type Deps = Dependencies<{
   masterchatProvider: MasterchatProvider
 }>
 
-export default class MasterchatProxyService implements IMasterchat {
+export default class MasterchatProxyService extends ContextClass implements IMasterchat {
   public name = MasterchatProxyService.name
 
   private readonly logService: LogService
@@ -23,6 +24,7 @@ export default class MasterchatProxyService implements IMasterchat {
   private requestId: number
 
   constructor (deps: Deps) {
+    super()
     this.logService = deps.resolve('logService')
     this.statusService = deps.resolve('statusService')
     this.masterchat = deps.resolve('masterchatProvider').get()
@@ -57,7 +59,7 @@ export default class MasterchatProxyService implements IMasterchat {
     return async (...query: TQuery) => {
       // set up
       const id = this.requestId++
-      const startTime = Date.now();
+      const startTime = Date.now()
 
       // do request
       let error: any | null = null

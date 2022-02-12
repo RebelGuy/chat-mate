@@ -1,9 +1,10 @@
-import { Dependencies } from '@rebel/server/context/context';
-import IProvider from '@rebel/server/providers/IProvider';
-import { IMasterchat } from '@rebel/server/interfaces';
+import { Dependencies } from '@rebel/server/context/context'
+import IProvider from '@rebel/server/providers/IProvider'
+import { IMasterchat } from '@rebel/server/interfaces'
 import MockMasterchat from '@rebel/server/mocks/MockMasterchat'
 import LogService from '@rebel/server/services/LogService'
-import { Masterchat } from '@rebel/masterchat';
+import { Masterchat } from '@rebel/masterchat'
+import ContextClass from '@rebel/server/context/ContextClass'
 
 type Deps = Dependencies<{
   liveId: string,
@@ -13,7 +14,7 @@ type Deps = Dependencies<{
   logService: LogService,
 }>
 
-export default class MasterchatProvider implements IProvider<IMasterchat> {
+export default class MasterchatProvider extends ContextClass implements IProvider<IMasterchat> {
   readonly name = MasterchatProvider.name
 
   private readonly liveId: string
@@ -25,6 +26,7 @@ export default class MasterchatProvider implements IProvider<IMasterchat> {
   private readonly masterchat: IMasterchat
 
   constructor (deps: Deps) {
+    super()
     this.liveId = deps.resolve('liveId')
     this.channelId = deps.resolve('channelId')
     this.auth = deps.resolve('auth')

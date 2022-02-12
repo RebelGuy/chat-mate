@@ -1,4 +1,6 @@
+import ContextClass from '@rebel/server/context/ContextClass'
 import { Branded, GenericObject } from '@rebel/server/types'
+import { reverse } from '@rebel/server/util/arrays'
 
 // make sure we don't accidentally override non-context-related properties when assigning the context to an object
 const CONTEXT_SYMBOL = Symbol('context')
@@ -8,41 +10,41 @@ export type Injectable = GenericObject
 export enum _BuiltContextBrand { }
 export type BuiltContext<TClasses, TObjects, TProperties> = Branded<ContextProvider<TClasses, TObjects, TProperties>, _BuiltContextBrand>
 
-export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects extends StoredClass<any, any>, TProperties extends StoredClass<any, any>> {
+export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects extends StoredObject<any, any>, TProperties extends StoredProperty<any, any>> {
   private readonly built: boolean
   private readonly builder: ServiceBuilder<TClasses, TObjects, TProperties>
   private isDisposed: boolean
 
-  private constructor (baseDependencies: TClasses & TObjects & TProperties, built: boolean) {
+  private constructor (baseBuilder: ServiceBuilder<TClasses, TObjects, TProperties> | null, built: boolean) {
     this.built = built
-    this.builder = new ServiceBuilder(baseDependencies)
+    this.builder = new ServiceBuilder(baseBuilder)
     this.isDisposed = false
   }
 
   public static create (): ContextProvider<GenericObject, GenericObject, GenericObject> {
-    return new ContextProvider({}, false)
+    return new ContextProvider(null, false)
   }
 
-  // use the current context as a parent content. note that this will create a
-  // new context, leaving the old one unaffected.
+  /** Use the current context as a parent context. Note that this will create a new context, leaving the old one unaffected.
+   * Calling `initialise` or `dispose` will only be delegated the new partial context, not the parent. */
   public asParent (): this extends BuiltContext<TClasses, TObjects, TProperties> ? ContextProvider<TClasses, TObjects, TProperties> : never {
     // it is utterly amazing that this works!! (even with the any typing)
     if (this.isBuiltContext()) {
-      return new ContextProvider(this.builder.clone().dependencies, false) as this extends BuiltContext<TClasses, TObjects, TProperties> ? ContextProvider<TClasses, TObjects, TProperties> : never
+      return new ContextProvider(this.builder.isolateServices(), false) as this extends BuiltContext<TClasses, TObjects, TProperties> ? ContextProvider<TClasses, TObjects, TProperties> : never
     }
     throw new Error(`Cannot use this context as a parent because it hasn't been built yet`)
   }
 
   // add the given class to the context. note that its dependencies can only depend on classes
   // that are already part of the context (will throw otherwise).
-  public withClass<Name extends DepName, ClassType> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType) {
+  public withClass<Name extends DepName, ClassType extends ContextClass> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType) {
     this.assertMutable()
     // todo: this should just extend the types, but not do any instantiation...
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
 
   // add the given helper class to the context. it should not have ANY dependencies
-  public withHelpers<Name extends DepName, HelperClassType> (name: Name, ctor: new () => HelperClassType) {
+  public withHelpers<Name extends DepName, HelperClassType extends ContextClass> (name: Name, ctor: new () => HelperClassType) {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
@@ -58,7 +60,7 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
   }
 
   public build (): BuiltContext<TClasses, TObjects, TProperties> {
-    return new ContextProvider(this.builder.clone().dependencies, true) as any as BuiltContext<TClasses, TObjects, TProperties>
+    return new ContextProvider(this.builder, true) as any as BuiltContext<TClasses, TObjects, TProperties>
   }
 
   public isBuiltContext (): this is BuiltContext<TClasses, TObjects, TProperties> {
@@ -75,6 +77,16 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
     return this.builder.getDependencies().resolve(name)
   }
 
+  /** Calls and awaits the `initialise` method of all dependencies that implement it, in forward order, one by one. */
+  public async initialise () {
+    if (this.isBuiltContext()) {
+      await this.builder.initialise()
+    } else {
+      throw new Error(`Cannot initialise a context that hasn't been built yet`)
+    }
+  }
+
+  /** Calls and awaits the `dispose` method of all dependencies that implement it, in reverse order, one by one. */
   public async dispose () {
     if (this.isBuiltContext()) {
       await this.builder.dispose()
@@ -95,13 +107,13 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
     if (this.isBuiltContext()) {
       throw new Error('This should not happen')
     } else {
-      return new ContextProvider(extender().dependencies, false) as this extends BuiltContext<TNewClasses, TNewObjects, TNewProperties> ? never : ContextProvider<TNewClasses, TNewObjects, TNewProperties>
+      return new ContextProvider(extender(), false) as this extends BuiltContext<TNewClasses, TNewObjects, TNewProperties> ? never : ContextProvider<TNewClasses, TNewObjects, TNewProperties>
     }
   }
 }
 
 type DepName = string
-type StoredClass<Name extends DepName, ClassType> = { [key in Name]: ClassType }
+type StoredClass<Name extends DepName, ClassType extends ContextClass> = { [key in Name]: ClassType }
 type StoredObject<Name extends DepName, Obj extends Injectable> = { [key in Name]: Obj }
 type StoredProperty<Name extends DepName, Prop extends string | boolean | number | null> = { [key in Name]: Prop }
 
@@ -144,18 +156,22 @@ export function getContextProvider<C extends BuiltContext<any, any, any>> (req: 
 
 // used internally for connecting classes
 class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends StoredObject<any, any>, TProperties extends StoredProperty<any, any>> {
-  public readonly dependencies: TClasses & TObjects & TProperties
+  private dependencies: TClasses & TObjects & TProperties
+  private contextClassOrder: (keyof TClasses)[]
 
-  constructor (dependencies: TClasses & TObjects & TProperties) {
-    this.dependencies = dependencies
+  constructor (baseBuilder: ServiceBuilder<TClasses, TObjects, TProperties> | null) {
+    this.contextClassOrder = baseBuilder?.contextClassOrder ?? []
+    this.dependencies = baseBuilder?.dependencies ?? {} as TClasses & TObjects & TProperties
   }
 
-  public clone () {
-    return new ServiceBuilder(this.dependencies)
+  public isolateServices () {
+    const isolated = new ServiceBuilder(this)
+    isolated.contextClassOrder = []
+    return isolated
   }
 
   // instantiate the class using the current dependencies and add the new instance to the dependencies
-  public withClass<Name extends DepName, ClassType> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType)
+  public withClass<Name extends DepName, ClassType extends ContextClass> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType)
     : ServiceBuilder<TClasses & StoredClass<Name, ClassType>, TObjects, TProperties>
   {
     this.assertUniqueDependency(name)
@@ -164,12 +180,13 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
       [name]: new ctor(this.getDependencies())
     } as StoredClass<Name, ClassType>
 
-    const newDependencies = {
+    this.dependencies = {
       ...this.dependencies,
       ...newStoredClass
     }
+    this.contextClassOrder.push(name)
 
-    return new ServiceBuilder(newDependencies)
+    return this
   }
 
   public withObject<Name extends DepName, ObjType extends Injectable> (name: Name, object: ObjType)
@@ -180,12 +197,12 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
       [name]: object
     } as StoredObject<Name, ObjType>
 
-    const newDependencies = {
+    this.dependencies = {
       ...this.dependencies,
       ...newStoredObj
     }
 
-    return new ServiceBuilder(newDependencies)
+    return this
   }
 
   public withProperty<Name extends DepName, PropType extends string | number | boolean | null> (name: Name, prop: PropType)
@@ -196,24 +213,28 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
       [name]: prop
     } as StoredProperty<Name, PropType>
 
-    const newDependencies = {
+    this.dependencies = {
       ...this.dependencies,
       ...newStoredProp
     }
 
-    return new ServiceBuilder(newDependencies)
+    return this
   }
 
   public getDependencies (): Dependencies<TClasses & TObjects & TProperties> {
     return new Dependencies(this.dependencies)
   }
 
+  public async initialise () {
+    for (const className of this.contextClassOrder) {
+      await this.dependencies[className].initialise()
+    }
+  }
+
   public async dispose () {
-    for (const key of Object.keys(this.dependencies)) {
-      if (this.dependencies[key]?.dispose) {
-        await this.dependencies[key].dispose()
-      }
-      Object.defineProperty(this.dependencies, key, { value: null, writable: false })
+    for (const className of reverse(this.contextClassOrder)) {
+      await this.dependencies[className].dispose()
+      Object.defineProperty(this.dependencies, className, { value: null, writable: false })
     }
   }
 

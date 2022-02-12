@@ -1,6 +1,7 @@
 import { Livestream } from '@prisma/client'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
@@ -18,7 +19,7 @@ type Deps = Dependencies<{
   viewershipStore: ViewershipStore
 }>
 
-export default class LivestreamService {
+export default class LivestreamService extends ContextClass {
   readonly name: string = LivestreamService.name
 
   private readonly livestreamStore: LivestreamStore
@@ -28,6 +29,7 @@ export default class LivestreamService {
   private readonly viewershipStore: ViewershipStore
 
   constructor (deps: Deps) {
+    super()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.masterchat = deps.resolve('masterchatProxyService')
     this.logService = deps.resolve('logService')
@@ -35,7 +37,7 @@ export default class LivestreamService {
     this.viewershipStore = deps.resolve('viewershipStore')
   }
 
-  public async start (): Promise<void> {
+  public override async initialise (): Promise<void> {
     const timerOptions: TimerOptions = {
       behaviour: 'start',
       callback: () => this.updateLivestreamMetadata(),

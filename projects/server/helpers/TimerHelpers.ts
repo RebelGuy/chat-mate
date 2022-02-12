@@ -1,6 +1,9 @@
 // at what point in the callback cycle the timer should be rescheduled.
 // use `start` for a constant period.
 // use `end` for constant padding between callbacks.
+
+import ContextClass from '@rebel/server/context/ContextClass'
+
 // use `dynamicEnd` for variable padding between callbacks.
 export type RescheduleBehaviour = 'start' | 'end' | 'dynamicEnd'
 
@@ -17,11 +20,12 @@ export type TimerOptions = {
   initialInterval?: number
 }
 
-export default class TimerHelpers {
+export default class TimerHelpers extends ContextClass {
   // automatically release timers that have been disposed
   private timers: Set<Timer>
 
   constructor () {
+    super()
     this.timers = new Set()
   }
 
@@ -55,7 +59,7 @@ export default class TimerHelpers {
     }
   }
 
-  public dispose () {
+  public override dispose () {
     this.timers.forEach(t => { t.dispose() })
   }
 }
@@ -114,7 +118,7 @@ class Timer {
   }
 
   public dispose () {
-    this.disposed = false
+    this.disposed = true
     this.stopTimer()
   }
 

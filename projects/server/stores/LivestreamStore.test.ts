@@ -27,19 +27,19 @@ export default () => {
     stopTestDb()
   })
 
-  describe(nameof(LivestreamStore, 'createLivestream'), () => {
+  describe(nameof(LivestreamStore, 'initialise'), () => {
     test('new livestream added to database', async () => {
-      const stream = await livestreamStore.createLivestream()
+      await livestreamStore.initialise()
 
-      expect(stream.liveId).toBe(liveId)
+      expect(livestreamStore.currentLivestream.liveId).toBe(liveId)
     })
 
     test('existing livestream returned', async () => {
       await db.livestream.create({ data: { liveId } })
 
-      const stream = await livestreamStore.createLivestream()
+      await livestreamStore.initialise()
 
-      expect(stream.liveId).toBe(liveId)
+      expect(livestreamStore.currentLivestream.liveId).toBe(liveId)
       await expectRowCount(db.livestream).toBe(1)
     })
   })
@@ -47,7 +47,7 @@ export default () => {
   describe(nameof(LivestreamStore, 'setContinuationToken'), () => {
     test('continuation token is updated', async () => {
       await db.livestream.create({ data: { liveId } })
-      await livestreamStore.createLivestream()
+      await livestreamStore.initialise()
 
       const stream = await livestreamStore.setContinuationToken('token')
 
@@ -64,7 +64,7 @@ export default () => {
     test('times are updated correctly', async () => {
       const time = new Date()
       await db.livestream.create({ data: { liveId } })
-      await livestreamStore.createLivestream()
+      await livestreamStore.initialise()
 
       const returnedStream = await livestreamStore.setTimes({ start: time, end: null })
 
@@ -84,7 +84,7 @@ export default () => {
   describe(nameof(LivestreamStore, 'currentLivestream'), () => {
     test('returns created livestream', async () => {
       await db.livestream.create({ data: { liveId, continuationToken: 'token1' } })
-      await livestreamStore.createLivestream()
+      await livestreamStore.initialise()
 
       const stream = livestreamStore.currentLivestream
 
@@ -93,7 +93,7 @@ export default () => {
 
     test('returns updated livestream', async () => {
       await db.livestream.create({ data: { liveId, continuationToken: 'token1' } })
-      await livestreamStore.createLivestream()
+      await livestreamStore.initialise()
 
       await livestreamStore.setContinuationToken('token2')
       const stream = livestreamStore.currentLivestream

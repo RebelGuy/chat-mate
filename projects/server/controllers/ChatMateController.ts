@@ -1,5 +1,6 @@
 import { LiveStatus } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
 import { PublicAuthor } from '@rebel/server/models/chat'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -61,7 +62,7 @@ type Deps = Dependencies<{
 }>
 
 @Path(buildPath('chatMate'))
-export default class ChatMateController {
+export default class ChatMateController extends ContextClass {
   readonly livestreamStore: LivestreamStore
   readonly viewershipStore: ViewershipStore
   readonly statusService: StatusService
@@ -69,6 +70,7 @@ export default class ChatMateController {
   readonly channelStore: ChannelStore
 
   constructor (dependencies: Deps) {
+    super()
     this.livestreamStore = dependencies.resolve('livestreamStore')
     this.viewershipStore = dependencies.resolve('viewershipStore')
     this.statusService = dependencies.resolve('statusService')

@@ -1,25 +1,29 @@
 import { Dependencies, ContextProvider } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 
-class TestA {
+class TestA extends ContextClass {
   constructor () {
+    super()
     console.log('A constructed')
   }
 }
 
-class TestB {
+class TestB extends ContextClass {
   readonly testA: TestA
 
   constructor (dependencies: Dependencies<{ testA: TestA }>) {
+    super()
     this.testA = dependencies.resolve('testA')
     console.log('B constructed')
   }
 }
 
-class TestC {
+class TestC extends ContextClass {
   readonly testA: TestA
   readonly testB: TestB
 
   constructor (dependencies: Dependencies<{ testA: TestA, testB: TestB }>) {
+    super()
     this.testA = dependencies.resolve('testA')
     this.testB = dependencies.resolve('testB')
     console.log('C constructed')

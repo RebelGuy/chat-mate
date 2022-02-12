@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
@@ -19,7 +20,7 @@ type Deps = Dependencies<{
   channelStore: ChannelStore
 }>
 
-export default class ChatStore {
+export default class ChatStore extends ContextClass {
   readonly name = ChatStore.name
   private readonly db: Db
   private readonly logService: LogService
@@ -27,6 +28,7 @@ export default class ChatStore {
   private readonly channelStore: ChannelStore
 
   constructor (dep: Deps) {
+    super()
     this.db = dep.resolve('dbProvider').get()
     this.logService = dep.resolve('logService')
     this.livestreamStore = dep.resolve('livestreamStore')

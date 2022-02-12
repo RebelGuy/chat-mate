@@ -1,5 +1,6 @@
 import { ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import ExperienceHelpers, { LevelData, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem } from '@rebel/server/models/chat'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -36,7 +37,7 @@ type Deps = Dependencies<{
   channelStore: ChannelStore
 }>
 
-export default class ExperienceService {
+export default class ExperienceService extends ContextClass {
   private readonly livestreamStore: LivestreamStore
   private readonly experienceStore: ExperienceStore
   private readonly experienceHelpers: ExperienceHelpers
@@ -46,6 +47,7 @@ export default class ExperienceService {
   public static readonly CHAT_BASE_XP = 1000
 
   constructor (deps: Deps) {
+    super()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.experienceStore = deps.resolve('experienceStore')
     this.experienceHelpers = deps.resolve('experienceHelpers')

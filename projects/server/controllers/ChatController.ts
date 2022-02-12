@@ -1,4 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
 import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { privateToPublicItems, PublicChatItem } from '@rebel/server/models/chat'
@@ -24,12 +25,13 @@ type Deps = Dependencies<{
 }>
 
 @Path(buildPath('chat'))
-export class ChatController {
+export default class ChatController extends ContextClass {
   readonly liveId: string
   readonly chatStore: ChatStore
   readonly experienceService: ExperienceService
 
   constructor (dependencies: Deps) {
+    super()
     this.liveId = dependencies.resolve('liveId')
     this.chatStore = dependencies.resolve('chatStore')
     this.experienceService = dependencies.resolve('experienceService')

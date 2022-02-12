@@ -1,15 +1,17 @@
 import { Dependencies } from '@rebel/server/context/context'
-import ChannelStore, { ChannelName, ChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ContextClass from '@rebel/server/context/ContextClass'
+import ChannelStore, { ChannelName } from '@rebel/server/stores/ChannelStore'
 import { min } from '@rebel/server/util/math'
 
 type Deps = Dependencies<{
   channelStore: ChannelStore
 }>
 
-export default class ChannelService {
+export default class ChannelService extends ContextClass {
   private readonly channelStore: ChannelStore
 
   public constructor (deps: Deps) {
+    super()
     this.channelStore = deps.resolve('channelStore')
   }
 
