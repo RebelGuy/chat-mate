@@ -69,7 +69,7 @@ export default class ExperienceController extends ContextClass {
     }
 
     const leaderboard = await this.experienceService.getLeaderboard()
-    const match = leaderboard.find(l => l.channelName.toLowerCase() === name)
+    const match = leaderboard.find(l => l.channelName === channel.name)
     if (match == null) {
       return emptyResponse
     }
