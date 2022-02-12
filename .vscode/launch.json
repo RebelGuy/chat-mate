@@ -25,6 +25,11 @@
         "<node_internals>/**"
       ],
       "type": "pwa-node",
+      "outFiles": [
+        // apparently vscode is dumb and can't find the files... sometimes
+        "${workspaceFolder}/dist/**/*.js",
+        "!**/node_modules/**"
+      ]
     },
     {
       "name": "start:mock",
@@ -36,6 +41,10 @@
         "<node_internals>/**"
       ],
       "type": "pwa-node",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js",
+        "!**/node_modules/**"
+      ]
     },
     {
       "name": "Debug Tests",
