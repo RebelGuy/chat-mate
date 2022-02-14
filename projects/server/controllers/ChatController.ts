@@ -1,40 +1,31 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
+import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { privateToPublicItems, PublicChatItem } from '@rebel/server/models/chat'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { ApiSchema } from '@rebel/server/types'
 import { unique } from '@rebel/server/util/arrays'
 import { GET, Path, QueryParam } from 'typescript-rest'
 
-type GetChatResponse = ApiSchema<4, {
-  liveId: string
-
+type GetChatResponse = ApiResponse<5, {
   // include the timestamp so it can easily be used for the next request
-  lastTimestamp: number
-
+  reusableTimestamp: number
   chat: PublicChatItem[]
 }>
 
-type Deps = Dependencies<{
-  liveId: string,
+type Deps = ControllerDependencies<{
   chatStore: ChatStore,
   experienceService: ExperienceService
 }>
 
 @Path(buildPath('chat'))
-export default class ChatController extends ContextClass {
-  readonly liveId: string
+export default class ChatController extends ControllerBase {
   readonly chatStore: ChatStore
   readonly experienceService: ExperienceService
 
-  constructor (dependencies: Deps) {
-    super()
-    this.liveId = dependencies.resolve('liveId')
-    this.chatStore = dependencies.resolve('chatStore')
-    this.experienceService = dependencies.resolve('experienceService')
+  constructor (deps: Deps) {
+    super(deps, 'chat')
+    this.chatStore = deps.resolve('chatStore')
+    this.experienceService = deps.resolve('experienceService')
   }
 
   @GET
@@ -43,15 +34,18 @@ export default class ChatController extends ContextClass {
     @QueryParam('since') since?: number,
     @QueryParam('limit') limit?: number
   ): Promise<GetChatResponse> {
-    since = since ?? 0
-    const items = await this.chatStore.getChatSince(since, limit)
-    const levelData = await this.getLevelData(items.map(c => c.channel.youtubeId))
+    const builder = this.registerResponseBuilder('', 5)
+    try {
+      since = since ?? 0
+      const items = await this.chatStore.getChatSince(since, limit)
+      const levelData = await this.getLevelData(items.map(c => c.channel.youtubeId))
 
-    return {
-      schema: 4,
-      liveId: this.liveId,
-      lastTimestamp: items.at(-1)?.time.getTime() ?? since,
-      chat: privateToPublicItems(items, levelData)
+      return builder.success({
+        reusableTimestamp: items.at(-1)?.time.getTime() ?? since,
+        chat: privateToPublicItems(items, levelData)
+      })
+    } catch (e: any) {
+      return builder.failure(e.message)
     }
   }
 

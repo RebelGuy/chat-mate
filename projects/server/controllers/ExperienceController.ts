@@ -1,52 +1,42 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
+import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService, { RankedEntry } from '@rebel/server/services/ExperienceService'
-import { ApiSchema } from '@rebel/server/types'
 import { GET, Path, QueryParam } from 'typescript-rest'
 
-type GetLeaderboardResponse = ApiSchema<1, {
-  // the timestamp at which this response was generated.
-  timestamp: number
+type GetLeaderboardResponse = ApiResponse<1, {
   entries: RankedEntry[]
 }>
 
-type GetRankResponse = ApiSchema<1, {
-  // the timestamp at which this response was generated.
-  timestamp: number
-
+type GetRankResponse = ApiResponse<1, {
   relevantIndex: number
-
-  // empty if `channelFound` is false
   entries: RankedEntry[]
 }>
 
-type Deps = Dependencies<{
+type Deps = ControllerDependencies<{
   channelService: ChannelService
   experienceService: ExperienceService
 }>
 
 @Path(buildPath('experience'))
-export default class ExperienceController extends ContextClass {
+export default class ExperienceController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
 
-  constructor (dependencies: Deps) {
-    super()
-    this.channelService = dependencies.resolve('channelService')
-    this.experienceService = dependencies.resolve('experienceService')
+  constructor (deps: Deps) {
+    super(deps, 'experience')
+    this.channelService = deps.resolve('channelService')
+    this.experienceService = deps.resolve('experienceService')
   }
 
   @GET
   @Path('/leaderboard')
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
-    const leaderboard = await this.experienceService.getLeaderboard()
-
-    return {
-      schema: 1,
-      timestamp: new Date().getTime(),
-      entries: leaderboard
+    const builder = this.registerResponseBuilder('leaderboard', 1)
+    try {
+      const leaderboard = await this.experienceService.getLeaderboard()
+      return builder.success({ entries: leaderboard })
+    } catch (e: any) {
+      return builder.failure(e.message)
     }
   }
 
@@ -55,43 +45,41 @@ export default class ExperienceController extends ContextClass {
   public async getRank (
     @QueryParam('name') name: string
   ): Promise<GetRankResponse> {
-    name = decodeURI(name).trim().toLowerCase()
-    const channel = await this.channelService.getChannelByName(name)
-
-    const emptyResponse: GetRankResponse = {
-      schema: 1,
-      timestamp: new Date().getTime(),
-      relevantIndex: -1,
-      entries: []
-    }
-    if (channel == null) {
-      return emptyResponse
+    const builder = this.registerResponseBuilder('rank', 1)
+    if (name == null) {
+      return builder.failure(400, `A value for 'name' must be provided.`)
     }
 
-    const leaderboard = await this.experienceService.getLeaderboard()
-    const match = leaderboard.find(l => l.channelName === channel.name)
-    if (match == null) {
-      return emptyResponse
-    }
+    try {
+      name = decodeURI(name).trim().toLowerCase()
+      const channel = await this.channelService.getChannelByName(name)
 
-    // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
-    const rankPadding = 3
-    let lowerRank: number
-    if (match.rank > leaderboard.length - rankPadding) {
-      lowerRank = leaderboard.length - rankPadding * 2
-    } else if (match.rank < 1 + rankPadding) {
-      lowerRank = 1
-    } else {
-      lowerRank = match.rank - rankPadding
-    }
-    const upperRank = lowerRank + rankPadding * 2
-    const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
+      if (channel == null) {
+        return builder.failure(404, `Could not find a channel matching '${name}'`)
+      }
 
-    return {
-      schema: 1,
-      timestamp: new Date().getTime(),
-      relevantIndex: prunedLeaderboard.findIndex(l => l === match),
-      entries: prunedLeaderboard
+      const leaderboard = await this.experienceService.getLeaderboard()
+      const match = leaderboard.find(l => l.channelName === channel.name)!
+
+      // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
+      const rankPadding = 3
+      let lowerRank: number
+      if (match.rank > leaderboard.length - rankPadding) {
+        lowerRank = leaderboard.length - rankPadding * 2
+      } else if (match.rank < 1 + rankPadding) {
+        lowerRank = 1
+      } else {
+        lowerRank = match.rank - rankPadding
+      }
+      const upperRank = lowerRank + rankPadding * 2
+      const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
+
+      return builder.success({
+        relevantIndex: prunedLeaderboard.findIndex(l => l === match),
+        entries: prunedLeaderboard
+      })
+    } catch (e: any) {
+      return builder.failure(e.message)
     }
   }
 }

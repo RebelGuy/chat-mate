@@ -142,72 +142,89 @@ Key:
 
 # API Endpoints
 
-Use the API endpoints to communicate with the server while it is running. The API base URL is `http://localhost:3010/api`
+Use the API endpoints to communicate with the server while it is running. The API base URL is `http://localhost:3010/api`.
 
+A response contains the following properties:
+- `schema` (`number`): The current schema of the return object. Every time there is a change, this will be bumped up by one to avoid inconsistencies between the server and client.
+- `timestamp` (`number`): The unix timestamp (in ms) at which the response was generated.
+- `success` (`boolean`): True if the request was processed correctly, and false otherwise.
+- `data` (`object`): Only included if `success` is `true`. Contains the response data, outlined for each endpoint below.
+- `error` (`object`): Only included if `success` is `false`. Contains the following properties:
+  - `errorCode` (`number`): The HTTP error code that most closely matches the type of problem encountered.
+  - `errorType` (`string`): The general type of error encounterd.
+  - `message` (`string`): An optional error message describing what went wrong.
+
+Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
 
 ## Chat Endpoints
+Path: `/chat`.
 
-### `GET /chat`
+### `GET`
+*Current schema: 5.*
 
-Retrieves the latest chat items, sorted from earliest to latest.
+Retrieves the latest chat items.
 
 Query parameters:
-- `since` (number): Gets only chat items **after** the given time (unix ms).
-- `limit` (number): Limits the number of returned chat items (see below).
+- `since` (`number`): *Optional.* Gets only chat items **after** the given time (unix ms).
+- `limit` (`number`): *Optional.* Limits the number of returned chat items. Defaults to 100.
 
-Returns an object with the following properties:
-- `schema` (`4`): The current schema of the return object.
-- `liveId` (`string`): The livestream ID to which the chat items belong. Currently, this is the liveId specified in the [`.env`](#env) file.
-- `lastTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+Returns data with the following properties:
+- `reusableTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `chat` ([`ChatItem`](#ChatItem)[]): The chat data that satisfy the request filter.
 
 ## ChatMate Endpoints
+Path: `/chatMate`.
 
 ### `GET /status`
+*Current schema: 1.*
 
 Gets the latest status information.
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp.
+Returns data with the following properties:
 - `livestreamStatus` ([`LivestreamStatus`](#LivestreamStatus)): Status information relating to the current livestream.
 - `apiStatus` ([`ApiStatus`](#ApiStatus)): Status information relating to the YouTube API.
 
 ### `GET /events`
+*Current schema: 2.*
 
-Gets the events since the specified time.
+Gets the events that have occurred since the specified time.
 
 Query parameters:
-- `since` (`number`): Gets only events **after** the given time (unix ms).
+- `since` (`number`): *Required.* Gets only events **after** the given time (unix ms).
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+Returns an data with the following properties:
+- `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `events` ([`Event`](#event)`[]`): The list of events that have occurred since the given timestamp.
 
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+
 ## Experience Endpoints
+Path: `/experience`.
 
 ### `GET /leaderboard`
+*Current schema: 1.*
 
 Gets the ranked experience list of all channels.
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp.
+Returns data with the following properties:
 - `entries` ([`RankedEntry`](#rankedentry)`[]`): The array of every channel's experience, in ascending order.
 
 ### `GET /rank`
+*Current schema: 1.*
 
-Gets the rank of a specific channel, as well as some context. Essentially, it returns a section of the data from `GET /leaderboard`.
+Gets the rank of a specific channel, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
 Query parameters:
-- `name` (`string`): The name of the channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
+- `name` (`string`): *Required.* The name of the channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp.
-- `relevantIndex` (`number`): The index of the entry in `entries` that belongs to the matched channel. `-1` if no channel could be matched.
-- `entries` ([`RankedEntry`](#rankedentry)`[]`): The partial leaderboard in ascending order, which includes the matched channel. Empty if no channel could be matched.
+Returns data with the following properties:
+- `relevantIndex` (`number`): The index of the entry in `entries` that belongs to the matched channel. Never negative.
+- `entries` ([`RankedEntry`](#rankedentry)`[]`): The partial leaderboard in ascending order, which includes the matched channel. Never empty.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+- `404`: When no channel could be matched against the search query.
 
 # Data Types
 
