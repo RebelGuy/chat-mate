@@ -55,7 +55,8 @@ export default class ExperienceService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
   }
 
-  // adds experience only for chat messages sent during the live chat
+  /** Adds experience only for chat messages sent during the live chat.
+   * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItems: ChatItem[]): Promise<void> {
     chatItems.sort((a, b) => a.timestamp - b.timestamp)
 
