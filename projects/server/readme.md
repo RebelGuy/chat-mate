@@ -103,7 +103,7 @@ Key:
   - 🟢 getContinuationToken
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
-  - 🟢 getLatestSnapshot
+  - 🟢 getSnapshot
   - 🟢 getPreviousChatExperience
   - 🟢 getAllTransactionsStartingAt
   - 🟢 getTotalDeltaStartingAt

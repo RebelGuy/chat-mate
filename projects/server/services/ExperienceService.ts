@@ -168,13 +168,12 @@ export default class ExperienceService extends ContextClass {
   }
 
   private async getTotalExperience (channelId: string): Promise<GreaterThanOrEqual<0>> {
-    const latestSnapshot = await this.experienceStore.getLatestSnapshot(channelId)
-    if (latestSnapshot == null) {
-      return 0
-    }
+    const snapshot = await this.experienceStore.getSnapshot(channelId)
+    const baseExperience = snapshot?.experience ?? 0
 
-    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(channelId, latestSnapshot.time.getTime())
-    const total = latestSnapshot.experience + totalDelta
+    const startingTime = snapshot?.time.getTime() ?? 0
+    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(channelId, startingTime)
+    const total = baseExperience + totalDelta
     return total >= 0 ? total as GreaterThanOrEqual<0> : 0
   }
 

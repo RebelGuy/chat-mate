@@ -46,24 +46,6 @@ export default () => {
   afterEach(stopTestDb)
 
   describe(nameof(ExperienceStore, 'addChatExperience'), () => {
-    test('initialises snapshot if none exists', async () => {
-      const data1 = { ...chatExperienceData1, chatMessageYtId: chatMessage1.youtubeId }
-      const data2 = { ...chatExperienceData2, chatMessageYtId: chatMessage2.youtubeId }
-      const data3 = { ...chatExperienceData3, chatMessageYtId: chatMessage3.youtubeId }
-
-      // add first item
-      await experienceStore.addChatExperience(data.channel1, data.time1.getTime(), 10, data1)
-      await expectRowCount(db.experienceSnapshot).toBe(1)
-
-      // add second item
-      await experienceStore.addChatExperience(data.channel1, data.time2.getTime(), 10, data2)
-      await expectRowCount(db.experienceSnapshot).toBe(1)
-
-      // add third item for a different channel
-      await experienceStore.addChatExperience(data.channel2, data.time3.getTime(), 10, data3)
-      await expectRowCount(db.experienceSnapshot).toBe(2)
-    })
-
     test('adds transaction with correct chat experience data', async () => {
       const data1 = { ...chatExperienceData1, chatMessageYtId: chatMessage1.youtubeId }
 
@@ -104,7 +86,7 @@ export default () => {
     })
   })
 
-  describe(nameof(ExperienceStore, 'getLatestSnapshot'), () => {
+  describe(nameof(ExperienceStore, 'getSnapshot'), () => {
     test('returns null if no snapshot exists', async () => {
       await db.experienceSnapshot.create({ data: {
         experience: 10,
@@ -112,7 +94,7 @@ export default () => {
         channel: { connect: { youtubeId: data.channel2 }}
       }})
 
-      const result = await experienceStore.getLatestSnapshot(data.channel1)
+      const result = await experienceStore.getSnapshot(data.channel1)
 
       expect(result).toBeNull()
     })
@@ -129,7 +111,7 @@ export default () => {
         channel: { connect: { youtubeId: data.channel1 }}
       }})
 
-      const result = (await experienceStore.getLatestSnapshot(data.channel1))!
+      const result = (await experienceStore.getSnapshot(data.channel1))!
 
       expect(result.experience).toEqual(20)
       expect(result.time).toEqual(data.time2)
