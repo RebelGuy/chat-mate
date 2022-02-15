@@ -10,7 +10,7 @@ export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 
 export type ChannelWithLatestInfo = Omit<Entity.Channel, 'chatMessages' | 'experienceTransactions' | 'experienceSnapshots' | 'viewingBlocks'>
 
-export type ChannelName = { youtubeId: string, name: string }
+export type ChannelName = { id: number, youtubeId: string, name: string }
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -85,10 +85,11 @@ export default class ChannelStore extends ContextClass {
     const currentChannelInfos = await this.db.channelInfo.findMany({
       distinct: ['channelId'],
       orderBy: { time: 'desc' },
-      select: { name: true, channel: { select: { youtubeId: true }} }
+      select: { name: true, channel: { select: { id: true, youtubeId: true }} }
     })
 
     return currentChannelInfos.map(info => ({
+      id: info.channel.id,
       name: info.name,
       youtubeId: info.channel.youtubeId
     }))

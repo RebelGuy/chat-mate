@@ -1,6 +1,7 @@
 import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService, { RankedEntry } from '@rebel/server/services/ExperienceService'
+import { ChannelName } from '@rebel/server/stores/ChannelStore'
 import { GET, Path, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<1, {
@@ -43,23 +44,30 @@ export default class ExperienceController extends ControllerBase {
   @GET
   @Path('/rank')
   public async getRank (
-    @QueryParam('name') name: string
+    @QueryParam('name') name?: string,
+    @QueryParam('id') id?: number
   ): Promise<GetRankResponse> {
     const builder = this.registerResponseBuilder('rank', 1)
-    if (name == null) {
-      return builder.failure(400, `A value for 'name' must be provided.`)
+    if (name == null && id == null) {
+      return builder.failure(400, `A value for 'name' or 'id' must be provided.`)
     }
 
     try {
-      name = decodeURI(name).trim().toLowerCase()
-      const channel = await this.channelService.getChannelByName(name)
-
-      if (channel == null) {
-        return builder.failure(404, `Could not find a channel matching '${name}'`)
+      let channel: ChannelName | null
+      if (name != null) {
+        channel = await this.channelService.getChannelByName(decodeURI(name).trim().toLowerCase())
+        if (channel == null) {
+          return builder.failure(404, `Could not find a channel matching name '${name}'`)
+        }
+      } else {
+        channel = await this.channelService.getChannelById(id!)
+        if (channel == null) {
+          return builder.failure(404, `Could not find a channel matching id '${id}'`)
+        }
       }
 
       const leaderboard = await this.experienceService.getLeaderboard()
-      const match = leaderboard.find(l => l.channelName === channel.name)!
+      const match = leaderboard.find(l => l.channelName === channel!.name)!
 
       // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
       const rankPadding = 3

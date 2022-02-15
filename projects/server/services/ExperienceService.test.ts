@@ -123,7 +123,9 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 
 describe(nameof(ExperienceService, 'getLeaderboard'), () => {
   test('returns levels for all users', async () => {
-    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ youtubeId: data.channel1, name: 'channel 1' }, { youtubeId: data.channel2, name: 'channel 2' }])
+    const channelName1 = { id: 1, youtubeId: data.channel1, name: 'channel 1' }
+    const channelName2 = { id: 2, youtubeId: data.channel2, name: 'channel 2' }
+    mockChannelStore.getCurrentChannelNames.mockResolvedValue([channelName1, channelName2])
     mockExperienceStore.getTotalDeltaStartingAt.calledWith(data.channel1, 0).mockResolvedValue(130)
     mockExperienceStore.getTotalDeltaStartingAt.calledWith(data.channel2, 0).mockResolvedValue(811)
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))

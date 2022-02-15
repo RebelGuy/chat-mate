@@ -33,4 +33,9 @@ export default class ChannelService extends ContextClass {
       return matches[index]
     }
   }
+
+  public async getChannelById (id: number): Promise<ChannelName | null> {
+    const channelNames = await this.channelStore.getCurrentChannelNames()
+    return channelNames.find(channel => channel.id === id) ?? null
+  }
 }

@@ -74,6 +74,7 @@ Key:
 
 **Services**
 - 🟢 ChannelService
+  - 🟢 getChannelById
   - 🟢 getChannelByName
 - 🟢 ChatService
   - 🟢 initialise

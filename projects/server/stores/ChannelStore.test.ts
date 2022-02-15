@@ -143,7 +143,9 @@ export default () => {
 
       const result = await channelStore.getCurrentChannelNames()
 
-      expect(result).toEqual<ChannelName[]>([{ youtubeId: channelId2, name: channelInfo3.name }, { youtubeId: channelId1, name: channelInfo2.name }])
+      const expected1 = { id: 2, youtubeId: channelId2, name: channelInfo3.name }
+      const expected2 = { id: 1, youtubeId: channelId1, name: channelInfo2.name }
+      expect(result).toEqual<ChannelName[]>([expected1, expected2])
     })
   })
 

@@ -15,9 +15,32 @@ beforeEach(() => {
   }))
 })
 
+describe(nameof(ChannelService, 'getChannelById'), () => {
+  test('returns null if channel with id does not exist', async () => {
+    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' }])
+
+    const result = await channelService.getChannelById(2)
+
+    expect(result).toBeNull()
+  })
+  
+  test('returns correct channel with id', async () => {
+    const names: ChannelName[] = [
+      { id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' },
+      { id: 2, name: 'Rebel', youtubeId: 'id2' },
+      { id: 3, name: 'Rebel_Guy', youtubeId: 'id3' }
+    ]
+    mockChannelStore.getCurrentChannelNames.mockResolvedValue(names)
+
+    const result = await channelService.getChannelById(2)
+
+    expect(result).toEqual(names[1])
+  })
+})
+
 describe(nameof(ChannelService, 'getChannelByName'), () => {
   test('returns null if there is no match', async () => {
-    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ name: 'Mr Cool Guy', youtubeId: 'id1' }])
+    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' }])
 
     const result = await channelService.getChannelByName('rebel_guy')
 
@@ -26,10 +49,10 @@ describe(nameof(ChannelService, 'getChannelByName'), () => {
 
   test('returns best match', async () => {
     const names: ChannelName[] = [
-      { name: 'Mr Cool Guy', youtubeId: 'id1' },
-      { name: 'Rebel', youtubeId: 'id2' },
-      { name: 'Rebel_Guy', youtubeId: 'id3' },
-      { name: 'Rebel_Guy2', youtubeId: 'id3' }
+      { id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' },
+      { id: 2, name: 'Rebel', youtubeId: 'id2' },
+      { id: 3, name: 'Rebel_Guy', youtubeId: 'id3' },
+      { id: 4, name: 'Rebel_Guy2', youtubeId: 'id3' }
     ]
     mockChannelStore.getCurrentChannelNames.mockResolvedValue(names)
 
