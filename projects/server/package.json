@@ -20,7 +20,10 @@
     "migrate:release": "yarn run db:dump && dotenv -e release.env npx prisma migrate deploy",
     "build:debug": "webpack --env NODE_ENV=debug",
     "build:release": "webpack --env NODE_ENV=release",
-    "start:release": "cross-env NODE_ENV=release node ../../dist/release/server/app.js"
+    "start:release": "cross-env NODE_ENV=release node ../../dist/release/server/app.js",
+
+    "snapshot:debug":   "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/debug/server/scripts/RefreshSnapshots.js",
+    "snapshot:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env node ../../dist/debug/server/scripts/RefreshSnapshots.js"
   },
   "dependencies": {
     "@prisma/client": "^3.6.0",
