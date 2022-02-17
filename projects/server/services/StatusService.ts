@@ -1,18 +1,8 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { GenericObject } from '@rebel/server/types'
 import { avg } from '@rebel/server/util/math'
-
-export type ApiStatus = {
-  // null if no data is available yet
-  status: 'ok' | 'error' | null
-
-  // the last timestamp at which the status was `ok`, if any
-  lastOk: number | null
-
-  // average time taken to receive recent responses, or null if no data is available yet
-  avgRoundtrip: number | null
-}
 
 type Deps = Dependencies<GenericObject>
 
@@ -28,8 +18,9 @@ export default class StatusService extends ContextClass {
     this.lastMasterchatStatus = null
   }
 
-  public getApiStatus (): ApiStatus {
+  public getApiStatus (): PublicApiStatus {
     return {
+      schema: 1,
       status: this.lastMasterchatStatus,
       lastOk: this.lastMasterchatOk,
       avgRoundtrip: avg(...this.masterchatResponseTimes)

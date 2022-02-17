@@ -1,16 +1,18 @@
 import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
+import { rankedEntryToPublic } from '@rebel/server/models/experience'
 import ChannelService from '@rebel/server/services/ChannelService'
-import ExperienceService, { RankedEntry } from '@rebel/server/services/ExperienceService'
+import ExperienceService from '@rebel/server/services/ExperienceService'
 import { ChannelName } from '@rebel/server/stores/ChannelStore'
 import { GET, Path, QueryParam } from 'typescript-rest'
 
-type GetLeaderboardResponse = ApiResponse<1, {
-  entries: RankedEntry[]
+type GetLeaderboardResponse = ApiResponse<2, {
+  rankedUsers: PublicRankedUser[]
 }>
 
-type GetRankResponse = ApiResponse<1, {
+type GetRankResponse = ApiResponse<2, {
   relevantIndex: number
-  entries: RankedEntry[]
+  rankedUsers: PublicRankedUser[]
 }>
 
 type Deps = ControllerDependencies<{
@@ -32,10 +34,11 @@ export default class ExperienceController extends ControllerBase {
   @GET
   @Path('/leaderboard')
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
-    const builder = this.registerResponseBuilder('leaderboard', 1)
+    const builder = this.registerResponseBuilder<GetLeaderboardResponse>('leaderboard', 2)
     try {
       const leaderboard = await this.experienceService.getLeaderboard()
-      return builder.success({ entries: leaderboard })
+      const publicLeaderboard = leaderboard.map(entry => rankedEntryToPublic(entry))
+      return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
       return builder.failure(e.message)
     }
@@ -47,7 +50,7 @@ export default class ExperienceController extends ControllerBase {
     @QueryParam('name') name?: string,
     @QueryParam('id') id?: number
   ): Promise<GetRankResponse> {
-    const builder = this.registerResponseBuilder('rank', 1)
+    const builder = this.registerResponseBuilder<GetRankResponse>('rank', 2)
     if (name == null && id == null) {
       return builder.failure(400, `A value for 'name' or 'id' must be provided.`)
     }
@@ -81,10 +84,11 @@ export default class ExperienceController extends ControllerBase {
       }
       const upperRank = lowerRank + rankPadding * 2
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
+      const publicLeaderboard = prunedLeaderboard.map(entry => rankedEntryToPublic(entry))
 
       return builder.success({
         relevantIndex: prunedLeaderboard.findIndex(l => l === match),
-        entries: prunedLeaderboard
+        rankedUsers: publicLeaderboard
       })
     } catch (e: any) {
       return builder.failure(e.message)

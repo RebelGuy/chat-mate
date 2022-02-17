@@ -94,7 +94,6 @@ Key:
 **Stores**
 - 🟢 ChannelStore
   - 🟢 createOrUpdate
-  - 🟢 exists
   - 🟢 getCurrent
   - 🟢 getCurrentChannelNames
   - 🟢 getHistory
@@ -157,6 +156,8 @@ A response contains the following properties:
 
 Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
 
+All non-primitive properties of `data` are of type `PublicObject`, which are reusable, schema-tagged objects which themselves contain either primitive types or other `PublicObject`s. The schema definitions for these can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times.
+
 ## Chat Endpoints
 Path: `/chat`.
 
@@ -171,7 +172,7 @@ Query parameters:
 
 Returns data with the following properties:
 - `reusableTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `chat` ([`ChatItem`](#ChatItem)[]): The chat data that satisfy the request filter.
+- `chat` (`PublicChatItem[]`): The chat data that satisfy the request filter.
 
 ## ChatMate Endpoints
 Path: `/chatMate`.
@@ -182,8 +183,8 @@ Path: `/chatMate`.
 Gets the latest status information.
 
 Returns data with the following properties:
-- `livestreamStatus` ([`LivestreamStatus`](#LivestreamStatus)): Status information relating to the current livestream.
-- `apiStatus` ([`ApiStatus`](#ApiStatus)): Status information relating to the YouTube API.
+- `livestreamStatus` (`PublicLivestreamStatus`): Status information relating to the current livestream.
+- `apiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
 *Current schema: 2.*
@@ -195,7 +196,7 @@ Query parameters:
 
 Returns an data with the following properties:
 - `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `events` ([`Event`](#event)`[]`): The list of events that have occurred since the given timestamp.
+- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp.
 
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
@@ -204,103 +205,25 @@ Can return the following errors:
 Path: `/experience`.
 
 ### `GET /leaderboard`
-*Current schema: 1.*
+*Current schema: 2.*
 
-Gets the ranked experience list of all channels.
+Gets the ranked experience list of all users.
 
 Returns data with the following properties:
-- `entries` ([`RankedEntry`](#rankedentry)`[]`): The array of every channel's experience, in ascending order.
+- `rankedUsers` (`PublicRankedUser[]`): The array of every user's rank, sorted in ascending order.
 
 ### `GET /rank`
-*Current schema: 1.*
+*Current schema: 2.*
 
-Gets the rank of a specific channel, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
+Gets the rank of a specific user, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
 Query parameters:
-- `name` (`string`): *Required.* The name of the channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
+- `name` (`string`): *Required.* The name of the user's channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
 
 Returns data with the following properties:
 - `relevantIndex` (`number`): The index of the entry in `entries` that belongs to the matched channel. Never negative.
-- `entries` ([`RankedEntry`](#rankedentry)`[]`): The partial leaderboard in ascending order, which includes the matched channel. Never empty.
+- `rankedUsers` (`PublicRankedUser[]`): The partial leaderboard in ascending order, which includes the matched channel. Never empty.
 
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 - `404`: When no channel could be matched against the search query.
-
-# Data Types
-
-
-## ChatItem
-- `internalId` (`number`): ChatMate database ID.
-- `id` (`string`): YouTube's ID.
-- `timestamp` (`number`): Unix timestamp in milliseconds.
-- `author` ([`Author`](#Author)): The author of the chat item.
-- `messageParts` ([`PartialChatMessage`](#PartialChatMessage)): The partial messages that make up the contents of this chat item.
-
-## Author
-- `internalId` (`number`): ChatMate database ID.
-- `name` (`string?`): The author name (channel name).
-- `channelId` (`string`): The unique YouTube channel ID.
-- `image` (`string`): The image URL of the author's channel.
-- `isOwner` (`boolean`): Whether the user is the channel owner of the livestreamer's channel.
-- `isModerator` (`boolean`): Whether the user is a moderator on the livestream.
-- `isVerified` (`boolean`): Whether the user has a YouTube verified checkmark.
-- `lastUpdate` (`number`): Timestamp of the last time the author's info was updated.
-- `level` (`number`): The current integer level of the author.
-- `levelProgress` (`number`): The normalised (0 <= x < 1) value representing the progress until the next level.
-
-## PartialChatMessage
-- `type` (`string`): The type of partial message.
-  - `text` (`string`): The message part consists purely of text.
-  - `emoji` (`string`): The message part consists purely of a single emoji.
-- `text` (`string`): The text of a message part of type `text`.
-- `isBold` (`boolean`): Whether the text of a message of type `text` is bold.
-- `isItalics` (`boolean`): Whether the text of a message of type `text` is in italics.
-- `emojiId` (`string`): A unique ID for this emoji.
-- `name` (`string`): The emoji name, only for a message part of type `emoji`. It is the same name that is shown when hovering over the emoji.
-- `label` (`string`): The emoji label, only for a message part of type `emoji`. It is either the shortcut text (e.g. `:yt:`, or the first search term used for this emoji).
-- `image` ([`ChatImage`](#ChatImage)): The image representing the emoji, only for a message part of type `emoji`.
-
-## ChatImage
-- `url` (`string`): The image URL for the emoji.
-- `width` (`number?`): The pixel width of the emoji image.
-- `height` (`number?`): The pixel height of the emoji image.
-
-## LivestreamStatus
-- `livestreamLink` (`string`): The public URL to the current livestream on YouTube.
-- `status` (`string`): The current livestream status.
-  - `not_started`: The livestream hasn't started yet.
-  - `live`: The livestream is currently ongoing.
-  - `finished`: The livestream has concluded.
-- `liveViewers` (`number | null`): The number of viewers currently watching the livestream. Set to `null` if `status` is not `live`, or if no information is available.
-- `startTime` (`number | null`): The timestamp at which the livestream has started. Set to `null` if `status` is `not_started`.
-- `endTime` (`number | null`): Time timestamp at which the livestream has finished. Set to `null` if `status` is not `finished`.
-
-## ApiStatus
-- `status` (`string | null`): The current status of the YouTube API.
-  - `null`: No information is available yet.
-  - `'ok'`: Everything is working correctly.
-  - `'error'`: Unable to reach the YouTube servers.
-- `lastOk` (`number | null`): The timestamp of the last time we have been able to successfully reach the YouTube servers. Set to `null` if no information is available yet.
-- `avgRoundtrip` (`number | null`): The average number milliseconds it has taken recent requests to receive a response. Set to `null` if no information is available yet.
-
-## Event
-
-- `type` (`string`): The event type. Must be one of the following values:
-  - `levelUp`: A [level up event](#levelup-event).
-- `timestamp` (`number`): The timestamp at which this event occurred.
-- `data` (`object`): Data for the event. The shape depends on the event type.
-
-### `levelUp` Event
-Occurrs when the experience level of a user changes by at least 1.
-
-- `channelName` (`string`): The name of the channel that levelled up.
-- `oldLevel` (`number`): The experience level at the beginning of the event check period.
-- `newLevel` (`number`): The current experience level.
-
-## RankedEntry
-
-- `rank` (`number`): The experience rank of this entry. The highest rank possible is `1`.
-- `channelName` (`string`): The current name of the channel holding this rank.
-- `level` (`number`): The current integer level of the channel.
-- `levelProgress` (`number`): The normalised (0 <= x < 1) value representing the progress until the next level.

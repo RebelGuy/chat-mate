@@ -1,5 +1,11 @@
 import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
+import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
+import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/PublicMessageEmoji'
+import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
+import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
+import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
+import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 
 export type ChatItem = {
@@ -11,21 +17,11 @@ export type ChatItem = {
   messageParts: PartialChatMessage[],
 }
 
-export type PublicChatItem = Omit<ChatItem, 'author'> & {
-  internalId: number
-  author: PublicAuthor
-}
-
 export type Author = {
   name?: string,
   channelId: string,
   image: string,
   attributes: AuthorAttributes
-}
-
-export type PublicAuthor = Omit<Author, 'attributes'> & AuthorAttributes & LevelData & {
-  internalId: number
-  lastUpdate: number
 }
 
 export type AuthorAttributes = {
@@ -102,54 +98,76 @@ export function getEmojiLabel (emoji: YTEmoji): string {
 }
 
 export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelData: Map<string, LevelData>): PublicChatItem[] {
-  return chatItems.map(item => {
-    const channelInfo = item.channel.infoHistory[0]
-    const result: PublicChatItem = {
-      internalId: item.id,
-      id: item.youtubeId,
-      timestamp: item.time.getTime(),
-      author: {
-        internalId: item.channel.id,
-        channelId: item.channel.youtubeId,
-        lastUpdate: channelInfo.time.getTime(),
-        name: channelInfo.name,
-        image: channelInfo.imageUrl,
-        isOwner: channelInfo.isOwner,
-        isModerator: channelInfo.isModerator,
-        isVerified: channelInfo.IsVerified,
-        ...levelData.get(item.channel.youtubeId)!
-      },
-      messageParts: item.chatMessageParts.map(part => {
-        let partResult: PartialChatMessage
-        if (part.text != null && part.emoji == null) {
-          const text = part.text
-          partResult = {
-            type: 'text',
-            text: text.text,
-            isBold: text.isBold,
-            isItalics: text.isItalics
-          }
-        } else if (part.text == null && part.emoji != null) {
-          const emoji = part.emoji
-          partResult = {
-            type: 'emoji',
-            emojiId: emoji.youtubeId,
-            name: emoji.name!,
-            label: emoji.label!,
-            image: {
-              url: emoji.imageUrl!,
-              height: emoji.imageHeight ?? undefined,
-              width: emoji.imageWidth ?? undefined
-            }
-          }
-        } else {
-          throw new Error('ChatMessagePart must have the text or emoji component defined.')
-        }
+  let publicChatItems: PublicChatItem[] = []
+  for (const chat of chatItems) {
+    const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
-        return partResult
-      })
+    const channelInfo = chat.channel.infoHistory[0]
+    const userInfo: PublicChannelInfo = {
+      schema: 1,
+      channelName: channelInfo.name
     }
 
-    return result
-  })
+    const level = levelData.get(chat.channel.youtubeId)!
+    const levelInfo: PublicLevelInfo = {
+      schema: 1,
+      level: level.level,
+      levelProgress: level.levelProgress
+    }
+
+    const newItem: PublicChatItem = {
+      schema: 1,
+      id: chat.id,
+      timestamp: chat.time.getTime(),
+      messageParts,
+      author: {
+        schema: 1,
+        id: chat.channel.id,
+        userInfo,
+        levelInfo
+      }
+    }
+    publicChatItems.push(newItem)
+  }
+
+  return publicChatItems
+}
+
+function toPublicMessagePart (part: ChatMessagePart & { emoji: ChatEmoji | null, text: ChatText | null }): PublicMessagePart {
+  let type: 'text' | 'emoji'
+  let text: PublicMessageText | null = null
+  let emoji: PublicMessageEmoji | null = null
+  if (part.text != null && part.emoji == null) {
+    type = 'text'
+    text = {
+      schema: 1,
+      text: part.text.text,
+      isBold: part.text.isBold,
+      isItalics: part.text.isItalics
+    }
+  } else if (part.emoji != null && part.text == null) {
+    type = 'emoji'
+    emoji = {
+      schema: 1,
+      // so far I am yet to find an instance where either of these are null
+      label: part.emoji.label!,
+      name: part.emoji.name!,
+      image: {
+        schema: 1,
+        url: part.emoji.imageUrl!,
+        height: part.emoji.imageHeight,
+        width: part.emoji.imageWidth
+      }
+    }
+  } else {
+    throw new Error('ChatMessagePart must have the text or emoji component defined.')
+  }
+
+  const publicPart: PublicMessagePart = {
+    schema: 1,
+    type,
+    textData: text,
+    emojiData: emoji
+  }
+  return publicPart
 }

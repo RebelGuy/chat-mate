@@ -26,6 +26,7 @@ export type LevelDiff = {
 
 export type RankedEntry = LevelData & {
   rank: number
+  channelId: number
   channelName: string
 }
 
@@ -97,6 +98,7 @@ export default class ExperienceService extends ContextClass {
     const ordered = sortBy(zip(allChannels, allLevels), item => item.totalExperience, 'desc')
     return ordered.map((item, i) => ({
       rank: i + 1,
+      channelId: item.id,
       channelName: item.name,
       level: item.level,
       levelProgress: item.levelProgress

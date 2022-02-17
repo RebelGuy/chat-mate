@@ -24,11 +24,7 @@ export default class ChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async exists (channelId: string): Promise<boolean> {
-    return (await this.db.channel.findUnique({ where: { youtubeId: channelId }})) != null
-  }
-
-  public async getCurrent (channelId: string): Promise<ChannelWithLatestInfo | null> {
+  public async getCurrent (channelId: string | number): Promise<ChannelWithLatestInfo | null> {
     return this.tryGetChannelWithLatestInfo(channelId)
   }
 
@@ -95,9 +91,12 @@ export default class ChannelStore extends ContextClass {
     }))
   }
 
-  private async tryGetChannelWithLatestInfo (channelId: string) {
+  private async tryGetChannelWithLatestInfo (channelId: string | number) {
+    const youtubeId: string | undefined = typeof channelId === 'string' ? channelId : undefined
+    const id: number | undefined = typeof channelId === 'number' ? channelId : undefined
+
     return await this.db.channel.findUnique({
-      where: { youtubeId: channelId },
+      where: { youtubeId, id },
       include: channelQuery_includeLatestChannelInfo
     })
   }

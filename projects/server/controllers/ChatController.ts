@@ -1,6 +1,7 @@
 import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
-import { privateToPublicItems, PublicChatItem } from '@rebel/server/models/chat'
+import { privateToPublicItems } from '@rebel/server/models/chat'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { unique } from '@rebel/server/util/arrays'
@@ -34,7 +35,7 @@ export default class ChatController extends ControllerBase {
     @QueryParam('since') since?: number,
     @QueryParam('limit') limit?: number
   ): Promise<GetChatResponse> {
-    const builder = this.registerResponseBuilder('', 5)
+    const builder = this.registerResponseBuilder<GetChatResponse>('', 5)
     try {
       since = since ?? 0
       const items = await this.chatStore.getChatSince(since, limit)
