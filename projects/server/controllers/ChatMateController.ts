@@ -11,6 +11,8 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLivestreamLink } from '@rebel/server/util/text'
 import { GET, Path, QueryParam } from 'typescript-rest'
 import { zip } from '@rebel/server/util/arrays'
+import { channelInfoAndLevelToPublicUser } from '@rebel/server/models/user'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 
 type GetStatusResponse = ApiResponse<1, {
   livestreamStatus: PublicLivestreamStatus
@@ -81,7 +83,7 @@ export default class ChatMateController extends ControllerBase {
       let events: PublicChatMateEvent[] = []
       for (let i = 0; i < diffs.length; i++) {
         const diff = diffs[i]
-        const channel = channels[i]
+        const user: PublicUser = channelInfoAndLevelToPublicUser(channels[i])
 
         events.push({
           schema: 1,
@@ -91,19 +93,7 @@ export default class ChatMateController extends ControllerBase {
             schema: 1,
             newLevel: diff.endLevel.level,
             oldLevel: diff.startLevel.level,
-            user: {
-              schema: 1,
-              id: channel.id,
-              userInfo: {
-                schema: 1,
-                channelName: channel.infoHistory[0].name
-              },
-              levelInfo: {
-                schema: 1,
-                level: channel.level,
-                levelProgress: channel.levelProgress
-              }
-            }
+            user
           }
         })
       }

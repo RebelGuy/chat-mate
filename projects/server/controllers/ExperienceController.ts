@@ -58,10 +58,11 @@ export default class ExperienceController extends ControllerBase {
     try {
       let channel: ChannelName | null
       if (name != null) {
-        channel = await this.channelService.getChannelByName(decodeURI(name).trim().toLowerCase())
-        if (channel == null) {
+        const matches = await this.channelService.getChannelByName(decodeURI(name).trim().toLowerCase())
+        if (matches == null) {
           return builder.failure(404, `Could not find a channel matching name '${name}'`)
         }
+        channel = matches[0]
       } else {
         channel = await this.channelService.getChannelById(id!)
         if (channel == null) {

@@ -4,7 +4,7 @@ import LogService from '@rebel/server/services/LogService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { mockGetter, nameof, promised, single } from '@rebel/server/_test/utils'
 import { DeepMockProxy, mock, mockDeep, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -138,7 +138,7 @@ export default () => {
       label: emoji1Saved.label,
       name: emoji1Saved.name
     }})
-  })
+  }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
 

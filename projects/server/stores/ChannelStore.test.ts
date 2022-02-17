@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ChannelStore, { ChannelName, CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
-import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof, single } from '@rebel/server/_test/utils'
 
 const channelId1 = 'channelId1'
@@ -47,7 +47,7 @@ export default () => {
     const dbProvider = await startTestDb()
     channelStore = new ChannelStore(new Dependencies({ dbProvider }))
     db = dbProvider.get()
-  }, 10000) // this timeout helps prevent the "Exceeded timeout of 5000 ms for a hook." error
+  }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
 

@@ -44,20 +44,20 @@ describe(nameof(ChannelService, 'getChannelByName'), () => {
 
     const result = await channelService.getChannelByName('rebel_guy')
 
-    expect(result).toBeNull()
+    expect(result).toEqual([])
   })
 
   test('returns best match', async () => {
     const names: ChannelName[] = [
       { id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' },
-      { id: 2, name: 'Rebel', youtubeId: 'id2' },
-      { id: 3, name: 'Rebel_Guy', youtubeId: 'id3' },
+      { id: 2, name: 'Rebel_Guy', youtubeId: 'id3' },
+      { id: 3, name: 'Rebel', youtubeId: 'id2' },
       { id: 4, name: 'Rebel_Guy2', youtubeId: 'id3' }
     ]
     mockChannelStore.getCurrentChannelNames.mockResolvedValue(names)
 
-    const result = await channelService.getChannelByName('rebel_guy')
+    const result = await channelService.getChannelByName('rebel')
 
-    expect(result).toEqual(names[2])
+    expect(result).toEqual([names[2], names[1], names[3]])
   })
 })

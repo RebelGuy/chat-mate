@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import ViewershipStore, { VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER, VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE } from '@rebel/server/stores/ViewershipStore'
 import { getGetterMock, mockGetter, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
@@ -44,7 +44,7 @@ export default () => {
       { channelId: 2, livestreamId: 2, time: data.time2, youtubeId: 'id2.1' },
       { channelId: 2, livestreamId: 2, time: addTime(data.time2, 'seconds', 1), youtubeId: 'id3.1' },
     ]})
-  })
+  }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
 

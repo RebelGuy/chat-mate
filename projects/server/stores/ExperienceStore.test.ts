@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { deleteProps, mockGetter, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -41,7 +41,7 @@ export default () => {
     chatMessage1 = await data.addChatMessage(db, data.time1, livestream.id, data.channel1)
     chatMessage2 = await data.addChatMessage(db, data.time2, livestream.id, data.channel1)
     chatMessage3 = await data.addChatMessage(db, data.time3, livestream.id, data.channel2)
-  })
+  }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
 

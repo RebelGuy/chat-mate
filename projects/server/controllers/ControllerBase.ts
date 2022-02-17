@@ -22,6 +22,8 @@ export type ApiResponse<Schema extends number, T extends ResponseData<T>> = {
   error: ApiError
 })
 
+export type ApiRequest<Schema extends number, T extends {schema: Schema } & PublicObject<Schema, T>> = T
+
 /** The root of the response data can be primitives or PublicObjects, and does not directly need to be schema-tagged. */
 export type ResponseData<T extends ResponseData<T>> = {
   // Note: the `extends self` condition is useful so that we get compile errors - otherwise, our typing will just remove (`never`) ineligible properties from T.
@@ -96,7 +98,8 @@ export abstract class ControllerBase extends ContextClass {
 class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
   private readonly logContext: LogContext
   private readonly endpointName: string
-  private readonly schema: Schema
+
+  public readonly schema: Schema
 
   constructor (logContext: LogContext, endpointName: string, schema: Schema) {
     this.logContext = logContext

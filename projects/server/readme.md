@@ -158,6 +158,8 @@ Note that a `500` error can be expected for all endpoints, but any other errors 
 
 All non-primitive properties of `data` are of type `PublicObject`, which are reusable, schema-tagged objects which themselves contain either primitive types or other `PublicObject`s. The schema definitions for these can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times.
 
+Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
+
 ## Chat Endpoints
 Path: `/chat`.
 
@@ -227,3 +229,20 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 - `404`: When no channel could be matched against the search query.
+
+## User Endpoints
+Path: `/user`.
+
+### `POST /search`
+*Current schema: 1.*
+
+Search for a specific user.
+
+Request data (body):
+- `searchTerm` (`string`): *Required.* The string to search in user's channel names.
+
+Returns data with the following properties:
+- `results` (`PublicUser[]`): An array containing the matches. If no match was found, the array is empty. Matches are sorted in ascending order according to the match quality.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
