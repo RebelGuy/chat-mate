@@ -34,6 +34,21 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.9 - The Pre-Admin Update [20/2/2022]
+- Server
+  - Endpoint changes
+    - Added a PoST /experience/modify endpoint to modify a user's experience
+      - This adds a custom admin transaction with optional message
+    - Added a POST /user/search endpoint to search for a channel by name
+      - Returns a list of matches
+    - The GET /leaderboard/rank endpoint now accepts a user by id
+  - API data now uses Public Objects
+    - Standardised and reusable
+    - Schema-tagged
+    - Simple serialisable objects
+  - Snapshots are now maintained manually
+  - Bug fixes and better error handling
+
 ## v1.8 - The Housekeeping Update [12/2/2022]
 - Server
   - Added a new `/experience` endpoint
