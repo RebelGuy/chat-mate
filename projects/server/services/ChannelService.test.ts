@@ -17,7 +17,7 @@ beforeEach(() => {
 
 describe(nameof(ChannelService, 'getChannelById'), () => {
   test('returns null if channel with id does not exist', async () => {
-    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' }])
+    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ id: 1, name: 'Mr Cool Guy' }])
 
     const result = await channelService.getChannelById(2)
 
@@ -26,9 +26,9 @@ describe(nameof(ChannelService, 'getChannelById'), () => {
   
   test('returns correct channel with id', async () => {
     const names: ChannelName[] = [
-      { id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' },
-      { id: 2, name: 'Rebel', youtubeId: 'id2' },
-      { id: 3, name: 'Rebel_Guy', youtubeId: 'id3' }
+      { id: 1, name: 'Mr Cool Guy' },
+      { id: 2, name: 'Rebel' },
+      { id: 3, name: 'Rebel_Guy' }
     ]
     mockChannelStore.getCurrentChannelNames.mockResolvedValue(names)
 
@@ -40,7 +40,7 @@ describe(nameof(ChannelService, 'getChannelById'), () => {
 
 describe(nameof(ChannelService, 'getChannelByName'), () => {
   test('returns null if there is no match', async () => {
-    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' }])
+    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ id: 1, name: 'Mr Cool Guy' }])
 
     const result = await channelService.getChannelByName('rebel_guy')
 
@@ -49,10 +49,10 @@ describe(nameof(ChannelService, 'getChannelByName'), () => {
 
   test('returns best match', async () => {
     const names: ChannelName[] = [
-      { id: 1, name: 'Mr Cool Guy', youtubeId: 'id1' },
-      { id: 2, name: 'Rebel_Guy', youtubeId: 'id3' },
-      { id: 3, name: 'Rebel', youtubeId: 'id2' },
-      { id: 4, name: 'Rebel_Guy2', youtubeId: 'id3' }
+      { id: 1, name: 'Mr Cool Guy' },
+      { id: 2, name: 'Rebel_Guy' },
+      { id: 3, name: 'Rebel' },
+      { id: 4, name: 'Rebel_Guy2' }
     ]
     mockChannelStore.getCurrentChannelNames.mockResolvedValue(names)
 

@@ -39,7 +39,7 @@ export default class ChatController extends ControllerBase {
     try {
       since = since ?? 0
       const items = await this.chatStore.getChatSince(since, limit)
-      const levelData = await this.getLevelData(items.map(c => c.channel.youtubeId))
+      const levelData = await this.getLevelData(items.map(c => c.channel.id))
 
       return builder.success({
         reusableTimestamp: items.at(-1)?.time.getTime() ?? since,
@@ -50,14 +50,14 @@ export default class ChatController extends ControllerBase {
     }
   }
 
-  private async getLevelData (channelIds: string[]): Promise<Map<string, LevelData>> {
+  private async getLevelData (channelIds: number[]): Promise<Map<number, LevelData>> {
     const uniqueIds = unique(channelIds)
 
     // since this is only a fetch request, we can run everything in parallel safely
     const promises = uniqueIds.map(id => this.experienceService.getLevel(id))
     const results = await Promise.all(promises)
 
-    const map: Map<string, LevelData> = new Map(
+    const map: Map<number, LevelData> = new Map(
       results.map((lv, i) => [uniqueIds[i], { level: lv.level, levelProgress: lv.levelProgress }])
     )
     return map

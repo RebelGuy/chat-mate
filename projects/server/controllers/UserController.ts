@@ -43,7 +43,7 @@ export default class UserController extends ControllerBase {
 
     try {
       const matches = await this.channelService.getChannelByName(request.searchTerm)
-      const levels = await Promise.all(matches.map(m => this.experienceService.getLevel(m.youtubeId)))
+      const levels = await Promise.all(matches.map(m => this.experienceService.getLevel(m.id)))
       const users = zip(matches, levels).map(u => userAndLevelToPublicUser(u))
 
       return builder.success({ results: users })

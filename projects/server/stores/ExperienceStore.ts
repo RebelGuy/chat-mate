@@ -83,22 +83,22 @@ export default class ExperienceStore extends ContextClass {
 
   /** Returns the experience for the channel's snapshot, if it exists.
    * Note that snapshots are updated by running the RefreshSnapshots.ts script. */
-  public getSnapshot (channelId: string): Promise<ExperienceSnapshot | null> {
+  public getSnapshot (channelId: number): Promise<ExperienceSnapshot | null> {
     return this.db.experienceSnapshot.findFirst({
-      where: { channel: { youtubeId: channelId }},
+      where: { channel: { id: channelId }},
       orderBy: { time: 'desc' }
     })
   }
 
   /** Returns the sum of all of the channel's experience deltas between now and the given timestamp. */
-  public async getTotalDeltaStartingAt (channelId: string, timestamp: number): Promise<number> {
+  public async getTotalDeltaStartingAt (channelId: number, timestamp: number): Promise<number> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
       return 0
     }
 
     const result = await this.db.experienceTransaction.aggregate({
       where: {
-        channel: { youtubeId: channelId },
+        channel: { id: channelId },
         time: { gte: new Date(timestamp) }
       },
       _sum: { delta: true }
@@ -108,7 +108,7 @@ export default class ExperienceStore extends ContextClass {
   }
 
   /** Returns the transactions in ascending order. */
-  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { channel: { youtubeId: string }})[]> {
+  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { channel: { id: number }})[]> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
       return []
     }
@@ -116,7 +116,7 @@ export default class ExperienceStore extends ContextClass {
     const transactions = await this.db.experienceTransaction.findMany({
       where: { time: { gte: new Date(timestamp) }},
       orderBy: { time: 'asc' },
-      include: { channel: { select: { youtubeId: true }}}
+      include: { channel: { select: { id: true }}}
     })
 
     // update cache

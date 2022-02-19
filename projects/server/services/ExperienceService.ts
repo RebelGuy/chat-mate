@@ -19,7 +19,7 @@ export type Level = {
 
 export type LevelDiff = {
   timestamp: number // at what time the last level transition occurred
-  channelId: string
+  channelId: number
   startLevel: Level
   endLevel: Level
 }
@@ -94,7 +94,7 @@ export default class ExperienceService extends ContextClass {
   /** Sorted in ascending order. */
   public async getLeaderboard (): Promise<RankedEntry[]> {
     const allChannels = await this.channelStore.getCurrentChannelNames()
-    const allLevels = await Promise.all(allChannels.map(channel => this.getLevel(channel.youtubeId)))
+    const allLevels = await Promise.all(allChannels.map(channel => this.getLevel(channel.id)))
     const ordered = sortBy(zip(allChannels, allLevels), item => item.totalExperience, 'desc')
     return ordered.map((item, i) => ({
       rank: i + 1,
@@ -105,7 +105,7 @@ export default class ExperienceService extends ContextClass {
     }))
   }
 
-  public async getLevel (channelId: string): Promise<Level> {
+  public async getLevel (channelId: number): Promise<Level> {
     const totalExperience = await this.getTotalExperience(channelId)
     const level = this.experienceHelpers.calculateLevel(totalExperience)
     return {
@@ -122,9 +122,9 @@ export default class ExperienceService extends ContextClass {
       return []
     }
 
-    const channelTxs: Map<string, ExperienceTransaction[]> = new Map()
+    const channelTxs: Map<number, ExperienceTransaction[]> = new Map()
     for (const tx of transactions) {
-      const channelId = tx.channel.youtubeId
+      const channelId = tx.channel.id
       if (!channelTxs.has(channelId)) {
         channelTxs.set(channelId, [])
       }
@@ -169,7 +169,7 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
-  private async getTotalExperience (channelId: string): Promise<GreaterThanOrEqual<0>> {
+  private async getTotalExperience (channelId: number): Promise<GreaterThanOrEqual<0>> {
     const snapshot = await this.experienceStore.getSnapshot(channelId)
     const baseExperience = snapshot?.experience ?? 0
 

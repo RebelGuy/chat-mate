@@ -88,18 +88,20 @@ export default () => {
 
   describe(nameof(ExperienceStore, 'getSnapshot'), () => {
     test('returns null if no snapshot exists', async () => {
+      const channel1Id = 1
       await db.experienceSnapshot.create({ data: {
         experience: 10,
         time: data.time1,
         channel: { connect: { youtubeId: data.channel2 }}
       }})
 
-      const result = await experienceStore.getSnapshot(data.channel1)
+      const result = await experienceStore.getSnapshot(channel1Id)
 
       expect(result).toBeNull()
     })
 
     test('gets correct snapshot', async () => {
+      const channel1Id = 1
       await db.experienceSnapshot.create({ data: {
         experience: 10,
         time: data.time1,
@@ -111,7 +113,7 @@ export default () => {
         channel: { connect: { youtubeId: data.channel1 }}
       }})
 
-      const result = (await experienceStore.getSnapshot(data.channel1))!
+      const result = (await experienceStore.getSnapshot(channel1Id))!
 
       expect(result.experience).toEqual(20)
       expect(result.time).toEqual(data.time2)
@@ -194,6 +196,7 @@ export default () => {
     })
 
     test('returns array of correct transactions, including the one starting on the same time', async () => {
+      const channel1Id = 1
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
@@ -220,7 +223,7 @@ export default () => {
       expect(result[1].time).toEqual(data.time3)
 
       // make sure caching doesn't do anything funny
-      const result2 = await experienceStore.getTotalDeltaStartingAt(data.channel1, addTime(data.time3, 'seconds', 1).getTime())
+      const result2 = await experienceStore.getTotalDeltaStartingAt(channel1Id, addTime(data.time3, 'seconds', 1).getTime())
 
       expect(result2).toBe(0)
     })
@@ -228,6 +231,7 @@ export default () => {
 
   describe(nameof(ExperienceStore, 'getTotalDeltaStartingAt'), () => {
     test('returns zero if no transactions at/after specified time', async () => {
+      const channel1Id = 1
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
@@ -241,12 +245,13 @@ export default () => {
         livestream: { connect: { liveId: data.livestream1.liveId }}
       }})
 
-      const result = await experienceStore.getTotalDeltaStartingAt(data.channel1, data.time2.getTime())
+      const result = await experienceStore.getTotalDeltaStartingAt(channel1Id, data.time2.getTime())
 
       expect(result).toBe(0)
     })
 
     test('returns correct delta sum, including the one starting on the same time', async () => {
+      const channel1Id = 1
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
@@ -266,7 +271,7 @@ export default () => {
         livestream: { connect: { liveId: data.livestream1.liveId }}
       }})
 
-      const result = await experienceStore.getTotalDeltaStartingAt(data.channel1, data.time2.getTime())
+      const result = await experienceStore.getTotalDeltaStartingAt(channel1Id, data.time2.getTime())
 
       expect(result).toBe(50)
     })

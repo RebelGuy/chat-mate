@@ -97,7 +97,7 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   return emoji.shortcuts?.at(0) ?? emoji.searchTerms?.at(0) ?? emoji.emojiId
 }
 
-export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelData: Map<string, LevelData>): PublicChatItem[] {
+export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelData: Map<number, LevelData>): PublicChatItem[] {
   let publicChatItems: PublicChatItem[] = []
   for (const chat of chatItems) {
     const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
@@ -108,7 +108,7 @@ export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelD
       channelName: channelInfo.name
     }
 
-    const level = levelData.get(chat.channel.youtubeId)!
+    const level = levelData.get(chat.channel.id)!
     const levelInfo: PublicLevelInfo = {
       schema: 1,
       level: level.level,
