@@ -210,7 +210,7 @@ describe(nameof(ExperienceHelpers, 'calculateExperience'), () => {
   })
 
   test('negative level is clamped to zero xp', () => {
-    const xp = experienceHelpers.calculateExperience(-1)
+    const xp = experienceHelpers.calculateExperience(-10)
 
     expect(xp).toBe(0)
   })

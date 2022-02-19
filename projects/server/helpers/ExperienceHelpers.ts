@@ -131,6 +131,8 @@ export default class ExperienceHelpers extends ContextClass {
   }
 
   public calculateExperience (levelFrac: number): GreaterThanOrEqual<0> {
+    levelFrac = Math.max(0, levelFrac)
+
     const scale = 1 / 20
     const a = 6_000 * scale
     const b = 10_000 * scale
