@@ -233,6 +233,23 @@ Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 - `404`: When no channel could be matched against the search query.
 
+### `POST /modify`
+*Current schema: 1.*
+
+Modifies a player's experience by adding a special admin transaction.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user whose experience should be modified.
+- `deltaLevels` (`float`): *Required.* How many levels to add or take away. This can be a fractional value. A user's current fractional level is given by `levelInfo.level + levelInfo.levelProgress`.
+  message: (`string`): *Optional.* A custom message to add as part of the transaction.
+
+Returns data with the following properties:
+- `updatedUser` (`PublicUser`): The user object after the experience change has been applied.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When the given user is not found.
+
 ## User Endpoints
 Path: `/user`.
 
