@@ -59,11 +59,12 @@ model Channel {
   id        Int    @id @default(autoincrement())
   youtubeId String @unique @db.VarChar(63)
 
-  chatMessages           ChatMessage[]
-  infoHistory            ChannelInfo[]
-  experienceTransactions ExperienceTransaction[]
-  experienceSnapshots    ExperienceSnapshot[]
-  viewingBlocks          ViewingBlock[]
+  chatMessages               ChatMessage[]
+  infoHistory                ChannelInfo[]
+  experienceTransactions     ExperienceTransaction[]
+  experienceSnapshots        ExperienceSnapshot[]
+  viewingBlocks              ViewingBlock[]
+  experienceDataAdministered ExperienceDataAdmin[]
 }
 
 // CHAT
@@ -145,6 +146,7 @@ model ExperienceTransaction {
   // Exactly one of the below experience data columns will always be defined,
   // depending on what kind of event triggered this transaction.
   experienceDataChatMessage ExperienceDataChatMessage?
+  experienceDataAdmin       ExperienceDataAdmin?
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
@@ -184,6 +186,21 @@ model ExperienceDataChatMessage {
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id])
 
   @@map("experience_data_chat_message")
+}
+
+/// Data for an experience transaction triggered by an admin
+model ExperienceDataAdmin {
+  id Int @id @default(autoincrement())
+
+  message String? @db.VarChar(1023)
+
+  adminChannelId Int
+  adminChannel   Channel @relation(fields: [adminChannelId], references: [id])
+
+  experienceTransactionId Int                   @unique
+  experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id])
+
+  @@map("experience_data_admin")
 }
 
 /// Represents a continuous period of time in which a channel has been viewing a livestream.

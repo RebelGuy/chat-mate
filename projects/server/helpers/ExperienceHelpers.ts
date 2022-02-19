@@ -129,4 +129,13 @@ export default class ExperienceHelpers extends ContextClass {
       levelProgress: asLt(asGte((experience - thisLevelXp) / (nextLevelXp - thisLevelXp), 0), 1)
     }
   }
+
+  public calculateExperience (levelFrac: number): GreaterThanOrEqual<0> {
+    const scale = 1 / 20
+    const a = 6_000 * scale
+    const b = 10_000 * scale
+
+    const xpFrac = a * levelFrac * levelFrac + b * levelFrac
+    return asGte(Math.max(0, Math.round(xpFrac)), 0)
+  }
 }

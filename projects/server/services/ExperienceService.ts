@@ -169,6 +169,19 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
+  public async modifyExperience (channelId: number, levelDelta: number, message: string | null): Promise<Level> {
+    const currentExperience = await this.getTotalExperience(channelId)
+    const currentLevel = this.experienceHelpers.calculateLevel(currentExperience)
+    const currentLevelFrac = currentLevel.level + currentLevel.levelProgress
+
+    const requiredExperience = this.experienceHelpers.calculateExperience(currentLevelFrac + levelDelta)
+    const experienceDelta = requiredExperience - currentExperience
+    await this.experienceStore.addManualExperience(channelId, experienceDelta, message)
+
+    const updatedLevel = await this.getLevel(channelId)
+    return updatedLevel
+  }
+
   private async getTotalExperience (channelId: number): Promise<GreaterThanOrEqual<0>> {
     const snapshot = await this.experienceStore.getSnapshot(channelId)
     const baseExperience = snapshot?.experience ?? 0

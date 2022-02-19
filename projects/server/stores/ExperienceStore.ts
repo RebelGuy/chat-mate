@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { NoNulls } from '@rebel/server/types'
 
@@ -81,6 +82,21 @@ export default class ExperienceStore extends ContextClass {
     this.cacheChatExperience(channelId, experienceTransaction)
   }
 
+  public async addManualExperience (channelId: number, xp: number, message: string | null) {
+    const experienceTransaction = await this.db.experienceTransaction.create({ data: {
+      time: new Date(),
+      channel: { connect: { id: channelId }},
+      livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+      delta: xp,
+      experienceDataAdmin: { create: {
+        adminChannel: { connect: { youtubeId: ADMIN_YOUTUBE_ID }},
+        message
+      }}
+    }})
+
+    this.updateLastTransactionTime(experienceTransaction.time.getTime())
+  }
+
   /** Returns the experience for the channel's snapshot, if it exists.
    * Note that snapshots are updated by running the RefreshSnapshots.ts script. */
   public getSnapshot (channelId: number): Promise<ExperienceSnapshot | null> {
@@ -122,9 +138,7 @@ export default class ExperienceStore extends ContextClass {
     // update cache
     if (transactions.length > 0) {
       const time = transactions.at(-1)!.time.getTime()
-      if (this.lastTransactionTime == null || time > this.lastTransactionTime) {
-        this.lastTransactionTime = time
-      }
+      this.updateLastTransactionTime(time)
     }
 
     return transactions
@@ -140,15 +154,18 @@ export default class ExperienceStore extends ContextClass {
         experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
       }
 
-      const timestamp = experienceTransaction.time.getTime()
-      if (this.lastTransactionTime == null || timestamp > this.lastTransactionTime) {
-        this.lastTransactionTime = timestamp
-      }
+      this.updateLastTransactionTime(experienceTransaction.time.getTime())
     } else {
       result = null
     }
 
     this.previousChatExperienceMap.set(channelId, result)
     return result
+  }
+
+  private updateLastTransactionTime (timestamp: number) {
+    if (this.lastTransactionTime == null || timestamp > this.lastTransactionTime) {
+      this.lastTransactionTime = timestamp
+    }
   }
 }

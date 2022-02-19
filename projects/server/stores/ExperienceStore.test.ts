@@ -8,6 +8,7 @@ import { deleteProps, mockGetter, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
+import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
 
 export default () => {
   const chatExperienceData1 = deleteProps(data.chatExperienceData1, 'chatMessageYtId')
@@ -35,7 +36,7 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.channel.createMany({ data: [{ youtubeId: data.channel1 }, { youtubeId: data.channel2}] })
+    await db.channel.createMany({ data: [{ youtubeId: data.channel1 }, { youtubeId: data.channel2}, { youtubeId: ADMIN_YOUTUBE_ID }] })
     const livestream = await db.livestream.create({ data: { ...data.livestream1 }})
 
     chatMessage1 = await data.addChatMessage(db, data.time1, livestream.id, data.channel1)
@@ -83,6 +84,22 @@ export default () => {
 
       const dbRecords = await db.experienceTransaction.count({ where: { channel: { youtubeId: data.channel1 }}})
       expect(dbRecords).toBe(1)
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'addManualExperience'), () => {
+    test('correctly adds experience', async () => {
+      await experienceStore.addManualExperience(1, -200, 'This is a test')
+
+      const added = (await db.experienceTransaction.findFirst({ include: {
+        experienceDataAdmin: true,
+        channel: true,
+        livestream: true
+      }}))!
+      expect(added.channelId).toBe(1)
+      expect(added.delta).toBe(-200)
+      expect(added.experienceDataAdmin?.adminChannelId).toBe(3)
+      expect(added.experienceDataAdmin?.message).toBe('This is a test')
     })
   })
 

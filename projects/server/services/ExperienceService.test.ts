@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
-import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
+import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceService, { Level, RankedEntry } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -230,5 +230,24 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     expect(diff.timestamp).toBe(time6.getTime())
     expect(diff.startLevel).toEqual(expect.objectContaining({ level: 5, totalExperience: 500 }))
     expect(diff.endLevel).toEqual(expect.objectContaining({ level: 8, totalExperience: 811 }))
+  })
+})
+
+describe(nameof(ExperienceService, 'modifyExperience'), () => {
+  test('gets the correct delta and saves to the db', async () => {
+    const time1 = new Date()
+    const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
+    const channelId = 1
+    mockExperienceStore.getSnapshot.calledWith(channelId).mockResolvedValue({ id: 1, channelId: 1, experience: 100, time: time1 })
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelId, time1.getTime()).mockResolvedValueOnce(50).mockResolvedValueOnce(550)
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(150, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0.5 as any })
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
+    mockExperienceHelpers.calculateExperience.calledWith(1.5 + 3.6).mockReturnValue(asGte(650, 0))
+
+    const result = await experienceService.modifyExperience(channelId, 3.6, 'Test')
+
+    const call = single(mockExperienceStore.addManualExperience.mock.calls)
+    expect(call).toEqual([channelId, 500, 'Test'])
+    expect(result).toEqual<Level>({ ...updatedLevel, totalExperience: asGte(650, 0) })
   })
 })

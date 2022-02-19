@@ -1,10 +1,12 @@
-import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
+import { userAndLevelToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import { ChannelName } from '@rebel/server/stores/ChannelStore'
-import { GET, Path, QueryParam } from 'typescript-rest'
+import { GET, Path, POST, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<2, {
   rankedUsers: PublicRankedUser[]
@@ -13,6 +15,17 @@ type GetLeaderboardResponse = ApiResponse<2, {
 type GetRankResponse = ApiResponse<2, {
   relevantIndex: number
   rankedUsers: PublicRankedUser[]
+}>
+
+type ModifyExperienceRequest = ApiRequest<1, {
+  schema: 1,
+  userId: number,
+  deltaLevels: number,
+  message: string | null
+}>
+
+type ModifyExperienceResponse = ApiResponse<1, {
+  updatedUser: PublicUser
 }>
 
 type Deps = ControllerDependencies<{
@@ -91,6 +104,28 @@ export default class ExperienceController extends ControllerBase {
         relevantIndex: prunedLeaderboard.findIndex(l => l === match),
         rankedUsers: publicLeaderboard
       })
+    } catch (e: any) {
+      return builder.failure(e.message)
+    }
+  }
+
+  @POST
+  @Path('modify')
+  public async modifyExperience (request: ModifyExperienceRequest): Promise<ModifyExperienceResponse> {
+    const builder = this.registerResponseBuilder<ModifyExperienceResponse>('modify', 1)
+    if (request == null || request.schema !== builder.schema) {
+      return builder.failure(400, 'Invalid request.')
+    }
+
+    try {
+      const channel = await this.channelService.getChannelById(request.userId)
+      if (channel == null) {
+        return builder.failure(404, 'Cannot find channel.')
+      }
+
+      const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
+      const publicUser = userAndLevelToPublicUser({ ...channel, ...level })
+      return builder.success({ updatedUser: publicUser })
     } catch (e: any) {
       return builder.failure(e.message)
     }

@@ -83,6 +83,7 @@ Key:
   - 🟢 getLeaderboard
   - 🟢 getLevel
   - 🟢 getLevelDiffs
+  - 🟢 modifyExperience
 - 🟢 LivestreamService
   - 🟢 initialise
 - 🟢 StatusService
@@ -103,6 +104,7 @@ Key:
   - 🟢 getContinuationToken
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
+  - 🟢 addManualExperience
   - 🟢 getSnapshot
   - 🟢 getPreviousChatExperience
   - 🟢 getAllTransactionsStartingAt
@@ -126,6 +128,7 @@ Key:
 **Helpers**
 - 🟢 ExperienceHelpers
   - 🟢 calculateChatMessageQuality
+  - 🟢 calculateExperience
   - 🟢 calculateLevel
   - 🟢 calculateParticipationMultiplier
   - 🟢 calculateQualityMultiplier
