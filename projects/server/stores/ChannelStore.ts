@@ -6,11 +6,13 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ObjectComparator } from '@rebel/server/types'
 import { compare } from '@rebel/server/util/typescript'
 
+export const ADMIN_YOUTUBE_ID = 'UCBDVDOdE6HOvWdVHsEOeQRA'
+
 export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
 
-export type ChannelWithLatestInfo = Omit<Entity.Channel, 'chatMessages' | 'experienceTransactions' | 'experienceSnapshots' | 'viewingBlocks'>
+export type ChannelWithLatestInfo = Omit<Entity.Channel, 'chatMessages' | 'experienceTransactions' | 'experienceSnapshots' | 'viewingBlocks' | 'experienceDataAdministered'>
 
-export type ChannelName = { youtubeId: string, name: string }
+export type ChannelName = { id: number, name: string }
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -24,11 +26,7 @@ export default class ChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async exists (channelId: string): Promise<boolean> {
-    return (await this.db.channel.findUnique({ where: { youtubeId: channelId }})) != null
-  }
-
-  public async getCurrent (channelId: string): Promise<ChannelWithLatestInfo | null> {
+  public async getCurrent (channelId: string | number): Promise<ChannelWithLatestInfo | null> {
     return this.tryGetChannelWithLatestInfo(channelId)
   }
 
@@ -85,18 +83,22 @@ export default class ChannelStore extends ContextClass {
     const currentChannelInfos = await this.db.channelInfo.findMany({
       distinct: ['channelId'],
       orderBy: { time: 'desc' },
-      select: { name: true, channel: { select: { youtubeId: true }} }
+      select: { name: true, channel: { select: { id: true, youtubeId: true }} }
     })
 
     return currentChannelInfos.map(info => ({
+      id: info.channel.id,
       name: info.name,
       youtubeId: info.channel.youtubeId
     }))
   }
 
-  private async tryGetChannelWithLatestInfo (channelId: string) {
+  private async tryGetChannelWithLatestInfo (channelId: string | number) {
+    const youtubeId: string | undefined = typeof channelId === 'string' ? channelId : undefined
+    const id: number | undefined = typeof channelId === 'number' ? channelId : undefined
+
     return await this.db.channel.findUnique({
-      where: { youtubeId: channelId },
+      where: { youtubeId, id },
       include: channelQuery_includeLatestChannelInfo
     })
   }

@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
@@ -21,7 +21,7 @@ export default () => {
       liveId,
       logService: mockLogService }))
     db = dbProvider.get()
-  })
+  }, DB_TEST_TIMEOUT)
 
   afterEach(() => {
     stopTestDb()

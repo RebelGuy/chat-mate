@@ -74,6 +74,7 @@ Key:
 
 **Services**
 - 🟢 ChannelService
+  - 🟢 getChannelById
   - 🟢 getChannelByName
 - 🟢 ChatService
   - 🟢 initialise
@@ -82,6 +83,7 @@ Key:
   - 🟢 getLeaderboard
   - 🟢 getLevel
   - 🟢 getLevelDiffs
+  - 🟢 modifyExperience
 - 🟢 LivestreamService
   - 🟢 initialise
 - 🟢 StatusService
@@ -93,7 +95,6 @@ Key:
 **Stores**
 - 🟢 ChannelStore
   - 🟢 createOrUpdate
-  - 🟢 exists
   - 🟢 getCurrent
   - 🟢 getCurrentChannelNames
   - 🟢 getHistory
@@ -103,7 +104,8 @@ Key:
   - 🟢 getContinuationToken
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
-  - 🟢 getLatestSnapshot
+  - 🟢 addManualExperience
+  - 🟢 getSnapshot
   - 🟢 getPreviousChatExperience
   - 🟢 getAllTransactionsStartingAt
   - 🟢 getTotalDeltaStartingAt
@@ -126,6 +128,7 @@ Key:
 **Helpers**
 - 🟢 ExperienceHelpers
   - 🟢 calculateChatMessageQuality
+  - 🟢 calculateExperience
   - 🟢 calculateLevel
   - 🟢 calculateParticipationMultiplier
   - 🟢 calculateQualityMultiplier
@@ -142,147 +145,124 @@ Key:
 
 # API Endpoints
 
-Use the API endpoints to communicate with the server while it is running. The API base URL is `http://localhost:3010/api`
+Use the API endpoints to communicate with the server while it is running. The API base URL is `http://localhost:3010/api`.
 
+A response contains the following properties:
+- `schema` (`number`): The current schema of the return object. Every time there is a change, this will be bumped up by one to avoid inconsistencies between the server and client.
+- `timestamp` (`number`): The unix timestamp (in ms) at which the response was generated.
+- `success` (`boolean`): True if the request was processed correctly, and false otherwise.
+- `data` (`object`): Only included if `success` is `true`. Contains the response data, outlined for each endpoint below.
+- `error` (`object`): Only included if `success` is `false`. Contains the following properties:
+  - `errorCode` (`number`): The HTTP error code that most closely matches the type of problem encountered.
+  - `errorType` (`string`): The general type of error encounterd.
+  - `message` (`string`): An optional error message describing what went wrong.
+
+Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
+
+All non-primitive properties of `data` are of type `PublicObject`, which are reusable, schema-tagged objects which themselves contain either primitive types or other `PublicObject`s. The schema definitions for these can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times.
+
+Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
 
 ## Chat Endpoints
+Path: `/chat`.
 
-### `GET /chat`
+### `GET`
+*Current schema: 5.*
 
-Retrieves the latest chat items, sorted from earliest to latest.
+Retrieves the latest chat items.
 
 Query parameters:
-- `since` (number): Gets only chat items **after** the given time (unix ms).
-- `limit` (number): Limits the number of returned chat items (see below).
+- `since` (`number`): *Optional.* Gets only chat items **after** the given time (unix ms).
+- `limit` (`number`): *Optional.* Limits the number of returned chat items. Defaults to 100.
 
-Returns an object with the following properties:
-- `schema` (`4`): The current schema of the return object.
-- `liveId` (`string`): The livestream ID to which the chat items belong. Currently, this is the liveId specified in the [`.env`](#env) file.
-- `lastTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `chat` ([`ChatItem`](#ChatItem)[]): The chat data that satisfy the request filter.
+Returns data with the following properties:
+- `reusableTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+- `chat` (`PublicChatItem[]`): The chat data that satisfy the request filter.
 
 ## ChatMate Endpoints
+Path: `/chatMate`.
 
 ### `GET /status`
+*Current schema: 1.*
 
 Gets the latest status information.
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp.
-- `livestreamStatus` ([`LivestreamStatus`](#LivestreamStatus)): Status information relating to the current livestream.
-- `apiStatus` ([`ApiStatus`](#ApiStatus)): Status information relating to the YouTube API.
+Returns data with the following properties:
+- `livestreamStatus` (`PublicLivestreamStatus`): Status information relating to the current livestream.
+- `apiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
+*Current schema: 2.*
 
-Gets the events since the specified time.
+Gets the events that have occurred since the specified time.
 
 Query parameters:
-- `since` (`number`): Gets only events **after** the given time (unix ms).
+- `since` (`number`): *Required.* Gets only events **after** the given time (unix ms).
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `events` ([`Event`](#event)`[]`): The list of events that have occurred since the given timestamp.
+Returns an data with the following properties:
+- `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
 
 ## Experience Endpoints
+Path: `/experience`.
 
 ### `GET /leaderboard`
+*Current schema: 2.*
 
-Gets the ranked experience list of all channels.
+Gets the ranked experience list of all users.
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp.
-- `entries` ([`RankedEntry`](#rankedentry)`[]`): The array of every channel's experience, in ascending order.
+Returns data with the following properties:
+- `rankedUsers` (`PublicRankedUser[]`): The array of every user's rank, sorted in ascending order.
 
 ### `GET /rank`
+*Current schema: 2.*
 
-Gets the rank of a specific channel, as well as some context. Essentially, it returns a section of the data from `GET /leaderboard`.
+Gets the rank of a specific user, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
 Query parameters:
-- `name` (`string`): The name of the channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
+- `name` (`string`): *Required.* The name of the user's channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
 
-Returns an object with the following properties:
-- `schema` (`1`): The current schema of the return object.
-- `timestamp` (`number`): The response timestamp.
-- `relevantIndex` (`number`): The index of the entry in `entries` that belongs to the matched channel. `-1` if no channel could be matched.
-- `entries` ([`RankedEntry`](#rankedentry)`[]`): The partial leaderboard in ascending order, which includes the matched channel. Empty if no channel could be matched.
+Returns data with the following properties:
+- `relevantIndex` (`number`): The index of the entry in `entries` that belongs to the matched channel. Never negative.
+- `rankedUsers` (`PublicRankedUser[]`): The partial leaderboard in ascending order, which includes the matched channel. Never empty.
 
-# Data Types
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+- `404`: When no channel could be matched against the search query.
 
+### `POST /modify`
+*Current schema: 1.*
 
-## ChatItem
-- `internalId` (`number`): ChatMate database ID.
-- `id` (`string`): YouTube's ID.
-- `timestamp` (`number`): Unix timestamp in milliseconds.
-- `author` ([`Author`](#Author)): The author of the chat item.
-- `messageParts` ([`PartialChatMessage`](#PartialChatMessage)): The partial messages that make up the contents of this chat item.
+Modifies a player's experience by adding a special admin transaction.
 
-## Author
-- `internalId` (`number`): ChatMate database ID.
-- `name` (`string?`): The author name (channel name).
-- `channelId` (`string`): The unique YouTube channel ID.
-- `image` (`string`): The image URL of the author's channel.
-- `isOwner` (`boolean`): Whether the user is the channel owner of the livestreamer's channel.
-- `isModerator` (`boolean`): Whether the user is a moderator on the livestream.
-- `isVerified` (`boolean`): Whether the user has a YouTube verified checkmark.
-- `lastUpdate` (`number`): Timestamp of the last time the author's info was updated.
-- `level` (`number`): The current integer level of the author.
-- `levelProgress` (`number`): The normalised (0 <= x < 1) value representing the progress until the next level.
+Request data (body):
+- `userId` (`int`): *Required.* The user whose experience should be modified.
+- `deltaLevels` (`float`): *Required.* How many levels to add or take away. This can be a fractional value. A user's current fractional level is given by `levelInfo.level + levelInfo.levelProgress`.
+  message: (`string`): *Optional.* A custom message to add as part of the transaction.
 
-## PartialChatMessage
-- `type` (`string`): The type of partial message.
-  - `text` (`string`): The message part consists purely of text.
-  - `emoji` (`string`): The message part consists purely of a single emoji.
-- `text` (`string`): The text of a message part of type `text`.
-- `isBold` (`boolean`): Whether the text of a message of type `text` is bold.
-- `isItalics` (`boolean`): Whether the text of a message of type `text` is in italics.
-- `emojiId` (`string`): A unique ID for this emoji.
-- `name` (`string`): The emoji name, only for a message part of type `emoji`. It is the same name that is shown when hovering over the emoji.
-- `label` (`string`): The emoji label, only for a message part of type `emoji`. It is either the shortcut text (e.g. `:yt:`, or the first search term used for this emoji).
-- `image` ([`ChatImage`](#ChatImage)): The image representing the emoji, only for a message part of type `emoji`.
+Returns data with the following properties:
+- `updatedUser` (`PublicUser`): The user object after the experience change has been applied.
 
-## ChatImage
-- `url` (`string`): The image URL for the emoji.
-- `width` (`number?`): The pixel width of the emoji image.
-- `height` (`number?`): The pixel height of the emoji image.
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When the given user is not found.
 
-## LivestreamStatus
-- `livestreamLink` (`string`): The public URL to the current livestream on YouTube.
-- `status` (`string`): The current livestream status.
-  - `not_started`: The livestream hasn't started yet.
-  - `live`: The livestream is currently ongoing.
-  - `finished`: The livestream has concluded.
-- `liveViewers` (`number | null`): The number of viewers currently watching the livestream. Set to `null` if `status` is not `live`, or if no information is available.
-- `startTime` (`number | null`): The timestamp at which the livestream has started. Set to `null` if `status` is `not_started`.
-- `endTime` (`number | null`): Time timestamp at which the livestream has finished. Set to `null` if `status` is not `finished`.
+## User Endpoints
+Path: `/user`.
 
-## ApiStatus
-- `status` (`string | null`): The current status of the YouTube API.
-  - `null`: No information is available yet.
-  - `'ok'`: Everything is working correctly.
-  - `'error'`: Unable to reach the YouTube servers.
-- `lastOk` (`number | null`): The timestamp of the last time we have been able to successfully reach the YouTube servers. Set to `null` if no information is available yet.
-- `avgRoundtrip` (`number | null`): The average number milliseconds it has taken recent requests to receive a response. Set to `null` if no information is available yet.
+### `POST /search`
+*Current schema: 1.*
 
-## Event
+Search for a specific user.
 
-- `type` (`string`): The event type. Must be one of the following values:
-  - `levelUp`: A [level up event](#levelup-event).
-- `timestamp` (`number`): The timestamp at which this event occurred.
-- `data` (`object`): Data for the event. The shape depends on the event type.
+Request data (body):
+- `searchTerm` (`string`): *Required.* The string to search in user's channel names.
 
-### `levelUp` Event
-Occurrs when the experience level of a user changes by at least 1.
+Returns data with the following properties:
+- `results` (`PublicUser[]`): An array containing the matches. If no match was found, the array is empty. Matches are sorted in ascending order according to the match quality.
 
-- `channelName` (`string`): The name of the channel that levelled up.
-- `oldLevel` (`number`): The experience level at the beginning of the event check period.
-- `newLevel` (`number`): The current experience level.
-
-## RankedEntry
-
-- `rank` (`number`): The experience rank of this entry. The highest rank possible is `1`.
-- `channelName` (`string`): The current name of the channel holding this rank.
-- `level` (`number`): The current integer level of the channel.
-- `levelProgress` (`number`): The normalised (0 <= x < 1) value representing the progress until the next level.
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.

@@ -1,59 +1,31 @@
 import { LiveStatus } from '@rebel/masterchat'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
-import { PublicAuthor } from '@rebel/server/models/chat'
+import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
+import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
+import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import StatusService, { ApiStatus } from '@rebel/server/services/StatusService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import StatusService from '@rebel/server/services/StatusService'
+import ChannelStore, { ChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { ApiSchema } from '@rebel/server/types'
 import { getLivestreamLink } from '@rebel/server/util/text'
 import { GET, Path, QueryParam } from 'typescript-rest'
+import { zip } from '@rebel/server/util/arrays'
+import { channelInfoAndLevelToPublicUser } from '@rebel/server/models/user'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 
-type GetStatusResponse = ApiSchema<1, {
-  // the timestamp at which the response was generated
-  timestamp: number
-
-  livestreamStatus: LivestreamStatus
-  apiStatus: ApiStatus
+type GetStatusResponse = ApiResponse<1, {
+  livestreamStatus: PublicLivestreamStatus
+  apiStatus: PublicApiStatus
 }>
 
-type LivestreamStatus = {
-  // public YouTube link to the livestream
-  livestreamLink: string
-  status: Exclude<LiveStatus, 'unknown'>
-
-  // not defined if status is `not_started`
-  startTime: number | null
-
-  // only defined if status is `finished`
-  endTime: number | null
-
-  // only defined if status is `live`
-  liveViewers: number | null
-}
-
-type GetEventsResponse = ApiSchema<1, {
+type GetEventsResponse = ApiResponse<2, {
   // include the timestamp so it can easily be used for the next request
-  timestamp: number
-  events: ChatMateEvent[]
+  reusableTimestamp: number
+  events: PublicChatMateEvent[]
 }>
 
-type ChatMateEvent = {
-  type: 'levelUp',
-
-  // the time at which the event occurred
-  timestamp: number,
-  data: {
-    channelName: string,
-    oldLevel: number,
-    newLevel: number
-  }
-}
-
-type Deps = Dependencies<{
+type Deps = ControllerDependencies<{
   livestreamStore: LivestreamStore
   viewershipStore: ViewershipStore
   statusService: StatusService
@@ -62,33 +34,33 @@ type Deps = Dependencies<{
 }>
 
 @Path(buildPath('chatMate'))
-export default class ChatMateController extends ContextClass {
+export default class ChatMateController extends ControllerBase {
   readonly livestreamStore: LivestreamStore
   readonly viewershipStore: ViewershipStore
   readonly statusService: StatusService
   readonly experienceService: ExperienceService
   readonly channelStore: ChannelStore
 
-  constructor (dependencies: Deps) {
-    super()
-    this.livestreamStore = dependencies.resolve('livestreamStore')
-    this.viewershipStore = dependencies.resolve('viewershipStore')
-    this.statusService = dependencies.resolve('statusService')
-    this.experienceService = dependencies.resolve('experienceService')
-    this.channelStore = dependencies.resolve('channelStore')
+  constructor (deps: Deps) {
+    super(deps, 'chatMate')
+    this.livestreamStore = deps.resolve('livestreamStore')
+    this.viewershipStore = deps.resolve('viewershipStore')
+    this.statusService = deps.resolve('statusService')
+    this.experienceService = deps.resolve('experienceService')
+    this.channelStore = deps.resolve('channelStore')
   }
 
   @GET
   @Path('/status')
   public async getStatus (): Promise<GetStatusResponse> {
-    const livestreamStatus = await this.getLivestreamStatus()
-    const apiStatus = this.statusService.getApiStatus()
+    const builder = this.registerResponseBuilder<GetStatusResponse>('status', 1)
+    try {
+      const livestreamStatus = await this.getLivestreamStatus()
+      const apiStatus = this.statusService.getApiStatus()
 
-    return {
-      schema: 1,
-      timestamp: Date.now(),
-      livestreamStatus,
-      apiStatus
+      return builder.success({ livestreamStatus, apiStatus })
+    } catch (e: any) {
+      return builder.failure(e.message)
     }
   }
 
@@ -97,33 +69,45 @@ export default class ChatMateController extends ContextClass {
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
-    const diffs = await this.experienceService.getLevelDiffs(since + 1)
-    const channels = await Promise.all(diffs.map(d => this.channelStore.getCurrent(d.channelId)))
-
-    let events: ChatMateEvent[] = []
-    for (let i = 0; i < diffs.length; i++) {
-      const diff = diffs[i]
-      const channel = channels[i]
-
-      events.push({
-        type: 'levelUp',
-        timestamp: diff.timestamp,
-        data: {
-          channelName: channel!.infoHistory[0].name,
-          newLevel: diff.endLevel.level,
-          oldLevel: diff.startLevel.level
-        }
-      })
+    const builder = this.registerResponseBuilder<GetEventsResponse>('events', 2)
+    if (since == null) {
+      return builder.failure(400, `A value for 'since' must be provided.`)
     }
 
-    return {
-      schema: 1,
-      timestamp: events.at(-1)?.timestamp ?? since,
-      events
+    try {
+      const diffs = await this.experienceService.getLevelDiffs(since + 1)
+      const channelInfo = await Promise.all(diffs.map(d => this.channelStore.getCurrent(d.channelId))) as ChannelWithLatestInfo[]
+      const levelInfo = await Promise.all(diffs.map(d => this.experienceService.getLevel(d.channelId)))
+      const channels = zip(channelInfo, levelInfo)
+
+      let events: PublicChatMateEvent[] = []
+      for (let i = 0; i < diffs.length; i++) {
+        const diff = diffs[i]
+        const user: PublicUser = channelInfoAndLevelToPublicUser(channels[i])
+
+        events.push({
+          schema: 1,
+          type: 'levelUp',
+          timestamp: diff.timestamp,
+          data: {
+            schema: 1,
+            newLevel: diff.endLevel.level,
+            oldLevel: diff.startLevel.level,
+            user
+          }
+        })
+      }
+
+      return builder.success({
+        reusableTimestamp: events.at(-1)?.timestamp ?? since,
+        events
+      })
+    } catch (e: any) {
+      return builder.failure(e.message)
     }
   }
 
-  private async getLivestreamStatus (): Promise<LivestreamStatus> {
+  private async getLivestreamStatus (): Promise<PublicLivestreamStatus> {
     const livestream = this.livestreamStore.currentLivestream
     const link = getLivestreamLink(livestream.liveId)
 
@@ -139,6 +123,7 @@ export default class ChatMateController extends ContextClass {
     }
 
     return {
+      schema: 1,
       startTime: livestream.start?.getTime() ?? null,
       endTime: livestream.end?.getTime() ?? null,
       liveViewers: viewers?.viewCount ?? null,

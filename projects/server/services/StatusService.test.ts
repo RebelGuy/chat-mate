@@ -26,11 +26,11 @@ describe(nameof(StatusService, 'getApiStatus'), () => {
 
     const result = statusService.getApiStatus()
 
-    expect(result).toEqual({
+    expect(result).toEqual(expect.objectContaining({
       avgRoundtrip: 300,
       lastOk: time1,
       status: 'error'
-    })
+    }))
   })
 })
 

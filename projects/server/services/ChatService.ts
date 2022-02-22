@@ -103,15 +103,29 @@ export default class ChatService extends ContextClass {
       } else {
         const token = response.continuation.token
 
-        // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
-        // is possible that calling the GET /chat endpoint returns the level information that does not yet incorporate the
-        // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
-        // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
-        // visual inconsitency. so for now just acknowledge this and leave it.
-        await this.chatStore.addChat(token, chatItems)
-        await Promise.all(chatItems.map(c => this.viewershipStore.addViewershipForChatParticipation(c.author.channelId, c.timestamp)))
-        await this.experienceService.addExperienceForChat(chatItems)
-        hasNewChat = chatItems.length > 0
+        let addedChat = false
+        try {
+          // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
+          // is possible that calling the GET /chat endpoint returns the level information that does not yet incorporate the
+          // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
+          // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
+          // visual inconsitency. so for now just acknowledge this and leave it.
+          await this.chatStore.addChat(token, chatItems)
+          addedChat = true
+        } catch (e: any) {
+          this.logService.logError(this, 'Failed to add chat.', e)
+        }
+
+        if (addedChat) {
+          try {
+            await Promise.all(chatItems.map(c => this.viewershipStore.addViewershipForChatParticipation(c.author.channelId, c.timestamp)))
+            await this.experienceService.addExperienceForChat(chatItems)
+          } catch (e: any) {
+            this.logService.logError(this, 'Successfully added chat items but failed to complete side effects.', e)
+          }
+        }
+
+        hasNewChat = addedChat && chatItems.length > 0
       }
     }
 

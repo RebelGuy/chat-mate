@@ -19,13 +19,14 @@ export type Level = {
 
 export type LevelDiff = {
   timestamp: number // at what time the last level transition occurred
-  channelId: string
+  channelId: number
   startLevel: Level
   endLevel: Level
 }
 
 export type RankedEntry = LevelData & {
   rank: number
+  channelId: number
   channelName: string
 }
 
@@ -55,7 +56,8 @@ export default class ExperienceService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
   }
 
-  // adds experience only for chat messages sent during the live chat
+  /** Adds experience only for chat messages sent during the live chat.
+   * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItems: ChatItem[]): Promise<void> {
     chatItems.sort((a, b) => a.timestamp - b.timestamp)
 
@@ -92,17 +94,18 @@ export default class ExperienceService extends ContextClass {
   /** Sorted in ascending order. */
   public async getLeaderboard (): Promise<RankedEntry[]> {
     const allChannels = await this.channelStore.getCurrentChannelNames()
-    const allLevels = await Promise.all(allChannels.map(channel => this.getLevel(channel.youtubeId)))
+    const allLevels = await Promise.all(allChannels.map(channel => this.getLevel(channel.id)))
     const ordered = sortBy(zip(allChannels, allLevels), item => item.totalExperience, 'desc')
     return ordered.map((item, i) => ({
       rank: i + 1,
+      channelId: item.id,
       channelName: item.name,
       level: item.level,
       levelProgress: item.levelProgress
     }))
   }
 
-  public async getLevel (channelId: string): Promise<Level> {
+  public async getLevel (channelId: number): Promise<Level> {
     const totalExperience = await this.getTotalExperience(channelId)
     const level = this.experienceHelpers.calculateLevel(totalExperience)
     return {
@@ -119,9 +122,9 @@ export default class ExperienceService extends ContextClass {
       return []
     }
 
-    const channelTxs: Map<string, ExperienceTransaction[]> = new Map()
+    const channelTxs: Map<number, ExperienceTransaction[]> = new Map()
     for (const tx of transactions) {
-      const channelId = tx.channel.youtubeId
+      const channelId = tx.channel.id
       if (!channelTxs.has(channelId)) {
         channelTxs.set(channelId, [])
       }
@@ -166,14 +169,26 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
-  private async getTotalExperience (channelId: string): Promise<GreaterThanOrEqual<0>> {
-    const latestSnapshot = await this.experienceStore.getLatestSnapshot(channelId)
-    if (latestSnapshot == null) {
-      return 0
-    }
+  public async modifyExperience (channelId: number, levelDelta: number, message: string | null): Promise<Level> {
+    const currentExperience = await this.getTotalExperience(channelId)
+    const currentLevel = this.experienceHelpers.calculateLevel(currentExperience)
+    const currentLevelFrac = currentLevel.level + currentLevel.levelProgress
 
-    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(channelId, latestSnapshot.time.getTime())
-    const total = latestSnapshot.experience + totalDelta
+    const requiredExperience = this.experienceHelpers.calculateExperience(currentLevelFrac + levelDelta)
+    const experienceDelta = requiredExperience - currentExperience
+    await this.experienceStore.addManualExperience(channelId, experienceDelta, message)
+
+    const updatedLevel = await this.getLevel(channelId)
+    return updatedLevel
+  }
+
+  private async getTotalExperience (channelId: number): Promise<GreaterThanOrEqual<0>> {
+    const snapshot = await this.experienceStore.getSnapshot(channelId)
+    const baseExperience = snapshot?.experience ?? 0
+
+    const startingTime = snapshot?.time.getTime() ?? 0
+    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(channelId, startingTime)
+    const total = baseExperience + totalDelta
     return total >= 0 ? total as GreaterThanOrEqual<0> : 0
   }
 

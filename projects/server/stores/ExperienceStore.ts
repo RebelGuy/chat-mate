@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { NoNulls } from '@rebel/server/types'
 
@@ -25,7 +26,7 @@ export default class ExperienceStore extends ContextClass {
 
   // key is channelId
   // value is null if we know there is no data for a particular channel
-  private readonly chatExperienceMap: Map<string, ChatExperience | null>
+  private readonly previousChatExperienceMap: Map<string, ChatExperience | null>
 
   // the timestamp cache of the last experience transaction, if known
   private lastTransactionTime: number | null
@@ -34,14 +35,14 @@ export default class ExperienceStore extends ContextClass {
     super()
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.chatExperienceMap = new Map()
+    this.previousChatExperienceMap = new Map()
     this.lastTransactionTime = null
   }
 
   // returns the previous chat experience, may not be for the current livestream
   public async getPreviousChatExperience (channelId: string): Promise<ChatExperience | null> {
-    if (this.chatExperienceMap.has(channelId)) {
-      return this.chatExperienceMap.get(channelId)!
+    if (this.previousChatExperienceMap.has(channelId)) {
+      return this.previousChatExperienceMap.get(channelId)!
     }
 
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
@@ -60,7 +61,6 @@ export default class ExperienceStore extends ContextClass {
       return
     }
 
-    await this.initialiseSnapshotIfRequired(channelId, timestamp)
     const experienceTransaction = await this.db.experienceTransaction.create({
       data: {
         time: new Date(timestamp),
@@ -82,22 +82,39 @@ export default class ExperienceStore extends ContextClass {
     this.cacheChatExperience(channelId, experienceTransaction)
   }
 
-  public getLatestSnapshot (channelId: string): Promise<ExperienceSnapshot | null> {
+  public async addManualExperience (channelId: number, xp: number, message: string | null) {
+    const experienceTransaction = await this.db.experienceTransaction.create({ data: {
+      time: new Date(),
+      channel: { connect: { id: channelId }},
+      livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+      delta: xp,
+      experienceDataAdmin: { create: {
+        adminChannel: { connect: { youtubeId: ADMIN_YOUTUBE_ID }},
+        message
+      }}
+    }})
+
+    this.updateLastTransactionTime(experienceTransaction.time.getTime())
+  }
+
+  /** Returns the experience for the channel's snapshot, if it exists.
+   * Note that snapshots are updated by running the RefreshSnapshots.ts script. */
+  public getSnapshot (channelId: number): Promise<ExperienceSnapshot | null> {
     return this.db.experienceSnapshot.findFirst({
-      where: { channel: { youtubeId: channelId }},
+      where: { channel: { id: channelId }},
       orderBy: { time: 'desc' }
     })
   }
 
   /** Returns the sum of all of the channel's experience deltas between now and the given timestamp. */
-  public async getTotalDeltaStartingAt (channelId: string, timestamp: number): Promise<number> {
+  public async getTotalDeltaStartingAt (channelId: number, timestamp: number): Promise<number> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
       return 0
     }
 
     const result = await this.db.experienceTransaction.aggregate({
       where: {
-        channel: { youtubeId: channelId },
+        channel: { id: channelId },
         time: { gte: new Date(timestamp) }
       },
       _sum: { delta: true }
@@ -107,7 +124,7 @@ export default class ExperienceStore extends ContextClass {
   }
 
   /** Returns the transactions in ascending order. */
-  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { channel: { youtubeId: string }})[]> {
+  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { channel: { id: number }})[]> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
       return []
     }
@@ -115,15 +132,13 @@ export default class ExperienceStore extends ContextClass {
     const transactions = await this.db.experienceTransaction.findMany({
       where: { time: { gte: new Date(timestamp) }},
       orderBy: { time: 'asc' },
-      include: { channel: { select: { youtubeId: true }}}
+      include: { channel: { select: { id: true }}}
     })
 
     // update cache
     if (transactions.length > 0) {
       const time = transactions.at(-1)!.time.getTime()
-      if (this.lastTransactionTime == null || time > this.lastTransactionTime) {
-        this.lastTransactionTime = time
-      }
+      this.updateLastTransactionTime(time)
     }
 
     return transactions
@@ -139,33 +154,18 @@ export default class ExperienceStore extends ContextClass {
         experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
       }
 
-      const timestamp = experienceTransaction.time.getTime()
-      if (this.lastTransactionTime == null || timestamp > this.lastTransactionTime) {
-        this.lastTransactionTime = timestamp
-      }
+      this.updateLastTransactionTime(experienceTransaction.time.getTime())
     } else {
       result = null
     }
 
-    this.chatExperienceMap.set(channelId, result)
+    this.previousChatExperienceMap.set(channelId, result)
     return result
   }
 
-  private async initialiseSnapshotIfRequired (channelId: string, timestamp: number) {
-    // the existence of a previous experience entry implies that a snapshot already exists
-    if (this.chatExperienceMap.get(channelId)) {
-      return
+  private updateLastTransactionTime (timestamp: number) {
+    if (this.lastTransactionTime == null || timestamp > this.lastTransactionTime) {
+      this.lastTransactionTime = timestamp
     }
-
-    const existing = await this.getLatestSnapshot(channelId)
-    if (existing) {
-      return
-    }
-
-    await this.db.experienceSnapshot.create({ data: {
-      time: new Date(timestamp),
-      experience: 0,
-      channel: { connect: { youtubeId: channelId }}
-    }})
   }
 }

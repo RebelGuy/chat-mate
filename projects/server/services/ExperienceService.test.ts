@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
-import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
+import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceService, { Level, RankedEntry } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -123,33 +123,17 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 
 describe(nameof(ExperienceService, 'getLeaderboard'), () => {
   test('returns levels for all users', async () => {
-    const time1 = new Date()
-    const time2 = addTime(time1, 'seconds', 1)
-    const time3 = addTime(time1, 'seconds', 2)
-    const channel1 = { channel: { youtubeId: data.channel1 }}
-    const channel2 = { channel: { youtubeId: data.channel2 }}
-
-    const experienceSnapshot1: ExperienceSnapshot = { id: 1, channelId: 1, experience: 100, time: time1 }
-    const experienceSnapshot2: ExperienceSnapshot = { id: 2, channelId: 2, experience: 500, time: time2 }
-    const transactions: (ExperienceTransaction & { channel: { youtubeId: string }})[] = [
-      { id: 1, channelId: 1, livestreamId: 1, time: time3, delta: 10, ...channel1 },
-      { id: 2, channelId: 1, livestreamId: 1, time: time3, delta: 20, ...channel1 },
-      { id: 3, channelId: 2, livestreamId: 1, time: time3, delta: 150, ...channel2 },
-      { id: 4, channelId: 2, livestreamId: 1, time: time3, delta: 160, ...channel2 },
-      { id: 5, channelId: 2, livestreamId: 1, time: time3, delta: 1, ...channel2 },
-    ]
-
-    mockChannelStore.getCurrentChannelNames.mockResolvedValue([{ youtubeId: data.channel1, name: 'channel 1' }, { youtubeId: data.channel2, name: 'channel 2' }])
-    mockExperienceStore.getLatestSnapshot.calledWith(data.channel1).mockResolvedValue(experienceSnapshot1)
-    mockExperienceStore.getLatestSnapshot.calledWith(data.channel2).mockResolvedValue(experienceSnapshot2)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(data.channel1, time1.getTime()).mockResolvedValue(30)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(data.channel2, time2.getTime()).mockResolvedValue(311)
+    const channelName1 = { id: 1, name: 'channel 1' }
+    const channelName2 = { id: 2, name: 'channel 2' }
+    mockChannelStore.getCurrentChannelNames.mockResolvedValue([channelName1, channelName2])
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelName1.id, 0).mockResolvedValue(130)
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelName2.id, 0).mockResolvedValue(811)
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const leaderboard = await experienceService.getLeaderboard()
 
-    const expectedEntry1: RankedEntry = { channelName: 'channel 2', rank: 1, level: asGte(8, 0), levelProgress: asLt(0, 1) }
-    const expectedEntry2: RankedEntry = { channelName: 'channel 1', rank: 2, level: asGte(1, 0), levelProgress: asLt(0, 1) }
+    const expectedEntry1: RankedEntry = { channelId: 2, channelName: 'channel 2', rank: 1, level: asGte(8, 0), levelProgress: asLt(0, 1) }
+    const expectedEntry2: RankedEntry = { channelId: 1, channelName: 'channel 1', rank: 2, level: asGte(1, 0), levelProgress: asLt(0, 1) }
     expect(leaderboard).toEqual([expectedEntry1, expectedEntry2])
   })
 })
@@ -158,7 +142,7 @@ describe(nameof(ExperienceService, 'getLevel'), () => {
   test('returns 0 for new user', async () => {
     mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue({ level: 0, levelProgress: asLt(asGte(0), 1) })
 
-    const result = await experienceService.getLevel(data.channel1)
+    const result = await experienceService.getLevel(1)
 
     const expected: Level = {
       level: 0,
@@ -169,20 +153,32 @@ describe(nameof(ExperienceService, 'getLevel'), () => {
   })
 
   test('uses results from ExperienceHelper and ExperienceStore', async () => {
+    const channelId = 1
     const experienceSnapshot: ExperienceSnapshot = {
       id: 1,
-      channelId: 1,
+      channelId: channelId,
       experience: 100,
       time: data.time1
     }
     const expectedTotalXp = 100 + 15
-    mockExperienceStore.getLatestSnapshot.calledWith(data.channel1).mockResolvedValue(experienceSnapshot)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(data.channel1, data.time1.getTime()).mockResolvedValue(15)
+    mockExperienceStore.getSnapshot.calledWith(channelId).mockResolvedValue(experienceSnapshot)
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelId, data.time1.getTime()).mockResolvedValue(15)
     mockExperienceHelpers.calculateLevel.calledWith(asGte(expectedTotalXp, 0)).mockReturnValue({ level: asGte(2, 0), levelProgress: asLt(asGte(0.1, 0), 1) })
 
-    const result = await experienceService.getLevel(data.channel1)
+    const result = await experienceService.getLevel(channelId)
 
     expect(result).toEqual({ level: 2, levelProgress: 0.1, totalExperience: expectedTotalXp})
+  })
+
+  test('correctly handles missing snapshot', async () => {
+    const channelId = 1
+    mockExperienceStore.getSnapshot.calledWith(channelId).mockResolvedValue(null)
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelId, 0).mockResolvedValue(15)
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(15, 0)).mockReturnValue({ level: asGte(2, 0), levelProgress: asLt(asGte(0.1, 0), 1) })
+
+    const result = await experienceService.getLevel(channelId)
+
+    expect(result).toEqual({ level: 2, levelProgress: 0.1, totalExperience: 15})
   })
 })
 
@@ -204,13 +200,15 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const time5 = addTime(time1, 'seconds', 4)
     const time6 = addTime(time1, 'seconds', 5)
     const time7 = addTime(time1, 'seconds', 6)
-    const channel1 = { channel: { youtubeId: data.channel1 }}
-    const channel2 = { channel: { youtubeId: data.channel2 }}
+    const channel1Id = 1
+    const channel2Id = 2
+    const channel1 = { channel: { id: channel1Id }}
+    const channel2 = { channel: { id: channel2Id }}
 
     const experienceSnapshot1: ExperienceSnapshot = { id: 1, channelId: 1, experience: 100, time: time1 }
     const experienceSnapshot2: ExperienceSnapshot = { id: 2, channelId: 2, experience: 500, time: time2 }
     
-    const transactions: (ExperienceTransaction & { channel: { youtubeId: string }})[] = [
+    const transactions: (ExperienceTransaction & { channel: { id: number }})[] = [
       { id: 1, channelId: 1, livestreamId: 1, time: time3, delta: 10, ...channel1 },
       { id: 2, channelId: 1, livestreamId: 1, time: time4, delta: 20, ...channel1 },
       { id: 3, channelId: 2, livestreamId: 1, time: time5, delta: 150, ...channel2 },
@@ -218,19 +216,38 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
       { id: 5, channelId: 2, livestreamId: 1, time: time7, delta: 1, ...channel2 },
     ]
 
-    mockExperienceStore.getLatestSnapshot.calledWith(data.channel1).mockResolvedValue(experienceSnapshot1)
-    mockExperienceStore.getLatestSnapshot.calledWith(data.channel2).mockResolvedValue(experienceSnapshot2)
+    mockExperienceStore.getSnapshot.calledWith(channel1Id).mockResolvedValue(experienceSnapshot1)
+    mockExperienceStore.getSnapshot.calledWith(channel2Id).mockResolvedValue(experienceSnapshot2)
     mockExperienceStore.getAllTransactionsStartingAt.calledWith(time3.getTime()).mockResolvedValue(transactions)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(data.channel1, experienceSnapshot1.time.getTime()).mockResolvedValue(30)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(data.channel2, experienceSnapshot2.time.getTime()).mockResolvedValue(311)
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channel1Id, experienceSnapshot1.time.getTime()).mockResolvedValue(30)
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channel2Id, experienceSnapshot2.time.getTime()).mockResolvedValue(311)
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const result = await experienceService.getLevelDiffs(time3.getTime())
 
     const diff = single(result)
-    expect(diff.channelId).toBe(channel2.channel.youtubeId)
+    expect(diff.channelId).toBe(channel2.channel.id)
     expect(diff.timestamp).toBe(time6.getTime())
     expect(diff.startLevel).toEqual(expect.objectContaining({ level: 5, totalExperience: 500 }))
     expect(diff.endLevel).toEqual(expect.objectContaining({ level: 8, totalExperience: 811 }))
+  })
+})
+
+describe(nameof(ExperienceService, 'modifyExperience'), () => {
+  test('gets the correct delta and saves to the db', async () => {
+    const time1 = new Date()
+    const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
+    const channelId = 1
+    mockExperienceStore.getSnapshot.calledWith(channelId).mockResolvedValue({ id: 1, channelId: 1, experience: 100, time: time1 })
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelId, time1.getTime()).mockResolvedValueOnce(50).mockResolvedValueOnce(550)
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(150, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0.5 as any })
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
+    mockExperienceHelpers.calculateExperience.calledWith(1.5 + 3.6).mockReturnValue(asGte(650, 0))
+
+    const result = await experienceService.modifyExperience(channelId, 3.6, 'Test')
+
+    const call = single(mockExperienceStore.addManualExperience.mock.calls)
+    expect(call).toEqual([channelId, 500, 'Test'])
+    expect(result).toEqual<Level>({ ...updatedLevel, totalExperience: asGte(650, 0) })
   })
 })

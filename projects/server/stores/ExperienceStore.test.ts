@@ -3,11 +3,12 @@ import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { deleteProps, mockGetter, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
+import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
 
 export default () => {
   const chatExperienceData1 = deleteProps(data.chatExperienceData1, 'chatMessageYtId')
@@ -35,35 +36,17 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.channel.createMany({ data: [{ youtubeId: data.channel1 }, { youtubeId: data.channel2}] })
+    await db.channel.createMany({ data: [{ youtubeId: data.channel1 }, { youtubeId: data.channel2}, { youtubeId: ADMIN_YOUTUBE_ID }] })
     const livestream = await db.livestream.create({ data: { ...data.livestream1 }})
 
     chatMessage1 = await data.addChatMessage(db, data.time1, livestream.id, data.channel1)
     chatMessage2 = await data.addChatMessage(db, data.time2, livestream.id, data.channel1)
     chatMessage3 = await data.addChatMessage(db, data.time3, livestream.id, data.channel2)
-  })
+  }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
 
   describe(nameof(ExperienceStore, 'addChatExperience'), () => {
-    test('initialises snapshot if none exists', async () => {
-      const data1 = { ...chatExperienceData1, chatMessageYtId: chatMessage1.youtubeId }
-      const data2 = { ...chatExperienceData2, chatMessageYtId: chatMessage2.youtubeId }
-      const data3 = { ...chatExperienceData3, chatMessageYtId: chatMessage3.youtubeId }
-
-      // add first item
-      await experienceStore.addChatExperience(data.channel1, data.time1.getTime(), 10, data1)
-      await expectRowCount(db.experienceSnapshot).toBe(1)
-
-      // add second item
-      await experienceStore.addChatExperience(data.channel1, data.time2.getTime(), 10, data2)
-      await expectRowCount(db.experienceSnapshot).toBe(1)
-
-      // add third item for a different channel
-      await experienceStore.addChatExperience(data.channel2, data.time3.getTime(), 10, data3)
-      await expectRowCount(db.experienceSnapshot).toBe(2)
-    })
-
     test('adds transaction with correct chat experience data', async () => {
       const data1 = { ...chatExperienceData1, chatMessageYtId: chatMessage1.youtubeId }
 
@@ -104,20 +87,38 @@ export default () => {
     })
   })
 
-  describe(nameof(ExperienceStore, 'getLatestSnapshot'), () => {
+  describe(nameof(ExperienceStore, 'addManualExperience'), () => {
+    test('correctly adds experience', async () => {
+      await experienceStore.addManualExperience(1, -200, 'This is a test')
+
+      const added = (await db.experienceTransaction.findFirst({ include: {
+        experienceDataAdmin: true,
+        channel: true,
+        livestream: true
+      }}))!
+      expect(added.channelId).toBe(1)
+      expect(added.delta).toBe(-200)
+      expect(added.experienceDataAdmin?.adminChannelId).toBe(3)
+      expect(added.experienceDataAdmin?.message).toBe('This is a test')
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'getSnapshot'), () => {
     test('returns null if no snapshot exists', async () => {
+      const channel1Id = 1
       await db.experienceSnapshot.create({ data: {
         experience: 10,
         time: data.time1,
         channel: { connect: { youtubeId: data.channel2 }}
       }})
 
-      const result = await experienceStore.getLatestSnapshot(data.channel1)
+      const result = await experienceStore.getSnapshot(channel1Id)
 
       expect(result).toBeNull()
     })
 
     test('gets correct snapshot', async () => {
+      const channel1Id = 1
       await db.experienceSnapshot.create({ data: {
         experience: 10,
         time: data.time1,
@@ -129,7 +130,7 @@ export default () => {
         channel: { connect: { youtubeId: data.channel1 }}
       }})
 
-      const result = (await experienceStore.getLatestSnapshot(data.channel1))!
+      const result = (await experienceStore.getSnapshot(channel1Id))!
 
       expect(result.experience).toEqual(20)
       expect(result.time).toEqual(data.time2)
@@ -212,6 +213,7 @@ export default () => {
     })
 
     test('returns array of correct transactions, including the one starting on the same time', async () => {
+      const channel1Id = 1
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
@@ -238,7 +240,7 @@ export default () => {
       expect(result[1].time).toEqual(data.time3)
 
       // make sure caching doesn't do anything funny
-      const result2 = await experienceStore.getTotalDeltaStartingAt(data.channel1, addTime(data.time3, 'seconds', 1).getTime())
+      const result2 = await experienceStore.getTotalDeltaStartingAt(channel1Id, addTime(data.time3, 'seconds', 1).getTime())
 
       expect(result2).toBe(0)
     })
@@ -246,6 +248,7 @@ export default () => {
 
   describe(nameof(ExperienceStore, 'getTotalDeltaStartingAt'), () => {
     test('returns zero if no transactions at/after specified time', async () => {
+      const channel1Id = 1
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
@@ -259,12 +262,13 @@ export default () => {
         livestream: { connect: { liveId: data.livestream1.liveId }}
       }})
 
-      const result = await experienceStore.getTotalDeltaStartingAt(data.channel1, data.time2.getTime())
+      const result = await experienceStore.getTotalDeltaStartingAt(channel1Id, data.time2.getTime())
 
       expect(result).toBe(0)
     })
 
     test('returns correct delta sum, including the one starting on the same time', async () => {
+      const channel1Id = 1
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
@@ -284,7 +288,7 @@ export default () => {
         livestream: { connect: { liveId: data.livestream1.liveId }}
       }})
 
-      const result = await experienceStore.getTotalDeltaStartingAt(data.channel1, data.time2.getTime())
+      const result = await experienceStore.getTotalDeltaStartingAt(channel1Id, data.time2.getTime())
 
       expect(result).toBe(50)
     })

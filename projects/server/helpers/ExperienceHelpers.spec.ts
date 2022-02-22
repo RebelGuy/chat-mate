@@ -2,7 +2,7 @@ import ExperienceHelpers, { MULTIPLIER_CHANGE_AT_MAX, MULTIPLIER_CHANGE_AT_MIN, 
 import { expectStrictIncreasing, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
-import { asGte, asRange, eps } from '@rebel/server/util/math'
+import { asGte, asLte, asRange, eps } from '@rebel/server/util/math'
 import { addTime } from '@rebel/server/util/datetime'
 
 const experienceHelpers = new ExperienceHelpers()
@@ -195,6 +195,24 @@ describe(nameof(ExperienceHelpers, 'calculateViewershipMultiplier'), () => {
     const m3 = experienceHelpers.calculateViewershipMultiplier(asGte(4, 0))
 
     expectStrictIncreasing(m0, m1, m2, m3)
+  })
+})
+
+describe(nameof(ExperienceHelpers, 'calculateExperience'), () => {
+  test('higher levels lead to higher experiences', () => {
+    const xp1 = experienceHelpers.calculateExperience(0)
+    const xp2 = experienceHelpers.calculateExperience(0.01)
+    const xp3 = experienceHelpers.calculateExperience(1)
+    const xp4 = experienceHelpers.calculateExperience(2)
+    const xp5 = experienceHelpers.calculateExperience(100)
+
+    expectStrictIncreasing(xp1, xp2, xp3, xp4, xp5)
+  })
+
+  test('negative level is clamped to zero xp', () => {
+    const xp = experienceHelpers.calculateExperience(-10)
+
+    expect(xp).toBe(0)
   })
 })
 

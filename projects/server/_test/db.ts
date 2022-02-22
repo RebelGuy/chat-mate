@@ -6,6 +6,10 @@ import { Dependencies } from '@rebel/server/context/context'
 import LogService from '@rebel/server/services/LogService'
 import Semaphore from '@rebel/server/util/Semaphore'
 
+/** Use this in the `beforeEach` of store tests when setting up the database.
+ * This timeout helps prevent the "Exceeded timeout of 5000 ms for a hook." error. */
+export const DB_TEST_TIMEOUT = 10000
+
 const semaphore: Semaphore = new Semaphore()
 const dbProvider = new DbProvider(new Dependencies({
   logService: mockDeep<LogService>(),

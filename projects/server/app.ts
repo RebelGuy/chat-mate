@@ -26,6 +26,7 @@ import StatusService from '@rebel/server/services/StatusService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceController from '@rebel/server/controllers/ExperienceController'
+import UserController from '@rebel/server/controllers/UserController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -79,6 +80,7 @@ app.use(async (req, res, next) => {
     .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
     .withClass('experienceController', ExperienceController)
+    .withClass('userController', UserController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -98,7 +100,8 @@ Server.registerServiceFactory(new ServiceFactory())
 Server.buildServices(app,
   ChatMateController,
   ChatController,
-  ExperienceController
+  ExperienceController,
+  UserController
 )
 
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })

@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ChannelStore, { ChannelName, CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
-import { expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof, single } from '@rebel/server/_test/utils'
 
 const channelId1 = 'channelId1'
@@ -47,25 +47,9 @@ export default () => {
     const dbProvider = await startTestDb()
     channelStore = new ChannelStore(new Dependencies({ dbProvider }))
     db = dbProvider.get()
-  })
+  }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
-
-  describe(nameof(ChannelStore, 'exists'), () => {
-    test('existing returns true', async () => {
-      await db.channel.create({ data: { youtubeId: 'mockId' }})
-
-      const result = await channelStore.exists('mockId')
-
-      expect(result).toBe(true)
-    })
-
-    test('non-existing returns false', async () => {
-      const result = await channelStore.exists('mockId')
-
-      expect(result).toBe(false)
-    })
-  })
 
   describe(nameof(ChannelStore, 'createOrUpdate'), () => {
     // set up the database with sample data
@@ -115,9 +99,22 @@ export default () => {
   describe(nameof(ChannelStore, 'getCurrent'), () => {
     test(`returns null if channel doesn't exist`, async () => {
       await expect(channelStore.getCurrent('bad id')).resolves.toEqual(null)
+      await expect(channelStore.getCurrent(100)).resolves.toEqual(null)
     })
 
-    test('returns channel with latest info', async () => {
+    test('returns channel by id with latest info', async () => {
+      const stored = await db.channel.create({ data: {
+        youtubeId: channelId1,
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
+      }})
+
+      const result = (await channelStore.getCurrent(stored.id))!
+
+      expect(result.id).toBe(stored.id)
+      expect(single(result.infoHistory).time).toEqual(channelInfo2.time)
+    })
+
+    test('returns channel by youtubeId with latest info', async () => {
       await db.channel.create({ data: {
         youtubeId: channelId1,
         infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
@@ -143,7 +140,9 @@ export default () => {
 
       const result = await channelStore.getCurrentChannelNames()
 
-      expect(result).toEqual<ChannelName[]>([{ youtubeId: channelId2, name: channelInfo3.name }, { youtubeId: channelId1, name: channelInfo2.name }])
+      const expected1 = { id: 2, youtubeId: channelId2, name: channelInfo3.name }
+      const expected2 = { id: 1, youtubeId: channelId1, name: channelInfo2.name }
+      expect(result).toEqual<ChannelName[]>([expected1, expected2])
     })
   })
 

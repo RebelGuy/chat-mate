@@ -1,97 +1,133 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { buildPath } from '@rebel/server/controllers/BaseEndpoint'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
+import { rankedEntryToPublic } from '@rebel/server/models/experience'
+import { userAndLevelToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
-import ExperienceService, { RankedEntry } from '@rebel/server/services/ExperienceService'
-import { ApiSchema } from '@rebel/server/types'
-import { GET, Path, QueryParam } from 'typescript-rest'
+import ExperienceService from '@rebel/server/services/ExperienceService'
+import { ChannelName } from '@rebel/server/stores/ChannelStore'
+import { GET, Path, POST, QueryParam } from 'typescript-rest'
 
-type GetLeaderboardResponse = ApiSchema<1, {
-  // the timestamp at which this response was generated.
-  timestamp: number
-  entries: RankedEntry[]
+type GetLeaderboardResponse = ApiResponse<2, {
+  rankedUsers: PublicRankedUser[]
 }>
 
-type GetRankResponse = ApiSchema<1, {
-  // the timestamp at which this response was generated.
-  timestamp: number
-
+type GetRankResponse = ApiResponse<2, {
   relevantIndex: number
-
-  // empty if `channelFound` is false
-  entries: RankedEntry[]
+  rankedUsers: PublicRankedUser[]
 }>
 
-type Deps = Dependencies<{
+type ModifyExperienceRequest = ApiRequest<1, {
+  schema: 1,
+  userId: number,
+  deltaLevels: number,
+  message: string | null
+}>
+
+type ModifyExperienceResponse = ApiResponse<1, {
+  updatedUser: PublicUser
+}>
+
+type Deps = ControllerDependencies<{
   channelService: ChannelService
   experienceService: ExperienceService
 }>
 
 @Path(buildPath('experience'))
-export default class ExperienceController extends ContextClass {
+export default class ExperienceController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
 
-  constructor (dependencies: Deps) {
-    super()
-    this.channelService = dependencies.resolve('channelService')
-    this.experienceService = dependencies.resolve('experienceService')
+  constructor (deps: Deps) {
+    super(deps, 'experience')
+    this.channelService = deps.resolve('channelService')
+    this.experienceService = deps.resolve('experienceService')
   }
 
   @GET
   @Path('/leaderboard')
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
-    const leaderboard = await this.experienceService.getLeaderboard()
-
-    return {
-      schema: 1,
-      timestamp: new Date().getTime(),
-      entries: leaderboard
+    const builder = this.registerResponseBuilder<GetLeaderboardResponse>('leaderboard', 2)
+    try {
+      const leaderboard = await this.experienceService.getLeaderboard()
+      const publicLeaderboard = leaderboard.map(entry => rankedEntryToPublic(entry))
+      return builder.success({ rankedUsers: publicLeaderboard })
+    } catch (e: any) {
+      return builder.failure(e.message)
     }
   }
 
   @GET
   @Path('/rank')
   public async getRank (
-    @QueryParam('name') name: string
+    @QueryParam('name') name?: string,
+    @QueryParam('id') id?: number
   ): Promise<GetRankResponse> {
-    name = decodeURI(name).trim().toLowerCase()
-    const channel = await this.channelService.getChannelByName(name)
-
-    const emptyResponse: GetRankResponse = {
-      schema: 1,
-      timestamp: new Date().getTime(),
-      relevantIndex: -1,
-      entries: []
-    }
-    if (channel == null) {
-      return emptyResponse
+    const builder = this.registerResponseBuilder<GetRankResponse>('rank', 2)
+    if (name == null && id == null) {
+      return builder.failure(400, `A value for 'name' or 'id' must be provided.`)
     }
 
-    const leaderboard = await this.experienceService.getLeaderboard()
-    const match = leaderboard.find(l => l.channelName === channel.name)
-    if (match == null) {
-      return emptyResponse
+    try {
+      let channel: ChannelName | null
+      if (name != null) {
+        const matches = await this.channelService.getChannelByName(decodeURI(name).trim().toLowerCase())
+        if (matches == null) {
+          return builder.failure(404, `Could not find a channel matching name '${name}'`)
+        }
+        channel = matches[0]
+      } else {
+        channel = await this.channelService.getChannelById(id!)
+        if (channel == null) {
+          return builder.failure(404, `Could not find a channel matching id '${id}'`)
+        }
+      }
+
+      const leaderboard = await this.experienceService.getLeaderboard()
+      const match = leaderboard.find(l => l.channelName === channel!.name)!
+
+      // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
+      const rankPadding = 3
+      let lowerRank: number
+      if (match.rank > leaderboard.length - rankPadding) {
+        lowerRank = leaderboard.length - rankPadding * 2
+      } else if (match.rank < 1 + rankPadding) {
+        lowerRank = 1
+      } else {
+        lowerRank = match.rank - rankPadding
+      }
+      const upperRank = lowerRank + rankPadding * 2
+      const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
+      const publicLeaderboard = prunedLeaderboard.map(entry => rankedEntryToPublic(entry))
+
+      return builder.success({
+        relevantIndex: prunedLeaderboard.findIndex(l => l === match),
+        rankedUsers: publicLeaderboard
+      })
+    } catch (e: any) {
+      return builder.failure(e.message)
+    }
+  }
+
+  @POST
+  @Path('modify')
+  public async modifyExperience (request: ModifyExperienceRequest): Promise<ModifyExperienceResponse> {
+    const builder = this.registerResponseBuilder<ModifyExperienceResponse>('modify', 1)
+    if (request == null || request.schema !== builder.schema) {
+      return builder.failure(400, 'Invalid request.')
     }
 
-    // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
-    const rankPadding = 3
-    let lowerRank: number
-    if (match.rank > leaderboard.length - rankPadding) {
-      lowerRank = leaderboard.length - rankPadding * 2
-    } else if (match.rank < 1 + rankPadding) {
-      lowerRank = 1
-    } else {
-      lowerRank = match.rank - rankPadding
-    }
-    const upperRank = lowerRank + rankPadding * 2
-    const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
+    try {
+      const channel = await this.channelService.getChannelById(request.userId)
+      if (channel == null) {
+        return builder.failure(404, 'Cannot find channel.')
+      }
 
-    return {
-      schema: 1,
-      timestamp: new Date().getTime(),
-      relevantIndex: prunedLeaderboard.findIndex(l => l === match),
-      entries: prunedLeaderboard
+      const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
+      const publicUser = userAndLevelToPublicUser({ ...channel, ...level })
+      return builder.success({ updatedUser: publicUser })
+    } catch (e: any) {
+      return builder.failure(e.message)
     }
   }
 }

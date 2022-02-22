@@ -46,9 +46,22 @@ export default class LivestreamService extends ContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  private async updateLivestreamMetadata () {
+  private async fetchMetadata (): Promise<Metadata | null> {
     try {
-      const metadata = await this.masterchat.fetchMetadata()
+      return await this.masterchat.fetchMetadata()
+    } catch (e: any) {
+      this.logService.logWarning(this, 'Encountered error while fetching metadata.', e.message)
+      return null
+    }
+  }
+
+  private async updateLivestreamMetadata () {
+    const metadata = await this.fetchMetadata()
+    if (metadata == null) {
+      return
+    }
+
+    try {
       const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, metadata)
 
       if (updatedTimes) {
@@ -59,7 +72,7 @@ export default class LivestreamService extends ContextClass {
         await this.viewershipStore.addLiveViewCount(metadata.viewerCount)
       }
     } catch (e: any) {
-      this.logService.logWarning(this, 'Encountered error while syncing metadata:', e.message)
+      this.logService.logError(this, 'Encountered error while syncing metadata.', e)
     }
   }
 
