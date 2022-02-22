@@ -70,11 +70,10 @@ export default class ExperienceService extends ContextClass {
         continue
       }
 
-      const channelId = chatItem.author.channelId
-
+      const channelId = await this.channelStore.getId(chatItem.author.channelId)
       const viewershipStreakMultiplier = await this.getViewershipMultiplier(channelId)
       const participationStreakMultiplier = await this.getParticipationMultiplier(channelId)
-      const spamMultiplier = await this.getSpamMultiplier(chatItem)
+      const spamMultiplier = await this.getSpamMultiplier(chatItem, channelId)
       const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
       const data: ChatExperienceData = {
         viewershipStreakMultiplier,
@@ -192,7 +191,7 @@ export default class ExperienceService extends ContextClass {
     return total >= 0 ? total as GreaterThanOrEqual<0> : 0
   }
 
-  private async getViewershipMultiplier (channelId: string): Promise<GreaterThanOrEqual<1>> {
+  private async getViewershipMultiplier (channelId: number): Promise<GreaterThanOrEqual<1>> {
     const streams = await this.viewershipStore.getLivestreamViewership(channelId)
 
     const viewershipScore = calculateWalkingScore(
@@ -207,7 +206,7 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateViewershipMultiplier(viewershipScore)
   }
 
-  private async getParticipationMultiplier (channelId: string): Promise<GreaterThanOrEqual<1>> {
+  private async getParticipationMultiplier (channelId: number): Promise<GreaterThanOrEqual<1>> {
     const streams = await this.viewershipStore.getLivestreamParticipation(channelId)
 
     const participationScore = calculateWalkingScore(
@@ -222,8 +221,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
 
-  private async getSpamMultiplier (chatItem: ChatItem): Promise<SpamMult> {
-    const prev = await this.experienceStore.getPreviousChatExperience(chatItem.author.channelId)
+  private async getSpamMultiplier (chatItem: ChatItem, channelId: number): Promise<SpamMult> {
+    const prev = await this.experienceStore.getPreviousChatExperience(channelId)
     if (prev == null || prev.livestream.id !== this.livestreamStore.currentLivestream.id) {
       // always start with a multiplier of 1 at the start of the livestream
       return 1 as SpamMult

@@ -65,26 +65,3 @@ export function expectRowCount<Tables extends any[]> (...tables: Tables)
     return expect(Promise.all(tables.map(table => getRowCount(table)))).resolves
   }
 }
-
-/*
-
-// note: it IS possible to mock the prisma client, but it is a lot of work and
-// pretty much has to mirror the implementation, which is not very useful.
-
-// e.g. return database object when findUnique is called:
-mockDb.channel.findUnique.mockResolvedValue({ id: 1, youtubeId: 'mockId' })
-const result = await channelStore.exists('mockId')
-expect(result).toBe(true)
-
-// e.g. return result based on arguments when findUnique is called:
-mockDb.channel.findUnique.mockImplementation(args => {
-  if (args.where.youtubeId === 'mockId') {
-    return null!
-  } else {
-    throw new Error()
-  }
-})
-const result = await channelStore.exists('mockId')
-expect(result).toBe(false)
-
-*/

@@ -98,6 +98,7 @@ Key:
   - 🟢 getCurrent
   - 🟢 getCurrentChannelNames
   - 🟢 getHistory
+  - 🟢 getId
 - 🟢 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince

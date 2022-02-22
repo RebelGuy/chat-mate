@@ -6,6 +6,7 @@ import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
@@ -45,6 +46,7 @@ let mockLogService: MockProxy<LogService>
 let mockExperienceService: MockProxy<ExperienceService>
 let mockViewershipStore: MockProxy<ViewershipStore>
 let mockTimerHelpers: MockProxy<TimerHelpers>
+let mockChannelStore: MockProxy<ChannelStore>
 let chatService: ChatService
 
 beforeEach(() => {
@@ -55,6 +57,7 @@ beforeEach(() => {
   mockExperienceService = mock<ExperienceService>()
   mockViewershipStore = mock<ViewershipStore>()
   mockTimerHelpers = mock<TimerHelpers>()
+  mockChannelStore = mock<ChannelStore>()
 
   mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(currentLivestream)
   mockChatStore.getChatSince.mockResolvedValue([])
@@ -71,7 +74,8 @@ beforeEach(() => {
     experienceService: mockExperienceService,
     viewershipStore: mockViewershipStore,
     masterchatProxyService: mockMasterchatProxyService,
-    timerHelpers: mockTimerHelpers
+    timerHelpers: mockTimerHelpers,
+    channelStore: mockChannelStore
   }))
 })
 
@@ -105,6 +109,8 @@ describe(nameof(ChatService, 'initialise'), () => {
   })
 
   test('passes chat items to ChatStore and ExperienceService', async () => {
+    const channelId1 = 1
+    mockChannelStore.getId.calledWith(chatAction1.authorChannelId).mockResolvedValue(channelId1)
     mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse([chatAction1]))
 
     await chatService.initialise()
@@ -114,7 +120,7 @@ describe(nameof(ChatService, 'initialise'), () => {
     expect(single(passedChatItems).id).toBe(chatAction1.id)
 
     const [passedChannel, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
-    expect(passedChannel).toBe(chatAction1.authorChannelId)
+    expect(passedChannel).toBe(channelId1)
     expect(passedTimestamp).toBe(chatAction1.timestamp.getTime())
 
     const [passedXpItems] = single(mockExperienceService.addExperienceForChat.mock.calls)

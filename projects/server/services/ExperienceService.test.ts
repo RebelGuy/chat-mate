@@ -56,6 +56,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
   })
 
   test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, does not notify ViewershipStore', async () => {
+    const channelId = 1
     const chatItem: ChatItem = {
       id: 'chat1',
       timestamp: addTime(data.livestream3.start!, 'seconds', 5).getTime(),
@@ -74,7 +75,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       * experienceData.participationStreakMultiplier * experienceData.viewershipStreakMultiplier * experienceData.spamMultiplier
     const msgQuality = asRange(0.2, 0, 2)
     const prevData: ChatExperience = {
-      channel: { id: 1, youtubeId: data.channel1 },
+      channel: { id: channelId, youtubeId: data.channel1 },
       delta: 100,
       time: data.livestream3.start!,
       livestream: data.livestream3,
@@ -88,20 +89,21 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       }
     }
 
-    mockExperienceStore.getPreviousChatExperience.calledWith(data.channel1).mockResolvedValue(prevData)
-    mockViewershipStore.getLivestreamViewership.calledWith(data.channel1).mockResolvedValue([
-      { ...data.livestream1, channelId: data.channel1, viewed: true },
-      { ...data.livestream2, channelId: data.channel1, viewed: false },
-      { ...data.livestream2, channelId: data.channel1, viewed: false },
-      { ...data.livestream2, channelId: data.channel1, viewed: true },
-      { ...data.livestream3, channelId: data.channel1, viewed: true }
+    mockChannelStore.getId.calledWith(data.author1.channelId).mockResolvedValue(channelId)
+    mockExperienceStore.getPreviousChatExperience.calledWith(channelId).mockResolvedValue(prevData)
+    mockViewershipStore.getLivestreamViewership.calledWith(channelId).mockResolvedValue([
+      { ...data.livestream1, channelId: channelId, viewed: true },
+      { ...data.livestream2, channelId: channelId, viewed: false },
+      { ...data.livestream2, channelId: channelId, viewed: false },
+      { ...data.livestream2, channelId: channelId, viewed: true },
+      { ...data.livestream3, channelId: channelId, viewed: true }
     ]) // -> walking viewership score: 2
-    mockViewershipStore.getLivestreamParticipation.calledWith(data.channel1).mockResolvedValue([
-      { ...data.livestream1, channelId: data.channel1, participated: true },
-      { ...data.livestream2, channelId: data.channel1, participated: true },
-      { ...data.livestream2, channelId: data.channel1, participated: false },
-      { ...data.livestream2, channelId: data.channel1, participated: true },
-      { ...data.livestream3, channelId: data.channel1, participated: false }
+    mockViewershipStore.getLivestreamParticipation.calledWith(channelId).mockResolvedValue([
+      { ...data.livestream1, channelId: channelId, participated: true },
+      { ...data.livestream2, channelId: channelId, participated: true },
+      { ...data.livestream2, channelId: channelId, participated: false },
+      { ...data.livestream2, channelId: channelId, participated: true },
+      { ...data.livestream3, channelId: channelId, participated: false }
     ]) // -> walking participation score: 1
     mockExperienceHelpers.calculateChatMessageQuality.calledWith(chatItem).mockReturnValue(msgQuality)
     mockExperienceHelpers.calculateParticipationMultiplier.calledWith(asGte(1, 0)).mockReturnValue(asGte(experienceData.participationStreakMultiplier, 1))
@@ -113,8 +115,8 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 
     await experienceService.addExperienceForChat([chatItem])
 
-    const expectedChatStoreArgs: [channelId: string, timestamp: number, xp: number, data: ChatExperienceData] = [
-      chatItem.author.channelId, chatItem.timestamp, expectedExperienceToAdd, experienceData
+    const expectedChatStoreArgs: [channelId: number, timestamp: number, xp: number, data: ChatExperienceData] = [
+      channelId, chatItem.timestamp, expectedExperienceToAdd, experienceData
     ]
     expect(single(mockExperienceStore.addChatExperience.mock.calls)).toEqual(expectedChatStoreArgs)
     expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toEqual(0)

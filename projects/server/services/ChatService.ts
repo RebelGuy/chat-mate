@@ -13,6 +13,8 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ContextClass from '@rebel/server/context/ContextClass'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
+import { zip } from '@rebel/server/util/arrays'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 6_000
@@ -37,7 +39,8 @@ type Deps = Dependencies<{
   masterchatProxyService: MasterchatProxyService,
   experienceService: ExperienceService,
   viewershipStore: ViewershipStore,
-  timerHelpers: TimerHelpers
+  timerHelpers: TimerHelpers,
+  channelStore: ChannelStore
 }>
 
 export default class ChatService extends ContextClass {
@@ -49,6 +52,7 @@ export default class ChatService extends ContextClass {
   private readonly experienceService: ExperienceService
   private readonly viewershipStore: ViewershipStore
   private readonly timerHelpers: TimerHelpers
+  private readonly channelStore: ChannelStore
 
   private initialised: boolean = false
 
@@ -61,6 +65,7 @@ export default class ChatService extends ContextClass {
     this.experienceService = deps.resolve('experienceService')
     this.viewershipStore = deps.resolve('viewershipStore')
     this.timerHelpers = deps.resolve('timerHelpers')
+    this.channelStore = deps.resolve('channelStore')
   }
 
   // await this method when initialising the service to guarantee an initial fetch
@@ -118,7 +123,8 @@ export default class ChatService extends ContextClass {
 
         if (addedChat) {
           try {
-            await Promise.all(chatItems.map(c => this.viewershipStore.addViewershipForChatParticipation(c.author.channelId, c.timestamp)))
+            const channelIds = await Promise.all(chatItems.map(c => this.channelStore.getId(c.author.channelId)))
+            await Promise.all(chatItems.map((c, i) => this.viewershipStore.addViewershipForChatParticipation(channelIds[i], c.timestamp)))
             await this.experienceService.addExperienceForChat(chatItems)
           } catch (e: any) {
             this.logService.logError(this, 'Successfully added chat items but failed to complete side effects.', e)

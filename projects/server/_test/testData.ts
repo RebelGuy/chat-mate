@@ -99,11 +99,11 @@ export const chatExperienceData3: ChatExperienceData = {
 }
 
 /** Adds random data. Assumes the channel and livestream have already been created. */
-export function addChatMessage (db: Db, time: Date, livestreamId: number, channelId: string): Promise<ChatMessage> {
+export function addChatMessage (db: Db, time: Date, livestreamId: number, channelId: number): Promise<ChatMessage> {
   return db.chatMessage.create({ data: {
     time,
     youtubeId: 'testMessage-' + Math.random(),
-    channel: { connect: { youtubeId: channelId }},
+    channel: { connect: { id: channelId }},
     livestream: { connect: { id: livestreamId }},
     chatMessageParts: { create: {
       order: 0,

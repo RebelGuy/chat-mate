@@ -26,7 +26,7 @@ export default class ExperienceStore extends ContextClass {
 
   // key is channelId
   // value is null if we know there is no data for a particular channel
-  private readonly previousChatExperienceMap: Map<string, ChatExperience | null>
+  private readonly previousChatExperienceMap: Map<number, ChatExperience | null>
 
   // the timestamp cache of the last experience transaction, if known
   private lastTransactionTime: number | null
@@ -40,13 +40,13 @@ export default class ExperienceStore extends ContextClass {
   }
 
   // returns the previous chat experience, may not be for the current livestream
-  public async getPreviousChatExperience (channelId: string): Promise<ChatExperience | null> {
+  public async getPreviousChatExperience (channelId: number): Promise<ChatExperience | null> {
     if (this.previousChatExperienceMap.has(channelId)) {
       return this.previousChatExperienceMap.get(channelId)!
     }
 
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
-      where: { channel: { youtubeId: channelId }, experienceDataChatMessage: { isNot: null }},
+      where: { channel: { id: channelId }, experienceDataChatMessage: { isNot: null }},
       orderBy: { time: 'desc' },
       include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, channel: true }
     })
@@ -54,7 +54,7 @@ export default class ExperienceStore extends ContextClass {
     return this.cacheChatExperience(channelId, experienceTransaction)
   }
 
-  public async addChatExperience (channelId: string, timestamp: number, xp: number, data: ChatExperienceData) {
+  public async addChatExperience (channelId: number, timestamp: number, xp: number, data: ChatExperienceData) {
     // don't allow backfilling or duplicates
     const prev = await this.getPreviousChatExperience(channelId)
     if (prev && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.youtubeId === data.chatMessageYtId)) {
@@ -64,7 +64,7 @@ export default class ExperienceStore extends ContextClass {
     const experienceTransaction = await this.db.experienceTransaction.create({
       data: {
         time: new Date(timestamp),
-        channel: { connect: { youtubeId: channelId }},
+        channel: { connect: { id: channelId }},
         livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
         delta: xp,
         experienceDataChatMessage: { create: {
@@ -144,7 +144,7 @@ export default class ExperienceStore extends ContextClass {
     return transactions
   }
 
-  private cacheChatExperience (channelId: string, experienceTransaction: (Omit<ChatExperience, 'experienceDataChatMessage'> & { experienceDataChatMessage: (ExperienceDataChatMessage & { chatMessage: ChatMessage }) | null }) | null)
+  private cacheChatExperience (channelId: number, experienceTransaction: (Omit<ChatExperience, 'experienceDataChatMessage'> & { experienceDataChatMessage: (ExperienceDataChatMessage & { chatMessage: ChatMessage }) | null }) | null)
     : ChatExperience | null {
     let result: ChatExperience | null
     if (experienceTransaction) {

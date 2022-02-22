@@ -26,14 +26,14 @@ export default class ChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async getCurrent (channelId: string | number): Promise<ChannelWithLatestInfo | null> {
+  public async getCurrent (channelId: number): Promise<ChannelWithLatestInfo | null> {
     return this.tryGetChannelWithLatestInfo(channelId)
   }
 
   // from newest to oldest
-  public async getHistory (channelId: string): Promise<Entity.ChannelInfo[] | null> {
+  public async getHistory (channelId: number): Promise<Entity.ChannelInfo[] | null> {
     const channel = await this.db.channel.findUnique({
-      where: { youtubeId: channelId },
+      where: { id: channelId },
       include: {
         infoHistory: {
           orderBy: { time: 'desc' },
@@ -45,8 +45,8 @@ export default class ChannelStore extends ContextClass {
     return channel?.infoHistory ?? null
   }
 
-  public async createOrUpdate (channelId: string, channelInfo: CreateOrUpdateChannelArgs): Promise<ChannelWithLatestInfo> {
-    const currentChannel = await this.tryGetChannelWithLatestInfo(channelId)
+  public async createOrUpdate (youtubeChannelId: string, channelInfo: CreateOrUpdateChannelArgs): Promise<ChannelWithLatestInfo> {
+    const currentChannel = await this.tryGetChannelWithLatestInfo(youtubeChannelId)
     const storedInfo = currentChannel?.infoHistory[0]
 
     let channel: ChannelWithLatestInfo
@@ -54,7 +54,7 @@ export default class ChannelStore extends ContextClass {
       // if anything has changed, create a new ChannelInfo object and link it to the channel
       if (storedInfo!.time < channelInfo.time && !compare(storedInfo!, channelInfo, channelInfoComparator)) {
         channel = await this.db.channel.update({
-          where: { youtubeId: channelId },
+          where: { youtubeId: youtubeChannelId },
           data: {
             infoHistory: { create: channelInfo }
           },
@@ -68,7 +68,7 @@ export default class ChannelStore extends ContextClass {
     } else {
       channel = await this.db.channel.create({
         data: {
-          youtubeId: channelId,
+          youtubeId: youtubeChannelId,
           infoHistory: { create: channelInfo }
         },
         include: channelQuery_includeLatestChannelInfo
@@ -88,9 +88,14 @@ export default class ChannelStore extends ContextClass {
 
     return currentChannelInfos.map(info => ({
       id: info.channel.id,
-      name: info.name,
-      youtubeId: info.channel.youtubeId
+      name: info.name
     }))
+  }
+
+  /** Throws if id is not found. */
+  public async getId (youtubeId: string): Promise<number> {
+    const channel = await this.db.channel.findUnique({ where: { youtubeId }, rejectOnNotFound: true })
+    return channel.id
   }
 
   private async tryGetChannelWithLatestInfo (channelId: string | number) {

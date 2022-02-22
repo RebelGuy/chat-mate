@@ -9,9 +9,9 @@ import { addTime, maxTime, MAX_DATE, minTime } from '@rebel/server/util/datetime
 export const VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE = 5
 export const VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER = 10
 
-export type LivestreamParticipation = Livestream & { channelId: string, participated: boolean }
+export type LivestreamParticipation = Livestream & { channelId: number, participated: boolean }
 
-export type LivestreamViewership = Livestream & { channelId: string, viewed: boolean }
+export type LivestreamViewership = Livestream & { channelId: number, viewed: boolean }
 
 export type LastSeen = { livestream: Livestream, time: Date, viewingBlockId: number }
 
@@ -25,7 +25,7 @@ export default class ViewershipStore extends ContextClass {
   private readonly livestreamStore: LivestreamStore
 
   // caches last-seens so we don't have to constantly re-query, which could lead to race conditions
-  private readonly lastSeenMap: Map<string, LastSeen | null>
+  private readonly lastSeenMap: Map<number, LastSeen | null>
 
   constructor (deps: Deps) {
     super()
@@ -44,7 +44,7 @@ export default class ViewershipStore extends ContextClass {
   /** Adds/extends a viewing block for this channel for the given time. Ignores if there is viewing data AFTER the given time. (do not use for backfilling).
    * Adds generous padding on the left and right
    */
-  public async addViewershipForChatParticipation (channelId: string, timestamp: number): Promise<void> {
+  public async addViewershipForChatParticipation (channelId: number, timestamp: number): Promise<void> {
     const startTime = this.livestreamStore.currentLivestream.start
     if (startTime == null) {
       // livestream hasn't started yet
@@ -77,7 +77,7 @@ export default class ViewershipStore extends ContextClass {
     } else {
       block = await this.db.viewingBlock.create({
         data: {
-          channel: { connect: { youtubeId: channelId }},
+          channel: { connect: { id: channelId }},
           livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
           startTime: lowerTime,
           lastUpdate: upperTime
@@ -94,13 +94,13 @@ export default class ViewershipStore extends ContextClass {
   }
 
   /** Returns the time of the previous viewing block. */
-  public async getLastSeen (channelId: string): Promise<LastSeen | null> {
+  public async getLastSeen (channelId: number): Promise<LastSeen | null> {
     if (this.lastSeenMap.has(channelId)) {
       return this.lastSeenMap.get(channelId)!
     }
 
     const block = await this.db.viewingBlock.findFirst({
-      where: { channel: { youtubeId: channelId }},
+      where: { channel: { id: channelId }},
       orderBy: { lastUpdate: 'desc'},
       include: { livestream: true }
     })
@@ -139,11 +139,11 @@ export default class ViewershipStore extends ContextClass {
   /** Returns streams in ascending order.
    * The following actions are considered participation:
    * - sending a message in chat */
-  public async getLivestreamParticipation (channelId: string): Promise<LivestreamParticipation[]> {
+  public async getLivestreamParticipation (channelId: number): Promise<LivestreamParticipation[]> {
     const livestreams = await this.db.livestream.findMany({
       include: {
         chatMessages: {
-          where: { channel: { youtubeId: channelId }},
+          where: { channel: { id: channelId }},
           take: 1
         }
       },
@@ -158,11 +158,11 @@ export default class ViewershipStore extends ContextClass {
   }
 
   /** Returns streams in ascending order. */
-  public async getLivestreamViewership (channelId: string): Promise<LivestreamViewership[]> {
+  public async getLivestreamViewership (channelId: number): Promise<LivestreamViewership[]> {
     const livestreams = await this.db.livestream.findMany({
       include: {
         viewingBlocks: {
-          where: { channel: { youtubeId: channelId }},
+          where: { channel: { id: channelId }},
           take: 1
         }
       },
