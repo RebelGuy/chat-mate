@@ -52,6 +52,18 @@ export type ResponseData<T extends ResponseData<T>> = {
 /** Public objects must be tagged by a concrete schema, and can consist of only primitives or other public objects, or arrays thereof. */
 export type PublicObject<Schema extends number, T extends { schema: Schema } & ResponseData<T>> = ResponseData<T>
 
+/** Extracts the `data` component from an `ApiResponse` object. */
+export type ExtractedData<T extends ApiResponse<any, any>> = Extract<T, { success: true }>['data']
+
+/** Utility type that defines the shape any endpoint implementation methods should have. */
+export type Endpoint<Schema extends number, Args, T extends ApiResponse<any, any>> = (args: Args & { builder: ResponseBuilder<Schema, ExtractedData<T>> }) => Promise<T>
+
+/** The input argument for an endpoint implementation method. */
+export type In<E extends Endpoint<any, any, any>> = Parameters<E>['0']
+
+/** The output arguemnt for an endpoint implementation method. */
+export type Out<E extends Endpoint<any, any, any>> = ReturnType<E>
+
 const API_ERRORS = {
   500: 'Internal Error',
   400: 'Bad Request',
@@ -95,7 +107,7 @@ export abstract class ControllerBase extends ContextClass {
   }
 }
 
-class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
+export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
   private readonly logContext: LogContext
   private readonly endpointName: string
 

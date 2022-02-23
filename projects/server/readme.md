@@ -32,6 +32,7 @@ The following environment variables must be set in the `.env` file:
 - `LIVE_ID`: The video ID of the livestream.
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
 - `IS_MOCK_LIVESTREAM`: [Optional, debug only] If true, uses the chat data of the `LIVE_ID` to replay its chat events, and no longer connect to YouTube. See `MockMasterchat` for more options, such as hardcoding the set of messages to send, or taking console user input for specifying the next message text.
+- `USE_FAKE_CONTROLLERS`: [Optional, debug only] If true, replaces some controllers with test-only implementations that generate fake data.
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
 - `NODE_ENV`: Either `debug` or `release` to indicate whether we are running a live server or not.

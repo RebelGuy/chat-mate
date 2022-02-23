@@ -97,40 +97,34 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   return emoji.shortcuts?.at(0) ?? emoji.searchTerms?.at(0) ?? emoji.emojiId
 }
 
-export function privateToPublicItems (chatItems: ChatItemWithRelations[], levelData: Map<number, LevelData>): PublicChatItem[] {
-  let publicChatItems: PublicChatItem[] = []
-  for (const chat of chatItems) {
-    const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
+export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData): PublicChatItem {
+  const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
-    const channelInfo = chat.channel.infoHistory[0]
-    const userInfo: PublicChannelInfo = {
-      schema: 1,
-      channelName: channelInfo.name
-    }
-
-    const level = levelData.get(chat.channel.id)!
-    const levelInfo: PublicLevelInfo = {
-      schema: 1,
-      level: level.level,
-      levelProgress: level.levelProgress
-    }
-
-    const newItem: PublicChatItem = {
-      schema: 1,
-      id: chat.id,
-      timestamp: chat.time.getTime(),
-      messageParts,
-      author: {
-        schema: 1,
-        id: chat.channel.id,
-        userInfo,
-        levelInfo
-      }
-    }
-    publicChatItems.push(newItem)
+  const channelInfo = chat.channel.infoHistory[0]
+  const userInfo: PublicChannelInfo = {
+    schema: 1,
+    channelName: channelInfo.name
   }
 
-  return publicChatItems
+  const levelInfo: PublicLevelInfo = {
+    schema: 1,
+    level: levelData.level,
+    levelProgress: levelData.levelProgress
+  }
+
+  const newItem: PublicChatItem = {
+    schema: 1,
+    id: chat.id,
+    timestamp: chat.time.getTime(),
+    messageParts,
+    author: {
+      schema: 1,
+      id: chat.channel.id,
+      userInfo,
+      levelInfo
+    }
+  }
+  return newItem
 }
 
 function toPublicMessagePart (part: ChatMessagePart & { emoji: ChatEmoji | null, text: ChatText | null }): PublicMessagePart {

@@ -1,5 +1,7 @@
 export type GenericObject = Record<string, any>
 
+export type EmptyObject = Record<string, never>
+
 // from https://stackoverflow.com/questions/50490773/why-doesnt-typescript-undefined-type-behave-same-as-optional
 // gets the keys of T that are optional
 export type OptionalKeys<T> = ({

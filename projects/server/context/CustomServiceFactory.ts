@@ -8,7 +8,7 @@ export default class CustomServiceFactory implements ServiceFactory {
   public create (serviceClass: Function, context: ServiceContext) {
     // note: we can't simply instantiate the serviceClass and pass the dependencies to its constructor, because
     // `this` won't bind correctly and we won't be able to actually assign the dependencies to class fields.
-    // Instead, we must preemptively create the Controller class using the ClassBuilder, and retrive its instance here.
+    // We have already created the context, so we can retrieve the correct instance here.
     const contextProvider = getContextProvider(context.request)
     return contextProvider.getClassInstance(toCamelCase(serviceClass.name))
   }

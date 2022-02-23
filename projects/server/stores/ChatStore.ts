@@ -49,8 +49,8 @@ export default class ChatStore extends ContextClass {
   }
 
   // returns ordered chat items
-  public getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
-    return this.db.chatMessage.findMany({
+  public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
+    return await this.db.chatMessage.findMany({
       where: {
         // same as using AND: {[...]}
         livestreamId: this.livestreamStore.currentLivestream.id,
