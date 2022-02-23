@@ -10,17 +10,17 @@ export function chooseWeightedRandom<T> (...args: [T, number][]): T {
   const r = Math.random()
   let cumWeight = 0
   for (const [value, weight] of args) {
+    cumWeight += weight / totalWeights
     if (r < cumWeight) {
       return value
     }
-    cumWeight += weight / totalWeights
   }
 
-  throw new Error('This should not happen...')
+  return args.at(-1)![0]
 }
 
 export function pickRandom<T> (args: T[]): T {
-  return args[Math.floor(Math.random())]
+  return args[Math.floor(Math.random() * args.length)]
 }
 
 /** From: inclusive. To: exclusive. */

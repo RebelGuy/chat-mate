@@ -48,12 +48,10 @@ export default class ChatStore extends ContextClass {
     await this.livestreamStore.setContinuationToken(token)
   }
 
-  // returns ordered chat items
+  /** Returns ordered chat items that may or may not be from the current livestream. */
   public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
     return await this.db.chatMessage.findMany({
       where: {
-        // same as using AND: {[...]}
-        livestreamId: this.livestreamStore.currentLivestream.id,
         time: { gt: new Date(since) }
       },
       orderBy: {

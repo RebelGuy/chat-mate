@@ -105,6 +105,10 @@ Server.buildServices(app,
 )
 
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
+if (env('useFakeControllers')) {
+  logContext.logInfo(`Using fake controllers`)
+}
+
 logContext.logInfo(`Using live ID ${liveId}`)
 
 globalContext.initialise().then(() => {

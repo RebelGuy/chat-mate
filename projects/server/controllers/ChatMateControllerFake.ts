@@ -36,7 +36,7 @@ export default class ChatMateControllerFake implements IChatMateController {
       schema: 1,
       avgRoundtrip: 100,
       lastOk: new Date().getTime(),
-      status: chooseWeightedRandom(['ok', 5], ['error', 1])
+      status: chooseWeightedRandom(['ok', 10], ['error', 1])
     }
     
     return new Promise(r => r(builder.success({ livestreamStatus, apiStatus })))
@@ -47,7 +47,7 @@ export default class ChatMateControllerFake implements IChatMateController {
     const channels = await this.channelStore.getCurrentChannelNames()
 
     let events: PublicChatMateEvent[] = []
-    const N = Math.sqrt(Math.random() * 10)
+    const N = Math.sqrt(Math.random() * 100) - 5
     for (let i = 0; i < N; i++) {
       const newLevel = randomInt(0, 101)
       const level: Level = {
