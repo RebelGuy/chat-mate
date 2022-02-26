@@ -1,7 +1,7 @@
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
 import { unique } from '@rebel/server/util/arrays'
-import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt } from '@rebel/server/util/math'
+import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/server/util/math'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
@@ -91,7 +91,23 @@ export default class ExperienceHelpers extends ContextClass {
     return messageQuality
   }
 
+  /** Accepts a fractional value. */
   public calculateLevel (experience: GreaterThanOrEqual<0>): LevelData {
+    const levelFrac = this.calculateLevel0to50(experience) ?? this.calculateLevel50upwards(experience)
+    if (levelFrac == null) {
+      throw new Error(`Unable to calculate level for experience ${experience}`)
+    }
+
+    const roundedLevel = asGte(Math.floor(levelFrac), 0)
+    const thisLevelXp = this.calculateExperience({ level: roundedLevel, levelProgress: asLt(0, 1) })
+    const nextLevelXp = this.calculateExperience({ level: asGte(roundedLevel + 1, 0), levelProgress: asLt(0, 1) })
+    return {
+      level: roundedLevel,
+      levelProgress: asLt(asGte((experience - thisLevelXp) / (nextLevelXp - thisLevelXp), 0), 1)
+    }
+  }
+
+  private calculateLevel0to50 (experience: number): number | null {
     // We want to go for a quadratic increase.
     // 10 per second, 2 hours livestream ~ 100k
     // 100 "good" messages per livestream ~ 100k
@@ -121,23 +137,88 @@ export default class ExperienceHelpers extends ContextClass {
 
     // can disregard the `-` case because it would lead to a negative numerator, and the denominator is always positive
     const levelFrac = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
-    const roundedLevel = asGte(Math.floor(levelFrac), 0)
-    const thisLevelXp = a * roundedLevel * roundedLevel + b * roundedLevel
-    const nextLevelXp = a * (roundedLevel + 1) * (roundedLevel + 1) + b * (roundedLevel + 1)
-    return {
-      level: roundedLevel,
-      levelProgress: asLt(asGte((experience - thisLevelXp) / (nextLevelXp - thisLevelXp), 0), 1)
+    return levelFrac <= 50 ? levelFrac : null
+  }
+
+  private calculateLevel50upwards (experience: number): number | null {
+    // I don't think there is an analytical solution to E = cx^3 + ex + f, so use the bisection algorithm.
+    // This is safe because the function is increasing monotonically, so we know we will always get a solution
+
+    const validator = (fractionalLevel: number) => {
+      const level = asGte(Math.floor(fractionalLevel), 0)
+      const levelProgress = asLt(asGte(fractionalLevel - level, 0), 1)
+      // if the maybeLevel is too high, the result will be negative
+      return experience - this.calculateExperience({ level, levelProgress })
+    }
+    const level = this.applyBisection(50, 200, 500, validator)
+    return level
+  }
+
+  /** May return a **fractional** value - the caller is responsible for rounding. */
+  public calculateExperience (levelData: LevelData): GreaterThanOrEqual<0> {
+    const { level, levelProgress } = levelData
+    const xpAtLevel = this.calculateExperienceForIntegerLevel(level)
+    const xpAtNextLevel = this.calculateExperienceForIntegerLevel(level + 1)
+    const xpFrac = levelProgress * (xpAtNextLevel - xpAtLevel) + xpAtLevel
+
+    return asGte(Math.max(0, xpFrac), 0)
+  }
+
+  private calculateExperienceForIntegerLevel (level: number): number {
+    if (level <= 50) {
+      return this.calculateExperience0to50(asLte(level, 50))
+    } else {
+      return this.calculateExperience50upwards(asGt(level, 50))
     }
   }
 
-  public calculateExperience (levelFrac: number): GreaterThanOrEqual<0> {
-    levelFrac = Math.max(0, levelFrac)
-
+  private calculateExperience0to50 (levelFrac: LessThanOrEqual<50>): number {
     const scale = 1 / 20
     const a = 6_000 * scale
     const b = 10_000 * scale
 
     const xpFrac = a * levelFrac * levelFrac + b * levelFrac
-    return asGte(Math.max(0, Math.round(xpFrac)), 0)
+    return xpFrac
+  }
+
+  private calculateExperience50upwards (levelFrac: GreaterThan<50>): number {
+    const scale = 1 / 20
+    const a = 6_000 * scale
+    const b = 10_000 * scale
+
+    const c = 10
+    const e = 100 * a + b - 7500 * c
+    const f = 250000 * c - 2500 * a
+
+    const xpFrac = c * levelFrac * levelFrac * levelFrac + e * levelFrac + f
+    return xpFrac
+  }
+
+  /** Iteratively attempts to find the value such that the validator returns 0.
+   * If the validator returns a negative value, will next try a lower value.
+   * If the validator returns a positive value, will next try a larger value.  */
+  private applyBisection (min: number, max: number, maxSteps: number, validator: (value: number) => number): number | null {
+    const eps = 1e-6
+    let bottom = min
+    let top = max
+
+    let step = 0
+    while (step < maxSteps) {
+      step++
+      const value = (top + bottom) / 2
+      const result = validator(value)
+
+      if (Math.abs(result) < eps || Math.abs(top - bottom) < eps) {
+        return value
+      } else if (result < 0) {
+        // use lower half
+        top = value
+      } else if (result > 0) {
+        // use upper half
+        bottom = value
+      }
+    }
+
+    return null
   }
 }

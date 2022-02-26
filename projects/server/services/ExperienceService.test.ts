@@ -244,7 +244,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelId, time1.getTime()).mockResolvedValueOnce(50).mockResolvedValueOnce(550)
     mockExperienceHelpers.calculateLevel.calledWith(asGte(150, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0.5 as any })
     mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
-    mockExperienceHelpers.calculateExperience.calledWith(1.5 + 3.6).mockReturnValue(asGte(650, 0))
+    mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 5 as any, levelProgress: 5.1 - 5 as any })).mockReturnValue(asGte(650, 0))
 
     const result = await experienceService.modifyExperience(channelId, 3.6, 'Test')
 

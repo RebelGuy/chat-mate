@@ -2,7 +2,7 @@ import ExperienceHelpers, { MULTIPLIER_CHANGE_AT_MAX, MULTIPLIER_CHANGE_AT_MIN, 
 import { expectStrictIncreasing, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
-import { asGte, asLte, asRange, eps } from '@rebel/server/util/math'
+import { asGte, asLt, asLte, asRange, eps } from '@rebel/server/util/math'
 import { addTime } from '@rebel/server/util/datetime'
 
 const experienceHelpers = new ExperienceHelpers()
@@ -85,6 +85,18 @@ describe(nameof(ExperienceHelpers, 'calculateLevel'), () => {
     const progress3 = experienceHelpers.calculateLevel(asGte(12800, 0)).levelProgress
 
     expectStrictIncreasing(progress0, progress1, progress2, progress3)
+  })
+
+  test('correctly inverts `calculateExperience`', () => {
+    const levels = [1, 1.5, 49, 50, 50.1, 50.15, 99.9]
+
+    const xp = levels.map(l => experienceHelpers.calculateExperience({
+      level: asGte(Math.floor(l), 0),
+      levelProgress: asLt(asGte(l - Math.floor(l), 0), 1)
+    }))
+    const levelResult = xp.map(x => experienceHelpers.calculateLevel(x))
+
+    expect(levelResult.map(l => l.level + l.levelProgress)).toEqual(levels)
   })
 })
 
@@ -200,19 +212,13 @@ describe(nameof(ExperienceHelpers, 'calculateViewershipMultiplier'), () => {
 
 describe(nameof(ExperienceHelpers, 'calculateExperience'), () => {
   test('higher levels lead to higher experiences', () => {
-    const xp1 = experienceHelpers.calculateExperience(0)
-    const xp2 = experienceHelpers.calculateExperience(0.01)
-    const xp3 = experienceHelpers.calculateExperience(1)
-    const xp4 = experienceHelpers.calculateExperience(2)
-    const xp5 = experienceHelpers.calculateExperience(100)
+    const xp1 = experienceHelpers.calculateExperience({ level: 0, levelProgress: asLt(0, 1) })
+    const xp2 = experienceHelpers.calculateExperience({ level: 0, levelProgress: asLt(asGte(0.01, 0), 1) })
+    const xp3 = experienceHelpers.calculateExperience({ level: asGte(1, 0), levelProgress: asLt(0, 1) })
+    const xp4 = experienceHelpers.calculateExperience({ level: asGte(2, 0), levelProgress: asLt(0, 1) })
+    const xp5 = experienceHelpers.calculateExperience({ level: asGte(100, 0), levelProgress: asLt(0, 1) })
 
     expectStrictIncreasing(xp1, xp2, xp3, xp4, xp5)
-  })
-
-  test('negative level is clamped to zero xp', () => {
-    const xp = experienceHelpers.calculateExperience(-10)
-
-    expect(xp).toBe(0)
   })
 })
 

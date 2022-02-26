@@ -8,12 +8,13 @@ import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/Experi
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { sortBy, zip } from '@rebel/server/util/arrays'
-import { asGte, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
+import { asGte, asLt, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
   totalExperience: GreaterThanOrEqual<0>,
+  /** Linear progress. For example, 0.5 signifies that half of the experience between the current level and the next has been collected. */
   levelProgress: GreaterThanOrEqual<0> & LessThan<1>
 }
 
@@ -172,8 +173,15 @@ export default class ExperienceService extends ContextClass {
     const currentExperience = await this.getTotalExperience(channelId)
     const currentLevel = this.experienceHelpers.calculateLevel(currentExperience)
     const currentLevelFrac = currentLevel.level + currentLevel.levelProgress
+    const newLevelFrac = currentLevelFrac + levelDelta
 
-    const requiredExperience = this.experienceHelpers.calculateExperience(currentLevelFrac + levelDelta)
+    const newLevel = Math.floor(newLevelFrac)
+    const newLevelProgress = newLevelFrac - newLevel
+    const newLevelData: LevelData = {
+      level: asGte(newLevel, 0),
+      levelProgress: asLt(asGte(newLevelProgress, 0), 1)
+    } 
+    const requiredExperience = this.experienceHelpers.calculateExperience(newLevelData)
     const experienceDelta = requiredExperience - currentExperience
     await this.experienceStore.addManualExperience(channelId, experienceDelta, message)
 
