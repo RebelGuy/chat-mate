@@ -5,7 +5,6 @@ import { rankedEntryToPublic } from '@rebel/server/models/experience'
 import { userAndLevelToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import { ChannelName } from '@rebel/server/stores/ChannelStore'
 import { GET, Path, POST, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<2, {
@@ -60,27 +59,17 @@ export default class ExperienceController extends ControllerBase {
   @GET
   @Path('/rank')
   public async getRank (
-    @QueryParam('name') name?: string,
-    @QueryParam('id') id?: number
+    @QueryParam('id') id: number
   ): Promise<GetRankResponse> {
     const builder = this.registerResponseBuilder<GetRankResponse>('rank', 2)
-    if (name == null && id == null) {
+    if (id == null) {
       return builder.failure(400, `A value for 'name' or 'id' must be provided.`)
     }
 
     try {
-      let channel: ChannelName | null
-      if (name != null) {
-        const matches = await this.channelService.getChannelByName(decodeURI(name).trim().toLowerCase())
-        if (matches == null) {
-          return builder.failure(404, `Could not find a channel matching name '${name}'`)
-        }
-        channel = matches[0]
-      } else {
-        channel = await this.channelService.getChannelById(id!)
-        if (channel == null) {
-          return builder.failure(404, `Could not find a channel matching id '${id}'`)
-        }
+      let channel = await this.channelService.getChannelById(id)
+      if (channel == null) {
+        return builder.failure(404, `Could not find a channel matching id '${id}'`)
       }
 
       const leaderboard = await this.experienceService.getLeaderboard()
