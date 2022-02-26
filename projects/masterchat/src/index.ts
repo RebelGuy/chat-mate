@@ -577,7 +577,7 @@ export class Masterchat extends EventEmitter {
 
     // Check ban status
     if (res.status === 429) {
-      throw new AccessDeniedError("Rate limit exceeded: " + this.videoId);
+      throw new AccessDeniedError("Rate limit exceeded: " + res.url);
     }
 
     const html = await res.text();

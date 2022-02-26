@@ -72,7 +72,7 @@ export default class ExperienceService extends ContextClass {
       const streamStartTime = this.livestreamStore.currentLivestream.start
       const streamEndTime = this.livestreamStore.currentLivestream.end
       if (streamStartTime == null || time < streamStartTime || streamEndTime != null && time > streamEndTime) {
-        continue
+        // continue
       }
 
       const channelId = await this.channelStore.getId(chatItem.author.channelId)
@@ -94,7 +94,7 @@ export default class ExperienceService extends ContextClass {
       // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
       // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
       // repetitive messages are anything but high quality, and thus receive a bigger punishment.
-      const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier - repetitionPenalty) * messageQualityMultiplier
+      const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
       const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
       await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
     }

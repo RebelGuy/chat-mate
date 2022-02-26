@@ -77,7 +77,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       repetitionPenalty: -0.2
     }
     const expectedExperienceToAdd = experienceData.baseExperience
-      * (experienceData.participationStreakMultiplier * experienceData.viewershipStreakMultiplier * experienceData.spamMultiplier - experienceData.repetitionPenalty!)
+      * (experienceData.participationStreakMultiplier * experienceData.viewershipStreakMultiplier * experienceData.spamMultiplier + experienceData.repetitionPenalty!)
       * experienceData.messageQualityMultiplier
     const msgQuality = asRange(0.2, 0, 2)
     const prevData: ChatExperience = {
