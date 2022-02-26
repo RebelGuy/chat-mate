@@ -4,20 +4,22 @@ import ExperienceService, { Level, RankedEntry } from '@rebel/server/services/Ex
 import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { getGetterMock, mockGetter, nameof, single } from '@rebel/server/_test/utils'
-import { mock, MockProxy } from 'jest-mock-extended'
+import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { asGte, asLt, asRange, sum } from '@rebel/server/util/math'
 import { ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
 import { addTime } from '@rebel/server/util/datetime'
-import { ChatItem } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChatStore from '@rebel/server/stores/ChatStore'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
 let mockLivestreamStore: MockProxy<LivestreamStore>
 let mockViewershipStore: MockProxy<ViewershipStore>
 let mockChannelStore: MockProxy<ChannelStore>
+let mockChatStore: MockProxy<ChatStore>
 let experienceService: ExperienceService
 beforeEach(() => {
   mockExperienceHelpers = mock<ExperienceHelpers>()
@@ -25,6 +27,7 @@ beforeEach(() => {
   mockLivestreamStore = mock<LivestreamStore>()
   mockViewershipStore = mock<ViewershipStore>()
   mockChannelStore = mock<ChannelStore>()
+  mockChatStore = mock<ChatStore>()
 
   mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(data.livestream3)
 
@@ -33,7 +36,8 @@ beforeEach(() => {
     experienceStore: mockExperienceStore,
     livestreamStore: mockLivestreamStore,
     viewershipStore: mockViewershipStore,
-    channelStore: mockChannelStore
+    channelStore: mockChannelStore,
+    chatStore: mockChatStore
   }))
 })
 
@@ -69,10 +73,12 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       messageQualityMultiplier: 1.1,
       participationStreakMultiplier: 1,
       viewershipStreakMultiplier: 1.5,
-      spamMultiplier: 0.8
+      spamMultiplier: 0.8,
+      repetitionPenalty: -0.2
     }
-    const expectedExperienceToAdd = experienceData.baseExperience * experienceData.messageQualityMultiplier
-      * experienceData.participationStreakMultiplier * experienceData.viewershipStreakMultiplier * experienceData.spamMultiplier
+    const expectedExperienceToAdd = experienceData.baseExperience
+      * (experienceData.participationStreakMultiplier * experienceData.viewershipStreakMultiplier * experienceData.spamMultiplier - experienceData.repetitionPenalty!)
+      * experienceData.messageQualityMultiplier
     const msgQuality = asRange(0.2, 0, 2)
     const prevData: ChatExperience = {
       channel: { id: channelId, youtubeId: data.channel1 },
@@ -88,6 +94,9 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
         chatMessage: null!
       }
     }
+
+    // cheating a little here since we don't want to write out all properties
+    const chatItems: ChatItemWithRelations[] = [{ channelId }] as any
 
     mockChannelStore.getId.calledWith(data.author1.channelId).mockResolvedValue(channelId)
     mockExperienceStore.getPreviousChatExperience.calledWith(channelId).mockResolvedValue(prevData)
@@ -112,13 +121,19 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockExperienceHelpers.calculateSpamMultiplier
       .calledWith(chatItem.timestamp, prevData.time.getTime(), asRange(prevData.experienceDataChatMessage.spamMultiplier, 0.1, 1.5))
       .mockReturnValue(asRange(experienceData.spamMultiplier, 0.1, 1.5))
+    mockChatStore.getChatSince.calledWith(anyNumber()).mockResolvedValue(chatItems)
+    mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatItem.timestamp, expect.arrayContaining([chatItems[0]])).mockReturnValue(asRange(experienceData.repetitionPenalty!, -2, 0))
 
     await experienceService.addExperienceForChat([chatItem])
 
-    const expectedChatStoreArgs: [channelId: number, timestamp: number, xp: number, data: ChatExperienceData] = [
+    const expectedStoreData: [channelId: number, timestamp: number, xp: number, data: ChatExperienceData] = [
       channelId, chatItem.timestamp, expectedExperienceToAdd, experienceData
     ]
-    expect(single(mockExperienceStore.addChatExperience.mock.calls)).toEqual(expectedChatStoreArgs)
+    const storeData = single(mockExperienceStore.addChatExperience.mock.calls)
+    expect(storeData[0]).toEqual(expectedStoreData[0])
+    expect(storeData[1]).toEqual(expectedStoreData[1])
+    expect(storeData[2]).toBeCloseTo(expectedStoreData[2]) // floating point error!
+    expect(storeData[3]).toEqual(expectedStoreData[3])
     expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toEqual(0)
   })
 })

@@ -79,7 +79,8 @@ export const chatExperienceData1: ChatExperienceData = {
   participationStreakMultiplier: 1.2,
   viewershipStreakMultiplier: 1.5,
   spamMultiplier: 0.99995,
-  messageQualityMultiplier: 0.5
+  messageQualityMultiplier: 0.5,
+  repetitionPenalty: 0
 }
 export const chatExperienceData2: ChatExperienceData = {
   baseExperience: 1000,
@@ -87,7 +88,8 @@ export const chatExperienceData2: ChatExperienceData = {
   participationStreakMultiplier: 1.5,
   viewershipStreakMultiplier: 1.2,
   spamMultiplier: 0.1,
-  messageQualityMultiplier: 0.1
+  messageQualityMultiplier: 0.1,
+  repetitionPenalty: -0.2
 }
 export const chatExperienceData3: ChatExperienceData = {
   baseExperience: 1000,
@@ -95,7 +97,8 @@ export const chatExperienceData3: ChatExperienceData = {
   participationStreakMultiplier: 1.01,
   viewershipStreakMultiplier: 1,
   spamMultiplier: 1,
-  messageQualityMultiplier: 0.2
+  messageQualityMultiplier: 0.2,
+  repetitionPenalty: 0
 }
 
 /** Adds random data. Assumes the channel and livestream have already been created. */

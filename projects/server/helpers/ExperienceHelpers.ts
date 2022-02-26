@@ -1,7 +1,8 @@
 import ContextClass from '@rebel/server/context/ContextClass'
-import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
-import { unique } from '@rebel/server/util/arrays'
+import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations } from '@rebel/server/models/chat'
+import { tally, unique } from '@rebel/server/util/arrays'
 import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/server/util/math'
+import { assertUnreachable } from '@rebel/server/util/typescript'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
@@ -16,6 +17,8 @@ export const MULTIPLIER_CHANGE_AT_MAX = 1.05
 export type LevelData = { level: GreaterThanOrEqual<0>, levelProgress: GreaterThanOrEqual<0> & LessThan<1> }
 
 export type SpamMult = NumRange<0.1, 1.5>
+
+export type RepetitionPenalty = NumRange<-2, 0>
 
 export default class ExperienceHelpers extends ContextClass {
   // intedned as a safeguard against people trying to spam messages for XP.
@@ -34,6 +37,38 @@ export default class ExperienceHelpers extends ContextClass {
     }
 
     return clamp(prevMultiplier * multiplierMultiplier, 0.1, 1.5)
+  }
+
+  /** Returns a penalty that is to be subtracted from the final multiplier. It is based on the given messages */
+  public calculateRepetitionPenalty (currentTimestamp: number, prevMessages: ChatItemWithRelations[]): RepetitionPenalty {
+    const text = prevMessages
+      .map(item => ({ text: this.chatItemToString(item), age: currentTimestamp - item.time.getTime() }))
+      .filter(item => item.age < 60000) // from within the last minute
+
+    const freq = tally(text, (item1, item2) => item1.text === item2.text)
+
+    let penalty = 0
+    for (const item of freq) {
+      if (item.count <= 3) {
+        break
+      }
+
+      penalty -= (item.count - 3) * 0.2
+    }
+
+    return clamp(penalty, -2, 0)
+  }
+
+  private chatItemToString (item: ChatItemWithRelations) {
+    return item.chatMessageParts.map(p => {
+      if (p.emoji != null && p.text == null) {
+        return p.emoji.name
+      } else if (p.emoji == null && p.text != null) {
+        return p.text.text
+      } else {
+        throw new Error('ChatMessagePart must have either an emoji or text attached to it')
+      }
+    }).join('')
   }
 
   // Returns 0 <= x < 1 for low-quality messages, and 1 < x <= 2 for high quality messages. 1 is "normal" quality.

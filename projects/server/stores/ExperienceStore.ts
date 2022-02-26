@@ -12,7 +12,7 @@ export type ChatExperience =
   & { experienceDataChatMessage: { chatMessage: ChatMessage} }
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
-  'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier'>
+  'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier' | 'repetitionPenalty'>
   & { chatMessageYtId: string }
 
 type Deps = Dependencies<{
@@ -73,6 +73,7 @@ export default class ExperienceStore extends ContextClass {
           participationStreakMultiplier: data.participationStreakMultiplier,
           spamMultiplier: data.spamMultiplier,
           messageQualityMultiplier: data.messageQualityMultiplier,
+          repetitionPenalty: data.repetitionPenalty,
           chatMessage: { connect: { youtubeId: data.chatMessageYtId }}
         }}
       },

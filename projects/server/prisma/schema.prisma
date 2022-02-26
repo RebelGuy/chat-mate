@@ -178,6 +178,7 @@ model ExperienceDataChatMessage {
   participationStreakMultiplier Float
   spamMultiplier                Float
   messageQualityMultiplier      Float
+  repetitionPenalty             Float? // todo: add data migration (default value is 0) and make required
 
   chatMessageId Int         @unique
   chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])

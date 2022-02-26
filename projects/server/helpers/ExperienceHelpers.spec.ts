@@ -1,7 +1,7 @@
 import ExperienceHelpers, { MULTIPLIER_CHANGE_AT_MAX, MULTIPLIER_CHANGE_AT_MIN, SpamMult, TARGET_CHAT_PERIOD_MAX, TARGET_CHAT_PERIOD_MIN } from '@rebel/server/helpers/ExperienceHelpers'
 import { expectStrictIncreasing, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
-import { ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import { asGte, asLt, asLte, asRange, eps } from '@rebel/server/util/math'
 import { addTime } from '@rebel/server/util/datetime'
 
@@ -120,6 +120,66 @@ describe(nameof(ExperienceHelpers, 'calculateQualityMultiplier'), () => {
     const m4 = experienceHelpers.calculateQualityMultiplier(asRange(2, 0, 2))
 
     expectStrictIncreasing(m0, m1, m2, m3, m4)
+  })
+})
+
+describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
+  const time1 = new Date().getTime()
+  const time2 = new Date().getTime() - 300000
+  function generateChatItem (timestamp: number, msg: string): ChatItemWithRelations {
+    return {
+      id: 1,
+      time: new Date(timestamp),
+      youtubeId: 'chat id',
+      livestreamId: 1,
+      channelId: 1,
+      channel: { id: 1, youtubeId: 'id', infoHistory: [] },
+      chatMessageParts: [{
+        id: 1,
+        chatMessageId: 1,
+        emoji: null,
+        emojiId: null,
+        order: 1,
+        textId: 1,
+        text: {
+          id: 1,
+          isBold: false,
+          isItalics: false,
+          text: msg
+        }
+      }]
+    }
+  }
+
+  test('returns zero if there are no repeats', () => {
+    const chatItems: ChatItemWithRelations[] = [
+      generateChatItem(time1, 'test1'),
+      generateChatItem(time1, 'test2'),
+      generateChatItem(time1, 'test3'),
+      generateChatItem(time1, 'test2'),
+      generateChatItem(time1, 'test4')
+    ]
+
+    const penalty = experienceHelpers.calculateRepetitionPenalty(time1, chatItems)
+
+    expect(penalty).toEqual(0)
+  })
+
+  test('returns negative value if there are repeats', () => {
+    const chatItems: ChatItemWithRelations[] = [
+      generateChatItem(time1, 'test1'),
+      generateChatItem(time1, 'test2'),
+      generateChatItem(time1, 'test1'),
+      generateChatItem(time1, 'test3'),
+      generateChatItem(time1, 'test1'),
+      generateChatItem(time1, 'test4'),
+      generateChatItem(time1, 'test1'),
+      generateChatItem(time1, 'test5')
+    ]
+
+    const penalty = experienceHelpers.calculateRepetitionPenalty(time1, chatItems)
+
+    expect(penalty).toBeLessThan(0)
   })
 })
 

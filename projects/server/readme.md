@@ -134,6 +134,7 @@ Key:
   - 🟢 calculateLevel
   - 🟢 calculateParticipationMultiplier
   - 🟢 calculateQualityMultiplier
+  - 🟢 calculateRepetitionPenalty
   - 🟢 calculateSpamMultiplier
   - 🟢 calculateViewershipMultiplier
 - 🟢 TimerHelpers

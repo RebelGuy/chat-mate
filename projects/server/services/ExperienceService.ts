@@ -1,9 +1,10 @@
 import { ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import ExperienceHelpers, { LevelData, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
+import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem } from '@rebel/server/models/chat'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
@@ -37,6 +38,7 @@ type Deps = Dependencies<{
   experienceHelpers: ExperienceHelpers
   viewershipStore: ViewershipStore
   channelStore: ChannelStore
+  chatStore: ChatStore
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -45,6 +47,7 @@ export default class ExperienceService extends ContextClass {
   private readonly experienceHelpers: ExperienceHelpers
   private readonly viewershipStore: ViewershipStore
   private readonly channelStore: ChannelStore
+  private readonly chatStore: ChatStore
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -55,6 +58,7 @@ export default class ExperienceService extends ContextClass {
     this.experienceHelpers = deps.resolve('experienceHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')
     this.channelStore = deps.resolve('channelStore')
+    this.chatStore = deps.resolve('chatStore')
   }
 
   /** Adds experience only for chat messages sent during the live chat.
@@ -76,16 +80,21 @@ export default class ExperienceService extends ContextClass {
       const participationStreakMultiplier = await this.getParticipationMultiplier(channelId)
       const spamMultiplier = await this.getSpamMultiplier(chatItem, channelId)
       const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
+      const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), channelId)
       const data: ChatExperienceData = {
         viewershipStreakMultiplier,
         participationStreakMultiplier,
         spamMultiplier,
         messageQualityMultiplier,
+        repetitionPenalty,
         baseExperience: ExperienceService.CHAT_BASE_XP,
         chatMessageYtId: chatItem.id
       }
 
-      const totalMultiplier = viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier * messageQualityMultiplier
+      // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
+      // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
+      // repetitive messages are anything but high quality, and thus receive a bigger punishment.
+      const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier - repetitionPenalty) * messageQualityMultiplier
       const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
       await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
     }
@@ -245,5 +254,10 @@ export default class ExperienceService extends ContextClass {
   private getMessageQualityMultiplier (chatItem: ChatItem): NumRange<0, 2> {
     const messageQuality = this.experienceHelpers.calculateChatMessageQuality(chatItem)
     return this.experienceHelpers.calculateQualityMultiplier(messageQuality)
+  }
+
+  private async getMessageRepetitionPenalty (currentTimestamp: number, channelId: number): Promise<RepetitionPenalty> {
+    const chat = await this.chatStore.getChatSince(currentTimestamp - 60000)
+    return this.experienceHelpers.calculateRepetitionPenalty(currentTimestamp, chat.filter(c => c.channelId === channelId))
   }
 }

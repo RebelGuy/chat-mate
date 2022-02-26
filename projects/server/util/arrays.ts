@@ -42,11 +42,30 @@ export function zip<T extends GenericObject, U extends GenericObject> (first: T[
   return first.map((a, i) => ({ ...a, ...second[i] }))
 }
 
-/** Retrusn a new array that is the inverse of the input array. */
+/** Returns a new array that is the inverse of the input array. */
 export function reverse<T> (arr: T[]): T[] {
   let result: T[] = []
   for (let i = arr.length - 1; i >= 0; i--) {
     result.push(arr[i])
   }
   return result
+}
+
+/** Returns the tally of each item, ordered from most frequent to least frequent. */
+export function tally<T> (arr: T[], comparator?: (a: T, b: T) => boolean): { value: T, count: number }[] {
+  if (comparator == null) {
+    comparator = (a: T, b: T) => a === b
+  }
+
+  let result: { value: T, count: number }[] = []
+  for (const item of arr) {
+    const existing = result.find(r => comparator!(r.value, item))
+    if (existing == null) {
+      result.push({ value: item, count: 1 })
+    } else {
+      existing.count++
+    }
+  }
+
+  return sortBy(result, r => r.count, 'desc')
 }
