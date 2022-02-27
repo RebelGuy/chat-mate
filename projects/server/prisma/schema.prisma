@@ -219,3 +219,15 @@ model ViewingBlock {
 
   @@map("viewing_block")
 }
+
+model CustomEmoji {
+  id Int @id @default(autoincrement())
+
+  symbol String @unique @db.VarChar(10)
+  name   String @db.VarChar(63)
+
+  // max 64KB of storage
+  image Bytes @db.Blob
+
+  levelRequirement Int @db.UnsignedSmallInt
+}
