@@ -3,13 +3,14 @@
   "version": "1.9.1",
   "main": "../../dist/release/studio/index.js",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
+    "eject": "react-app-rewired eject"
   },
   "devDependencies": {
     "create-react-app": "^5.0.0",
+    "react-app-rewired": "^2.2.1",
     "serve": "^13.0.2"
   },
   "dependencies": {

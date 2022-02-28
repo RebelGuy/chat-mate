@@ -4,24 +4,24 @@ import { customEmojiToPublicObject, publicObjectToCustomEmoji, publicObjectNewTo
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import { Path, GET, POST, PATCH } from 'typescript-rest'
 
-type GetCustomEmojisResponse = ApiResponse<1, { emojis: PublicCustomEmoji[] }>
+export type GetCustomEmojisResponse = ApiResponse<1, { emojis: PublicCustomEmoji[] }>
 
-type AddCustomEmojiRequest = ApiRequest<1, { schema: 1, newEmoji: PublicCustomEmojiNew }>
-type AddCustomEmojiResponse = ApiResponse<1, { newEmoji: PublicCustomEmoji }>
+export type AddCustomEmojiRequest = ApiRequest<1, { schema: 1, newEmoji: PublicCustomEmojiNew }>
+export type AddCustomEmojiResponse = ApiResponse<1, { newEmoji: PublicCustomEmoji }>
 
-type UpdateCustomEmojiRequest = ApiRequest<1, { schema: 1, updatedEmoji: PublicCustomEmoji }>
-type UpdateCustomEmojiResponse = ApiResponse<1, { updatedEmoji: PublicCustomEmoji }>
+export type UpdateCustomEmojiRequest = ApiRequest<1, { schema: 1, updatedEmoji: PublicCustomEmoji }>
+export type UpdateCustomEmojiResponse = ApiResponse<1, { updatedEmoji: PublicCustomEmoji }>
 
 type Deps = ControllerDependencies<{
   customEmojiStore: CustomEmojiStore
 }>
 
 @Path(buildPath('emoji'))
-export default class ExperienceController extends ControllerBase {
+export default class EmojiController extends ControllerBase {
   private readonly customEmojiStore: CustomEmojiStore
 
   constructor (deps: Deps) {
-    super(deps, 'experience')
+    super(deps, 'emoji')
     this.customEmojiStore = deps.resolve('customEmojiStore')
   }
 

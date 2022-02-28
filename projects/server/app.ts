@@ -28,6 +28,7 @@ import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceController from '@rebel/server/controllers/ExperienceController'
 import UserController from '@rebel/server/controllers/UserController'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
+import EmojiController from '@rebel/server/controllers/EmojiController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -81,6 +82,7 @@ app.use(async (req, res, next) => {
   const context = globalContext.asParent()
     .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
+    .withClass('emojiController', EmojiController)
     .withClass('experienceController', ExperienceController)
     .withClass('userController', UserController)
     .build()
@@ -90,6 +92,9 @@ app.use(async (req, res, next) => {
   res.on('finish', async () => {
     await context.dispose()
   })
+
+  res.header('Content-Type', 'application/json')
+  res.header('Access-Control-Allow-Origin', '*')
 
   next()
 })
@@ -102,6 +107,7 @@ Server.registerServiceFactory(new ServiceFactory())
 Server.buildServices(app,
   ChatMateController,
   ChatController,
+  EmojiController,
   ExperienceController,
   UserController
 )
