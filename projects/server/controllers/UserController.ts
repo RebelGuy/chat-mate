@@ -36,9 +36,9 @@ export default class UserController extends ControllerBase {
   @POST
   @Path('search')
   public async search (request: SearchUserRequest): Promise<SearchUserResponse> {
-    const builder = this.registerResponseBuilder<SearchUserResponse>('search', 1)
+    const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search', 1)
     if (request == null || request.schema !== builder.schema || isNullOrEmpty(request.searchTerm)) {
-      return builder.failure(400, 'Invalid request.')
+      return builder.failure(400, 'Invalid request data.')
     }
 
     try {

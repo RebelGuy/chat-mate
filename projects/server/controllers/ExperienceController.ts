@@ -44,9 +44,9 @@ export default class ExperienceController extends ControllerBase {
   }
 
   @GET
-  @Path('/leaderboard')
+  @Path('leaderboard')
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
-    const builder = this.registerResponseBuilder<GetLeaderboardResponse>('leaderboard', 2)
+    const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 2)
     try {
       const leaderboard = await this.experienceService.getLeaderboard()
       const publicLeaderboard = leaderboard.map(entry => rankedEntryToPublic(entry))
@@ -57,11 +57,11 @@ export default class ExperienceController extends ControllerBase {
   }
 
   @GET
-  @Path('/rank')
+  @Path('rank')
   public async getRank (
     @QueryParam('id') id: number
   ): Promise<GetRankResponse> {
-    const builder = this.registerResponseBuilder<GetRankResponse>('rank', 2)
+    const builder = this.registerResponseBuilder<GetRankResponse>('GET /rank', 2)
     if (id == null) {
       return builder.failure(400, `A value for 'name' or 'id' must be provided.`)
     }
@@ -101,9 +101,9 @@ export default class ExperienceController extends ControllerBase {
   @POST
   @Path('modify')
   public async modifyExperience (request: ModifyExperienceRequest): Promise<ModifyExperienceResponse> {
-    const builder = this.registerResponseBuilder<ModifyExperienceResponse>('modify', 1)
+    const builder = this.registerResponseBuilder<ModifyExperienceResponse>('POST /modify', 1)
     if (request == null || request.schema !== builder.schema) {
-      return builder.failure(400, 'Invalid request.')
+      return builder.failure(400, 'Invalid request data.')
     }
 
     try {

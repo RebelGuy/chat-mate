@@ -33,7 +33,7 @@ export default class ChatController extends ControllerBase {
     @QueryParam('since') since?: number,
     @QueryParam('limit') limit?: number
   ): Promise<GetChatResponse> {
-    const builder = this.registerResponseBuilder<GetChatResponse>('', 5)
+    const builder = this.registerResponseBuilder<GetChatResponse>('GET /', 5)
     try {
       return await this.implementation.getChat({ builder, since, limit })
     } catch (e: any) {

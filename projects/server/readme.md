@@ -106,6 +106,10 @@ Key:
   - 🟢 addChat
   - 🟢 getChatSince
   - 🟢 getContinuationToken
+- 🟢 CustomEmojiStore
+  - 🟢 addCustomEmoji
+  - 🟢 getAllCustomEmojis
+  - 🟢 updateCustomEmoji
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
   - 🟢 addManualExperience
@@ -210,6 +214,45 @@ Returns an data with the following properties:
 
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
+
+## Emoji Endpoints
+Path: `/emoji`.
+
+### `GET /custom`
+*Current schema: 1.*
+
+Gets all custom emojis.
+
+Returns data with the following properties:
+- `emojis` (`PublicCustomEmoji[]`): The list of all custom emojis.
+
+### `POST /custom`
+*Current schema: 1.*
+
+Add a new custom emoji.
+
+Request data (body):
+- `newEmoji` (`PublicCustomEmojiNew`): *Required.* The new emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected.
+
+Returns data with the following properties:
+- `newEmoji` (`PublicCustomEmoji`): The new emoji that was created.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `PATCH /custom`
+*Current schema: 1.*
+
+Update an existing custom emoji.
+
+Request data (body):
+- `updatedEmoji` (`PublicCustomEmoji`): *Required.* The updated emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected. The `id` is used to match the new emoji to an emoji in the database.
+
+Returns data with the following properties:
+- `updatedEmoji` (`PublicCustomEmoji`): The updated emoji data.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
 
 ## Experience Endpoints
 Path: `/experience`.

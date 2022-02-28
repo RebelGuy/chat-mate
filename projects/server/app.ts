@@ -27,6 +27,7 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceController from '@rebel/server/controllers/ExperienceController'
 import UserController from '@rebel/server/controllers/UserController'
+import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -62,6 +63,7 @@ const globalContext = ContextProvider.create()
   .withClass('chatStore', ChatStore)
   .withClass('experienceService', ExperienceService)
   .withClass('chatService', ChatService)
+  .withClass('customEmojiStore', CustomEmojiStore)
   .build()
 
 const app = express()

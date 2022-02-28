@@ -39,9 +39,9 @@ export default class ChatMateController extends ControllerBase {
   }
 
   @GET
-  @Path('/status')
+  @Path('status')
   public async getStatus (): Promise<GetStatusResponse> {
-    const builder = this.registerResponseBuilder<GetStatusResponse>('status', 1)
+    const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status', 1)
     try {
       return await this.implementation.getStatus({ builder })
     } catch (e: any) {
@@ -50,11 +50,11 @@ export default class ChatMateController extends ControllerBase {
   }
 
   @GET
-  @Path('/events')
+  @Path('events')
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
-    const builder = this.registerResponseBuilder<GetEventsResponse>('events', 2)
+    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events', 2)
     if (since == null) {
       return builder.failure(400, `A value for 'since' must be provided.`)
     }

@@ -72,7 +72,7 @@ export default class ExperienceService extends ContextClass {
       const streamStartTime = this.livestreamStore.currentLivestream.start
       const streamEndTime = this.livestreamStore.currentLivestream.end
       if (streamStartTime == null || time < streamStartTime || streamEndTime != null && time > streamEndTime) {
-        // continue
+        continue
       }
 
       const channelId = await this.channelStore.getId(chatItem.author.channelId)
