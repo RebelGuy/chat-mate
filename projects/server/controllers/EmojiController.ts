@@ -41,8 +41,13 @@ export default class EmojiController extends ControllerBase {
   @Path('/custom')
   public async addCustomEmoji (request: AddCustomEmojiRequest): Promise<AddCustomEmojiResponse> {
     const builder = this.registerResponseBuilder<AddCustomEmojiResponse>('POST /custom', 1)
-    if (request == null || request.schema !== builder.schema) {
+    if (request == null || request.schema !== builder.schema || request.newEmoji == null) {
       return builder.failure(400, 'Invalid request data.')
+    }
+
+    const symbol = request.newEmoji.symbol ?? ''
+    if (symbol.length < 3 || symbol.length > 10) {
+      return builder.failure(400, 'Symbol must be between 3 and 10 characters.')
     }
 
     try {

@@ -12,7 +12,7 @@ export type PublicCustomEmoji = PublicObject<1, {
   /** The unique 3-10 character long symbol that identifies this emoji. */
   symbol: string,
 
-  /** The UTF-8 encoded image data, created directly from the buffer. */
+  /** The Base64 encoded image data, created directly from the buffer. */
   imageData: string
 
   /** The minimum level a user must be to unlock this emoji. */

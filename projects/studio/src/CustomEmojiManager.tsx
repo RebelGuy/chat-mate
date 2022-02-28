@@ -3,13 +3,16 @@ import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controlle
 import { addCustomEmoji, getAllCustomEmojis, updateCustomEmoji } from '@rebel/studio/api'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 
+// this code is yuckyu and needs cleaning up, but it works!
+
 type Props = {}
 
 type State = {
   loading: boolean
   emojis: PublicCustomEmoji[]
-  editingEmoji: PublicCustomEmoji | null // todo: make custom emoji type to simplify thigns, e.g. nullify the image data
+  editingEmoji: PublicCustomEmoji | null
   newEmoji: PublicCustomEmojiNew
+  error: string | null
 }
 
 export default class CustomEmojiManager extends React.PureComponent<Props, State> {
@@ -26,7 +29,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
         symbol: '',
         levelRequirement: 0,
         imageData: ''
-      }
+      },
+      error: null
     }
   }
 
@@ -46,16 +50,17 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
       const updatedEmoji = result.data.updatedEmoji
       this.setState({
         editingEmoji: null,
-        emojis: this.state.emojis.map(emoji => emoji.id === updatedEmoji.id ? updatedEmoji : emoji)
+        emojis: this.state.emojis.map(emoji => emoji.id === updatedEmoji.id ? updatedEmoji : emoji),
+        error: null
       })
     } else {
-      console.error(result.error)
+      this.setState({ error: result.error.message })
     }
   }
 
   onChange = (updatedData: PublicCustomEmoji) => {
     if (this.state.editingEmoji?.id === updatedData.id) {
-      this.setState({ editingEmoji: updatedData })
+      this.setState({ editingEmoji: updatedData, error: null })
     } else {
       this.setState({ newEmoji: updatedData })
     }
@@ -72,10 +77,11 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
           levelRequirement: 0,
           imageData: ''
         },
-        emojis: [...this.state.emojis, result.data.newEmoji]
+        emojis: [...this.state.emojis, result.data.newEmoji],
+        error: null
       })
     } else {
-      console.error(result.error)
+      this.setState({ error: result.error.message })
     }
   }
 
@@ -86,6 +92,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
         emojis: emojis.data.emojis,
         loading: false
       })
+    } else {
+      this.setState({ error: emojis.error.message })
     }
   }
 
@@ -95,31 +103,36 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     }
 
     return (
-      <table style={{ width: '90%', padding: '5%' }}>
-        <thead>
-          <tr>
-            <td>Name</td>
-            <td>Symbol</td>
-            <td>Level Req.</td>
-            <td>Image</td>
-            <td>Action</td>
-          </tr>
-        </thead>
+      <>
+        {this.state.error && <div style={{ color: 'red', paddingBottom: 12 }}>
+          <strong>{this.state.error}</strong>
+        </div>}
+        <table style={{ width: '90%', padding: '5%' }}>
+          <thead>
+            <tr>
+              <td>Name</td>
+              <td>Symbol</td>
+              <td>Level Req.</td>
+              <td>Image</td>
+              <td>Action</td>
+            </tr>
+          </thead>
 
-        <tbody>
-          {this.state.emojis.map(emoji => {
-            const isEditing = this.state.editingEmoji?.id === emoji.id
-            const actionCell = <>
-              {!isEditing && <button data-id={emoji.id} onClick={this.onEdit}>Edit</button>}
-              {isEditing && <button onClick={this.onUpdate}>Submit</button>}
-              {isEditing && <button onClick={this.onCancelEdit}>Cancel</button>}
-            </>
-            return <CustomEmojiRow data={isEditing ? this.state.editingEmoji! : emoji} actionCell={actionCell} onChange={isEditing ? this.onChange : null} />
-          })}
+          <tbody>
+            {this.state.emojis.map(emoji => {
+              const isEditing = this.state.editingEmoji?.id === emoji.id
+              const actionCell = <>
+                {!isEditing && <button data-id={emoji.id} onClick={this.onEdit}>Edit</button>}
+                {isEditing && <button onClick={this.onUpdate}>Submit</button>}
+                {isEditing && <button onClick={this.onCancelEdit}>Cancel</button>}
+              </>
+              return <CustomEmojiRow key={emoji.symbol} data={isEditing ? this.state.editingEmoji! : emoji} actionCell={actionCell} onChange={isEditing ? this.onChange : null} />
+            })}
 
-          <CustomEmojiRow data={{ id: -1, ...this.state.newEmoji }} actionCell={<button onClick={this.onAdd}>Add</button>} onChange={this.onChange} />
-        </tbody>
-      </table>
+            <CustomEmojiRow data={{ id: -1, ...this.state.newEmoji }} actionCell={<button onClick={this.onAdd}>Add</button>} onChange={this.onChange} />
+          </tbody>
+        </table>
+      </>
     )
   }
 }
@@ -149,17 +162,27 @@ function RenderedImage (props: { imageData: string, disabled: boolean, onSetImag
       if (files == null || files.length === 0) {
         props.onSetImage(null)
       } else {
+        // https://developer.mozilla.org/en-US/docs/Web/API/FileReader/readAsDataURL
+        // reads as base64 encoding, including the data: tag
         const fr = new FileReader();
-        fr.onload = () => props.onSetImage(fr.result as any);
+        fr.onload = () => {
+          const data = fr.result as string
+          const tag = 'data:image/png;base64,'
+          props.onSetImage(data.substring(tag.length))
+        }
         fr.onerror = () => { throw new Error() }
-        fr.readAsText(files[0], 'base64')
-    
-        // const pngText = Buffer.from(new Uint8Array(await files[0].arrayBuffer())).toString('utf-8')
-        // props.onSetImage(pngText)
+        fr.readAsDataURL(files[0])
       }
     }
-    return <input type="file" accept="image/png" onChange={onSelect} />
+    return <input type="file" accept="image/png" disabled={props.disabled} onChange={onSelect} />
   } else {
-    return <>Display image here</>
+    const onClear = () => props.onSetImage(null)
+
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <img src={`data:image/png;base64,${props.imageData}`} style={{ maxHeight: 32 }} alt="" />
+        {!props.disabled && <div style={{ paddingLeft: 4, cursor: 'pointer' }} onClick={onClear}>x</div>}
+      </div>
+    )
   }
 }

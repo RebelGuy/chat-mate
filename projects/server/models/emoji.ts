@@ -7,7 +7,7 @@ export function customEmojiToPublicObject (emoji: Entity.CustomEmoji): PublicCus
     id: emoji.id,
     name: emoji.name,
     symbol: emoji.symbol,
-    imageData: emoji.image.toString('utf8'),
+    imageData: emoji.image.toString('base64'),
     levelRequirement: emoji.levelRequirement
   }
 }
@@ -16,7 +16,7 @@ export function publicObjectNewToNewCustomEmoji (emoji: PublicCustomEmojiNew): N
   return {
     name: emoji.name,
     symbol: emoji.symbol,
-    image: Buffer.from(emoji.imageData, 'utf8'),
+    image: Buffer.from(emoji.imageData, 'base64'),
     levelRequirement: emoji.levelRequirement
   }
 }
@@ -26,7 +26,7 @@ export function publicObjectToCustomEmoji (emoji: PublicCustomEmoji): Entity.Cus
     id: emoji.id,
     name: emoji.name,
     symbol: emoji.symbol,
-    image: Buffer.from(emoji.imageData, 'utf8'),
+    image: Buffer.from(emoji.imageData, 'base64'),
     levelRequirement: emoji.levelRequirement
   }
 }
