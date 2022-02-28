@@ -1,17 +1,11 @@
 // this is for configuring the `react-app-rewired` package. why? because the vanilla `react-scripts` have presets that don't work with our project setup.
+// react-scripts don't support path aliasing. oddly, VSCode was also having issues until this config file was added.
 
-const path = require('path')
+// current known limitation: sourcemaps don't seem to work for modules outside of the /src folder
 
-module.exports = function override(config) {
-  config.resolve = {
-    ...config.resolve,
+const { aliasDangerous, aliasJest, configPaths } = require('react-app-rewire-alias/lib/aliasDangerous')
 
-    // react-scripts don't support path aliasing. oddly, VSCode was also having issues until this config file was added.
-    alias: {
-      '@rebel/studio': path.resolve(__dirname, './src'),
-      '@rebel/server': path.resolve(__dirname, '../server')
-    },
-  }
+const aliasMap = configPaths('./tsconfig.paths.json')
 
-  return config
-}
+module.exports = aliasDangerous(aliasMap) // dangerous because we are importing from outside the /src folder
+module.exports.jest = aliasJest(aliasMap)
