@@ -29,6 +29,7 @@ import ExperienceController from '@rebel/server/controllers/ExperienceController
 import UserController from '@rebel/server/controllers/UserController'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import EmojiController from '@rebel/server/controllers/EmojiController'
+import cors from 'cors'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -78,6 +79,9 @@ app.use((req, res, next) => {
   next()
 })
 
+// for some reason ChatMate Studio can't POST requests due to some CORS issue. adding this middleware magically fixes it
+app.use(cors())
+
 app.use(async (req, res, next) => {
   const context = globalContext.asParent()
     .withClass('chatMateController', ChatMateController)
@@ -92,9 +96,6 @@ app.use(async (req, res, next) => {
   res.on('finish', async () => {
     await context.dispose()
   })
-
-  res.header('Content-Type', 'application/json')
-  res.header('Access-Control-Allow-Origin', '*')
 
   next()
 })

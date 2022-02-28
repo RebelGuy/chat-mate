@@ -30,17 +30,17 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     }
   }
 
-  onEdit (e: React.MouseEvent<HTMLElement>) {
+  onEdit = (e: React.MouseEvent<HTMLElement>) => {
     const id = Number(e.currentTarget.dataset.id)!
     const editingEmoji = this.state.emojis.find(emoji => emoji.id === id)!
     this.setState({ editingEmoji })
   }
 
-  onCancelEdit (e: React.MouseEvent<HTMLElement>) {
+  onCancelEdit = (e: React.MouseEvent<HTMLElement>) => {
     this.setState({ editingEmoji: null })
   }
 
-  async onUpdate (e: React.MouseEvent<HTMLElement>) {
+  onUpdate = async (e: React.MouseEvent<HTMLElement>) => {
     const result = await updateCustomEmoji(this.state.editingEmoji!)
     if (result.success) {
       const updatedEmoji = result.data.updatedEmoji
@@ -53,7 +53,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     }
   }
 
-  onChange (updatedData: PublicCustomEmoji) {
+  onChange = (updatedData: PublicCustomEmoji) => {
     if (this.state.editingEmoji?.id === updatedData.id) {
       this.setState({ editingEmoji: updatedData })
     } else {
@@ -61,7 +61,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     }
   }
 
-  async onAdd () {
+  onAdd = async () => {
     const result = await addCustomEmoji(this.state.newEmoji)
     if (result.success) {
       this.setState({
@@ -149,7 +149,13 @@ function RenderedImage (props: { imageData: string, disabled: boolean, onSetImag
       if (files == null || files.length === 0) {
         props.onSetImage(null)
       } else {
-        props.onSetImage(await files[0].text())
+        const fr = new FileReader();
+        fr.onload = () => props.onSetImage(fr.result as any);
+        fr.onerror = () => { throw new Error() }
+        fr.readAsText(files[0], 'base64')
+    
+        // const pngText = Buffer.from(new Uint8Array(await files[0].arrayBuffer())).toString('utf-8')
+        // props.onSetImage(pngText)
       }
     }
     return <input type="file" accept="image/png" onChange={onSelect} />

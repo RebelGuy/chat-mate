@@ -17,9 +17,14 @@ export async function updateCustomEmoji (updatedEmoji: PublicCustomEmoji): Promi
 
   const response = await fetch(baseUrl + '/emoji/custom', {
     method: 'PATCH',
-    body: JSON.stringify(request)
+    body: JSON.stringify(request),
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
   })
-  return await response.json()
+  const body = await response.text()
+  return JSON.parse(body)
 }
 
 export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew): Promise<AddCustomEmojiResponse> {
@@ -31,7 +36,10 @@ export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew): Promise<A
   const response = await fetch(baseUrl + '/emoji/custom', {
     method: 'POST',
     body: JSON.stringify(request),
-    mode: 'no-cors'
+    headers: {
+      'Content-Type': 'application/json'
+    }
   })
-  return await response.json()
+  const body = await response.text()
+  return JSON.parse(body)
 }
