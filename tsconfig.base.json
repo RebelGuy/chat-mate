@@ -4,6 +4,7 @@
   "references": [
     { "path": "./projects/server" },
     { "path": "./projects/masterchat" },
+    { "path": "./projects/studio" },
   ],
   "compilerOptions": {
     "experimentalDecorators": true,
@@ -30,7 +31,8 @@
     "paths": {
       "@rebel/server/*": ["./projects/server/*"],
       "@rebel/masterchat": ["./projects/masterchat/src/index.ts"],
-      "@rebel/masterchat/*": ["./projects/masterchat/src/*"]
+      "@rebel/masterchat/*": ["./projects/masterchat/src/*"],
+      "@rebel/studio/*": ["./projects/studio/src/*"],
     }
   }
 }
