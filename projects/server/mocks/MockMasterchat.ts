@@ -149,7 +149,9 @@ function generateFakeChatItem (text: string): ChatItemWithRelations {
         isBold: randomBoolean(),
         isItalics: randomBoolean(),
         text
-      }
+      },
+      customEmojiId: null,
+      customEmoji: null
     }]
   }
 }

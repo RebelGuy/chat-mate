@@ -25,6 +25,7 @@ const author: Author = {
   image: 'author1.image',
   name: 'author1.name'
 }
+const channelId = 1
 
 const text1: PartialTextChatMessage = {
   type: 'text',
@@ -143,16 +144,10 @@ export default () => {
   afterEach(stopTestDb)
 
   describe(nameof(ChatStore, 'addChat'), () => {
-    test('passes continuation token to livestream store', async () => {
-      await chatStore.addChat('token', [])
-
-      expect(single(mockLivestreamStore.setContinuationToken.mock.calls)[0]).toBe('token')
-    })
-
     test('adds chat item with ordered text message parts', async () => {
       const chatItem = makeChatItem(text1, text2, text3)
 
-      await chatStore.addChat('token', [chatItem])
+      await chatStore.addChat(chatItem, channelId)
 
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))?.text?.text
       const saved2 = (await db.chatMessagePart.findFirst({ where: { order: 1 }, select: { text: true }}))?.text?.text
@@ -164,7 +159,7 @@ export default () => {
     test('adds chat item with message parts that reference existing emoji and new emoji', async () => {
       const chatItem = makeChatItem(emoji1Saved, emoji2New)
 
-      await chatStore.addChat('token', [chatItem])
+      await chatStore.addChat(chatItem, channelId)
 
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatEmoji).toEqual([1, 2, 2])
     })
@@ -178,7 +173,7 @@ export default () => {
         livestreamId: 1
       }})
 
-      await chatStore.addChat('token', [chatItem])
+      await chatStore.addChat(chatItem, channelId)
 
       await expectRowCount(db.chatMessage).toBe(1)
     })
@@ -195,7 +190,11 @@ export default () => {
       const chatItem1: ChatItem = { author: author, id: 'id1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
       const chatItem2: ChatItem = { author: author, id: 'id2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
       const chatItem3: ChatItem = { author: author, id: 'id3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
-      await chatStore.addChat('token', [chatItem1, chatItem2, chatItem3])
+
+      // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
+      await chatStore.addChat(chatItem1, channelId)
+      await chatStore.addChat(chatItem2, channelId)
+      await chatStore.addChat(chatItem3, channelId)
 
       const result = await chatStore.getChatSince(chatItem1.timestamp)
 

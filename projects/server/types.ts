@@ -48,3 +48,5 @@ type NumberOnlyKeys<T> = {
 }[keyof T]
 
 export type NumberOnly<T extends GenericObject> = Pick<T, NumberOnlyKeys<T>>
+
+export type Singular<T> = T extends Array<infer K> ? K : never

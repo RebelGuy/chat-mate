@@ -1,11 +1,12 @@
 import { Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import { assertUnreachable } from '@rebel/server/util/typescript'
 import { List } from 'immutable'
 
 export type ChatSave = {
@@ -35,68 +36,16 @@ export default class ChatStore extends ContextClass {
     this.channelStore = dep.resolve('channelStore')
   }
 
-  public async addChat (token: string, newChat: ChatItem[]) {
-    this.logService.logInfo(this, `Adding ${newChat.length} new chat items`)
-
-    const sorted = List(newChat).sort((c1, c2) => c1.timestamp - c2.timestamp)
-    for (const item of sorted) {
-      await this.addChatItem(item)
-    }
-
-    // purposefully only set this AFTER everything has been added. if we set it before,
-    // and something goes wrong with adding chat, the chat messages will be lost forever.
-    await this.livestreamStore.setContinuationToken(token)
-  }
-
-  /** Returns ordered chat items that may or may not be from the current livestream. */
-  public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
-    return await this.db.chatMessage.findMany({
-      where: {
-        time: { gt: new Date(since) }
-      },
-      orderBy: {
-        time: 'asc'
-      },
-      include: {
-        chatMessageParts: {
-          orderBy: { order: 'asc' },
-          include: { emoji: true, text: true },
-        },
-        channel: {
-          include: {
-            infoHistory: {
-              orderBy: { time: 'desc' },
-              take: 1
-            }
-          }
-        }
-      },
-      take: limit
-    })
-  }
-
-  // quietly ignore duplicates
-  private async addChatItem (chatItem: ChatItem) {
-    const author = chatItem.author
-    const timestamp = chatItem.timestamp
-    const channelInfo: CreateOrUpdateChannelArgs = {
-      name: author.name ?? '',
-      time: new Date(timestamp),
-      imageUrl: author.image,
-      isOwner: author.attributes.isOwner,
-      isModerator: author.attributes.isModerator,
-      IsVerified: author.attributes.isVerified
-    }
-    const channel = await this.channelStore.createOrUpdate(author.channelId, channelInfo)
-
+  /** Adds the chat item, quietly ignoring duplicates. */
+  public async addChat (chatItem: ChatItem, channelId: number) {
     // there is a race condition where the client may request messages whose message parts haven't yet been
     // completely written to the DB. bundle everything into a single transaction to solve this.
     await this.db.$transaction(async (db) => {
       const chatMessage = await db.chatMessage.upsert({
         create: {
-          time: new Date(timestamp),
+          time: new Date(chatItem.timestamp),
           youtubeId: chatItem.id,
-          channel: { connect: { id: channel.id }},
+          channel: { connect: { id: channelId }},
           livestream: { connect: { id: this.livestreamStore.currentLivestream.id }}
         },
         update: {},
@@ -116,12 +65,44 @@ export default class ChatStore extends ContextClass {
     })
   }
 
+  /** Returns ordered chat items that may or may not be from the current livestream. */
+  public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
+    return await this.db.chatMessage.findMany({
+      where: {
+        time: { gt: new Date(since) }
+      },
+      orderBy: {
+        time: 'asc'
+      },
+      include: {
+        chatMessageParts: {
+          orderBy: { order: 'asc' },
+          include: {
+            emoji: true,
+            text: true,
+            customEmoji: { include: { customEmoji: true, text: true }}
+          },
+        },
+        channel: {
+          include: {
+            infoHistory: {
+              orderBy: { time: 'desc' },
+              take: 1
+            }
+          }
+        }
+      },
+      take: limit
+    })
+  }
+
   private createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {
     return Prisma.validator<Prisma.ChatMessagePartCreateInput>()({
       order: index,
       chatMessage: { connect: { id: chatMessageId }},
       text: part.type === 'text' ? { create: this.createText(part) } : undefined,
-      emoji: part.type === 'emoji' ? { connectOrCreate: this.connectOrCreate(part) } : undefined
+      emoji: part.type === 'emoji' ? { connectOrCreate: this.connectOrCreate(part) } : undefined,
+      customEmoji: part.type === 'customEmoji' ? { create: { text: { create: this.createText(part) }, customEmoji: { connect: { id: part.customEmojiId } }}} : undefined
     })
   }
 
@@ -140,11 +121,21 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  private createText (part: PartialTextChatMessage) {
-    return Prisma.validator<Prisma.ChatTextCreateInput>()({
-      isBold: part.isBold,
-      isItalics: part.isItalics,
-      text: part.text
-    })
+  private createText (part: PartialTextChatMessage | PartialCustomEmojiChatMessage) {
+    if (part.type === 'text') {
+      return Prisma.validator<Prisma.ChatTextCreateInput>()({
+        isBold: part.isBold,
+        isItalics: part.isItalics,
+        text: part.text
+      })
+    } else if (part.type === 'customEmoji') {
+      return Prisma.validator<Prisma.ChatTextCreateInput>()({
+        isBold: part.text.isBold,
+        isItalics: part.text.isItalics,
+        text: part.text.text
+      })
+    } else {
+      assertUnreachable(part)
+    }
   }
 }

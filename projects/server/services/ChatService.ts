@@ -13,7 +13,7 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ContextClass from '@rebel/server/context/ContextClass'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
 import { zip } from '@rebel/server/util/arrays'
 
 const MIN_INTERVAL = 500
@@ -82,6 +82,47 @@ export default class ChatService extends ContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
+  /** Returns true if the chat item was successfully added. */
+  public async onNewChatItem (item: ChatItem): Promise<boolean> {
+    let addedChat: boolean = false
+    try {
+      const channelInfo: CreateOrUpdateChannelArgs = {
+        name: item.author.name ?? '',
+        time: new Date(item.timestamp),
+        imageUrl: item.author.image,
+        isOwner: item.author.attributes.isOwner,
+        isModerator: item.author.attributes.isModerator,
+        IsVerified: item.author.attributes.isVerified
+      }
+      const channel = await this.channelStore.createOrUpdate(item.author.channelId, channelInfo)  
+
+      // todo:
+      // item.messageParts = item.messageParts.flatMap(part => this.emojiService.applyCustomEmojis(part, channel.id))
+
+      // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
+      // is possible that calling the GET /chat endpoint returns the level information that does not yet incorporate the
+      // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
+      // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
+      // visual inconsitency. so for now just acknowledge this and leave it.
+      await this.chatStore.addChat(item, channel.id)
+      addedChat = true
+    } catch (e: any) {
+      this.logService.logError(this, 'Failed to add chat.', e)
+    }
+
+    if (addedChat) {
+      try {
+        const channelId = await this.channelStore.getId(item.author.channelId)
+        await this.viewershipStore.addViewershipForChatParticipation(channelId, item.timestamp)
+        await this.experienceService.addExperienceForChat(item)
+      } catch (e: any) {
+        this.logService.logError(this, `Successfully added chat item ${item.id} but failed to complete side effects.`, e)
+      }
+    }
+
+    return addedChat
+  }
+
   private fetchLatest = async () => {
     const token = this.livestreamStore.currentLivestream.continuationToken
     try {
@@ -99,39 +140,31 @@ export default class ChatService extends ContextClass {
 
     let hasNewChat: boolean = false
     if (response != null) {
-      const chatItems = response.actions
+      let chatItems = response.actions
         .filter(action => isAddChatAction(action))
         .map(item => this.toChatItem(item as AddChatItemAction))
+        .sort((c1, c2) => c1.timestamp - c2.timestamp)
 
       if (response.continuation?.token == null) {
         this.logService.logWarning(this, `Fetched ${chatItems.length} new chat items but continuation token is null. Ignoring chat items.`)
       } else {
-        const token = response.continuation.token
+        this.logService.logInfo(this, `Adding ${chatItems.length} new chat items`)
 
-        let addedChat = false
-        try {
-          // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
-          // is possible that calling the GET /chat endpoint returns the level information that does not yet incorporate the
-          // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
-          // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
-          // visual inconsitency. so for now just acknowledge this and leave it.
-          await this.chatStore.addChat(token, chatItems)
-          addedChat = true
-        } catch (e: any) {
-          this.logService.logError(this, 'Failed to add chat.', e)
-        }
-
-        if (addedChat) {
-          try {
-            const channelIds = await Promise.all(chatItems.map(c => this.channelStore.getId(c.author.channelId)))
-            await Promise.all(chatItems.map((c, i) => this.viewershipStore.addViewershipForChatParticipation(channelIds[i], c.timestamp)))
-            await this.experienceService.addExperienceForChat(chatItems)
-          } catch (e: any) {
-            this.logService.logError(this, 'Successfully added chat items but failed to complete side effects.', e)
+        let anyFailed = false
+        for (const item of chatItems) {
+          const success = await this.onNewChatItem(item)
+          if (success) {
+            hasNewChat = true
+          } else {
+            anyFailed = true
           }
         }
 
-        hasNewChat = addedChat && chatItems.length > 0
+        if (!anyFailed) {
+          // purposefully only set this AFTER everything has been added. if we set it before,
+          // and something goes wrong with adding chat, the chat messages will be lost forever.
+          await this.livestreamStore.setContinuationToken(response.continuation.token)
+        }
       }
     }
 

@@ -95,7 +95,26 @@ model ChatText {
   // technically messagePart should always be defined
   messagePart ChatMessagePart?
 
+  // this text object may refer to a custom emoji
+  customEmoji ChatCustomEmoji?
+
   @@map("chat_text")
+}
+
+model ChatCustomEmoji {
+  id Int @id @default(autoincrement())
+
+  // keep the original text in case the emoji symbol changes.
+  textId Int      @unique
+  text   ChatText @relation(fields: [textId], references: [id])
+
+  customEmojiId Int
+  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id])
+
+  // technically messagePart should always be defined
+  ChatMessagePart ChatMessagePart?
+
+  @@map("chat_custom_emoji")
 }
 
 /// Has either a text or emoji component attached, but never none or both
@@ -111,6 +130,9 @@ model ChatMessagePart {
 
   emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
+
+  customEmojiId Int?             @unique
+  customEmoji   ChatCustomEmoji? @relation(fields: [customEmojiId], references: [id])
 
   // all message parts of the chat message must have a different ordering
   @@unique([order, chatMessageId])
@@ -230,4 +252,6 @@ model CustomEmoji {
   image Bytes @db.Blob
 
   levelRequirement Int @db.UnsignedSmallInt
+
+  ChatCustomEmoji ChatCustomEmoji[]
 }

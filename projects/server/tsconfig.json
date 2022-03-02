@@ -22,6 +22,7 @@
     "./scripts/migrations/migrateData.ts",
 
     // old scripts we don't want to continue maintaining
-    "./scripts/v1.5-db-backfill.ts"
+    "./scripts/v1.5-db-backfill.ts",
+    "./scripts/fillDatabaseWithJsonData.ts",
   ]
 }

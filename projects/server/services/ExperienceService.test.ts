@@ -54,7 +54,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     livestreamGetter.mockClear()
     livestreamGetter.mockReturnValue(data.livestream1)
 
-    await experienceService.addExperienceForChat([chatItem])
+    await experienceService.addExperienceForChat(chatItem)
 
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
@@ -124,7 +124,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockChatStore.getChatSince.calledWith(anyNumber()).mockResolvedValue(chatItems)
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatItem.timestamp, expect.arrayContaining([chatItems[0]])).mockReturnValue(asRange(experienceData.repetitionPenalty!, -2, 0))
 
-    await experienceService.addExperienceForChat([chatItem])
+    await experienceService.addExperienceForChat(chatItem)
 
     const expectedStoreData: [channelId: number, timestamp: number, xp: number, data: ChatExperienceData] = [
       channelId, chatItem.timestamp, expectedExperienceToAdd, experienceData

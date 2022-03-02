@@ -63,41 +63,37 @@ export default class ExperienceService extends ContextClass {
 
   /** Adds experience only for chat messages sent during the live chat.
    * Duplicate experience for the same chat message is checked on a database level. */
-  public async addExperienceForChat (chatItems: ChatItem[]): Promise<void> {
-    chatItems.sort((a, b) => a.timestamp - b.timestamp)
-
-    for (const chatItem of chatItems) {
-      // ensure that stream is live
-      const time = new Date(chatItem.timestamp)
-      const streamStartTime = this.livestreamStore.currentLivestream.start
-      const streamEndTime = this.livestreamStore.currentLivestream.end
-      if (streamStartTime == null || time < streamStartTime || streamEndTime != null && time > streamEndTime) {
-        continue
-      }
-
-      const channelId = await this.channelStore.getId(chatItem.author.channelId)
-      const viewershipStreakMultiplier = await this.getViewershipMultiplier(channelId)
-      const participationStreakMultiplier = await this.getParticipationMultiplier(channelId)
-      const spamMultiplier = await this.getSpamMultiplier(chatItem, channelId)
-      const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
-      const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), channelId)
-      const data: ChatExperienceData = {
-        viewershipStreakMultiplier,
-        participationStreakMultiplier,
-        spamMultiplier,
-        messageQualityMultiplier,
-        repetitionPenalty,
-        baseExperience: ExperienceService.CHAT_BASE_XP,
-        chatMessageYtId: chatItem.id
-      }
-
-      // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
-      // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
-      // repetitive messages are anything but high quality, and thus receive a bigger punishment.
-      const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
-      const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
-      await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
+  public async addExperienceForChat (chatItem: ChatItem): Promise<void> {
+    // ensure that stream is live
+    const time = new Date(chatItem.timestamp)
+    const streamStartTime = this.livestreamStore.currentLivestream.start
+    const streamEndTime = this.livestreamStore.currentLivestream.end
+    if (streamStartTime == null || time < streamStartTime || streamEndTime != null && time > streamEndTime) {
+      return
     }
+
+    const channelId = await this.channelStore.getId(chatItem.author.channelId)
+    const viewershipStreakMultiplier = await this.getViewershipMultiplier(channelId)
+    const participationStreakMultiplier = await this.getParticipationMultiplier(channelId)
+    const spamMultiplier = await this.getSpamMultiplier(chatItem, channelId)
+    const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
+    const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), channelId)
+    const data: ChatExperienceData = {
+      viewershipStreakMultiplier,
+      participationStreakMultiplier,
+      spamMultiplier,
+      messageQualityMultiplier,
+      repetitionPenalty,
+      baseExperience: ExperienceService.CHAT_BASE_XP,
+      chatMessageYtId: chatItem.id
+    }
+
+    // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
+    // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
+    // repetitive messages are anything but high quality, and thus receive a bigger punishment.
+    const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
+    const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
+    await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
   }
 
   /** Sorted in ascending order. */

@@ -1,12 +1,14 @@
-import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatText, Channel } from '@prisma/client'
+import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, Channel, CustomEmoji } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
+import { PublicMessageCustomEmoji } from '@rebel/server/controllers/public/chat/PublicMessageCustomEmoji'
 import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/PublicMessageEmoji'
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
+import { Singular } from '@rebel/server/types'
 
 export type ChatItem = {
   id: string,
@@ -30,7 +32,7 @@ export type AuthorAttributes = {
   isVerified: boolean
 }
 
-export type PartialChatMessage = PartialTextChatMessage | PartialEmojiChatMessage
+export type PartialChatMessage = PartialTextChatMessage | PartialEmojiChatMessage | PartialCustomEmojiChatMessage
 
 export type PartialTextChatMessage = {
   type: 'text',
@@ -53,6 +55,13 @@ export type PartialEmojiChatMessage = {
   image: ChatImage
 }
 
+export type PartialCustomEmojiChatMessage = {
+  type: 'customEmoji'
+
+  text: PartialTextChatMessage
+  customEmojiId: number
+}
+
 export type ChatImage = {
   url: string,
 
@@ -66,8 +75,9 @@ export type ChatItemWithRelations = (ChatMessage & {
       infoHistory: ChannelInfo[];
   };
   chatMessageParts: (ChatMessagePart & {
-      emoji: ChatEmoji | null;
-      text: ChatText | null;
+      emoji: ChatEmoji | null
+      text: ChatText | null
+      customEmoji: (ChatCustomEmoji & { text: ChatText, customEmoji: CustomEmoji }) | null
   })[];
 })
 
@@ -127,11 +137,12 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   return newItem
 }
 
-function toPublicMessagePart (part: ChatMessagePart & { emoji: ChatEmoji | null, text: ChatText | null }): PublicMessagePart {
-  let type: 'text' | 'emoji'
+function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageParts']>): PublicMessagePart {
+  let type: 'text' | 'emoji' | 'customEmoji'
   let text: PublicMessageText | null = null
   let emoji: PublicMessageEmoji | null = null
-  if (part.text != null && part.emoji == null) {
+  let customEmoji: PublicMessageCustomEmoji | null = null
+  if (part.text != null && part.emoji == null && part.customEmoji == null) {
     type = 'text'
     text = {
       schema: 1,
@@ -139,7 +150,7 @@ function toPublicMessagePart (part: ChatMessagePart & { emoji: ChatEmoji | null,
       isBold: part.text.isBold,
       isItalics: part.text.isItalics
     }
-  } else if (part.emoji != null && part.text == null) {
+  } else if (part.emoji != null && part.text == null && part.customEmoji == null) {
     type = 'emoji'
     emoji = {
       schema: 1,
@@ -153,15 +164,35 @@ function toPublicMessagePart (part: ChatMessagePart & { emoji: ChatEmoji | null,
         width: part.emoji.imageWidth
       }
     }
+  } else if (part.emoji == null && part.text == null && part.customEmoji != null) {
+    type = 'customEmoji'
+    customEmoji = {
+      schema: 1,
+      textData: {
+        schema: 1,
+        text: part.customEmoji.text.text,
+        isBold: part.customEmoji.text.isBold,
+        isItalics: part.customEmoji.text.isItalics
+      },
+      customEmoji: {
+        schema: 1,
+        id: part.customEmoji.id,
+        name: part.customEmoji.customEmoji.name,
+        symbol: part.customEmoji.customEmoji.symbol,
+        levelRequirement: part.customEmoji.customEmoji.levelRequirement,
+        imageData: part.customEmoji.customEmoji.image.toString('base64')
+      }
+    }
   } else {
-    throw new Error('ChatMessagePart must have the text or emoji component defined.')
+    throw new Error('ChatMessagePart must have the text, emoji, or customEmoji component defined.')
   }
 
   const publicPart: PublicMessagePart = {
-    schema: 1,
+    schema: 2,
     type,
     textData: text,
-    emojiData: emoji
+    emojiData: emoji,
+    customEmojiData: customEmoji
   }
   return publicPart
 }

@@ -38,7 +38,7 @@ export namespace Entity {
   export type ExperienceDataChatMessage = FullPayload<'ExperienceDataChatMessage'>
   export type ViewingBlock = FullPayload<'ViewingBlock'>
 
-  export type CustomEmoji = FullPayload<'CustomEmoji'>
+  export type CustomEmoji = Omit<FullPayload<'CustomEmoji'>, 'ChatCustomEmoji'>
 }
 
 // wraps Entity.Object, for creating new entities
@@ -69,7 +69,7 @@ type Includes = DbDefine<{
   ExperienceSnapshot: Prisma.ExperienceSnapshotInclude,
   ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageInclude,
   ViewingBlock: Prisma.ViewingBlockInclude,
-  CustomEmoji: EmptyObject
+  CustomEmoji: Prisma.CustomEmojiInclude
 }>
 
 

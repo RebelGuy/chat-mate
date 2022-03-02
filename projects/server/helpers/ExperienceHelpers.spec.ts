@@ -146,7 +146,9 @@ describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
           isBold: false,
           isItalics: false,
           text: msg
-        }
+        },
+        customEmojiId: null,
+        customEmoji: null
       }]
     }
   }

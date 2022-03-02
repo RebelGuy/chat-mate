@@ -115,16 +115,16 @@ describe(nameof(ChatService, 'initialise'), () => {
 
     await chatService.initialise()
 
-    const [passedToken, passedChatItems] = single(mockChatStore.addChat.mock.calls)
-    expect(passedToken).toBe(token2)
-    expect(single(passedChatItems).id).toBe(chatAction1.id)
+    const [passedChatItem, channelId] = single(mockChatStore.addChat.mock.calls)
+    expect(passedChatItem.id).toBe(chatAction1.id)
+    expect(channelId).toBe(channelId1)
 
     const [passedChannel, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
     expect(passedChannel).toBe(channelId1)
     expect(passedTimestamp).toBe(chatAction1.timestamp.getTime())
 
-    const [passedXpItems] = single(mockExperienceService.addExperienceForChat.mock.calls)
-    expect(single(passedXpItems).id).toBe(chatAction1.id)
+    const [passedXpItem] = single(mockExperienceService.addExperienceForChat.mock.calls)
+    expect(passedXpItem.id).toBe(chatAction1.id)
   })
 })
 
