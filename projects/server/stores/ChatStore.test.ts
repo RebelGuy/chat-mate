@@ -1,12 +1,10 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import LogService from '@rebel/server/services/LogService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { mockGetter, nameof, promised, single } from '@rebel/server/_test/utils'
-import { DeepMockProxy, mock, mockDeep, MockProxy } from 'jest-mock-extended'
+import { mockGetter, nameof } from '@rebel/server/_test/utils'
+import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import { ChannelInfo, Livestream } from '@prisma/client'
 
@@ -75,14 +73,6 @@ function authorToChannelInfo (author: Author, time?: Date): Omit<ChannelInfo, 'c
   }
 }
 
-function authorToFullChannelInfo (author: Author, time?: Date): ChannelInfo {
-  return {
-    ...authorToChannelInfo(author, time),
-    id: 1,
-    channelId: 1
-  }
-}
-
 function makeChatItem (...msg: PartialChatMessage[]): ChatItem {
   return {
     id: 'id1',
@@ -93,37 +83,18 @@ function makeChatItem (...msg: PartialChatMessage[]): ChatItem {
 }
 
 export default () => {
-  let mockChannelStore: DeepMockProxy<ChannelStore>
   let mockLivestreamStore: MockProxy<LivestreamStore>
-  let mockLogService: DeepMockProxy<LogService>
   let chatStore: ChatStore
   let db: Db
   beforeEach(async () => {
     const dbProvider = await startTestDb()
 
-    mockChannelStore = mockDeep<ChannelStore>()
-    mockChannelStore.createOrUpdate.mockImplementation((channelId, args) => {
-      if (channelId === author.channelId) {
-        return promised({
-          id: 1,
-          youtubeId: author.channelId,
-          infoHistory: [authorToFullChannelInfo(author)]
-        })
-      } else {
-        throw new Error('Invalid channelId')
-      }
-    })
-
     mockLivestreamStore = mock<LivestreamStore>()
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(livestream)
 
-    mockLogService = mockDeep<LogService>()
-
     chatStore = new ChatStore(new Dependencies({
       dbProvider,
-      channelStore: mockChannelStore,
       livestreamStore: mockLivestreamStore,
-      logService: mockLogService
     }))
     db = dbProvider.get()
 

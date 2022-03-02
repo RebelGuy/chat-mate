@@ -80,6 +80,8 @@ Key:
   - 🟢 getChannelById
   - 🟢 getChannelByName
 - 🟢 ChatService
+  - 🟢 onNewChatItem
+- 🟢 ChatFetchService
   - 🟢 initialise
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat

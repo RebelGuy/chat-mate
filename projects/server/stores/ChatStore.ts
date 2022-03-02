@@ -3,11 +3,8 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import LogService from '@rebel/server/services/LogService'
-import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { List } from 'immutable'
 
 export type ChatSave = {
   continuationToken: string | null
@@ -16,24 +13,18 @@ export type ChatSave = {
 
 type Deps = Dependencies<{
   dbProvider: DbProvider,
-  logService: LogService,
   livestreamStore: LivestreamStore,
-  channelStore: ChannelStore
 }>
 
 export default class ChatStore extends ContextClass {
   readonly name = ChatStore.name
   private readonly db: Db
-  private readonly logService: LogService
   private readonly livestreamStore: LivestreamStore
-  private readonly channelStore: ChannelStore
 
   constructor (dep: Deps) {
     super()
     this.db = dep.resolve('dbProvider').get()
-    this.logService = dep.resolve('logService')
     this.livestreamStore = dep.resolve('livestreamStore')
-    this.channelStore = dep.resolve('channelStore')
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */

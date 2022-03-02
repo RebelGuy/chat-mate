@@ -6,7 +6,7 @@ import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import ContextClass from '@rebel/server/context/ContextClass'
-import ChannelStore, { CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { ChannelWithLatestInfo, CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
 
 type ChatEvents = {
   newChatItem: {
@@ -39,9 +39,10 @@ export default class ChatService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
   }
 
-  /** Returns true if the chat item was successfully added. */
+  /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
   public async onNewChatItem (item: ChatItem): Promise<boolean> {
     let addedChat: boolean = false
+    let channel: ChannelWithLatestInfo
     try {
       const channelInfo: CreateOrUpdateChannelArgs = {
         name: item.author.name ?? '',
@@ -51,7 +52,7 @@ export default class ChatService extends ContextClass {
         isModerator: item.author.attributes.isModerator,
         IsVerified: item.author.attributes.isVerified
       }
-      const channel = await this.channelStore.createOrUpdate(item.author.channelId, channelInfo)  
+      channel = await this.channelStore.createOrUpdate(item.author.channelId, channelInfo)  
 
       // todo:
       // item.messageParts = item.messageParts.flatMap(part => this.emojiService.applyCustomEmojis(part, channel.id))
@@ -69,8 +70,7 @@ export default class ChatService extends ContextClass {
 
     if (addedChat) {
       try {
-        const channelId = await this.channelStore.getId(item.author.channelId)
-        await this.viewershipStore.addViewershipForChatParticipation(channelId, item.timestamp)
+        await this.viewershipStore.addViewershipForChatParticipation(channel!.id, item.timestamp)
         await this.experienceService.addExperienceForChat(item)
       } catch (e: any) {
         this.logService.logError(this, `Successfully added chat item ${item.id} but failed to complete side effects.`, e)

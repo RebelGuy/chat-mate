@@ -1,137 +1,93 @@
-import { Livestream } from '@prisma/client'
-import { AddChatItemAction, ChatResponse } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
-import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
+import { ChatItem, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { ChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { mockGetter, nameof, single } from '@rebel/server/_test/utils'
+import { nameof, single } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import * as data from '@rebel/server/_test/testData'
 
-const token1 = 'token1'
-const token2 = 'token2'
-const currentLivestream: Livestream = {
-  id: 1,
-  liveId: 'liveId',
-  continuationToken: token1,
-  createdAt: new Date(),
-  start: new Date(),
-  end: null
+const textPart: PartialTextChatMessage = {
+  type: 'text',
+  text: 'text',
+  isBold: false,
+  isItalics: false
 }
-const chatAction1: AddChatItemAction = {
-  type: 'addChatItemAction',
-  authorChannelId: 'author1',
-  authorPhoto: 'author1.photo',
-  id: 'chat1',
-  isModerator: false,
-  isOwner: false,
-  isVerified: false,
-  message: [],
-  timestamp: new Date(),
-  timestampUsec: String(new Date().getTime()),
-  authorName: 'author1.name',
-  contextMenuEndpointParams: '',
-  rawMessage: []
+const emojiPart: PartialEmojiChatMessage = {
+  type: 'emoji',
+  name: 'emoji name',
+  emojiId: 'emojiId',
+  image: { url: 'url' },
+  label: 'emoji label'
+}
+const chatItem: ChatItem = {
+  id: 'id1',
+  author: data.author1,
+  messageParts: [textPart, emojiPart],
+  timestamp: data.time1.getTime()
+}
+
+const channel: ChannelWithLatestInfo = {
+  id: 1,
+  youtubeId: data.channel1,
+  infoHistory: [{ ...data.channelInfo1, id: 1, channelId: 1 }]
 }
 
 let mockChatStore: MockProxy<ChatStore>
-let mockLivestreamStore: MockProxy<LivestreamStore>
-let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
 let mockLogService: MockProxy<LogService>
 let mockExperienceService: MockProxy<ExperienceService>
 let mockViewershipStore: MockProxy<ViewershipStore>
-let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockChannelStore: MockProxy<ChannelStore>
 let chatService: ChatService
 
 beforeEach(() => {
   mockChatStore = mock<ChatStore>()
-  mockLivestreamStore = mock<LivestreamStore>()
-  mockMasterchatProxyService = mock<MasterchatProxyService>()
   mockLogService = mock<LogService>()
   mockExperienceService = mock<ExperienceService>()
   mockViewershipStore = mock<ViewershipStore>()
-  mockTimerHelpers = mock<TimerHelpers>()
   mockChannelStore = mock<ChannelStore>()
-
-  mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(currentLivestream)
-  mockChatStore.getChatSince.mockResolvedValue([])
-
-  // automatically execute callback passed to TimerHelpers
-  mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
-    await options.callback()
-  })
 
   chatService = new ChatService(new Dependencies({
     chatStore: mockChatStore,
-    livestreamStore: mockLivestreamStore,
     logService: mockLogService,
     experienceService: mockExperienceService,
     viewershipStore: mockViewershipStore,
-    masterchatProxyService: mockMasterchatProxyService,
-    timerHelpers: mockTimerHelpers,
     channelStore: mockChannelStore
   }))
 })
 
-describe(nameof(ChatService, 'initialise'), () => {
-  test('throws when initialising twice', async () => {
-    mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse())
+describe(nameof(ChatService, 'onNewChatItem'), () => {
+  test('synthesises correct data and calls required services, then returns true', async () => {
+    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(channel)
 
-    await chatService.initialise()
+    const addedChat = await chatService.onNewChatItem(chatItem)
 
-    await expect(() => chatService.initialise()).rejects.toThrow()
-  })
-
-  test('uses continuation token when fetching and schedules new fetch', async () => {
-    mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse())
-
-    await chatService.initialise()
-
-    // don't need to explicitly check return type of the callback because the type guard already checks this
-    const expectedTimerOptions: TimerOptions = { behaviour: 'dynamicEnd', callback: expect.any(Function) }
-    expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expectedTimerOptions, true])
-
-    expect(single(single(mockMasterchatProxyService.fetch.mock.calls))).toBe(token1)
-  })
-
-  test('quietly handles fetching error and reset continuation token', async () => {
-    mockMasterchatProxyService.fetch.mockRejectedValue(new Error('Fetching failed'))
-
-    await chatService.initialise()
-
-    expect(single(single(mockLivestreamStore.setContinuationToken.mock.calls))).toBe(null)
-  })
-
-  test('passes chat items to ChatStore and ExperienceService', async () => {
-    const channelId1 = 1
-    mockChannelStore.getId.calledWith(chatAction1.authorChannelId).mockResolvedValue(channelId1)
-    mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse([chatAction1]))
-
-    await chatService.initialise()
+    expect(addedChat).toBe(true)
 
     const [passedChatItem, channelId] = single(mockChatStore.addChat.mock.calls)
-    expect(passedChatItem.id).toBe(chatAction1.id)
-    expect(channelId).toBe(channelId1)
+    expect(passedChatItem).toBe(chatItem)
+    expect(channelId).toBe(channel.id)
 
     const [passedChannel, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
-    expect(passedChannel).toBe(channelId1)
-    expect(passedTimestamp).toBe(chatAction1.timestamp.getTime())
+    expect(passedChannel).toBe(channel.id)
+    expect(passedTimestamp).toBe(chatItem.timestamp)
 
-    const [passedXpItem] = single(mockExperienceService.addExperienceForChat.mock.calls)
-    expect(passedXpItem.id).toBe(chatAction1.id)
+    const [passedChatItem_] = single(mockExperienceService.addExperienceForChat.mock.calls)
+    expect(passedChatItem_).toBe(chatItem)
+  })
+
+  test('returns false if unable to add chat item, and does not attempt to call services', async () => {
+    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(channel)
+    mockChatStore.addChat.mockRejectedValue(new Error('Test'))
+
+    const addedChat = await chatService.onNewChatItem(chatItem)
+
+    expect(addedChat).toBe(false)
+
+    expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toBe(0)
+    expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
   })
 })
-
-function createChatResponse (actions?: AddChatItemAction[]): ChatResponse {
-  return {
-    continuation: { token: token2, timeoutMs: 10000 },
-    error: null,
-    actions: actions ?? []
-  }
-}
