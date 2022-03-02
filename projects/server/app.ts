@@ -30,6 +30,7 @@ import UserController from '@rebel/server/controllers/UserController'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import EmojiController from '@rebel/server/controllers/EmojiController'
 import cors from 'cors'
+import ChatFetchService from '@rebel/server/services/ChatFetchService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -66,6 +67,7 @@ const globalContext = ContextProvider.create()
   .withClass('experienceService', ExperienceService)
   .withClass('chatService', ChatService)
   .withClass('customEmojiStore', CustomEmojiStore)
+  .withClass('chatFetchService', ChatFetchService)
   .build()
 
 const app = express()
