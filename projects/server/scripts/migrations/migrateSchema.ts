@@ -35,8 +35,11 @@ const main = async () => {
     console.log('')
     console.log('There was a problem, try running the command manually in the terminal:')
 
+    // you can't pass `&` in the console
+    const url = env('databaseUrl').replace(/&/g, '"&"')
+
     // don't use dotenv -e because for some reason it ignores the --create-only flag
-    console.log(`  yarn cross-env NODE_ENV=debug DATABASE_URL=${env('databaseUrl')} ${command}`)
+    console.log(`  yarn cross-env NODE_ENV=debug DATABASE_URL=${url} ${command}`)
     console.log('')
     process.exit(0)
   }
@@ -49,4 +52,4 @@ const main = async () => {
   process.exit(0)
 }
 
-main()
+void main()

@@ -111,8 +111,7 @@ model ChatCustomEmoji {
   customEmojiId Int
   customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id])
 
-  // technically messagePart should always be defined
-  ChatMessagePart ChatMessagePart?
+  ChatMessagePart ChatMessagePart[]
 
   @@map("chat_custom_emoji")
 }
@@ -131,7 +130,7 @@ model ChatMessagePart {
   emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
 
-  customEmojiId Int?             @unique
+  customEmojiId Int?
   customEmoji   ChatCustomEmoji? @relation(fields: [customEmojiId], references: [id])
 
   // all message parts of the chat message must have a different ordering
