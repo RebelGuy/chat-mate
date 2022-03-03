@@ -196,3 +196,17 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
   }
   return publicPart
 }
+
+/** Returns the remainder of the text before and after the removal, if any. */
+export function removeRangeFromText (part: PartialTextChatMessage, removeStart: number, removeLength: number): [leading: PartialTextChatMessage | null, removed: PartialTextChatMessage, trailing: PartialTextChatMessage | null] {
+  if (removeStart < 0 || removeStart >= part.text.length) {
+    throw new Error(`Illegal removal index ${removeStart}`)
+  } else if (removeLength <= 0 || removeStart + removeLength > part.text.length) {
+    throw new Error(`Illegal removeal length ${removeLength}`)
+  }
+
+  const leading: PartialTextChatMessage | null = removeStart === 0 ? null : { type: 'text', text: part.text.substring(0, removeStart), isBold: part.isBold, isItalics: part.isItalics }
+  const removed: PartialTextChatMessage = { type: 'text', text: part.text.substring(removeStart, removeStart + removeLength), isBold: part.isBold, isItalics: part.isItalics }
+  const trailing: PartialTextChatMessage | null = removeStart + removeLength === part.text.length ? null : { type: 'text', text: part.text.substring(removeStart + removeLength, part.text.length), isBold: part.isBold, isItalics: part.isItalics }
+  return [leading, removed, trailing]
+}

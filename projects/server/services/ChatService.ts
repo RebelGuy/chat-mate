@@ -7,6 +7,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ChannelStore, { ChannelWithLatestInfo, CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
+import EmojiService from '@rebel/server/services/EmojiService'
 
 type ChatEvents = {
   newChatItem: {
@@ -19,7 +20,8 @@ type Deps = Dependencies<{
   logService: LogService,
   experienceService: ExperienceService,
   viewershipStore: ViewershipStore,
-  channelStore: ChannelStore
+  channelStore: ChannelStore,
+  emojiService: EmojiService
 }>
 
 export default class ChatService extends ContextClass {
@@ -29,6 +31,7 @@ export default class ChatService extends ContextClass {
   private readonly experienceService: ExperienceService
   private readonly viewershipStore: ViewershipStore
   private readonly channelStore: ChannelStore
+  private readonly emojiService: EmojiService
 
   constructor (deps: Deps) {
     super()
@@ -37,6 +40,7 @@ export default class ChatService extends ContextClass {
     this.experienceService = deps.resolve('experienceService')
     this.viewershipStore = deps.resolve('viewershipStore')
     this.channelStore = deps.resolve('channelStore')
+    this.emojiService = deps.resolve('emojiService')
   }
 
   /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
@@ -54,8 +58,9 @@ export default class ChatService extends ContextClass {
       }
       channel = await this.channelStore.createOrUpdate(item.author.channelId, channelInfo)  
 
-      // todo:
-      // item.messageParts = item.messageParts.flatMap(part => this.emojiService.applyCustomEmojis(part, channel.id))
+      // inject custom emojis
+      const splitParts = await Promise.all(item.messageParts.map(part => this.emojiService.applyCustomEmojis(part, channel.id)))
+      item.messageParts = splitParts.flatMap(p => p)
 
       // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
       // is possible that calling the GET /chat endpoint returns the level information that does not yet incorporate the

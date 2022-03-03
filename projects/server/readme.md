@@ -83,6 +83,8 @@ Key:
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
   - 🟢 initialise
+- 🟢 EmojiService
+  - 🟢 applyCustomEmojis
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
   - 🟢 getLeaderboard
