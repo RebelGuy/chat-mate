@@ -250,7 +250,7 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
   })
 })
 
-describe.only(nameof(ExperienceService, 'modifyExperience'), () => {
+describe(nameof(ExperienceService, 'modifyExperience'), () => {
   test('gets the correct delta and saves rounded value to the db', async () => {
     const time1 = new Date()
     const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
