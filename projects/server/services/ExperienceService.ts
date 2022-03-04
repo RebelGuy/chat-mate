@@ -186,7 +186,7 @@ export default class ExperienceService extends ContextClass {
       level: asGte(newLevel, 0),
       levelProgress: asLt(asGte(newLevelProgress, 0), 1)
     } 
-    const requiredExperience = this.experienceHelpers.calculateExperience(newLevelData)
+    const requiredExperience = Math.round(this.experienceHelpers.calculateExperience(newLevelData))
     const experienceDelta = requiredExperience - currentExperience
     await this.experienceStore.addManualExperience(channelId, experienceDelta, message)
 

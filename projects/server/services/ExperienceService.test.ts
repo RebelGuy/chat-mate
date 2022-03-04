@@ -250,8 +250,8 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
   })
 })
 
-describe(nameof(ExperienceService, 'modifyExperience'), () => {
-  test('gets the correct delta and saves to the db', async () => {
+describe.only(nameof(ExperienceService, 'modifyExperience'), () => {
+  test('gets the correct delta and saves rounded value to the db', async () => {
     const time1 = new Date()
     const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
     const channelId = 1
@@ -259,7 +259,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelId, time1.getTime()).mockResolvedValueOnce(50).mockResolvedValueOnce(550)
     mockExperienceHelpers.calculateLevel.calledWith(asGte(150, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0.5 as any })
     mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
-    mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 5 as any, levelProgress: 5.1 - 5 as any })).mockReturnValue(asGte(650, 0))
+    mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 5 as any, levelProgress: 5.1 - 5 as any })).mockReturnValue(asGte(650.1, 0))
 
     const result = await experienceService.modifyExperience(channelId, 3.6, 'Test')
 
