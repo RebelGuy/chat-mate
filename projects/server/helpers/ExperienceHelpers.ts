@@ -1,5 +1,5 @@
 import ContextClass from '@rebel/server/context/ContextClass'
-import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations } from '@rebel/server/models/chat'
+import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations, PartialCustomEmojiChatMessage } from '@rebel/server/models/chat'
 import { tally, unique } from '@rebel/server/util/arrays'
 import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/server/util/math'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -79,7 +79,8 @@ export default class ExperienceHelpers extends ContextClass {
     const msg = text.join()
     const words = msg.split(' ')
 
-    const emojis = chatItem.messageParts.filter(p => p.type === 'emoji') as PartialEmojiChatMessage[]
+    const emojis = chatItem.messageParts.filter(p => p.type === 'emoji' || p.type === 'customEmoji')
+      .map(part => part.type === 'emoji' ? part.name : part.type === 'customEmoji' ? part.customEmojiId : null)
 
     // immediately we can filter out spammy messages
     if (text.length === 0 && emojis.length === 0) {
@@ -87,7 +88,7 @@ export default class ExperienceHelpers extends ContextClass {
       return asRange(0, 0, 2)
     } else if (text.length === 0) {
       // emoji only
-      const uniqueEmojiCount = unique(emojis.map(e => e.name)).length
+      const uniqueEmojiCount = unique(emojis).length
       const quality = clampNorm(uniqueEmojiCount, 0, 10, 0) * 0.8
       return asRange(quality, 0, 2)
     }
@@ -108,7 +109,7 @@ export default class ExperienceHelpers extends ContextClass {
     const uniqueCharacters = unique(Array.from(msg.replace(' ', '').toLowerCase())).length
     const uniqueCharactersQuality = clampNorm(uniqueCharacters, 1, 20, 8) * 2
 
-    const uniqueEmojis = unique(emojis.map(e => e.name)).length
+    const uniqueEmojis = unique(emojis).length
     const emojiQuality = clampNorm(uniqueEmojis, 0, 10, 0) * 2
 
     return asRange(avg(lengthQuality, wordCountQuality, wordLengthQuality, uniqueCharactersQuality, emojiQuality)!, 0, 2)
