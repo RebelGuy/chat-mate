@@ -27,16 +27,30 @@ export default class EmojiService extends ContextClass {
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
   public async applyCustomEmojis (part: PartialChatMessage, channelId: number): Promise<PartialChatMessage[]> {
-    if (part.type === 'emoji') {
-      // youtube emoji - don't change
-      return [part]
-    } else if (part.type === 'customEmoji') {
+    if (part.type === 'customEmoji') {
       // this should never happen
       throw new Error('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
     }
 
     const eligibleEmojis = await this.getEligibleEmojis(channelId)
     const searchTerms = eligibleEmojis.map(e => `:${e.symbol}:`)
+
+    if (part.type === 'emoji') {
+      // youtube emoji - check if it has the same symbol (label) as one of our custom emojis.
+      // this is an all-or-none match, so we don't need to split up the message part.
+      const matchedIndex = searchTerms.findIndex(sym => sym.toLowerCase() === part.label.toLowerCase())
+      if (matchedIndex === -1) {
+        return [part]
+      } else {
+        return [{
+          type: 'customEmoji',
+          customEmojiId: eligibleEmojis[matchedIndex]!.id,
+          text: null,
+          emoji: part
+        }]
+      }
+    }
+
     const searchResults = this.findMatches(part.text, searchTerms)
 
     let remainderText: PartialTextChatMessage | null = part
@@ -55,7 +69,8 @@ export default class EmojiService extends ContextClass {
       result.push({
         type: 'customEmoji',
         customEmojiId: eligibleEmojis.find(e => `:${e.symbol}:` === searchResult.searchTerm)!.id,
-        text: removed
+        text: removed,
+        emoji: null
       })
 
       remainderText = trailing

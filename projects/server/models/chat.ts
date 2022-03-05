@@ -58,7 +58,8 @@ export type PartialEmojiChatMessage = {
 export type PartialCustomEmojiChatMessage = {
   type: 'customEmoji'
 
-  text: PartialTextChatMessage
+  text: PartialTextChatMessage | null
+  emoji: PartialEmojiChatMessage | null
   customEmojiId: number
 }
 
@@ -77,7 +78,7 @@ export type ChatItemWithRelations = (ChatMessage & {
   chatMessageParts: (ChatMessagePart & {
       emoji: ChatEmoji | null
       text: ChatText | null
-      customEmoji: (ChatCustomEmoji & { text: ChatText, customEmoji: CustomEmoji }) | null
+      customEmoji: (ChatCustomEmoji & { text: ChatText | null, emoji: ChatEmoji | null, customEmoji: CustomEmoji }) | null
   })[];
 })
 
@@ -167,12 +168,23 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
   } else if (part.emoji == null && part.text == null && part.customEmoji != null) {
     type = 'customEmoji'
     customEmoji = {
-      schema: 1,
-      textData: {
+      schema: 2,
+      textData: part.customEmoji.text == null ? null : {
         schema: 1,
         text: part.customEmoji.text.text,
         isBold: part.customEmoji.text.isBold,
         isItalics: part.customEmoji.text.isItalics
+      },
+      emojiData: part.customEmoji.emoji == null ? null : {
+        schema: 1,
+        label: part.customEmoji.emoji.label!,
+        name: part.customEmoji.emoji.name!,
+        image: {
+          schema: 1,
+          url: part.customEmoji.emoji.imageUrl!,
+          width: part.customEmoji.emoji.imageWidth,
+          height: part.customEmoji.emoji.imageHeight
+        }
       },
       customEmoji: {
         schema: 1,

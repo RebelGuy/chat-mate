@@ -71,7 +71,7 @@ export default class ChatStore extends ContextClass {
           include: {
             emoji: true,
             text: true,
-            customEmoji: { include: { customEmoji: true, text: true }}
+            customEmoji: { include: { customEmoji: true, text: true, emoji: true }}
           },
         },
         channel: {
@@ -92,12 +92,16 @@ export default class ChatStore extends ContextClass {
       order: index,
       chatMessage: { connect: { id: chatMessageId }},
       text: part.type === 'text' ? { create: this.createText(part) } : undefined,
-      emoji: part.type === 'emoji' ? { connectOrCreate: this.connectOrCreate(part) } : undefined,
-      customEmoji: part.type === 'customEmoji' ? { create: { text: { create: this.createText(part) }, customEmoji: { connect: { id: part.customEmojiId } }}} : undefined
+      emoji: part.type === 'emoji' ? { connectOrCreate: this.connectOrCreateEmoji(part) } : undefined,
+      customEmoji: part.type === 'customEmoji' ? { create: {
+        text: part.text == null ? undefined : { create: this.createText(part.text) },
+        emoji: part.emoji == null ? undefined : { connectOrCreate: this.connectOrCreateEmoji(part.emoji) },
+        customEmoji: { connect: { id: part.customEmojiId } }}
+      } : undefined
     })
   }
 
-  private connectOrCreate (part: PartialEmojiChatMessage) {
+  private connectOrCreateEmoji (part: PartialEmojiChatMessage) {
     return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
       create: {
         youtubeId: part.emojiId,
@@ -112,21 +116,11 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  private createText (part: PartialTextChatMessage | PartialCustomEmojiChatMessage) {
-    if (part.type === 'text') {
-      return Prisma.validator<Prisma.ChatTextCreateInput>()({
-        isBold: part.isBold,
-        isItalics: part.isItalics,
-        text: part.text
-      })
-    } else if (part.type === 'customEmoji') {
-      return Prisma.validator<Prisma.ChatTextCreateInput>()({
-        isBold: part.text.isBold,
-        isItalics: part.text.isItalics,
-        text: part.text.text
-      })
-    } else {
-      assertUnreachable(part)
-    }
+  private createText (part: PartialTextChatMessage) {
+    return Prisma.validator<Prisma.ChatTextCreateInput>()({
+      isBold: part.isBold,
+      isItalics: part.isItalics,
+      text: part.text
+    })
   }
 }

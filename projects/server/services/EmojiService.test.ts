@@ -30,12 +30,39 @@ beforeEach(() => {
 })
 
 describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
-  test('emoji part is passed through', async () => {
-    const emojiPart: PartialEmojiChatMessage = { type: 'emoji' } as any
+  test('non-matching emoji part is passed through', async () => {
+    setupLevel(100)
+    const emojiPart: PartialEmojiChatMessage = {
+      type: 'emoji',
+      emojiId: 'id',
+      image: { url: 'testUrl' },
+      label: ':test:',
+      name: 'TestEmoji'
+    }
 
     const result = await emojiService.applyCustomEmojis(emojiPart, channelId)
 
     expect(single(result)).toBe(emojiPart)
+  })
+
+  test('matching emoji part is detected', async () => {
+    setupLevel(100)
+    const emojiPart: PartialEmojiChatMessage = {
+      type: 'emoji',
+      emojiId: 'id',
+      image: { url: 'testUrl' },
+      label: `:${customEmoji1.symbol.toUpperCase()}:`,
+      name: 'TestEmoji'
+    }
+
+    const result = await emojiService.applyCustomEmojis(emojiPart, channelId)
+
+    expect(single(result)).toEqual<PartialCustomEmojiChatMessage>({
+      type: 'customEmoji',
+      customEmojiId: customEmoji1.id,
+      emoji: expect.objectContaining(emojiPart),
+      text: null
+    })
   })
 
   test('text message is made up entirely of a single custom emoji', async () => {
@@ -131,7 +158,8 @@ function expectedCustomEmojiPart (customEmoji: Entity.CustomEmoji, originalText:
       text: `:${customEmoji.symbol}:`,
       isBold: originalText.isBold,
       isItalics: originalText.isItalics
-    })
+    }),
+    emoji: null
   }
 }
 

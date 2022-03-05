@@ -82,6 +82,9 @@ model ChatEmoji {
 
   messageParts ChatMessagePart[]
 
+  // any custom emojis that have replaced this YouTube emoji within a chat message
+  customEmoji ChatCustomEmoji[]
+
   @@map("chat_emoji")
 }
 
@@ -104,9 +107,12 @@ model ChatText {
 model ChatCustomEmoji {
   id Int @id @default(autoincrement())
 
-  // keep the original text in case the emoji symbol changes.
-  textId Int      @unique
-  text   ChatText @relation(fields: [textId], references: [id])
+  // keep the original objects in case the emoji symbol changes.
+  textId Int?      @unique
+  text   ChatText? @relation(fields: [textId], references: [id])
+
+  emojiId Int?
+  emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
 
   customEmojiId Int
   customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id])

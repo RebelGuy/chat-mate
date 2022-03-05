@@ -27,7 +27,8 @@ const emojiPart: PartialEmojiChatMessage = {
 const customEmojiPart: PartialCustomEmojiChatMessage = {
   type: 'customEmoji',
   customEmojiId: 1,
-  text: textPart
+  text: textPart,
+  emoji: null
 }
 const chatItem: ChatItem = {
   id: 'id1',
