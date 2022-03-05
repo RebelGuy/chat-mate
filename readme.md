@@ -36,6 +36,18 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.10 - The Emoji Update [5/3/2022]
+- Server
+  - Added Custom Emojis
+    - Given a chat item, can replace text or emoji parts with a custom emoji part
+    - Current eligibility is based only on level
+  - Added Fake Controllers for testing
+  - Increased the experience difficulty past level 50, and added penalty for spamming the same message
+  - Small bug fixes and code improvements
+- Studio
+  - Initialised project
+  - Added page for visually managing the custom emojis
+
 ## v1.9 - The Pre-Admin Update [20/2/2022]
 - Server
   - Endpoint changes
