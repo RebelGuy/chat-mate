@@ -2,10 +2,12 @@ SELECT msg.id AS `Msg Id`, CONVERT_TZ(msg.time, '+00:00', '+10:00') AS Time, gro
 FROM chat_mate.chat_message AS msg
 LEFT JOIN (
 	# this gets the full rendered chat message
-	SELECT text, label, chatMessageId, group_concat(coalesce(text, label) SEPARATOR ' ') AS concatted # https://stackoverflow.com/a/13451984
+	SELECT text, label, symbol, chatMessageId, group_concat(coalesce(text, label, concat(':', symbol, ':')) SEPARATOR ' ') AS concatted # https://stackoverflow.com/a/13451984
 	FROM chat_mate.chat_message_part AS part
 	LEFT JOIN chat_mate.chat_text AS text ON part.textId = text.id
 	LEFT JOIN chat_mate.chat_emoji AS emoji ON part.emojiId = emoji.id
+    LEFT JOIN chat_mate.chat_custom_emoji AS customEmoji ON part.customEmojiId = customEmoji.id
+    LEFT JOIN chat_mate.customemoji AS ce ON customEmoji.customEmojiId = ce.id
 	GROUP BY chatMessageId
 ) AS txt ON txt.chatMessageId = msg.id
 LEFT JOIN (
