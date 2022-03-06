@@ -61,12 +61,14 @@ export default class ExperienceHelpers extends ContextClass {
 
   private chatItemToString (item: ChatItemWithRelations) {
     return item.chatMessageParts.map(p => {
-      if (p.emoji != null && p.text == null) {
+      if (p.emoji != null && p.text == null && p.customEmoji == null) {
         return p.emoji.name
-      } else if (p.emoji == null && p.text != null) {
+      } else if (p.emoji == null && p.text != null && p.customEmoji == null) {
         return p.text.text
+      } else if (p.emoji == null && p.text == null && p.customEmoji != null) {
+        return p.customEmoji.customEmoji.symbol
       } else {
-        throw new Error('ChatMessagePart must have either an emoji or text attached to it')
+        throw new Error('ChatMessagePart must have either an emoji, custom emoji, or text attached to it')
       }
     }).join('')
   }
