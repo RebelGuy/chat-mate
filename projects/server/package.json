@@ -18,8 +18,8 @@
     "migrate:data_deprecated":  "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/debug/server/scripts/migrations/migrateData.js",
     "db:dump": "C:/\"Program Files\"/MySQL/\"MySQL Server 8.0\"/bin/mysqldump chat_mate > \"../../data/release/dump.sql\" --user root --password",
     "migrate:release": "yarn run db:dump && dotenv -e release.env npx prisma migrate deploy",
-    "build:debug": "webpack --env NODE_ENV=debug",
-    "build:release": "webpack --env NODE_ENV=release",
+    "build:debug": "yarn run generate && webpack --env NODE_ENV=debug",
+    "build:release": "yarn run generate && webpack --env NODE_ENV=release",
     "start:release": "cross-env NODE_ENV=release node ../../dist/release/server/app.js",
 
     "snapshot:debug":   "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/debug/server/scripts/RefreshSnapshots.js",
