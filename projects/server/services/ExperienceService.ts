@@ -178,7 +178,7 @@ export default class ExperienceService extends ContextClass {
     const currentExperience = await this.getTotalExperience(channelId)
     const currentLevel = this.experienceHelpers.calculateLevel(currentExperience)
     const currentLevelFrac = currentLevel.level + currentLevel.levelProgress
-    const newLevelFrac = currentLevelFrac + levelDelta
+    const newLevelFrac = Math.max(0, currentLevelFrac + levelDelta)
 
     const newLevel = Math.floor(newLevelFrac)
     const newLevelProgress = newLevelFrac - newLevel

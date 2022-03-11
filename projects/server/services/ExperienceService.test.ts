@@ -267,4 +267,21 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     expect(call).toEqual([channelId, 500, 'Test'])
     expect(result).toEqual<Level>({ ...updatedLevel, totalExperience: asGte(650, 0) })
   })
+
+  test('level does not fall below 0', async () => {
+    const time1 = new Date()
+    const channelId = 1
+    mockExperienceStore.getSnapshot.calledWith(channelId).mockResolvedValue({ id: 1, channelId: 1, experience: 0, time: time1 })
+    mockExperienceStore.getTotalDeltaStartingAt.calledWith(channelId, time1.getTime()).mockResolvedValueOnce(100).mockResolvedValueOnce(0)
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(100, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0 as any })
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(0, 0)).mockReturnValue({ level: 0, levelProgress: 0 as any })
+    mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 0, levelProgress: 0 })).mockReturnValue(0)
+
+    const result = await experienceService.modifyExperience(channelId, -2, 'Test')
+
+    const call = single(mockExperienceStore.addManualExperience.mock.calls)
+    expect(call).toEqual([channelId, -100, 'Test'])
+    expect(result).toEqual<Level>({ level: 0, levelProgress: 0 as any, totalExperience: 0 })
+
+  })
 })
