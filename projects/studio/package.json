@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "main": "../../dist/release/studio/index.js",
   "scripts": {
     "start": "react-app-rewired start",
