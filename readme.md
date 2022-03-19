@@ -36,6 +36,10 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.11 - The Modal Update [20/3/2022]
+- Server
+  - Bug fixes
+
 ## v1.10 - The Emoji Update [5/3/2022]
 - Server
   - Added Custom Emojis
