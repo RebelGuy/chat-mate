@@ -29,7 +29,8 @@ type Deps = Dependencies<{
   logService: LogService,
   masterchatProxyService: MasterchatProxyService,
   timerHelpers: TimerHelpers,
-  livestreamStore: LivestreamStore
+  livestreamStore: LivestreamStore,
+  disableExternalApis: boolean
 }>
 
 export default class ChatFetchService extends ContextClass {
@@ -40,6 +41,7 @@ export default class ChatFetchService extends ContextClass {
   private readonly masterchat: IMasterchat
   private readonly timerHelpers: TimerHelpers
   private readonly livestreamStore: LivestreamStore
+  private readonly disableExternalApis: boolean
 
   constructor (deps: Deps) {
     super()
@@ -49,9 +51,14 @@ export default class ChatFetchService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.disableExternalApis = deps.resolve('disableExternalApis')
   }
 
   public override async initialise (): Promise<void> {
+    if (this.disableExternalApis) {
+      return
+    }
+
     const timerOptions: TimerOptions = {
       behaviour: 'dynamicEnd',
       callback: this.updateMessages

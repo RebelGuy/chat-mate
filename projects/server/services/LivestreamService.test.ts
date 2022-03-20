@@ -54,11 +54,28 @@ beforeEach(() => {
     logService: mockLogService,
     masterchatProxyService: mockMasterchatProxyService,
     timerHelpers: mockTimerHelpers,
-    viewershipStore: mockViewershipStore
+    viewershipStore: mockViewershipStore,
+    disableExternalApis: false
   }))
 })
 
 describe(nameof(LivestreamService, 'initialise'), () => {
+  test('ignores api is disableExternalApis is true', async () => {
+    livestreamService = new LivestreamService(new Dependencies({
+      livestreamStore: mockLivestreamStore,
+      logService: mockLogService,
+      masterchatProxyService: mockMasterchatProxyService,
+      timerHelpers: mockTimerHelpers,
+      viewershipStore: mockViewershipStore,
+      disableExternalApis: true
+    }))
+
+    await livestreamService.initialise()
+    
+    expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
+    expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(0)
+  })
+
   test('ignores times and views if receives `not_started` status from metadata', async () => {
     mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue({ ...makeMetadata('not_started'), viewerCount: 2 })
@@ -66,7 +83,6 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     await livestreamService.initialise()
 
     expect(mockLivestreamStore.setTimes.mock.calls.length).toBe(0)
-    expect(mockViewershipStore.addLiveViewCount.mock.calls.length).toBe(0)
   })
 
   test('passes to LivestreamStore if receives `live` status from metadata', async () => {

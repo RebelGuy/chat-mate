@@ -83,11 +83,29 @@ beforeEach(() => {
     livestreamStore: mockLivestreamStore,
     logService: mockLogService,
     masterchatProxyService: mockMasterchatProxyService,
-    timerHelpers: mockTimerHelpers
+    timerHelpers: mockTimerHelpers,
+    disableExternalApis: false
   }))
 })
 
 describe(nameof(ChatService, 'initialise'), () => {
+  test('ignores api is disableExternalApis is true', async () => {
+    chatFetchService = new ChatFetchService(new Dependencies({
+      chatService: mockChatService,
+      chatStore: mockChatStore,
+      livestreamStore: mockLivestreamStore,
+      logService: mockLogService,
+      masterchatProxyService: mockMasterchatProxyService,
+      timerHelpers: mockTimerHelpers,
+      disableExternalApis: true
+    }))
+
+    await chatFetchService.initialise()
+    
+    expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
+    expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(0)
+  })
+
   test('uses continuation token when fetching and schedules new fetch', async () => {
     mockMasterchatProxyService.fetch.mockResolvedValue(createChatResponse())
 

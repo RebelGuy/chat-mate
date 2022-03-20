@@ -16,7 +16,8 @@ type Deps = Dependencies<{
   masterchatProxyService: MasterchatProxyService,
   logService: LogService,
   timerHelpers: TimerHelpers,
-  viewershipStore: ViewershipStore
+  viewershipStore: ViewershipStore,
+  disableExternalApis: boolean
 }>
 
 export default class LivestreamService extends ContextClass {
@@ -27,6 +28,7 @@ export default class LivestreamService extends ContextClass {
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
   private readonly viewershipStore: ViewershipStore
+  private readonly disableExternalApis: boolean
 
   constructor (deps: Deps) {
     super()
@@ -35,9 +37,14 @@ export default class LivestreamService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')
+    this.disableExternalApis = deps.resolve('disableExternalApis')
   }
 
   public override async initialise (): Promise<void> {
+    if (this.disableExternalApis) {
+      return
+    }
+
     const timerOptions: TimerOptions = {
       behaviour: 'start',
       callback: () => this.updateLivestreamMetadata(),
