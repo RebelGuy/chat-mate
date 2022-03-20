@@ -119,6 +119,14 @@ Server.buildServices(app,
 )
 
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
+
+process.on('unhandledRejection', (error) => {
+  // from https://stackoverflow.com/questions/46629778/debug-unhandled-promise-rejections
+  // to debug timers quietly failing: https://github.com/nodejs/node/issues/22149#issuecomment-410706698
+  logContext.logError('process.unhandledRejection', error)
+  throw error
+})
+
 if (env('useFakeControllers')) {
   logContext.logInfo(`Using fake controllers`)
 }
