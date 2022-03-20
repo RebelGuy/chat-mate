@@ -1,4 +1,5 @@
 require('./_config')
+import 'source-map-support/register'
 import express from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'

@@ -45,7 +45,7 @@ export default class ChatMateController extends ControllerBase {
     try {
       return await this.implementation.getStatus({ builder })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 
@@ -62,7 +62,7 @@ export default class ChatMateController extends ControllerBase {
     try {
       return await this.implementation.getEvents({ builder, since })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 }

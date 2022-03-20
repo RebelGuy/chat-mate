@@ -78,6 +78,8 @@ export type ApiError = {
   errorType: string
 }
 
+export type ErrorType = Error | string
+
 export type ControllerDependencies<T> = Dependencies<T & {
   logService: LogService
 }>
@@ -130,13 +132,13 @@ export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
     }
   }
   
-  public failure (message: string): ApiResponse<Schema, any>
-  public failure (errorCode: ErrorCode, message: string): ApiResponse<Schema, any>
-  public failure (arg1: ErrorCode | string, arg2?: string): ApiResponse<Schema, any> {
+  public failure (error: ErrorType): ApiResponse<Schema, any>
+  public failure (errorCode: ErrorCode, error: ErrorType): ApiResponse<Schema, any>
+  public failure (arg1: ErrorCode | ErrorType, arg2?: ErrorType): ApiResponse<Schema, any> {
     const errorCode: ErrorCode = typeof arg1 === 'number' ? arg1 : 500
-    const message: string = typeof arg1 === 'number' ? arg2! : arg1
+    const error = this.getErrorObject(typeof arg1 === 'number' ? arg2! : arg1)
 
-    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error:`, message)
+    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error: `, error)
     
     return {
       success: false,
@@ -145,8 +147,20 @@ export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
       error: {
         errorCode,
         errorType: API_ERRORS[errorCode],
-        message
+        message: error.message
       }
+    }
+  }
+
+  private getErrorObject (error: ErrorType): { message: string, stack?: string } {
+    if (typeof error === 'string') {
+      return { message: error }
+    } else if (error instanceof Error) {
+      // for some reason we can't directly stringify the error object - it just returns a string of an empty object
+      // so copy its properties
+      return { message: error.message, stack: error.stack }
+    } else {
+      return { message: 'CANNOT CONVERT ERROR TO STRING' }
     }
   }
 }

@@ -37,7 +37,7 @@ export default class ChatController extends ControllerBase {
     try {
       return await this.implementation.getChat({ builder, since, limit })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 }

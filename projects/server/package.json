@@ -6,7 +6,7 @@
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
     "watch": "tsc --build --watch",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/debug/ --inspect ../../dist/debug/server/app.js",
-    "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true nodemon --watch ../../dist/debug --inspect ../../dist/debug/server/app.js",
+    "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true nodemon --watch ../../dist/debug --inspect --enable-source-maps ../../dist/debug/server/app.js",
     "test": "cross-env NODE_ENV=debug BUILD=tsc dotenv -e test.env jest --detectOpenHandles=true --verbose=true",
     "test:db": "dotenv -e test.env yarn prisma migrate deploy",
     "generate": "dotenv -e debug.env npx prisma generate",
@@ -18,9 +18,9 @@
     "migrate:data_deprecated":  "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/debug/server/scripts/migrations/migrateData.js",
     "db:dump": "C:/\"Program Files\"/MySQL/\"MySQL Server 8.0\"/bin/mysqldump chat_mate > \"../../data/release/dump.sql\" --user root --password",
     "migrate:release": "yarn run db:dump && dotenv -e release.env npx prisma migrate deploy",
-    "build:debug": "yarn run generate && webpack --env NODE_ENV=debug",
+    "build:debug":   "yarn run generate && webpack --env NODE_ENV=debug",
     "build:release": "yarn run generate && webpack --env NODE_ENV=release",
-    "start:release": "cross-env NODE_ENV=release node ../../dist/release/server/app.js",
+    "start:release": "cross-env NODE_ENV=release node --enable-source-maps ../../dist/release/server/app.js",
 
     "snapshot:debug":   "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/debug/server/scripts/RefreshSnapshots.js",
     "snapshot:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env node ../../dist/debug/server/scripts/RefreshSnapshots.js"
@@ -37,6 +37,7 @@
     "fs-extra": "^10.0.0",
     "immutable": "^4.0.0",
     "module-alias": "^2.2.2",
+    "source-map-support": "^0.5.21",
     "tslib": "^2.3.1",
     "typescript": "^4.4.4",
     "typescript-rest": "^1.6.2",

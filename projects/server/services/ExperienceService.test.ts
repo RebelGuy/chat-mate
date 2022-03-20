@@ -248,6 +248,23 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     expect(diff.startLevel).toEqual(expect.objectContaining({ level: 5, totalExperience: 500 }))
     expect(diff.endLevel).toEqual(expect.objectContaining({ level: 8, totalExperience: 811 }))
   })
+
+  test('negative deltas are ignored', async () => {
+    // if a user's level has decreased over the event period, we don't want to be notified
+    const time1 = new Date()
+    const time2 = addTime(time1, 'seconds', 1)
+    const channelId = 1
+    const channel = { channel: { id: channelId }}
+    const transactions: (ExperienceTransaction & { channel: { id: number }})[] = [{ id: 1, channelId: 1, livestreamId: 1, time: time1, delta: -500, ...channel }]
+
+    mockExperienceStore.getSnapshot.mockResolvedValue(null)
+    mockExperienceStore.getTotalDeltaStartingAt.mockResolvedValue(-100)
+    mockExperienceStore.getAllTransactionsStartingAt.mockResolvedValue(transactions)
+
+    const result = await experienceService.getLevelDiffs(time2.getTime())
+
+    expect(result.length).toBe(0)
+  })
 })
 
 describe(nameof(ExperienceService, 'modifyExperience'), () => {

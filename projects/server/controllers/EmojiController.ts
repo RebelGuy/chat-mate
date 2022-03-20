@@ -33,7 +33,7 @@ export default class EmojiController extends ControllerBase {
       const emojis = await this.customEmojiStore.getAllCustomEmojis()
       return builder.success({ emojis: emojis.map(e => customEmojiToPublicObject(e)) })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 
@@ -54,7 +54,7 @@ export default class EmojiController extends ControllerBase {
       const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji))
       return builder.success({ newEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 
@@ -70,7 +70,7 @@ export default class EmojiController extends ControllerBase {
       const emoji = await this.customEmojiStore.updateCustomEmoji(publicObjectToCustomEmoji(request.updatedEmoji))
       return builder.success({ updatedEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 }

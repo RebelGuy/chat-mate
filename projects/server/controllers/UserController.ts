@@ -48,7 +48,7 @@ export default class UserController extends ControllerBase {
 
       return builder.success({ results: users })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 }

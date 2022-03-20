@@ -144,8 +144,14 @@ export default class ExperienceService extends ContextClass {
       }
 
       const endXp = await this.getTotalExperience(channelId)
+      const totalDelta = sum(txs.map(tx => tx.delta))
+      if (endXp <= 0 || totalDelta <= 0 || endXp - totalDelta < 0) {
+        // these are unusual edge cases that we get only when playing around with negative xp, especially at low levels, e.g. for spammers
+        continue
+      }
+
       // this was the experience *before the starting tx*
-      const startXp = asGte(endXp - sum(txs.map(tx => tx.delta)), 0)
+      const startXp = asGte(endXp - totalDelta, 0)
       const startLevel = this.experienceHelpers.calculateLevel(startXp)
       const endLevel = this.experienceHelpers.calculateLevel(endXp)
       if (startLevel.level >= endLevel.level) {

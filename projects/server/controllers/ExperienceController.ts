@@ -52,7 +52,7 @@ export default class ExperienceController extends ControllerBase {
       const publicLeaderboard = leaderboard.map(entry => rankedEntryToPublic(entry))
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 
@@ -94,7 +94,7 @@ export default class ExperienceController extends ControllerBase {
         rankedUsers: publicLeaderboard
       })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 
@@ -116,7 +116,7 @@ export default class ExperienceController extends ControllerBase {
       const publicUser = userAndLevelToPublicUser({ ...channel, ...level })
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {
-      return builder.failure(e.message)
+      return builder.failure(e)
     }
   }
 }
