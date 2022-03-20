@@ -9,6 +9,7 @@ import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicC
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { Singular } from '@rebel/server/types'
+import { sortByLength } from '@rebel/server/util/arrays'
 
 export type ChatItem = {
   id: string,
@@ -102,10 +103,19 @@ export function getUniqueEmojiId (emoji: YTEmoji): string {
   }
 }
 
-// this is unique, and usually of the form :emoji_description:
+// this is unique, and usually of the form :emoji_description:. if more than one descriptions are available, uses the shortest one.
 // it MAY be the emoji symbol itself if no further information is available
 export function getEmojiLabel (emoji: YTEmoji): string {
-  return emoji.shortcuts?.at(0) ?? emoji.searchTerms?.at(0) ?? emoji.emojiId
+  if (emoji.shortcuts != null && emoji.shortcuts.length > 0) {
+    // e.g. ['wheelchair', 'wheelchair_symbol']
+    return sortByLength(emoji.shortcuts, 'asc')[0]
+  } else if (emoji.searchTerms != null && emoji.searchTerms.length > 0) {
+    // e.g. ['wheelchair', 'symbol']
+    return sortByLength(emoji.searchTerms, 'asc')[0]
+  } else {
+    // this could be the ascii representation of the emoji
+    return emoji.emojiId
+  }
 }
 
 export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData): PublicChatItem {

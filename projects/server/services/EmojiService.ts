@@ -38,6 +38,8 @@ export default class EmojiService extends ContextClass {
     if (part.type === 'emoji') {
       // youtube emoji - check if it has the same symbol (label) as one of our custom emojis.
       // this is an all-or-none match, so we don't need to split up the message part.
+      // note that this does not work if a youtube emoji has multiple labels and our custom emoji symbol
+      // is not the same as the shortest labels.
       const matchedIndex = searchTerms.findIndex(sym => sym.toLowerCase() === part.label.toLowerCase())
       if (matchedIndex === -1) {
         return [part]

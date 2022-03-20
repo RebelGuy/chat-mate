@@ -15,6 +15,10 @@ export function unique<T> (array: T[]): T[] {
   return Array.from(values)
 }
 
+export function sortByLength (array: string[], direction?: 'asc' | 'desc'): string[] {
+  return sortBy(array.map(str => ({ value: str })), item => item.value.length, direction).map(item => item.value)
+}
+
 export function sortBy<T extends GenericObject> (array: T[], selector: (item: T) => number, direction?: 'asc' | 'desc'): T[]
 export function sortBy<T extends GenericObject, K extends keyof NumberOnly<T>> (array: T[], key: K, direction?: 'asc' | 'desc'): T[]
 export function sortBy<T extends GenericObject> (array: T[], selector: keyof T | ((item: T) => number), direction: 'asc' | 'desc' = 'asc'): T[] {

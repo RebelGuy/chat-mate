@@ -1,5 +1,7 @@
 export type GenericObject = Record<string, any>
 
+export type Primitive = string | number | boolean
+
 export type EmptyObject = Record<string, never>
 
 // from https://stackoverflow.com/questions/50490773/why-doesnt-typescript-undefined-type-behave-same-as-optional
