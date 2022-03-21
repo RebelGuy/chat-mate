@@ -27,6 +27,8 @@
   },
   "dependencies": {
     "@prisma/client": "^3.6.0",
+    "@twurple/auth": "^5.0.18",
+    "@twurple/chat": "^5.0.18",
     "@types/eslint": "^8.4.1",
     "@types/node": "^16.11.7",
     "copy-webpack-plugin": "^10.2.0",

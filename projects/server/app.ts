@@ -33,6 +33,9 @@ import EmojiController from '@rebel/server/controllers/EmojiController'
 import cors from 'cors'
 import ChatFetchService from '@rebel/server/services/ChatFetchService'
 import EmojiService from '@rebel/server/services/EmojiService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
+import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
+import TwurpleService from '@rebel/server/services/TwurpleServic'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -42,6 +45,10 @@ import EmojiService from '@rebel/server/services/EmojiService'
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)
 const liveId = getLiveId(env('liveId'))
+const twitchClientId = env('twitchClientId')
+const twitchClientSecret = env('twitchClientSecret')
+const twitchChannelName = env('twitchChannelName')
+
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
   .withProperty('auth', env('auth'))
@@ -52,6 +59,9 @@ const globalContext = ContextProvider.create()
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
   .withProperty('disableExternalApis', env('useFakeControllers') === true)
+  .withProperty('twitchClientId', twitchClientId)
+  .withProperty('twitchClientSecret', twitchClientSecret)
+  .withProperty('twitchChannelName', twitchChannelName)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withClass('fileService', FileService)
@@ -60,6 +70,9 @@ const globalContext = ContextProvider.create()
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('masterchatProxyService', MasterchatProxyService)
+  .withClass('twurpleAuthProvider', TwurpleAuthProvider)
+  .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
+  .withClass('twurpleService', TwurpleService)
   .withClass('livestreamStore', LivestreamStore)
   .withClass('viewershipStore', ViewershipStore)
   .withClass('livestreamService', LivestreamService)

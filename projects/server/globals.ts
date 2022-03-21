@@ -19,6 +19,10 @@ type EnvironmentVariables = {
   // authentication token passed into Masterchat
   auth: string
 
+  twitchClientId: string
+  twitchClientSecret: string
+  twitchChannelName: string
+
   channelId: string
   liveId: string
   databaseUrl: string
