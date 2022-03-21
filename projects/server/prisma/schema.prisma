@@ -12,6 +12,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Persists access tokens for twitch authentication
+model TwitchAuth {
+  // there can only be one access token per client
+  clientId String @id
+
+  accessToken         String
+  refreshToken        String
+  expiresIn           Int
+  obtainmentTimestamp Int
+  scope               String
+
+  @@map("twitch_auth")
+}
+
 model Livestream {
   id        Int       @id @default(autoincrement())
   liveId    String    @unique @db.VarChar(11)

@@ -4,6 +4,9 @@
   "main": "../../dist/release/server/app.js",
   "scripts": {
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
+    "auth:twitch:debug": "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env electron ../../dist/debug/server/scripts/TwitchAuth.js",
+    "auth:twitch:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env electron ../../dist/debug/server/scripts/TwitchAuth.js",
+
     "watch": "tsc --build --watch",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/debug/ --inspect ../../dist/debug/server/app.js",
     "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true nodemon --watch ../../dist/debug --inspect ../../dist/debug/server/app.js",
@@ -57,10 +60,12 @@
     "cross-env": "^7.0.3",
     "dir-compare": "^3.3.0",
     "dotenv-cli": "^4.1.1",
+    "electron": "^17.1.2",
     "eslint": "^8.8.0",
     "jest": "^27.4.5",
     "jest-mock-extended": "^2.0.4",
     "listr": "^0.14.3",
+    "node-fetch": "^3.2.3",
     "nodemon": "^2.0.15",
     "prisma": "^3.6.0",
     "ts-jest": "^27.1.2",

@@ -1,5 +1,5 @@
 require('./_config')
-import 'source-map-support/register'
+import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
 import express from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'
@@ -48,6 +48,8 @@ const liveId = getLiveId(env('liveId'))
 const twitchClientId = env('twitchClientId')
 const twitchClientSecret = env('twitchClientSecret')
 const twitchChannelName = env('twitchChannelName')
+const twitchAccessToken = env('twitchAccessToken')
+const twitchRefreshToken = env('twitchRefreshToken')
 
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
@@ -62,6 +64,8 @@ const globalContext = ContextProvider.create()
   .withProperty('twitchClientId', twitchClientId)
   .withProperty('twitchClientSecret', twitchClientSecret)
   .withProperty('twitchChannelName', twitchChannelName)
+  .withProperty('twitchAccessToken', twitchAccessToken)
+  .withProperty('twitchRefreshToken', twitchRefreshToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withClass('fileService', FileService)

@@ -34,6 +34,8 @@ The following environment variables must be set in the `.env` file:
 - `LIVE_ID`: The video ID of the livestream.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth.
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
+- `TWITCH_ACCESS_TOKEN`: The access token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
+- `TWITCH_REFRESH_TOKEN`: The refresh token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
 - `TWITCH_CHANNEL_NAME`: The Twitch channel's name to which we should connect.
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
 - `IS_MOCK_LIVESTREAM`: [Optional, debug only] If true, uses the chat data of the `LIVE_ID` to replay its chat events, and no longer connect to YouTube. See `MockMasterchat` for more options, such as hardcoding the set of messages to send, or taking console user input for specifying the next message text.

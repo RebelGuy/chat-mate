@@ -22,6 +22,8 @@ type EnvironmentVariables = {
   twitchClientId: string
   twitchClientSecret: string
   twitchChannelName: string
+  twitchAccessToken: string
+  twitchRefreshToken: string
 
   channelId: string
   liveId: string

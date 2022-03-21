@@ -4,7 +4,6 @@ import IProvider from '@rebel/server/providers/IProvider'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import LogService from '@rebel/server/services/LogService'
 import { ChatClient, LogLevel } from '@twurple/chat'
-import { LoggerOverrideConfig } from '@d-fischer/logger/lib/CustomLoggerWrapper'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
 type Deps = Dependencies<{
@@ -16,19 +15,21 @@ type Deps = Dependencies<{
 export default class TwurpleChatClientProvider extends ContextClass implements IProvider<ChatClient> {
   readonly name = TwurpleChatClientProvider.name
 
-  private readonly auth: TwurpleAuthProvider
+  private readonly twurkpleAuthProvider: TwurpleAuthProvider
   private readonly logService: LogService
   private readonly twitchChannelName: string
-  private readonly chatClient: ChatClient
+  private chatClient!: ChatClient
 
   constructor (deps: Deps) {
     super()
-    this.auth = deps.resolve('twurpleAuthProvider')
+    this.twurkpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
     this.twitchChannelName = deps.resolve('twitchChannelName')
+  }
 
+  override async initialise (): Promise<void> {
     this.chatClient = new ChatClient({
-      authProvider: this.auth.get(),
+      authProvider: this.twurkpleAuthProvider.get(),
       channels: [this.twitchChannelName],
       isAlwaysMod: true,
 
@@ -39,9 +40,6 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
         }
       }
     })
-  }
-
-  override async initialise (): Promise<void> {
     await this.chatClient.connect()
 
     this.logService.logInfo(this, 'Connected to the Twurple chat client')
