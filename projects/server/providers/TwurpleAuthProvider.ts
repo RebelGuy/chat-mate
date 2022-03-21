@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import IProvider from '@rebel/server/providers/IProvider'
-import { ClientCredentialsAuthProvider } from '@twurple/auth/lib'
+import { ClientCredentialsAuthProvider } from '@twurple/auth'
 
 type Deps = Dependencies<{
   twitchClientId: string

@@ -3,8 +3,9 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import IProvider from '@rebel/server/providers/IProvider'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import LogService from '@rebel/server/services/LogService'
-import { ChatClient } from '@twurple/chat/lib'
+import { ChatClient, LogLevel } from '@twurple/chat'
 import { LoggerOverrideConfig } from '@d-fischer/logger/lib/CustomLoggerWrapper'
+import { assertUnreachable } from '@rebel/server/util/typescript'
 
 type Deps = Dependencies<{
   twurpleAuthProvider: TwurpleAuthProvider
@@ -32,7 +33,11 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
       isAlwaysMod: true,
 
       // inject custom logging
-      logger: { custom: this.makeLogger() }
+      logger: {
+        custom: {
+          log: (level: LogLevel, message: string) => this.onChatClientLog(level, message)
+        }
+      }
     })
   }
 
@@ -52,10 +57,26 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     return this.chatClient
   }
 
-  private makeLogger (): LoggerOverrideConfig {
-    // todo
-    return {
+  private onChatClientLog (level: LogLevel, message: string): void {
+    const customMessage = `$ChatClient logged a ${level} message:`
 
-    } as any
+    switch (level) {
+      case LogLevel.CRITICAL:
+      case LogLevel.ERROR:
+        this.logService.logError(this, customMessage, message)
+        break
+      case LogLevel.WARNING:
+        this.logService.logWarning(this, customMessage, message)
+        break
+      case LogLevel.INFO:
+        this.logService.logInfo(this, customMessage, message)
+        break
+      case LogLevel.DEBUG:
+      case LogLevel.TRACE:
+        this.logService.logDebug(this, customMessage, message)
+        break
+      default:
+        assertUnreachable(level)
+    }
   }
 }

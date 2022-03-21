@@ -26,7 +26,7 @@
   ],
   "rules": {
     // see https://eslint.org/docs/rules/
-    "indent": ["warn", 2, { "flatTernaryExpressions": true } ],
+    "indent": ["warn", 2, { "flatTernaryExpressions": true, "SwitchCase": 1 } ],
     "quotes": "off", // handled by ts
     "semi": "off", // handled by ts
     "space-before-function-paren": "warn",
