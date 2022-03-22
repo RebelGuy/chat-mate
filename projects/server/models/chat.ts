@@ -10,15 +10,24 @@ import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLev
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { Singular } from '@rebel/server/types'
 import { sortByLength } from '@rebel/server/util/arrays'
+import { assertUnreachable } from '@rebel/server/util/typescript'
+import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
+
+export type ChatPlatform = 'youtube' | 'twitch'
 
 export type ChatItem = {
   id: string,
 
   // unix timestamp (in milliseconds)
   timestamp: number,
-  author: Author,
   messageParts: PartialChatMessage[],
-}
+} & ({
+  platform: 'youtube'
+  author: Author
+} | {
+  platform: 'twitch'
+  author: TwitchAuthor
+})
 
 export type Author = {
   name?: string,
@@ -33,7 +42,7 @@ export type AuthorAttributes = {
   isVerified: boolean
 }
 
-export type PartialChatMessage = PartialTextChatMessage | PartialEmojiChatMessage | PartialCustomEmojiChatMessage
+export type PartialChatMessage = PartialTextChatMessage | PartialEmojiChatMessage | PartialCustomEmojiChatMessage | PartialCheerChatMessage
 
 export type PartialTextChatMessage = {
   type: 'text',
@@ -64,12 +73,105 @@ export type PartialCustomEmojiChatMessage = {
   customEmojiId: number
 }
 
+export type PartialCheerChatMessage = {
+  type: 'cheer'
+  name: string
+  amount: number
+  /** The image that should be shown */
+  imageUrl: string
+  /** Hex colour that should be used to show the cheer amount. */
+  colour: string
+}
+
 export type ChatImage = {
   url: string,
 
   // dimensions not set if the image is an SVG
   width?: number,
   height?: number
+}
+
+export type TwitchAuthor = {
+  // todo: make a new user type and user info type
+  userId: string
+  userName: string
+  displayName: string
+  userType: 'mod' | 'global_mod' | 'admin' | 'staff' | undefined
+  isBroadcaster: boolean
+  isSubscriber: boolean
+  isMod: boolean
+  isVip: boolean
+
+  /** The color (in hex format) the user chose to display in chat. */
+  color: string | undefined
+
+  /** Maps the badge category to the detail. */
+  badges: Map<string, string>
+
+  /** Maps the badge category to the detail. */
+  badgeInfo: Map<string, string>
+}
+
+/** Evaluates all the getters */
+export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
+  const evaluatedParts: PartialChatMessage[] = msg.parseEmotes().map(p => {
+    if (p.type === 'text') {
+      const textPart: PartialTextChatMessage = {
+        type: 'text',
+        text: p.text,
+        isBold: false,
+        isItalics: false
+      }
+      return textPart
+
+    } else if (p.type === 'emote') {
+      const emojiPart: PartialEmojiChatMessage = {
+        type: 'emoji',
+        emojiId: p.id,
+        name: p.name,
+        label: p.displayInfo.code, // symbol
+        image: {
+          url: p.displayInfo.getUrl({ animationSettings: 'default', backgroundType: 'light', size: '1.0' })
+        }
+      }
+      return emojiPart
+
+    } else if (p.type === 'cheer') {
+      const cheerPart: PartialCheerChatMessage = {
+        type: 'cheer',
+        amount: p.amount,
+        name: p.name,
+        colour: p.displayInfo.color,
+        imageUrl: p.displayInfo.url
+      }
+      return cheerPart
+
+    } else {
+      assertUnreachable(p)
+    }
+  })
+
+  const evaluatedChatUser: TwitchAuthor = {
+    userId: msg.userInfo.userId,
+    userName: msg.userInfo.userName,
+    displayName: msg.userInfo.displayName,
+    userType: msg.userInfo.userType as any,
+    isBroadcaster: msg.userInfo.isBroadcaster,
+    isSubscriber: msg.userInfo.isSubscriber,
+    isMod: msg.userInfo.isMod,
+    isVip: msg.userInfo.isVip,
+    color: msg.userInfo.color,
+    badges: msg.userInfo.badges,
+    badgeInfo: msg.userInfo.badgeInfo
+  }
+
+  return {
+    id: msg.id,
+    timestamp: new Date().getTime(),
+    platform: 'twitch',
+    author: evaluatedChatUser,
+    messageParts: evaluatedParts
+  }
 }
 
 export type ChatItemWithRelations = (ChatMessage & {
