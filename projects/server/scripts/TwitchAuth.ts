@@ -77,7 +77,7 @@ async function createWindow () {
       const response = await rawResponse.json() as any
 
       console.log('----- SUCCESS -----')
-      console.log(`Copy the following variables to the ${process.env.nodeEnv?.toLowerCase()}.env file:`)
+      console.log(`Copy the following variables to the ${process.env.NODE_ENV?.toLowerCase()}.env file:`)
       console.log('')
       console.log(`TWITCH_ACCESS_TOKEN=${response.access_token}`)
       console.log(`TWITCH_REFRESH_TOKEN=${response.refresh_token}`)

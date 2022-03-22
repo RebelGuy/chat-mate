@@ -56,22 +56,20 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
   }
 
   private onChatClientLog (level: LogLevel, message: string): void {
-    const customMessage = `$ChatClient logged a ${level} message:`
-
     switch (level) {
       case LogLevel.CRITICAL:
       case LogLevel.ERROR:
-        this.logService.logError(this, customMessage, message)
+        this.logService.logError(this, message)
         break
       case LogLevel.WARNING:
-        this.logService.logWarning(this, customMessage, message)
+        this.logService.logWarning(this, message)
         break
       case LogLevel.INFO:
-        this.logService.logInfo(this, customMessage, message)
+        this.logService.logInfo(this, message)
         break
       case LogLevel.DEBUG:
       case LogLevel.TRACE:
-        this.logService.logDebug(this, customMessage, message)
+        this.logService.logDebug(this, message)
         break
       default:
         assertUnreachable(level)

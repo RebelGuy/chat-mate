@@ -35,7 +35,7 @@ import ChatFetchService from '@rebel/server/services/ChatFetchService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
-import TwurpleService from '@rebel/server/services/TwurpleServic'
+import TwurpleService from '@rebel/server/services/TwurpleService'
 
 //
 // "Over-engineering is the best thing since sliced bread."

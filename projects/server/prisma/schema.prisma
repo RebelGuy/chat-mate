@@ -20,7 +20,7 @@ model TwitchAuth {
   accessToken         String
   refreshToken        String
   expiresIn           Int
-  obtainmentTimestamp Int
+  obtainmentTimestamp BigInt
   scope               String
 
   @@map("twitch_auth")

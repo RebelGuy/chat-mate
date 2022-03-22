@@ -86,7 +86,7 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
         accessToken: auth.accessToken,
         refreshToken: auth.refreshToken,
         expiresIn: auth.expiresIn,
-        obtainmentTimestamp: auth.obtainmentTimestamp,
+        obtainmentTimestamp: Number(auth.obtainmentTimestamp),
         scope: auth.scope.split(',')
       }
     }

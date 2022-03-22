@@ -16,14 +16,16 @@ export default class TwurpleService extends ContextClass {
   readonly name = TwurpleService.name
 
   private readonly logService: LogService
-  private readonly chatClient: ChatClient
+  private chatClientProvider: TwurpleChatClientProvider
 
   constructor (deps: Deps) {
     super()
     this.logService = deps.resolve('logService')
-    this.chatClient = deps.resolve('twurpleChatClientProvider').get()
+    this.chatClientProvider = deps.resolve('twurpleChatClientProvider')
+  }
 
-    this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
+  public override initialise (): void {
+    this.chatClientProvider.get().onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
   }
 
   private onMessage (channel: string, user: string, message: string, msg: TwitchPrivateMessage) {
