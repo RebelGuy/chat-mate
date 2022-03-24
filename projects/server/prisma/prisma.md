@@ -52,5 +52,6 @@ RENAME TABLE `x` TO `y`;
 ALTER TABLE `y` RENAME INDEX `old_index_name` TO `new_index_name`;
 ```
 
-where `new_index_name` can be found by looking at the automatic `CREATE` statement (step 3).
+where `new_index_name` can be found by looking at the automatic `CREATE` statement (step 3). Some foreign key indexes may also
+fail to rename automatically - in that case, create a new migration to automatically remedy the issue.
 
