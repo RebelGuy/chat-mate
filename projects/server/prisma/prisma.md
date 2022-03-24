@@ -38,3 +38,19 @@ See https://www.prisma.io/docs/concepts/components/prisma-client/relation-querie
 
 
 ## Migration problems and resolutions
+
+### Renaming a table
+When renaming a table (for example by changing `@@map("x")` to `@@map("y")`), Prisma will delete and re-add the table in the migration. The automatic migration will be structured as follows:
+1. Remove all foreign keys of table `x`
+2. Drop table `x`
+3. Create table `y` - note that this also automatically recreates any indexes, though with a slightly different name
+4. Re-add the foreign keys to table `y` - these will have a slightly different name
+
+To prevent data loss, manually modify steps 2 and 3 above as follows:
+```SQL
+RENAME TABLE `x` TO `y`;
+ALTER TABLE `y` RENAME INDEX `old_index_name` TO `new_index_name`;
+```
+
+where `new_index_name` can be found by looking at the automatic `CREATE` statement (step 3).
+
