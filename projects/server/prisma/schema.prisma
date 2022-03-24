@@ -53,6 +53,8 @@ model LiveViewers {
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
+
+  @@map("live_viewers")
 }
 
 /// USERS
@@ -87,7 +89,7 @@ model ChannelInfo {
   channelId Int
   channel   Channel @relation(fields: [channelId], references: [id])
 
-  @@map("channel_info")
+  @@map("youtube_channel_info")
 }
 
 model Channel {
@@ -131,6 +133,7 @@ model TwitchChannel {
 
   chatMessages ChatMessage[]
   infoHistory  TwitchChannelInfo[]
+
   @@map("twitch_channels")
 }
 
@@ -154,7 +157,7 @@ model ChatEmoji {
   // any custom emojis that have replaced this YouTube emoji within a chat message
   customEmoji ChatCustomEmoji[]
 
-  @@map("chat_emoji")
+  @@map("chat_emojis")
 }
 
 model ChatText {
@@ -287,7 +290,7 @@ model ExperienceSnapshot {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  @@map("experience_snapshot")
+  @@map("experience_snapshots")
 }
 
 /// Data for an experience transaction triggered by a chat message
@@ -353,4 +356,6 @@ model CustomEmoji {
   levelRequirement Int @db.UnsignedSmallInt
 
   ChatCustomEmoji ChatCustomEmoji[]
+
+  @@map("custom_emojis")
 }
