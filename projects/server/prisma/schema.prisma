@@ -43,6 +43,8 @@ model Livestream {
   chatMessages           ChatMessage[]
   experienceTransactions ExperienceTransaction[]
   viewingBlocks          ViewingBlock[]
+
+  @@map("livestreams")
 }
 
 model LiveViewers {
@@ -53,6 +55,8 @@ model LiveViewers {
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
+
+  @@map("live_viewers")
 }
 
 /// USERS
@@ -87,7 +91,7 @@ model ChannelInfo {
   channelId Int
   channel   Channel @relation(fields: [channelId], references: [id])
 
-  @@map("channel_info")
+  @@map("youtube_channel_info")
 }
 
 model Channel {
@@ -99,6 +103,8 @@ model Channel {
 
   chatMessages ChatMessage[]
   infoHistory  ChannelInfo[]
+
+  @@map("youtube_channels")
 }
 
 model TwitchChannelInfo {
@@ -131,6 +137,7 @@ model TwitchChannel {
 
   chatMessages ChatMessage[]
   infoHistory  TwitchChannelInfo[]
+
   @@map("twitch_channels")
 }
 
@@ -154,7 +161,7 @@ model ChatEmoji {
   // any custom emojis that have replaced this YouTube emoji within a chat message
   customEmoji ChatCustomEmoji[]
 
-  @@map("chat_emoji")
+  @@map("chat_emojis")
 }
 
 model ChatText {
@@ -201,7 +208,7 @@ model ChatCustomEmoji {
 
   ChatMessagePart ChatMessagePart[]
 
-  @@map("chat_custom_emoji")
+  @@map("chat_custom_emojis")
 }
 
 /// Has exactly one text, emoji, or cheer component attached, and possibly also a custom emoji.
@@ -226,7 +233,7 @@ model ChatMessagePart {
 
   // all message parts of the chat message must have a different ordering
   @@unique([order, chatMessageId])
-  @@map("chat_message_part")
+  @@map("chat_message_parts")
 }
 
 model ChatMessage {
@@ -253,7 +260,7 @@ model ChatMessage {
 
   experienceDataChatMessage ExperienceDataChatMessage?
 
-  @@map("chat_message")
+  @@map("chat_messages")
 }
 
 // Experience
@@ -275,7 +282,7 @@ model ExperienceTransaction {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  @@map("experience_transaction")
+  @@map("experience_transactions")
 }
 
 /// Holds snapshots of a person's experience at certaint points in time.
@@ -287,7 +294,7 @@ model ExperienceSnapshot {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  @@map("experience_snapshot")
+  @@map("experience_snapshots")
 }
 
 /// Data for an experience transaction triggered by a chat message
@@ -338,7 +345,7 @@ model ViewingBlock {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  @@map("viewing_block")
+  @@map("viewing_blocks")
 }
 
 model CustomEmoji {
@@ -353,4 +360,6 @@ model CustomEmoji {
   levelRequirement Int @db.UnsignedSmallInt
 
   ChatCustomEmoji ChatCustomEmoji[]
+
+  @@map("custom_emojis")
 }
