@@ -27,7 +27,7 @@ const main = async () => {
       // don't use dotenv -e because for some reason it ignores the --create-only flag
       console.log(`  yarn cross-env NODE_ENV=debug DATABASE_URL=${url} ${command}`)
       console.log('')
-      console.log('(you might also want to replace `dev` with `deploy` to force the migration without resetting the data')
+      console.log('(you might also want to replace `dev` with `deploy` to force the migration without resetting the data)')
       process.exit(0)
     }
   } else {

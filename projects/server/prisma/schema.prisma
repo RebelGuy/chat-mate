@@ -97,7 +97,8 @@ model Channel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  infoHistory ChannelInfo[]
+  chatMessages ChatMessage[]
+  infoHistory  ChannelInfo[]
 }
 
 model TwitchChannelInfo {
@@ -128,7 +129,8 @@ model TwitchChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  infoHistory TwitchChannelInfo[]
+  chatMessages ChatMessage[]
+  infoHistory  TwitchChannelInfo[]
   @@map("twitch_channels")
 }
 
@@ -232,10 +234,17 @@ model ChatMessage {
   // youtube or twitch id
   youtubeId String   @unique @db.VarChar(255)
   time      DateTime
-  platform  Platform
 
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
+
+  // keep track of which actual channel posted the message. must be one of the two mentioned here.
+  // the userId above is simply a convenience and duplicates the below information.
+  youtubeChannelId Int?
+  youtubeChannel   Channel? @relation(fields: [youtubeChannelId], references: [id])
+
+  twitchChannelId Int?
+  twitchChannel   TwitchChannel? @relation(fields: [twitchChannelId], references: [id])
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
@@ -245,11 +254,6 @@ model ChatMessage {
   experienceDataChatMessage ExperienceDataChatMessage?
 
   @@map("chat_message")
-}
-
-enum Platform {
-  YouTube
-  Twitch
 }
 
 // Experience
