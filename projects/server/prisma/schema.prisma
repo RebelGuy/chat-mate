@@ -43,8 +43,6 @@ model Livestream {
   chatMessages           ChatMessage[]
   experienceTransactions ExperienceTransaction[]
   viewingBlocks          ViewingBlock[]
-
-  @@map("livestreams")
 }
 
 model LiveViewers {
@@ -233,7 +231,7 @@ model ChatMessagePart {
 
   // all message parts of the chat message must have a different ordering
   @@unique([order, chatMessageId])
-  @@map("chat_message_parts")
+  @@map("chat_message_part")
 }
 
 model ChatMessage {
