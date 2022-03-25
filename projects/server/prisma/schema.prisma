@@ -48,10 +48,10 @@ model Livestream {
 }
 
 model LiveViewers {
-  id               Int      @id @default(autoincrement())
-  time             DateTime @default(now())
-  youtubeViewCount Int
-  twitchViewCount  Int
+  id              Int      @id @default(autoincrement())
+  time            DateTime @default(now())
+  viewCount       Int
+  twitchViewCount Int
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
@@ -65,7 +65,7 @@ model ChatUser {
   id Int @id @default(autoincrement())
 
   // the channels associated with the user
-  youtubeChannels YoutubeChannel[]
+  youtubeChannels Channel[]
   twitchChannels  TwitchChannel[]
 
   chatMessages               ChatMessage[]
@@ -77,24 +77,24 @@ model ChatUser {
   @@map("chat_users")
 }
 
-model YoutubeChannelInfo {
+model ChannelInfo {
   id          Int     @id @default(autoincrement())
   name        String  @db.VarChar(255)
   imageUrl    String  @db.VarChar(511)
   isOwner     Boolean
   isModerator Boolean
-  isVerified  Boolean
+  IsVerified  Boolean
 
   /// first seen with this info
   time DateTime
 
   channelId Int
-  channel   YoutubeChannel @relation(fields: [channelId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id])
 
   @@map("youtube_channel_info")
 }
 
-model YoutubeChannel {
+model Channel {
   id        Int    @id @default(autoincrement())
   youtubeId String @unique @db.VarChar(63)
 
@@ -102,7 +102,7 @@ model YoutubeChannel {
   user   ChatUser @relation(fields: [userId], references: [id])
 
   chatMessages ChatMessage[]
-  infoHistory  YoutubeChannelInfo[]
+  infoHistory  ChannelInfo[]
 
   @@map("youtube_channels")
 }
@@ -146,8 +146,7 @@ model TwitchChannel {
 /// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
   id          Int     @id @default(autoincrement())
-  // twitch or youtube id
-  externalId  String  @unique @db.VarChar(255)
+  youtubeId   String  @unique @db.VarChar(255)
   imageUrl    String? @db.VarChar(511)
   imageWidth  Int?    @db.SmallInt
   imageHeight Int?    @db.SmallInt
@@ -238,10 +237,10 @@ model ChatMessagePart {
 }
 
 model ChatMessage {
-  id         Int      @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   // youtube or twitch id
-  externalId String   @unique @db.VarChar(255)
-  time       DateTime
+  youtubeId String   @unique @db.VarChar(255)
+  time      DateTime
 
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
@@ -249,7 +248,7 @@ model ChatMessage {
   // keep track of which actual channel posted the message. must be one of the two mentioned here.
   // the userId above is simply a convenience and duplicates the below information.
   youtubeChannelId Int?
-  youtubeChannel   YoutubeChannel? @relation(fields: [youtubeChannelId], references: [id])
+  youtubeChannel   Channel? @relation(fields: [youtubeChannelId], references: [id])
 
   twitchChannelId Int?
   twitchChannel   TwitchChannel? @relation(fields: [twitchChannelId], references: [id])
