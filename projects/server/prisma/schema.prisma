@@ -26,9 +26,6 @@ model TwitchAuth {
   @@map("twitch_auth")
 }
 
-// there is no notion of a "livestream" on twitch - all chat messages are sent to the channel directly.
-// since we never run the twitch chat without the youtube chat, this does not present a problem as we can
-// simply match all twitch messages with a youtube livestream.
 model Livestream {
   id        Int       @id @default(autoincrement())
   liveId    String    @unique @db.VarChar(11)
@@ -36,7 +33,7 @@ model Livestream {
   start     DateTime?
   end       DateTime?
 
-  // for fetching the youtube chat of this livestream
+  // for fetching the chat of this livestream
   continuationToken String? @db.VarChar(1023)
 
   liveViewers            LiveViewers[]
@@ -46,33 +43,15 @@ model Livestream {
 }
 
 model LiveViewers {
-  id              Int      @id @default(autoincrement())
-  time            DateTime @default(now())
-  viewCount       Int
-  twitchViewCount Int
+  id        Int      @id @default(autoincrement())
+  time      DateTime @default(now())
+  viewCount Int
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
 }
 
-/// USERS
-
-model ChatUser {
-  id Int @id @default(autoincrement())
-
-  // the channels associated with the user
-  youtubeChannels Channel[]
-  twitchChannels  TwitchChannel[]
-
-  chatMessages               ChatMessage[]
-  experienceTransactions     ExperienceTransaction[]
-  experienceSnapshots        ExperienceSnapshot[]
-  viewingBlocks              ViewingBlock[]
-  experienceDataAdministered ExperienceDataAdmin[]
-
-  @@map("chat_users")
-}
-
+// for tracking history
 model ChannelInfo {
   id          Int     @id @default(autoincrement())
   name        String  @db.VarChar(255)
@@ -94,57 +73,25 @@ model Channel {
   id        Int    @id @default(autoincrement())
   youtubeId String @unique @db.VarChar(63)
 
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id])
-
-  infoHistory ChannelInfo[]
-}
-
-model TwitchChannelInfo {
-  id Int @id @default(autoincrement())
-
-  userName      String  @db.VarChar(64)
-  displayName   String  @db.VarChar(64)
-  userType      String  @db.VarChar(32)
-  isBroadcaster Boolean
-  isSubscriber  Boolean
-  isMod         Boolean
-  isVip         Boolean
-  colour        String  @db.VarChar(8)
-
-  /// first seen with this info
-  time DateTime
-
-  channelId Int
-  channel   TwitchChannel @relation(fields: [channelId], references: [id])
-
-  @@map("twitch_channel_info")
-}
-
-model TwitchChannel {
-  id       Int    @id @default(autoincrement())
-  twitchId String @db.VarChar(32)
-
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id])
-
-  infoHistory TwitchChannelInfo[]
-  @@map("twitch_channels")
+  chatMessages               ChatMessage[]
+  infoHistory                ChannelInfo[]
+  experienceTransactions     ExperienceTransaction[]
+  experienceSnapshots        ExperienceSnapshot[]
+  viewingBlocks              ViewingBlock[]
+  experienceDataAdministered ExperienceDataAdmin[]
 }
 
 // CHAT
 
 /// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
-  id          Int     @id @default(autoincrement())
-  youtubeId   String  @unique @db.VarChar(255)
-  imageUrl    String? @db.VarChar(511)
-  imageWidth  Int?    @db.SmallInt
-  imageHeight Int?    @db.SmallInt
-  name        String? @db.VarChar(127)
-  label       String? @db.VarChar(127)
-
-  // for youtube only - currently unused
+  id            Int     @id @default(autoincrement())
+  youtubeId     String  @unique @db.VarChar(255)
+  imageUrl      String? @db.VarChar(511)
+  imageWidth    Int?    @db.SmallInt
+  imageHeight   Int?    @db.SmallInt
+  name          String? @db.VarChar(127)
+  label         String? @db.VarChar(127)
   isCustomEmoji Boolean
 
   messageParts ChatMessagePart[]
@@ -159,8 +106,8 @@ model ChatText {
   id        Int     @id @default(autoincrement())
   isBold    Boolean
   isItalics Boolean
-  // YouTube imposes a chat message limit of 200 characters, and Twitch 500
-  text      String  @db.VarChar(500)
+  // YouTube imposes a chat message limit of 200 characters
+  text      String  @db.VarChar(200)
 
   // technically messagePart should always be defined
   messagePart ChatMessagePart?
@@ -169,19 +116,6 @@ model ChatText {
   customEmoji ChatCustomEmoji?
 
   @@map("chat_text")
-}
-
-model ChatCheer {
-  id       Int    @id @default(autoincrement())
-  amount   Int
-  name     String @db.VarChar(64)
-  colour   String @db.VarChar(8)
-  imageUrl String @db.VarChar(512)
-
-  // technically messagePart should always be defined
-  messagePart ChatMessagePart?
-
-  @@map("chat_cheers")
 }
 
 model ChatCustomEmoji {
@@ -202,7 +136,7 @@ model ChatCustomEmoji {
   @@map("chat_custom_emoji")
 }
 
-/// Has exactly one text, emoji, or cheer component attached, and possibly also a custom emoji.
+/// Has either a text or emoji component attached, but never none or both
 model ChatMessagePart {
   id    Int @id @default(autoincrement())
   order Int
@@ -216,9 +150,6 @@ model ChatMessagePart {
   emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
 
-  cheerId Int?       @unique
-  cheer   ChatCheer? @relation(fields: [cheerId], references: [id])
-
   customEmojiId Int?
   customEmoji   ChatCustomEmoji? @relation(fields: [customEmojiId], references: [id])
 
@@ -229,13 +160,11 @@ model ChatMessagePart {
 
 model ChatMessage {
   id        Int      @id @default(autoincrement())
-  // youtube or twitch id
   youtubeId String   @unique @db.VarChar(255)
   time      DateTime
-  platform  Platform
 
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id])
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
@@ -245,11 +174,6 @@ model ChatMessage {
   experienceDataChatMessage ExperienceDataChatMessage?
 
   @@map("chat_message")
-}
-
-enum Platform {
-  YouTube
-  Twitch
 }
 
 // Experience
@@ -268,8 +192,8 @@ model ExperienceTransaction {
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
 
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id])
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
 
   @@map("experience_transaction")
 }
@@ -280,8 +204,8 @@ model ExperienceSnapshot {
   time       DateTime
   experience Int
 
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id])
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
 
   @@map("experience_snapshot")
 }
@@ -312,8 +236,8 @@ model ExperienceDataAdmin {
 
   message String? @db.VarChar(1023)
 
-  adminUserId Int
-  adminUser   ChatUser @relation(fields: [adminUserId], references: [id])
+  adminChannelId Int
+  adminChannel   Channel @relation(fields: [adminChannelId], references: [id])
 
   experienceTransactionId Int                   @unique
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id])
@@ -331,8 +255,8 @@ model ViewingBlock {
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id])
 
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id])
+  channelId Int
+  channel   Channel @relation(fields: [channelId], references: [id])
 
   @@map("viewing_block")
 }
