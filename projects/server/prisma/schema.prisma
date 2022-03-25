@@ -101,8 +101,6 @@ model Channel {
 
   chatMessages ChatMessage[]
   infoHistory  ChannelInfo[]
-
-  @@map("youtube_channels")
 }
 
 model TwitchChannelInfo {
@@ -206,7 +204,7 @@ model ChatCustomEmoji {
 
   ChatMessagePart ChatMessagePart[]
 
-  @@map("chat_custom_emojis")
+  @@map("chat_custom_emoji")
 }
 
 /// Has exactly one text, emoji, or cheer component attached, and possibly also a custom emoji.
@@ -258,7 +256,7 @@ model ChatMessage {
 
   experienceDataChatMessage ExperienceDataChatMessage?
 
-  @@map("chat_messages")
+  @@map("chat_message")
 }
 
 // Experience
@@ -280,7 +278,7 @@ model ExperienceTransaction {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  @@map("experience_transactions")
+  @@map("experience_transaction")
 }
 
 /// Holds snapshots of a person's experience at certaint points in time.
@@ -343,7 +341,7 @@ model ViewingBlock {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id])
 
-  @@map("viewing_blocks")
+  @@map("viewing_block")
 }
 
 model CustomEmoji {
