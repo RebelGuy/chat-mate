@@ -14,8 +14,7 @@ const main = async () => {
     await promptInput('Hit enter to continue, or terminate the script now...')
     console.log('')
 
-    // the --create-only flag insures it doesn't automatically apply a new migration if the schema.prisma file has been updated.
-    const command = `yarn prisma migrate dev --create-only`
+    const command = `yarn prisma migrate dev`
     try {
       await execAsync(`yarn ${command}`)
     } catch (e) {
