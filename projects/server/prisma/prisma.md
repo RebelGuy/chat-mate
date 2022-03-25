@@ -38,3 +38,13 @@ See https://www.prisma.io/docs/concepts/components/prisma-client/relation-querie
 
 
 ## Migration problems and resolutions
+
+### Index and Foreign Key mapping
+Prisma automatically takes care of indexing columns that are foreign keys, as well as creating the foreign keys themselves. Unfortunately, this breaks when columns or tables are renamed, and so we have to manage the names (mappings) ourselves. Use the following conventions to define custom mappings:
+
+- **Unique columns:** `@@unique([..., map: "<mappedTableName>_<columnName>_key")`. Don't use the `@unique()` tag next to the column definition.
+- **Foreign key indexes:** `@@index(..., map: "<mappedTableName>_<idColumnName>_fkey")`
+- **Foreign relations:** `@relation(..., map: "<mappedTableName>_<idColumnName>_fkey")`
+
+Following these conventions at all times will make it easier to refactor later on, especially renaming things.
+

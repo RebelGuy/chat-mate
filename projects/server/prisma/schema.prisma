@@ -28,7 +28,7 @@ model TwitchAuth {
 
 model Livestream {
   id        Int       @id @default(autoincrement())
-  liveId    String    @unique @db.VarChar(11)
+  liveId    String    @db.VarChar(11) // unique
   createdAt DateTime  @default(now())
   start     DateTime?
   end       DateTime?
@@ -40,6 +40,9 @@ model Livestream {
   chatMessages           ChatMessage[]
   experienceTransactions ExperienceTransaction[]
   viewingBlocks          ViewingBlock[]
+
+  @@unique([liveId], map: "Livestream_liveId_key")
+  @@map("livestream")
 }
 
 model LiveViewers {
@@ -48,7 +51,10 @@ model LiveViewers {
   viewCount Int
 
   livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id])
+  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "LiveViewers_livestreamId_fkey")
+
+  @@index([livestreamId], map: "LiveViewers_livestreamId_fkey")
+  @@map("liveviewers")
 }
 
 // for tracking history
@@ -64,14 +70,15 @@ model ChannelInfo {
   time DateTime
 
   channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id], map: "channel_info_channelId_fkey")
 
+  @@index([channelId], map: "channel_info_channelId_fkey")
   @@map("channel_info")
 }
 
 model Channel {
   id        Int    @id @default(autoincrement())
-  youtubeId String @unique @db.VarChar(63)
+  youtubeId String @db.VarChar(63) // unique
 
   chatMessages               ChatMessage[]
   infoHistory                ChannelInfo[]
@@ -79,6 +86,9 @@ model Channel {
   experienceSnapshots        ExperienceSnapshot[]
   viewingBlocks              ViewingBlock[]
   experienceDataAdministered ExperienceDataAdmin[]
+
+  @@unique([youtubeId], map: "Channel_youtubeId_key")
+  @@map("channel")
 }
 
 // CHAT
@@ -86,7 +96,7 @@ model Channel {
 /// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
   id            Int     @id @default(autoincrement())
-  youtubeId     String  @unique @db.VarChar(255)
+  youtubeId     String  @db.VarChar(255) // unique
   imageUrl      String? @db.VarChar(511)
   imageWidth    Int?    @db.SmallInt
   imageHeight   Int?    @db.SmallInt
@@ -99,6 +109,7 @@ model ChatEmoji {
   // any custom emojis that have replaced this YouTube emoji within a chat message
   customEmoji ChatCustomEmoji[]
 
+  @@unique([youtubeId], map: "chat_emoji_youtubeId_key")
   @@map("chat_emoji")
 }
 
@@ -122,57 +133,67 @@ model ChatCustomEmoji {
   id Int @id @default(autoincrement())
 
   // keep the original objects in case the emoji symbol changes.
-  textId Int?      @unique
-  text   ChatText? @relation(fields: [textId], references: [id])
+  textId Int? // unique
+  text   ChatText? @relation(fields: [textId], references: [id], map: "chat_custom_emoji_textId_fkey")
 
   emojiId Int?
-  emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
+  emoji   ChatEmoji? @relation(fields: [emojiId], references: [id], map: "chat_custom_emoji_emojiId_fkey")
 
   customEmojiId Int
-  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id])
+  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "chat_custom_emoji_customEmojiId_fkey")
 
   ChatMessagePart ChatMessagePart[]
 
+  @@unique([textId], map: "chat_custom_emoji_textId_key")
+  @@index([emojiId], map: "chat_custom_emoji_emojiId_fkey")
+  @@index([customEmojiId], map: "chat_custom_emoji_customEmojiId_fkey")
   @@map("chat_custom_emoji")
 }
 
 /// Has either a text or emoji component attached, but never none or both
 model ChatMessagePart {
   id    Int @id @default(autoincrement())
-  order Int
+  order Int // unique with `chatMessageId`
 
-  chatMessageId Int
-  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])
+  chatMessageId Int // unique with `order`
+  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id], map: "chat_message_part_chatMessageId_fkey")
 
-  textId Int?      @unique
-  text   ChatText? @relation(fields: [textId], references: [id])
+  textId Int? // unique
+  text   ChatText? @relation(fields: [textId], references: [id], map: "chat_message_part_textId_fkey")
 
   emojiId Int?
-  emoji   ChatEmoji? @relation(fields: [emojiId], references: [id])
+  emoji   ChatEmoji? @relation(fields: [emojiId], references: [id], map: "chat_message_part_emojiId_fkey")
 
   customEmojiId Int?
-  customEmoji   ChatCustomEmoji? @relation(fields: [customEmojiId], references: [id])
+  customEmoji   ChatCustomEmoji? @relation(fields: [customEmojiId], references: [id], map: "chat_message_part_customEmojiId_fkey")
 
   // all message parts of the chat message must have a different ordering
-  @@unique([order, chatMessageId])
+  @@unique([order, chatMessageId], map: "chat_message_part_order_chatMessageId_key")
+  @@unique([textId], map: "chat_message_part_textId_key")
+  @@index([chatMessageId], map: "chat_message_part_chatMessageId_fkey")
+  @@index([emojiId], map: "chat_message_part_emojiId_fkey")
+  @@index([customEmojiId], map: "chat_message_part_customEmojiId_fkey")
   @@map("chat_message_part")
 }
 
 model ChatMessage {
   id        Int      @id @default(autoincrement())
-  youtubeId String   @unique @db.VarChar(255)
+  youtubeId String   @db.VarChar(255) // unique
   time      DateTime
 
   channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id], map: "chat_message_channelId_fkey")
 
   livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id])
+  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "chat_message_livestreamId_fkey")
 
   chatMessageParts ChatMessagePart[]
 
   experienceDataChatMessage ExperienceDataChatMessage?
 
+  @@unique([youtubeId], map: "chat_message_youtubeId_key")
+  @@index([channelId], map: "chat_message_channelId_fkey")
+  @@index([livestreamId], map: "chat_message_livestreamId_fkey")
   @@map("chat_message")
 }
 
@@ -190,11 +211,13 @@ model ExperienceTransaction {
   experienceDataAdmin       ExperienceDataAdmin?
 
   livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id])
+  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "experience_transaction_livestreamId_fkey")
 
   channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id], map: "experience_transaction_channelId_fkey")
 
+  @@index([livestreamId], map: "experience_transaction_livestreamId_fkey")
+  @@index([channelId], map: "experience_transaction_channelId_fkey")
   @@map("experience_transaction")
 }
 
@@ -205,8 +228,9 @@ model ExperienceSnapshot {
   experience Int
 
   channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id], map: "experience_snapshot_channelId_fkey")
 
+  @@index([channelId], map: "experience_snapshot_channelId_fkey")
   @@map("experience_snapshot")
 }
 
@@ -221,12 +245,14 @@ model ExperienceDataChatMessage {
   messageQualityMultiplier      Float
   repetitionPenalty             Float? // todo: add data migration (default value is 0) and make required
 
-  chatMessageId Int         @unique
-  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id])
+  chatMessageId Int // unique
+  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id], map: "experience_data_chat_message_chatMessageId_fkey")
 
-  experienceTransactionId Int                   @unique
-  experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id])
+  experienceTransactionId Int // unique
+  experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id], map: "experience_data_chat_message_experienceTransactionId_fkey")
 
+  @@unique([chatMessageId], map: "experience_data_chat_message_chatMessageId_key")
+  @@unique([experienceTransactionId], map: "experience_data_chat_message_experienceTransactionId_key")
   @@map("experience_data_chat_message")
 }
 
@@ -237,11 +263,13 @@ model ExperienceDataAdmin {
   message String? @db.VarChar(1023)
 
   adminChannelId Int
-  adminChannel   Channel @relation(fields: [adminChannelId], references: [id])
+  adminChannel   Channel @relation(fields: [adminChannelId], references: [id], map: "experience_data_admin_adminChannelId_fkey")
 
-  experienceTransactionId Int                   @unique
-  experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id])
+  experienceTransactionId Int // unique
+  experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id], map: "experience_data_admin_experienceTransactionId_fkey")
 
+  @@unique([experienceTransactionId], map: "experience_data_admin_experienceTransactionId_key")
+  @@index([adminChannelId], map: "experience_data_admin_adminChannelId_fkey")
   @@map("experience_data_admin")
 }
 
@@ -253,18 +281,20 @@ model ViewingBlock {
   lastUpdate DateTime
 
   livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id])
+  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "viewing_block_livestreamId_fkey")
 
   channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id], map: "viewing_block_channelId_fkey")
 
+  @@index([livestreamId], map: "viewing_block_livestreamId_fkey")
+  @@index([channelId], map: "viewing_block_channelId_fkey")
   @@map("viewing_block")
 }
 
 model CustomEmoji {
   id Int @id @default(autoincrement())
 
-  symbol String @unique @db.VarChar(10)
+  symbol String @db.VarChar(10)
   name   String @db.VarChar(63)
 
   // max 64KB of storage
@@ -273,4 +303,7 @@ model CustomEmoji {
   levelRequirement Int @db.UnsignedSmallInt
 
   ChatCustomEmoji ChatCustomEmoji[]
+
+  @@unique([symbol], map: "CustomEmoji_symbol_key")
+  @@map("customemoji")
 }
