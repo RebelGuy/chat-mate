@@ -70,11 +70,11 @@ model ChatUser {
   youtubeChannels Channel[]
   twitchChannels  TwitchChannel[]
 
-  chatMessages ChatMessage[]
-  // experienceTransactions     ExperienceTransaction[]
-  // experienceSnapshots        ExperienceSnapshot[]
-  // viewingBlocks              ViewingBlock[]
-  // experienceDataAdministered ExperienceDataAdmin[]
+  chatMessages               ChatMessage[]
+  experienceTransactions     ExperienceTransaction[]
+  experienceSnapshots        ExperienceSnapshot[]
+  viewingBlocks              ViewingBlock[]
+  experienceDataAdministered ExperienceDataAdmin[]
 
   @@map("chat_users")
 }
@@ -101,12 +101,8 @@ model Channel {
   id        Int    @id @default(autoincrement())
   youtubeId String @db.VarChar(63) // unique
 
-  userId                     Int
-  user                       ChatUser                @relation(fields: [userId], references: [id], map: "channel_userId_fkey")
-  experienceTransactions     ExperienceTransaction[]
-  experienceSnapshots        ExperienceSnapshot[]
-  viewingBlocks              ViewingBlock[]
-  experienceDataAdministered ExperienceDataAdmin[]
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "channel_userId_fkey")
 
   infoHistory  ChannelInfo[]
   chatMessages ChatMessage[]
@@ -266,8 +262,8 @@ model ChatMessage {
   user   ChatUser @relation(fields: [userId], references: [id], map: "chat_message_userId_fkey")
 
   // youtube and twitch ids are used to ensure we know what actual platform account authored the message
-  channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id], map: "chat_message_channelId_fkey")
+  channelId Int?
+  channel   Channel? @relation(fields: [channelId], references: [id], map: "chat_message_channelId_fkey")
 
   twitchChannelId Int?
   twitchChannel   TwitchChannel? @relation(fields: [twitchChannelId], references: [id], map: "chat_message_twitchChannelId_fkey")
@@ -303,14 +299,12 @@ model ExperienceTransaction {
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "experience_transaction_livestreamId_fkey")
 
-  // userId Int
-  // user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
-  channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id], map: "experience_transaction_channelId_fkey")
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
 
   // @@index([userId], map: "experience_transaction_userId_fkey")
   @@index([livestreamId], map: "experience_transaction_livestreamId_fkey")
-  @@index([channelId], map: "experience_transaction_channelId_fkey")
+  @@index([userId], map: "experience_transaction_userId_fkey")
   @@map("experience_transaction")
 }
 
@@ -320,13 +314,10 @@ model ExperienceSnapshot {
   time       DateTime
   experience Int
 
-  channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id], map: "experience_snapshot_channelId_fkey")
-  // userId Int
-  // user   ChatUser @relation(fields: [userId], references: [id], map: "experience_snapshot_userId_fkey")
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "experience_snapshot_userId_fkey")
 
-  // @@index([userId], map: "experience_snapshot_userId_fkey")
-  @@index([channelId], map: "experience_snapshot_channelId_fkey")
+  @@index([userId], map: "experience_snapshot_userId_fkey")
   @@map("experience_snapshot")
 }
 
@@ -358,17 +349,15 @@ model ExperienceDataAdmin {
 
   message String? @db.VarChar(1023)
 
-  adminChannelId Int
-  adminChannel   Channel @relation(fields: [adminChannelId], references: [id], map: "experience_data_admin_adminChannelId_fkey")
-  // adminUserId Int
-  // adminUser   ChatUser @relation(fields: [adminUserId], references: [id], map: "experience_data_admin_adminUserId_fkey")
+  adminUserId Int
+  adminUser   ChatUser @relation(fields: [adminUserId], references: [id], map: "experience_data_admin_adminUserId_fkey")
 
   experienceTransactionId Int // unique
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id], map: "experience_data_admin_experienceTransactionId_fkey")
 
   // @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
   @@unique([experienceTransactionId], map: "experience_data_admin_experienceTransactionId_key")
-  @@index([adminChannelId], map: "experience_data_admin_adminChannelId_fkey")
+  @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
   @@map("experience_data_admin")
 }
 
@@ -382,11 +371,11 @@ model ViewingBlock {
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "viewing_block_livestreamId_fkey")
 
-  channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id], map: "viewing_block_channelId_fkey")
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "viewing_block_userId_fkey")
 
   @@index([livestreamId], map: "viewing_block_livestreamId_fkey")
-  @@index([channelId], map: "viewing_block_channelId_fkey")
+  @@index([userId], map: "viewing_block_userId_fkey")
   @@map("viewing_block")
 }
 
