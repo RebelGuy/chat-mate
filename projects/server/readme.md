@@ -113,7 +113,8 @@ Key:
 - 🟢 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince
-  - 🟢 getContinuationToken
+  - 🔴 getContinuationToken
+  - 🟢 getLastChatByUser
 - 🟢 CustomEmojiStore
   - 🟢 addCustomEmoji
   - 🟢 getAllCustomEmojis

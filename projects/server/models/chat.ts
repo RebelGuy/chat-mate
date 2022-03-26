@@ -22,10 +22,10 @@ export type ChatItem = {
   timestamp: number,
   messageParts: PartialChatMessage[],
 } & ({
-  platform: 'youtube'
+  platform: Extract<ChatPlatform, 'youtube'>
   author: Author
 } | {
-  platform: 'twitch'
+  platform: Extract<ChatPlatform, 'twitch'>
   author: TwitchAuthor
 })
 
