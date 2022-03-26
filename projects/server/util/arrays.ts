@@ -137,3 +137,35 @@ export function groupedSingle<T, G> (arr: T[], grouper: (item: T) => G): T[] {
 
   return result
 }
+
+/** Assigns items to single-member subgroups, where there can be any number of subgroups per main group. The order of
+ * the subgroups (inner array) has the same ordering as the supplied items, but the main group is unordered. */
+export function subGroupedSingle<T, G, S> (arr: T[], mainGrouper: (item: T) => G, subGrouper: (item: T) => S): { group: G, subgrouped: T[] }[] {
+  let groups: Map<G, Set<S>> = new Map()
+  let resultingMap: Map<G, T[]> = new Map()
+
+  for (const item of arr) {
+    const mainGroup = mainGrouper(item)
+    const subGroup = subGrouper(item)
+
+    if (groups.has(mainGroup)) {
+      const existingSubGroups = groups.get(mainGroup)!
+      if (!existingSubGroups.has(subGroup)) {
+        existingSubGroups.add(subGroup)
+        resultingMap.get(mainGroup)!.push(item)
+      }
+    } else {
+      groups.set(mainGroup, new Set([subGroup]))
+      resultingMap.set(mainGroup, [item])
+    }
+  }
+
+  let result: { group: G, subgrouped: T[] }[] = []
+  for (const [group, values] of resultingMap) {
+    result.push({
+      group: group,
+      subgrouped: values
+    })
+  }
+  return result
+}

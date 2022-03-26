@@ -1,4 +1,4 @@
-import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, Channel, CustomEmoji } from '@prisma/client'
+import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, Channel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { PublicMessageCustomEmoji } from '@rebel/server/controllers/public/chat/PublicMessageCustomEmoji'
@@ -175,14 +175,14 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
 }
 
 export type ChatItemWithRelations = (ChatMessage & {
-  channel: Channel & {
-      infoHistory: ChannelInfo[];
-  };
+  channel: Channel & { infoHistory: ChannelInfo[] } | null
+  twitchChannel: TwitchChannel & { infoHistory: TwitchChannelInfo[] } | null
   chatMessageParts: (ChatMessagePart & {
       emoji: ChatEmoji | null
       text: ChatText | null
       customEmoji: (ChatCustomEmoji & { text: ChatText | null, emoji: ChatEmoji | null, customEmoji: CustomEmoji }) | null
-  })[];
+      cheer: ChatCheer | null
+  })[]
 })
 
 export function getUniqueEmojiId (emoji: YTEmoji): string {

@@ -82,8 +82,9 @@ Key:
 
 **Services**
 - 🟢 ChannelService
-  - 🟢 getChannelById
-  - 🟢 getChannelByName
+  - 🟢 getActiveUserChannel
+  - 🟢 getUserByChannelName
+  - 🟢 getUserById
 - 🟢 ChatService
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
