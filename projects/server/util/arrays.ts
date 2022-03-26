@@ -1,4 +1,4 @@
-import { GenericObject, NumberOnly } from '@rebel/server/types'
+import { GenericObject, Nullify, NumberOnly, PrimitiveKeys } from '@rebel/server/types'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
 // uses default equality comparison
@@ -46,6 +46,54 @@ export function zip<T extends GenericObject, U extends GenericObject> (first: T[
   return first.map((a, i) => ({ ...a, ...second[i] }))
 }
 
+/** Merges the two arrays on the specified key, which must be a common property. It is assumed that the key is unique within
+ * an array, but may or may not be unique across the two arrays. No other properties should overlap between the objects, else
+ * the behaviour is undefined. The arrays' lengths may differ. The return order is undefined. */
+export function zipOn<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (first: T[], second: U[], key: Key): (Pick<T & U, Key> & Partial<Omit<T & U, Key>>)[] {
+  // for some reason we must explicitly define `Key extends (string | number | symbol)` otherwise Omit<> is unhappy
+  let firstMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
+  let secondMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
+  
+  for (const x of first) {
+    const k = x[key]
+    if (firstMap.has(k)) {
+      throw new Error('The key should be unique within the first array')
+    } else {
+      const copy = { ...x }
+      delete copy[key]
+      firstMap.set(k, copy)
+    }
+  }
+
+  for (const y of second) {
+    const k = y[key]
+    if (secondMap.has(k)) {
+      throw new Error('The key should be unique within the second array')
+    } else {
+      const copy = { ...y }
+      delete copy[key]
+      secondMap.set(k, copy)
+    }
+  }
+
+  let map: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
+  const allKeys = unique([...firstMap.keys(), ...secondMap.keys()])
+  for (const k of allKeys) {
+    const firstValue = firstMap.get(k) ?? {} as Omit<Partial<T & U>, Key>
+    const secondValue = secondMap.get(k) ?? {} as Omit<Partial<T & U>, Key>
+
+    const keyValue = { [key]: k } as Pick<T & U, Key>
+    const finalValue = {
+      ...keyValue,
+      ...firstValue,
+      ...secondValue
+    }
+    map.set(k, finalValue)
+  }
+
+  return [...map.values()]
+}
+
 /** Returns a new array that is the inverse of the input array. */
 export function reverse<T> (arr: T[]): T[] {
   let result: T[] = []
@@ -72,4 +120,20 @@ export function tally<T> (arr: T[], comparator?: (a: T, b: T) => boolean): { val
   }
 
   return sortBy(result, r => r.count, 'desc')
+}
+
+/** Assigns items to single-member groups on a first-come, first-serve basis. The resulting array is also ordered. */
+export function groupedSingle<T, G> (arr: T[], grouper: (item: T) => G): T[] {
+  let groups: Set<G> = new Set()
+  let result: T[] = []
+
+  for (const item of arr) {
+    const group = grouper(item)
+    if (!groups.has(group)) {
+      groups.add(group)
+      result.push(item)
+    }
+  }
+
+  return result
 }

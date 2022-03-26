@@ -1,13 +1,14 @@
 
 import { Dependencies } from '@rebel/server/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { ChatItem } from '@rebel/server/models/chat'
+import { ChatItem, ChatPlatform } from '@rebel/server/models/chat'
 import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import ContextClass from '@rebel/server/context/ContextClass'
-import ChannelStore, { ChannelWithLatestInfo, CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { ChannelWithLatestInfo, CreateOrUpdateChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import EmojiService from '@rebel/server/services/EmojiService'
+import { assertUnreachable } from '@rebel/server/util/typescript'
 
 type ChatEvents = {
   newChatItem: {
@@ -46,20 +47,45 @@ export default class ChatService extends ContextClass {
   /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
   public async onNewChatItem (item: ChatItem): Promise<boolean> {
     let addedChat: boolean = false
-    let channel: ChannelWithLatestInfo
+    let channel: ChannelWithLatestInfo | TwitchChannelWithLatestInfo
+    let externalId: string
+    let platform: ChatPlatform
     try {
-      const channelInfo: CreateOrUpdateChannelArgs = {
-        name: item.author.name ?? '',
-        time: new Date(item.timestamp),
-        imageUrl: item.author.image,
-        isOwner: item.author.attributes.isOwner,
-        isModerator: item.author.attributes.isModerator,
-        IsVerified: item.author.attributes.isVerified
+      if (item.platform === 'youtube') {
+        const channelInfo: CreateOrUpdateChannelArgs = {
+          name: item.author.name ?? '',
+          time: new Date(item.timestamp),
+          imageUrl: item.author.image,
+          isOwner: item.author.attributes.isOwner,
+          isModerator: item.author.attributes.isModerator,
+          IsVerified: item.author.attributes.isVerified
+        }
+        externalId = item.author.channelId
+        platform = 'youtube'
+        channel = await this.channelStore.createOrUpdate(externalId, channelInfo)
+
+      } else if (item.platform === 'twitch') {
+        const channelInfo: CreateOrUpdateTwitchChannelArgs = {
+          userName: item.author.userName,
+          displayName: item.author.displayName,
+          time: new Date(item.timestamp),
+          userType: item.author.userType ?? '',
+          colour: item.author.color ?? '',
+          isBroadcaster: item.author.isBroadcaster,
+          isMod: item.author.isMod,
+          isSubscriber: item.author.isSubscriber,
+          isVip: item.author.isVip
+        }
+        externalId = item.author.userId
+        platform = 'twitch'
+        channel = await this.channelStore.createOrUpdateTwitch(externalId, channelInfo)
+
+      } else {
+        assertUnreachable(item)
       }
-      channel = await this.channelStore.createOrUpdate(item.author.channelId, channelInfo)  
 
       // inject custom emojis
-      const splitParts = await Promise.all(item.messageParts.map(part => this.emojiService.applyCustomEmojis(part, channel.id)))
+      const splitParts = await Promise.all(item.messageParts.map(part => this.emojiService.applyCustomEmojis(part, channel.userId)))
       item.messageParts = splitParts.flatMap(p => p)
 
       // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
@@ -67,7 +93,7 @@ export default class ChatService extends ContextClass {
       // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
       // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
       // visual inconsitency. so for now just acknowledge this and leave it.
-      await this.chatStore.addChat(item, channel.id)
+      await this.chatStore.addChat(item, channel.userId, externalId, platform)
       addedChat = true
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)
@@ -75,10 +101,10 @@ export default class ChatService extends ContextClass {
 
     if (addedChat) {
       try {
-        await this.viewershipStore.addViewershipForChatParticipation(channel!.id, item.timestamp)
+        await this.viewershipStore.addViewershipForChatParticipation(channel!.userId, item.timestamp)
         await this.experienceService.addExperienceForChat(item)
       } catch (e: any) {
-        this.logService.logError(this, `Successfully added chat item ${item.id} but failed to complete side effects.`, e)
+        this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to complete side effects.`, e)
       }
     }
 

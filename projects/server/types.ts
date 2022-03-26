@@ -1,4 +1,4 @@
-export type GenericObject = Record<string, any>
+export type GenericObject = Record<string | number | symbol, any>
 
 export type Primitive = string | number | boolean
 
@@ -33,8 +33,17 @@ export type MakeRequired<T> = {
   [P in keyof Required<T>]: Pick<T, P> extends Required<Pick<T, P>> ? T[P] : (T[P] | undefined);
 }
 
+/** Returns the union of property names that belong to a primitive value. */
+export type PrimitiveKeys<T> = ({
+  [P in keyof T]: T[P] extends Primitive ? P : never
+})[keyof T]
+
 export type NoNulls<T> = {
   [P in keyof T]: Exclude<T[P], null>
+}
+
+export type Nullify<T> = {
+  [P in keyof T]: T[P] | null
 }
 
 export type ObjectComparator<T> = {

@@ -334,3 +334,13 @@ export function removeRangeFromText (part: PartialTextChatMessage, removeStart: 
   const trailing: PartialTextChatMessage | null = removeStart + removeLength === part.text.length ? null : { type: 'text', text: part.text.substring(removeStart + removeLength, part.text.length), isBold: part.isBold, isItalics: part.isItalics }
   return [leading, removed, trailing]
 }
+
+export function getChannelId (chatItem: ChatItem) {
+  if (chatItem.platform === 'youtube') {
+    return chatItem.author.channelId
+  } else if (chatItem.platform === 'twitch') {
+    return chatItem.author.userId
+  } else {
+    assertUnreachable(chatItem)
+  }
+}

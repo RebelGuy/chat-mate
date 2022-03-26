@@ -25,13 +25,17 @@ export namespace Entity {
 
   export type Livestream = FullPayload<'Livestream'>
 
+  export type ChatUser = FullPayload<'ChatUser'>
   export type Channel = FullPayload<'Channel'>
   export type ChannelInfo = FullPayload<'ChannelInfo'>
+  export type TwitchChannel = FullPayload<'TwitchChannel'>
+  export type TwitchChannelInfo = FullPayload<'TwitchChannelInfo'>
 
   export type ChatMessage = FullPayload<'ChatMessage'>
   export type ChatMessagePart = FullPayload<'ChatMessagePart'>
   export type ChatEmoji = FullPayload<'ChatEmoji'>
   export type ChatText = FullPayload<'ChatText'>
+  export type ChatCheer = FullPayload<'ChatCheer'>
 
   export type ExperienceTransaction = FullPayload<'ExperienceTransaction'>
   export type ExperienceSnapshot = FullPayload<'ExperienceSnapshot'>
@@ -52,19 +56,23 @@ export type New<E> = NullableToOptional<Omit<E, 'id'>>
 export type WithChildren<M extends Models, C extends keyof Omit<Includes[M], '_count'> = any> = GetPayloads<FullSelect<Selects[M]> & IncludeSpecificChildren<Includes[M], C>>[M]
 
 type Models = 'Livestream' |
-  'Channel' | 'ChannelInfo' |
-  'ChatMessage' | 'ChatMessagePart' | 'ChatEmoji' | 'ChatText' |
+  'ChatUser' | 'Channel' | 'ChannelInfo' | 'TwitchChannel' | 'TwitchChannelInfo' |
+  'ChatMessage' | 'ChatMessagePart' | 'ChatEmoji' | 'ChatText' | 'ChatCheer' |
   'ExperienceTransaction' | 'ExperienceSnapshot' | 'ExperienceDataChatMessage' | 'ViewingBlock' |
   'CustomEmoji'
 
 type Includes = DbDefine<{
   Livestream: Prisma.LivestreamInclude,
+  ChatUser: Prisma.ChatUserInclude,
   Channel: Prisma.ChannelInclude,
   ChannelInfo: Prisma.ChannelInfoInclude,
+  TwitchChannel: Prisma.TwitchChannelInclude,
+  TwitchChannelInfo: Prisma.TwitchChannelInfoInclude,
   ChatMessage: Prisma.ChatMessageInclude,
   ChatMessagePart: Prisma.ChatMessagePartInclude,
   ChatEmoji: Prisma.ChatEmojiInclude,
   ChatText: Prisma.ChatTextInclude,
+  ChatCheer: Prisma.ChatCheerInclude,
   ExperienceTransaction: Prisma.ExperienceTransactionInclude,
   ExperienceSnapshot: Prisma.ExperienceSnapshotInclude,
   ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageInclude,
@@ -75,12 +83,16 @@ type Includes = DbDefine<{
 
 type GetPayloads<T> = DbDefine<{
   Livestream: Prisma.LivestreamGetPayload<T>,
+  ChatUser: Prisma.ChatUserGetPayload<T>,
   Channel: Prisma.ChannelGetPayload<T>,
   ChannelInfo: Prisma.ChannelInfoGetPayload<T>,
+  TwitchChannel: Prisma.TwitchChannelGetPayload<T>,
+  TwitchChannelInfo: Prisma.TwitchChannelInfoGetPayload<T>,
   ChatMessage: Prisma.ChatMessageGetPayload<T>,
   ChatMessagePart: Prisma.ChatMessagePartGetPayload<T>,
   ChatEmoji: Prisma.ChatEmojiGetPayload<T>,
   ChatText: Prisma.ChatTextGetPayload<T>,
+  ChatCheer: Prisma.ChatCheerGetPayload<T>,
   ExperienceTransaction: Prisma.ExperienceTransactionGetPayload<T>,
   ExperienceSnapshot: Prisma.ExperienceSnapshotGetPayload<T>,
   ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageGetPayload<T>,
@@ -90,12 +102,16 @@ type GetPayloads<T> = DbDefine<{
 
 type Selects = DbDefine<{
   Livestream: Prisma.LivestreamSelect,
+  ChatUser: Prisma.ChatUserSelect,
   Channel: Prisma.ChannelSelect,
   ChannelInfo: Prisma.ChannelInfoSelect,
+  TwitchChannel: Prisma.TwitchChannelSelect,
+  TwitchChannelInfo: Prisma.TwitchChannelInfoSelect,
   ChatMessage: Prisma.ChatMessageSelect,
   ChatMessagePart: Prisma.ChatMessagePartSelect,
   ChatEmoji: Prisma.ChatEmojiSelect,
   ChatText: Prisma.ChatTextSelect,
+  ChatCheer: Prisma.ChatCheerSelect,
   ExperienceTransaction: Prisma.ExperienceTransactionSelect,
   ExperienceSnapshot: Prisma.ExperienceSnapshotSelect,
   ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageSelect,

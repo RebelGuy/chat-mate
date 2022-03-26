@@ -3,7 +3,7 @@ import { ChatItem, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, Parti
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
-import ChannelStore, { ChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { ChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { nameof, promised, single } from '@rebel/server/_test/utils'
@@ -30,17 +30,32 @@ const customEmojiPart: PartialCustomEmojiChatMessage = {
   text: textPart,
   emoji: null
 }
-const chatItem: ChatItem = {
-  id: 'id1',
+const chatItem1: ChatItem = {
+  id: 'youtube_id1',
+  platform: 'youtube',
   author: data.author1,
   messageParts: [textPart, emojiPart],
   timestamp: data.time1.getTime()
 }
+const chatItem2: ChatItem = {
+  id: 'twitch_id1',
+  platform: 'twitch',
+  author: data.author3,
+  messageParts: [textPart, emojiPart],
+  timestamp: data.time1.getTime()
+}
 
-const channel: ChannelWithLatestInfo = {
-  id: 1,
+const youtubeChannel1: ChannelWithLatestInfo = {
+  id: 10,
+  userId: data.user1.id,
   youtubeId: data.channel1,
   infoHistory: [{ ...data.channelInfo1, id: 1, channelId: 1 }]
+}
+const twitchChannel1: TwitchChannelWithLatestInfo = {
+  id: 20,
+  userId: data.user3.id,
+  twitchId: data.twitchChannel3,
+  infoHistory: [{ ...data.twitchChannelInfo3, id: 2, channelId: 2 }]
 }
 
 let mockChatStore: MockProxy<ChatStore>
@@ -70,37 +85,66 @@ beforeEach(() => {
 })
 
 describe(nameof(ChatService, 'onNewChatItem'), () => {
-  test('synthesises correct data and calls required services, then returns true', async () => {
+  test('youtube: synthesises correct data and calls required services, then returns true', async () => {
     const chatItemWithCustomEmoji = {
-      ...chatItem,
+      ...chatItem1,
       messageParts: [textPart, customEmojiPart, emojiPart]
     }
-    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(channel)
-    mockEmojiService.applyCustomEmojis.calledWith(textPart, channel.id).mockResolvedValue([textPart, customEmojiPart])
-    mockEmojiService.applyCustomEmojis.calledWith(emojiPart, channel.id).mockResolvedValue([emojiPart])
+    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(youtubeChannel1)
+    mockEmojiService.applyCustomEmojis.calledWith(textPart, youtubeChannel1.userId).mockResolvedValue([textPart, customEmojiPart])
+    mockEmojiService.applyCustomEmojis.calledWith(emojiPart, youtubeChannel1.userId).mockResolvedValue([emojiPart])
 
-    const addedChat = await chatService.onNewChatItem(chatItem)
+    const addedChat = await chatService.onNewChatItem(chatItem1)
 
     expect(addedChat).toBe(true)
 
-    const [passedChatItem, channelId] = single(mockChatStore.addChat.mock.calls)
+    const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
     expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
-    expect(channelId).toBe(channel.id)
+    expect(passedUserId).toBe(youtubeChannel1.userId)
+    expect(passedChannelId).toBe(youtubeChannel1.id)
+    expect(passedPlatform).toBe('youtube')
 
-    const [passedChannel, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
-    expect(passedChannel).toBe(channel.id)
-    expect(passedTimestamp).toBe(chatItem.timestamp)
+    const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
+    expect(passedUserId_).toBe(youtubeChannel1.userId)
+    expect(passedTimestamp).toBe(chatItem1.timestamp)
 
     const [passedChatItem_] = single(mockExperienceService.addExperienceForChat.mock.calls)
-    expect(passedChatItem_).toBe(chatItem)
+    expect(passedChatItem_).toBe(chatItem1)
+  })
+
+  test('twitch: synthesises correct data and calls required services, then returns true', async () => {
+    const chatItemWithCustomEmoji = {
+      ...chatItem2,
+      messageParts: [textPart, customEmojiPart, emojiPart]
+    }
+    mockChannelStore.createOrUpdateTwitch.calledWith(data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
+    mockEmojiService.applyCustomEmojis.calledWith(textPart, twitchChannel1.userId).mockResolvedValue([textPart, customEmojiPart])
+    mockEmojiService.applyCustomEmojis.calledWith(emojiPart, twitchChannel1.userId).mockResolvedValue([emojiPart])
+
+    const addedChat = await chatService.onNewChatItem(chatItem2)
+
+    expect(addedChat).toBe(true)
+
+    const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
+    expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
+    expect(passedUserId).toBe(twitchChannel1.userId)
+    expect(passedChannelId).toBe(twitchChannel1.id)
+    expect(passedPlatform).toBe('twitch')
+
+    const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
+    expect(passedUserId_).toBe(twitchChannel1.userId)
+    expect(passedTimestamp).toBe(chatItem2.timestamp)
+
+    const [passedChatItem_] = single(mockExperienceService.addExperienceForChat.mock.calls)
+    expect(passedChatItem_).toBe(chatItem2)
   })
 
   test('returns false if unable to add chat item, and does not attempt to call services', async () => {
-    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(channel)
+    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
     mockChatStore.addChat.mockRejectedValue(new Error('Test'))
 
-    const addedChat = await chatService.onNewChatItem(chatItem)
+    const addedChat = await chatService.onNewChatItem(chatItem1)
 
     expect(addedChat).toBe(false)
 

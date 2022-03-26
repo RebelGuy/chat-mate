@@ -1,5 +1,5 @@
-import { ChannelInfo, ChatMessage, Livestream } from '@prisma/client'
-import { Author, ChatItem } from '@rebel/server/models/chat'
+import { ChannelInfo, ChatMessage, ChatUser, Livestream, TwitchChannelInfo } from '@prisma/client'
+import { Author, ChatItem, TwitchAuthor } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import { addTime } from '@rebel/server/util/datetime'
@@ -33,6 +33,10 @@ export const livestream3: Livestream = {
   end: null
 }
 
+export const user1: ChatUser = { id: 1 }
+export const user2: ChatUser = { id: 2 }
+export const user3: ChatUser = { id: 3 }
+
 export const channel1 = 'channel1'
 export const author1: Author = {
   attributes: { isModerator: true, isOwner: false, isVerified: false },
@@ -65,9 +69,36 @@ export const channelInfo2: Omit<ChannelInfo, 'id' | 'channelId'> = {
   time: time1
 }
 
-/** By channel1 at time1 with empty message */
+export const twitchChannel3 = 'twitchChannel3'
+export const author3: TwitchAuthor = {
+  userName: 'some_twitch_userName',
+  displayName: 'Twitch User',
+  color: '#00000',
+  userId: '12345',
+  userType: 'mod',
+  isBroadcaster: false,
+  isMod: true,
+  isSubscriber: false,
+  isVip: false,
+  badges: new Map(),
+  badgeInfo: new Map()
+}
+export const twitchChannelInfo3: Omit<TwitchChannelInfo, 'id' | 'channelId'> = {
+  userName: author3.userName,
+  displayName: author3.displayName,
+  colour: author3.color!,
+  time: time1,
+  isBroadcaster: author3.isBroadcaster,
+  isMod: author3.isMod,
+  isSubscriber: author3.isSubscriber,
+  isVip: author3.isVip,
+  userType: author3.userType!
+}
+
+/** By youtube channel1 at time1 with empty message */
 export const chatItem1: ChatItem = {
   id: 'chat_id1',
+  platform: 'youtube',
   author: author1,
   timestamp: time1.getTime(),
   messageParts: []
@@ -101,12 +132,13 @@ export const chatExperienceData3: ChatExperienceData = {
   repetitionPenalty: 0
 }
 
-/** Adds random data. Assumes the channel and livestream have already been created. */
-export function addChatMessage (db: Db, time: Date, livestreamId: number, channelId: number): Promise<ChatMessage> {
+/** Adds random data. Assumes the user, channel and livestream have already been created. */
+export function addChatMessage (db: Db, time: Date, livestreamId: number, userId: number, youtubeChannelId: number): Promise<ChatMessage> {
   return db.chatMessage.create({ data: {
     time,
     youtubeId: 'testMessage-' + Math.random(),
-    channel: { connect: { id: channelId }},
+    user: { connect: { id: userId }},
+    channel: { connect: { id: youtubeChannelId }},
     livestream: { connect: { id: livestreamId }},
     chatMessageParts: { create: {
       order: 0,
