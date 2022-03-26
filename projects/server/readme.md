@@ -108,10 +108,8 @@ Key:
 **Stores**
 - 🟢 ChannelStore
   - 🟢 createOrUpdate
-  - 🟢 getCurrent
-  - 🟢 getCurrentChannelNames
-  - 🟢 getHistory
-  - 🟢 getId
+  - 🟢 getCurrentUserNames
+  - 🟢 getUserId
 - 🟢 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince

@@ -1,6 +1,8 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ChannelStore, { ChannelName, CreateOrUpdateChannelArgs } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserNames, CreateOrUpdateChannelArgs, CreateOrUpdateTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
+import { sortBy } from '@rebel/server/util/arrays'
+import { randomString } from '@rebel/server/util/random'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof, single } from '@rebel/server/_test/utils'
 
@@ -8,6 +10,11 @@ const ytChannelId1 = 'channelId1'
 const ytChannelId2 = 'channelId2'
 const channelId1 = 1
 const channelId2 = 2
+const extTwitchChannelId1 = 'tchannelId1'
+const extTwitchChannelId2 = 'tchannelId2'
+const extTwitchChannelId3 = 'tchannelId3'
+const twitchChannelId1 = 1
+const twitchChannelId2 = 2
 
 const channelInfo1: CreateOrUpdateChannelArgs = {
   time: new Date(2021, 1, 1),
@@ -42,6 +49,42 @@ const channelInfo4: CreateOrUpdateChannelArgs = {
   IsVerified: false
 }
 
+const baseTwitchChannelProps = {
+  colour: '#FF00FF',
+  isBroadcaster: false,
+  isMod: false,
+  isSubscriber: false,
+  isVip: false,
+  userType: ''
+}
+const twitchChannelInfo1: CreateOrUpdateTwitchChannelArgs = {
+  ...baseTwitchChannelProps,
+  time: new Date(2021, 1, 1),
+  userName: 'User_1_A',
+  displayName: 'User 1 A'
+}
+const twitchChannelInfo2: CreateOrUpdateTwitchChannelArgs = {
+  ...baseTwitchChannelProps,
+  time: new Date(2021, 1, 2),
+  userName: 'User_1_B',
+  displayName: 'User 1 B',
+  isVip: true
+}
+const twitchChannelInfo3: CreateOrUpdateTwitchChannelArgs = {
+  ...baseTwitchChannelProps,
+  time: new Date(2021, 1, 3),
+  userName: 'User_2_A',
+  displayName: 'User 2 A',
+  isSubscriber: true
+}
+const twitchChannelInfo4: CreateOrUpdateTwitchChannelArgs = {
+  ...baseTwitchChannelProps,
+  time: new Date(2021, 1, 4),
+  userName: 'User_2_B',
+  displayName: 'User 2 B',
+  isBroadcaster: true
+}
+
 export default () => {
   let channelStore: ChannelStore
   let db: Db
@@ -60,125 +103,178 @@ export default () => {
     beforeEach(async () => {
       await db.channel.create({ data: {
         youtubeId: ytChannelId1,
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} }
       }})
       await db.channel.create({ data: {
         youtubeId: ytChannelId2,
+        user: { create: {}},
         infoHistory: { createMany: { data: [channelInfo3]} } 
       }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { connect: { id: 1 }},
+        infoHistory: { createMany: { data: [twitchChannelInfo2, twitchChannelInfo1]} }
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { connect: { id: 2 }},
+        infoHistory: { createMany: { data: [twitchChannelInfo3]} } 
+      }})
     })
+    
+    // each of the following youtube tests is repeated for the twitch-equivalent test
+    // the data values are approximately mirrored, so we expect both version of the test
+    // to be extremely similar both in set up and expected outcome
 
-    test('creating new channel works', async () => {
-      const result = await channelStore.createOrUpdate('channel3', channelInfo1)
+    test('creating new youtube channel works', async () => {
+      const result = await channelStore.createOrUpdate('youtube', 'channel3', channelInfo1)
 
       expect(result.youtubeId).toBe('channel3')
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo1))
       await expectRowCount(db.channel, db.channelInfo).toEqual([nChannel + 1, nInfo + 1])
     })
 
-    test('updating existing channel works', async () => {
-      const result = await channelStore.createOrUpdate(ytChannelId2, channelInfo4)
+    test('creating new twitch channel works', async () => {
+      const result = await channelStore.createOrUpdate('twitch', 'channel3', twitchChannelInfo1)
+
+      expect(result.twitchId).toBe('channel3')
+      expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelInfo1))
+      await expectRowCount(db.twitchChannel, db.twitchChannelInfo).toEqual([nChannel + 1, nInfo + 1])
+    })
+
+    // ----
+
+    test('updating existing youtube channel works', async () => {
+      const result = await channelStore.createOrUpdate('youtube', ytChannelId2, channelInfo4)
       
       expect(result.youtubeId).toBe(ytChannelId2)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo4))
       await expectRowCount(db.channel, db.channelInfo).toEqual([nChannel, nInfo + 1])
     })
 
-    test('stale channel info skips db update', async () => {
+    test('updating existing twitch channel works', async () => {
+      const result = await channelStore.createOrUpdate('twitch', extTwitchChannelId2, twitchChannelInfo4)
+      
+      expect(result.twitchId).toBe(extTwitchChannelId2)
+      expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelInfo4))
+      await expectRowCount(db.twitchChannel, db.twitchChannelInfo).toEqual([nChannel, nInfo + 1])
+    })
+
+    // ----
+
+    test('stale youtube channel info skips db update', async () => {
       const modifiedInfo2 = {
         ...channelInfo2,
         time: new Date(2021, 1, 3)
       }
 
-      const result = await channelStore.createOrUpdate(ytChannelId1, modifiedInfo2)
+      const result = await channelStore.createOrUpdate('youtube', ytChannelId1, modifiedInfo2)
 
       expect(result.youtubeId).toBe(ytChannelId1)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo2))
       await expectRowCount(db.channel, db.channelInfo).toEqual([nChannel, nInfo])
     })
-  })
 
-  describe(nameof(ChannelStore, 'getCurrent'), () => {
-    test(`returns null if channel doesn't exist`, async () => {
-      await expect(channelStore.getCurrent(100)).resolves.toEqual(null)
-    })
+    test('stale twitch channel info skips db update', async () => {
+      const modifiedInfo2 = {
+        ...twitchChannelInfo2,
+        time: new Date(2021, 1, 3)
+      }
 
-    test('returns channel by id with latest info', async () => {
-      const stored = await db.channel.create({ data: {
-        youtubeId: ytChannelId1,
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
-      }})
+      const result = await channelStore.createOrUpdate('twitch', extTwitchChannelId1, modifiedInfo2)
 
-      const result = (await channelStore.getCurrent(stored.id))!
-
-      expect(result.id).toBe(stored.id)
-      expect(single(result.infoHistory).time).toEqual(channelInfo2.time)
-    })
-
-    test('returns channel by youtubeId with latest info', async () => {
-      await db.channel.create({ data: {
-        youtubeId: ytChannelId1,
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
-      }})
-
-      const result = (await channelStore.getCurrent(channelId1))!
-
-      expect(result.youtubeId).toBe(ytChannelId1)
-      expect(single(result.infoHistory).time).toEqual(channelInfo2.time)
+      expect(result.twitchId).toBe(extTwitchChannelId1)
+      expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelInfo2))
+      await expectRowCount(db.twitchChannel, db.twitchChannelInfo).toEqual([nChannel, nInfo])
     })
   })
 
-  describe(nameof(ChannelStore, 'getCurrentChannelNames'), () => {
-    test('returns most up-to-date name of each channel', async () => {
+  describe(nameof(ChannelStore, 'getCurrentUserNames'), () => {
+    test('returns most up-to-date name of each channel, for multiple users', async () => {
       await db.channel.create({ data: {
         youtubeId: ytChannelId1,
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} } 
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } } 
       }})
       await db.channel.create({ data: {
         youtubeId: ytChannelId2,
-        infoHistory: { createMany: { data: [channelInfo3]} } 
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo4] } } 
+      }})
+      // user 2 has 3 twitch channels
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { connect: { id: 2 }},
+        infoHistory: { createMany: { data: [twitchChannelInfo2, twitchChannelInfo3] } }
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { connect: { id: 2 }},
+        infoHistory: { createMany: { data: [twitchChannelInfo4] } }
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId3,
+        user: { connect: { id: 2 }},
+        infoHistory: { createMany: { data: [twitchChannelInfo1] } }
       }})
 
-      const result = await channelStore.getCurrentChannelNames()
+      const result = await channelStore.getCurrentUserNames()
 
-      const expected1: ChannelName = { id: channelId2, name: channelInfo3.name }
-      const expected2: ChannelName = { id: channelId1, name: channelInfo2.name }
-      expect(result).toEqual<ChannelName[]>([expected1, expected2])
+      const expected1: UserNames = { userId: 1, youtubeNames: [channelInfo3.name], twitchNames: [] }
+      const expected2: UserNames = { userId: 2, youtubeNames: [channelInfo4.name], twitchNames: [twitchChannelInfo3.displayName, twitchChannelInfo4.displayName, twitchChannelInfo1.displayName] }
+      expect(sortBy(result, 'userId')).toEqual<UserNames[]>([expected1, expected2])
     })
   })
 
-  describe(nameof(ChannelStore, 'getHistory'), () => {
-    test(`returns null if channel doesn't exist`, async () => {
-      await expect(channelStore.getHistory(100)).resolves.toEqual(null)
+  describe(nameof(ChannelStore, 'getUserId'), () => {
+    test('throws if channel with given not found', async () => {
+      await db.channel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})
+      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: 'test_twitch' }})
+
+      await expect(() => channelStore.getUserId('bad id')).rejects.toThrow()
     })
 
-    test('returns ordered list of channel history', async () => {
-      await db.channel.create({ data: {
-        youtubeId: ytChannelId1,
-        infoHistory: { createMany: { data: [channelInfo1, channelInfo2]} } 
-      }})
-      
-      const result = (await channelStore.getHistory(channelId1))!
+    test('returns correct id for youtube channel', async () => {
+      await db.channel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})
+      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: 'test_twitch' }})
 
-      expect(result.length).toBe(2)
+      const result = await channelStore.getUserId('test_youtube')
 
-      // ordered from newest to oldest
-      expect(result[0].time).toEqual(channelInfo2.time)
-      expect(result[1].time).toEqual(channelInfo1.time)
-    })
-  })
-
-  describe(nameof(ChannelStore, 'getId'), () => {
-    test('throws if channel with given youtubeId not found', async () => {
-      await expect(() => channelStore.getId('bad id')).rejects.toThrow()
+      expect(result).not.toBeNull()
     })
 
-    test('returns correct id', async () => {
-      await db.channel.create({ data: { youtubeId: 'test' }})
+    test('returns correct id for youtube channel', async () => {
+      await db.channel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})
+      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: 'test_twitch' }})
 
-      const result = await channelStore.getId('test')
+      const result = await channelStore.getUserId('test_twitch')
 
       expect(result).not.toBeNull()
     })
   })
+}
+
+/** Inserts ChannelInfos for separate channels, with the given channel names. It is assumed that all users exist. */
+function insertNames (db: Db, names: UserNames[]) {
+  for (const name of names) {
+    for (const yt of name.youtubeNames) {
+      db.channel.create({
+        data: {
+          youtubeId: randomString(4),
+          user: { connect: { id: name.userId }},
+          infoHistory: { create: { name: yt, time: new Date(), imageUrl: '', isModerator: false, isOwner: false, IsVerified: false }}
+        }
+      })
+    }
+    for (const tw of name.twitchNames) {
+      db.twitchChannel.create({
+        data: {
+          twitchId: randomString(4),
+          user: { connect: { id: name.userId }},
+          infoHistory: { create: { displayName: tw, time: new Date(), colour: '', isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false, userName: tw, userType: '' }}
+        }
+      })
+    }
+  }
 }

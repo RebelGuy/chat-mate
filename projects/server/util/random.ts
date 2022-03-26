@@ -27,3 +27,12 @@ export function pickRandom<T> (args: T[]): T {
 export function randomInt (from: number, to: number) {
   return Math.floor(Math.random() * (to - from)) + from
 }
+
+export function randomString (length: number) {
+  const options = 'abcdefghijklmnopqrstuvwxyz'
+  let result = ''
+  for (let i = 0; i < length; i++) {
+    result += options.at(randomInt(0, options.length))
+  }
+  return result
+}

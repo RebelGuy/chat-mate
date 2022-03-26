@@ -48,6 +48,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     const { builder, since } = args
 
     const diffs = await this.experienceService.getLevelDiffs(since + 1)
+    // todo: use the ChannelService to get the active channel by user, then either modify it to also return ChannelInfo/TwitchChannelInfo, or make another call elsewhere to achieve this
     const channelInfo = await Promise.all(diffs.map(d => this.channelStore.getCurrent(d.channelId))) as ChannelWithLatestInfo[]
     const levelInfo = await Promise.all(diffs.map(d => this.experienceService.getLevel(d.channelId)))
     const channels = zip(channelInfo, levelInfo)
