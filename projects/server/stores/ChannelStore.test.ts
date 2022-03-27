@@ -222,7 +222,7 @@ export default () => {
       const result = await channelStore.getCurrentUserNames()
 
       const expected1: UserNames = { userId: 1, youtubeNames: [channelInfo3.name], twitchNames: [] }
-      const expected2: UserNames = { userId: 2, youtubeNames: [channelInfo4.name], twitchNames: [twitchChannelInfo3.displayName, twitchChannelInfo4.displayName, twitchChannelInfo1.displayName] }
+      const expected2: UserNames = { userId: 2, youtubeNames: [channelInfo4.name], twitchNames: [twitchChannelInfo4.displayName, twitchChannelInfo3.displayName, twitchChannelInfo1.displayName] }
       expect(sortBy(result, 'userId')).toEqual<UserNames[]>([expected1, expected2])
     })
   })

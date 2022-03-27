@@ -70,7 +70,7 @@ export default class ChannelService extends ContextClass {
       userId: user.userId,
       youtubeNames: user.youtubeNames.filter(n => n.toLowerCase().includes(name)),
       twitchNames: user.twitchNames.filter(n => n.toLowerCase().includes(name))
-    }))
+    })).filter(user => user.youtubeNames.length > 0 || user.twitchNames.length > 0)
 
     return sortBy(matches, m => sum([...m.youtubeNames.map(n => n.length), ...m.twitchNames.map(n => n.length)]), 'asc')
   }

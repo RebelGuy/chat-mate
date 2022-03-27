@@ -270,7 +270,7 @@ export default () => {
 
       expect(result.length).toBe(3)
       expect(result[0]).toEqual(expect.objectContaining({ viewed: true, id: 1}))
-      expect(result[0]).toEqual(expect.objectContaining({ viewed: false, id: 2}))
+      expect(result[1]).toEqual(expect.objectContaining({ viewed: false, id: 2}))
       expect(result[2]).toEqual(expect.objectContaining({ viewed: true, id: 3}))
     })
   })

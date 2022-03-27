@@ -110,7 +110,7 @@ export default class ChannelStore extends ContextClass {
     return users.map(user => user.id)
   }
 
-  /** Returns the most current names of all channels of a user. */
+  /** Returns the most current names of all channels of a user (unordered). */
   public async getCurrentUserNames (): Promise<UserNames[]> {
     const currentChannelInfos = await this.db.channelInfo.findMany({
       distinct: ['channelId'],

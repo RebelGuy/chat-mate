@@ -203,10 +203,10 @@ export default () => {
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))!.text!.text
-      const saved2 = (await db.chatMessagePart.findFirst({ where: { order: 1 }, select: { cheer: true }}))!.cheer!
+      const saved2 = (await db.chatMessagePart.findFirst({ where: { order: 1 }, select: { cheer: true }}))!.cheer!.amount
       expect(saved1).toEqual(text1.text)
-      expect(saved2).toEqual({ id: 1, ...cheer1 })
-      await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCheer).toEqual([1, 3, 1, 1])
+      expect(saved2).toEqual(cheer1.amount)
+      await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCheer).toEqual([1, 2, 1, 1])
 
       // check author links
       const authors = await db.chatMessage.findFirst({ select: { userId: true, channelId: true, twitchChannelId: true }})

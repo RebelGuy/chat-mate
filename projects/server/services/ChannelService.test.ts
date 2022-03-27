@@ -13,6 +13,7 @@ let channelService: ChannelService
 
 beforeEach(() => {
   mockChannelStore = mock<ChannelStore>()
+  mockChatStore = mock<ChatStore>()
 
   channelService = new ChannelService(new Dependencies({
     channelStore: mockChannelStore,
@@ -104,12 +105,15 @@ describe(nameof(ChannelService, 'getUserByChannelName'), () => {
       { userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] },
       { userId: 2, youtubeNames: ['Rebel_Guy'], twitchNames: [] },
       { userId: 3, youtubeNames: ['Rebel_Guy2'], twitchNames: [] },
-      { userId: 4, youtubeNames: ['Test'], twitchNames: ['Rebel_Guy2'] }
+      { userId: 4, youtubeNames: ['Test'], twitchNames: ['Rebel_Guy420', 'Reb', 'Rebel_Guy10000'] }
     ]
     mockChannelStore.getCurrentUserNames.mockResolvedValue(names)
 
     const result = await channelService.getUserByChannelName('rebel')
 
-    expect(result).toEqual([names[2], names[1], names[3]])
+    expect(result.length).toBe(3)
+    expect(result[0]).toEqual<UserNames>({ userId: 2, youtubeNames: ['Rebel_Guy'], twitchNames: [] })
+    expect(result[1]).toEqual<UserNames>({ userId: 3, youtubeNames: ['Rebel_Guy2'], twitchNames: [] })
+    expect(result[2]).toEqual<UserNames>({ userId: 4, youtubeNames: [], twitchNames: ['Rebel_Guy420', 'Rebel_Guy10000'] })
   })
 })

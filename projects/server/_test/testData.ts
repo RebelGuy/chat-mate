@@ -74,7 +74,7 @@ export const author3: TwitchAuthor = {
   userName: 'some_twitch_userName',
   displayName: 'Twitch User',
   color: '#00000',
-  userId: '12345',
+  userId: twitchChannel3,
   userType: 'mod',
   isBroadcaster: false,
   isMod: true,

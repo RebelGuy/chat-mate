@@ -105,7 +105,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
     expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
     expect(passedUserId).toBe(youtubeChannel1.userId)
-    expect(passedChannelId).toBe(youtubeChannel1.id)
+    expect(passedChannelId).toBe(youtubeChannel1.youtubeId)
     expect(passedPlatform).toBe('youtube')
 
     const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
@@ -132,7 +132,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
     expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
     expect(passedUserId).toBe(twitchChannel1.userId)
-    expect(passedChannelId).toBe(twitchChannel1.id)
+    expect(passedChannelId).toBe(twitchChannel1.twitchId)
     expect(passedPlatform).toBe('twitch')
 
     const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)

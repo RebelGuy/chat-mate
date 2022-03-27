@@ -50,7 +50,7 @@
       "name": "Debug Tests",
       "request": "launch",
       "cwd": "${workspaceFolder}/projects/server",
-      "runtimeArgs": ["test", ""], // modify this to run only certain files, e.g. ["test", "LivestreamService"]
+      "runtimeArgs": ["test", "chatservice"], // modify this to run only certain files, e.g. ["test", "LivestreamService"]
       "runtimeExecutable": "yarn",
       "skipFiles": [
         "<node_internals>/**"
