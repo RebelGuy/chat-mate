@@ -10,7 +10,7 @@ import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLev
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { Singular } from '@rebel/server/types'
 import { sortByLength } from '@rebel/server/util/arrays'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 
 export type ChatPlatform = 'youtube' | 'twitch'
@@ -43,6 +43,7 @@ export type AuthorAttributes = {
 }
 
 export type PartialChatMessage = PartialTextChatMessage | PartialEmojiChatMessage | PartialCustomEmojiChatMessage | PartialCheerChatMessage
+export const PARTIAL_MESSAGE_TYPES: 'text' | 'emoji' | 'customEmoji' | 'cheer' = 'text'
 
 export type PartialTextChatMessage = {
   type: 'text',
@@ -251,11 +252,16 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
 }
 
 function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageParts']>): PublicMessagePart {
-  let type: 'text' | 'emoji' | 'customEmoji'
+  if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer') {
+    assertUnreachableCompile(PARTIAL_MESSAGE_TYPES)
+  }
+
+  let type: 'text' | 'emoji' | 'customEmoji' | 'cheer'
   let text: PublicMessageText | null = null
   let emoji: PublicMessageEmoji | null = null
   let customEmoji: PublicMessageCustomEmoji | null = null
-  if (part.text != null && part.emoji == null && part.customEmoji == null) {
+  let cheer: PublicMessageCheer | null = null
+  if (part.text != null && part.emoji == null && part.customEmoji == null && part.cheer == null) {
     type = 'text'
     text = {
       schema: 1,
@@ -263,7 +269,7 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
       isBold: part.text.isBold,
       isItalics: part.text.isItalics
     }
-  } else if (part.emoji != null && part.text == null && part.customEmoji == null) {
+  } else if (part.emoji != null && part.text == null && part.customEmoji == null && part.cheer == null) {
     type = 'emoji'
     emoji = {
       schema: 1,
@@ -277,7 +283,7 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
         width: part.emoji.imageWidth
       }
     }
-  } else if (part.emoji == null && part.text == null && part.customEmoji != null) {
+  } else if (part.emoji == null && part.text == null && part.customEmoji != null && part.cheer == null) {
     type = 'customEmoji'
     customEmoji = {
       schema: 2,
@@ -307,6 +313,8 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
         imageData: part.customEmoji.customEmoji.image.toString('base64')
       }
     }
+  } else if (part.emoji == null && part.text == null && part.customEmoji == null && part.cheer != null) {
+    type = 'cheer'
   } else {
     throw new Error('ChatMessagePart must have the text, emoji, or customEmoji component defined.')
   }
@@ -335,7 +343,7 @@ export function removeRangeFromText (part: PartialTextChatMessage, removeStart: 
   return [leading, removed, trailing]
 }
 
-export function getChannelId (chatItem: ChatItem) {
+export function getExternalId (chatItem: ChatItem) {
   if (chatItem.platform === 'youtube') {
     return chatItem.author.channelId
   } else if (chatItem.platform === 'twitch') {

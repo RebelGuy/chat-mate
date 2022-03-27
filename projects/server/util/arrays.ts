@@ -169,3 +169,7 @@ export function subGroupedSingle<T, G, S> (arr: T[], mainGrouper: (item: T) => G
   }
   return result
 }
+
+export function nonNull<T> (arr: (T | null)[]): T[] {
+  return arr.filter(value => value != null) as T[]
+}

@@ -13,7 +13,7 @@ export type ChatExperience =
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
   'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier' | 'repetitionPenalty'>
-  & { chatMessageYtId: string }
+  & { externalId: string }
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -69,7 +69,7 @@ export default class ExperienceStore extends ContextClass {
   public async addChatExperience (userId: number, timestamp: number, xp: number, data: ChatExperienceData) {
     // don't allow backfilling or duplicates
     const prev = await this.getPreviousChatExperience(userId)
-    if (prev && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.youtubeId === data.chatMessageYtId)) {
+    if (prev && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.youtubeId === data.externalId)) {
       return
     }
 
@@ -86,7 +86,7 @@ export default class ExperienceStore extends ContextClass {
           spamMultiplier: data.spamMultiplier,
           messageQualityMultiplier: data.messageQualityMultiplier,
           repetitionPenalty: data.repetitionPenalty,
-          chatMessage: { connect: { youtubeId: data.chatMessageYtId }}
+          chatMessage: { connect: { youtubeId: data.externalId }}
         }}
       },
       include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
@@ -137,15 +137,14 @@ export default class ExperienceStore extends ContextClass {
   }
 
   /** Returns the transactions in ascending order. */
-  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { user: { id: number }})[]> {
+  public async getAllTransactionsStartingAt (timestamp: number): Promise<ExperienceTransaction[]> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
       return []
     }
 
     const transactions = await this.db.experienceTransaction.findMany({
       where: { time: { gte: new Date(timestamp) }},
-      orderBy: { time: 'asc' },
-      include: { user: { select: { id: true }}}
+      orderBy: { time: 'asc' }
     })
 
     // update cache

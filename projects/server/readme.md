@@ -81,8 +81,9 @@ Key:
 - ⚪: Won't do
 
 **Services**
-- 🟢 ChannelService
+- 🟡 ChannelService
   - 🟢 getActiveUserChannel
+  - 🔴 getActiveUserChannels
   - 🟢 getUserByChannelName
   - 🟢 getUserById
 - 🟢 ChatService
@@ -109,11 +110,12 @@ Key:
 - ⚪ LogService
 
 **Stores**
-- 🟢 ChannelStore
+- 🟡 ChannelStore
   - 🟢 createOrUpdate
+  - 🔴 getCurrentUserIds
   - 🟢 getCurrentUserNames
   - 🟢 getUserId
-- 🟢 ChatStore
+- 🟡 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince
   - 🔴 getContinuationToken

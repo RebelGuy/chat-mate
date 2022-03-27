@@ -2,7 +2,8 @@ import { ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
-import { ChatItem } from '@rebel/server/models/chat'
+import { ChatItem, getExternalId } from '@rebel/server/models/chat'
+import ChannelService, { getUserName } from '@rebel/server/services/ChannelService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
@@ -21,15 +22,15 @@ export type Level = {
 
 export type LevelDiff = {
   timestamp: number // at what time the last level transition occurred
-  channelId: number
+  userId: number
   startLevel: Level
   endLevel: Level
 }
 
 export type RankedEntry = LevelData & {
   rank: number
-  channelId: number
-  channelName: string
+  userId: number
+  userName: string
 }
 
 type Deps = Dependencies<{
@@ -39,6 +40,7 @@ type Deps = Dependencies<{
   viewershipStore: ViewershipStore
   channelStore: ChannelStore
   chatStore: ChatStore
+  channelService: ChannelService
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -48,6 +50,7 @@ export default class ExperienceService extends ContextClass {
   private readonly viewershipStore: ViewershipStore
   private readonly channelStore: ChannelStore
   private readonly chatStore: ChatStore
+  private readonly channelService: ChannelService
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -59,6 +62,7 @@ export default class ExperienceService extends ContextClass {
     this.viewershipStore = deps.resolve('viewershipStore')
     this.channelStore = deps.resolve('channelStore')
     this.chatStore = deps.resolve('chatStore')
+    this.channelService = deps.resolve('channelService')
   }
 
   /** Adds experience only for chat messages sent during the live chat.
@@ -72,12 +76,13 @@ export default class ExperienceService extends ContextClass {
       return
     }
 
-    const channelId = await this.channelStore.getId(chatItem.author.channelId)
-    const viewershipStreakMultiplier = await this.getViewershipMultiplier(channelId)
-    const participationStreakMultiplier = await this.getParticipationMultiplier(channelId)
-    const spamMultiplier = await this.getSpamMultiplier(chatItem, channelId)
+    const externalId = getExternalId(chatItem)
+    const userId = await this.channelStore.getUserId(externalId)
+    const viewershipStreakMultiplier = await this.getViewershipMultiplier(userId)
+    const participationStreakMultiplier = await this.getParticipationMultiplier(userId)
+    const spamMultiplier = await this.getSpamMultiplier(chatItem, userId)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
-    const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), channelId)
+    const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), userId)
     const data: ChatExperienceData = {
       viewershipStreakMultiplier,
       participationStreakMultiplier,
@@ -85,7 +90,7 @@ export default class ExperienceService extends ContextClass {
       messageQualityMultiplier,
       repetitionPenalty,
       baseExperience: ExperienceService.CHAT_BASE_XP,
-      chatMessageYtId: chatItem.id
+      externalId: chatItem.id
     }
 
     // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
@@ -93,25 +98,25 @@ export default class ExperienceService extends ContextClass {
     // repetitive messages are anything but high quality, and thus receive a bigger punishment.
     const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
     const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
-    await this.experienceStore.addChatExperience(channelId, chatItem.timestamp, xpAmount, data)
+    await this.experienceStore.addChatExperience(userId, chatItem.timestamp, xpAmount, data)
   }
 
   /** Sorted in ascending order. */
   public async getLeaderboard (): Promise<RankedEntry[]> {
-    const allChannels = await this.channelStore.getCurrentChannelNames()
-    const allLevels = await Promise.all(allChannels.map(channel => this.getLevel(channel.id)))
-    const ordered = sortBy(zip(allChannels, allLevels), item => item.totalExperience, 'desc')
+    const userNames = await this.channelService.getActiveUserChannels()
+    const allLevels = await Promise.all(userNames.map(user => this.getLevel(user.channel.userId)))
+    const ordered = sortBy(zip(userNames, allLevels), item => item.totalExperience, 'desc')
     return ordered.map((item, i) => ({
       rank: i + 1,
-      channelId: item.id,
-      channelName: item.name,
+      userId: item.channel.userId,
+      userName: getUserName(item),
       level: item.level,
       levelProgress: item.levelProgress
     }))
   }
 
-  public async getLevel (channelId: number): Promise<Level> {
-    const totalExperience = await this.getTotalExperience(channelId)
+  public async getLevel (userId: number): Promise<Level> {
+    const totalExperience = await this.getTotalExperience(userId)
     const level = this.experienceHelpers.calculateLevel(totalExperience)
     return {
       totalExperience,
@@ -127,23 +132,23 @@ export default class ExperienceService extends ContextClass {
       return []
     }
 
-    const channelTxs: Map<number, ExperienceTransaction[]> = new Map()
+    const userTxs: Map<number, ExperienceTransaction[]> = new Map()
     for (const tx of transactions) {
-      const channelId = tx.channel.id
-      if (!channelTxs.has(channelId)) {
-        channelTxs.set(channelId, [])
+      const userId = tx.userId
+      if (!userTxs.has(userId)) {
+        userTxs.set(userId, [])
       }
 
-      channelTxs.get(channelId)!.push(tx)
+      userTxs.get(userId)!.push(tx)
     }
 
     const diffs: LevelDiff[] = []
-    for (const [channelId, txs] of channelTxs) {
+    for (const [userId, txs] of userTxs) {
       if (txs.length === 0) {
         continue
       }
 
-      const endXp = await this.getTotalExperience(channelId)
+      const endXp = await this.getTotalExperience(userId)
       const totalDelta = sum(txs.map(tx => tx.delta))
       if (endXp <= 0 || totalDelta <= 0 || endXp - totalDelta < 0) {
         // these are unusual edge cases that we get only when playing around with negative xp, especially at low levels, e.g. for spammers
@@ -170,7 +175,7 @@ export default class ExperienceService extends ContextClass {
       }
 
       diffs.push({
-        channelId: channelId,
+        userId: userId,
         timestamp: transitionTime!,
         startLevel: { ...startLevel, totalExperience: startXp },
         endLevel: { ...endLevel, totalExperience: endXp }
@@ -180,8 +185,8 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
-  public async modifyExperience (channelId: number, levelDelta: number, message: string | null): Promise<Level> {
-    const currentExperience = await this.getTotalExperience(channelId)
+  public async modifyExperience (userId: number, levelDelta: number, message: string | null): Promise<Level> {
+    const currentExperience = await this.getTotalExperience(userId)
     const currentLevel = this.experienceHelpers.calculateLevel(currentExperience)
     const currentLevelFrac = currentLevel.level + currentLevel.levelProgress
     const newLevelFrac = Math.max(0, currentLevelFrac + levelDelta)
@@ -194,24 +199,24 @@ export default class ExperienceService extends ContextClass {
     } 
     const requiredExperience = Math.round(this.experienceHelpers.calculateExperience(newLevelData))
     const experienceDelta = requiredExperience - currentExperience
-    await this.experienceStore.addManualExperience(channelId, experienceDelta, message)
+    await this.experienceStore.addManualExperience(userId, experienceDelta, message)
 
-    const updatedLevel = await this.getLevel(channelId)
+    const updatedLevel = await this.getLevel(userId)
     return updatedLevel
   }
 
-  private async getTotalExperience (channelId: number): Promise<GreaterThanOrEqual<0>> {
-    const snapshot = await this.experienceStore.getSnapshot(channelId)
+  private async getTotalExperience (userId: number): Promise<GreaterThanOrEqual<0>> {
+    const snapshot = await this.experienceStore.getSnapshot(userId)
     const baseExperience = snapshot?.experience ?? 0
 
     const startingTime = snapshot?.time.getTime() ?? 0
-    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(channelId, startingTime)
+    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(userId, startingTime)
     const total = baseExperience + totalDelta
     return total >= 0 ? total as GreaterThanOrEqual<0> : 0
   }
 
-  private async getViewershipMultiplier (channelId: number): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamViewership(channelId)
+  private async getViewershipMultiplier (userId: number): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamViewership(userId)
 
     const viewershipScore = calculateWalkingScore(
       streams,
@@ -225,8 +230,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateViewershipMultiplier(viewershipScore)
   }
 
-  private async getParticipationMultiplier (channelId: number): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamParticipation(channelId)
+  private async getParticipationMultiplier (userId: number): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamParticipation(userId)
 
     const participationScore = calculateWalkingScore(
       streams,
@@ -240,8 +245,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
 
-  private async getSpamMultiplier (chatItem: ChatItem, channelId: number): Promise<SpamMult> {
-    const prev = await this.experienceStore.getPreviousChatExperience(channelId)
+  private async getSpamMultiplier (chatItem: ChatItem, userId: number): Promise<SpamMult> {
+    const prev = await this.experienceStore.getPreviousChatExperience(userId)
     if (prev == null || prev.livestream.id !== this.livestreamStore.currentLivestream.id) {
       // always start with a multiplier of 1 at the start of the livestream
       return 1 as SpamMult
@@ -258,8 +263,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateQualityMultiplier(messageQuality)
   }
 
-  private async getMessageRepetitionPenalty (currentTimestamp: number, channelId: number): Promise<RepetitionPenalty> {
+  private async getMessageRepetitionPenalty (currentTimestamp: number, userId: number): Promise<RepetitionPenalty> {
     const chat = await this.chatStore.getChatSince(currentTimestamp - 60000)
-    return this.experienceHelpers.calculateRepetitionPenalty(currentTimestamp, chat.filter(c => c.channelId === channelId))
+    return this.experienceHelpers.calculateRepetitionPenalty(currentTimestamp, chat.filter(c => c.userId === userId))
   }
 }

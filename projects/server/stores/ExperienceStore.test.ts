@@ -11,9 +11,9 @@ import { addTime } from '@rebel/server/util/datetime'
 import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
 
 export default () => {
-  const chatExperienceData1 = deleteProps(data.chatExperienceData1, 'chatMessageYtId')
-  const chatExperienceData2 = deleteProps(data.chatExperienceData2, 'chatMessageYtId')
-  const chatExperienceData3 = deleteProps(data.chatExperienceData3, 'chatMessageYtId')
+  const chatExperienceData1 = deleteProps(data.chatExperienceData1, 'externalId')
+  const chatExperienceData2 = deleteProps(data.chatExperienceData2, 'externalId')
+  const chatExperienceData3 = deleteProps(data.chatExperienceData3, 'externalId')
   const user1 = 1
   const user2 = 2
   const user3 = 3
@@ -57,7 +57,7 @@ export default () => {
 
   describe(nameof(ExperienceStore, 'addChatExperience'), () => {
     test('adds transaction with correct chat experience data', async () => {
-      const data1 = { ...chatExperienceData1, chatMessageYtId: chatMessage1.youtubeId }
+      const data1 = { ...chatExperienceData1, externalId: chatMessage1.youtubeId }
 
       await experienceStore.addChatExperience(user1, data.time1.getTime(), 10, data1)
 
@@ -67,7 +67,7 @@ export default () => {
         livestream: true
       }}))!
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      delete (data1 as any).chatMessageYtId // hehe <:
+      delete (data1 as any).externalId // hehe <:
       expect(added.delta).toBe(10)
       expect(added.time).toEqual(data.time1)
       expect(added.userId).toBe(user1)
@@ -88,8 +88,8 @@ export default () => {
         }}
       }})
 
-      await experienceStore.addChatExperience(user1, chatMessage1.time.getTime(), 20, { ...data.chatExperienceData1, chatMessageYtId: chatMessage1.youtubeId })
-      await experienceStore.addChatExperience(user1, chatMessage2.time.getTime(), 30, { ...data.chatExperienceData2, chatMessageYtId: chatMessage2.youtubeId })
+      await experienceStore.addChatExperience(user1, chatMessage1.time.getTime(), 20, { ...data.chatExperienceData1, externalId: chatMessage1.youtubeId })
+      await experienceStore.addChatExperience(user1, chatMessage2.time.getTime(), 30, { ...data.chatExperienceData2, externalId: chatMessage2.youtubeId })
 
       const dbRecords = await db.experienceTransaction.count({ where: { user: { id: user1 }}})
       expect(dbRecords).toBe(1)

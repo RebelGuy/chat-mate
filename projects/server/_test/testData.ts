@@ -108,7 +108,7 @@ export const chatItem1: ChatItem = {
 
 export const chatExperienceData1: ChatExperienceData = {
   baseExperience: 1000,
-  chatMessageYtId: 'chat id 1',
+  externalId: 'chat id 1',
   participationStreakMultiplier: 1.2,
   viewershipStreakMultiplier: 1.5,
   spamMultiplier: 0.99995,
@@ -117,7 +117,7 @@ export const chatExperienceData1: ChatExperienceData = {
 }
 export const chatExperienceData2: ChatExperienceData = {
   baseExperience: 1000,
-  chatMessageYtId: 'chat id 2',
+  externalId: 'chat id 2',
   participationStreakMultiplier: 1.5,
   viewershipStreakMultiplier: 1.2,
   spamMultiplier: 0.1,
@@ -126,7 +126,7 @@ export const chatExperienceData2: ChatExperienceData = {
 }
 export const chatExperienceData3: ChatExperienceData = {
   baseExperience: 1000,
-  chatMessageYtId: 'chat id 3',
+  externalId: 'chat id 3',
   participationStreakMultiplier: 1.01,
   viewershipStreakMultiplier: 1,
   spamMultiplier: 1,

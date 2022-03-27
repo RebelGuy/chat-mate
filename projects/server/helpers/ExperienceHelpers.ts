@@ -1,8 +1,8 @@
 import ContextClass from '@rebel/server/context/ContextClass'
-import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations, PartialCustomEmojiChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations, PartialCustomEmojiChatMessage, PARTIAL_MESSAGE_TYPES } from '@rebel/server/models/chat'
 import { tally, unique } from '@rebel/server/util/arrays'
 import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/server/util/math'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
@@ -60,17 +60,23 @@ export default class ExperienceHelpers extends ContextClass {
   }
 
   private chatItemToString (item: ChatItemWithRelations) {
-    return item.chatMessageParts.map(p => {
-      if (p.emoji != null && p.text == null && p.customEmoji == null) {
-        return p.emoji.name
-      } else if (p.emoji == null && p.text != null && p.customEmoji == null) {
-        return p.text.text
-      } else if (p.emoji == null && p.text == null && p.customEmoji != null) {
-        return p.customEmoji.customEmoji.symbol
-      } else {
-        throw new Error('ChatMessagePart must have either an emoji, custom emoji, or text attached to it')
-      }
-    }).join('')
+    if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer') {
+      assertUnreachableCompile(PARTIAL_MESSAGE_TYPES)
+    }
+
+    // ignore cheer parts, they can't be converted to text
+    return item.chatMessageParts.filter(p => !(p.emoji == null && p.text == null && p.customEmoji == null && p.cheer != null))
+      .map(p => {
+        if (p.emoji != null && p.text == null && p.customEmoji == null && p.cheer == null) {
+          return p.emoji.name
+        } else if (p.emoji == null && p.text != null && p.customEmoji == null && p.cheer == null) {
+          return p.text.text
+        } else if (p.emoji == null && p.text == null && p.customEmoji != null && p.cheer == null) {
+          return p.customEmoji.customEmoji.symbol
+        } else {
+          throw new Error('ChatMessagePart must have either an emoji, custom emoji, or text attached to it')
+        }
+      }).join('')
   }
 
   // Returns 0 <= x < 1 for low-quality messages, and 1 < x <= 2 for high quality messages. 1 is "normal" quality.

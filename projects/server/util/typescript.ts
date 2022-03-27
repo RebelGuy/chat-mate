@@ -70,5 +70,5 @@ export function assertUnreachable (x: never): never {
   throw new Error('This should not happen')
 }
 
-/** Used as a type-guard during compile-time, but has no effect on runtime code. */
+/** Used as a type-guard during compile-time to check completeness of implementations, but has no effect on runtime code. */
 export function assertUnreachableCompile (x: never): any { return }

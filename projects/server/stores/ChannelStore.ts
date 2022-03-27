@@ -103,6 +103,12 @@ export default class ChannelStore extends ContextClass {
 
     return channel!
   }
+  
+  /** Returns all user ids. */
+  public async getCurrentUserIds (): Promise<number[]> {
+    const users = await this.db.chatUser.findMany()
+    return users.map(user => user.id)
+  }
 
   /** Returns the most current names of all channels of a user. */
   public async getCurrentUserNames (): Promise<UserNames[]> {

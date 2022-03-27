@@ -46,6 +46,10 @@ export type Nullify<T> = {
   [P in keyof T]: T[P] | null
 }
 
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P] extends Array<infer A> ? DeepPartial<A>[] : T[P]
+}
+
 export type ObjectComparator<T> = {
   [key in keyof T]: ValueComparator<T[key]>
 }

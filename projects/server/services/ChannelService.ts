@@ -2,9 +2,9 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { sortBy } from '@rebel/server/util/arrays'
+import { nonNull, sortBy } from '@rebel/server/util/arrays'
 import { min, sum } from '@rebel/server/util/math'
-import { assertUnreachableCompile } from '@rebel/server/util/typescript'
+import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
 
 /** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
 export const LIVESTREAM_PARTICIPATION_TYPES = 'chatParticipation' as const
@@ -50,6 +50,13 @@ export default class ChannelService extends ContextClass {
     }
   }
 
+  /** Returns all active user channels. */
+  public async getActiveUserChannels (): Promise<UserChannel[]> {
+    const allIds = await this.channelStore.getCurrentUserIds()
+    const userChannels = await Promise.all(allIds.map(id => this.getActiveUserChannel(id)))
+    return nonNull(userChannels)
+  }
+
   /** Returns channels matching the given name, sorted in ascending order of channel name length (i.e. best sequential match is first). */
   public async getUserByChannelName (name: string): Promise<UserNames[]> {
     if (name == null || name.length === 0) {
@@ -71,5 +78,15 @@ export default class ChannelService extends ContextClass {
   public async getUserById (userId: number): Promise<UserNames | null> {
     const channelNames = await this.channelStore.getCurrentUserNames()
     return channelNames.find(userName => userName.userId === userId) ?? null
+  }
+}
+
+export function getUserName (userChannel: UserChannel) {
+  if (userChannel.platform === 'youtube') {
+    return userChannel.channel.infoHistory[0].name
+  } else if (userChannel.platform === 'twitch') {
+    return userChannel.channel.infoHistory[0].displayName
+  } else {
+    assertUnreachable(userChannel)
   }
 }

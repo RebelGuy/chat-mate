@@ -130,10 +130,13 @@ describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
     return {
       id: 1,
       time: new Date(timestamp),
+      userId: 1,
       youtubeId: 'chat id',
       livestreamId: 1,
       channelId: 1,
-      channel: { id: 1, youtubeId: 'id', infoHistory: [] },
+      twitchChannelId: null,
+      twitchChannel: null,
+      channel: { userId: 1, id: 1, youtubeId: 'id', infoHistory: [] },
       chatMessageParts: [{
         id: 1,
         chatMessageId: 1,
@@ -148,7 +151,9 @@ describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
           text: msg
         },
         customEmojiId: null,
-        customEmoji: null
+        customEmoji: null,
+        cheerId: null,
+        cheer: null
       }]
     }
   }
