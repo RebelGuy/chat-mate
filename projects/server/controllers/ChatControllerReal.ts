@@ -27,11 +27,11 @@ export default class ChatControllerReal implements IChatController {
     let { builder, limit, since } = args
     since = since ?? 0
     const items = await this.chatStore.getChatSince(since, limit)
-    const levelData = await this.getLevelData(items.map(c => c.channel.id))
+    const levelData = await this.getLevelData(items.map(c => c.userId))
     
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
-      const level = levelData.get(chat.channel.id)!
+      const level = levelData.get(chat.userId)!
       chatItems.push(chatAndLevelToPublicChatItem(chat, level))
     }
 
@@ -41,8 +41,8 @@ export default class ChatControllerReal implements IChatController {
     })
   }
 
-  private async getLevelData (channelIds: number[]): Promise<Map<number, LevelData>> {
-    const uniqueIds = unique(channelIds)
+  private async getLevelData (userIds: number[]): Promise<Map<number, LevelData>> {
+    const uniqueIds = unique(userIds)
 
     // since this is only a fetch request, we can run everything in parallel safely
     const promises = uniqueIds.map(id => this.experienceService.getLevel(id))

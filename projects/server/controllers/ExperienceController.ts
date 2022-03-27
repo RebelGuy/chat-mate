@@ -1,19 +1,19 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
-import { userAndLevelToPublicUser } from '@rebel/server/models/user'
+import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import { GET, Path, POST, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<2, {
-  rankedUsers: PublicRankedUser[]
+  rankedUsers: Tagged<1, PublicRankedUser>[]
 }>
 
 type GetRankResponse = ApiResponse<2, {
   relevantIndex: number
-  rankedUsers: PublicRankedUser[]
+  rankedUsers: Tagged<1, PublicRankedUser>[]
 }>
 
 type ModifyExperienceRequest = ApiRequest<1, {
@@ -24,7 +24,7 @@ type ModifyExperienceRequest = ApiRequest<1, {
 }>
 
 type ModifyExperienceResponse = ApiResponse<1, {
-  updatedUser: PublicUser
+  updatedUser: Tagged<1, PublicUser>
 }>
 
 type Deps = ControllerDependencies<{
@@ -67,13 +67,13 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      let channel = await this.channelService.getChannelById(id)
-      if (channel == null) {
-        return builder.failure(404, `Could not find a channel matching id '${id}'`)
+      let user = await this.channelService.getActiveUserChannel(id)
+      if (user == null) {
+        return builder.failure(404, `Could not find a user matching id '${id}'`)
       }
 
       const leaderboard = await this.experienceService.getLeaderboard()
-      const match = leaderboard.find(l => l.channelName === channel!.name)!
+      const match = leaderboard.find(l => l.userId === id)!
 
       // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
       const rankPadding = 3
@@ -107,13 +107,13 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      const channel = await this.channelService.getChannelById(request.userId)
-      if (channel == null) {
-        return builder.failure(404, 'Cannot find channel.')
+      const user = await this.channelService.getActiveUserChannel(request.userId)
+      if (user == null) {
+        return builder.failure(404, 'Cannot find user.')
       }
 
       const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
-      const publicUser = userAndLevelToPublicUser({ ...channel, ...level })
+      const publicUser = userChannelAndLevelToPublicUser({ ...user, ...level })
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {
       return builder.failure(e)

@@ -4,21 +4,22 @@ import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/Publ
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import StatusService from '@rebel/server/services/StatusService'
-import ChannelStore, { ChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { ChannelWithLatestInfo, UserChannel } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLivestreamLink } from '@rebel/server/util/text'
-import { zip } from '@rebel/server/util/arrays'
-import { channelInfoAndLevelToPublicUser } from '@rebel/server/models/user'
+import { nonNull, zip } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController } from '@rebel/server/controllers/ChatMateController'
+import ChannelService from '@rebel/server/services/ChannelService'
+import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
   viewershipStore: ViewershipStore
   statusService: StatusService
   experienceService: ExperienceService
-  channelStore: ChannelStore
+  channelService: ChannelService
 }>
 
 export default class ChatMateControllerReal implements IChatMateController {
@@ -26,14 +27,14 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly viewershipStore: ViewershipStore
   readonly statusService: StatusService
   readonly experienceService: ExperienceService
-  readonly channelStore: ChannelStore
+  readonly channelService: ChannelService
 
   constructor (deps: ChatMateControllerDeps) {
     this.livestreamStore = deps.resolve('livestreamStore')
     this.viewershipStore = deps.resolve('viewershipStore')
     this.statusService = deps.resolve('statusService')
     this.experienceService = deps.resolve('experienceService')
-    this.channelStore = deps.resolve('channelStore')
+    this.channelService = deps.resolve('channelService')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -48,15 +49,15 @@ export default class ChatMateControllerReal implements IChatMateController {
     const { builder, since } = args
 
     const diffs = await this.experienceService.getLevelDiffs(since + 1)
-    // todo: use the ChannelService to get the active channel by user, then either modify it to also return ChannelInfo/TwitchChannelInfo, or make another call elsewhere to achieve this
-    const channelInfo = await Promise.all(diffs.map(d => this.channelStore.getCurrent(d.channelId))) as ChannelWithLatestInfo[]
-    const levelInfo = await Promise.all(diffs.map(d => this.experienceService.getLevel(d.channelId)))
-    const channels = zip(channelInfo, levelInfo)
+
+    const userChannels = nonNull(await Promise.all(diffs.map(d => this.channelService.getActiveUserChannel(d.userId))))
+    const levelInfo = await Promise.all(diffs.map(d => this.experienceService.getLevel(d.userId)))
+    const channels = zip(userChannels, levelInfo)
 
     let events: PublicChatMateEvent[] = []
     for (let i = 0; i < diffs.length; i++) {
       const diff = diffs[i]
-      const user: PublicUser = channelInfoAndLevelToPublicUser(channels[i])
+      const user: PublicUser = userChannelAndLevelToPublicUser(channels[i])
 
       events.push({
         schema: 1,

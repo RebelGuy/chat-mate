@@ -52,6 +52,9 @@ export type ResponseData<T extends ResponseData<T>> = {
 /** Public objects must be tagged by a concrete schema, and can consist of only primitives or other public objects, or arrays thereof. */
 export type PublicObject<Schema extends number, T extends { schema: Schema } & ResponseData<T>> = ResponseData<T>
 
+/** Helper type for cascading-up public object schema changes. */
+export type Tagged<Schema extends number, T extends {schema: Schema} & PublicObject<Schema, any>> = T
+
 /** Extracts the `data` component from an `ApiResponse` object. */
 export type ExtractedData<T extends ApiResponse<any, any>> = Extract<T, { success: true }>['data']
 

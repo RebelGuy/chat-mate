@@ -1,15 +1,17 @@
 import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
-import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 
-export type PublicUser = PublicObject<1, {
+export type PublicUserNames = PublicObject<1, {
   schema: 1
 
   /** The internal id of the user. */
   id: number
 
-  /** Current information about the user. */
-  userInfo: Tagged<1, PublicChannelInfo>
+  /** All or some of the current YouTube channel names that this user owns. */
+  youtubeChannelNames: string[]
+
+  /** All or some of the current Twitch channel names that this user owns. */
+  twitchChannelNames: string[]
 
   /** Current level of the user. */
   levelInfo: Tagged<1, PublicLevelInfo>

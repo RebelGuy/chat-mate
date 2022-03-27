@@ -1,16 +1,16 @@
-import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest } from '@rebel/server/controllers/ControllerBase'
+import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { customEmojiToPublicObject, publicObjectToCustomEmoji, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import { Path, GET, POST, PATCH } from 'typescript-rest'
 
-export type GetCustomEmojisResponse = ApiResponse<1, { emojis: PublicCustomEmoji[] }>
+export type GetCustomEmojisResponse = ApiResponse<1, { emojis: Tagged<1, PublicCustomEmoji>[] }>
 
-export type AddCustomEmojiRequest = ApiRequest<1, { schema: 1, newEmoji: PublicCustomEmojiNew }>
-export type AddCustomEmojiResponse = ApiResponse<1, { newEmoji: PublicCustomEmoji }>
+export type AddCustomEmojiRequest = ApiRequest<1, { schema: 1, newEmoji: Tagged<1, PublicCustomEmojiNew> }>
+export type AddCustomEmojiResponse = ApiResponse<1, { newEmoji: Tagged<1, PublicCustomEmoji> }>
 
-export type UpdateCustomEmojiRequest = ApiRequest<1, { schema: 1, updatedEmoji: PublicCustomEmoji }>
-export type UpdateCustomEmojiResponse = ApiResponse<1, { updatedEmoji: PublicCustomEmoji }>
+export type UpdateCustomEmojiRequest = ApiRequest<1, { schema: 1, updatedEmoji: Tagged<1, PublicCustomEmoji> }>
+export type UpdateCustomEmojiResponse = ApiResponse<1, { updatedEmoji: Tagged<1, PublicCustomEmoji> }>
 
 type Deps = ControllerDependencies<{
   customEmojiStore: CustomEmojiStore

@@ -1,4 +1,4 @@
-import { ApiResponse, buildPath, ControllerBase, Endpoint } from '@rebel/server/controllers/ControllerBase'
+import { ApiResponse, buildPath, ControllerBase, Endpoint, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
@@ -8,14 +8,14 @@ import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/co
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 
 type GetStatusResponse = ApiResponse<1, {
-  livestreamStatus: PublicLivestreamStatus
-  apiStatus: PublicApiStatus
+  livestreamStatus: Tagged<1, PublicLivestreamStatus>
+  apiStatus: Tagged<1, PublicApiStatus>
 }>
 
 type GetEventsResponse = ApiResponse<2, {
   // include the timestamp so it can easily be used for the next request
   reusableTimestamp: number
-  events: PublicChatMateEvent[]
+  events: Tagged<1, PublicChatMateEvent>[]
 }>
 
 // eslint-disable-next-line @typescript-eslint/ban-types

@@ -7,10 +7,10 @@ export function rankedEntryToPublic (rankedEntry: RankedEntry): PublicRankedUser
     rank: rankedEntry.rank,
     user: {
       schema: 1,
-      id: rankedEntry.channelId,
+      id: rankedEntry.userId,
       userInfo: {
         schema: 1,
-        channelName: rankedEntry.channelName
+        channelName: rankedEntry.userName
       },
       levelInfo: {
         schema: 1,

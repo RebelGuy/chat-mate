@@ -1,4 +1,3 @@
-
 import { Dependencies } from '@rebel/server/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'

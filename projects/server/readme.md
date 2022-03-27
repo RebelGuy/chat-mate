@@ -179,7 +179,7 @@ A response contains the following properties:
 
 Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
 
-All non-primitive properties of `data` are of type `PublicObject`, which are reusable, schema-tagged objects which themselves contain either primitive types or other `PublicObject`s. The schema definitions for these can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times.
+All non-primitive properties of `data` are of type `PublicObject`, which are reusable, schema-tagged objects which themselves contain either primitive types or other `PublicObject`s. The schema definitions for these can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times. The schema of an object should be bumped whenever a property of this object, or one of its children changes. That is, schema changes should cascade upwards until reaching the controller levels.
 
 Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
 
@@ -187,7 +187,7 @@ Any data in the request body should also have a schema. This is always in sync w
 Path: `/chat`.
 
 ### `GET`
-*Current schema: 5.*
+*Current schema: 6.*
 
 Retrieves the latest chat items.
 
@@ -197,7 +197,7 @@ Query parameters:
 
 Returns data with the following properties:
 - `reusableTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `chat` (`PublicChatItem[]`): The chat data that satisfy the request filter.
+- `chat` (`PublicChatItem[]`): The chat data that satisfy the request filter, sorted in ascending order by time.
 
 ## ChatMate Endpoints
 Path: `/chatMate`.
@@ -282,7 +282,7 @@ Returns data with the following properties:
 Gets the rank of a specific user, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
 Query parameters:
-- `name` (`string`): *Required.* The name of the user's channel for which the rank is to be returned (case insensitive). The matched channel is the channel whose name had the maximum overlap with the given string.
+- `id` (`number`): *Required.* The id of the user for which the rank is to be returned.
 
 Returns data with the following properties:
 - `relevantIndex` (`number`): The index of the entry in `entries` that belongs to the matched channel. Never negative.
@@ -313,7 +313,7 @@ Can return the following errors:
 Path: `/user`.
 
 ### `POST /search`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Search for a specific user.
 
@@ -321,7 +321,7 @@ Request data (body):
 - `searchTerm` (`string`): *Required.* The string to search in user's channel names.
 
 Returns data with the following properties:
-- `results` (`PublicUser[]`): An array containing the matches. If no match was found, the array is empty. Matches are sorted in ascending order according to the match quality.
+- `results` (`PublicUserNames[]`): An array containing the users with matching channel names. If no match was found, the array is empty. Users are sorted in ascending order according to the match quality, with the first user having the best match.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.

@@ -1,6 +1,7 @@
 import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, Channel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
+import { PublicMessageCheer } from '@rebel/server/controllers/public/chat/PublicMessageCheer'
 import { PublicMessageCustomEmoji } from '@rebel/server/controllers/public/chat/PublicMessageCustomEmoji'
 import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/PublicMessageEmoji'
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
@@ -8,12 +9,16 @@ import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicM
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
+import { getUserName } from '@rebel/server/services/ChannelService'
+import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { Singular } from '@rebel/server/types'
 import { sortByLength } from '@rebel/server/util/arrays'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 
 export type ChatPlatform = 'youtube' | 'twitch'
+
+export const PLATFORM_TYPES: ChatPlatform = 'youtube'
 
 export type ChatItem = {
   id: string,
@@ -224,10 +229,28 @@ export function getEmojiLabel (emoji: YTEmoji): string {
 export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData): PublicChatItem {
   const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
-  const channelInfo = chat.channel.infoHistory[0]
+  if (PLATFORM_TYPES !== 'youtube' && PLATFORM_TYPES !== 'twitch') {
+    assertUnreachableCompile(PLATFORM_TYPES)
+  }
+
+  let userChannel: UserChannel
+  if (chat.channel != null) {
+    userChannel = {
+      platform: 'youtube',
+      channel: chat.channel
+    }
+  } else if (chat.twitchChannel != null) {
+    userChannel = {
+      platform: 'twitch',
+      channel: chat.twitchChannel
+    }
+  } else {
+    throw new Error(`Cannot determine platform of chat item ${chat.id} because both the channel and twitchChannel are null`)
+  }
+
   const userInfo: PublicChannelInfo = {
     schema: 1,
-    channelName: channelInfo.name
+    channelName: getUserName(userChannel)
   }
 
   const levelInfo: PublicLevelInfo = {
@@ -237,13 +260,14 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   }
 
   const newItem: PublicChatItem = {
-    schema: 1,
+    schema: 2,
     id: chat.id,
     timestamp: chat.time.getTime(),
+    platform: userChannel.platform,
     messageParts,
     author: {
       schema: 1,
-      id: chat.channel.id,
+      id: chat.userId,
       userInfo,
       levelInfo
     }
@@ -315,16 +339,24 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
     }
   } else if (part.emoji == null && part.text == null && part.customEmoji == null && part.cheer != null) {
     type = 'cheer'
+    cheer = {
+      schema: 1,
+      amount: part.cheer.amount,
+      colour: part.cheer.colour,
+      imageUrl: part.cheer.imageUrl,
+      name: part.cheer.name
+    }
   } else {
     throw new Error('ChatMessagePart must have the text, emoji, or customEmoji component defined.')
   }
 
   const publicPart: PublicMessagePart = {
-    schema: 2,
+    schema: 3,
     type,
     textData: text,
     emojiData: emoji,
-    customEmojiData: customEmoji
+    customEmojiData: customEmoji,
+    cheerData: cheer
   }
   return publicPart
 }

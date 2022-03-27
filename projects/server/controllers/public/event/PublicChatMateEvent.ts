@@ -1,4 +1,4 @@
-import { PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicLevelUpData } from '@rebel/server/controllers/public/event/PublicLevelUpData'
 
 export type PublicChatMateEvent = PublicObject<1, {
@@ -11,5 +11,5 @@ export type PublicChatMateEvent = PublicObject<1, {
   timestamp: number
 
   /** Data related to the current event type. */
-  data: PublicLevelUpData
+  data: Tagged<1, PublicLevelUpData>
 }>

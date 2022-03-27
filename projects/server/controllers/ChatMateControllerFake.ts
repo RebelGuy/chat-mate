@@ -5,18 +5,18 @@ import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/
 import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/server/util/random'
 import { addTime } from '@rebel/server/util/datetime'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
-import { userAndLevelToPublicUser } from '@rebel/server/models/user'
+import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import { Level } from '@rebel/server/services/ExperienceService'
 import { asGte, asLt } from '@rebel/server/util/math'
+import ChannelService from '@rebel/server/services/ChannelService'
 
 export default class ChatMateControllerFake implements IChatMateController {
-  private channelStore: ChannelStore
+  private channelService: ChannelService
 
   constructor (deps: ChatMateControllerDeps) {
-    this.channelStore = deps.resolve('channelStore')
+    this.channelService = deps.resolve('channelService')
   }
 
   public getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -44,7 +44,7 @@ export default class ChatMateControllerFake implements IChatMateController {
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
-    const channels = await this.channelStore.getCurrentChannelNames()
+    const users = await this.channelService.getActiveUserChannels()
 
     let events: PublicChatMateEvent[] = []
     const N = Math.sqrt(Math.random() * 100) - 5
@@ -55,7 +55,7 @@ export default class ChatMateControllerFake implements IChatMateController {
         levelProgress: asLt(asGte(Math.random(), 0), 1),
         totalExperience: asGte(randomInt(0, 100000), 0)
       }
-      const user: PublicUser = userAndLevelToPublicUser({ ...pickRandom(channels), ...level })
+      const user: PublicUser = userChannelAndLevelToPublicUser({ ...pickRandom(users), ...level })
 
       events.push({
         schema: 1,
