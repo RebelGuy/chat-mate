@@ -8,7 +8,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { NoNulls } from '@rebel/server/types'
 
 export type ChatExperience =
-  NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'channel' | 'experienceDataChatMessage' | 'livestream'>>
+  NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'user' | 'experienceDataChatMessage' | 'livestream'>>
   & { experienceDataChatMessage: { chatMessage: ChatMessage} }
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
@@ -24,11 +24,13 @@ export default class ExperienceStore extends ContextClass {
   private readonly db: Db
   private readonly livestreamStore: LivestreamStore
 
-  // key is channelId
-  // value is null if we know there is no data for a particular channel
+  // key is userId
+  // value is null if we know there is no data for a particular user
   private readonly previousChatExperienceMap: Map<number, ChatExperience | null>
 
-  // the timestamp cache of the last experience transaction, if known
+  private ADMIN_USER_ID!: number
+
+  // the timestamp cache of the last experience transaction for any user, if known
   private lastTransactionTime: number | null
 
   constructor (deps: Deps) {
@@ -39,24 +41,34 @@ export default class ExperienceStore extends ContextClass {
     this.lastTransactionTime = null
   }
 
+  public override async initialise (): Promise<void> {
+    const adminUser = await this.db.channel.findUnique({
+      where: { youtubeId: ADMIN_YOUTUBE_ID },
+      rejectOnNotFound: true,
+      select: { userId: true }
+    })
+
+    this.ADMIN_USER_ID = adminUser.userId
+  }
+
   // returns the previous chat experience, may not be for the current livestream
-  public async getPreviousChatExperience (channelId: number): Promise<ChatExperience | null> {
-    if (this.previousChatExperienceMap.has(channelId)) {
-      return this.previousChatExperienceMap.get(channelId)!
+  public async getPreviousChatExperience (userId: number): Promise<ChatExperience | null> {
+    if (this.previousChatExperienceMap.has(userId)) {
+      return this.previousChatExperienceMap.get(userId)!
     }
 
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
-      where: { channel: { id: channelId }, experienceDataChatMessage: { isNot: null }},
+      where: { user: { id: userId }, experienceDataChatMessage: { isNot: null }},
       orderBy: { time: 'desc' },
-      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, channel: true }
+      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
     })
 
-    return this.cacheChatExperience(channelId, experienceTransaction)
+    return this.cacheChatExperience(userId, experienceTransaction)
   }
 
-  public async addChatExperience (channelId: number, timestamp: number, xp: number, data: ChatExperienceData) {
+  public async addChatExperience (userId: number, timestamp: number, xp: number, data: ChatExperienceData) {
     // don't allow backfilling or duplicates
-    const prev = await this.getPreviousChatExperience(channelId)
+    const prev = await this.getPreviousChatExperience(userId)
     if (prev && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.youtubeId === data.chatMessageYtId)) {
       return
     }
@@ -64,7 +76,7 @@ export default class ExperienceStore extends ContextClass {
     const experienceTransaction = await this.db.experienceTransaction.create({
       data: {
         time: new Date(timestamp),
-        channel: { connect: { id: channelId }},
+        user: { connect: { id: userId }},
         livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
         delta: xp,
         experienceDataChatMessage: { create: {
@@ -77,20 +89,20 @@ export default class ExperienceStore extends ContextClass {
           chatMessage: { connect: { youtubeId: data.chatMessageYtId }}
         }}
       },
-      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, channel: true }
+      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
     })
 
-    this.cacheChatExperience(channelId, experienceTransaction)
+    this.cacheChatExperience(userId, experienceTransaction)
   }
 
-  public async addManualExperience (channelId: number, xp: number, message: string | null) {
+  public async addManualExperience (userId: number, xp: number, message: string | null) {
     const experienceTransaction = await this.db.experienceTransaction.create({ data: {
       time: new Date(),
-      channel: { connect: { id: channelId }},
+      user: { connect: { id: userId }},
       livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
       delta: xp,
       experienceDataAdmin: { create: {
-        adminChannel: { connect: { youtubeId: ADMIN_YOUTUBE_ID }},
+        adminUser: { connect: { id: this.ADMIN_USER_ID }},
         message
       }}
     }})
@@ -98,24 +110,24 @@ export default class ExperienceStore extends ContextClass {
     this.updateLastTransactionTime(experienceTransaction.time.getTime())
   }
 
-  /** Returns the experience for the channel's snapshot, if it exists.
+  /** Returns the experience for the user's snapshot, if it exists.
    * Note that snapshots are updated by running the RefreshSnapshots.ts script. */
-  public getSnapshot (channelId: number): Promise<ExperienceSnapshot | null> {
+  public getSnapshot (userId: number): Promise<ExperienceSnapshot | null> {
     return this.db.experienceSnapshot.findFirst({
-      where: { channel: { id: channelId }},
+      where: { user: { id: userId }},
       orderBy: { time: 'desc' }
     })
   }
 
-  /** Returns the sum of all of the channel's experience deltas between now and the given timestamp. */
-  public async getTotalDeltaStartingAt (channelId: number, timestamp: number): Promise<number> {
+  /** Returns the sum of all of the user's experience deltas between now and the given timestamp. */
+  public async getTotalDeltaStartingAt (userId: number, timestamp: number): Promise<number> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
       return 0
     }
 
     const result = await this.db.experienceTransaction.aggregate({
       where: {
-        channel: { id: channelId },
+        user: { id: userId },
         time: { gte: new Date(timestamp) }
       },
       _sum: { delta: true }
@@ -125,7 +137,7 @@ export default class ExperienceStore extends ContextClass {
   }
 
   /** Returns the transactions in ascending order. */
-  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { channel: { id: number }})[]> {
+  public async getAllTransactionsStartingAt (timestamp: number): Promise<(ExperienceTransaction & { user: { id: number }})[]> {
     if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
       return []
     }
@@ -133,7 +145,7 @@ export default class ExperienceStore extends ContextClass {
     const transactions = await this.db.experienceTransaction.findMany({
       where: { time: { gte: new Date(timestamp) }},
       orderBy: { time: 'asc' },
-      include: { channel: { select: { id: true }}}
+      include: { user: { select: { id: true }}}
     })
 
     // update cache
@@ -145,7 +157,7 @@ export default class ExperienceStore extends ContextClass {
     return transactions
   }
 
-  private cacheChatExperience (channelId: number, experienceTransaction: (Omit<ChatExperience, 'experienceDataChatMessage'> & { experienceDataChatMessage: (ExperienceDataChatMessage & { chatMessage: ChatMessage }) | null }) | null)
+  private cacheChatExperience (userId: number, experienceTransaction: (Omit<ChatExperience, 'experienceDataChatMessage'> & { experienceDataChatMessage: (ExperienceDataChatMessage & { chatMessage: ChatMessage }) | null }) | null)
     : ChatExperience | null {
     let result: ChatExperience | null
     if (experienceTransaction) {
@@ -160,7 +172,7 @@ export default class ExperienceStore extends ContextClass {
       result = null
     }
 
-    this.previousChatExperienceMap.set(channelId, result)
+    this.previousChatExperienceMap.set(userId, result)
     return result
   }
 

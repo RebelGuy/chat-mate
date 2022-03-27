@@ -10,12 +10,12 @@ const main = async () => {
   console.log(`Successfully deleted ${deleted.count} entries.`)
 
   const result = await DB.experienceTransaction.groupBy({
-    by: ['channelId'],
+    by: ['userId'],
     _sum: { delta: true }
   })
-  console.log(`Successfully retrieved experience data for ${result.length} channels.`)
+  console.log(`Successfully retrieved experience data for ${result.length} users.`)
 
-  await Promise.all(result.map(r => createSnapshot(r.channelId, r._sum.delta ?? 0)))
+  await Promise.all(result.map(r => createSnapshot(r.userId, r._sum.delta ?? 0)))
   console.log(`Successfully created new snapshots.`)
 
   const totalTransaction = (await DB.experienceTransaction.aggregate({ _sum: { delta: true }}))._sum.delta
@@ -27,9 +27,9 @@ const main = async () => {
   }
 }
 
-async function createSnapshot (channelId: number, experience: number) {
+async function createSnapshot (userId: number, experience: number) {
   await DB.experienceSnapshot.create({data: {
-    channelId,
+    userId,
     experience,
     time: new Date()
   }})
