@@ -99,6 +99,9 @@ Key:
   - 🟢 modifyExperience
 - 🟢 LivestreamService
   - 🟢 initialise
+- 🟢 MasterchatProxyService
+  - 🟢 fetch
+  - 🟢 fetchMetadata
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onMasterchatRequest
@@ -131,9 +134,6 @@ Key:
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
   - 🟢 setTimes
-- 🟢 MasterchatProxyService
-  - 🟢 fetch
-  - 🟢 fetchMetadata
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation

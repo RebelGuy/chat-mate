@@ -95,6 +95,8 @@ export const twitchChannelInfo3: Omit<TwitchChannelInfo, 'id' | 'channelId'> = {
   userType: author3.userType!
 }
 
+export const twitchChannel4 = 'twitchChannel4'
+
 /** By youtube channel1 at time1 with empty message */
 export const chatItem1: ChatItem = {
   id: 'chat_id1',

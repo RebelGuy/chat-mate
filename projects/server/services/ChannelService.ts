@@ -4,6 +4,10 @@ import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/Chann
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { sortBy } from '@rebel/server/util/arrays'
 import { min, sum } from '@rebel/server/util/math'
+import { assertUnreachableCompile } from '@rebel/server/util/typescript'
+
+/** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
+export const LIVESTREAM_PARTICIPATION_TYPES = 'chatParticipation' as const
 
 type Deps = Dependencies<{
   chatStore: ChatStore
@@ -23,6 +27,10 @@ export default class ChannelService extends ContextClass {
   /** Gets the user's channel with the most recent activity. Given that users rarely use multiple accounts at once,
    * this is probably the most relevant channel we want to associate with the user at the current time. */
   public async getActiveUserChannel (userId: number): Promise<UserChannel | null> {
+    if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
+      assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
+    }
+
     const chat = await this.chatStore.getLastChatByUser(userId)
 
     if (chat == null) {

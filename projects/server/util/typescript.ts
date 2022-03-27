@@ -1,6 +1,6 @@
 import { ObjectComparator, ValueComparator } from '@rebel/server/types'
 
-export function assert(condition: any, msg: string): asserts condition {
+export function assert (condition: any, msg: string): asserts condition {
   if (!condition) {
     throw new Error(msg)
   }
@@ -43,7 +43,7 @@ export function comparePrimitives<T> (a: T, b: T, ...ignoreKeys: (keyof T)[]): b
   return true
 }
 
-export function compare<T>(a: T, b: T, comparator: ObjectComparator<T>) {
+export function compare<T> (a: T, b: T, comparator: ObjectComparator<T>) {
   const allKeys = Object.keys(comparator) as (keyof T)[]
 
   for (const key of allKeys) {
@@ -69,3 +69,6 @@ export function compare<T>(a: T, b: T, comparator: ObjectComparator<T>) {
 export function assertUnreachable (x: never): never {
   throw new Error('This should not happen')
 }
+
+/** Used as a type-guard during compile-time, but has no effect on runtime code. */
+export function assertUnreachableCompile (x: never): any { return }
