@@ -62,7 +62,7 @@ export default class ChatService extends ContextClass {
         }
         externalId = item.author.channelId
         platform = 'youtube'
-        channel = await this.channelStore.createOrUpdate(externalId, channelInfo)
+        channel = await this.channelStore.createOrUpdate('youtube', externalId, channelInfo)
 
       } else if (item.platform === 'twitch') {
         const channelInfo: CreateOrUpdateTwitchChannelArgs = {
@@ -78,7 +78,7 @@ export default class ChatService extends ContextClass {
         }
         externalId = item.author.userId
         platform = 'twitch'
-        channel = await this.channelStore.createOrUpdateTwitch(externalId, channelInfo)
+        channel = await this.channelStore.createOrUpdate('twitch', externalId, channelInfo)
 
       } else {
         assertUnreachable(item)

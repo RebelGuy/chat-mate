@@ -1,4 +1,4 @@
-import { ChatMessagePart, CustomEmoji } from '@prisma/client'
+import { CustomEmoji } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
@@ -26,13 +26,13 @@ export default class EmojiService extends ContextClass {
   }
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
-  public async applyCustomEmojis (part: PartialChatMessage, channelId: number): Promise<PartialChatMessage[]> {
+  public async applyCustomEmojis (part: PartialChatMessage, userId: number): Promise<PartialChatMessage[]> {
     if (part.type === 'customEmoji') {
       // this should never happen
       throw new Error('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
     }
 
-    const eligibleEmojis = await this.getEligibleEmojis(channelId)
+    const eligibleEmojis = await this.getEligibleEmojis(userId)
     const searchTerms = eligibleEmojis.map(e => `:${e.symbol}:`)
 
     if (part.type === 'emoji') {
@@ -51,6 +51,8 @@ export default class EmojiService extends ContextClass {
           emoji: part
         }]
       }
+    } else if (part.type === 'cheer') {
+      return [part]
     }
 
     const searchResults = this.findMatches(part.text, searchTerms)
@@ -85,8 +87,8 @@ export default class EmojiService extends ContextClass {
     return result
   }
 
-  private async getEligibleEmojis (channelId: number): Promise<CustomEmoji[]> {
-    const levelPromise = this.experienceService.getLevel(channelId)
+  private async getEligibleEmojis (userId: number): Promise<CustomEmoji[]> {
+    const levelPromise = this.experienceService.getLevel(userId)
     const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
     const level = await levelPromise
 

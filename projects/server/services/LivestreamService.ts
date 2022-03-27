@@ -76,7 +76,7 @@ export default class LivestreamService extends ContextClass {
       }
 
       if (metadata.liveStatus === 'live' && metadata.viewerCount != null) {
-        await this.viewershipStore.addLiveViewCount(metadata.viewerCount)
+        await this.viewershipStore.addLiveViewCount(metadata.viewerCount, 0)
       }
     } catch (e: any) {
       this.logService.logError(this, 'Encountered error while syncing metadata.', e)

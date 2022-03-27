@@ -54,14 +54,14 @@ export default class MockMasterchat implements IMasterchat {
     }
 
     const item: ChatItemWithRelations = generateFakeChatItem(customMessage)
-    const channelInfo = item.channel.infoHistory[0]!
+    const channelInfo = item.channel!.infoHistory[0]!
     const action: MakeRequired<AddChatItemAction> = {
       type: 'addChatItemAction',
       id: item.youtubeId,
       timestamp: item.time,
       timestampUsec: `${item.time.getTime() * 1000}`,
       authorName: channelInfo.name,
-      authorChannelId: item.channel.youtubeId,
+      authorChannelId: item.channel!.youtubeId,
       authorPhoto: channelInfo.imageUrl,
       membership: undefined,
       isOwner: channelInfo.isOwner,
@@ -122,9 +122,13 @@ function generateFakeChatItem (text: string): ChatItemWithRelations {
     time: new Date(),
     id: 1,
     livestreamId: 1,
+    userId: 1,
+    twitchChannel: null,
+    twitchChannelId: null,
     channelId: 1,
     channel: {
       id: 1,
+      userId: 1,
       youtubeId: randomString(10),
       infoHistory: [{
         IsVerified: randomBoolean(),
@@ -151,7 +155,9 @@ function generateFakeChatItem (text: string): ChatItemWithRelations {
         text
       },
       customEmojiId: null,
-      customEmoji: null
+      customEmoji: null,
+      cheerId: null,
+      cheer: null
     }]
   }
 }

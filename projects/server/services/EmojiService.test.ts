@@ -5,10 +5,10 @@ import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import { nameof, single } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Entity } from '@rebel/server/models/entities'
-import { PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import { asGte, asLte } from '@rebel/server/util/math'
 
-const channelId = 1
+const userId = 1
 const customEmoji1: Entity.CustomEmoji = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 1, image: Buffer.from('') }
 const customEmoji2: Entity.CustomEmoji = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 2, image: Buffer.from('') }
 const customEmoji3: Entity.CustomEmoji = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 3, image: Buffer.from('') }
@@ -40,9 +40,24 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       name: 'TestEmoji'
     }
 
-    const result = await emojiService.applyCustomEmojis(emojiPart, channelId)
+    const result = await emojiService.applyCustomEmojis(emojiPart, userId)
 
     expect(single(result)).toBe(emojiPart)
+  })
+
+  test('cheer part is passed through', async () => {
+    setupLevel(100)
+    const cheerPart: PartialCheerChatMessage = {
+      type: 'cheer',
+      amount: 100,
+      colour: '#00FF00',
+      imageUrl: 'test.com',
+      name: 'cheer name'
+    }
+
+    const result = await emojiService.applyCustomEmojis(cheerPart, userId)
+
+    expect(single(result)).toBe(cheerPart)
   })
 
   test('matching emoji part is detected', async () => {
@@ -55,7 +70,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       name: 'TestEmoji'
     }
 
-    const result = await emojiService.applyCustomEmojis(emojiPart, channelId)
+    const result = await emojiService.applyCustomEmojis(emojiPart, userId)
 
     expect(single(result)).toEqual<PartialCustomEmojiChatMessage>({
       type: 'customEmoji',
@@ -74,7 +89,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, channelId)
+    const result = await emojiService.applyCustomEmojis(part, userId)
 
     expect(single(result)).toEqual(expectedCustomEmojiPart(customEmoji1, part))
   })
@@ -88,7 +103,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, channelId)
+    const result = await emojiService.applyCustomEmojis(part, userId)
 
     expect(result.length).toBe(5)
     expect(result[0]).toEqual(expectedTextPart('abc ', part))
@@ -107,7 +122,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, channelId)
+    const result = await emojiService.applyCustomEmojis(part, userId)
 
     expect(single(result)).toEqual(expectedTextPart(part.text, part))
   })
@@ -121,7 +136,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, channelId)
+    const result = await emojiService.applyCustomEmojis(part, userId)
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expectedCustomEmojiPart(customEmoji1, part))
@@ -137,7 +152,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, channelId)
+    const result = await emojiService.applyCustomEmojis(part, userId)
 
     const expectedResult = expectedCustomEmojiPart(customEmoji1, part)
     expectedResult.text = part
@@ -146,7 +161,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 })
 
 function setupLevel (level: number) {
-  mockExperienceService.getLevel.calledWith(channelId).mockResolvedValue({ level: asGte(level, 0), levelProgress: asLte(0, 1), totalExperience: 0 })
+  mockExperienceService.getLevel.calledWith(userId).mockResolvedValue({ level: asGte(level, 0), levelProgress: asLte(0, 1), totalExperience: 0 })
 }
 
 function expectedCustomEmojiPart (customEmoji: Entity.CustomEmoji, originalText: PartialTextChatMessage): PartialCustomEmojiChatMessage {

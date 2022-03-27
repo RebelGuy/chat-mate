@@ -3,13 +3,16 @@ import { ChatItem, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, Parti
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
-import ChannelStore, { ChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { ChannelWithLatestInfo, CreateOrUpdateChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { nameof, promised, single } from '@rebel/server/_test/utils'
-import { mock, MockProxy } from 'jest-mock-extended'
+import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import EmojiService from '@rebel/server/services/EmojiService'
+
+// jest is having trouble mocking the correct overload method, so we have to force it into the correct type
+type CreateOrUpdateYoutube = CalledWithMock<Promise<ChannelWithLatestInfo>, ['youtube', string, CreateOrUpdateChannelArgs]>
 
 const textPart: PartialTextChatMessage = {
   type: 'text',
@@ -89,8 +92,9 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const chatItemWithCustomEmoji = {
       ...chatItem1,
       messageParts: [textPart, customEmojiPart, emojiPart]
-    }
-    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(youtubeChannel1)
+    }; // required semicolon for some reason lol
+
+    (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.calledWith(textPart, youtubeChannel1.userId).mockResolvedValue([textPart, customEmojiPart])
     mockEmojiService.applyCustomEmojis.calledWith(emojiPart, youtubeChannel1.userId).mockResolvedValue([emojiPart])
 
@@ -117,7 +121,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
       ...chatItem2,
       messageParts: [textPart, customEmojiPart, emojiPart]
     }
-    mockChannelStore.createOrUpdateTwitch.calledWith(data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
+    mockChannelStore.createOrUpdate.calledWith('twitch', data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
     mockEmojiService.applyCustomEmojis.calledWith(textPart, twitchChannel1.userId).mockResolvedValue([textPart, customEmojiPart])
     mockEmojiService.applyCustomEmojis.calledWith(emojiPart, twitchChannel1.userId).mockResolvedValue([emojiPart])
 
@@ -140,7 +144,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
   })
 
   test('returns false if unable to add chat item, and does not attempt to call services', async () => {
-    mockChannelStore.createOrUpdate.calledWith(data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(youtubeChannel1)
+    (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.channel1, expect.objectContaining(data.channelInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
     mockChatStore.addChat.mockRejectedValue(new Error('Test'))
 

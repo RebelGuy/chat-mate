@@ -132,7 +132,8 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const receivedCount = single(mockViewershipStore.addLiveViewCount.mock.calls)[0]
-    expect(receivedCount).toBe(metadata.viewerCount)
+    const [receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    expect(receivedYoutubeCount).toBe(metadata.viewerCount)
+    expect(receivedTwitchCount).toBe(0)
   })
 })
