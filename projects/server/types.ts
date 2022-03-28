@@ -47,7 +47,11 @@ export type Nullify<T> = {
 }
 
 export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P] extends Array<infer A> ? DeepPartial<A>[] : T[P]
+  [P in keyof T]?:
+    T[P] extends (...args: any[]) => any ? T[P] :
+    T[P] extends object ? DeepPartial<T[P]> :
+    T[P] extends Array<infer A> ? DeepPartial<A>[] :
+    T[P]
 }
 
 export declare type MakeOptional<T extends object, Keys extends keyof T> = {

@@ -7,9 +7,10 @@ import env from '@rebel/server/globals'
 import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 
-type GetStatusResponse = ApiResponse<1, {
+type GetStatusResponse = ApiResponse<2, {
   livestreamStatus: Tagged<1, PublicLivestreamStatus>
-  apiStatus: Tagged<1, PublicApiStatus>
+  youtubeApiStatus: Tagged<1, PublicApiStatus>
+  twitchApiStatus: Tagged<1, PublicApiStatus>
 }>
 
 type GetEventsResponse = ApiResponse<2, {
@@ -19,7 +20,7 @@ type GetEventsResponse = ApiResponse<2, {
 }>
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type GetStatusEndpoint = Endpoint<1, {}, GetStatusResponse>
+export type GetStatusEndpoint = Endpoint<2, {}, GetStatusResponse>
 
 export type GetEventsEndpoint = Endpoint<2, { since: number }, GetEventsResponse>
 
@@ -41,7 +42,7 @@ export default class ChatMateController extends ControllerBase {
   @GET
   @Path('status')
   public async getStatus (): Promise<GetStatusResponse> {
-    const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status', 1)
+    const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status', 2)
     try {
       return await this.implementation.getStatus({ builder })
     } catch (e: any) {

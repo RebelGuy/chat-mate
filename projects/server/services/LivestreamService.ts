@@ -3,20 +3,24 @@ import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import { IMasterchat } from '@rebel/server/interfaces'
+import { IMasterchat, ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
+import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import { ApiClient } from '@twurple/api/lib'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
-  masterchatProxyService: MasterchatProxyService,
-  logService: LogService,
-  timerHelpers: TimerHelpers,
-  viewershipStore: ViewershipStore,
+  masterchatProxyService: MasterchatProxyService
+  twurpleApiProxyService: TwurpleApiProxyService
+  logService: LogService
+  timerHelpers: TimerHelpers
+  viewershipStore: ViewershipStore
   disableExternalApis: boolean
 }>
 
@@ -25,6 +29,7 @@ export default class LivestreamService extends ContextClass {
 
   private readonly livestreamStore: LivestreamStore
   private readonly masterchat: IMasterchat
+  private readonly twurple: ITwurpleApi
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
   private readonly viewershipStore: ViewershipStore
@@ -34,6 +39,7 @@ export default class LivestreamService extends ContextClass {
     super()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.masterchat = deps.resolve('masterchatProxyService')
+    this.twurple = deps.resolve('twurpleApiProxyService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')
@@ -53,30 +59,43 @@ export default class LivestreamService extends ContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  private async fetchMetadata (): Promise<Metadata | null> {
+  private async fetchYoutubeMetadata (): Promise<Metadata | null> {
     try {
       return await this.masterchat.fetchMetadata()
     } catch (e: any) {
-      this.logService.logWarning(this, 'Encountered error while fetching metadata.', e.message)
+      this.logService.logWarning(this, 'Encountered error while fetching youtube metadata.', e.message)
+      return null
+    }
+  }
+
+  private async fetchTwitchMetadata (): Promise<TwitchMetadata | null> {
+    try {
+      return await this.twurple.fetchMetadata()
+    } catch (e: any) {
+      this.logService.logWarning(this, 'Encountered error while fetching twitch metadata.', e.message)
       return null
     }
   }
 
   private async updateLivestreamMetadata () {
-    const metadata = await this.fetchMetadata()
-    if (metadata == null) {
+    // deliberately require that youtube metadata is always called successfully, as it
+    // is used as the source of truth for the stream status
+    const youtubeMetadata = await this.fetchYoutubeMetadata()
+    if (youtubeMetadata == null) {
       return
     }
 
+    const twitchMetadata = await this.fetchTwitchMetadata()
+
     try {
-      const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, metadata)
+      const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, youtubeMetadata)
 
       if (updatedTimes) {
         await this.livestreamStore.setTimes(updatedTimes)
       }
 
-      if (metadata.liveStatus === 'live' && metadata.viewerCount != null) {
-        await this.viewershipStore.addLiveViewCount(metadata.viewerCount, 0)
+      if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {
+        await this.viewershipStore.addLiveViewCount(youtubeMetadata.viewerCount, twitchMetadata?.viewerCount ?? 0)
       }
     } catch (e: any) {
       this.logService.logError(this, 'Encountered error while syncing metadata.', e)

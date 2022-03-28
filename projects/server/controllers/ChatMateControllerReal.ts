@@ -17,7 +17,8 @@ import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
   viewershipStore: ViewershipStore
-  statusService: StatusService
+  masterchatStatusService: StatusService
+  twurpleStatusService: StatusService
   experienceService: ExperienceService
   channelService: ChannelService
 }>
@@ -25,14 +26,16 @@ export type ChatMateControllerDeps = ControllerDependencies<{
 export default class ChatMateControllerReal implements IChatMateController {
   readonly livestreamStore: LivestreamStore
   readonly viewershipStore: ViewershipStore
-  readonly statusService: StatusService
+  readonly masterchatStatusService: StatusService
+  readonly twurpleStatusService: StatusService
   readonly experienceService: ExperienceService
   readonly channelService: ChannelService
 
   constructor (deps: ChatMateControllerDeps) {
     this.livestreamStore = deps.resolve('livestreamStore')
     this.viewershipStore = deps.resolve('viewershipStore')
-    this.statusService = deps.resolve('statusService')
+    this.masterchatStatusService = deps.resolve('masterchatStatusService')
+    this.twurpleStatusService = deps.resolve('twurpleStatusService')
     this.experienceService = deps.resolve('experienceService')
     this.channelService = deps.resolve('channelService')
   }
@@ -40,9 +43,10 @@ export default class ChatMateControllerReal implements IChatMateController {
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
     const { builder } = args
     const livestreamStatus = await this.getLivestreamStatus()
-    const apiStatus = this.statusService.getApiStatus()
+    const youtubeApiStatus = this.masterchatStatusService.getApiStatus()
+    const twitchApiStatus = this.twurpleStatusService.getApiStatus()
 
-    return builder.success({ livestreamStatus, apiStatus })
+    return builder.success({ livestreamStatus, youtubeApiStatus, twitchApiStatus })
   }
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {

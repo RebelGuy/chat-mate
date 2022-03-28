@@ -32,14 +32,20 @@ export default class ChatMateControllerFake implements IChatMateController {
       status
     }
 
-    const apiStatus: PublicApiStatus = {
+    const youtubeApiStatus: PublicApiStatus = {
+      schema: 1,
+      avgRoundtrip: 100,
+      lastOk: new Date().getTime(),
+      status: chooseWeightedRandom(['ok', 10], ['error', 1])
+    }
+    const twitchApiStatus: PublicApiStatus = {
       schema: 1,
       avgRoundtrip: 100,
       lastOk: new Date().getTime(),
       status: chooseWeightedRandom(['ok', 10], ['error', 1])
     }
     
-    return new Promise(r => r(builder.success({ livestreamStatus, apiStatus })))
+    return new Promise(r => r(builder.success({ livestreamStatus, youtubeApiStatus, twitchApiStatus })))
   }
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {

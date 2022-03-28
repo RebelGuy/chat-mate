@@ -105,7 +105,7 @@ Key:
   - 🟢 fetchMetadata
 - 🟢 StatusService
   - 🟢 getApiStatus
-  - 🟢 onMasterchatRequest
+  - 🟢 onRequestDone
 - 🟢 TwurpleAuthProvider
   - 🟢 initialise
 - 🟢 TwurpleService
@@ -209,13 +209,14 @@ Returns data with the following properties:
 Path: `/chatMate`.
 
 ### `GET /status`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Gets the latest status information.
 
 Returns data with the following properties:
 - `livestreamStatus` (`PublicLivestreamStatus`): Status information relating to the current livestream.
-- `apiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
+- `youtubeApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
+- `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
 *Current schema: 2.*

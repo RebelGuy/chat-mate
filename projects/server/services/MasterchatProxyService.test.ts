@@ -24,7 +24,7 @@ beforeEach(() => {
 
   masterchatProxyService = new MasterchatProxyService(new Dependencies({
     logService: mockLogService,
-    statusService: mockStatusService,
+    masterchatStatusService: mockStatusService,
     masterchatProvider: mockMasterchatProvider
   }))
 })
@@ -91,6 +91,6 @@ function verifyServicesUsed (expectError: boolean) {
   const loggedError = mockLogService.logApiResponse.mock.calls[0][2]
   expect(loggedError).toBe(expectError)
 
-  const reportedStatus = mockStatusService.onMasterchatRequest.mock.calls[0][1]
+  const reportedStatus = mockStatusService.onRequestDone.mock.calls[0][1]
   expect(reportedStatus).toBe(expectError ? 'error' : 'ok')
 }

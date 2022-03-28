@@ -7,37 +7,37 @@ import { avg } from '@rebel/server/util/math'
 type Deps = Dependencies<GenericObject>
 
 export default class StatusService extends ContextClass {
-  private masterchatResponseTimes: number[]
-  private lastMasterchatOk: number | null
-  private lastMasterchatStatus: 'ok' | 'error' | null
+  private responseTimes: number[]
+  private lastOk: number | null
+  private lastStatus: 'ok' | 'error' | null
 
   constructor (deps: Deps) {
     super()
-    this.masterchatResponseTimes = []
-    this.lastMasterchatOk = null
-    this.lastMasterchatStatus = null
+    this.responseTimes = []
+    this.lastOk = null
+    this.lastStatus = null
   }
 
   public getApiStatus (): PublicApiStatus {
     return {
       schema: 1,
-      status: this.lastMasterchatStatus,
-      lastOk: this.lastMasterchatOk,
-      avgRoundtrip: avg(...this.masterchatResponseTimes)
+      status: this.lastStatus,
+      lastOk: this.lastOk,
+      avgRoundtrip: avg(...this.responseTimes)
     }
   }
 
-  public onMasterchatRequest (timestamp: number, status: 'ok' | 'error', responseTime: number) {
+  public onRequestDone (timestamp: number, status: 'ok' | 'error', responseTime: number) {
     if (status === 'ok') {
-      this.lastMasterchatOk = timestamp
+      this.lastOk = timestamp
     }
 
-    this.lastMasterchatStatus = status
+    this.lastStatus = status
 
-    const N = this.masterchatResponseTimes.length
+    const N = this.responseTimes.length
     if (N >= 10) {
-      this.masterchatResponseTimes.splice(0, N - 9)
+      this.responseTimes.splice(0, N - 9)
     }
-    this.masterchatResponseTimes.push(responseTime)
+    this.responseTimes.push(responseTime)
   }
 }

@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import IProvider from '@rebel/server/providers/IProvider'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
-import LogService from '@rebel/server/services/LogService'
+import LogService, { createLogContext, LogContext, onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { ChatClient, LogLevel } from '@twurple/chat'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
@@ -18,6 +18,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
 
   private readonly twurkpleAuthProvider: TwurpleAuthProvider
   private readonly logService: LogService
+  private readonly logContext: LogContext
   private readonly twitchChannelName: string
   private readonly disableExternalApis: boolean
   private chatClient!: ChatClient
@@ -26,6 +27,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     super()
     this.twurkpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
+    this.logContext = createLogContext(this.logService, this)
     this.twitchChannelName = deps.resolve('twitchChannelName')
     this.disableExternalApis = deps.resolve('disableExternalApis')
   }
@@ -39,7 +41,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
       // inject custom logging
       logger: {
         custom: {
-          log: (level: LogLevel, message: string) => this.onChatClientLog(level, message)
+          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
         }
       }
     })
@@ -60,30 +62,5 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
 
   get () {
     return this.chatClient
-  }
-
-  private onChatClientLog (level: LogLevel, message: string): void {
-    switch (level) {
-      case LogLevel.CRITICAL:
-        this.logService.logError(this, '[CRITICAL]', message)
-        break
-      case LogLevel.ERROR:
-        this.logService.logError(this, '[ERROR]', message)
-        break
-      case LogLevel.WARNING:
-        this.logService.logWarning(this, '[WARNING]', message)
-        break
-      case LogLevel.INFO:
-        this.logService.logInfo(this, '[INFO]', message)
-        break
-      case LogLevel.DEBUG:
-        this.logService.logDebug(this, '[DEBUG]', message)
-        break
-      case LogLevel.TRACE:
-        this.logService.logDebug(this, '[TRACE]', message)
-        break
-      default:
-        assertUnreachable(level)
-    }
   }
 }

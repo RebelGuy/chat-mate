@@ -4,6 +4,8 @@ import { NodeEnv } from '@rebel/server/globals'
 import { ILoggable } from '@rebel/server/interfaces'
 import FileService from '@rebel/server/services/FileService'
 import { formatDate, formatTime } from '@rebel/server/util/datetime'
+import { assertUnreachable } from '@rebel/server/util/typescript'
+import { LogLevel } from '@twurple/chat/lib'
 
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
@@ -92,5 +94,30 @@ export function createLogContext (logService: LogService, logger: ILoggable): Lo
     logApiResponse: (requestId: number, error: boolean, response: any) => logService.logApiResponse(logger, requestId, error, response),
     logWarning: (...args: any[]) => logService.logWarning(logger, ...args),
     logError: (...args: any[]) => logService.logError(logger, ...args)
+  }
+}
+
+export function onTwurpleClientLog (context: LogContext, level: LogLevel, message: string): void {
+  switch (level) {
+    case LogLevel.CRITICAL:
+      context.logError('[CRITICAL]', message)
+      break
+    case LogLevel.ERROR:
+      context.logError('[ERROR]', message)
+      break
+    case LogLevel.WARNING:
+      context.logWarning('[WARNING]', message)
+      break
+    case LogLevel.INFO:
+      context.logInfo('[INFO]', message)
+      break
+    case LogLevel.DEBUG:
+      context.logDebug('[DEBUG]', message)
+      break
+    case LogLevel.TRACE:
+      context.logDebug('[TRACE]', message)
+      break
+    default:
+      assertUnreachable(level)
   }
 }

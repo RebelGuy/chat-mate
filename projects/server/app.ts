@@ -40,6 +40,8 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import Factory from '@rebel/server/factories/Factory'
 import { RefreshingAuthProvider } from '@twurple/auth/lib'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
+import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
+import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -75,13 +77,16 @@ const globalContext = ContextProvider.create()
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
-  .withClass('statusService', StatusService)
+  .withClass('masterchatStatusService', StatusService)
+  .withClass('twurpleStatusService', StatusService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('masterchatProxyService', MasterchatProxyService)
   .withClass('authStore', AuthStore)
   .withClass('twurpleAuthProvider', TwurpleAuthProvider)
   .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
+  .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
+  .withClass('twurpleApiProxyService', TwurpleApiProxyService)
   .withClass('livestreamStore', LivestreamStore)
   .withClass('viewershipStore', ViewershipStore)
   .withClass('livestreamService', LivestreamService)

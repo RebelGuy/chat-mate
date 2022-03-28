@@ -21,8 +21,8 @@ describe(nameof(StatusService, 'getApiStatus'), () => {
   test('non-empty state returns correct values', () => {
     const time1 = data.time1.getTime()
     const time2 = data.time2.getTime()
-    statusService.onMasterchatRequest(time1, 'ok', 200)
-    statusService.onMasterchatRequest(time2, 'error', 400)
+    statusService.onRequestDone(time1, 'ok', 200)
+    statusService.onRequestDone(time2, 'error', 400)
 
     const result = statusService.getApiStatus()
 
@@ -34,10 +34,10 @@ describe(nameof(StatusService, 'getApiStatus'), () => {
   })
 })
 
-describe(nameof(StatusService, 'onMasterchatRequest'), () => {
+describe(nameof(StatusService, 'onRequestDone'), () => {
   test('does not crash upon many calls', () => {
     for (let i = 0; i < 1000; i++) {
-      statusService.onMasterchatRequest(Date.now(), i % 100 === 0 ? 'error' : 'ok', Math.round(Math.random() * 100))
+      statusService.onRequestDone(Date.now(), i % 100 === 0 ? 'error' : 'ok', Math.round(Math.random() * 100))
     }
     const status = statusService.getApiStatus()
 
