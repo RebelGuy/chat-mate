@@ -36,6 +36,10 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import TwurpleService from '@rebel/server/services/TwurpleService'
+import AuthStore from '@rebel/server/stores/AuthStore'
+import Factory from '@rebel/server/factories/Factory'
+import { RefreshingAuthProvider } from '@twurple/auth/lib'
+import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -68,12 +72,14 @@ const globalContext = ContextProvider.create()
   .withProperty('twitchRefreshToken', twitchRefreshToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
+  .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
   .withClass('statusService', StatusService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('masterchatProxyService', MasterchatProxyService)
+  .withClass('authStore', AuthStore)
   .withClass('twurpleAuthProvider', TwurpleAuthProvider)
   .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
   .withClass('livestreamStore', LivestreamStore)

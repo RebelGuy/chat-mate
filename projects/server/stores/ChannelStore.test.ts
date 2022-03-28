@@ -190,6 +190,52 @@ export default () => {
     })
   })
 
+  describe(nameof(ChannelStore, 'getCurrentUserIds'), () => {
+    test('returns single user if all channels belong to the same user', async () => {
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } } 
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { connect: { id: 1 }},
+        infoHistory: { createMany: { data: [twitchChannelInfo2, twitchChannelInfo3] } }
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { connect: { id: 1 }},
+        infoHistory: { createMany: { data: [twitchChannelInfo4] } }
+      }})
+
+      const result = await channelStore.getCurrentUserIds()
+
+      expect(single(result)).toBe(1)
+    })
+
+    test('returns all distinct user ids', async () => {
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } } 
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [twitchChannelInfo2, twitchChannelInfo3] } }
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [twitchChannelInfo4] } }
+      }})
+
+      const result = await channelStore.getCurrentUserIds()
+
+      expect(result.sort()).toEqual([1, 2, 3])
+    })
+  })
+
   describe(nameof(ChannelStore, 'getCurrentUserNames'), () => {
     test('returns most up-to-date name of each channel, for multiple users', async () => {
       await db.channel.create({ data: {

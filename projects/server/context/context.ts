@@ -1,4 +1,5 @@
 import ContextClass from '@rebel/server/context/ContextClass'
+import Factory from '@rebel/server/factories/Factory'
 import { Branded, GenericObject } from '@rebel/server/types'
 import { reverse } from '@rebel/server/util/arrays'
 
@@ -45,6 +46,12 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
 
   // add the given helper class to the context. it should not have ANY dependencies
   public withHelpers<Name extends DepName, HelperClassType extends ContextClass> (name: Name, ctor: new () => HelperClassType) {
+    this.assertMutable()
+    return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
+  }
+
+  // add the given factory class to the context. it should not have ANY dependencies
+  public withFactory<Name extends DepName, FactoryClassType extends Factory<any>> (name: Name, ctor: new () => FactoryClassType) {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }

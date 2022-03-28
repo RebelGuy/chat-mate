@@ -50,6 +50,12 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P] extends Array<infer A> ? DeepPartial<A>[] : T[P]
 }
 
+export declare type MakeOptional<T extends object, Keys extends keyof T> = {
+  [K in Keys]?: T[K]
+} & {
+  [K in Exclude<keyof T, Keys>]: T[K]
+}
+
 export type ObjectComparator<T> = {
   [key in keyof T]: ValueComparator<T[key]>
 }

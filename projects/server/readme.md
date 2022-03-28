@@ -81,9 +81,9 @@ Key:
 - ⚪: Won't do
 
 **Services**
-- 🟡 ChannelService
+- 🟢 ChannelService
   - 🟢 getActiveUserChannel
-  - 🔴 getActiveUserChannels
+  - 🟢 getActiveUserChannels
   - 🟢 getUserByChannelName
   - 🟢 getUserById
 - 🟢 ChatService
@@ -106,19 +106,25 @@ Key:
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onMasterchatRequest
+- 🟢 TwurpleAuthProvider
+  - 🟢 initialise
+- 🟢 TwurpleService
+  - 🟢 initialise
 - ⚪ FileService
 - ⚪ LogService
 
 **Stores**
-- 🟡 ChannelStore
+- 🟢 AuthStore
+  - 🟢 loadAccessToken
+  - 🟢 saveAccessToken
+- 🟢 ChannelStore
   - 🟢 createOrUpdate
-  - 🔴 getCurrentUserIds
+  - 🟢 getCurrentUserIds
   - 🟢 getCurrentUserNames
   - 🟢 getUserId
-- 🟡 ChatStore
+- 🟢 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince
-  - 🔴 getContinuationToken
   - 🟢 getLastChatByUser
 - 🟢 CustomEmojiStore
   - 🟢 addCustomEmoji

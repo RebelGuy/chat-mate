@@ -1,8 +1,9 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import DbProvider from '@rebel/server/providers/DbProvider'
+import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
+import AuthStore from '@rebel/server/stores/AuthStore'
 import { AccessToken, AuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 type Deps = Dependencies<{
@@ -11,8 +12,9 @@ type Deps = Dependencies<{
   twitchClientSecret: string
   twitchAccessToken: string | null
   twitchRefreshToken: string | null
-  dbProvider: DbProvider
   logService: LogService
+  authStore: AuthStore
+  refreshingAuthProviderFactory: RefreshingAuthProviderFactory
 }>
 
 export default class TwurpleAuthProvider extends ContextClass implements IProvider<AuthProvider> {
@@ -23,8 +25,9 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
   private readonly clientSecret: string
   private readonly fallbackAccessToken: string | null
   private readonly fallbackRefreshToken: string | null
-  private readonly dbProvider: DbProvider
   private readonly logService: LogService
+  private readonly authStore: AuthStore
+  private readonly refreshingAuthProviderFactory: RefreshingAuthProviderFactory
   private auth!: RefreshingAuthProvider
 
   constructor (deps: Deps) {
@@ -34,12 +37,14 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
     this.clientSecret = deps.resolve('twitchClientSecret')
     this.fallbackAccessToken = deps.resolve('twitchAccessToken')
     this.fallbackRefreshToken = deps.resolve('twitchRefreshToken')
-    this.dbProvider = deps.resolve('dbProvider')
     this.logService = deps.resolve('logService')
+    this.authStore = deps.resolve('authStore')
+    this.refreshingAuthProviderFactory = deps.resolve('refreshingAuthProviderFactory')
   }
 
   public override async initialise (): Promise<void> {
-    let token = await this.loadAccessToken()
+    // no error handling on purpose - if this fails, it should be considered a fatal error
+    let token = await this.authStore.loadAccessToken()
 
     if (token != null) {
       this.logService.logDebug(this, 'Loaded database access token')
@@ -57,7 +62,7 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
       this.throwAuthError('No access token could be found in the database, and no fallback access token and refresh token have been provided in the .env file.')
     }
 
-    this.auth = new RefreshingAuthProvider({
+    this.auth = this.refreshingAuthProviderFactory.create({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
       // async callbacks are allowed as per the example at https://twurple.js.org/docs/auth/providers/refreshing.html
@@ -75,38 +80,9 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
     throw new Error(`Unable to authenticate Twurple.\n${message}\nPlease run the following script:\n\n    ${scriptName}`)
   }
 
-  private async loadAccessToken (): Promise<AccessToken | null> {
-    // no error handling on purpose - if this fails, it should be considered a fatal error
-    const auth = await this.dbProvider.get().twitchAuth.findUnique({ where: { clientId: this.clientId }})
-
-    if (auth == null) {
-      return null
-    } else {
-      return {
-        accessToken: auth.accessToken,
-        refreshToken: auth.refreshToken,
-        expiresIn: auth.expiresIn,
-        obtainmentTimestamp: Number(auth.obtainmentTimestamp),
-        scope: auth.scope.split(',')
-      }
-    }
-  }
-
   private async saveAccessToken (token: AccessToken) {
-    const tokenData = {
-      accessToken: token.accessToken,
-      refreshToken: token.refreshToken!,
-      expiresIn: token.expiresIn!,
-      obtainmentTimestamp: token.obtainmentTimestamp,
-      scope: token.scope.join(',')
-    }
-
     try {
-      await this.dbProvider.get().twitchAuth.upsert({
-        create: { clientId: this.clientId, ...tokenData },
-        where: { clientId: this.clientId },
-        update: { ...tokenData }
-      })
+      await this.authStore.saveAccessToken(token)
       this.logService.logInfo(this, 'Saved access token')
     } catch (e: any) {
       this.logService.logError(this, 'Failed to save access token', e.message)
