@@ -86,7 +86,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     const livestream = this.livestreamStore.currentLivestream
     const link = getLivestreamLink(livestream.liveId)
 
-    let viewers: { time: Date, viewCount: number } | null = null
+    let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
     let status: Exclude<LiveStatus, 'unknown'>
     if (livestream.start == null) {
       status = 'not_started'
@@ -98,10 +98,11 @@ export default class ChatMateControllerReal implements IChatMateController {
     }
 
     return {
-      schema: 1,
+      schema: 2,
       startTime: livestream.start?.getTime() ?? null,
       endTime: livestream.end?.getTime() ?? null,
-      liveViewers: viewers?.viewCount ?? null,
+      youtubeLiveViewers: viewers?.viewCount ?? null,
+      twitchLiveViewers: viewers?.twitchViewCount ?? null,
       livestreamLink: link,
       status
     }

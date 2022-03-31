@@ -24,10 +24,11 @@ export default class ChatMateControllerFake implements IChatMateController {
 
     const status: 'not_started' | 'live' | 'finished' = chooseWeightedRandom(['not_started', 1], ['live', 10], ['finished', 1])
     const livestreamStatus: PublicLivestreamStatus = {
-      schema: 1,
+      schema: 2,
       startTime: status === 'not_started' ? null : addTime(new Date(), 'minutes', -10).getTime(),
       endTime: status === 'finished' ? addTime(new Date(), 'minutes', -5).getTime() : null,
-      liveViewers: Math.round(Math.random() * 25),
+      youtubeLiveViewers: Math.round(Math.random() * 25),
+      twitchLiveViewers: Math.round(Math.random() * 25),
       livestreamLink: 'www.test.com',
       status
     }

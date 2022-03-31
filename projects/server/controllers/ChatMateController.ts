@@ -8,7 +8,7 @@ import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/co
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 
 type GetStatusResponse = ApiResponse<2, {
-  livestreamStatus: Tagged<1, PublicLivestreamStatus>
+  livestreamStatus: Tagged<2, PublicLivestreamStatus>
   youtubeApiStatus: Tagged<1, PublicApiStatus>
   twitchApiStatus: Tagged<1, PublicApiStatus>
 }>

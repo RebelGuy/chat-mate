@@ -1,7 +1,7 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicLivestreamStatus = PublicObject<1, {
-  schema: 1
+export type PublicLivestreamStatus = PublicObject<2, {
+  schema: 2
 
   /** Link to the YouTube watch page of the livestream. */
   livestreamLink: string
@@ -15,6 +15,9 @@ export type PublicLivestreamStatus = PublicObject<1, {
   /** The end timestamp of the livestream. Null if status is not `finished`. */
   endTime: number | null
 
-  /** The current number of viewers watching the livestream, as reported by YouTUbe. Null if status is not `live`. */
-  liveViewers: number | null
+  /** The current number of viewers watching the Youtube livestream. Null if status is not `live`. */
+  youtubeLiveViewers: number | null
+
+  /** The current number of viewers watching the Twitch livestream. Null if status is not `live`. */
+  twitchLiveViewers: number | null
 }>
