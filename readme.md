@@ -36,6 +36,19 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.12 - The Twitch Update [1/4/2022]
+- Server
+  - Added Twitch as a chat provider
+    - Initial authentication is achieved via an Electron app
+    - Twurple is used to communicate with the Twitch API
+    - Event-based chat system conforms messages to a known format and forwards them to ChatService
+    - Helix API is used for fetching stream metadata
+    - Database key mappings are now defined explicitly to aid in future renaming tasks
+  - Individual participants are now represented by a `User`
+    - Can have a Youtube or Twitch Channel linked, or both
+  - Fixed negative experience bug
+  - Fixed wheelchair emoji
+
 ## v1.11 - The Modal Update [20/3/2022]
 - Server
   - Bug fixes

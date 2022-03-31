@@ -1,11 +1,11 @@
-The server is responsible for fetching data from YouTube, and (in the future) sending data to YouTube via the `masterchat` project. It exposes this chat data, as well as additional functionality, via a REST API.
+The server is responsible for fetching data from Youtube via the `masterchat` project, and from Twitch via the `@twurple` package. It exposes this chat data, as well as additional functionality, via a REST API.
 
 
 
 # Project Details
 Debug and release environments both have their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
 
-Note: If fetching metadata incurs a "Rate limit exceeded" error, then YouTube has flagged us as a bot. A (temporary?) solution is to regenerate an auth token (see below).
+Note: If fetching Youtube metadata incurs a "Rate limit exceeded" error, then Youtube has flagged us as a bot. A (temporary?) solution is to regenerate an auth token (see below).
 
 
 ## Scripts for development:
