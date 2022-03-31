@@ -4,13 +4,11 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat, ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
-import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { ApiClient } from '@twurple/api/lib'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 

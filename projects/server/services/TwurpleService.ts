@@ -4,7 +4,7 @@ import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import ChatService from '@rebel/server/services/ChatService'
 import LogService from '@rebel/server/services/LogService'
-import { ChatClient } from '@twurple/chat/lib'
+import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 
 type Deps = Dependencies<{

@@ -4,7 +4,7 @@ import IProvider from '@rebel/server/providers/IProvider'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import LogService, { createLogContext, LogContext, onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { ApiClient } from '@twurple/api'
-import { LogLevel } from '@twurple/chat/lib'
+import { LogLevel } from '@twurple/chat'
 
 type Deps = Dependencies<{
   twurpleAuthProvider: TwurpleAuthProvider

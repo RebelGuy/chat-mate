@@ -4,8 +4,7 @@ import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClient
 import ChatService from '@rebel/server/services/ChatService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import { nameof, single } from '@rebel/server/_test/utils'
-import { ChatClient } from '@twurple/chat/lib'
-import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
+import { ChatClient } from '@twurple/chat'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as chat from '@rebel/server/models/chat'
 

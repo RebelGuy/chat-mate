@@ -5,7 +5,7 @@ import { ILoggable } from '@rebel/server/interfaces'
 import FileService from '@rebel/server/services/FileService'
 import { formatDate, formatTime } from '@rebel/server/util/datetime'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { LogLevel } from '@twurple/chat/lib'
+import { LogLevel } from '@twurple/chat'
 
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 

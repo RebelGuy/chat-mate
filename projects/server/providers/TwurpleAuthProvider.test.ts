@@ -3,7 +3,7 @@ import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAut
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { nameof, single } from '@rebel/server/_test/utils'
-import { AccessToken, RefreshingAuthProvider } from '@twurple/auth/lib'
+import { AccessToken, RefreshingAuthProvider } from '@twurple/auth'
 import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'
 
 let clientId: string

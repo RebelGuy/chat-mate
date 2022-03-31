@@ -1,14 +1,12 @@
 
-import { ChatResponse, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { IMasterchat, ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import { ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { DeepPartial } from '@rebel/server/types'
-import { ApiClient } from '@twurple/api/lib'
+import { ApiClient } from '@twurple/api'
 
 type Deps = Dependencies<{
   logService: LogService

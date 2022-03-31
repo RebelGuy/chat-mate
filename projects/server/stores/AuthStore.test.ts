@@ -3,7 +3,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { nameof } from '@rebel/server/_test/utils'
-import { AccessToken } from '@twurple/auth/lib'
+import { AccessToken } from '@twurple/auth'
 
 const clientId = 'clientId'
 const accessToken: AccessToken = {

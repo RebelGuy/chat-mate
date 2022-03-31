@@ -38,7 +38,7 @@ import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClient
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import Factory from '@rebel/server/factories/Factory'
-import { RefreshingAuthProvider } from '@twurple/auth/lib'
+import { RefreshingAuthProvider } from '@twurple/auth'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'

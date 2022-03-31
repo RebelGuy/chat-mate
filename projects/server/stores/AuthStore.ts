@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
-import { AccessToken } from '@twurple/auth/lib'
+import { AccessToken } from '@twurple/auth'
 
 type Deps = Dependencies<{
   twitchClientId: string
