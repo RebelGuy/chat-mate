@@ -109,6 +109,12 @@ describe(nameof(ExperienceHelpers, 'calculateParticipationMultiplier'), () => {
 
     expectStrictIncreasing(m0, m1, m2, m3)
   })
+
+  test('capped at 2', () => {
+    const m = experienceHelpers.calculateParticipationMultiplier(asGte(100 ,0))
+
+    expect(m).toBe(2)
+  })
 })
 
 describe(nameof(ExperienceHelpers, 'calculateQualityMultiplier'), () => {
@@ -120,6 +126,12 @@ describe(nameof(ExperienceHelpers, 'calculateQualityMultiplier'), () => {
     const m4 = experienceHelpers.calculateQualityMultiplier(asRange(2, 0, 2))
 
     expectStrictIncreasing(m0, m1, m2, m3, m4)
+  })
+
+  test('capped at 2', () => {
+    const m = experienceHelpers.calculateParticipationMultiplier(asGte(100 ,0))
+
+    expect(m).toBe(2)
   })
 })
 
