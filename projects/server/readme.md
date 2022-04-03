@@ -7,10 +7,14 @@ Debug and release environments both have their own folders in `./data` and `./di
 
 Note: If fetching Youtube metadata incurs a "Rate limit exceeded" error, then Youtube has flagged us as a bot. A (temporary?) solution is to regenerate an auth token (see below).
 
+Twitch's EventSub notifies us of new events. To set up the listener on our local machine, we use `ngrok` (https://ngrok.com/download). See https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html for more details.
+
+Note: Importing modules from Twurple must be done from the package level, `@twurple/<package-name>`, rather than `@twurple/<package-name>/lib` (unfortunately VSCode defaults to this type of importing, which will result in a runtime error). 
+
 
 ## Scripts for development:
 1. `yarn install`.
-2. `yarn auth` to fetch the authentication credentials. Copy them from the console and set them in the [`.env`](#.env) file.
+2. `yarn auth` to fetch the authentication credentials for YouTube, and `yarn auth:twitch:<debug|release>`. Copy them from the console and set them in the [`.env`](#.env) file.
 3. `yarn watch` while developing
 4. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options. Note that this does not bundle up the application. For a debug bundle that mirrors the release build, use `yarn build:debug`.
 
@@ -32,7 +36,7 @@ The following environment variables must be set in the `.env` file:
 - `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `yarn auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `LIVE_ID`: The video ID of the livestream.
-- `TWITCH_CLIENT_ID`: The client ID for twitch auth.
+- `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_ACCESS_TOKEN`: The access token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
 - `TWITCH_REFRESH_TOKEN`: The refresh token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.

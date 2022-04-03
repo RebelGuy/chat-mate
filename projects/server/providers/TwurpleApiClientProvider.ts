@@ -18,6 +18,7 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
   private readonly logService: LogService
   private readonly logContext: LogContext
   private apiClient!: ApiClient
+  private clientApiClient!: ApiClient
 
   constructor (deps: Deps) {
     super()
@@ -25,7 +26,6 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
-
   }
 
   public override initialise () {
@@ -39,9 +39,25 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
         }
       }
     })
+
+    this.clientApiClient = new ApiClient({
+      authProvider: this.twurpleAuthProvider.getClientAuthProvider(),
+            
+      // inject custom logging
+      logger: {
+        custom: {
+          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
+        }
+      }
+    })
   }
 
+  /** This is probably the one you want. */
   public get () {
     return this.apiClient
+  }
+  
+  public getClientApi () {
+    return this.clientApiClient
   }
 }

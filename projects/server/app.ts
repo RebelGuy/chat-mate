@@ -37,11 +37,12 @@ import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import Factory from '@rebel/server/factories/Factory'
-import { RefreshingAuthProvider } from '@twurple/auth'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
+import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
+import HelixEventService from '@rebel/server/services/HelixEventService'
+import FollowerService from '@rebel/server/services/FollowerService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -75,6 +76,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
+  .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
   .withClass('masterchatStatusService', StatusService)
@@ -100,6 +102,8 @@ const globalContext = ContextProvider.create()
   .withClass('chatService', ChatService)
   .withClass('chatFetchService', ChatFetchService)
   .withClass('twurpleService', TwurpleService)
+  .withClass('followerService', FollowerService)
+  .withClass('helixEventService', HelixEventService)
   .build()
 
 const app = express()

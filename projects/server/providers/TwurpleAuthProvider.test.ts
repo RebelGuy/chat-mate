@@ -1,10 +1,11 @@
 import { Dependencies } from '@rebel/server/context/context'
+import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { nameof, single } from '@rebel/server/_test/utils'
-import { AccessToken, RefreshingAuthProvider } from '@twurple/auth'
-import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'
+import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
+import { mock, MockProxy } from 'jest-mock-extended'
 
 let clientId: string
 let clientSecret: string
@@ -13,6 +14,8 @@ let refreshToken: string | null
 let mockAuthStore: MockProxy<AuthStore>
 let mockRefreshingAuthProvider: MockProxy<RefreshingAuthProvider>
 let mockRefreshingAuthProviderFactory: MockProxy<RefreshingAuthProviderFactory>
+let mockClientCredentialsAuthProvider: MockProxy<ClientCredentialsAuthProvider>
+let mockClientCredentialsAuthProviderFactory: MockProxy<ClientCredentialsAuthProviderFactory>
 let twurpleAuthProvider: TwurpleAuthProvider
 
 beforeEach(() => {
@@ -23,8 +26,11 @@ beforeEach(() => {
   mockAuthStore = mock()
   mockRefreshingAuthProvider = mock()
   mockRefreshingAuthProviderFactory = mock()
+  mockClientCredentialsAuthProvider = mock()
+  mockClientCredentialsAuthProviderFactory = mock()
   
   mockRefreshingAuthProviderFactory.create.mockReturnValue(mockRefreshingAuthProvider)
+  mockClientCredentialsAuthProviderFactory.create.mockReturnValue(mockClientCredentialsAuthProvider)
 
   twurpleAuthProvider = new TwurpleAuthProvider(new Dependencies({
     isLive: true,
@@ -34,18 +40,19 @@ beforeEach(() => {
     twitchRefreshToken: refreshToken,
     logService: mock(),
     authStore: mockAuthStore,
-    refreshingAuthProviderFactory: mockRefreshingAuthProviderFactory
+    refreshingAuthProviderFactory: mockRefreshingAuthProviderFactory,
+    clientCredentialsAuthProviderFactory: mockClientCredentialsAuthProviderFactory
   }))
 })
 
 describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
-  test('throws if access token failed to load', async () => {
+  test('throws if access token failed to load for RefreshingAuthProvider', async () => {
     mockAuthStore.loadAccessToken.mockRejectedValue(new Error('Test'))
 
     await expect(() => twurpleAuthProvider.initialise()).rejects.toThrow()
   })
 
-  test('uses fallback token details if no access token exists', async () => {
+  test('uses fallback token details if no access token exists for RefreshingAuthProvider', async () => {
     mockAuthStore.loadAccessToken.mockResolvedValue(null)
 
     await twurpleAuthProvider.initialise()
@@ -55,7 +62,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     expect(initialToken.refreshToken).toBe(refreshToken)
   })
 
-  test('uses loaded token details if access token exists', async () => {
+  test('uses loaded token details if access token exists for RefreshingAuthProvider', async () => {
     const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token' }
     mockAuthStore.loadAccessToken.mockResolvedValue(loadedToken as AccessToken)
 
@@ -66,7 +73,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     expect(initialToken.refreshToken).toBe(loadedToken.refreshToken)
   })
 
-  test('provides correct client details and saves refresh token when available', async () => {
+  test('provides correct client details to RefreshingAuthProvider and saves refresh token when available', async () => {
     await twurpleAuthProvider.initialise()
 
     const [config, _] = single(mockRefreshingAuthProviderFactory.create.mock.calls)
@@ -76,5 +83,13 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     const refreshedToken: AccessToken = {} as any
     await config.onRefresh!(refreshedToken)
     expect(single(single(mockAuthStore.saveAccessToken.mock.calls))).toBe(refreshedToken)
+  })
+
+  test('uses client id and client secret for the ClientCredentialsAuthProvider', async () => {
+    await twurpleAuthProvider.initialise()
+
+    const [providedClientId, providedClientSecret] = single(mockClientCredentialsAuthProviderFactory.create.mock.calls)
+    expect(providedClientId).toBe(clientId)
+    expect(providedClientSecret).toBe(clientSecret)
   })
 })

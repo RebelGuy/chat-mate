@@ -33,6 +33,8 @@
     "@twurple/api": "^5.0.18",
     "@twurple/auth": "^5.0.18",
     "@twurple/chat": "^5.0.18",
+    "@twurple/eventsub": "^5.0.18",
+    "@twurple/eventsub-ngrok": "^5.0.18",
     "@types/eslint": "^8.4.1",
     "@types/node": "^16.11.7",
     "copy-webpack-plugin": "^10.2.0",

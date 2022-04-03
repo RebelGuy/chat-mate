@@ -1,10 +1,11 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import { AccessToken, AuthProvider, RefreshingAuthProvider } from '@twurple/auth'
+import { AccessToken, AuthProvider, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 type Deps = Dependencies<{
   isLive: boolean
@@ -15,9 +16,10 @@ type Deps = Dependencies<{
   logService: LogService
   authStore: AuthStore
   refreshingAuthProviderFactory: RefreshingAuthProviderFactory
+  clientCredentialsAuthProviderFactory: ClientCredentialsAuthProviderFactory
 }>
 
-export default class TwurpleAuthProvider extends ContextClass implements IProvider<AuthProvider> {
+export default class TwurpleAuthProvider extends ContextClass {
   readonly name = TwurpleAuthProvider.name
 
   private readonly isLive: boolean
@@ -29,6 +31,7 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
   private readonly authStore: AuthStore
   private readonly refreshingAuthProviderFactory: RefreshingAuthProviderFactory
   private auth!: RefreshingAuthProvider
+  private readonly clientAuth: ClientCredentialsAuthProvider
 
   constructor (deps: Deps) {
     super()
@@ -40,6 +43,7 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
     this.logService = deps.resolve('logService')
     this.authStore = deps.resolve('authStore')
     this.refreshingAuthProviderFactory = deps.resolve('refreshingAuthProviderFactory')
+    this.clientAuth = deps.resolve('clientCredentialsAuthProviderFactory').create(this.clientId, this.clientSecret)
   }
 
   public override async initialise (): Promise<void> {
@@ -73,6 +77,10 @@ export default class TwurpleAuthProvider extends ContextClass implements IProvid
 
   get () {
     return this.auth
+  }
+
+  getClientAuthProvider () {
+    return this.clientAuth
   }
 
   private throwAuthError (message: string) {
