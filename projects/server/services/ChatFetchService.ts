@@ -13,7 +13,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
 
 const MIN_INTERVAL = 500
-const MAX_INTERVAL = 6_000
+const MAX_INTERVAL = 3_000
 
 // this can approximately be interpreted as the number of chat messages per minute
 const MIN_CHAT_RATE = 0.5 / 60

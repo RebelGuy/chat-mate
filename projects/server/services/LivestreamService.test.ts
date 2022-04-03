@@ -74,7 +74,7 @@ beforeEach(() => {
 })
 
 describe(nameof(LivestreamService, 'initialise'), () => {
-  test('ignores api is disableExternalApis is true', async () => {
+  test('ignores api if disableExternalApis is true', async () => {
     livestreamService = new LivestreamService(new Dependencies({
       livestreamStore: mockLivestreamStore,
       logService: mockLogService,
@@ -159,6 +159,19 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(metadata)
     mockTwurpleApiProxyService.fetchMetadata.mockRejectedValue(new Error('Test error'))
+
+    await livestreamService.initialise()
+
+    const [receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    expect(receivedYoutubeCount).toBe(metadata.viewerCount)
+    expect(receivedTwitchCount).toBe(0)
+  })
+
+  test('ignores null from twitch metadata', async () => {
+    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
+    const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
+    mockMasterchatProxyService.fetchMetadata.mockResolvedValue(metadata)
+    mockTwurpleApiProxyService.fetchMetadata.mockResolvedValue(null)
 
     await livestreamService.initialise()
 

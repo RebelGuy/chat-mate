@@ -26,7 +26,10 @@ module.exports = (env) => {
       }
     },
 
-    // required to surpress some module errors
+    // required to surpress some module errors.
+    // this means that, instead of requiring webpack to bundle the module, we promise that the module name
+    // will be available as a global variable at runtime (e.g. because we loaded it via a <script> in the HTML page).
+    // see https://stackoverflow.com/questions/52507232/how-to-exclude-a-module-from-webpack-and-instead-import-it-using-es6
     externals: {
       // e.g. fs
       ...nodeExternals(),
@@ -39,7 +42,13 @@ module.exports = (env) => {
       'typescript-ioc/es6': 'typescript-ioc/es6',
 
       // we don't use it in webpack builds, but not marking it as an external here will cause a 'Module not found' error
-      'module-alias/register': {}
+      'module-alias/register': {},
+
+      // this is in the node_modules/ws/lib/validation.js file, and is safe to ignore as there is a fallback mechanism for when the module doesn't exist
+      'utf-8-validate': 'utf-8-validate',
+
+      // this is in the node_modules/ws/lib/buffer-util.js file, and is safe to ignore as there is a fallback mechanism for when the module doesn't exist
+      'bufferutil': 'bufferutil'
     },
     target: 'node',
 

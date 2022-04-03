@@ -13,7 +13,8 @@ export type TwitchMetadata = {
 }
 
 export interface ITwurpleApi {
-  fetchMetadata (): Promise<TwitchMetadata>
+  // returns null if the stream hasn't started
+  fetchMetadata (): Promise<TwitchMetadata | null>
 }
 
 export interface ILoggable {

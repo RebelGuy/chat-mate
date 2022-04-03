@@ -42,6 +42,7 @@ export default class TwurpleService extends ContextClass {
 
   private onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
     const evaluated = evalTwitchPrivateMessage(msg)
+    this.logService.logInfo(this, 'Adding 1 new chat item')
     this.chatService.onNewChatItem(evaluated)
   }
 }

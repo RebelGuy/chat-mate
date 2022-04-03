@@ -39,7 +39,7 @@ describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
 
     const metadata = await twurpleApiProxyService.fetchMetadata()
 
-    expect(metadata.viewerCount).toBe(10)
+    expect(metadata!.viewerCount).toBe(10)
     verifyServicesUsed(false)
   })
 

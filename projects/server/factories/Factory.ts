@@ -10,6 +10,6 @@ export default abstract class Factory<C extends new (...args: any[]) => any> ext
   }
 
   public create (...args: ConstructorParameters<C>): InstanceType<C> {
-    return new this.class(args)
+    return new this.class(...args)
   }
 }

@@ -42,11 +42,11 @@ export default class TwurpleApiProxyService extends ContextClass implements ITwu
     this.wrappedApi = this.createWrapper()
   }
 
-  public async fetchMetadata (): Promise<TwitchMetadata> {
+  public async fetchMetadata (): Promise<TwitchMetadata | null> {
     const stream = await this.wrappedApi.streams!.getStreamByUserName!(this.twitchChannelName)
 
     if (stream == null) {
-      throw new Error('Twitch stream is null')
+      return null
     }
 
     return {
