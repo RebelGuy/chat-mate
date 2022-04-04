@@ -47,7 +47,7 @@ export const author1: Author = {
 export const channelInfo1: Omit<ChannelInfo, 'id' | 'channelId'> = {
   isModerator: author1.attributes.isModerator,
   isOwner: author1.attributes.isOwner,
-  IsVerified: author1.attributes.isVerified,
+  isVerified: author1.attributes.isVerified,
   imageUrl: author1.image,
   name: author1.name!,
   time: time1
@@ -63,7 +63,7 @@ export const author2: Author = {
 export const channelInfo2: Omit<ChannelInfo, 'id' | 'channelId'> = {
   isModerator: author2.attributes.isModerator,
   isOwner: author2.attributes.isOwner,
-  IsVerified: author2.attributes.isVerified,
+  isVerified: author2.attributes.isVerified,
   imageUrl: author2.image,
   name: author2.name!,
   time: time1
@@ -138,9 +138,9 @@ export const chatExperienceData3: ChatExperienceData = {
 export function addChatMessage (db: Db, time: Date, livestreamId: number, userId: number, youtubeChannelId: number): Promise<ChatMessage> {
   return db.chatMessage.create({ data: {
     time,
-    youtubeId: 'testMessage-' + Math.random(),
+    externalId: 'testMessage-' + Math.random(),
     user: { connect: { id: userId }},
-    channel: { connect: { id: youtubeChannelId }},
+    youtubeChannel: { connect: { id: youtubeChannelId }},
     livestream: { connect: { id: livestreamId }},
     chatMessageParts: { create: {
       order: 0,

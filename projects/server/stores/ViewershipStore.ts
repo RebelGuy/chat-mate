@@ -39,7 +39,7 @@ export default class ViewershipStore extends ContextClass {
   public async addLiveViewCount (youtubeCount: number, twitchCount: number): Promise<void> {
     await this.db.liveViewers.create({ data: {
       livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
-      viewCount: youtubeCount,
+      youtubeViewCount: youtubeCount,
       twitchViewCount: twitchCount
     }})
   }
@@ -133,7 +133,7 @@ export default class ViewershipStore extends ContextClass {
     if (result) {
       return {
         time: result.time,
-        viewCount: result.viewCount,
+        viewCount: result.youtubeViewCount,
         twitchViewCount: result.twitchViewCount
       }
     } else {

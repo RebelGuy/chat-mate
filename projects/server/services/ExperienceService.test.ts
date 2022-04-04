@@ -103,7 +103,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     }
 
     // cheating a little here since we don't want to write out all properties
-    const chatItems: ChatItemWithRelations[] = [{ userId }] as any
+    const chatItems: Partial<ChatItemWithRelations>[] = [{ userId }]
 
     mockChannelStore.getUserId.calledWith(chatItem.author.channelId).mockResolvedValue(userId)
     mockExperienceStore.getPreviousChatExperience.calledWith(userId).mockResolvedValue(prevData)
@@ -128,7 +128,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockExperienceHelpers.calculateSpamMultiplier
       .calledWith(chatItem.timestamp, prevData.time.getTime(), asRange(prevData.experienceDataChatMessage.spamMultiplier, 0.1, 1.5))
       .mockReturnValue(asRange(experienceData.spamMultiplier, 0.1, 1.5))
-    mockChatStore.getChatSince.calledWith(anyNumber()).mockResolvedValue(chatItems)
+    mockChatStore.getChatSince.calledWith(anyNumber()).mockResolvedValue(chatItems as ChatItemWithRelations[])
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatItem.timestamp, expect.arrayContaining([chatItems[0]])).mockReturnValue(asRange(experienceData.repetitionPenalty!, -2, 0))
 
     await experienceService.addExperienceForChat(chatItem)

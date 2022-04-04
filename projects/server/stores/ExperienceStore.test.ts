@@ -57,7 +57,7 @@ export default () => {
 
   describe(nameof(ExperienceStore, 'addChatExperience'), () => {
     test('adds transaction with correct chat experience data', async () => {
-      const data1 = { ...chatExperienceData1, externalId: chatMessage1.youtubeId }
+      const data1 = { ...chatExperienceData1, externalId: chatMessage1.externalId }
 
       await experienceStore.addChatExperience(user1, data.time1.getTime(), 10, data1)
 
@@ -73,7 +73,7 @@ export default () => {
       expect(added.userId).toBe(user1)
       expect(added.livestream.liveId).toBe(data.livestream1.liveId)
       expect(added.experienceDataChatMessage).toEqual(expect.objectContaining(data1))
-      expect(added.experienceDataChatMessage!.chatMessage!.youtubeId).toBe(chatMessage1.youtubeId)
+      expect(added.experienceDataChatMessage!.chatMessage!.externalId).toBe(chatMessage1.externalId)
     })
 
     test('does not add data if trying to backfill or duplicate', async () => {
@@ -84,12 +84,12 @@ export default () => {
         livestream: { connect: { id: chatMessage2.livestreamId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData2,
-          chatMessage: { connect: { youtubeId: chatMessage2.youtubeId }}
+          chatMessage: { connect: { externalId: chatMessage2.externalId }}
         }}
       }})
 
-      await experienceStore.addChatExperience(user1, chatMessage1.time.getTime(), 20, { ...data.chatExperienceData1, externalId: chatMessage1.youtubeId })
-      await experienceStore.addChatExperience(user1, chatMessage2.time.getTime(), 30, { ...data.chatExperienceData2, externalId: chatMessage2.youtubeId })
+      await experienceStore.addChatExperience(user1, chatMessage1.time.getTime(), 20, { ...data.chatExperienceData1, externalId: chatMessage1.externalId })
+      await experienceStore.addChatExperience(user1, chatMessage2.time.getTime(), 30, { ...data.chatExperienceData2, externalId: chatMessage2.externalId })
 
       const dbRecords = await db.experienceTransaction.count({ where: { user: { id: user1 }}})
       expect(dbRecords).toBe(1)
@@ -159,7 +159,7 @@ export default () => {
         livestream: { connect: { liveId: data.livestream1.liveId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData3,
-          chatMessage: { connect: { youtubeId: chatMessage3.youtubeId }}
+          chatMessage: { connect: { externalId: chatMessage3.externalId }}
         }}
       }})
 
@@ -176,7 +176,7 @@ export default () => {
         livestream: { connect: { liveId: data.livestream1.liveId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData1,
-          chatMessage: { connect: { youtubeId: chatMessage1.youtubeId }}
+          chatMessage: { connect: { externalId: chatMessage1.externalId }}
         }}
       }})
       await db.experienceTransaction.create({ data: {
@@ -186,7 +186,7 @@ export default () => {
         livestream: { connect: { liveId: data.livestream1.liveId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData2,
-          chatMessage: { connect: { youtubeId: chatMessage2.youtubeId }}
+          chatMessage: { connect: { externalId: chatMessage2.externalId }}
         }}
       }})
 

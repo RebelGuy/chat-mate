@@ -49,10 +49,10 @@ model Livestream {
 }
 
 model LiveViewers {
-  id              Int      @id @default(autoincrement())
-  time            DateTime @default(now())
-  viewCount       Int
-  twitchViewCount Int
+  id               Int      @id @default(autoincrement())
+  time             DateTime @default(now())
+  youtubeViewCount Int
+  twitchViewCount  Int
 
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "LiveViewers_livestreamId_fkey")
@@ -85,7 +85,7 @@ model ChannelInfo {
   imageUrl    String  @db.VarChar(511)
   isOwner     Boolean
   isModerator Boolean
-  IsVerified  Boolean
+  isVerified  Boolean
 
   /// first seen with this info
   time DateTime
@@ -144,7 +144,7 @@ model TwitchChannel {
   infoHistory  TwitchChannelInfo[]
   chatMessages ChatMessage[]
 
-  @@unique([twitchId], map: "twich_channels_twitchId_key")
+  @@unique([twitchId], map: "twitch_channels_twitchId_key")
   @@index([userId], map: "twitch_channels_userId_fkey")
   @@map("twitch_channels")
 }
@@ -154,7 +154,7 @@ model TwitchChannel {
 /// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
   id          Int     @id @default(autoincrement())
-  youtubeId   String  @db.VarChar(255) // unique
+  externalId  String  @db.VarChar(255) // unique
   imageUrl    String? @db.VarChar(511)
   imageWidth  Int?    @db.SmallInt
   imageHeight Int?    @db.SmallInt
@@ -169,7 +169,7 @@ model ChatEmoji {
   // any custom emojis that have replaced this YouTube emoji within a chat message
   customEmoji ChatCustomEmoji[]
 
-  @@unique([youtubeId], map: "chat_emoji_youtubeId_key")
+  @@unique([externalId], map: "chat_emoji_externalId_key")
   @@map("chat_emoji")
 }
 
@@ -223,7 +223,7 @@ model ChatCustomEmoji {
   @@map("chat_custom_emoji")
 }
 
-/// Has exactly one text, emoji, or cheer component attached, and possibly also a custom emoji.
+/// Has exactly one text, emoji, or cheer component attached, and possibly also a custom emoji in addition to the other three.
 model ChatMessagePart {
   id    Int @id @default(autoincrement())
   order Int // unique with `chatMessageId`
@@ -237,7 +237,7 @@ model ChatMessagePart {
   emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id], map: "chat_message_part_emojiId_fkey")
 
-  cheerId Int?
+  cheerId Int? // unique
   cheer   ChatCheer? @relation(fields: [cheerId], references: [id], map: "chat_message_part_cheerId_fkey")
 
   customEmojiId Int?
@@ -254,17 +254,16 @@ model ChatMessagePart {
 }
 
 model ChatMessage {
-  id        Int      @id @default(autoincrement())
-  // youtube or twitch id
-  youtubeId String   @db.VarChar(255) // unique
-  time      DateTime
+  id         Int      @id @default(autoincrement())
+  externalId String   @db.VarChar(255) // unique
+  time       DateTime
 
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "chat_message_userId_fkey")
 
   // youtube and twitch ids are used to ensure we know what actual platform account authored the message
-  channelId Int?
-  channel   Channel? @relation(fields: [channelId], references: [id], map: "chat_message_channelId_fkey")
+  youtubeChannelId Int?
+  youtubeChannel   Channel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
 
   twitchChannelId Int?
   twitchChannel   TwitchChannel? @relation(fields: [twitchChannelId], references: [id], map: "chat_message_twitchChannelId_fkey")
@@ -272,13 +271,12 @@ model ChatMessage {
   livestreamId Int
   livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "chat_message_livestreamId_fkey")
 
-  chatMessageParts ChatMessagePart[]
-
+  chatMessageParts          ChatMessagePart[]
   experienceDataChatMessage ExperienceDataChatMessage?
 
-  @@unique([youtubeId], map: "chat_message_youtubeId_key")
+  @@unique([externalId], map: "chat_message_externalId_key")
   @@index([userId], map: "chat_message_userId_fkey")
-  @@index([channelId], map: "chat_message_channelId_fkey")
+  @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")
   @@index([livestreamId], map: "chat_message_livestreamId_fkey")
   @@map("chat_message")

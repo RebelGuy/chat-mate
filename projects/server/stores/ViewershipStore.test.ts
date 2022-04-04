@@ -7,6 +7,7 @@ import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
 import { mock, MockProxy } from 'jest-mock-extended'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import { LiveViewers } from '@prisma/client'
 
 /** ext. ids channel1, twitchChannel3 */
 const user1 = 1
@@ -47,9 +48,9 @@ export default () => {
       { userId: 2, livestreamId: 3, startTime: data.time3, lastUpdate: data.time3 },
     ]})
     await db.chatMessage.createMany({ data: [
-      { userId: 2, livestreamId: 1, time: data.time1, youtubeId: 'id1.1' },
-      { userId: 2, livestreamId: 2, time: data.time2, youtubeId: 'id2.1' },
-      { userId: 2, livestreamId: 2, time: addTime(data.time2, 'seconds', 1), youtubeId: 'id3.1' },
+      { userId: 2, livestreamId: 1, time: data.time1, externalId: 'id1.1' },
+      { userId: 2, livestreamId: 2, time: data.time2, externalId: 'id2.1' },
+      { userId: 2, livestreamId: 2, time: addTime(data.time2, 'seconds', 1), externalId: 'id3.1' },
     ]})
   }, DB_TEST_TIMEOUT)
 
@@ -63,9 +64,9 @@ export default () => {
       await viewershipStore.addLiveViewCount(youtubeViews, twitchViews)
 
       const dbContents = await db.liveViewers.findFirst()
-      expect(dbContents).toEqual(expect.objectContaining({
+      expect(dbContents).toEqual(expect.objectContaining<Partial<LiveViewers>>({
         livestreamId: data.livestream3.id,
-        viewCount: youtubeViews,
+        youtubeViewCount: youtubeViews,
         twitchViewCount: twitchViews
       }))
     })
@@ -191,7 +192,7 @@ export default () => {
     test('returns null if no data exists for current livestream', async () => {
       await db.liveViewers.create({ data: {
         livestream: { connect: { liveId: 'id1' }},
-        viewCount: 2,
+        youtubeViewCount: 2,
         twitchViewCount: 5
       }})
 
@@ -205,13 +206,13 @@ export default () => {
       const data2 = { time: data.time2, viewCount: 2, twitchViewCount: 4 }
       await db.liveViewers.create({ data: {
         livestream: { connect: { liveId: 'id3' }},
-        viewCount: data1.viewCount,
+        youtubeViewCount: data1.viewCount,
         twitchViewCount: data1.twitchViewCount,
         time: data1.time
       }})
       await db.liveViewers.create({ data: {
         livestream: { connect: { liveId: 'id3' }},
-        viewCount: data2.viewCount,
+        youtubeViewCount: data2.viewCount,
         twitchViewCount: data2.twitchViewCount,
         time: data2.time
       }})
@@ -233,9 +234,9 @@ export default () => {
     test('returns ordered streams where user participated', async () => {
       // 2 messages in stream 1, 0 messages in stream 2, 1 message in stream 3
       await db.chatMessage.createMany({ data: [
-        { userId: user1, livestreamId: 1, time: data.time1, youtubeId: 'id1' },
-        { userId: user1, livestreamId: 1, time: addTime(data.time1, 'seconds', 1), youtubeId: 'id2' },
-        { userId: user1, livestreamId: 3, time: data.time3, youtubeId: 'id3' },
+        { userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
+        { userId: user1, livestreamId: 1, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' },
+        { userId: user1, livestreamId: 3, time: data.time3, externalId: 'id3' },
       ]})
 
       const result = await viewershipStore.getLivestreamParticipation(user1)

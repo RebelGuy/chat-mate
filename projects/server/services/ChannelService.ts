@@ -35,10 +35,10 @@ export default class ChannelService extends ContextClass {
 
     if (chat == null) {
       return null
-    } else if (chat.channel != null) {
+    } else if (chat.youtubeChannel != null) {
       return {
         platform: 'youtube',
-        channel: chat.channel
+        channel: chat.youtubeChannel
       }
     } else if (chat.twitchChannel != null) {
       return {

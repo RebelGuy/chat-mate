@@ -32,12 +32,12 @@ describe(nameof(ChannelService, 'getActiveUserChannel'), () => {
 
   test('returns active youtube channel', async () => {
     const channel: ChannelWithLatestInfo = {} as any
-    const chatItem: ChatItemWithRelations = {
+    const chatItem: Partial<ChatItemWithRelations> = {
       userId: 2,
-      channelId: 5, channel: channel,
+      youtubeChannelId: 5, youtubeChannel: channel,
       twitchChannelId: null, twitchChannel: null
-    } as any
-    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem)
+    }
+    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem as ChatItemWithRelations)
 
     const result = await channelService.getActiveUserChannel(2)
 
@@ -47,12 +47,12 @@ describe(nameof(ChannelService, 'getActiveUserChannel'), () => {
   
   test('returns active twitch channel', async () => {
     const channel: TwitchChannelWithLatestInfo = {} as any
-    const chatItem: ChatItemWithRelations = {
+    const chatItem: Partial<ChatItemWithRelations> = {
       userId: 2,
-      channelId: null, channel: null,
+      youtubeChannelId: null, youtubeChannel: null,
       twitchChannelId: 5, twitchChannel: channel
-    } as any
-    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem)
+    }
+    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem as ChatItemWithRelations)
 
     const result = await channelService.getActiveUserChannel(2)
 
@@ -69,21 +69,21 @@ describe(nameof(ChannelService, 'getActiveUserChannel'), () => {
 
 describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
   test('returns all active user channels', async () => {
-    const channel1: TwitchChannelWithLatestInfo = {} as any
-    const chatItem1: ChatItemWithRelations = {
+    const channel1: ChannelWithLatestInfo = {} as any
+    const chatItem1: Partial<ChatItemWithRelations> = {
       userId: 1,
-      channelId: 10, channel: channel1,
+      youtubeChannelId: 10, youtubeChannel: channel1,
       twitchChannelId: null, twitchChannel: null,
-    } as any
+    }
     const channel2: TwitchChannelWithLatestInfo = {} as any
-    const chatItem2: ChatItemWithRelations = {
+    const chatItem2: Partial<ChatItemWithRelations> = {
       userId: 2,
-      channelId: null, channel: null,
+      youtubeChannelId: null, youtubeChannel: null,
       twitchChannelId: 5, twitchChannel: channel2
-    } as any
+    }
 
-    mockChatStore.getLastChatByUser.calledWith(1).mockResolvedValue(chatItem1)
-    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem2)
+    mockChatStore.getLastChatByUser.calledWith(1).mockResolvedValue(chatItem1 as ChatItemWithRelations)
+    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem2 as ChatItemWithRelations)
     mockChannelStore.getCurrentUserIds.mockResolvedValue([1, 2])
 
     const result = await channelService.getActiveUserChannels()

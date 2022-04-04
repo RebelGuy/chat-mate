@@ -22,7 +22,7 @@ const channelInfo1: CreateOrUpdateChannelArgs = {
   imageUrl: 'www.image.com',
   isOwner: false,
   isModerator: true,
-  IsVerified: false
+  isVerified: false
 }
 const channelInfo2: CreateOrUpdateChannelArgs = {
   time: new Date(2021, 1, 2),
@@ -30,7 +30,7 @@ const channelInfo2: CreateOrUpdateChannelArgs = {
   imageUrl: 'www.image.com',
   isOwner: false,
   isModerator: false,
-  IsVerified: false
+  isVerified: false
 }
 const channelInfo3: CreateOrUpdateChannelArgs = {
   time: new Date(2021, 1, 3),
@@ -38,7 +38,7 @@ const channelInfo3: CreateOrUpdateChannelArgs = {
   imageUrl: 'www.image.net',
   isOwner: false,
   isModerator: false,
-  IsVerified: true
+  isVerified: true
 }
 const channelInfo4: CreateOrUpdateChannelArgs = {
   time: new Date(2021, 1, 4),
@@ -46,7 +46,7 @@ const channelInfo4: CreateOrUpdateChannelArgs = {
   imageUrl: 'www.image.net',
   isOwner: true,
   isModerator: false,
-  IsVerified: false
+  isVerified: false
 }
 
 const baseTwitchChannelProps = {
@@ -309,7 +309,7 @@ function insertNames (db: Db, names: UserNames[]) {
         data: {
           youtubeId: randomString(4),
           user: { connect: { id: name.userId }},
-          infoHistory: { create: { name: yt, time: new Date(), imageUrl: '', isModerator: false, isOwner: false, IsVerified: false }}
+          infoHistory: { create: { name: yt, time: new Date(), imageUrl: '', isModerator: false, isOwner: false, isVerified: false }}
         }
       })
     }

@@ -54,19 +54,19 @@ export default class MockMasterchat implements IMasterchat {
     }
 
     const item: ChatItemWithRelations = generateFakeChatItem(customMessage)
-    const channelInfo = item.channel!.infoHistory[0]!
+    const channelInfo = item.youtubeChannel!.infoHistory[0]!
     const action: MakeRequired<AddChatItemAction> = {
       type: 'addChatItemAction',
-      id: item.youtubeId,
+      id: item.externalId,
       timestamp: item.time,
       timestampUsec: `${item.time.getTime() * 1000}`,
       authorName: channelInfo.name,
-      authorChannelId: item.channel!.youtubeId,
+      authorChannelId: item.youtubeChannel!.youtubeId,
       authorPhoto: channelInfo.imageUrl,
       membership: undefined,
       isOwner: channelInfo.isOwner,
       isModerator: channelInfo.isModerator,
-      isVerified: channelInfo.IsVerified,
+      isVerified: channelInfo.isVerified,
       message: item.chatMessageParts.map((part, i) => {
         if (part.text && !part.emoji || customMessage && i === 0) {
           return {
@@ -77,7 +77,7 @@ export default class MockMasterchat implements IMasterchat {
         } else if (!part.text && part.emoji) {
           return {
             emoji: {
-              emojiId: part.emoji.youtubeId!,
+              emojiId: part.emoji.externalId!,
               image: {
                 accessibility: { accessibilityData: { label: part.emoji.name }},
                 thumbnails: [{ url: part.emoji.imageUrl, width: part.emoji.imageWidth, height: part.emoji.imageHeight }]
@@ -118,20 +118,20 @@ export default class MockMasterchat implements IMasterchat {
 }
 function generateFakeChatItem (text: string): ChatItemWithRelations {
   return {
-    youtubeId: randomString(10),
+    externalId: randomString(10),
     time: new Date(),
     id: 1,
     livestreamId: 1,
     userId: 1,
     twitchChannel: null,
     twitchChannelId: null,
-    channelId: 1,
-    channel: {
+    youtubeChannelId: 1,
+    youtubeChannel: {
       id: 1,
       userId: 1,
       youtubeId: randomString(10),
       infoHistory: [{
-        IsVerified: randomBoolean(),
+        isVerified: randomBoolean(),
         isModerator: randomBoolean(),
         isOwner: randomBoolean(),
         name: randomString(['A name', 'Some user', 'asdfaklsjdf']),

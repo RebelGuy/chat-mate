@@ -69,7 +69,7 @@ export default class ExperienceStore extends ContextClass {
   public async addChatExperience (userId: number, timestamp: number, xp: number, data: ChatExperienceData) {
     // don't allow backfilling or duplicates
     const prev = await this.getPreviousChatExperience(userId)
-    if (prev && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.youtubeId === data.externalId)) {
+    if (prev && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.externalId === data.externalId)) {
       return
     }
 
@@ -86,7 +86,7 @@ export default class ExperienceStore extends ContextClass {
           spamMultiplier: data.spamMultiplier,
           messageQualityMultiplier: data.messageQualityMultiplier,
           repetitionPenalty: data.repetitionPenalty,
-          chatMessage: { connect: { youtubeId: data.externalId }}
+          chatMessage: { connect: { externalId: data.externalId }}
         }}
       },
       include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, user: true }

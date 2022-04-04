@@ -161,7 +161,7 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
     userId: msg.userInfo.userId,
     userName: msg.userInfo.userName,
     displayName: msg.userInfo.displayName,
-    userType: msg.userInfo.userType as any,
+    userType: msg.userInfo.userType as 'mod' | 'global_mod' | 'admin' | 'staff' | undefined,
     isBroadcaster: msg.userInfo.isBroadcaster,
     isSubscriber: msg.userInfo.isSubscriber,
     isMod: msg.userInfo.isMod,
@@ -181,7 +181,7 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
 }
 
 export type ChatItemWithRelations = (ChatMessage & {
-  channel: Channel & { infoHistory: ChannelInfo[] } | null
+  youtubeChannel: Channel & { infoHistory: ChannelInfo[] } | null
   twitchChannel: TwitchChannel & { infoHistory: TwitchChannelInfo[] } | null
   chatMessageParts: (ChatMessagePart & {
       emoji: ChatEmoji | null
@@ -234,10 +234,10 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   }
 
   let userChannel: UserChannel
-  if (chat.channel != null) {
+  if (chat.youtubeChannel != null) {
     userChannel = {
       platform: 'youtube',
-      channel: chat.channel
+      channel: chat.youtubeChannel
     }
   } else if (chat.twitchChannel != null) {
     userChannel = {

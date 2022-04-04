@@ -58,7 +58,7 @@ export default class ChatService extends ContextClass {
           imageUrl: item.author.image,
           isOwner: item.author.attributes.isOwner,
           isModerator: item.author.attributes.isModerator,
-          IsVerified: item.author.attributes.isVerified
+          isVerified: item.author.attributes.isVerified
         }
         externalId = item.author.channelId
         platform = 'youtube'

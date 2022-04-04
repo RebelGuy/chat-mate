@@ -87,7 +87,7 @@ const cheer1: PartialCheerChatMessage = {
 
 function authorToChannelInfo (a: Author, time?: Date): Omit<ChannelInfo, 'channelId' | 'id'> {
   return {
-    IsVerified: a.attributes.isVerified,
+    isVerified: a.attributes.isVerified,
     isModerator: a.attributes.isModerator,
     isOwner: a.attributes.isOwner,
     imageUrl: a.image,
@@ -159,7 +159,7 @@ export default () => {
     await db.livestream.create({ data: livestream })
     await db.chatEmoji.create({ data: {
       isCustomEmoji: false,
-      youtubeId: emoji1Saved.emojiId,
+      externalId: emoji1Saved.emojiId,
       imageUrl: emoji1Saved.image.url,
       label: emoji1Saved.label,
       name: emoji1Saved.name
@@ -182,9 +182,9 @@ export default () => {
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText).toEqual([1, 3, 3])
 
       // check author links
-      const authors = await db.chatMessage.findFirst({ select: { userId: true, channelId: true, twitchChannelId: true }})
+      const authors = await db.chatMessage.findFirst({ select: { userId: true, youtubeChannelId: true, twitchChannelId: true }})
       expect(authors!.userId).toBe(1)
-      expect(authors!.channelId).toBe(1)
+      expect(authors!.youtubeChannelId).toBe(1)
       expect(authors!.twitchChannelId).toBeNull()
     })
 
@@ -209,9 +209,9 @@ export default () => {
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCheer).toEqual([1, 2, 1, 1])
 
       // check author links
-      const authors = await db.chatMessage.findFirst({ select: { userId: true, channelId: true, twitchChannelId: true }})
+      const authors = await db.chatMessage.findFirst({ select: { userId: true, youtubeChannelId: true, twitchChannelId: true }})
       expect(authors!.userId).toBe(2)
-      expect(authors!.channelId).toBeNull()
+      expect(authors!.youtubeChannelId).toBeNull()
       expect(authors!.twitchChannelId).toBe(1)
     })
 
@@ -220,8 +220,8 @@ export default () => {
       db.chatMessage.create({ data: {
         user: { connect: { id: youtubeUserId }},
         time: new Date(chatItem.timestamp),
-        youtubeId: chatItem.id,
-        channel: { connect: { id: 1 }},
+        externalId: chatItem.id,
+        youtubeChannel: { connect: { id: 1 }},
         livestream: { connect: { id: 1 }}
       }})
 
@@ -250,7 +250,7 @@ export default () => {
 
       const result = await chatStore.getChatSince(chatItem1.timestamp)
 
-      expect(result.map(r => r.youtubeId)).toEqual([chatItem2.id, chatItem3.id])
+      expect(result.map(r => r.externalId)).toEqual([chatItem2.id, chatItem3.id])
     })
   })
 
@@ -273,21 +273,21 @@ export default () => {
         livestreamId: 1,
         time: data.time1,
         userId: 1,
-        youtubeId: 'msg 1',
-        channelId: 1
+        externalId: 'msg 1',
+        youtubeChannelId: 1
       }, {
         livestreamId: 1,
         time: data.time2,
         userId: 1,
-        youtubeId: 'msg 2',
+        externalId: 'msg 2',
         twitchChannelId: 1
       }]})
 
       const msg = await chatStore.getLastChatByUser(1)
 
-      expect(msg!.youtubeId).toBe('msg 2')
+      expect(msg!.externalId).toBe('msg 2')
       expect(msg!.userId).toBe(1)
-      expect(msg!.channelId).toBeNull()
+      expect(msg!.youtubeChannelId).toBeNull()
       expect(msg!.twitchChannelId).toBe(1)
     })
   })

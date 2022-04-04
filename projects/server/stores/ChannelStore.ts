@@ -188,7 +188,7 @@ const youtubeChannelInfoComparator: ObjectComparator<CreateOrUpdateChannelArgs> 
   time: null,
   isOwner: 'default',
   isModerator: 'default',
-  IsVerified: 'default'
+  isVerified: 'default'
 }
 
 const twitchChannelInfoComparator: ObjectComparator<CreateOrUpdateTwitchChannelArgs> = {

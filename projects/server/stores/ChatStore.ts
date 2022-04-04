@@ -35,14 +35,14 @@ export default class ChatStore extends ContextClass {
       const chatMessage = await db.chatMessage.upsert({
         create: {
           time: new Date(chatItem.timestamp),
-          youtubeId: chatItem.id,
+          externalId: chatItem.id,
           user: { connect: { id: userId }},
-          channel: platform === 'youtube' ? { connect: { youtubeId: channelId }} : platform === 'twitch' ? undefined : assertUnreachable(platform),
+          youtubeChannel: platform === 'youtube' ? { connect: { youtubeId: channelId }} : platform === 'twitch' ? undefined : assertUnreachable(platform),
           twitchChannel: platform === 'twitch' ? { connect: { twitchId: channelId }} : platform === 'youtube' ? undefined : assertUnreachable(platform),
           livestream: { connect: { id: this.livestreamStore.currentLivestream.id }}
         },
         update: {},
-        where: { youtubeId: chatItem.id },
+        where: { externalId: chatItem.id },
         include: { chatMessageParts: true }
       })
 
@@ -95,7 +95,7 @@ export default class ChatStore extends ContextClass {
   private connectOrCreateEmoji (part: PartialEmojiChatMessage) {
     return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
       create: {
-        youtubeId: part.emojiId,
+        externalId: part.emojiId,
         imageUrl: part.image.url,
         imageHeight: part.image.height ?? null,
         imageWidth: part.image.width ?? null,
@@ -103,7 +103,7 @@ export default class ChatStore extends ContextClass {
         name: part.name,
         isCustomEmoji: false
       },
-      where: { youtubeId: part.emojiId }
+      where: { externalId: part.emojiId }
     })
   }
 
@@ -144,6 +144,6 @@ const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>(
       cheer: true
     },
   },
-  channel: includeChannelInfo,
+  youtubeChannel: includeChannelInfo,
   twitchChannel: includeChannelInfo
 })
