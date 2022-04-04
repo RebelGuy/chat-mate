@@ -2,7 +2,7 @@ import { In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController } from '@rebel/server/controllers/ChatMateController'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
-import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/server/util/random'
+import { chooseWeightedRandom, pickRandom, randomInt, randomString } from '@rebel/server/util/random'
 import { addTime } from '@rebel/server/util/datetime'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
@@ -56,25 +56,41 @@ export default class ChatMateControllerFake implements IChatMateController {
     let events: PublicChatMateEvent[] = []
     const N = Math.sqrt(Math.random() * 100) - 5
     for (let i = 0; i < N; i++) {
-      const newLevel = randomInt(0, 101)
-      const level: Level = {
-        level: asGte(newLevel, 0),
-        levelProgress: asLt(asGte(Math.random(), 0), 1),
-        totalExperience: asGte(randomInt(0, 100000), 0)
-      }
-      const user: PublicUser = userChannelAndLevelToPublicUser({ ...pickRandom(users), ...level })
-
-      events.push({
-        schema: 1,
-        timestamp: new Date().getTime(),
-        type: 'levelUp',
-        data: {
-          schema: 1,
-          newLevel: newLevel,
-          oldLevel: newLevel - 1,
-          user
+      if (Math.random() < 0.5) {
+        // level up event
+        const newLevel = randomInt(0, 101)
+        const level: Level = {
+          level: asGte(newLevel, 0),
+          levelProgress: asLt(asGte(Math.random(), 0), 1),
+          totalExperience: asGte(randomInt(0, 100000), 0)
         }
-      })
+        const user: PublicUser = userChannelAndLevelToPublicUser({ ...pickRandom(users), ...level })
+  
+        events.push({
+          schema: 2,
+          timestamp: new Date().getTime(),
+          type: 'levelUp',
+          levelUpData: {
+            schema: 1,
+            newLevel: newLevel,
+            oldLevel: newLevel - 1,
+            user
+          },
+          newTwitchFollowerData: null
+        })  
+      } else {
+        // new follower event
+        events.push({
+          schema: 2,
+          timestamp: new Date().getTime(),
+          type: 'newTwitchFollower',
+          levelUpData: null,
+          newTwitchFollowerData: {
+            schema: 1,
+            displayName: randomString(8)
+          }
+        })  
+      }
     }
 
     return builder.success({

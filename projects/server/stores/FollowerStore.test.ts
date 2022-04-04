@@ -5,8 +5,8 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { nameof, single } from '@rebel/server/_test/utils'
-import { AccessToken } from '@twurple/auth'
 import { mock } from 'jest-mock-extended'
+import * as data from '@rebel/server/_test/testData'
 
 export default () => {
   let followerStore: FollowerStore
@@ -22,6 +22,27 @@ export default () => {
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
+
+  describe(nameof(FollowerStore, 'getFollowersSince'), () => {
+    test('returns empty array if no followers since given time', async () => {
+      await addFollower('1', 'a', 'A', data.time1)
+
+      const result = await followerStore.getFollowersSince(data.time2.getTime())
+
+      expect(result.length).toBe(0)
+    })
+
+    test('returns correct followers since given time', async () => {
+      await addFollower('1', 'a', 'A', data.time1)
+      await addFollower('2', 'b', 'B', data.time3)
+      await addFollower('3', 'c', 'C', data.time3)
+
+      const result = await followerStore.getFollowersSince(data.time2.getTime())
+
+      expect(result.length).toBe(2)
+      expect(result.map(r => r.twitchId)).toEqual(['2', '3'])
+    })
+  })
 
   describe(nameof(FollowerStore, 'saveNewFollower'), () => {
     test('saves new follower to the db', async () => {
@@ -42,15 +63,20 @@ export default () => {
     })
 
     test('ignores known follower', async () => {
-      await db.twitchFollower.create({ data: {
-        twitchId: '12345',
-        displayName: 'TestUser',
-        userName: 'testuser'
-      }})
+      await addFollower('12345', 'testuser', 'TestUser')
 
       await followerStore.saveNewFollower('12345', 'ichangedmyname', 'IChangedMyName')
 
       expectRowCount(db.twitchFollower).toBe(1)
     })
   })
+
+  async function addFollower (id: string, userName: string, displayName: string, time?: Date) {
+    await db.twitchFollower.create({ data: {
+      twitchId: id,
+      userName: userName,
+      displayName: displayName,
+      date: time
+    }})
+  }
 }

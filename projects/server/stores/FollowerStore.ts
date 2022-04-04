@@ -1,3 +1,4 @@
+import { TwitchFollower } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
@@ -18,6 +19,16 @@ export default class FollowerStore extends ContextClass {
 
     this.logService = deps.resolve('logService')
     this.db = deps.resolve('dbProvider').get()
+  }
+
+  /** Returns the followers since the given timestamp (exclusive). */
+  public async getFollowersSince (since: number): Promise<TwitchFollower[]> {
+    try {
+      return await this.db.twitchFollower.findMany({ where: { date: { gt: new Date(since) }}})
+    } catch (e) {
+      this.logService.logError(this, 'Unable to get followers since', since, e)
+      return []
+    }
   }
 
   /** Saves the user's details to the TwitchFollowers table if they follow for the first time. */

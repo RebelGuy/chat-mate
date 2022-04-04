@@ -142,6 +142,7 @@ Key:
   - 🟢 getAllTransactionsStartingAt
   - 🟢 getTotalDeltaStartingAt
 - 🟢 FollowerStore
+  - 🟢 getFollowersSince
   - 🟢 saveNewFollower
 - 🟢 LivestreamStore
   - 🟢 initialise
@@ -229,7 +230,7 @@ Returns data with the following properties:
 - `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Gets the events that have occurred since the specified time.
 

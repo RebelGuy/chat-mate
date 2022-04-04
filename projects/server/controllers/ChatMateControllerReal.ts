@@ -13,6 +13,7 @@ import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController } from '@rebel/server/controllers/ChatMateController'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
+import FollowerStore from '@rebel/server/stores/FollowerStore'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -21,6 +22,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   twurpleStatusService: StatusService
   experienceService: ExperienceService
   channelService: ChannelService
+  followerStore: FollowerStore
 }>
 
 export default class ChatMateControllerReal implements IChatMateController {
@@ -30,6 +32,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly twurpleStatusService: StatusService
   readonly experienceService: ExperienceService
   readonly channelService: ChannelService
+  readonly followerStore: FollowerStore
 
   constructor (deps: ChatMateControllerDeps) {
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -38,6 +41,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     this.twurpleStatusService = deps.resolve('twurpleStatusService')
     this.experienceService = deps.resolve('experienceService')
     this.channelService = deps.resolve('channelService')
+    this.followerStore = deps.resolve('followerStore')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -64,14 +68,30 @@ export default class ChatMateControllerReal implements IChatMateController {
       const user: PublicUser = userChannelAndLevelToPublicUser(channels[i])
 
       events.push({
-        schema: 1,
+        schema: 2,
         type: 'levelUp',
         timestamp: diff.timestamp,
-        data: {
+        levelUpData: {
           schema: 1,
           newLevel: diff.endLevel.level,
           oldLevel: diff.startLevel.level,
           user
+        },
+        newTwitchFollowerData: null
+      })
+    }
+
+    const newFollowers = await this.followerStore.getFollowersSince(since + 1)
+    for (let i = 0; i < newFollowers.length; i++) {
+      const follower = newFollowers[i]
+      events.push({
+        schema: 2,
+        type: 'newTwitchFollower',
+        timestamp: follower.date.getTime(),
+        levelUpData: null,
+        newTwitchFollowerData: {
+          schema: 1,
+          displayName: follower.displayName
         }
       })
     }
