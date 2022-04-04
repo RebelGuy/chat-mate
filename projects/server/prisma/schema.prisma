@@ -149,6 +149,17 @@ model TwitchChannel {
   @@map("twitch_channels")
 }
 
+model TwitchFollower {
+  id          Int      @id @default(autoincrement())
+  twitchId    String   @db.VarChar(32) // unique
+  date        DateTime @default(now())
+  userName    String
+  displayName String
+
+  @@unique([twitchId], map: "twitch_followers_twitchId_key")
+  @@map("twitch_followers")
+}
+
 // CHAT
 
 /// Unlike text, emoji objects are finite and can be re-used

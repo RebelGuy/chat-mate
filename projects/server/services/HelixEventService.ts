@@ -3,11 +3,12 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { NgrokAdapter } from '@twurple/eventsub-ngrok'
 import { EventSubListener } from '@twurple/eventsub'
-import FollowerService from '@rebel/server/services/FollowerService'
+import FollowerService from '@rebel/server/stores/FollowerStore'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
 import { HelixEventSubApi, HelixUser } from '@twurple/api/lib'
 import { disconnect, kill } from 'ngrok'
+import FollowerStore from '@rebel/server/stores/FollowerStore'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -18,7 +19,7 @@ type Deps = Dependencies<{
   isLive: boolean
   twitchChannelName: string
   twurpleApiClientProvider: TwurpleApiClientProvider
-  followerService: FollowerService
+  followerStore: FollowerStore
   timerHelpers: TimerHelpers
   logService: LogService
 }>
@@ -30,7 +31,7 @@ export default class HelixEventService extends ContextClass {
   private readonly isLive: boolean
   private readonly twitchChannelName: string
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
-  private readonly followerService: FollowerService
+  private readonly followerStore: FollowerStore
   private readonly timerHelpers: TimerHelpers
   private readonly logService: LogService
 
@@ -45,7 +46,7 @@ export default class HelixEventService extends ContextClass {
     this.isLive = deps.resolve('isLive')
     this.twitchChannelName = deps.resolve('twitchChannelName')
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
-    this.followerService = deps.resolve('followerService')
+    this.followerStore = deps.resolve('followerStore')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.logService = deps.resolve('logService')
   }
@@ -87,7 +88,7 @@ export default class HelixEventService extends ContextClass {
 
   private async subscribeToEvents () {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    await this.listener.subscribeToChannelFollowEvents(this.user.id, async (e) => await this.followerService.onNewFollower(e.userId, e.userName, e.userDisplayName))
+    await this.listener.subscribeToChannelFollowEvents(this.user.id, async (e) => await this.followerStore.saveNewFollower(e.userId, e.userName, e.userDisplayName))
   }
 
   private createNewListener () {

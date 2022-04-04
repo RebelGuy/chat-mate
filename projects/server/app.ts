@@ -42,7 +42,7 @@ import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyServic
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
-import FollowerService from '@rebel/server/services/FollowerService'
+import FollowerStore from '@rebel/server/stores/FollowerStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -102,7 +102,7 @@ const globalContext = ContextProvider.create()
   .withClass('chatService', ChatService)
   .withClass('chatFetchService', ChatFetchService)
   .withClass('twurpleService', TwurpleService)
-  .withClass('followerService', FollowerService)
+  .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
   .build()
 

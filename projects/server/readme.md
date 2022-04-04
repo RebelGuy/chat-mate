@@ -110,8 +110,8 @@ Key:
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
-- 🟢 TwurpleAuthProvider
-  - 🟢 initialise
+- 🟢 TwurpleApiProxyService
+  - 🟢 fetchMetadata
 - 🟢 TwurpleService
   - 🟢 initialise
 - ⚪ FileService
@@ -141,6 +141,8 @@ Key:
   - 🟢 getPreviousChatExperience
   - 🟢 getAllTransactionsStartingAt
   - 🟢 getTotalDeltaStartingAt
+- 🟢 FollowerStore
+  - 🟢 saveNewFollower
 - 🟢 LivestreamStore
   - 🟢 initialise
   - 🟢 currentLivestream
@@ -153,6 +155,10 @@ Key:
   - 🟢 getLatestLiveCount
   - 🟢 getLivestreamParticipation
   - 🟢 getLivestreamViewership
+
+**Providers**
+- 🟢 TwurpleAuthProvider
+  - 🟢 initialise
 
 **Helpers**
 - 🟢 ExperienceHelpers
