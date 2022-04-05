@@ -8,6 +8,7 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import { AccessToken, AuthProvider, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 type Deps = Dependencies<{
+  disableExternalApis: boolean
   isLive: boolean
   twitchClientId: string
   twitchClientSecret: string
@@ -22,6 +23,7 @@ type Deps = Dependencies<{
 export default class TwurpleAuthProvider extends ContextClass {
   readonly name = TwurpleAuthProvider.name
 
+  private readonly disableExternalApis: boolean
   private readonly isLive: boolean
   private readonly clientId: string
   private readonly clientSecret: string
@@ -35,6 +37,7 @@ export default class TwurpleAuthProvider extends ContextClass {
 
   constructor (deps: Deps) {
     super()
+    this.disableExternalApis = deps.resolve('disableExternalApis')
     this.isLive = deps.resolve('isLive')
     this.clientId = deps.resolve('twitchClientId')
     this.clientSecret = deps.resolve('twitchClientSecret')
@@ -47,6 +50,10 @@ export default class TwurpleAuthProvider extends ContextClass {
   }
 
   public override async initialise (): Promise<void> {
+    if (this.disableExternalApis) {
+      return
+    }
+
     // no error handling on purpose - if this fails, it should be considered a fatal error
     let token = await this.authStore.loadAccessToken()
 

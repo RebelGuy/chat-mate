@@ -7,6 +7,7 @@ import { ApiClient } from '@twurple/api'
 import { LogLevel } from '@twurple/chat'
 
 type Deps = Dependencies<{
+  disableExternalApis: boolean
   twurpleAuthProvider: TwurpleAuthProvider
   logService: LogService
 }>
@@ -14,6 +15,7 @@ type Deps = Dependencies<{
 export default class TwurpleApiClientProvider extends ContextClass implements IProvider<ApiClient> {
   public readonly name = TwurpleApiClientProvider.name
 
+  private readonly disableExternalApis: boolean
   private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly logService: LogService
   private readonly logContext: LogContext
@@ -23,12 +25,17 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
   constructor (deps: Deps) {
     super()
   
+    this.disableExternalApis = deps.resolve('disableExternalApis')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
   }
 
   public override initialise () {
+    if (this.disableExternalApis) {
+      return
+    }
+
     this.apiClient = new ApiClient({
       authProvider: this.twurpleAuthProvider.get(),
       

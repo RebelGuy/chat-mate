@@ -33,6 +33,7 @@ beforeEach(() => {
   mockClientCredentialsAuthProviderFactory.create.mockReturnValue(mockClientCredentialsAuthProvider)
 
   twurpleAuthProvider = new TwurpleAuthProvider(new Dependencies({
+    disableExternalApis: false,
     isLive: true,
     twitchClientId: clientId,
     twitchClientSecret: clientSecret,

@@ -33,6 +33,10 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
   }
 
   override async initialise (): Promise<void> {
+    if (this.disableExternalApis) {
+      return
+    }
+
     this.chatClient = new ChatClient({
       authProvider: this.twurkpleAuthProvider.get(),
       channels: [this.twitchChannelName],
@@ -45,10 +49,6 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
         }
       }
     })
-
-    if (this.disableExternalApis) {
-      return
-    }
 
     await this.chatClient.connect()
     this.logService.logInfo(this, 'Connected to the Twurple chat client')

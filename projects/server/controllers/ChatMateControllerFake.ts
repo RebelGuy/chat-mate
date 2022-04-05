@@ -56,7 +56,7 @@ export default class ChatMateControllerFake implements IChatMateController {
     let events: PublicChatMateEvent[] = []
     const N = Math.sqrt(Math.random() * 100) - 5
     for (let i = 0; i < N; i++) {
-      if (Math.random() < 0.5) {
+      if (Math.random() < 0.9) {
         // level up event
         const newLevel = randomInt(0, 101)
         const level: Level = {

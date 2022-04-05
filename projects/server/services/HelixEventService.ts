@@ -16,6 +16,7 @@ import FollowerStore from '@rebel/server/stores/FollowerStore'
 const NGROK_MAX_SESSION = 3600 * 2 * 1000
 
 type Deps = Dependencies<{
+  disableExternalApis: boolean
   isLive: boolean
   twitchChannelName: string
   twurpleApiClientProvider: TwurpleApiClientProvider
@@ -28,6 +29,7 @@ type Deps = Dependencies<{
 export default class HelixEventService extends ContextClass {
   public readonly name = HelixEventService.name
 
+  private readonly disableExternalApis: boolean
   private readonly isLive: boolean
   private readonly twitchChannelName: string
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
@@ -43,6 +45,7 @@ export default class HelixEventService extends ContextClass {
   constructor (deps: Deps) {
     super()
 
+    this.disableExternalApis = deps.resolve('disableExternalApis')
     this.isLive = deps.resolve('isLive')
     this.twitchChannelName = deps.resolve('twitchChannelName')
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
@@ -52,6 +55,10 @@ export default class HelixEventService extends ContextClass {
   }
 
   public override async initialise () {
+    if (this.disableExternalApis) {
+      return
+    }
+
     // https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html
     // we have to use the clientCredentialsApiClient, for some reasont he refreshing one doesn't work
     const client = this.twurpleApiClientProvider.getClientApi()
