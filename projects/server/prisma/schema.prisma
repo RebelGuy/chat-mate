@@ -75,6 +75,8 @@ model ChatUser {
   experienceSnapshots        ExperienceSnapshot[]
   viewingBlocks              ViewingBlock[]
   experienceDataAdministered ExperienceDataAdmin[]
+  receivedPunishments        Punishment[]            @relation("punishments_user")
+  administeredPunishments    Punishment[]            @relation("punishments_adminUser")
 
   @@map("chat_users")
 }
@@ -404,4 +406,33 @@ model CustomEmoji {
 
   @@unique([symbol], map: "CustomEmoji_symbol_key")
   @@map("customemoji")
+}
+
+model Punishment {
+  id Int @id @default(autoincrement())
+
+  punishmentType PunishmentType
+  issuedAt       DateTime
+  /// null if punishment never expires
+  expirationTime DateTime?
+  message        String?        @db.VarChar(1024)
+
+  /// only set if the punishments has been revoked
+  revokedTime   DateTime?
+  revokeMessage String?   @db.VarChar(1024)
+
+  userId Int
+  user   ChatUser @relation("punishments_user", fields: [userId], references: [id], map: "punishments_userId_fkey")
+
+  adminUserId Int
+  adminUser   ChatUser @relation("punishments_adminUser", fields: [adminUserId], references: [id], map: "punishments_adminUserId_fkey")
+
+  @@index([userId], map: "punishments_userId_fkey")
+  @@index([adminUserId], map: "punishments_adminUserId_fkey")
+  @@map("punishments")
+}
+
+enum PunishmentType {
+  ban
+  timeout
 }
