@@ -16,7 +16,7 @@ import {
   NoPermissionError,
   UnavailableError,
 } from "./errors";
-import { ChatResponse, Credentials } from "./interfaces";
+import { ChatResponse, Credentials, Metadata } from "./interfaces";
 import { Action, AddChatItemAction } from "./interfaces/actions";
 import { ActionCatalog, ActionInfo } from "./interfaces/contextActions";
 import {
@@ -542,6 +542,22 @@ export class Masterchat extends EventEmitter {
     this.channelName = metadata.channelName;
     this.isLive = metadata.isLive;
   }
+  
+  // pre-v0.15.0
+  async fetchMetadata(): Promise<Metadata> {
+    const res = await this.get("/watch?v=" + this.videoId);
+
+    // Check ban status
+    if (res.status === 429) {
+      throw new AccessDeniedError("Rate limit exceeded: " + this.videoId);
+    }
+
+    const html = await res.data;
+    return {
+      ...parseMetadataFromWatch(html),
+      videoId: this.videoId
+    };
+  }
 
   async fetchMetadataFromWatch(id: string) {
     const res = await this.get("/watch?v=" + this.videoId);
@@ -591,7 +607,7 @@ export class Masterchat extends EventEmitter {
     if (!(item && "liveChatTextMessageRenderer" in item)) {
       throw new Error(`Invalid response: ` + item);
     }
-    return item.liveChatTextMessageRenderer;
+    return item.liveChatTextMessageRenderer!;
   }
 
   /**

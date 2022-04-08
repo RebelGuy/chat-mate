@@ -9,6 +9,9 @@ import {
 
 export function parseReplaceChatItemAction(payload: YTReplaceChatItemAction) {
   const parsedItem = parseReplacementItem(payload.replacementItem);
+  if (parsedItem == null) {
+    return null
+  }
 
   const parsed: ReplaceChatItemAction = {
     type: "replaceChatItemAction",
@@ -26,7 +29,7 @@ function parseReplacementItem(
       item.liveChatPlaceholderItemRenderer
     );
   } else if ("liveChatTextMessageRenderer" in item) {
-    return parseLiveChatTextMessageRenderer(item.liveChatTextMessageRenderer);
+    return parseLiveChatTextMessageRenderer(item.liveChatTextMessageRenderer!);
   } else if ("liveChatPaidMessageRenderer" in item) {
     // TODO: check if YTLiveChatPaidMessageRendererContainer will actually appear
     debugLog(
@@ -38,6 +41,6 @@ function parseReplacementItem(
       "[action required] unrecognized replacementItem type:",
       JSON.stringify(item)
     );
-    return item;
+    return null;
   }
 }

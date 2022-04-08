@@ -1,3 +1,4 @@
+import { LiveStatus } from '@rebel/masterchat'
 import { Action } from "./actions";
 import { TimedContinuation } from "./misc";
 export * from "./actions";
@@ -14,7 +15,7 @@ export interface Metadata {
   /** @deprecated **Do not use this for checking if the stream is currently live of not, as it is bugged.**
    * Use `liveStatus` instead. */
   isLive?: boolean;
-
+  liveStatus: LiveStatus
   /** Undefined if we don't know. */
   viewerCount?: number
 }

@@ -122,7 +122,7 @@ export default class ChatFetchService extends ContextClass {
   }
 
   private toChatItem (item: AddChatItemAction): ChatItem {
-    const messageParts = item.message.map((run: YTRun): PartialChatMessage => {
+    const messageParts = item.message!.map((run: YTRun): PartialChatMessage => {
       if (isTextRun(run)) {
         return {
           type: 'text',
