@@ -710,11 +710,7 @@ export class Masterchat extends EventEmitter {
     const url = actionInfo.url;
     let res;
     if (actionInfo.isPost) {
-      res = await this.post(url, {
-        body: withContext({
-          params: actionInfo.params,
-        }),
-      });
+      res = await this.post(url, withContext({ params: actionInfo.params }))
     } else {
       res = await this.get(url);
     }
@@ -726,6 +722,7 @@ export class Masterchat extends EventEmitter {
   }
 
   /**
+   * This gets the allowed actions when clicking on the menu next to a message.
    * NOTE: urlParams: pbj=1|0
    */
   private async getActionCatalog(
