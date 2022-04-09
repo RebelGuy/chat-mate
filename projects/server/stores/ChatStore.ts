@@ -59,6 +59,14 @@ export default class ChatStore extends ContextClass {
     })
   }
 
+  public async getLastChatByYoutubeChannel (youtubeChannelId: number): Promise<ChatItemWithRelations | null> {
+    return await this.db.chatMessage.findFirst({
+      where: { youtubeChannel: { id: youtubeChannelId }},
+      orderBy: { time: 'desc' },
+      include: chatMessageIncludeRelations
+    })
+  }
+
   /** Returns the last chat item authored by the user, if any, regardless of which channel was used. */
   public async getLastChatByUser (userId: number): Promise<ChatItemWithRelations | null> {
     return await this.db.chatMessage.findFirst({

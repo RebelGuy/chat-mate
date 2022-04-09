@@ -107,6 +107,10 @@ Key:
 - 🟢 MasterchatProxyService
   - 🟢 fetch
   - 🟢 fetchMetadata
+- 🟢 PunishmentService
+  - 🟢 banUser
+  - 🟢 getCurrentPunishments
+  - 🟢 unbanUser
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
@@ -126,9 +130,11 @@ Key:
   - 🟢 getCurrentUserIds
   - 🟢 getCurrentUserNames
   - 🟢 getUserId
+  - 🟢 getUserOwnedChannels
 - 🟢 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince
+  - 🟢 getLastChatByYoutubeChannel
   - 🟢 getLastChatByUser
 - 🟢 CustomEmojiStore
   - 🟢 addCustomEmoji
@@ -149,6 +155,11 @@ Key:
   - 🟢 currentLivestream
   - 🟢 setContinuationToken
   - 🟢 setTimes
+- 🟢 PunishmentStore
+  - 🟢 addPunishment
+  - 🟢 getPunishments
+  - 🟢 getPunishmentsForUser
+  - 🟢 revokePunishment
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation

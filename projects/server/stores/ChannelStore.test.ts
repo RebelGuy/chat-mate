@@ -299,6 +299,37 @@ export default () => {
       expect(result).not.toBeNull()
     })
   })
+
+  describe(nameof(ChannelStore, 'getUserOwnedChannels'), () => {
+    test('throws if user does not exist', async () => {
+      await expect(() => channelStore.getUserOwnedChannels(1)).rejects.toThrow()
+    })
+
+    test('returns all youtube and twitch channel ids for this user', async () => {
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}}
+      }})
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { connect: { id: 1 }}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { connect: { id: 1 }}
+      }})
+
+      const result = await channelStore.getUserOwnedChannels(1)
+
+      expect(result.userId).toBe(1)
+      expect(result.youtubeChannels).toEqual([1, 2])
+      expect(result.twitchChannels).toEqual([2])
+    })
+  })
 }
 
 /** Inserts ChannelInfos for separate channels, with the given channel names. It is assumed that all users exist. */

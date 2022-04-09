@@ -19,6 +19,13 @@ export type TwitchChannelWithLatestInfo = Omit<Entity.TwitchChannel, 'chatMessag
 /** Contains the most recent name of each channel that the user owns. */
 export type UserNames = { userId: number, youtubeNames: string[], twitchNames: string[] }
 
+/** Contains all channels on all platforms owned by the user. */
+export type UserOwnedChannels = {
+  userId: number,
+  youtubeChannels: number[],
+  twitchChannels: number[]
+}
+
 export type UserChannel = {
   platform: Extract<ChatPlatform, 'youtube'>
   channel: ChannelWithLatestInfo
@@ -158,6 +165,24 @@ export default class ChannelStore extends ContextClass {
     }
     
     throw new Error('Cannot find user with external id ' + externalId)
+  }
+
+  /** Throws if the user does not exist. */
+  public async getUserOwnedChannels (userId: number): Promise<UserOwnedChannels> {
+    const result = await this.db.chatUser.findUnique({
+      where: { id: userId },
+      rejectOnNotFound: true,
+      include: {
+        youtubeChannels: { select: { id: true }},
+        twitchChannels: { select: { id: true }}
+      },
+    })
+
+    return {
+      userId: result.id,
+      youtubeChannels: result.youtubeChannels.map(c => c.id),
+      twitchChannels: result.twitchChannels.map(c => c.id)
+    }
   }
 
   private async tryGetChannelWithLatestInfo (youtubeChannelId: string) {

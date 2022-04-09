@@ -51,6 +51,14 @@ export default class PunishmentStore extends ContextClass {
     }})
   }
 
+  public async getPunishments () {
+    return await this.db.punishment.findMany()
+  }
+  
+  public async getPunishmentsForUser (userId: number) {
+    return await this.db.punishment.findMany({ where: { userId: userId }})
+  }
+  
   public async revokePunishment (punishmentId: number, revokedAt: Date, revokeMessage: string | null) {
     const punishment = await this.db.punishment.findUnique({
       where: { id: punishmentId },
@@ -65,13 +73,5 @@ export default class PunishmentStore extends ContextClass {
       where: { id: punishmentId },
       data: { revokedTime: revokedAt, revokeMessage: revokeMessage }
     })
-  }
-
-  public async getPunishments () {
-    return await this.db.punishment.findMany()
-  }
-  
-  public async getPunishmentsForUser (userId: number) {
-    return await this.db.punishment.findMany({ where: { userId: userId }})
   }
 }

@@ -18,16 +18,24 @@ const livestream: Livestream = {
   end: null
 }
 
-const youtubeUserId = 1
-const extYoutubeChannel = 'channel1'
+const youtube1UserId = 1
+const extYoutubeChannel1 = 'channel1'
+const youtube2UserId = 1
+const extYoutubeChannel2 = 'channel_2'
 const twitchUserId = 2
 const extTwitchChannel = 'channel2'
 
-const ytAuthor: Author = {
+const ytAuthor1: Author = {
   attributes: { isModerator: true, isOwner: false, isVerified: false },
-  channelId: extYoutubeChannel,
+  channelId: extYoutubeChannel1,
   image: 'author1.image',
   name: 'author1.name'
+}
+const ytAuthor2: Author = {
+  attributes: { isModerator: false, isOwner: true, isVerified: false },
+  channelId: extYoutubeChannel2,
+  image: 'author2.image',
+  name: 'author2.name'
 }
 const twitchAuthor: TwitchAuthor = {
   userId: extTwitchChannel,
@@ -116,7 +124,7 @@ function makeYtChatItem (...msg: PartialChatMessage[]): ChatItem {
     platform: 'youtube',
     contextToken: 'params1',
     timestamp: new Date(2021, 1, 1).getTime(),
-    author: ytAuthor,
+    author: ytAuthor1,
     messageParts: msg
   }
 }
@@ -149,13 +157,18 @@ export default () => {
 
     await db.channel.create({ data: {
       user: { create: {}},
-      youtubeId: ytAuthor.channelId,
-      infoHistory: { create: authorToChannelInfo(ytAuthor)}
+      youtubeId: ytAuthor1.channelId,
+      infoHistory: { create: authorToChannelInfo(ytAuthor1)}
     }})
     await db.twitchChannel.create({ data: {
       user: { create: {}},
       twitchId: twitchAuthor.userId,
       infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
+    }})
+    await db.channel.create({ data: {
+      user: { connect: { id: youtube1UserId }},
+      youtubeId: ytAuthor2.channelId,
+      infoHistory: { create: authorToChannelInfo(ytAuthor2)}
     }})
     await db.livestream.create({ data: livestream })
     await db.chatEmoji.create({ data: {
@@ -173,7 +186,7 @@ export default () => {
     test('adds youtube chat item with ordered text message parts', async () => {
       const chatItem = makeYtChatItem(text1, text2, text3)
 
-      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel)
+      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))?.text?.text
@@ -192,7 +205,7 @@ export default () => {
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
       const chatItem = makeYtChatItem(emoji1Saved, emoji2New)
 
-      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel)
+      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatEmoji).toEqual([1, 2, 2])
     })
@@ -218,15 +231,15 @@ export default () => {
 
     test('duplicate chat id ignored', async () => {
       const chatItem = makeYtChatItem(text1)
-      db.chatMessage.create({ data: {
-        user: { connect: { id: youtubeUserId }},
+      await db.chatMessage.create({ data: {
+        user: { connect: { id: youtube1UserId }},
         time: new Date(chatItem.timestamp),
         externalId: chatItem.id,
         youtubeChannel: { connect: { id: 1 }},
         livestream: { connect: { id: 1 }}
       }})
 
-      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel)
+      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage).toBe(1)
     })
@@ -240,18 +253,54 @@ export default () => {
     })
 
     test('does not include earlier items', async () => {
-      const chatItem1: ChatItem = { author: ytAuthor, id: 'id1', platform: 'youtube', contextToken: 'params1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
-      const chatItem2: ChatItem = { author: ytAuthor, id: 'id2', platform: 'youtube', contextToken: 'params2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
-      const chatItem3: ChatItem = { author: ytAuthor, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
+      const chatItem1: ChatItem = { author: ytAuthor1, id: 'id1', platform: 'youtube', contextToken: 'params1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
+      const chatItem2: ChatItem = { author: ytAuthor1, id: 'id2', platform: 'youtube', contextToken: 'params2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
+      const chatItem3: ChatItem = { author: ytAuthor1, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
 
       // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
-      await chatStore.addChat(chatItem1, youtubeUserId, extYoutubeChannel)
-      await chatStore.addChat(chatItem2, youtubeUserId, extYoutubeChannel)
-      await chatStore.addChat(chatItem3, youtubeUserId, extYoutubeChannel)
+      await chatStore.addChat(chatItem1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem2, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem3, youtube1UserId, extYoutubeChannel1)
 
       const result = await chatStore.getChatSince(chatItem1.timestamp)
 
       expect(result.map(r => r.externalId)).toEqual([chatItem2.id, chatItem3.id])
+    })
+  })
+
+  describe(nameof(ChatStore, 'getLastChatByYoutubeChannel'), () => {
+    test('returns null if youtube channel has not posted a message', async () => {
+      const result = await chatStore.getLastChatByYoutubeChannel(1)
+
+      expect(result).toBeNull()
+    })
+
+    test('returns latest chat item of channel', async () => {
+      await db.chatMessage.create({ data: {
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1,
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        user: { connect: { id: youtube1UserId }},
+        time: data.time3,
+        externalId: 'x3',
+        youtubeChannel: { connect: { id: 1 }},
+        livestream: { connect: { id: 1 }}
+      }})
+
+      const result = await chatStore.getLastChatByYoutubeChannel(2)
+
+      expect(result!.time).toEqual(data.time2)
     })
   })
 
