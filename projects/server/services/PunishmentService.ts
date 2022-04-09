@@ -1,23 +1,22 @@
-import { Punishment, PunishmentType } from '@prisma/client'
+import { Punishment } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { IMasterchat } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import PunishmentStore, { CreatePunishmentArgs } from '@rebel/server/stores/PunishmentStore'
 
 type Deps = Dependencies<{
-  masterchatProvider: MasterchatProvider
+  masterchatProxyService: MasterchatProxyService
   punishmentStore: PunishmentStore
 }>
 
 export default class PunishmentService extends ContextClass {
-  private readonly masterchat: IMasterchat
+  private readonly masterchat: MasterchatProxyService
   private readonly punishmentStore: PunishmentStore
 
   constructor (deps: Deps) {
     super()
 
-    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.masterchat = deps.resolve('masterchatProxyService')
     this.punishmentStore = deps.resolve('punishmentStore')
   }
 

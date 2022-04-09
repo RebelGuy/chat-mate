@@ -36,6 +36,7 @@ const customEmojiPart: PartialCustomEmojiChatMessage = {
 const chatItem1: ChatItem = {
   id: 'youtube_id1',
   platform: 'youtube',
+  contextToken: 'params1',
   author: data.author1,
   messageParts: [textPart, emojiPart],
   timestamp: data.time1.getTime()
@@ -102,11 +103,10 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
+    const [passedChatItem, passedUserId, passedChannelId] = single(mockChatStore.addChat.mock.calls)
     expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
     expect(passedUserId).toBe(youtubeChannel1.userId)
     expect(passedChannelId).toBe(youtubeChannel1.youtubeId)
-    expect(passedPlatform).toBe('youtube')
 
     const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
     expect(passedUserId_).toBe(youtubeChannel1.userId)
@@ -129,11 +129,10 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
+    const [passedChatItem, passedUserId, passedChannelId] = single(mockChatStore.addChat.mock.calls)
     expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
     expect(passedUserId).toBe(twitchChannel1.userId)
     expect(passedChannelId).toBe(twitchChannel1.twitchId)
-    expect(passedPlatform).toBe('twitch')
 
     const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
     expect(passedUserId_).toBe(twitchChannel1.userId)

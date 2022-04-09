@@ -51,6 +51,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       platform: 'youtube',
+      contextToken: 'params',
       timestamp: data.time3.getTime(),
       author: data.author1,
       messageParts: [],
@@ -70,6 +71,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       platform: 'youtube',
+      contextToken: 'params',
       timestamp: addTime(data.livestream3.start!, 'seconds', 5).getTime(),
       author: data.author1,
       messageParts: [],

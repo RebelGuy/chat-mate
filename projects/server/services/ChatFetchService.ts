@@ -145,6 +145,7 @@ export default class ChatFetchService extends ContextClass {
       id: item.id,
       timestamp: item.timestamp.getTime(),
       platform: 'youtube',
+      contextToken: item.contextMenuEndpointParams,
       author: {
         name: item.authorName,
         channelId: item.authorChannelId,

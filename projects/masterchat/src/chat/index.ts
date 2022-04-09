@@ -82,6 +82,12 @@ export function parseAction(action: YTAction): Action | UnknownAction {
     }
   }
 
+  // non-type payloads that are not currently categorised are info messages
+  // e.g. the "<user> was hidden by <mod>" grey message.
+  // in the future, we will need to listen to these as they mark events
+  // that are relevant for us. (CHAT-293)
+  // could parse them based on an expected template (similar to the quoted example above)
+
   return {
     type: "unknown",
     payload: action,

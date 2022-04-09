@@ -43,6 +43,8 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
+import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -64,7 +66,6 @@ const globalContext = ContextProvider.create()
   .withProperty('channelId', env('channelId'))
   .withProperty('liveId', liveId)
   .withProperty('dataPath', dataPath)
-  .withProperty('isMockLivestream', env('isMockLivestream'))
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
   .withProperty('disableExternalApis', env('useFakeControllers') === true)
@@ -104,6 +105,8 @@ const globalContext = ContextProvider.create()
   .withClass('twurpleService', TwurpleService)
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
+  .withClass('punishmentStore', PunishmentStore)
+  .withClass('punishmentService', PunishmentService)
   .build()
 
 const app = express()

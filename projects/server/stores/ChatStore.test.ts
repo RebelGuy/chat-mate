@@ -114,6 +114,7 @@ function makeYtChatItem (...msg: PartialChatMessage[]): ChatItem {
   return {
     id: 'id1',
     platform: 'youtube',
+    contextToken: 'params1',
     timestamp: new Date(2021, 1, 1).getTime(),
     author: ytAuthor,
     messageParts: msg
@@ -172,7 +173,7 @@ export default () => {
     test('adds youtube chat item with ordered text message parts', async () => {
       const chatItem = makeYtChatItem(text1, text2, text3)
 
-      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel, 'youtube')
+      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel)
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))?.text?.text
@@ -191,7 +192,7 @@ export default () => {
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
       const chatItem = makeYtChatItem(emoji1Saved, emoji2New)
 
-      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel, 'youtube')
+      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel)
 
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatEmoji).toEqual([1, 2, 2])
     })
@@ -199,7 +200,7 @@ export default () => {
     test('adds twitch chat item with text and cheer parts', async () => {
       const chatItem = makeTwitchChatItem(text1, cheer1)
 
-      await chatStore.addChat(chatItem, twitchUserId, extTwitchChannel, 'twitch')
+      await chatStore.addChat(chatItem, twitchUserId, extTwitchChannel)
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))!.text!.text
@@ -225,7 +226,7 @@ export default () => {
         livestream: { connect: { id: 1 }}
       }})
 
-      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel, 'youtube')
+      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel)
 
       await expectRowCount(db.chatMessage).toBe(1)
     })
@@ -239,14 +240,14 @@ export default () => {
     })
 
     test('does not include earlier items', async () => {
-      const chatItem1: ChatItem = { author: ytAuthor, id: 'id1', platform: 'youtube', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
-      const chatItem2: ChatItem = { author: ytAuthor, id: 'id2', platform: 'youtube', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
-      const chatItem3: ChatItem = { author: ytAuthor, id: 'id3', platform: 'youtube', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
+      const chatItem1: ChatItem = { author: ytAuthor, id: 'id1', platform: 'youtube', contextToken: 'params1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
+      const chatItem2: ChatItem = { author: ytAuthor, id: 'id2', platform: 'youtube', contextToken: 'params2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
+      const chatItem3: ChatItem = { author: ytAuthor, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
 
       // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
-      await chatStore.addChat(chatItem1, youtubeUserId, extYoutubeChannel, 'youtube')
-      await chatStore.addChat(chatItem2, youtubeUserId, extYoutubeChannel, 'youtube')
-      await chatStore.addChat(chatItem3, youtubeUserId, extYoutubeChannel, 'youtube')
+      await chatStore.addChat(chatItem1, youtubeUserId, extYoutubeChannel)
+      await chatStore.addChat(chatItem2, youtubeUserId, extYoutubeChannel)
+      await chatStore.addChat(chatItem3, youtubeUserId, extYoutubeChannel)
 
       const result = await chatStore.getChatSince(chatItem1.timestamp)
 

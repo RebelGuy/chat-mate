@@ -29,6 +29,7 @@ export type ChatItem = {
 } & ({
   platform: Extract<ChatPlatform, 'youtube'>
   author: Author
+  contextToken: string
 } | {
   platform: Extract<ChatPlatform, 'twitch'>
   author: TwitchAuthor

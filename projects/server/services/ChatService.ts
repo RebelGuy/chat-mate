@@ -93,7 +93,7 @@ export default class ChatService extends ContextClass {
       // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
       // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
       // visual inconsitency. so for now just acknowledge this and leave it.
-      await this.chatStore.addChat(item, channel.userId, externalId, platform)
+      await this.chatStore.addChat(item, channel.userId, externalId)
       addedChat = true
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)
