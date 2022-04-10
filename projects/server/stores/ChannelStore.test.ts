@@ -273,6 +273,25 @@ export default () => {
     })
   })
 
+  describe(nameof(ChannelStore, 'getTwitchUserNameFromChannelId'), () => {
+    test('gets correct name', async () => {
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [twitchChannelInfo1]} }
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [twitchChannelInfo2]} }
+      }})
+
+      const result = await channelStore.getTwitchUserNameFromChannelId(2)
+
+      expect(result).toEqual(twitchChannelInfo2.userName)
+    })
+  })
+
   describe(nameof(ChannelStore, 'getUserId'), () => {
     test('throws if channel with given not found', async () => {
       await db.channel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})

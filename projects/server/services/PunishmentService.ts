@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import PunishmentStore, { CreatePunishmentArgs } from '@rebel/server/stores/PunishmentStore'
@@ -20,6 +21,7 @@ import { assertUnreachable } from '@rebel/server/util/typescript'
 type Deps = Dependencies<{
   logService: LogService
   masterchatProxyService: MasterchatProxyService
+  twurpleService: TwurpleService
   punishmentStore: PunishmentStore
   channelStore: ChannelStore
   chatStore: ChatStore
@@ -30,6 +32,7 @@ export default class PunishmentService extends ContextClass {
 
   private readonly logService: LogService
   private readonly masterchat: MasterchatProxyService
+  private readonly twurpleService: TwurpleService
   private readonly punishmentStore: PunishmentStore
   private readonly channelStore: ChannelStore
   private readonly chatStore: ChatStore
@@ -39,6 +42,7 @@ export default class PunishmentService extends ContextClass {
 
     this.logService = deps.resolve('logService')
     this.masterchat = deps.resolve('masterchatProxyService')
+    this.twurpleService = deps.resolve('twurpleService')
     this.punishmentStore = deps.resolve('punishmentStore')
     this.channelStore = deps.resolve('channelStore')
     this.chatStore = deps.resolve('chatStore')
@@ -52,7 +56,7 @@ export default class PunishmentService extends ContextClass {
   public async banUser (userId: number, message: string | null) {
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'ban')))
-    await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, 'ban')))
+    await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'ban')))
 
     const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
     await Promise.all(currentPunishments
@@ -71,7 +75,7 @@ export default class PunishmentService extends ContextClass {
   public async unbanUser (userId: number, unbanMessage: string | null) {
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'unban')))
-    await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, 'unban')))
+    await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, unbanMessage, 'unban')))
 
     const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
     const ban = currentPunishments.find(p => p.punishmentType === 'ban')
@@ -115,8 +119,23 @@ export default class PunishmentService extends ContextClass {
     }
   }
 
-  private async tryApplyTwitchPunishment (channelId: number, type: 'ban' | 'unban'): Promise<void> {
-    // todo
+  private async tryApplyTwitchPunishment (channelId: number, reason: string | null, type: 'ban' | 'unban'): Promise<void> {
+    let request: (channelId: number, reason: string | null) => Promise<void>
+    if (type === 'ban') {
+      request = this.twurpleService.banChannel
+    } else if (type === 'unban') {
+      request = this.twurpleService.unbanChannel
+    } else {
+      assertUnreachable(type)
+    }
+
+    try {
+      // if the punishment is already applied, twitch will just send an Notice message which we can ignore
+      await request(channelId, reason)
+      this.logService.logInfo(this, `Request to ${type} twitch channel ${channelId} succeeded.`)
+    } catch (e: any) {
+      this.logService.logError(this, `Request to ${type} twitch channel ${channelId} failed:`, e.message)
+    }
   }
 }
 

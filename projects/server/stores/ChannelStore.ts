@@ -152,6 +152,16 @@ export default class ChannelStore extends ContextClass {
     }))
   }
 
+  /** Gets the user's name, e.g. rebel_guymc. */
+  public async getTwitchUserNameFromChannelId (twitchChannelId: number): Promise<string> {
+    const channel = await this.db.twitchChannel.findUnique({
+      where: { id: twitchChannelId },
+      rejectOnNotFound: true,
+      include: channelQuery_includeLatestChannelInfo
+    })
+    return channel.infoHistory[0].userName
+  }
+
   /** Gets the userId that is associated with the channel that has the given external id. Throws if none is found. */
   public async getUserId (externalId: string): Promise<number> {
     const channel = await this.db.channel.findUnique({ where: { youtubeId: externalId } })

@@ -114,10 +114,15 @@ Key:
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
-- 🟢 TwurpleApiProxyService
+- 🟢 TwurpleApiProxyServicev
+  - ⚪ ban
   - 🟢 fetchMetadata
+  - ⚪ say
+  - ⚪ timeout
 - 🟢 TwurpleService
+  - 🟢 banChannel
   - 🟢 initialise
+  - 🟢 unbanChannel
 - ⚪ FileService
 - ⚪ LogService
 
@@ -129,6 +134,7 @@ Key:
   - 🟢 createOrUpdate
   - 🟢 getCurrentUserIds
   - 🟢 getCurrentUserNames
+  - 🟢 getTwitchUserNameFromChannelId
   - 🟢 getUserId
   - 🟢 getUserOwnedChannels
 - 🟢 ChatStore

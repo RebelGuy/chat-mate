@@ -10,6 +10,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
+import TwurpleService from '@rebel/server/services/TwurpleService'
 
 export const userId1 = 2
 
@@ -62,6 +63,7 @@ let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
 let mockPunishmentStore: MockProxy<PunishmentStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
+let mockTwurpleService: MockProxy<TwurpleService>
 let punishmentService: PunishmentService
 
 beforeEach(() => {
@@ -69,13 +71,15 @@ beforeEach(() => {
   mockPunishmentStore = mock()
   mockChannelStore = mock()
   mockChatStore = mock()
+  mockTwurpleService = mock()
 
   punishmentService = new PunishmentService(new Dependencies({
     logService: mock(),
     masterchatProxyService: mockMasterchatProxyService,
     punishmentStore: mockPunishmentStore,
     channelStore: mockChannelStore,
-    chatStore: mockChatStore
+    chatStore: mockChatStore,
+    twurpleService: mockTwurpleService
   }))
 })
 
@@ -90,7 +94,7 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
       youtubeChannels: [1, 2, 3, 4],
-      twitchChannels: [] // todo
+      twitchChannels: [1, 2]
     })
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
 
@@ -99,6 +103,9 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     const suppliedContextTokens = mockMasterchatProxyService.banYoutubeChannel.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
     
+    const suppliedTwitchChannelIds = mockTwurpleService.banChannel.mock.calls.map(c => c[0])
+    expect(suppliedTwitchChannelIds).toEqual([1, 2])
+
     const suppliedPunishmentStoreArgs: CreatePunishmentArgs = single(single(mockPunishmentStore.addPunishment.mock.calls))
     expect(suppliedPunishmentStoreArgs).toEqual(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'ban' }))
   })
@@ -137,7 +144,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
       youtubeChannels: [1, 2, 3, 4],
-      twitchChannels: [] // todo
+      twitchChannels: [1, 2]
     })
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeBan])
 
@@ -145,6 +152,9 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
     const suppliedContextTokens = mockMasterchatProxyService.unbanYoutubeChannel.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
+
+    const suppliedTwitchChannelIds = mockTwurpleService.unbanChannel.mock.calls.map(c => c[0])
+    expect(suppliedTwitchChannelIds).toEqual([1, 2])
     
     const revokePunishmentArgs = single(mockPunishmentStore.revokePunishment.mock.calls)
     expect(revokePunishmentArgs[0]).toEqual(activeBan.id)
