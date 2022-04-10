@@ -53,7 +53,7 @@ export default class PunishmentService extends ContextClass {
     return punishments.filter(currentPunishmentsFilter)
   }
 
-  public async banUser (userId: number, message: string | null) {
+  public async banUser (userId: number, message: string | null): Promise<Punishment> {
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'ban')))
     await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'ban')))
@@ -69,10 +69,11 @@ export default class PunishmentService extends ContextClass {
       message: message,
       userId: userId
     }
-    await this.punishmentStore.addPunishment(args)
+    return await this.punishmentStore.addPunishment(args)
   }
 
-  public async unbanUser (userId: number, unbanMessage: string | null) {
+  /** Returns the updated punishment, if there was one. */
+  public async unbanUser (userId: number, unbanMessage: string | null): Promise<Punishment | null> {
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'unban')))
     await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, unbanMessage, 'unban')))
@@ -81,10 +82,10 @@ export default class PunishmentService extends ContextClass {
     const ban = currentPunishments.find(p => p.punishmentType === 'ban')
     if (ban == null) {
       this.logService.logWarning(this, `Can't unban user ${userId} because they are not currently banned`)
-      return
+      return null
     }
 
-    await this.punishmentStore.revokePunishment(ban.id, new Date(), unbanMessage)
+    return await this.punishmentStore.revokePunishment(ban.id, new Date(), unbanMessage)
   }
 
   private async getCurrentPunishmentsForUser (userId: number) {

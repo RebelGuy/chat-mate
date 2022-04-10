@@ -344,6 +344,53 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `404`: When the given user is not found.
 
+## Punishment Endpoints
+Path: `/punishment`.
+
+### `GET`
+*Current schema: 1.*
+
+Gets the list of all punishments for a user.
+
+Query parameters:
+- `userId` (`number`): *Required.* The ID of the user for which to get punishments.
+
+Returns data with the following properties:
+- `punishments` (`PublicPunishment[]`): The list of punishments of the user, in descending order by time issued.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+
+### `POST /ban`
+*Current schema: 1.*
+
+Applies a punishment of type `ban` to the user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `message` (`string`): *Optional.* The reason for the punishment.
+
+Returns data with the following properties:
+- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /unban`
+*Current schema: 1.*
+
+Revokes an existing `ban` punishment from the user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the punishment should be revoked.
+- `message` (`string`): *Optional.* The reason for revoking the punishment.
+
+Returns data with the following properties:
+- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
 ## User Endpoints
 Path: `/user`.
 

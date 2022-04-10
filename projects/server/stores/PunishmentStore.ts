@@ -1,4 +1,4 @@
-import { PunishmentType } from '@prisma/client'
+import { Punishment, PunishmentType } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
@@ -40,8 +40,8 @@ export default class PunishmentStore extends ContextClass {
     this.ADMIN_USER_ID = adminUser.userId
   }
 
-  public async addPunishment (args: CreatePunishmentArgs) {
-    await this.db.punishment.create({ data: {
+  public async addPunishment (args: CreatePunishmentArgs): Promise<Punishment> {
+    return await this.db.punishment.create({ data: {
       issuedAt: args.issuedAt,
       user: { connect: { id: args.userId }},
       message: args.message,
@@ -59,7 +59,7 @@ export default class PunishmentStore extends ContextClass {
     return await this.db.punishment.findMany({ where: { userId: userId }})
   }
   
-  public async revokePunishment (punishmentId: number, revokedAt: Date, revokeMessage: string | null) {
+  public async revokePunishment (punishmentId: number, revokedAt: Date, revokeMessage: string | null): Promise<Punishment> {
     const punishment = await this.db.punishment.findUnique({
       where: { id: punishmentId },
       rejectOnNotFound: true
@@ -69,7 +69,7 @@ export default class PunishmentStore extends ContextClass {
       throw new Error('Punishment has already been revoked')
     }
 
-    await this.db.punishment.update({
+    return await this.db.punishment.update({
       where: { id: punishmentId },
       data: { revokedTime: revokedAt, revokeMessage: revokeMessage }
     })

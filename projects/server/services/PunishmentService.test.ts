@@ -98,7 +98,9 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     })
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
 
-    await punishmentService.banUser(userId1, 'test')
+    const result = await punishmentService.banUser(userId1, 'test')
+
+    expect(result).not.toBeNull()
 
     const suppliedContextTokens = mockMasterchatProxyService.banYoutubeChannel.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
@@ -114,7 +116,9 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeBan])
 
-    await punishmentService.banUser(userId1, 'test')
+    const result = await punishmentService.banUser(userId1, 'test')
+
+    expect(result).not.toBeNull()
 
     const revokedArgs = single(mockPunishmentStore.revokePunishment.mock.calls)
     expect(revokedArgs[0]).toBe(activeBan.id)
@@ -148,7 +152,9 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     })
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeBan])
 
-    await punishmentService.unbanUser(userId1, 'test')
+    const result = await punishmentService.unbanUser(userId1, 'test')
+    
+    expect(result).not.toBeNull()
 
     const suppliedContextTokens = mockMasterchatProxyService.unbanYoutubeChannel.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
@@ -164,7 +170,9 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([revokedBan])
 
-    await punishmentService.unbanUser(userId1, 'test')
+    const result = await punishmentService.unbanUser(userId1, 'test')
+    
+    expect(result).toBeNull()
 
     expect(mockPunishmentStore.addPunishment.mock.calls.length).toBe(0)
   })

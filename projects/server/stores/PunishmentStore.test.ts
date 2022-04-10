@@ -113,11 +113,13 @@ export default () => {
       const revokeTime = data.time2
       const revokeMessage = 'test'
 
-      await punishmentstore.revokePunishment(1, revokeTime, revokeMessage)
+      const result = await punishmentstore.revokePunishment(1, revokeTime, revokeMessage)
 
       const entry = single(await db.punishment.findMany())
       expect(entry.revokedTime).toEqual(revokeTime)
       expect(entry.revokeMessage).toEqual(revokeMessage)
+      expect(result.revokedTime).toEqual(revokeTime)
+      expect(result.revokeMessage).toEqual(revokeMessage)
     })
   })
 }
