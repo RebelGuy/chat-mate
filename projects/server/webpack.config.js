@@ -100,6 +100,10 @@ module.exports = (env) => {
             from: path.resolve(__dirname, './node_modules/.prisma/client/schema.prisma'),
             to: outPath,
           },
+          {
+            from: path.resolve(__dirname, '../../node_modules/ngrok/bin/ngrok.exe'),
+            to: path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it (folder is automatically created)
+          }
         ],
       }),
 
