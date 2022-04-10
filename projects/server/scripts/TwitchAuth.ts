@@ -88,7 +88,7 @@ async function createWindow () {
     }
   })
 
-  await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=chat:read+chat:edit`)
+  await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=chat:read+chat:edit+moderation:read+moderator:manage:banned_users+channel:moderate`)
 }
 
 app.on("session-created", (session: any) => {

@@ -41,6 +41,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
       authProvider: this.twurkpleAuthProvider.get(),
       channels: [this.twitchChannelName],
       isAlwaysMod: true,
+      readOnly: false,
 
       // inject custom logging
       logger: {

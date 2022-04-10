@@ -67,7 +67,10 @@ export default class TwurpleAuthProvider extends ContextClass {
         expiresIn: 0, // refresh immediately
         obtainmentTimestamp: 0,
         // future-proofing for when we want to do non-read-only actions
-        scope: ['chat:read', 'chat:edit']
+        // see https://dev.twitch.tv/docs/authentication/scopes
+        // if you edit the scopes here, you will also need to add them to the TwitchAuth.ts file,
+        // then request a new access token, set it in the .env file, and delete the saved token from the db.twitch_auth table.
+        scope: ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate']
       }
     } else {
       this.throwAuthError('No access token could be found in the database, and no fallback access token and refresh token have been provided in the .env file.')
@@ -98,7 +101,7 @@ export default class TwurpleAuthProvider extends ContextClass {
   private async saveAccessToken (token: AccessToken) {
     try {
       await this.authStore.saveAccessToken(token)
-      this.logService.logInfo(this, 'Saved access token')
+      this.logService.logDebug(this, 'Saved access token')
     } catch (e: any) {
       this.logService.logError(this, 'Failed to save access token', e.message)
     }
