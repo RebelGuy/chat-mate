@@ -67,11 +67,21 @@ export default class TwurpleService extends ContextClass {
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.ban(twitchUserName, reason ?? undefined)
   }
+  
+  public async timeout (twitchChannelId: number, reason: string | null, durationSeconds: number) {
+    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.timeout(this.twitchChannelName, twitchUserName, durationSeconds, reason ?? undefined)
+  }
 
   public async unbanChannel (twitchChannelId: number) {
     // there is no API for unbanning a user, but the `ban` implementation is essentially just a wrapper around the `say` method, so we can manually use it here
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
     this.twurpleApiProxyService.say(`/unban ${twitchUserName}`)
+  }
+
+  public async untimeout (twitchChannelId: number, reason: string | null) {
+    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.timeout(this.twitchChannelName, twitchUserName, 1, reason ?? undefined)
   }
 
   private onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {

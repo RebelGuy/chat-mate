@@ -109,8 +109,12 @@ Key:
   - 🟢 fetchMetadata
 - 🟢 PunishmentService
   - 🟢 banUser
+  - 🟢 muteUser
+  - 🟢 timeoutUser
   - 🟢 getCurrentPunishments
   - 🟢 unbanUser
+  - 🟢 unmuteUser
+  - 🟢 untimeoutUser
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone

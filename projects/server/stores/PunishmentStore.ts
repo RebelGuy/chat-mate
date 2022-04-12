@@ -11,7 +11,7 @@ export type CreatePunishmentArgs = {
 } & ({
   type: Extract<PunishmentType, 'ban'>,
 } | {
-  type: Extract<PunishmentType, 'timeout'>
+  type: Extract<PunishmentType, 'timeout' | 'mute'>
   expirationTime: Date
 })
 

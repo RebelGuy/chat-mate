@@ -1,13 +1,15 @@
-import { Punishment, PunishmentType } from '@prisma/client'
+import { Punishment } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import { isPunishmentActive } from '@rebel/server/models/punishment'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import PunishmentStore, { CreatePunishmentArgs } from '@rebel/server/stores/PunishmentStore'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { addTime } from '@rebel/server/util/datetime'
+import { assert, assertUnreachable } from '@rebel/server/util/typescript'
 
 // It is not an issue on Twitch, but on Youtube we come across the interesting problem of being unable to check
 // the current list of on-platform punishments. This means that, when a punishment occurrs, the platform data
@@ -17,6 +19,7 @@ import { assertUnreachable } from '@rebel/server/util/typescript'
 // (assuming the external request succeeded).
 // Finally, while it is not an error to request the same punishment multiple times in succession, it should
 // generally be avoided to reduce clutter in the punishment history of the user.
+// The public methods are set up in such a way that there can only ever be one active punishment per user per type.
 
 type Deps = Dependencies<{
   logService: LogService
@@ -50,7 +53,7 @@ export default class PunishmentService extends ContextClass {
 
   public async getCurrentPunishments (): Promise<Punishment[]> {
     const punishments = await this.punishmentStore.getPunishments()
-    return punishments.filter(currentPunishmentsFilter)
+    return punishments.filter(isPunishmentActive)
   }
 
   public async banUser (userId: number, message: string | null): Promise<Punishment> {
@@ -61,11 +64,51 @@ export default class PunishmentService extends ContextClass {
     const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
     await Promise.all(currentPunishments
       .filter(p => p.punishmentType === 'ban')
-      .map(p => this.punishmentStore.revokePunishment(p.id, new Date(), 'Sync DB and platform ban states')))
+      .map(p => this.punishmentStore.revokePunishment(p.id, new Date(), 'Clean/sync DB and platform ban states')))
 
     const args: CreatePunishmentArgs = {
       type: 'ban',
       issuedAt: new Date(),
+      message: message,
+      userId: userId
+    }
+    return await this.punishmentStore.addPunishment(args)
+  }
+
+  /** Mutes are used only in ChatMate and not relayed to Youtube or Twitch. */
+  public async muteUser (userId: number, message: string | null, durationSeconds: number): Promise<Punishment> {
+    const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
+    await Promise.all(currentPunishments
+      .filter(p => p.punishmentType === 'mute')
+      .map(p => this.punishmentStore.revokePunishment(p.id, new Date(), 'Clean DB state')))
+
+    const now = new Date()
+    const args: CreatePunishmentArgs = {
+      type: 'mute',
+      issuedAt: now,
+      expirationTime: addTime(now, 'seconds', durationSeconds),
+      message: message,
+      userId: userId
+    }
+    return await this.punishmentStore.addPunishment(args)
+  }
+
+  /** Applies an actual timeout that is relayed to Youtube or Twitch. */
+  public async timeoutUser (userId: number, message: string | null, durationSeconds: number): Promise<Punishment> {
+    const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
+    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'timeout')))
+    await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'timeout', durationSeconds)))
+
+    const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
+    await Promise.all(currentPunishments
+      .filter(p => p.punishmentType === 'timeout')
+      .map(p => this.punishmentStore.revokePunishment(p.id, new Date(), 'Clean/sync DB and platform timeout states')))
+
+    const now = new Date()
+    const args: CreatePunishmentArgs = {
+      type: 'timeout',
+      issuedAt: now,
+      expirationTime: addTime(now, 'seconds', durationSeconds),
       message: message,
       userId: userId
     }
@@ -88,17 +131,48 @@ export default class PunishmentService extends ContextClass {
     return await this.punishmentStore.revokePunishment(ban.id, new Date(), unbanMessage)
   }
 
-  private async getCurrentPunishmentsForUser (userId: number) {
-    const allPunishments = await this.punishmentStore.getPunishmentsForUser(userId)
-    return allPunishments.filter(currentPunishmentsFilter)
+  public async unmuteUser (userId: number, revokeMessage: string | null): Promise<Punishment | null> {
+    const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
+    const mute = currentPunishments.find(p => p.punishmentType === 'mute')
+    if (mute == null) {
+      this.logService.logWarning(this, `Can't revoke soft timeout for user ${userId} because they are not currently muted`)
+      return null
+    }
+
+    return await this.punishmentStore.revokePunishment(mute.id, new Date(), revokeMessage)
   }
 
-  private async tryApplyYoutubePunishment (channelId: number, type: 'ban' | 'unban'): Promise<void> {
+  public async untimeoutUser (userId: number, revokeMessage: string | null): Promise<Punishment | null> {
+    const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
+    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'untimeout')))
+    await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, revokeMessage, 'untimeout')))
+
+    const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
+    const timeout = currentPunishments.find(p => p.punishmentType === 'timeout')
+    if (timeout == null) {
+      this.logService.logWarning(this, `Can't revoke hard timeout for user ${userId} because they are not currently timed out`)
+      return null
+    }
+
+    return await this.punishmentStore.revokePunishment(timeout.id, new Date(), revokeMessage)
+  }
+
+  private async getCurrentPunishmentsForUser (userId: number) {
+    const allPunishments = await this.punishmentStore.getPunishmentsForUser(userId)
+    return allPunishments.filter(isPunishmentActive)
+  }
+
+  private async tryApplyYoutubePunishment (channelId: number, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<void> {
     let request: (contextToken: string) => Promise<boolean>
     if (type === 'ban') {
       request = this.masterchat.banYoutubeChannel
     } else if (type === 'unban') {
       request = this.masterchat.unbanYoutubeChannel
+    } else if (type === 'timeout') {
+      request = this.masterchat.timeout
+    } else if (type === 'untimeout') {
+      // it is impossible to untimeout people using masterchat
+      return
     } else {
       assertUnreachable(type)
     }
@@ -120,24 +194,27 @@ export default class PunishmentService extends ContextClass {
     }
   }
 
-  private async tryApplyTwitchPunishment (channelId: number, reason: string | null, type: 'ban' | 'unban'): Promise<void> {
-    let request: (channelId: number, reason: string | null) => Promise<void>
+  private async tryApplyTwitchPunishment (channelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<void> {
+    let request: (channelId: number, reason: string | null, durationSeconds: number) => Promise<void>
     if (type === 'ban') {
       request = this.twurpleService.banChannel
     } else if (type === 'unban') {
       request = this.twurpleService.unbanChannel
+    } else if (type === 'timeout') {
+      assert(durationSeconds != null, 'Timeout duration must be defined')
+      request = this.twurpleService.timeout
+    } else if (type === 'untimeout') {
+      request = this.twurpleService.untimeout
     } else {
       assertUnreachable(type)
     }
 
     try {
       // if the punishment is already applied, twitch will just send an Notice message which we can ignore
-      await request(channelId, reason)
+      await request(channelId, reason, durationSeconds!)
       this.logService.logInfo(this, `Request to ${type} twitch channel ${channelId} succeeded.`)
     } catch (e: any) {
       this.logService.logError(this, `Request to ${type} twitch channel ${channelId} failed:`, e.message)
     }
   }
 }
-
-const currentPunishmentsFilter = (p: Punishment) =>  (p.expirationTime == null || p.expirationTime > new Date()) && p.revokedTime == null

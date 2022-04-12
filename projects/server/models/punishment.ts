@@ -9,6 +9,11 @@ export function punishmentToPublicObject (punishment: Punishment): PublicPunishm
     expirationTime: punishment.expirationTime?.getTime() ?? null,
     message: punishment.message,
     revokedAt: punishment.revokedTime?.getTime() ?? null,
-    revokeMessage: punishment.revokeMessage
+    revokeMessage: punishment.revokeMessage,
+    isActive: isPunishmentActive(punishment)
   }
+}
+
+export function isPunishmentActive (punishment: Punishment): boolean {
+  return (punishment.expirationTime == null || punishment.expirationTime > new Date()) && punishment.revokedTime == null
 }

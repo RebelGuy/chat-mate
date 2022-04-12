@@ -6,7 +6,7 @@ import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 
-type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide'>
+type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout'>
 
 type Deps = Dependencies<{
   logService: LogService
@@ -55,6 +55,12 @@ export default class MasterchatProxyService extends ContextClass implements IMas
     return result != null
   }
 
+  /** Times out the channel by 5 minutes. This cannot be undone. */
+  public async timeout (contextMenuEndpointParams: string): Promise<boolean> {
+    const result = await this.wrappedMasterchat.timeout(contextMenuEndpointParams)
+    return result != null
+  }
+
   public async unbanYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
     const result = await this.wrappedMasterchat.unhide(contextMenuEndpointParams)
     return result != null
@@ -68,8 +74,9 @@ export default class MasterchatProxyService extends ContextClass implements IMas
     const fetchMetadata = this.wrapRequest(() => this.masterchat.fetchMetadata(), 'masterchat.fetchMetadata')
     const hide = this.wrapRequest((arg) => this.masterchat.hide(arg), 'masterchat.hide')
     const unhide = this.wrapRequest((arg) => this.masterchat.unhide(arg), 'masterchat.unhide')
+    const timeout = this.wrapRequest((arg) => this.masterchat.timeout(arg), 'masterchat.timeout')
 
-    return { fetch, fetchMetadata, hide, unhide }
+    return { fetch, fetchMetadata, hide, unhide, timeout }
   }
 
   private wrapRequest<TQuery extends any[], TResponse> (

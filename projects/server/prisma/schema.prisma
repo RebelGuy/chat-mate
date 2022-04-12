@@ -439,4 +439,5 @@ model Punishment {
 enum PunishmentType {
   ban
   timeout
+  mute
 }
