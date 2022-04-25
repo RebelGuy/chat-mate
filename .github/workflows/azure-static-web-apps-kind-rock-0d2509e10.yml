@@ -18,12 +18,16 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
-          cache: 'npm'
-      - name: Build Studio
-        run: |
-          cd projects/studio
-          npm install
-          npm run build
+          cache: 'yarn'
+      - uses: borales/actions-yarn@v2.0.0
+        with:
+          cmd: install
+      - uses: borales/actions-yarn@v2.0.0
+        with:
+          cmd: workspace server build:debug
+      - uses: borales/actions-yarn@v2.0.0
+        with:
+          cmd: workspace studio build
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
