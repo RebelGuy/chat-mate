@@ -1,24 +1,24 @@
 pipelines:
   branches:
     master:
-	- step:
-		name: Build
-		caches:
-		  - node
-		script:
-		  - yarn install
-		  - yarn workspace studio build
-		artifacts:
-		  - build/**
+  - step:
+    name: Build
+    caches:
+      - node
+    script:
+      - yarn install
+      - yarn workspace studio build
+    artifacts:
+      - build/**
     - step:
-	  name: Deploy Studio to Production
-	  deployment: Production
-	  trigger: manual
-	  clone:
-		  enabled: false
-	  script:
-	  - pipe: microsoft/azure-static-web-apps-deploy:master
-		variables:
-			APP_LOCATION: '/projects/studio'
-			OUTPUT_LOCATION: '/projects/studio/build'
-			API_TOKEN: $deployment_token​
+    name: Deploy to Production
+    deployment: Production
+    trigger: manual
+    clone:
+	  enabled: false
+    script:
+    - pipe: microsoft/azure-static-web-apps-deploy:master
+    variables:
+      APP_LOCATION: '/projects/studio'
+      OUTPUT_LOCATION: '/projects/studio/build'
+      API_TOKEN: $deployment_token​
