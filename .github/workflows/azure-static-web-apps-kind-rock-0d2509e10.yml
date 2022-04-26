@@ -23,7 +23,7 @@ jobs:
           node-version: '16'
           cache: 'yarn'
       - run: yarn install
-      - run: yarn yarn workspace server tsc build
+      - run: yarn workspace server tsc build
       - run: yarn workspace studio build
       - name: Build And Deploy
         id: builddeploy
