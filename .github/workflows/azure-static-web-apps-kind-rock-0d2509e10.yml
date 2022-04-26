@@ -20,17 +20,11 @@ jobs:
           submodules: true
       - uses: actions/setup-node@v3
         with:
-          node-version: 16.0.0
+          node-version: '16'
           cache: 'yarn'
-      - uses: borales/actions-yarn@v2.0.0
-        with:
-          cmd: install
-      - uses: borales/actions-yarn@v2.0.0
-        with:
-          cmd: workspace server tsc build
-      - uses: borales/actions-yarn@v2.0.0
-        with:
-          cmd: workspace studio build
+      - run: yarn install
+      - run: yarn yarn workspace server tsc build
+      - run: yarn workspace studio build
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
