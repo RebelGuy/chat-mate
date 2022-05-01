@@ -1,4 +1,4 @@
-import { Livestream, LiveViewers, ViewingBlock } from '@prisma/client'
+import { Livestream, LivestreamType, LiveViewers, ViewingBlock } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
@@ -6,7 +6,7 @@ import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelSe
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime, maxTime, MAX_DATE, minTime } from '@rebel/server/util/datetime'
-import { assertUnreachableCompile } from '@rebel/server/util/typescript'
+import { assertUnreachableCompile, reminder } from '@rebel/server/util/typescript'
 
 // padding are in minutes
 export const VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE = 5
@@ -169,10 +169,13 @@ export default class ViewershipStore extends ContextClass {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
 
+    // please add a test to ensure we don't add participation for chat messages in unlisted streams
+    reminder<LivestreamType>({ publicLivestream: true })
+
     const livestreams = await this.db.livestream.findMany({
       include: {
         chatMessages: {
-          where: { user: { id: userId }},
+          where: { user: { id: userId }, livestream: { type: 'publicLivestream' }},
           take: 1 // order doesn't matter
         }
       },

@@ -79,3 +79,6 @@ export function assertNotNull<T, K extends keyof T> (x: T, key: K, msg: string):
     throw new Error(msg)
   }
 }
+
+/** This function's sole purpose is to remind us of some required implementation updates if a property of type T changes. */
+export function reminder<T extends string> (x: Record<T, true>): void { /* no op */ }

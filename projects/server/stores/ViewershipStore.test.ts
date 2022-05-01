@@ -240,6 +240,10 @@ export default () => {
       expect(result.filter(ls => ls.participated).length).toBe(0)
     })
 
+    test('does not include chat messages not attached to a public livestream', async () => {
+      throw new Error('nyi')
+    })
+
     test('returns ordered streams where user participated', async () => {
       // 2 messages in stream 1, 0 messages in stream 2, 1 message in stream 3
       await db.chatMessage.createMany({ data: [
