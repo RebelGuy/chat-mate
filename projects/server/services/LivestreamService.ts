@@ -61,6 +61,24 @@ export default class LivestreamService extends ContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
+  /** Sets the current livestream as inactive, also removing the associated masterchat instance. */
+  public async deactivateLivestream () {
+    if (this.livestreamStore.activeLivestream == null) {
+      return
+    }
+
+    const liveId = this.livestreamStore.activeLivestream.liveId
+    await this.livestreamStore.deactivateLivestream()
+    this.masterchatProxyService.removeMasterchat(liveId)
+  }
+
+  /** Sets the given livestream as active, and creates a masterchat instance.
+   * Please ensure you deactivate the previous livestream first, if applicable. */
+  public async setActiveLivestream (liveId: string) {
+    await this.livestreamStore.setActiveLivestream(liveId, 'publicLivestream')
+    this.masterchatProxyService.addMasterchat(liveId)
+  }
+
   private async fetchYoutubeMetadata (liveId: string): Promise<Metadata | null> {
     try {
       return await this.masterchatProxyService.fetchMetadata(liveId)

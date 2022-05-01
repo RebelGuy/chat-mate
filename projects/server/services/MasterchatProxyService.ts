@@ -35,7 +35,8 @@ export default class MasterchatProxyService extends ContextClass {
   }
 
   public addMasterchat (liveId: string) {
-    this.createWrapper(liveId, this.masterchatFactory.create(liveId))
+    const newMasterchat = this.createWrapper(liveId, this.masterchatFactory.create(liveId))
+    this.wrappedMasterchats.set(liveId, newMasterchat)
   }
 
   public removeMasterchat (liveId: string) {

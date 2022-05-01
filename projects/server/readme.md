@@ -105,11 +105,13 @@ Key:
   - 🟢 modifyExperience
 - 🟢 LivestreamService
   - 🟢 initialise
+  - 🟢 deactivateLivestream
+  - 🟢 setActiveLivestream
 - 🟢 MasterchatProxyService
-  - 🔴 addMasterchat
+  - 🟢 addMasterchat
   - 🟢 fetch
   - 🟢 fetchMetadata
-  - 🔴 removeMasterchat
+  - 🟢 removeMasterchat
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
@@ -150,7 +152,8 @@ Key:
 - 🟢 LivestreamStore
   - 🟢 initialise
   - 🟢 currentLivestream
-  - 🔴 setActiveLivestream
+  - 🟢 deactivateLivestream
+  - 🟢 setActiveLivestream
   - 🟢 setContinuationToken
   - 🟢 setTimes
 - 🟢 ViewershipStore

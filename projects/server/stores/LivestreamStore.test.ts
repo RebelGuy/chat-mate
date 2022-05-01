@@ -3,7 +3,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { nameof } from '@rebel/server/_test/utils'
+import { nameof, single } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 export default () => {
@@ -47,17 +47,56 @@ export default () => {
     })
   })
 
+  describe(nameof(LivestreamStore, 'deactivateLivestream'), () => {
+    test('updates entry in the database and clears cache', async () => {
+      await db.livestream.create({ data: { liveId, type: 'publicLivestream', isActive: true }})
+      await livestreamStore.initialise()
+
+      expect(livestreamStore.activeLivestream!.liveId).toBe(liveId)
+
+      await livestreamStore.deactivateLivestream()
+
+      const storedLivestream = single(await db.livestream.findMany())
+      expect(storedLivestream).toEqual(expect.objectContaining({ liveId, isActive: false }))
+      expect(livestreamStore.activeLivestream).toBeNull()
+    })
+  })
+
   describe(nameof(LivestreamStore, 'setActiveLivestream'), () => {
     test('creates and sets new active livestream', async () => {
-      throw new Error('nyi')
+      await livestreamStore.initialise()
+
+      expect(livestreamStore.activeLivestream).toBeNull()
+
+      const result = await livestreamStore.setActiveLivestream(liveId, 'publicLivestream')
+
+      expect(livestreamStore.activeLivestream).toEqual(result)
+
+      const storedLivestream = single(await db.livestream.findMany())
+      expect(storedLivestream).toEqual(expect.objectContaining({ liveId, isActive: true }))
+      expect(result).toEqual(storedLivestream)
     })
 
-    test('updates existing livestream', async () => {
-      throw new Error('nyi')
+    test('updates existing livestream in the db', async () => {
+      await db.livestream.create({ data: { liveId, type: 'publicLivestream', isActive: false }})
+      await livestreamStore.initialise()
+      expect(livestreamStore.activeLivestream).toBeNull()
+
+      const result = await livestreamStore.setActiveLivestream(liveId, 'publicLivestream')
+
+      expect(livestreamStore.activeLivestream).toEqual(result)
+
+      const storedLivestream = single(await db.livestream.findMany())
+      expect(storedLivestream).toEqual(expect.objectContaining({ liveId, isActive: true }))
+      expect(result).toEqual(storedLivestream)
     })
 
-    test('deactivates current active livestream', async () => {
-      throw new Error('nyi')
+    test('throws if there is already an active livestream', async () => {
+      await db.livestream.create({ data: { liveId, type: 'publicLivestream', isActive: true }})
+      await livestreamStore.initialise()
+      expect(livestreamStore.activeLivestream).not.toBeNull()
+
+      await expect(() => livestreamStore.setActiveLivestream('id2', 'publicLivestream')).rejects.toThrow()
     })
   })
 
@@ -118,8 +157,10 @@ export default () => {
       expect(stream).toEqual(expect.objectContaining({ liveId, continuationToken: 'token2' }))
     })
 
-    test('throws if livestream not yet created', () => {
-      expect(() => livestreamStore.activeLivestream).toThrow()
+    test('returns null if there is no active livestream', async () => {
+      await livestreamStore.initialise()
+
+      expect(livestreamStore.activeLivestream).toBeNull()
     })
   })
 }

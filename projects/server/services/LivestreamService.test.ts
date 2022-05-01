@@ -135,11 +135,20 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   })
 
   test('ignores if no active livestream', async () => {
-    throw new Error('nyi')
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+
+    await livestreamService.initialise()
+
+    expect(mockMasterchatProxyService.addMasterchat.mock.calls.length).toBe(0)
+    expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(0)
   })
 
   test('passes active livestream to masterchatProxyService', async () => {
-    throw new Error('nyi')
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(null, null))
+
+    await livestreamService.initialise()
+
+    expect(single(mockMasterchatProxyService.addMasterchat.mock.calls)).toEqual([data.livestream1.liveId])
   })
 
   test('updates metadata regularly', async () => {
@@ -197,5 +206,28 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     await livestreamService.initialise()
 
     expect(mockViewershipStore.addLiveViewCount.mock.calls.length).toBe(0)
+  })
+})
+
+describe(nameof(LivestreamService, 'setActiveLivestream'), () => {
+  test('sets active livestream', async () => {
+    const testLiveId = 'testLiveId'
+
+    await livestreamService.setActiveLivestream(testLiveId)
+
+    expect(single(mockLivestreamStore.setActiveLivestream.mock.calls)).toEqual([testLiveId, 'publicLivestream'])
+    expect(single(mockMasterchatProxyService.addMasterchat.mock.calls)).toEqual([testLiveId])
+  })
+})
+
+describe(nameof(LivestreamService, 'deactivateLivestream'), () => {
+  test('deactivates livestream', async () => {
+    const testLiveId = 'testLiveId'
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue({ liveId: testLiveId } as any)
+
+    await livestreamService.deactivateLivestream()
+
+    expect(mockLivestreamStore.deactivateLivestream.mock.calls.length).toBe(1)
+    expect(single(mockMasterchatProxyService.removeMasterchat.mock.calls)).toEqual([testLiveId])
   })
 })

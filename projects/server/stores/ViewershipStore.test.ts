@@ -241,7 +241,17 @@ export default () => {
     })
 
     test('does not include chat messages not attached to a public livestream', async () => {
-      throw new Error('nyi')
+      await db.chatMessage.createMany({ data: [
+        { userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
+        { userId: user1, livestreamId: null, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' }
+      ]})
+
+      const result = await viewershipStore.getLivestreamParticipation(user1)
+
+      expect(result.length).toBe(3)
+      expect(result[0]).toEqual(expect.objectContaining({ participated: true, id: 1}))
+      expect(result[1]).toEqual(expect.objectContaining({ participated: false, id: 2}))
+      expect(result[2]).toEqual(expect.objectContaining({ participated: false, id: 3}))
     })
 
     test('returns ordered streams where user participated', async () => {

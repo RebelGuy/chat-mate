@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
+import { reminder } from '@rebel/server/util/typescript'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider,
@@ -30,15 +31,30 @@ export default class LivestreamStore extends ContextClass {
     this._activeLivestream = maybeLivestream ?? null
   }
 
+  /** Sets the current active livestream to inactive such that `LivestreamStore.activeLivestream` returns null. */
+  public async deactivateLivestream (): Promise<void> {
+    if (this.activeLivestream == null) {
+      return
+    }
+
+    await this.db.livestream.update({
+      where: { liveId: this.activeLivestream!.liveId },
+      data: { isActive: false }
+    })
+
+    this._activeLivestream = null
+  }
+
   // todo: in the future, we can pass more options into this function, e.g. if a livestream is considered unlisted
+  /** Sets the given livestream as active, such that `LivestreamStore.activeLivestream` returns this stream.
+   * Please ensure you deactivate the previous livestream first, if applicable. */
   public async setActiveLivestream (liveId: string, type: LivestreamType): Promise<Livestream> {
-    if (this.activeLivestream != null) {
-      this.updateCachedLivestream(
-        await this.db.livestream.update({
-          where: { liveId: this.activeLivestream.liveId },
-          data: { isActive: false }
-        })
-      )
+    if (this._activeLivestream != null) {
+      if (this._activeLivestream.liveId === liveId) {
+        return this._activeLivestream
+      } else {
+        throw new Error('Cannot set an active livestream while another livestream is already active. Please ensure you deactivate the existing livestream first.')
+      }
     }
 
     return this.updateCachedLivestream(
@@ -70,6 +86,9 @@ export default class LivestreamStore extends ContextClass {
 
   private updateCachedLivestream (livestream: Livestream) {
     if (this._activeLivestream != null && this._activeLivestream.liveId !== livestream.liveId) {
+      // for the new type (probably "unlistedLivestream"), we will need to add a new cached livestream
+      reminder<LivestreamType>({ publicLivestream: true })
+
       throw new Error('Cannot update cached livestream because the liveIds do not match. This suggests there are two active livestreams. Before adding an active livestream, ensure that the previous one has been deactivated.')
     }
 

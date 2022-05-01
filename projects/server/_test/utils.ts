@@ -26,7 +26,8 @@ type NonFunctionPropertyNames<T> = {
 export function mockGetter<T, GetterName extends NonFunctionPropertyNames<T>> (obj: MockProxy<T>, getterName: GetterName) {
   const mockedGetter = jest.fn() as jest.Mock<T[GetterName], []>
   Object.defineProperty(obj, getterName, {
-    get: mockedGetter
+    get: mockedGetter,
+    configurable: true // allow this to be overwritten if it already exists
   })
 
   return mockedGetter
