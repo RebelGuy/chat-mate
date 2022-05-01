@@ -68,10 +68,14 @@ export default class ExperienceService extends ContextClass {
   /** Adds experience only for chat messages sent during the live chat.
    * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItem: ChatItem): Promise<void> {
-    // ensure that stream is live
+    // ensure that an active public stream exists and is live
+    const livestream = this.livestreamStore.activeLivestream
+    if (livestream == null) {
+      return
+    }
     const time = new Date(chatItem.timestamp)
-    const streamStartTime = this.livestreamStore.currentLivestream.start
-    const streamEndTime = this.livestreamStore.currentLivestream.end
+    const streamStartTime = livestream.start
+    const streamEndTime = livestream.end
     if (streamStartTime == null || time < streamStartTime || streamEndTime != null && time > streamEndTime) {
       return
     }
@@ -80,7 +84,7 @@ export default class ExperienceService extends ContextClass {
     const userId = await this.channelStore.getUserId(externalId)
     const viewershipStreakMultiplier = await this.getViewershipMultiplier(userId)
     const participationStreakMultiplier = await this.getParticipationMultiplier(userId)
-    const spamMultiplier = await this.getSpamMultiplier(chatItem, userId)
+    const spamMultiplier = await this.getSpamMultiplier(livestream.id, chatItem, userId)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
     const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), userId)
     const data: ChatExperienceData = {
@@ -245,9 +249,9 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
 
-  private async getSpamMultiplier (chatItem: ChatItem, userId: number): Promise<SpamMult> {
+  private async getSpamMultiplier (currentLivestreamId: number, chatItem: ChatItem, userId: number): Promise<SpamMult> {
     const prev = await this.experienceStore.getPreviousChatExperience(userId)
-    if (prev == null || prev.livestream.id !== this.livestreamStore.currentLivestream.id) {
+    if (prev == null || prev.experienceDataChatMessage.chatMessage.livestreamId !== currentLivestreamId) {
       // always start with a multiplier of 1 at the start of the livestream
       return 1 as SpamMult
     }

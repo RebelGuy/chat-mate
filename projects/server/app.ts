@@ -8,7 +8,7 @@ import { ContextProvider, setContextProvider } from '@rebel/server/context/conte
 import ChatService from '@rebel/server/services/ChatService'
 import ServiceFactory from '@rebel/server/context/CustomServiceFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import MasterchatProvider from '@rebel/server/factories/MasterchatFactory'
 import path from 'node:path'
 import FileService from '@rebel/server/services/FileService'
 import { getLiveId } from '@rebel/server/util/text'
@@ -43,6 +43,7 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
+import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -51,7 +52,6 @@ import FollowerStore from '@rebel/server/stores/FollowerStore'
 
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)
-const liveId = getLiveId(env('liveId'))
 const twitchClientId = env('twitchClientId')
 const twitchClientSecret = env('twitchClientSecret')
 const twitchChannelName = env('twitchChannelName')
@@ -62,7 +62,6 @@ const globalContext = ContextProvider.create()
   .withProperty('port', port)
   .withProperty('auth', env('auth'))
   .withProperty('channelId', env('channelId'))
-  .withProperty('liveId', liveId)
   .withProperty('dataPath', dataPath)
   .withProperty('isMockLivestream', env('isMockLivestream'))
   .withProperty('isLive', env('nodeEnv') === 'release')
@@ -79,6 +78,7 @@ const globalContext = ContextProvider.create()
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
+  .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
   .withClass('twurpleStatusService', StatusService)
   .withClass('dbProvider', DbProvider)
@@ -163,8 +163,6 @@ process.on('unhandledRejection', (error) => {
 if (env('useFakeControllers')) {
   logContext.logInfo(`Using fake controllers`)
 }
-
-logContext.logInfo(`Using live ID ${liveId}`)
 
 globalContext.initialise().then(() => {
   app.listen(port, () => {

@@ -92,7 +92,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   })
 
   test('ignores times and views if receives `not_started` status from metadata', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(null, null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue({ ...makeYoutubeMetadata('not_started'), viewerCount: 2 })
     mockTwurpleApiProxyService.fetchMetadata.mockResolvedValue(makeTwitchMetadata(10))
 
@@ -102,29 +102,31 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   })
 
   test('passes to LivestreamStore if receives `live` status from metadata', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(null, null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeYoutubeMetadata('live'))
 
     await livestreamService.initialise()
 
-    const { start, end } = single(mockLivestreamStore.setTimes.mock.calls)[0]
+    const [liveId, { start, end }] = single(mockLivestreamStore.setTimes.mock.calls)
+    expect(liveId).toBe(data.livestream1.liveId)
     expect(start).not.toBeNull()
     expect(end).toBeNull()
   })
 
   test('passes to LivestreamStore if receives `finished` status from metadata', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(new Date(), null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeYoutubeMetadata('finished'))
 
     await livestreamService.initialise()
 
-    const { start, end } = single(mockLivestreamStore.setTimes.mock.calls)[0]
+    const [liveId, { start, end }] = single(mockLivestreamStore.setTimes.mock.calls)
+    expect(liveId).toBe(data.livestream1.liveId)
     expect(start).not.toBeNull()
     expect(end).not.toBeNull()
   })
 
   test('ignores if invalid status', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), new Date()))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(new Date(), new Date()))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeYoutubeMetadata('live'))
 
     await livestreamService.initialise()
@@ -132,8 +134,16 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     expect(mockLivestreamStore.setTimes.mock.calls.length).toBe(0)
   })
 
+  test('ignores if no active livestream', async () => {
+    throw new Error('nyi')
+  })
+
+  test('passes active livestream to masterchatProxyService', async () => {
+    throw new Error('nyi')
+  })
+
   test('updates metadata regularly', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(null, null))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(null, null))
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(makeYoutubeMetadata('not_started'))
 
     await livestreamService.initialise()
@@ -142,7 +152,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   })
 
   test('passes to ViewershipStore if receives live viewer count from metadata', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(new Date(), null))
     const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(metadata)
     mockTwurpleApiProxyService.fetchMetadata.mockResolvedValue(makeTwitchMetadata(5))
@@ -155,7 +165,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   })
 
   test('passes to ViewershipStore if receives live viewer count from youtube, but error from twitch', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(new Date(), null))
     const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(metadata)
     mockTwurpleApiProxyService.fetchMetadata.mockRejectedValue(new Error('Test error'))
@@ -168,7 +178,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   })
 
   test('ignores null from twitch metadata', async () => {
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(makeStream(new Date(), null))
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(new Date(), null))
     const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
     mockMasterchatProxyService.fetchMetadata.mockResolvedValue(metadata)
     mockTwurpleApiProxyService.fetchMetadata.mockResolvedValue(null)

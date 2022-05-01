@@ -10,29 +10,17 @@ import { LogLevel } from '@twurple/chat'
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
 type Deps = Dependencies<{
-  liveId: string
-  isLive: boolean
   fileService: FileService
 }>
 
 export default class LogService extends ContextClass {
-  private readonly liveId: string
-  private readonly isLive: boolean
   private readonly fileService: FileService
   private readonly logFile: string
 
   constructor (deps: Deps) {
     super()
-    this.liveId = deps.resolve('liveId')
-    this.isLive = deps.resolve('isLive')
     this.fileService = deps.resolve('fileService')
-
-    const existingFile = this.fileService.getDataFiles().find(file => file.startsWith('log_') && file.includes(this.liveId))
-    if (existingFile) {
-      this.logFile = this.fileService.getDataFilePath(existingFile)
-    } else {
-      this.logFile = this.fileService.getDataFilePath(`log_${formatDate()}_${this.liveId}.txt`)
-    }
+    this.logFile = this.fileService.getDataFilePath(`log_${formatDate()}.txt`)
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {

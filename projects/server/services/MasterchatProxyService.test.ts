@@ -1,12 +1,12 @@
 import { ChatResponse, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import { IMasterchat } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import StatusService from '@rebel/server/services/StatusService'
 import { nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
@@ -18,14 +18,14 @@ beforeEach(() => {
   mockStatusService = mock<StatusService>()
   mockMasterchat = mock<IMasterchat>()
 
-  const mockMasterchatProvider = mock<MasterchatProvider>({
-    get: () => mockMasterchat
+  const mockMasterchatFactory = mock<MasterchatFactory>({
+    create: () => mockMasterchat
   })
 
   masterchatProxyService = new MasterchatProxyService(new Dependencies({
     logService: mockLogService,
     masterchatStatusService: mockStatusService,
-    masterchatProvider: mockMasterchatProvider
+    masterchatFactory: mockMasterchatFactory
   }))
 })
 
@@ -35,6 +35,7 @@ describe(nameof(MasterchatProxyService, 'fetch'), () => {
     const token: string = 'test token'
     mockMasterchat.fetch.calledWith(token).mockResolvedValue(expectedResponse)
 
+    // todo: need to add masterchat first before providing liveId. also test that there is an error when trying to operate on invalid id.
     const actualResponse = await masterchatProxyService.fetch(token)
 
     expect(actualResponse).toBe(expectedResponse)
@@ -63,7 +64,7 @@ describe(nameof(MasterchatProxyService, 'fetchMetadata'), () => {
     const expectedResponse: Metadata = {} as any
     mockMasterchat.fetchMetadata.calledWith().mockResolvedValue(expectedResponse)
 
-    const actualResponse = await masterchatProxyService.fetchMetadata()
+    const actualResponse = await masterchatProxyService.fetchMetadata('todo')
 
     expect(actualResponse).toBe(expectedResponse)
     verifyServicesUsed(false)
@@ -75,7 +76,7 @@ describe(nameof(MasterchatProxyService, 'fetchMetadata'), () => {
 
     let actualResponse
     try {
-      await masterchatProxyService.fetchMetadata()
+      await masterchatProxyService.fetchMetadata('todo')
     } catch (e: any) {
       actualResponse = e
     }

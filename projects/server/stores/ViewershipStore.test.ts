@@ -24,19 +24,20 @@ export default () => {
 
   beforeEach(async () => {
     mockLivestreamStore = mock<LivestreamStore>()
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(data.livestream3)
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(data.livestream3)
 
     const dbProvider = await startTestDb()
     viewershipStore = new ViewershipStore(new Dependencies({
       dbProvider,
-      livestreamStore: mockLivestreamStore
+      livestreamStore: mockLivestreamStore,
+      logService: mock()
     }))
     db = dbProvider.get()
 
     await db.livestream.createMany({ data: [
-      { liveId: 'id1', continuationToken: null, start: data.time1, createdAt: data.time1 },
-      { liveId: 'id2', continuationToken: null, start: data.time2, createdAt: data.time2 },
-      { liveId: 'id3', continuationToken: null, start: data.time3, createdAt: data.time3 }
+      { liveId: 'id1', continuationToken: null, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' },
+      { liveId: 'id2', continuationToken: null, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' },
+      { liveId: 'id3', continuationToken: null, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' }
     ]})
     await db.chatUser.createMany({ data: [{}, {}]})
     await db.channel.createMany({ data: [{ userId: user1, youtubeId: data.channel1 }, { userId: user2, youtubeId: data.channel2 }]})
@@ -85,7 +86,7 @@ export default () => {
     test('trims viewing block to fit into livestream times', async () => {
       const start = addTime(data.time3, 'minutes', -1)
       const end = addTime(data.time3, 'minutes', 1)
-      const livestreamGetter = getGetterMock(mockLivestreamStore, 'currentLivestream')
+      const livestreamGetter = getGetterMock(mockLivestreamStore, 'activeLivestream')
       livestreamGetter.mockClear()
       livestreamGetter.mockReturnValue({ ...data.livestream3, start, end })
 
@@ -102,7 +103,7 @@ export default () => {
       const prevUpdate = addTime(currentTime, 'minutes', -2)
       const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
-        livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
+        livestream: { connect: { id: mockLivestreamStore.activeLivestream!.id }},
         user: { connect: { id: user1 }},
         startTime,
         lastUpdate: prevUpdate
@@ -121,7 +122,7 @@ export default () => {
       const prevUpdate = addTime(currentTime, 'minutes', -30)
       const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
-        livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
+        livestream: { connect: { id: mockLivestreamStore.activeLivestream!.id }},
         user: { connect: { id: user1 }},
         startTime,
         lastUpdate: prevUpdate
@@ -143,7 +144,7 @@ export default () => {
       const prevUpdate = addTime(currentTime, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER + 5)
       const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
-        livestream: { connect: { id: mockLivestreamStore.currentLivestream.id }},
+        livestream: { connect: { id: mockLivestreamStore.activeLivestream!.id }},
         user: { connect: { id: user1 }},
         startTime,
         lastUpdate: prevUpdate
@@ -189,7 +190,7 @@ export default () => {
   })
 
   describe(nameof(ViewershipStore, 'getLatestLiveCount'), () => {
-    test('returns null if no data exists for current livestream', async () => {
+    test('returns null if no data exists for active livestream', async () => {
       await db.liveViewers.create({ data: {
         livestream: { connect: { liveId: 'id1' }},
         youtubeViewCount: 2,
@@ -201,7 +202,15 @@ export default () => {
       expect(result).toBeNull()
     })
 
-    test('returns correct count and time for current livestream', async () => {
+    test('returns null if there is no active livestream', async () => {
+      mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+
+      const result = await viewershipStore.getLatestLiveCount()
+
+      expect(result).toBeNull()
+    })
+
+    test('returns correct count and time for active livestream', async () => {
       const data1 = { time: data.time1, viewCount: 1, twitchViewCount: 3 }
       const data2 = { time: data.time2, viewCount: 2, twitchViewCount: 4 }
       await db.liveViewers.create({ data: {

@@ -2,24 +2,24 @@ import { ChatResponse, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { IMasterchat } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
+import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 
 type Deps = Dependencies<{
   logService: LogService
   masterchatStatusService: StatusService
-  masterchatProvider: MasterchatProvider
+  masterchatFactory: MasterchatFactory
 }>
 
-export default class MasterchatProxyService extends ContextClass implements IMasterchat {
+export default class MasterchatProxyService extends ContextClass {
   public name = MasterchatProxyService.name
 
   private readonly logService: LogService
   private readonly statusService: StatusService
-  private readonly masterchat: IMasterchat
+  private readonly masterchatFactory: MasterchatFactory
 
-  private readonly wrappedMasterchat: IMasterchat
+  private readonly wrappedMasterchats: Map<string, IMasterchat>
 
   private requestId: number
 
@@ -27,27 +27,35 @@ export default class MasterchatProxyService extends ContextClass implements IMas
     super()
     this.logService = deps.resolve('logService')
     this.statusService = deps.resolve('masterchatStatusService')
-    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.masterchatFactory = deps.resolve('masterchatFactory')
 
-    this.wrappedMasterchat = this.createWrapper()
+    this.wrappedMasterchats = new Map()
 
     this.requestId = 0
   }
 
-  public fetch (chatToken?: string): Promise<ChatResponse> {
-    return this.wrappedMasterchat.fetch(chatToken)
+  public addMasterchat (liveId: string) {
+    this.createWrapper(liveId, this.masterchatFactory.create(liveId))
   }
 
-  public fetchMetadata (): Promise<Metadata> {
-    return this.wrappedMasterchat.fetchMetadata()
+  public removeMasterchat (liveId: string) {
+    this.wrappedMasterchats.delete(liveId)
+  }
+
+  public async fetch (liveId: string, continuationToken?: string): Promise<ChatResponse> {
+    return await this.wrappedMasterchats.get(liveId)!.fetch(continuationToken)
+  }
+
+  public async fetchMetadata (liveId: string): Promise<Metadata> {
+    return await this.wrappedMasterchats.get(liveId)!.fetchMetadata()
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
-  private createWrapper = (): IMasterchat => {
+  private createWrapper = (liveId: string, masterchat: IMasterchat): IMasterchat => {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
-    const fetch = this.wrapRequest((...args) => this.masterchat.fetch(...args), 'masterchat.fetch')
-    const fetchMetadata = this.wrapRequest(() => this.masterchat.fetchMetadata(), 'masterchat.fetchMetadata')
+    const fetch = this.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`)
+    const fetchMetadata = this.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`)
 
     return { fetch, fetchMetadata }
   }

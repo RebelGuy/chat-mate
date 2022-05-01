@@ -102,8 +102,12 @@ export default class ChatMateControllerReal implements IChatMateController {
     })
   }
 
-  private async getLivestreamStatus (): Promise<PublicLivestreamStatus> {
-    const livestream = this.livestreamStore.currentLivestream
+  private async getLivestreamStatus (): Promise<PublicLivestreamStatus | null> {
+    const livestream = this.livestreamStore.activeLivestream
+    if (livestream == null) {
+      return null
+    }
+    
     const link = getLivestreamLink(livestream.liveId)
 
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null

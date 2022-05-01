@@ -26,8 +26,8 @@ export default class LivestreamService extends ContextClass {
   readonly name: string = LivestreamService.name
 
   private readonly livestreamStore: LivestreamStore
-  private readonly masterchat: IMasterchat
-  private readonly twurple: ITwurpleApi
+  private readonly masterchatProxyService: MasterchatProxyService
+  private readonly twurpleApiProxyService: ITwurpleApi
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
   private readonly viewershipStore: ViewershipStore
@@ -36,8 +36,8 @@ export default class LivestreamService extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.masterchat = deps.resolve('masterchatProxyService')
-    this.twurple = deps.resolve('twurpleApiProxyService')
+    this.masterchatProxyService = deps.resolve('masterchatProxyService')
+    this.twurpleApiProxyService = deps.resolve('twurpleApiProxyService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')
@@ -49,6 +49,10 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
+    if (this.livestreamStore.activeLivestream != null) {
+      this.masterchatProxyService.addMasterchat(this.livestreamStore.activeLivestream.liveId)
+    }
+
     const timerOptions: TimerOptions = {
       behaviour: 'start',
       callback: () => this.updateLivestreamMetadata(),
@@ -57,9 +61,9 @@ export default class LivestreamService extends ContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  private async fetchYoutubeMetadata (): Promise<Metadata | null> {
+  private async fetchYoutubeMetadata (liveId: string): Promise<Metadata | null> {
     try {
-      return await this.masterchat.fetchMetadata()
+      return await this.masterchatProxyService.fetchMetadata(liveId)
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching youtube metadata.', e.message)
       return null
@@ -68,7 +72,7 @@ export default class LivestreamService extends ContextClass {
 
   private async fetchTwitchMetadata (): Promise<TwitchMetadata | null> {
     try {
-      return await this.twurple.fetchMetadata()
+      return await this.twurpleApiProxyService.fetchMetadata()
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching twitch metadata.', e.message)
       return null
@@ -76,9 +80,14 @@ export default class LivestreamService extends ContextClass {
   }
 
   private async updateLivestreamMetadata () {
+    const activeLivestream = this.livestreamStore.activeLivestream
+    if (activeLivestream == null) {
+      return
+    }
+
     // deliberately require that youtube metadata is always called successfully, as it
     // is used as the source of truth for the stream status
-    const youtubeMetadata = await this.fetchYoutubeMetadata()
+    const youtubeMetadata = await this.fetchYoutubeMetadata(activeLivestream.liveId)
     if (youtubeMetadata == null) {
       return
     }
@@ -86,10 +95,10 @@ export default class LivestreamService extends ContextClass {
     const twitchMetadata = await this.fetchTwitchMetadata()
 
     try {
-      const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, youtubeMetadata)
+      const updatedTimes = this.getUpdatedLivestreamTimes(activeLivestream, youtubeMetadata)
 
       if (updatedTimes) {
-        await this.livestreamStore.setTimes(updatedTimes)
+        await this.livestreamStore.setTimes(activeLivestream.liveId, updatedTimes)
       }
 
       if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {

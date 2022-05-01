@@ -2,9 +2,8 @@ import { ChatMessage } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
-import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { deleteProps, mockGetter, nameof } from '@rebel/server/_test/utils'
+import { deleteProps, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
@@ -26,15 +25,10 @@ export default () => {
   let chatMessage3: ChatMessage
 
   let experienceStore: ExperienceStore
-  let mockLivestreamStore: MockProxy<LivestreamStore>
   let db: Db
   beforeEach(async () => {
-    mockLivestreamStore = mock<LivestreamStore>()
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(data.livestream1)
-
     const dbProvider = await startTestDb()
     experienceStore = new ExperienceStore(new Dependencies({
-      livestreamStore: mockLivestreamStore,
       dbProvider
     }))
     db = dbProvider.get()
@@ -44,11 +38,10 @@ export default () => {
     const channelId1 = 1
     const channelId2 = 2
     await db.channel.createMany({ data: [{ userId: user1, youtubeId: data.channel1 }, { userId: user2, youtubeId: data.channel2}, { userId: user3, youtubeId: ADMIN_YOUTUBE_ID }] })
-    const livestream = await db.livestream.create({ data: { ...data.livestream1 }})
 
-    chatMessage1 = await data.addChatMessage(db, data.time1, livestream.id, user1, channelId1)
-    chatMessage2 = await data.addChatMessage(db, data.time2, livestream.id, user1, channelId1)
-    chatMessage3 = await data.addChatMessage(db, data.time3, livestream.id, user2, channelId2)
+    chatMessage1 = await data.addChatMessage(db, data.time1, null, user1, channelId1)
+    chatMessage2 = await data.addChatMessage(db, data.time2, null, user1, channelId1)
+    chatMessage3 = await data.addChatMessage(db, data.time3, null, user2, channelId2)
 
     await experienceStore.initialise()
   }, DB_TEST_TIMEOUT)
@@ -63,15 +56,13 @@ export default () => {
 
       const added = (await db.experienceTransaction.findFirst({ include: {
         experienceDataChatMessage: { include: { chatMessage: true }},
-        user: true,
-        livestream: true
+        user: true
       }}))!
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       delete (data1 as any).externalId // hehe <:
       expect(added.delta).toBe(10)
       expect(added.time).toEqual(data.time1)
       expect(added.userId).toBe(user1)
-      expect(added.livestream.liveId).toBe(data.livestream1.liveId)
       expect(added.experienceDataChatMessage).toEqual(expect.objectContaining(data1))
       expect(added.experienceDataChatMessage!.chatMessage!.externalId).toBe(chatMessage1.externalId)
     })
@@ -81,7 +72,6 @@ export default () => {
         delta: 100,
         time: chatMessage2.time,
         user: { connect: { id: user1 }},
-        livestream: { connect: { id: chatMessage2.livestreamId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData2,
           chatMessage: { connect: { externalId: chatMessage2.externalId }}
@@ -102,8 +92,7 @@ export default () => {
 
       const added = (await db.experienceTransaction.findFirst({ include: {
         experienceDataAdmin: true,
-        user: true,
-        livestream: true
+        user: true
       }}))!
       expect(added.userId).toBe(1)
       expect(added.delta).toBe(-200)
@@ -149,14 +138,12 @@ export default () => {
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time3,
         user: { connect: { id: user2 }}, // note: data exists only for user 2
-        livestream: { connect: { liveId: data.livestream1.liveId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData3,
           chatMessage: { connect: { externalId: chatMessage3.externalId }}
@@ -173,7 +160,6 @@ export default () => {
         delta: 10,
         time: data.time1,
         user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData1,
           chatMessage: { connect: { externalId: chatMessage1.externalId }}
@@ -183,7 +169,6 @@ export default () => {
         delta: 20,
         time: data.time2,
         user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }},
         experienceDataChatMessage: { create: {
           ...chatExperienceData2,
           chatMessage: { connect: { externalId: chatMessage2.externalId }}
@@ -194,7 +179,6 @@ export default () => {
       expect(result.user.id).toBe(user1)
       expect(result.delta).toBe(20)
       expect(result.time).toEqual(data.time2)
-      expect(result.livestream.id).toBe(data.livestream1.id)
       expect(result.experienceDataChatMessage).toEqual(expect.objectContaining(chatExperienceData2))
     })
   })
@@ -204,14 +188,12 @@ export default () => {
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
       await db.experienceTransaction.create({ data: {
         delta: 20,
         time: data.time2,
-        user: { connect: { id: user2 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user2 }}
       }})
 
       const result = await experienceStore.getAllTransactionsStartingAt(data.time3.getTime())
@@ -223,20 +205,17 @@ export default () => {
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
       await db.experienceTransaction.create({ data: {
         delta: 20,
         time: data.time2,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
       await db.experienceTransaction.create({ data: {
         delta: 30,
         time: data.time3,
-        user: { connect: { id: user2 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user2 }}
       }})
 
       const result = await experienceStore.getAllTransactionsStartingAt(data.time2.getTime())
@@ -257,14 +236,12 @@ export default () => {
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
       await db.experienceTransaction.create({ data: {
         delta: 20,
         time: data.time3,
-        user: { connect: { id: user2 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user2 }}
       }})
 
       const result = await experienceStore.getTotalDeltaStartingAt(user1, data.time2.getTime())
@@ -276,20 +253,17 @@ export default () => {
       await db.experienceTransaction.create({ data: {
         delta: 10,
         time: data.time1,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
       await db.experienceTransaction.create({ data: {
         delta: 20,
         time: data.time2,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
       await db.experienceTransaction.create({ data: {
         delta: 30,
         time: data.time3,
-        user: { connect: { id: user1 }},
-        livestream: { connect: { liveId: data.livestream1.liveId }}
+        user: { connect: { id: user1 }}
       }})
 
       const result = await experienceStore.getTotalDeltaStartingAt(user1, data.time2.getTime())

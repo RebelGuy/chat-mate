@@ -72,3 +72,10 @@ export function assertUnreachable (x: never): never {
 
 /** Used as a type-guard during compile-time to check completeness of implementations, but has no effect on runtime code. */
 export function assertUnreachableCompile (x: never): any { return }
+
+/** Asserts that the property of the given variable is not identically null. */
+export function assertNotNull<T, K extends keyof T> (x: T, key: K, msg: string): asserts x is { [P in keyof T]: P extends K ? Exclude<T[P], null> : T[P] } {
+  if (x != null && x[key] === null) {
+    throw new Error(msg)
+  }
+}

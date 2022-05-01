@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
+import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime, maxTime, MAX_DATE, minTime } from '@rebel/server/util/datetime'
 import { assertUnreachableCompile } from '@rebel/server/util/typescript'
@@ -20,11 +21,15 @@ export type LastSeen = { livestream: Livestream, time: Date, viewingBlockId: num
 type Deps = Dependencies<{
   dbProvider: DbProvider
   livestreamStore: LivestreamStore
+  logService: LogService
 }>
 
 export default class ViewershipStore extends ContextClass {
+  public readonly name = ViewershipStore.name
+
   private readonly db: Db
   private readonly livestreamStore: LivestreamStore
+  private readonly logService: LogService
 
   // caches last-seen users so we don't have to constantly re-query, which could lead to race conditions
   private readonly lastSeenMap: Map<number, LastSeen | null>
@@ -33,12 +38,18 @@ export default class ViewershipStore extends ContextClass {
     super()
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.logService = deps.resolve('logService')
     this.lastSeenMap = new Map()
   }
 
   public async addLiveViewCount (youtubeCount: number, twitchCount: number): Promise<void> {
+    if (this.livestreamStore.activeLivestream == null) {
+      this.logService.logWarning(this, 'Tried adding live view counts but there is no active public livestream')
+      return
+    }
+
     await this.db.liveViewers.create({ data: {
-      livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+      livestream: { connect: { id: this.livestreamStore.activeLivestream.id }},
       youtubeViewCount: youtubeCount,
       twitchViewCount: twitchCount
     }})
@@ -49,12 +60,17 @@ export default class ViewershipStore extends ContextClass {
    * viewership of a specific *channel*.
    */
   public async addViewershipForChatParticipation (userId: number, timestamp: number): Promise<void> {
-    const startTime = this.livestreamStore.currentLivestream.start
+    if (this.livestreamStore.activeLivestream == null) {
+      this.logService.logWarning(this, 'Tried adding viewership for chat participation but there is no active public livestream')
+      return
+    }
+
+    const startTime = this.livestreamStore.activeLivestream.start
     if (startTime == null) {
       // livestream hasn't started yet
       return
     }
-    const endTime = this.livestreamStore.currentLivestream.end ?? MAX_DATE
+    const endTime = this.livestreamStore.activeLivestream.end ?? MAX_DATE
 
     // get the viewing block range
     const _time = new Date(timestamp)
@@ -82,7 +98,7 @@ export default class ViewershipStore extends ContextClass {
       block = await this.db.viewingBlock.create({
         data: {
           user: { connect: { id: userId }},
-          livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
+          livestream: { connect: { id: this.livestreamStore.activeLivestream.id }},
           startTime: lowerTime,
           lastUpdate: upperTime
         },
@@ -125,8 +141,12 @@ export default class ViewershipStore extends ContextClass {
   }
 
   public async getLatestLiveCount (): Promise<{ time: Date, viewCount: number, twitchViewCount: number } | null> {
+    if (this.livestreamStore.activeLivestream == null) {
+      return null
+    }
+
     const result = await this.db.liveViewers.findFirst({
-      where: { livestreamId: this.livestreamStore.currentLivestream.id },
+      where: { livestreamId: this.livestreamStore.activeLivestream.id },
       orderBy: { time: 'desc' }
     })
 

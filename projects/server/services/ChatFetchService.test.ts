@@ -20,7 +20,9 @@ const currentLivestream: Livestream = {
   continuationToken: token1,
   createdAt: new Date(),
   start: new Date(),
-  end: null
+  end: null,
+  type: 'publicLivestream',
+  isActive: true
 }
 const chatAction1: AddChatItemAction = {
   type: 'addChatItemAction',
@@ -69,7 +71,7 @@ beforeEach(() => {
   mockTimerHelpers = mock<TimerHelpers>()
   mockChatService = mock<ChatService>()
 
-  mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(currentLivestream)
+  mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(currentLivestream)
   mockChatStore.getChatSince.mockResolvedValue([])
 
   // automatically execute callback passed to TimerHelpers
@@ -89,7 +91,7 @@ beforeEach(() => {
 })
 
 describe(nameof(ChatService, 'initialise'), () => {
-  test('ignores api is disableExternalApis is true', async () => {
+  test('ignores api if disableExternalApis is true', async () => {
     chatFetchService = new ChatFetchService(new Dependencies({
       chatService: mockChatService,
       chatStore: mockChatStore,
@@ -124,6 +126,15 @@ describe(nameof(ChatService, 'initialise'), () => {
     await chatFetchService.initialise()
 
     expect(single(single(mockLivestreamStore.setContinuationToken.mock.calls))).toBe(null)
+  })
+
+  test('quietly handles no active livestream', async () => {
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+
+    await chatFetchService.initialise()
+
+    expect(single(single(mockLivestreamStore.setContinuationToken.mock.calls))).toBe(null)
+    expect(mockTimerHelpers.dispose.mock.calls.length).toBe(0)
   })
 
   test('passes ordered chat items to ChatService and updates continuation token', async () => {

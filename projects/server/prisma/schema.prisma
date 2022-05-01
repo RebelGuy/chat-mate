@@ -27,25 +27,32 @@ model TwitchAuth {
 }
 
 // there is no notion of a "livestream" on twitch - all chat messages are sent to the channel directly.
-// since we never run the twitch chat without the youtube chat, this does not present a problem as we can
-// simply match all twitch messages with a youtube livestream.
+// since we never run a twitch livestream without also running a youtube livestream, we point the twitch
+// livestream to the youtube livestream.
 model Livestream {
-  id        Int       @id @default(autoincrement())
-  liveId    String    @db.VarChar(11) // unique
-  createdAt DateTime  @default(now())
+  id        Int            @id @default(autoincrement())
+  liveId    String         @db.VarChar(11) // unique
+  createdAt DateTime       @default(now())
   start     DateTime?
   end       DateTime?
+  type      LivestreamType
+
+  // if false, we don't listen to messages anymore (e.g. for when a livestream has concluded)
+  isActive Boolean
 
   // for fetching the youtube chat of this livestream
   continuationToken String? @db.VarChar(1023)
 
-  liveViewers            LiveViewers[]
-  chatMessages           ChatMessage[]
-  experienceTransactions ExperienceTransaction[]
-  viewingBlocks          ViewingBlock[]
+  liveViewers   LiveViewers[]
+  chatMessages  ChatMessage[]
+  viewingBlocks ViewingBlock[]
 
   @@unique([liveId], map: "Livestream_liveId_key")
   @@map("livestream")
+}
+
+enum LivestreamType {
+  publicLivestream
 }
 
 model LiveViewers {
@@ -279,8 +286,9 @@ model ChatMessage {
   twitchChannelId Int?
   twitchChannel   TwitchChannel? @relation(fields: [twitchChannelId], references: [id], map: "chat_message_twitchChannelId_fkey")
 
-  livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "chat_message_livestreamId_fkey")
+  // null if the message was received off-stream. this is generally only true when received on twitch
+  livestreamId Int?
+  livestream   Livestream? @relation(fields: [livestreamId], references: [id], map: "chat_message_livestreamId_fkey")
 
   chatMessageParts          ChatMessagePart[]
   experienceDataChatMessage ExperienceDataChatMessage?
@@ -306,14 +314,9 @@ model ExperienceTransaction {
   experienceDataChatMessage ExperienceDataChatMessage?
   experienceDataAdmin       ExperienceDataAdmin?
 
-  livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "experience_transaction_livestreamId_fkey")
-
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
 
-  // @@index([userId], map: "experience_transaction_userId_fkey")
-  @@index([livestreamId], map: "experience_transaction_livestreamId_fkey")
   @@index([userId], map: "experience_transaction_userId_fkey")
   @@map("experience_transaction")
 }

@@ -26,7 +26,6 @@ type EnvironmentVariables = {
   twitchRefreshToken: string
 
   channelId: string
-  liveId: string
   databaseUrl: string
 
   // id for auto-replaying chat messages

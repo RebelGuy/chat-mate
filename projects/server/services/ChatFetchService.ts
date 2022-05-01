@@ -4,13 +4,13 @@ import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from '@rebel/server/models/chat'
 import { isList, List } from 'immutable'
 import { clamp, clampNormFn, sum } from '@rebel/server/util/math'
-import { IMasterchat } from '@rebel/server/interfaces'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
+import { Livestream } from '@prisma/client'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 3_000
@@ -37,7 +37,7 @@ export default class ChatFetchService extends ContextClass {
   private readonly chatService: ChatService
   private readonly chatStore: ChatStore
   private readonly logService: LogService
-  private readonly masterchat: IMasterchat
+  private readonly masterchatProxyService: MasterchatProxyService
   private readonly timerHelpers: TimerHelpers
   private readonly livestreamStore: LivestreamStore
   private readonly disableExternalApis: boolean
@@ -46,7 +46,7 @@ export default class ChatFetchService extends ContextClass {
     super()
     this.chatService = deps.resolve('chatService')
     this.chatStore = deps.resolve('chatStore')
-    this.masterchat = deps.resolve('masterchatProxyService')
+    this.masterchatProxyService = deps.resolve('masterchatProxyService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -65,20 +65,27 @@ export default class ChatFetchService extends ContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  private fetchLatest = async () => {
-    const token = this.livestreamStore.currentLivestream.continuationToken
+  private fetchLatest = async (livestream: Livestream) => {
+    const token = livestream.continuationToken
+    const liveId = livestream.liveId
+
     try {
-      const result = token ? await this.masterchat.fetch(token) : await this.masterchat.fetch()
+      const result = await this.masterchatProxyService.fetch(liveId, token ?? undefined)
       return result
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching chat:', e.message)
-      await this.livestreamStore.setContinuationToken(null)
+      await this.livestreamStore.setContinuationToken(liveId, null)
       return null
     }
   }
 
   private updateMessages = async () => {
-    const response = await this.fetchLatest()
+    const livestream = this.livestreamStore.activeLivestream
+    if (livestream == null) {
+      return MAX_INTERVAL
+    }
+
+    const response = await this.fetchLatest(livestream)
 
     let hasNewChat: boolean = false
     if (response != null) {
@@ -105,7 +112,7 @@ export default class ChatFetchService extends ContextClass {
         if (!anyFailed) {
           // purposefully only set this AFTER everything has been added. if we set it before,
           // and something goes wrong with adding chat, the chat messages will be lost forever.
-          await this.livestreamStore.setContinuationToken(response.continuation.token)
+          await this.livestreamStore.setContinuationToken(livestream.liveId, response.continuation.token)
         }
       }
     }

@@ -35,7 +35,6 @@ The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `yarn auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
 - `CHANNEL_ID`: The channel ID of the livestream user.
-- `LIVE_ID`: The video ID of the livestream.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_ACCESS_TOKEN`: The access token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
@@ -107,8 +106,10 @@ Key:
 - 🟢 LivestreamService
   - 🟢 initialise
 - 🟢 MasterchatProxyService
+  - 🔴 addMasterchat
   - 🟢 fetch
   - 🟢 fetchMetadata
+  - 🔴 removeMasterchat
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
@@ -149,6 +150,7 @@ Key:
 - 🟢 LivestreamStore
   - 🟢 initialise
   - 🟢 currentLivestream
+  - 🔴 setActiveLivestream
   - 🟢 setContinuationToken
   - 🟢 setTimes
 - 🟢 ViewershipStore
@@ -222,12 +224,12 @@ Returns data with the following properties:
 Path: `/chatMate`.
 
 ### `GET /status`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Gets the latest status information.
 
 Returns data with the following properties:
-- `livestreamStatus` (`PublicLivestreamStatus`): Status information relating to the current livestream.
+- `livestreamStatus` (`PublicLivestreamStatus | null`): Status information relating to the active public livestream. Null if there is no active public livestream.
 - `youtubeApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 - `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
