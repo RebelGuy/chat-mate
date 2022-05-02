@@ -9,6 +9,7 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import { addTime } from '@rebel/server/util/datetime'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
@@ -100,6 +101,12 @@ export default class LivestreamService extends ContextClass {
   private async updateLivestreamMetadata () {
     const activeLivestream = this.livestreamStore.activeLivestream
     if (activeLivestream == null) {
+      return
+    } else if (activeLivestream.end != null && new Date() > addTime(activeLivestream.end, 'minutes', 2)) {
+      // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
+      // (after some delay), so there is no need to keep it around.
+      await this.deactivateLivestream()
+      this.logService.logInfo(this, 'Automatically deactivated current livestream because it has ended.')
       return
     }
 

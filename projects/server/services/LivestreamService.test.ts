@@ -12,6 +12,7 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { TwitchMetadata } from '@rebel/server/interfaces'
+import { addTime } from '@rebel/server/util/datetime'
 
 function makeYoutubeMetadata (status: LiveStatus): Metadata {
   return {
@@ -123,6 +124,16 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     expect(liveId).toBe(data.livestream1.liveId)
     expect(start).not.toBeNull()
     expect(end).not.toBeNull()
+  })
+
+  test('deactivates livestream if finished', async () => {
+    const startDate = addTime(new Date(), 'minutes', -10)
+    const endDate = addTime(new Date(), 'minutes', -5)
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(makeStream(startDate, endDate))
+
+    await livestreamService.initialise()
+
+    expect(mockLivestreamStore.deactivateLivestream.mock.calls.length).toBe(1)
   })
 
   test('ignores if invalid status', async () => {
