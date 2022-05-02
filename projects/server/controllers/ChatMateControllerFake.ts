@@ -1,6 +1,6 @@
 import { In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
-import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController } from '@rebel/server/controllers/ChatMateController'
+import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import { chooseWeightedRandom, pickRandom, randomInt, randomString } from '@rebel/server/util/random'
 import { addTime } from '@rebel/server/util/datetime'
@@ -11,9 +11,12 @@ import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import { Level } from '@rebel/server/services/ExperienceService'
 import { asGte, asLt } from '@rebel/server/util/math'
 import ChannelService from '@rebel/server/services/ChannelService'
+import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
 
 export default class ChatMateControllerFake implements IChatMateController {
   private channelService: ChannelService
+
+  private liveId: string | null = 'CkOgjC9wjog'
 
   constructor (deps: ChatMateControllerDeps) {
     this.channelService = deps.resolve('channelService')
@@ -23,13 +26,13 @@ export default class ChatMateControllerFake implements IChatMateController {
     const { builder } = args
 
     const status: 'not_started' | 'live' | 'finished' = chooseWeightedRandom(['not_started', 1], ['live', 10], ['finished', 1])
-    const livestreamStatus: PublicLivestreamStatus = {
+    const livestreamStatus: PublicLivestreamStatus | null = this.liveId == null ? null : {
       schema: 2,
       startTime: status === 'not_started' ? null : addTime(new Date(), 'minutes', -10).getTime(),
       endTime: status === 'finished' ? addTime(new Date(), 'minutes', -5).getTime() : null,
       youtubeLiveViewers: Math.round(Math.random() * 25),
       twitchLiveViewers: Math.round(Math.random() * 25),
-      livestreamLink: 'www.test.com',
+      livestreamLink: getLivestreamLink(this.liveId),
       status
     }
 
@@ -97,5 +100,29 @@ export default class ChatMateControllerFake implements IChatMateController {
       reusableTimestamp: events.at(-1)?.timestamp ?? since,
       events
     })
+  }
+
+  // eslint-disable-next-line @typescript-eslint/require-await
+  public async setActiveLivestream (args: In<SetActiveLivestreamEndpoint>): Out<SetActiveLivestreamEndpoint> {
+    let liveId: string | null
+    if (args.livestream == null) {
+      liveId = null
+    } else {
+      try {
+        liveId = getLiveId(args.livestream)
+      } catch (e: any) {
+        return args.builder.failure(400, `Cannot parse the liveId: ${e.message}`)
+      }
+    }
+
+    if (this.liveId == null && liveId != null) {
+      this.liveId = liveId
+    } else if (this.liveId != null && liveId == null) {
+      this.liveId = null
+    } else if (!(this.liveId == null && liveId == null || this.liveId! === liveId)) {
+      return args.builder.failure(422, `Cannot set active livestream ${liveId} because another livestream is already active.`)
+    }
+
+    return args.builder.success({})
   }
 }

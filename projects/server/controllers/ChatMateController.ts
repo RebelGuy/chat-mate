@@ -1,11 +1,12 @@
-import { ApiResponse, buildPath, ControllerBase, Endpoint, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, Endpoint, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
-import { GET, Path, QueryParam } from 'typescript-rest'
+import { GET, PATCH, Path, POST, QueryParam } from 'typescript-rest'
 import env from '@rebel/server/globals'
 import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
+import { EmptyObject } from '@rebel/server/types'
 
 type GetStatusResponse = ApiResponse<3, {
   livestreamStatus: Tagged<2, PublicLivestreamStatus> | null
@@ -19,14 +20,20 @@ type GetEventsResponse = ApiResponse<3, {
   events: Tagged<2, PublicChatMateEvent>[]
 }>
 
+type SetActiveLivestreamResponse = ApiResponse<1, EmptyObject>
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type GetStatusEndpoint = Endpoint<3, {}, GetStatusResponse>
 
 export type GetEventsEndpoint = Endpoint<3, { since: number }, GetEventsResponse>
 
+export type SetActiveLivestreamRequest = ApiRequest<1, { schema: 1, livestream: string | null }>
+export type SetActiveLivestreamEndpoint = Endpoint<1, Omit<SetActiveLivestreamRequest, 'schema'>, SetActiveLivestreamResponse>
+
 export interface IChatMateController {
   getStatus: GetStatusEndpoint
   getEvents: GetEventsEndpoint
+  setActiveLivestream: SetActiveLivestreamEndpoint
 }
 
 @Path(buildPath('chatMate'))
@@ -62,6 +69,21 @@ export default class ChatMateController extends ControllerBase {
     
     try {
       return await this.implementation.getEvents({ builder, since })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @PATCH
+  @Path('livestream')
+  public async setActiveLivestream (request: SetActiveLivestreamRequest): Promise<SetActiveLivestreamResponse> {
+    const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream', 1)
+    if (request == null || request.livestream === undefined) {
+      return builder.failure(400, `A value for 'livestream' must be provided.`)
+    }
+
+    try {
+      return await this.implementation.setActiveLivestream({ builder, ...request })
     } catch (e: any) {
       return builder.failure(e)
     }

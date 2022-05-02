@@ -71,6 +71,7 @@ export default class LivestreamService extends ContextClass {
     const liveId = this.livestreamStore.activeLivestream.liveId
     await this.livestreamStore.deactivateLivestream()
     this.masterchatProxyService.removeMasterchat(liveId)
+    this.logService.logInfo(this, `Livestream with id ${liveId} has been deactivated.`)
   }
 
   /** Sets the given livestream as active, and creates a masterchat instance.
@@ -78,6 +79,7 @@ export default class LivestreamService extends ContextClass {
   public async setActiveLivestream (liveId: string) {
     await this.livestreamStore.setActiveLivestream(liveId, 'publicLivestream')
     this.masterchatProxyService.addMasterchat(liveId)
+    this.logService.logInfo(this, `Livestream with id ${liveId} has been activated.`)
   }
 
   private async fetchYoutubeMetadata (liveId: string): Promise<Metadata | null> {
@@ -105,8 +107,8 @@ export default class LivestreamService extends ContextClass {
     } else if (activeLivestream.end != null && new Date() > addTime(activeLivestream.end, 'minutes', 2)) {
       // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
       // (after some delay), so there is no need to keep it around.
+      this.logService.logInfo(this, 'Automatically deactivating current livestream because it has ended.')
       await this.deactivateLivestream()
-      this.logService.logInfo(this, 'Automatically deactivated current livestream because it has ended.')
       return
     }
 

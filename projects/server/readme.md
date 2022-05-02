@@ -251,6 +251,20 @@ Returns an data with the following properties:
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
+### `PATCH /livestream`
+*Current schema: 1.*
+
+Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
+
+Request data (body):
+- `livestream` (`string | null`): *Required.* The livestream link or id to set as active. If `null`, the active stream will be deactivated.
+
+Returns an empty response body - if the status code is 200, it signifies that the action succeeded.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `422`: When an active livestream already exists.
+
 ## Emoji Endpoints
 Path: `/emoji`.
 

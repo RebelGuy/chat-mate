@@ -70,7 +70,8 @@ export type Out<E extends Endpoint<any, any, any>> = ReturnType<E>
 const API_ERRORS = {
   500: 'Internal Error',
   400: 'Bad Request',
-  404: 'Not Found'
+  404: 'Not Found',
+  422: 'Unprocessable Entity'
 }
 
 export type ErrorCode = keyof typeof API_ERRORS
