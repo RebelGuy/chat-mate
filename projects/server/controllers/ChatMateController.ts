@@ -8,7 +8,7 @@ import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/co
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 import { EmptyObject } from '@rebel/server/types'
 
-type GetStatusResponse = ApiResponse<3, {
+export type GetStatusResponse = ApiResponse<3, {
   livestreamStatus: Tagged<2, PublicLivestreamStatus> | null
   youtubeApiStatus: Tagged<1, PublicApiStatus>
   twitchApiStatus: Tagged<1, PublicApiStatus>
@@ -20,14 +20,13 @@ type GetEventsResponse = ApiResponse<3, {
   events: Tagged<2, PublicChatMateEvent>[]
 }>
 
-type SetActiveLivestreamResponse = ApiResponse<1, EmptyObject>
-
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type GetStatusEndpoint = Endpoint<3, {}, GetStatusResponse>
 
 export type GetEventsEndpoint = Endpoint<3, { since: number }, GetEventsResponse>
 
 export type SetActiveLivestreamRequest = ApiRequest<1, { schema: 1, livestream: string | null }>
+export type SetActiveLivestreamResponse = ApiResponse<1, EmptyObject>
 export type SetActiveLivestreamEndpoint = Endpoint<1, Omit<SetActiveLivestreamRequest, 'schema'>, SetActiveLivestreamResponse>
 
 export interface IChatMateController {

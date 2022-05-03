@@ -1,4 +1,5 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/server/controllers/EmojiController'
+import { GetStatusResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 
 const baseUrl = 'http://localhost:3010/api'
@@ -40,6 +41,29 @@ export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew): Promise<A
       'Content-Type': 'application/json'
     }
   })
+  const body = await response.text()
+  return JSON.parse(body)
+}
+
+export async function setActiveLivestream (newLivestream: string | null): Promise<SetActiveLivestreamResponse> {
+  const request: SetActiveLivestreamRequest = {
+    schema: 1,
+    livestream: newLivestream
+  }
+
+  const response = await fetch(baseUrl + '/chatMate/livestream', {
+    method: 'PATCH',
+    body: JSON.stringify(request),
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  const body = await response.text()
+  return JSON.parse(body)
+}
+
+export async function getStatus (): Promise<GetStatusResponse> {
+  const response = await fetch(baseUrl + '/chatMate/status', { method: 'GET' })
   const body = await response.text()
   return JSON.parse(body)
 }
