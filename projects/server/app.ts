@@ -45,6 +45,7 @@ import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/PunishmentService'
 import PunishmentStore from '@rebel/server/stores/PunishmentStore'
+import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -106,6 +107,7 @@ const globalContext = ContextProvider.create()
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
   .withClass('punishmentStore', PunishmentStore)
+  .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
   .withClass('punishmentService', PunishmentService)
   .build()
 

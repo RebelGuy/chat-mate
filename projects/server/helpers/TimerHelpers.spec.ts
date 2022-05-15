@@ -64,6 +64,34 @@ describe(nameof(TimerHelpers, 'createRepeatingTimer'), () => {
   })
 })
 
+describe(nameof(TimerHelpers, 'disposeSingle'), () => {
+  test('does nothing if timer does not exist', () => {
+    const result = timerHelpers.disposeSingle(0)
+
+    expect(result).toBe(false)
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
+  test('stops the identified timer', () => {
+    const interval = 300
+    let calls = 0
+    const options: TimerOptions = {
+      behaviour: 'start',
+      callback: () => { calls++; return new Promise(r => r()) },
+      interval
+    }
+
+    const id = timerHelpers.createRepeatingTimer(options)
+    jest.runOnlyPendingTimers()
+
+    const result = timerHelpers.disposeSingle(id)
+
+    expect(calls).toBe(1) // first
+    expect(result).toBe(true)
+    expect(jest.getTimerCount()).toBe(0)
+  })
+})
+
 describe(nameof(TimerHelpers, 'dispose'), () => {
   test('all timers are stopped', () => {
     const options: TimerOptions = {

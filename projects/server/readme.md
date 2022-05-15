@@ -108,9 +108,10 @@ Key:
   - 🟢 fetch
   - 🟢 fetchMetadata
 - 🟢 PunishmentService
+  - 🟡 initialise
   - 🟢 banUser
   - 🟢 muteUser
-  - 🟢 timeoutUser
+  - 🟡 timeoutUser
   - 🟢 getCurrentPunishments
   - 🟢 unbanUser
   - 🟢 unmuteUser
@@ -127,6 +128,10 @@ Key:
   - 🟢 banChannel
   - 🟢 initialise
   - 🟢 unbanChannel
+- 🟢 youtubeTimeoutRefreshService
+  - 🟢 calculateNextInterval
+  - 🟢 startTrackingTimeout
+  - 🟢 stopTrackingTimeout
 - ⚪ FileService
 - ⚪ LogService
 
@@ -194,6 +199,7 @@ Key:
   - 🟢 calculateViewershipMultiplier
 - 🟢 TimerHelpers
   - 🟢 createRepeatingTimer
+  - 🟢 disposeSingle
   - 🟢 dispose
 
 **Misc**

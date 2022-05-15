@@ -11,6 +11,7 @@ import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import TwurpleService from '@rebel/server/services/TwurpleService'
+import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 
 export const userId1 = 2
 
@@ -86,6 +87,7 @@ let mockPunishmentStore: MockProxy<PunishmentStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let mockTwurpleService: MockProxy<TwurpleService>
+let mockYoutubeTimeoutRefreshService: MockProxy<YoutubeTimeoutRefreshService>
 let punishmentService: PunishmentService
 
 beforeEach(() => {
@@ -94,6 +96,7 @@ beforeEach(() => {
   mockChannelStore = mock()
   mockChatStore = mock()
   mockTwurpleService = mock()
+  mockYoutubeTimeoutRefreshService = mock()
 
   punishmentService = new PunishmentService(new Dependencies({
     logService: mock(),
@@ -101,8 +104,57 @@ beforeEach(() => {
     punishmentStore: mockPunishmentStore,
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
-    twurpleService: mockTwurpleService
+    twurpleService: mockTwurpleService,
+    youtubeTimeoutRefreshService: mockYoutubeTimeoutRefreshService
   }))
+})
+
+describe(nameof(PunishmentService, 'initialise'), () => {
+  test('sets up timeout refreshing timers', async () => {
+    const timeout1: Partial<Punishment> = {
+      punishmentType: 'timeout',
+      id: 1,
+      userId: 3,
+      expirationTime: addTime(new Date(), 'seconds', 1000)
+    }
+    const timeout2: Partial<Punishment> = {
+      punishmentType: 'timeout',
+      id: 2,
+      userId: 4,
+      expirationTime: addTime(new Date(), 'seconds', 1000)
+    }
+    const currentPunishments: Partial<Punishment>[] = [{ punishmentType: 'ban' }, timeout1, timeout2]
+    mockPunishmentStore.getPunishments.mockResolvedValue(currentPunishments as Punishment[])
+
+    const contextToken1 = 'token1'
+    const contextToken2 = 'token2'
+    const contextToken3 = 'token3'
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue({ contextToken: contextToken1 } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue({ contextToken: contextToken2 } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue({ contextToken: contextToken3 } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
+    mockChannelStore.getUserOwnedChannels.calledWith(timeout1.userId!).mockResolvedValue({ userId: timeout1.userId!, youtubeChannels: [1, 2], twitchChannels: [] })
+    mockChannelStore.getUserOwnedChannels.calledWith(timeout2.userId!).mockResolvedValue({ userId: timeout2.userId!, youtubeChannels: [3, 4], twitchChannels: [] })
+
+    await punishmentService.initialise()
+
+    const [args1, args2] = mockYoutubeTimeoutRefreshService.startTrackingTimeout.mock.calls
+    expect(args1).toEqual([timeout1.id, timeout1.expirationTime, true, expect.any(Function)])
+    expect(args2).toEqual([timeout2.id, timeout2.expirationTime, true, expect.any(Function)])
+
+    // ensure that the youtube punishment is re-applied when required
+    const onRefreshUser1 = args1[3]
+    mockMasterchatProxyService.timeout.mockClear()
+    await onRefreshUser1()
+    const resuppliedContextTokensUser1 = mockMasterchatProxyService.timeout.mock.calls.map(c => single(c))
+    expect(resuppliedContextTokensUser1).toEqual([contextToken1, contextToken2])
+
+    const onRefreshUser2 = args2[3]
+    mockMasterchatProxyService.timeout.mockClear()
+    await onRefreshUser2()
+    const resuppliedContextTokensUser2 = mockMasterchatProxyService.timeout.mock.calls.map(c => single(c))
+    expect(resuppliedContextTokensUser2).toEqual([contextToken3])
+  })
 })
 
 describe(nameof(PunishmentService, 'banUser'), () => {
@@ -185,10 +237,14 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
       twitchChannels: [1, 2]
     })
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
-    const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'timeout' })).mockResolvedValue(expectedResult)
+    const expectedResult: Partial<Punishment> = {
+      id: 5,
+      userId: userId1,
+      expirationTime: addTime(new Date(), 'seconds', 1000)
+    }
+    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'timeout' })).mockResolvedValue(expectedResult as Punishment)
 
-    const result = await punishmentService.timeoutUser(userId1, 'test', 10)
+    const result = await punishmentService.timeoutUser(userId1, 'test', 1000)
 
     expect(result).toBe(expectedResult)
 
@@ -196,7 +252,17 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
     
     const suppliedTwitchChannelIds = mockTwurpleService.timeout.mock.calls
-    expect(suppliedTwitchChannelIds).toEqual([[1, any(), 10], [2, any(), 10]])
+    expect(suppliedTwitchChannelIds).toEqual([[1, any(), 1000], [2, any(), 1000]])
+
+    const youtubeTimeoutRefreshArgs = single(mockYoutubeTimeoutRefreshService.startTrackingTimeout.mock.calls)
+    expect(youtubeTimeoutRefreshArgs).toEqual([expectedResult.id, expectedResult.expirationTime, false, expect.any(Function)])
+
+    // ensure that the youtube punishment is re-applied when required
+    const onRefresh = youtubeTimeoutRefreshArgs[3]
+    mockMasterchatProxyService.timeout.mockClear()
+    await onRefresh()
+    const resuppliedContextTokens = mockMasterchatProxyService.timeout.mock.calls.map(c => single(c))
+    expect(resuppliedContextTokens).toEqual([contextToken1, contextToken2])
   })
 
   test('re-applies timeout in database if one already exists', async () => {
@@ -209,6 +275,10 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
 
     const revokedArgs = single(mockPunishmentStore.revokePunishment.mock.calls)
     expect(revokedArgs[0]).toBe(activeTimeout.id)
+
+    const stopTrackingArgs = single(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls)
+    expect(stopTrackingArgs[0]).toBe(activeTimeout.id)
+
     expect(result).toBe(expectedResult)
   })
 })
@@ -303,6 +373,9 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
 
     const suppliedTwitchChannelIds = mockTwurpleService.untimeout.mock.calls.map(c => c[0])
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
+
+    const stopTrackingArgs = single(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls)
+    expect(stopTrackingArgs[0]).toBe(activeTimeout.id)
   })
 
   test('returns null and does not make database change if ban is already revoked', async () => {
@@ -313,5 +386,6 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     
     expect(result).toBeNull()
     expect(mockPunishmentStore.addPunishment.mock.calls.length).toBe(0)
+    expect(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls.length).toBe(0)
   })
 })

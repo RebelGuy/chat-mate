@@ -3,7 +3,7 @@ import LivestreamService from '@rebel/server/services/LivestreamService'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { mockGetter, nameof, single } from '@rebel/server/_test/utils'
-import { mock, MockProxy } from 'jest-mock-extended'
+import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Livestream } from '@prisma/client'
@@ -12,6 +12,9 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { TwitchMetadata } from '@rebel/server/interfaces'
+
+// jest is having trouble mocking the correct overload method, so we have to force it into the correct type
+type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
 
 function makeYoutubeMetadata (status: LiveStatus): Metadata {
   return {
@@ -57,9 +60,10 @@ beforeEach(() => {
   mockViewershipStore = mock()
 
   // automatically execute callback passed to TimerHelpers
-  // eslint-disable-next-line @typescript-eslint/require-await
-  mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
-    return options.callback()
+  const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
+  createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
+    await options.callback()
+    return 0
   })
 
   livestreamService = new LivestreamService(new Dependencies({
