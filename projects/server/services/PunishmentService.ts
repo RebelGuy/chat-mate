@@ -97,7 +97,7 @@ export default class PunishmentService extends ContextClass {
   }
 
   /** Mutes are used only in ChatMate and not relayed to Youtube or Twitch. */
-  public async muteUser (userId: number, message: string | null, durationSeconds: number): Promise<Punishment> {
+  public async muteUser (userId: number, message: string | null, durationSeconds: number | null): Promise<Punishment> {
     const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
     await Promise.all(currentPunishments
       .filter(p => p.punishmentType === 'mute')
@@ -107,7 +107,7 @@ export default class PunishmentService extends ContextClass {
     const args: CreatePunishmentArgs = {
       type: 'mute',
       issuedAt: now,
-      expirationTime: addTime(now, 'seconds', durationSeconds),
+      expirationTime: durationSeconds == null ? null : addTime(now, 'seconds', durationSeconds),
       message: message,
       userId: userId
     }

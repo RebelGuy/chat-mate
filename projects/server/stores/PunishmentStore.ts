@@ -11,8 +11,11 @@ export type CreatePunishmentArgs = {
 } & ({
   type: Extract<PunishmentType, 'ban'>,
 } | {
-  type: Extract<PunishmentType, 'timeout' | 'mute'>
+  type: Extract<PunishmentType, 'timeout'>
   expirationTime: Date
+} | {
+  type: Extract<PunishmentType, 'mute'>
+  expirationTime: Date | null
 })
 
 type Deps = Dependencies<{

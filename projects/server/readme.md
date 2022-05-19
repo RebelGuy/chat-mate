@@ -108,10 +108,10 @@ Key:
   - 🟢 fetch
   - 🟢 fetchMetadata
 - 🟢 PunishmentService
-  - 🟡 initialise
+  - 🟢 initialise
   - 🟢 banUser
   - 🟢 muteUser
-  - 🟡 timeoutUser
+  - 🟢 timeoutUser
   - 🟢 getCurrentPunishments
   - 🟢 unbanUser
   - 🟢 unmuteUser
@@ -363,7 +363,8 @@ Path: `/punishment`.
 Gets the list of all punishments for a user.
 
 Query parameters:
-- `userId` (`number`): *Required.* The ID of the user for which to get punishments.
+- `userId` (`number`): *Optional.* The ID of the user for which to get punishments. If not provided, returns punishments for all users.
+- `activeOnly` (`boolean`): *Optional.* If true, returns only punishments that are currently active.
 
 Returns data with the following properties:
 - `punishments` (`PublicPunishment[]`): The list of punishments of the user, in descending order by time issued.
@@ -374,7 +375,7 @@ Can return the following errors:
 ### `POST /ban`
 *Current schema: 1.*
 
-Applies a punishment of type `ban` to the user.
+Applies a punishment of type `ban` to the user. This is essentially a temporary `timeout`.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
@@ -390,6 +391,68 @@ Can return the following errors:
 *Current schema: 1.*
 
 Revokes an existing `ban` punishment from the user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the punishment should be revoked.
+- `message` (`string`): *Optional.* The reason for revoking the punishment.
+
+Returns data with the following properties:
+- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /timeout`
+*Current schema: 1.*
+
+Applies a punishment of type `timeout` to the user. This is essentially a temporary `ban`.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `message` (`string`): *Optional.* The reason for the punishment.
+- `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 5 minutes.
+
+Returns data with the following properties:
+- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /revokeTimeout`
+*Current schema: 1.*
+
+Revokes an existing `timeout` punishment from the user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the punishment should be revoked.
+- `message` (`string`): *Optional.* The reason for revoking the punishment.
+
+Returns data with the following properties:
+- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /mute`
+*Current schema: 1.*
+
+Applies a punishment of type `mute` to the user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `message` (`string`): *Optional.* The reason for the punishment.
+- `durationSeconds` (`number`): *Optional.* The duration of the punishment, in seconds. If 0 or not provided, the punishment is permanent.
+
+Returns data with the following properties:
+- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /unmute`
+*Current schema: 1.*
+
+Revokes an existing `mute` punishment from the user.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user from which the punishment should be revoked.

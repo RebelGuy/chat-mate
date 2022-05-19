@@ -203,7 +203,9 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
     const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute' })).mockResolvedValue(expectedResult)
+    mockPunishmentStore.addPunishment.calledWith(
+      expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute', expirationTime: expect.any(Date) })
+    ).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.muteUser(userId1, 'test', 10)
 
@@ -213,12 +215,24 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
   test('re-applies mute in database if one already exists', async () => {
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeBan, activeMute])
     const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute' })).mockResolvedValue(expectedResult)
+    mockPunishmentStore.addPunishment.calledWith(
+      expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute', expirationTime: expect.any(Date) })
+    ).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.muteUser(userId1, 'test', 100)
 
     const revokedArgs = single(mockPunishmentStore.revokePunishment.mock.calls)
     expect(revokedArgs[0]).toBe(activeMute.id)
+    expect(result).toBe(expectedResult)
+  })
+
+  test('mute is permanent if duration is null', async () => {
+    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
+    const expectedResult: any = {}
+    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute', expirationTime: null })).mockResolvedValue(expectedResult)
+
+    const result = await punishmentService.muteUser(userId1, 'test', null)
+
     expect(result).toBe(expectedResult)
   })
 })
