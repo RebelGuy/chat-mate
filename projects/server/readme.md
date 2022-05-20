@@ -231,7 +231,7 @@ Any data in the request body should also have a schema. This is always in sync w
 Path: `/chat`.
 
 ### `GET`
-*Current schema: 6.*
+*Current schema: 7.*
 
 Retrieves the latest chat items.
 
@@ -257,7 +257,7 @@ Returns data with the following properties:
 - `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Gets the events that have occurred since the specified time.
 
@@ -314,7 +314,7 @@ Can return the following errors:
 Path: `/experience`.
 
 ### `GET /leaderboard`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Gets the ranked experience list of all users.
 
@@ -322,7 +322,7 @@ Returns data with the following properties:
 - `rankedUsers` (`PublicRankedUser[]`): The array of every user's rank, sorted in ascending order.
 
 ### `GET /rank`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Gets the rank of a specific user, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
@@ -338,7 +338,7 @@ Can return the following errors:
 - `404`: When no channel could be matched against the search query.
 
 ### `POST /modify`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Modifies a player's experience by adding a special admin transaction.
 
