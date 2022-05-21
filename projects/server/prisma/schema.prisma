@@ -273,7 +273,7 @@ model ChatMessage {
 
   /// For Youtube messages only - required to retrieve the list of and execute options in the context menu next to messages.
   /// Internally in Youtube, this is called the `contextMenuEndpointParams`.
-  contextToken String? @db.VarChar(255)
+  contextToken String? @db.VarChar(511)
 
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "chat_message_userId_fkey")

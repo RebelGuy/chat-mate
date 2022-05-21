@@ -50,10 +50,6 @@ export default class PunishmentController extends ControllerBase {
     @QueryParam('activeOnly') activeOnly?: boolean // if not set, return all
   ): Promise<GetUserPunishments> {
     const builder = this.registerResponseBuilder<GetUserPunishments>('GET', 1)
-    if (userId == null) {
-      return builder.failure(400, 'userId was not provided.')
-    }
-
     try {
       let punishments: Punishment[]
       if (userId != null) {

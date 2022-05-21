@@ -46,6 +46,7 @@ import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/PunishmentService'
 import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
+import PunishmentController from '@rebel/server/controllers/PunishmentController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -132,6 +133,7 @@ app.use(async (req, res, next) => {
     .withClass('emojiController', EmojiController)
     .withClass('experienceController', ExperienceController)
     .withClass('userController', UserController)
+    .withClass('punishmentController', PunishmentController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -153,7 +155,8 @@ Server.buildServices(app,
   ChatController,
   EmojiController,
   ExperienceController,
-  UserController
+  UserController,
+  PunishmentController
 )
 
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
