@@ -22,16 +22,11 @@ export function userChannelAndLevelToPublicUser (data: UserChannel & Level, acti
   }
 }
 
-export function userNamesAndLevelToPublicUserNames (data: UserNames & Level): PublicUserNames {
+export function userNamesAndLevelToPublicUserNames (data: UserNames & UserChannel & Level, activePunishments: PublicPunishment[]): PublicUserNames {
   return {
-    schema: 1,
-    id: data.userId,
+    schema: 2,
+    user: userChannelAndLevelToPublicUser(data, activePunishments),
     youtubeChannelNames: data.youtubeNames,
     twitchChannelNames: data.twitchNames,
-    levelInfo: {
-      schema: 1,
-      level: data.level,
-      levelProgress: data.levelProgress
-    }
   }
 }

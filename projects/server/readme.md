@@ -468,7 +468,7 @@ Can return the following errors:
 Path: `/user`.
 
 ### `POST /search`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Search for a specific user.
 
