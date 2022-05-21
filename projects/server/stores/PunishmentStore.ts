@@ -49,7 +49,7 @@ export default class PunishmentStore extends ContextClass {
       user: { connect: { id: args.userId }},
       message: args.message,
       punishmentType: args.type,
-      expirationTime: args.type === 'timeout' ? args.expirationTime : null,
+      expirationTime: args.type === 'timeout' || args.type === 'mute' ? args.expirationTime : null,
       adminUser: { connect: { id: this.ADMIN_USER_ID }}
     }})
   }
