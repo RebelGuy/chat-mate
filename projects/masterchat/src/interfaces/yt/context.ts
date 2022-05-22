@@ -1303,6 +1303,7 @@ export interface ShareEntityEndpoint {
 export interface YTResponseContext {
   serviceTrackingParams: YTServiceTrackingParam[];
   webResponseContextExtensionData: WebResponseContextExtensionData;
+  mainAppWebResponseContext?: { loggedOut?: boolean }
 }
 
 export interface YTServiceTrackingParam {

@@ -1,6 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
+import { clamp } from '@rebel/server/util/math'
 
 // Clicking on the "timeout" option in a chat context menu times out the user by 5 minutes. This cannot be
 // changed without access to the Youtube API, so we have to manually refresh this timeout.
@@ -66,6 +67,7 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
     if (nextInterval == null) {      
       // stop
       const timerId = this.punishmentTimerMap.get(punishmentId)!
+      this.punishmentTimerMap.delete(punishmentId)
       this.timerHelpers.disposeSingle(timerId)
     } else {
       // refresh
@@ -92,6 +94,6 @@ export function calculateNextInterval (expirationTime: Date): number | null {
     // since the timeout always lasts for the same period, we have to make sure we set up the refreshes so the timeout expires at the desired time.
     // we can fine-tune the expiration time only if we are more than 1 period from expiration (now is a good time).
     // we return a smaller-than-maximum interval so that, after the next refresh, we can just naturally let the timeout expire.
-    return remainder - maxInterval
+    return clamp(remainder - YOUTUBE_TIMEOUT_DURATION, 0, maxInterval)
   }
 }

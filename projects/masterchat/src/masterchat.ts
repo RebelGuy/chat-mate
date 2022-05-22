@@ -718,7 +718,9 @@ export class Masterchat extends EventEmitter {
     if (!json.success) {
       throw new Error(`Failed to perform action: ` + JSON.stringify(json));
     }
-    return json.actions;
+
+    // never return undefined if the request succeeded
+    return json.actions ?? [];
   }
 
   /**
@@ -757,6 +759,10 @@ export class Masterchat extends EventEmitter {
       //   }
       // }
       return undefined;
+    }
+
+    if (response.responseContext?.mainAppWebResponseContext?.loggedOut === true) {
+      throw new Error('Youtube user is not logged in.')
     }
 
     let items: ActionCatalog = {};

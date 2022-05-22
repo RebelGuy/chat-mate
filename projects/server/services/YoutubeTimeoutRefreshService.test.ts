@@ -60,7 +60,7 @@ describe(nameof(calculateNextInterval), () => {
 
     const result = calculateNextInterval(expiration)
 
-    expect(result).toBe(7 * 60 * 1000 - (YOUTUBE_TIMEOUT_DURATION - BUFFER))
+    expect(result).toBeLessThan(YOUTUBE_TIMEOUT_DURATION - BUFFER)
   })
 
   test('returns null if expiration date is less than 1 youtube-period in the future', () => {

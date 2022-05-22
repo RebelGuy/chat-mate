@@ -200,17 +200,6 @@ export default class PunishmentService extends ContextClass {
   }
 
   private async tryApplyYoutubePunishment (channelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout'): Promise<void> {
-    let request: (contextToken: string) => Promise<boolean>
-    if (type === 'ban') {
-      request = this.masterchat.banYoutubeChannel
-    } else if (type === 'unban') {
-      request = this.masterchat.unbanYoutubeChannel
-    } else if (type === 'timeout' || type === 'refreshTimeout') {
-      request = this.masterchat.timeout
-    } else {
-      assertUnreachable(type)
-    }
-
     const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(channelId)
     if (lastChatItem == null) {
       this.logService.logWarning(this, `Could not ${type} youtube channel ${channelId} because no chat item was found for the channel`)
@@ -221,7 +210,17 @@ export default class PunishmentService extends ContextClass {
     }
     
     try {
-      const result = await request(lastChatItem.contextToken)
+      let result: boolean
+      if (type === 'ban') {
+        result = await this.masterchat.banYoutubeChannel(lastChatItem.contextToken)
+      } else if (type === 'unban') {
+        result = await this.masterchat.unbanYoutubeChannel(lastChatItem.contextToken)
+      } else if (type === 'timeout' || type === 'refreshTimeout') {
+        result = await this.masterchat.timeout(lastChatItem.contextToken)
+      } else {
+        assertUnreachable(type)
+      }
+      
       this.logService.logInfo(this, `Request to ${type} youtube channel ${channelId} succeeded. Action applied: ${result}`)
     } catch (e: any) {
       this.logService.logError(this, `Request to ${type} youtube channel ${channelId} failed:`, e.message)
@@ -230,22 +229,23 @@ export default class PunishmentService extends ContextClass {
 
   private async tryApplyTwitchPunishment (channelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<void> {
     let request: (channelId: number, reason: string | null, durationSeconds: number) => Promise<void>
-    if (type === 'ban') {
-      request = this.twurpleService.banChannel
-    } else if (type === 'unban') {
-      request = this.twurpleService.unbanChannel
-    } else if (type === 'timeout') {
-      assert(durationSeconds != null, 'Timeout duration must be defined')
-      request = this.twurpleService.timeout
-    } else if (type === 'untimeout') {
-      request = this.twurpleService.untimeout
-    } else {
-      assertUnreachable(type)
-    }
+
 
     try {
-      // if the punishment is already applied, twitch will just send an Notice message which we can ignore
-      await request(channelId, reason, durationSeconds!)
+      // if the punishment is already applied, twitch will just send a Notice message which we can ignore
+      if (type === 'ban') {
+        await this.twurpleService.banChannel(channelId, reason)
+      } else if (type === 'unban') {
+        await this.twurpleService.unbanChannel(channelId)
+      } else if (type === 'timeout') {
+        assert(durationSeconds != null, 'Timeout duration must be defined')
+        await this.twurpleService.timeout(channelId, reason, durationSeconds)
+      } else if (type === 'untimeout') {
+        await this.twurpleService.untimeout(channelId, reason)
+      } else {
+        assertUnreachable(type)
+      }
+
       this.logService.logInfo(this, `Request to ${type} twitch channel ${channelId} succeeded.`)
     } catch (e: any) {
       this.logService.logError(this, `Request to ${type} twitch channel ${channelId} failed:`, e.message)
