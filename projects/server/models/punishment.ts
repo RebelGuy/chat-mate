@@ -4,6 +4,7 @@ import { PublicPunishment } from '@rebel/server/controllers/public/punishment/Pu
 export function punishmentToPublicObject (punishment: Punishment): PublicPunishment {
   return {
     schema: 1,
+    id: punishment.id,
     type: punishment.punishmentType,
     issuedAt: punishment.issuedAt.getTime(),
     expirationTime: punishment.expirationTime?.getTime() ?? null,

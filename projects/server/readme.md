@@ -66,6 +66,13 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 `yarn migrate:release` deploys changes to the production environment. Only uses migration files, NOT the Prisma schema file.
 
+## Punishments
+Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
+
+Currently there are 3 punishment types:
+1. `mute`: This is an internal punishment, and is used by the client to hide messages of a certain user. A mute can be temporary or permanent.
+2. `timeout`: This is both internal and external (i.e. sent to YouTube and Twitch) and completely stops the user from sending messages in the livestream chat. It is always temporary. Due to limitations with the Masterchat implementation, timeouts must be at least 5 minutes long. Furthermore, we have a service that refreshes YouTube timeouts periodically if they are longer than 5 minutes.
+3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
 `yarn test` performs the test suite.
@@ -356,6 +363,20 @@ Can return the following errors:
 
 ## Punishment Endpoints
 Path: `/punishment`.
+
+### `GET /:id`
+*Current schema: 1.*
+
+Gets a punishment by id.
+
+Path parameters:
+- `id` (`number`): *Required.* The ID of the punishment to retrieve.
+
+Returns data with the following properties:
+- `punishment` (`PublicPunishment`): The punishment matching the specified id.
+
+Can return the following errors:
+- `404`: When a punishment with the specifed id could not be found.
 
 ### `GET`
 *Current schema: 1.*

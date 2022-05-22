@@ -5,8 +5,10 @@ import { isPunishmentActive, punishmentToPublicObject } from '@rebel/server/mode
 import PunishmentService from '@rebel/server/services/PunishmentService'
 import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import { sortBy } from '@rebel/server/util/arrays'
-import { Path, GET, QueryParam, POST } from 'typescript-rest'
+import { Path, GET, QueryParam, POST, PathParam } from 'typescript-rest'
 import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
+
+export type GetSinglePunishment = ApiResponse<1, { punishment: Tagged<1, PublicPunishment> }>
 
 export type GetUserPunishments = ApiResponse<1, { punishments: Tagged<1, PublicPunishment>[] }>
 
@@ -42,6 +44,24 @@ export default class PunishmentController extends ControllerBase {
     super(deps, 'punishment')
     this.punishmentStore = deps.resolve('punishmentStore')
     this.punishmentService = deps.resolve('punishmentService')
+  }
+
+  @GET
+  @Path('/:id')
+  public async getSinglePunishment (
+    @PathParam('id') id: number
+  ): Promise<GetSinglePunishment> {
+    const builder = this.registerResponseBuilder<GetSinglePunishment>('GET /:id', 1)
+    try {
+      const punishment = (await this.punishmentStore.getPunishments()).find(p => p.id === id)
+      if (punishment == null) {
+        return builder.failure(404, `Cannot find punishment with id ${id}.`)
+      } else {
+        return builder.success({ punishment: punishmentToPublicObject(punishment) })
+      }
+    } catch (e: any) {
+      return builder.failure(e)
+    }
   }
 
   @GET
