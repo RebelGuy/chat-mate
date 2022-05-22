@@ -96,6 +96,11 @@ export default class PunishmentService extends ContextClass {
     return await this.punishmentStore.addPunishment(args)
   }
 
+  public async isUserPunished (userId: number): Promise<boolean> {
+    const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
+    return currentPunishments.length > 0
+  }
+
   /** Mutes are used only in ChatMate and not relayed to Youtube or Twitch. */
   public async muteUser (userId: number, message: string | null, durationSeconds: number | null): Promise<Punishment> {
     const currentPunishments = await this.getCurrentPunishmentsForUser(userId)

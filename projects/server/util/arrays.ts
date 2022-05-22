@@ -1,4 +1,4 @@
-import { GenericObject, Nullify, NumberOnly, PrimitiveKeys } from '@rebel/server/types'
+import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys } from '@rebel/server/types'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
 // uses default equality comparison
@@ -172,4 +172,22 @@ export function subGroupedSingle<T, G, S> (arr: T[], mainGrouper: (item: T) => G
 
 export function nonNull<T> (arr: (T | null)[]): T[] {
   return arr.filter(value => value != null) as T[]
+}
+
+export function compareArrays<T> (first: T[], second: T[], comparator?: (a: T, b: T) => boolean) {
+  if (first.length !== second.length) {
+    return false
+  }
+
+  if (comparator == null) {
+    comparator = (a: T, b: T) => a === b
+  }
+
+  for (let i = 0; i < first.length; i++) {
+    if (!comparator(first[i], second[i])) {
+      return false
+    }
+  }
+
+  return true
 }

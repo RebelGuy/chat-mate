@@ -2,10 +2,15 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
-import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import { AccessToken, AuthProvider, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
+import { compareArrays } from '@rebel/server/util/arrays'
+import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
+
+// see https://dev.twitch.tv/docs/authentication/scopes
+// if you edit the scope here, you will also need to add them to the TwitchAuth.ts file,
+// then request a new access token, set it in the .env file, and delete the saved token from the db.twitch_auth table.
+export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate']
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
@@ -59,6 +64,10 @@ export default class TwurpleAuthProvider extends ContextClass {
 
     if (token != null) {
       this.logService.logDebug(this, 'Loaded database access token')
+      if (!this.compareScopes(TWITCH_SCOPE, token.scope)) {
+        throw new Error('The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
+      }
+
     } else if (this.fallbackAccessToken != null && this.fallbackRefreshToken != null) {
       this.logService.logDebug(this, 'Using fallback access token')
       token = {
@@ -66,11 +75,7 @@ export default class TwurpleAuthProvider extends ContextClass {
         refreshToken: this.fallbackRefreshToken,
         expiresIn: 0, // refresh immediately
         obtainmentTimestamp: 0,
-        // future-proofing for when we want to do non-read-only actions
-        // see https://dev.twitch.tv/docs/authentication/scopes
-        // if you edit the scopes here, you will also need to add them to the TwitchAuth.ts file,
-        // then request a new access token, set it in the .env file, and delete the saved token from the db.twitch_auth table.
-        scope: ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate']
+        scope: TWITCH_SCOPE
       }
     } else {
       this.throwAuthError('No access token could be found in the database, and no fallback access token and refresh token have been provided in the .env file.')
@@ -105,5 +110,10 @@ export default class TwurpleAuthProvider extends ContextClass {
     } catch (e: any) {
       this.logService.logError(this, 'Failed to save access token', e.message)
     }
+  }
+
+  private compareScopes (expected: string[], actual: string[]): boolean {
+    // the database does not retain ordering?
+    return compareArrays([...expected].sort(), [...actual].sort())
   }
 }

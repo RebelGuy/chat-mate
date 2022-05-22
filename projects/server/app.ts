@@ -47,6 +47,7 @@ import PunishmentService from '@rebel/server/services/PunishmentService'
 import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -80,6 +81,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('timerHelpers', TimerHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
+  .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
   .withClass('masterchatStatusService', StatusService)
@@ -99,17 +101,17 @@ const globalContext = ContextProvider.create()
   .withClass('channelStore', ChannelStore)
   .withClass('chatStore', ChatStore)
   .withClass('channelService', ChannelService)
+  .withClass('punishmentStore', PunishmentStore)
+  .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
+  .withClass('twurpleService', TwurpleService)
+  .withClass('punishmentService', PunishmentService)
   .withClass('experienceService', ExperienceService)
   .withClass('customEmojiStore', CustomEmojiStore)
   .withClass('emojiService', EmojiService)
   .withClass('chatService', ChatService)
   .withClass('chatFetchService', ChatFetchService)
-  .withClass('twurpleService', TwurpleService)
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
-  .withClass('punishmentStore', PunishmentStore)
-  .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
-  .withClass('punishmentService', PunishmentService)
   .build()
 
 const app = express()

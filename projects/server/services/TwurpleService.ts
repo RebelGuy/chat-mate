@@ -3,6 +3,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import ChatService from '@rebel/server/services/ChatService'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import LogService from '@rebel/server/services/LogService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -13,10 +14,10 @@ type Deps = Dependencies<{
   logService: LogService
   twurpleChatClientProvider: TwurpleChatClientProvider
   twurpleApiProxyService: TwurpleApiProxyService
-  chatService: ChatService
   disableExternalApis: boolean
   twitchChannelName: string
   channelStore: ChannelStore
+  eventDispatchService: EventDispatchService
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -25,10 +26,10 @@ export default class TwurpleService extends ContextClass {
   private readonly logService: LogService
   private readonly chatClientProvider: TwurpleChatClientProvider
   private readonly twurpleApiProxyService: TwurpleApiProxyService
-  private readonly chatService: ChatService
   private readonly disableExternalApis: boolean
   private readonly twitchChannelName: string
   private readonly channelStore: ChannelStore
+  private readonly eventDispatchService: EventDispatchService
   private chatClient!: ChatClient
 
   constructor (deps: Deps) {
@@ -36,10 +37,10 @@ export default class TwurpleService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.chatClientProvider = deps.resolve('twurpleChatClientProvider')
     this.twurpleApiProxyService = deps.resolve('twurpleApiProxyService')
-    this.chatService = deps.resolve('chatService')
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.twitchChannelName = deps.resolve('twitchChannelName')
     this.channelStore = deps.resolve('channelStore')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
   }
 
   public override initialise () {
@@ -87,6 +88,6 @@ export default class TwurpleService extends ContextClass {
   private onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
     const evaluated = evalTwitchPrivateMessage(msg)
     this.logService.logInfo(this, 'Adding 1 new chat item')
-    this.chatService.onNewChatItem(evaluated)
+    this.eventDispatchService.addData('chatItem', evaluated)
   }
 }

@@ -28,6 +28,17 @@ Assumes that steps 1-3 of the previous section have been run.
 5. `yarn start:release` to run the release server
 
 
+## Authentication
+### YouTube
+Run `yarn auth` and log in using the streaming account, or a moderator account. After the Electron app closes, note the authentication token in the console and use it as the `AUTH` environment variable.
+
+### Twitch
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future.
+
+For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<debug|release>` and sign in manually. After the Electron app closes, note the access token and refresh token printed in the console and set the relevant environment variables. The next time the project is run, these will be stored in the database (`twitch_auth` table) and retrieved thereon, so the variables can be safely removed before subsequent runs.
+
+Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` and `TwitchAuth.ts` at the moment. Making any changes to the scope will require that you delete the single row in the `twitch_auth` table and follow the steps above to repeat the initial authentication process. **There is currently no indication that a 
+
 # .env
 Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template.
 
@@ -40,7 +51,7 @@ The following environment variables must be set in the `.env` file:
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_ACCESS_TOKEN`: The access token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
 - `TWITCH_REFRESH_TOKEN`: The refresh token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
-- `TWITCH_CHANNEL_NAME`: The Twitch channel's name to which we should connect.
+- `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
 - `IS_MOCK_LIVESTREAM`: *Deprecated* [Optional, debug only] If true, uses the chat data of the `LIVE_ID` to replay its chat events, and no longer connect to YouTube. See `MockMasterchat` for more options, such as hardcoding the set of messages to send, or taking console user input for specifying the next message text.
 - `USE_FAKE_CONTROLLERS`: [Optional, debug only] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
@@ -98,6 +109,7 @@ Key:
   - 🟢 getUserByChannelName
   - 🟢 getUserById
 - 🟢 ChatService
+  - 🟢 initialise
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
   - 🟢 initialise
@@ -109,6 +121,7 @@ Key:
   - 🟢 getLevel
   - 🟢 getLevelDiffs
   - 🟢 modifyExperience
+- ⚪ EventDispatchService
 - 🟢 LivestreamService
   - 🟢 initialise
 - 🟢 MasterchatProxyService
@@ -117,6 +130,7 @@ Key:
 - 🟢 PunishmentService
   - 🟢 initialise
   - 🟢 banUser
+  - 🟢 isUserPunished
   - 🟢 muteUser
   - 🟢 timeoutUser
   - 🟢 getCurrentPunishments

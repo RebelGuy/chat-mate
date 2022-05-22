@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
-import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
+import TwurpleAuthProvider, { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { nameof, single } from '@rebel/server/_test/utils'
 import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
@@ -64,7 +64,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
   })
 
   test('uses loaded token details if access token exists for RefreshingAuthProvider', async () => {
-    const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token' }
+    const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE }
     mockAuthStore.loadAccessToken.mockResolvedValue(loadedToken as AccessToken)
 
     await twurpleAuthProvider.initialise()
@@ -92,5 +92,12 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     const [providedClientId, providedClientSecret] = single(mockClientCredentialsAuthProviderFactory.create.mock.calls)
     expect(providedClientId).toBe(clientId)
     expect(providedClientSecret).toBe(clientSecret)
+  })
+
+  test('throws if stored scope differs from expected scope', async () => {
+    const loadedToken: Partial<AccessToken> = { scope: ['differentScope'] }
+    mockAuthStore.loadAccessToken.mockResolvedValue(loadedToken as AccessToken)
+
+    await expect(twurpleAuthProvider.initialise()).rejects.toThrow()
   })
 })

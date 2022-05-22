@@ -199,6 +199,33 @@ describe(nameof(PunishmentService, 'banUser'), () => {
   })
 })
 
+describe(nameof(PunishmentService, 'isUserPunished'), () => {
+  test('returns false if there are no active punishments for the user', async () => {
+    const punishment1: Partial<Punishment> = {
+      expirationTime: addTime(new Date(), 'hours', -1)
+    }
+    const punishment2: Partial<Punishment> = {
+      revokedTime: addTime(new Date(), 'hours', -1)
+    }
+    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([punishment1 as Punishment, punishment2 as Punishment])
+  
+    const result = await punishmentService.isUserPunished(userId1)
+
+    expect(result).toBe(false)
+  })
+
+  test('returns true if there are active punishments for the user', async () => {
+    const punishment: Partial<Punishment> = {
+      expirationTime: addTime(new Date(), 'hours', 1)
+    }
+    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([punishment as Punishment])
+  
+    const result = await punishmentService.isUserPunished(userId1)
+
+    expect(result).toBe(true)
+  })
+})
+
 describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
     mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
