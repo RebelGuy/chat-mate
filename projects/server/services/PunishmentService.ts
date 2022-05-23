@@ -233,9 +233,6 @@ export default class PunishmentService extends ContextClass {
   }
 
   private async tryApplyTwitchPunishment (channelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<void> {
-    let request: (channelId: number, reason: string | null, durationSeconds: number) => Promise<void>
-
-
     try {
       // if the punishment is already applied, twitch will just send a Notice message which we can ignore
       if (type === 'ban') {

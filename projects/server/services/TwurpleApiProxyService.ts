@@ -118,7 +118,9 @@ export default class TwurpleApiProxyService extends ContextClass implements ITwu
       let response: TResponse | null = null
       this.logService.logApiRequest(this, id, requestName, { ...query })
       try {
-        response = await request(...query)
+        // thanks to Twitch's messaging system (or a bug in Twurple?) we don't always hear back, so assume the request failed after 5 seconds
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out.')), 5000))
+        response = await Promise.race([request(...query), timeout]) as TResponse
         this.logService.logApiResponse(this, id, false, response)
       } catch (e) {
         error = e
