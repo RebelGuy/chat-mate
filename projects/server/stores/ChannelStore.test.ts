@@ -292,6 +292,25 @@ export default () => {
     })
   })
 
+  describe(nameof(ChannelStore, 'getYoutubeChannelNameFromChannelId'), () => {
+    test('gets correct name', async () => {
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo1]} }
+      }})
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo3]} }
+      }})
+
+      const result = await channelStore.getYoutubeChannelNameFromChannelId(2)
+
+      expect(result).toEqual(channelInfo3.name)
+    })
+  })
+
   describe(nameof(ChannelStore, 'getUserId'), () => {
     test('throws if channel with given not found', async () => {
       await db.channel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})

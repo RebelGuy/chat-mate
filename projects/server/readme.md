@@ -165,6 +165,7 @@ Key:
   - 🟢 getCurrentUserIds
   - 🟢 getCurrentUserNames
   - 🟢 getTwitchUserNameFromChannelId
+  - 🟢 getYoutubeChannelNameFromChannelId
   - 🟢 getUserId
   - 🟢 getUserOwnedChannels
 - 🟢 ChatStore
@@ -408,9 +409,9 @@ Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
 ### `POST /ban`
-*Current schema: 1.*
+*Current schema: 2.*
 
-Applies a punishment of type `ban` to the user. This is essentially a temporary `timeout`.
+Applies a punishment of type `ban` to the user. This is essentially a permanent `timeout`.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
@@ -418,14 +419,15 @@ Request data (body):
 
 Returns data with the following properties:
 - `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /unban`
-*Current schema: 1.*
+*Current schema: 2.*
 
-Revokes an existing `ban` punishment from the user.
+Revokes an existing `ban` punishment from the user. This may also be used to remove any residual bans on the external platforms.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user from which the punishment should be revoked.
@@ -433,12 +435,13 @@ Request data (body):
 
 Returns data with the following properties:
 - `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /timeout`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Applies a punishment of type `timeout` to the user. This is essentially a temporary `ban`.
 
@@ -449,14 +452,15 @@ Request data (body):
 
 Returns data with the following properties:
 - `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /revokeTimeout`
-*Current schema: 1.*
+*Current schema: 2.*
 
-Revokes an existing `timeout` punishment from the user.
+Revokes an existing `timeout` punishment from the user. This may also be used to remove any residual timeouts on the external platforms.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user from which the punishment should be revoked.
@@ -464,6 +468,7 @@ Request data (body):
 
 Returns data with the following properties:
 - `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.

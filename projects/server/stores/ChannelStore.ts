@@ -162,6 +162,15 @@ export default class ChannelStore extends ContextClass {
     return channel.infoHistory[0].userName
   }
 
+  public async getYoutubeChannelNameFromChannelId (youtubeChannelId: number): Promise<string> {
+    const channel = await this.db.channel.findUnique({
+      where: { id: youtubeChannelId },
+      rejectOnNotFound: true,
+      include: channelQuery_includeLatestChannelInfo
+    })
+    return channel.infoHistory[0].name
+  }
+
   /** Gets the userId that is associated with the channel that has the given external id. Throws if none is found. */
   public async getUserId (externalId: string): Promise<number> {
     const channel = await this.db.channel.findUnique({ where: { youtubeId: externalId } })
