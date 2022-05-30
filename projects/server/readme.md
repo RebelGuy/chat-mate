@@ -37,7 +37,7 @@ Enure you create an application on the [Twitch Developer Console](https://dev.tw
 
 For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<debug|release>` and sign in manually. After the Electron app closes, note the access token and refresh token printed in the console and set the relevant environment variables. The next time the project is run, these will be stored in the database (`twitch_auth` table) and retrieved thereon, so the variables can be safely removed before subsequent runs.
 
-Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` and `TwitchAuth.ts` at the moment. Making any changes to the scope will require that you delete the single row in the `twitch_auth` table and follow the steps above to repeat the initial authentication process. **There is currently no indication that a 
+Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you delete the single row in the `twitch_auth` table and follow the steps above to repeat the initial authentication process.
 
 # .env
 Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template.
@@ -140,7 +140,7 @@ Key:
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
-- 🟢 TwurpleApiProxyServicev
+- 🟢 TwurpleApiProxyService
   - ⚪ ban
   - 🟢 fetchMetadata
   - ⚪ say

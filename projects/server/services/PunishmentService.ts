@@ -25,7 +25,7 @@ import { assert, assertUnreachable } from '@rebel/server/util/typescript'
 // The public methods are set up in such a way that there can only ever be one active punishment per user per type.
 
 // Note that Youtube timeouts invariably last for 5 minutes, but can be refreshed to achieve longer timeouts.
-// We use the YoutubeTimeoutRefreshService to  help us achieve this.
+// We use the YoutubeTimeoutRefreshService to help us achieve this.
 
 export type AppliedPunishmentResult = {
   punishment: Punishment
@@ -186,7 +186,7 @@ export default class PunishmentService extends ContextClass {
     const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
     const mute = currentPunishments.find(p => p.punishmentType === 'mute')
     if (mute == null) {
-      this.logService.logWarning(this, `Can't revoke soft timeout for user ${userId} because they are not currently muted`)
+      this.logService.logWarning(this, `Can't unmute user ${userId} because they are not currently muted`)
       return null
     }
 
@@ -205,7 +205,7 @@ export default class PunishmentService extends ContextClass {
     const youtubeResults: YoutubePunishmentResult[] = ownedChannels.youtubeChannels.map(c => ({ youtubeChannelId: c, error: 'YouTube timeouts expire automatically 5 minutes after they were last applied.'}))
 
     if (timeout == null) {
-      this.logService.logWarning(this, `Can't revoke hard timeout for user ${userId} because they are not currently timed out`)
+      this.logService.logWarning(this, `Can't revoke timeout for user ${userId} because they are not currently timed out`)
       return { punishment: null, youtubeResults, twitchResults }
     }
 

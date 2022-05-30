@@ -8,8 +8,7 @@ import { compareArrays } from '@rebel/server/util/arrays'
 import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 // see https://dev.twitch.tv/docs/authentication/scopes
-// if you edit the scope here, you will also need to add them to the TwitchAuth.ts file,
-// then request a new access token, set it in the .env file, and delete the saved token from the db.twitch_auth table.
+// if you edit the scope here, you must request a new access token via `yarn auth:twitch:<env>`, set it in the .env file, and delete the saved token from the `twitch_auth` table.
 export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate']
 
 type Deps = Dependencies<{

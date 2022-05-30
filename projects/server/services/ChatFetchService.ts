@@ -166,7 +166,7 @@ function isTextRun (run: YTRun): run is YTTextRun {
 }
 
 function isAddChatAction (action: Action): action is AddChatItemAction {
-  return action.type === 'addChatItemAction'
+  return action.type === 'addChatItemAction' && (action.message?.length ?? 0) > 0
 }
 
 function getNextInterval (currentTime: number, timestamps: List<number> | number[], logContext: LogContext): number {

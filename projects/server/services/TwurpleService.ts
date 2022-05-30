@@ -81,6 +81,7 @@ export default class TwurpleService extends ContextClass {
   }
 
   public async untimeout (twitchChannelId: number, reason: string | null) {
+    // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.timeout(this.twitchChannelName, twitchUserName, 1, reason ?? undefined)
   }
