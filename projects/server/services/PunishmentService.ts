@@ -252,7 +252,7 @@ export default class PunishmentService extends ContextClass {
       
       this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)
       if (!result) {
-        error = `Request to ${type} youtube channel ${youtubeChannelId} succeeded, but action was not applied`
+        error = `Request succeeded, but action was not applied.`
       }
     } catch (e: any) {
       this.logService.logError(this, `Request to ${type} youtube channel ${youtubeChannelId} failed:`, e.message)
