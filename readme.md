@@ -36,6 +36,20 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.13 - The Punishment Update [30/5/2022]
+- Server
+  - Added ability to apply punishments to livestream participants
+    - Ban: user's channels are banned on YouTube/Twitch
+    - Timeout: user's channels are timed out on YouTube/Twitch
+      - On YouTube, timeouts can only be issued in blocks of 5 minutes, but we can simulate longer timeouts by automatically reapplying the punishment
+    - Mute: user's messages are hidden in the client (internal punishment)
+    - Users with an active punishment will not receive any experience
+  - Punishments can have a custom reason attached, and can be revoked with another message
+  - New Twitch followers are now saved to the DB
+- Masterchat
+  - Fixed context actions not working
+  - Pulled in v0.15.0
+
 ## v1.12 - The Twitch Update [1/4/2022]
 - Server
   - Added Twitch as a chat provider
