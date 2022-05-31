@@ -4,6 +4,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem, getExternalId } from '@rebel/server/models/chat'
 import ChannelService, { getUserName } from '@rebel/server/services/ChannelService'
+import PunishmentService from '@rebel/server/services/PunishmentService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
@@ -41,6 +42,7 @@ type Deps = Dependencies<{
   channelStore: ChannelStore
   chatStore: ChatStore
   channelService: ChannelService
+  punishmentService: PunishmentService
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -51,6 +53,7 @@ export default class ExperienceService extends ContextClass {
   private readonly channelStore: ChannelStore
   private readonly chatStore: ChatStore
   private readonly channelService: ChannelService
+  private readonly punishmentService: PunishmentService
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -63,6 +66,7 @@ export default class ExperienceService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.chatStore = deps.resolve('chatStore')
     this.channelService = deps.resolve('channelService')
+    this.punishmentService = deps.resolve('punishmentService')
   }
 
   /** Adds experience only for chat messages sent during the live chat.
@@ -78,6 +82,11 @@ export default class ExperienceService extends ContextClass {
 
     const externalId = getExternalId(chatItem)
     const userId = await this.channelStore.getUserId(externalId)
+    const isPunished = await this.punishmentService.isUserPunished(userId)
+    if (isPunished) {
+      return
+    }
+
     const viewershipStreakMultiplier = await this.getViewershipMultiplier(userId)
     const participationStreakMultiplier = await this.getParticipationMultiplier(userId)
     const spamMultiplier = await this.getSpamMultiplier(chatItem, userId)

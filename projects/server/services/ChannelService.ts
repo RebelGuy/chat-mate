@@ -50,7 +50,7 @@ export default class ChannelService extends ContextClass {
     }
   }
 
-  /** Returns all active user channels. */
+  /** Returns all active user channels. Each user has exactly one active user channel. */
   public async getActiveUserChannels (): Promise<UserChannel[]> {
     const allIds = await this.channelStore.getCurrentUserIds()
     const userChannels = await Promise.all(allIds.map(id => this.getActiveUserChannel(id)))

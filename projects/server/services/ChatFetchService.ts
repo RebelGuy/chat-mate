@@ -122,7 +122,7 @@ export default class ChatFetchService extends ContextClass {
   }
 
   private toChatItem (item: AddChatItemAction): ChatItem {
-    const messageParts = item.message.map((run: YTRun): PartialChatMessage => {
+    const messageParts = item.message!.map((run: YTRun): PartialChatMessage => {
       if (isTextRun(run)) {
         return {
           type: 'text',
@@ -145,6 +145,7 @@ export default class ChatFetchService extends ContextClass {
       id: item.id,
       timestamp: item.timestamp.getTime(),
       platform: 'youtube',
+      contextToken: item.contextMenuEndpointParams,
       author: {
         name: item.authorName,
         channelId: item.authorChannelId,
@@ -165,7 +166,7 @@ function isTextRun (run: YTRun): run is YTTextRun {
 }
 
 function isAddChatAction (action: Action): action is AddChatItemAction {
-  return action.type === 'addChatItemAction'
+  return action.type === 'addChatItemAction' && (action.message?.length ?? 0) > 0
 }
 
 function getNextInterval (currentTime: number, timestamps: List<number> | number[], logContext: LogContext): number {

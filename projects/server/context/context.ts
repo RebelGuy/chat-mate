@@ -88,6 +88,7 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
   public async initialise () {
     if (this.isBuiltContext()) {
       await this.builder.initialise()
+      await this.builder.notifyReady()
     } else {
       throw new Error(`Cannot initialise a context that hasn't been built yet`)
     }
@@ -234,13 +235,19 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
 
   public async initialise () {
     for (const className of this.contextClassOrder) {
-      await this.dependencies[className].initialise()
+      await (this.dependencies[className] as ContextClass).initialise()
+    }
+  }
+
+  public async notifyReady () {
+    for (const className of this.contextClassOrder) {
+      await (this.dependencies[className] as ContextClass).onReady()
     }
   }
 
   public async dispose () {
     for (const className of reverse(this.contextClassOrder)) {
-      await this.dependencies[className].dispose()
+      await (this.dependencies[className] as ContextClass).dispose()
       Object.defineProperty(this.dependencies, className, { value: null, writable: false })
     }
   }

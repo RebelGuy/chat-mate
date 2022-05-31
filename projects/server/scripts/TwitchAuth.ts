@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/quotes */
+require('../_config')
 // https://www.electronjs.org/docs/api/session
-
 import { app, BrowserWindow } from 'electron'
 import { URL } from 'url'
 import fetch from 'node-fetch'
+import { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
 
 
 // stolen from the masterchat auth fetcher, modified according to https://twurple.js.org/docs/examples/chat/basic-bot.html
@@ -88,7 +89,8 @@ async function createWindow () {
     }
   })
 
-  await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=chat:read+chat:edit`)
+  const scope = TWITCH_SCOPE.join('+')
+  await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${scope}`)
 }
 
 app.on("session-created", (session: any) => {

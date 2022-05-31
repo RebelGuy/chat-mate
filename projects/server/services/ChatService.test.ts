@@ -10,6 +10,7 @@ import { nameof, promised, single } from '@rebel/server/_test/utils'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import EmojiService from '@rebel/server/services/EmojiService'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateOrUpdateYoutube = CalledWithMock<Promise<ChannelWithLatestInfo>, ['youtube', string, CreateOrUpdateChannelArgs]>
@@ -36,6 +37,7 @@ const customEmojiPart: PartialCustomEmojiChatMessage = {
 const chatItem1: ChatItem = {
   id: 'youtube_id1',
   platform: 'youtube',
+  contextToken: 'params1',
   author: data.author1,
   messageParts: [textPart, emojiPart],
   timestamp: data.time1.getTime()
@@ -67,6 +69,7 @@ let mockExperienceService: MockProxy<ExperienceService>
 let mockViewershipStore: MockProxy<ViewershipStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockEmojiService: MockProxy<EmojiService>
+let mockEventDispatchService: MockProxy<EventDispatchService>
 let chatService: ChatService
 
 beforeEach(() => {
@@ -76,6 +79,7 @@ beforeEach(() => {
   mockViewershipStore = mock<ViewershipStore>()
   mockChannelStore = mock<ChannelStore>()
   mockEmojiService = mock<EmojiService>()
+  mockEventDispatchService = mock<EventDispatchService>()
 
   chatService = new ChatService(new Dependencies({
     chatStore: mockChatStore,
@@ -83,8 +87,19 @@ beforeEach(() => {
     experienceService: mockExperienceService,
     viewershipStore: mockViewershipStore,
     channelStore: mockChannelStore,
-    emojiService: mockEmojiService
+    emojiService: mockEmojiService,
+    eventDispatchService: mockEventDispatchService
   }))
+})
+
+describe(nameof(ChatService, 'initialise'), () => {
+  test('subscribes to chatItem events', () => {
+    chatService.initialise()
+
+    const args = single(mockEventDispatchService.onData.mock.calls)
+    expect(args[0]).toBe('chatItem')
+    expect(args[1]).not.toBeNull()
+  })
 })
 
 describe(nameof(ChatService, 'onNewChatItem'), () => {
@@ -102,11 +117,10 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
+    const [passedChatItem, passedUserId, passedChannelId] = single(mockChatStore.addChat.mock.calls)
     expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
     expect(passedUserId).toBe(youtubeChannel1.userId)
     expect(passedChannelId).toBe(youtubeChannel1.youtubeId)
-    expect(passedPlatform).toBe('youtube')
 
     const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
     expect(passedUserId_).toBe(youtubeChannel1.userId)
@@ -129,11 +143,10 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedChatItem, passedUserId, passedChannelId, passedPlatform] = single(mockChatStore.addChat.mock.calls)
+    const [passedChatItem, passedUserId, passedChannelId] = single(mockChatStore.addChat.mock.calls)
     expect(passedChatItem).toEqual(chatItemWithCustomEmoji)
     expect(passedUserId).toBe(twitchChannel1.userId)
     expect(passedChannelId).toBe(twitchChannel1.twitchId)
-    expect(passedPlatform).toBe('twitch')
 
     const [passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
     expect(passedUserId_).toBe(twitchChannel1.userId)

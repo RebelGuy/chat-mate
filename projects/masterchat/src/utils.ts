@@ -1,6 +1,5 @@
-import crossFetch from "cross-fetch";
 import debug from "debug";
-import { DC, DH, DO } from "./constants";
+import { DC, DO } from "./constants";
 import { AbortError } from "./errors";
 import { Color, TimedContinuation } from "./interfaces/misc";
 import {
@@ -27,6 +26,16 @@ export interface RunsToStringOptions {
   emojiHandler?: (emoji: YTEmojiRun) => string;
 }
 
+export function splitRunsByNewLines(runs: YTRun[]): YTRun[][] {
+  return runs.reduce(
+    (s, i) =>
+      "text" in i && i.text === "\n"
+        ? [...s, []]
+        : (s[s.length - 1].push(i), s),
+    [[]] as YTRun[][]
+  );
+}
+
 /**
  * Convert timestampUsec into Date
  */
@@ -50,23 +59,6 @@ export function formatColor(color: Color, format: ColorFormat = "hex"): string {
         16
       )}${color.opacity.toString(16)}`;
   }
-}
-
-export function ytFetch(input: string, init?: RequestInit) {
-  if (!input.startsWith("http")) {
-    input = DO + input;
-  }
-  const parsedUrl = new URL(input);
-
-  const requestUrl = parsedUrl.toString();
-  const requestInit = {
-    ...init,
-    headers: {
-      ...DH,
-      ...init?.headers,
-    },
-  };
-  return crossFetch(requestUrl, requestInit);
 }
 
 export const debugLog = debug("masterchat");
@@ -150,10 +142,29 @@ export function textRunToPlainText(run: YTTextRun): string {
 
 export function emojiRunToPlainText(run: YTEmojiRun): string {
   const { emoji } = run;
-  const term = emoji.isCustomEmoji
-    ? emoji.shortcuts[emoji.shortcuts.length - 1]
-    : emoji.emojiId;
-
+  /**
+   * Anomalous emoji pattern
+   * 1. Missing `isCustomEmoji` and `emojiId`
+   * {
+      emoji: {
+        emojiId: "",
+        shortcuts: [":smilisageReng_face_with_tear:"],
+        searchTerms: ["smiling", "face", "with", "tear"],
+        image: {
+          thumbnails: [
+            {
+              url: "https://www.youtube.com/s/gaming/emoji/828cb648/emoji_u1f972.svg",
+            },
+          ],
+          accessibility: { accessibilityData: { label: "" } },
+        },
+      },
+    },
+   */
+  const term =
+    emoji.isCustomEmoji || emoji.emojiId === ""
+      ? emoji.shortcuts[emoji.shortcuts.length - 1]
+      : emoji.emojiId;
   return term;
 }
 

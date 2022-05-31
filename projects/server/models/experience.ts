@@ -1,12 +1,13 @@
+import { PublicPunishment } from '@rebel/server/controllers/public/punishment/PublicPunishment'
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
 import { RankedEntry } from '@rebel/server/services/ExperienceService'
 
-export function rankedEntryToPublic (rankedEntry: RankedEntry): PublicRankedUser {
+export function rankedEntryToPublic (rankedEntry: RankedEntry, activePunishments: PublicPunishment[]): PublicRankedUser {
   return {
-    schema: 1,
+    schema: 2,
     rank: rankedEntry.rank,
     user: {
-      schema: 1,
+      schema: 2,
       id: rankedEntry.userId,
       userInfo: {
         schema: 1,
@@ -16,7 +17,8 @@ export function rankedEntryToPublic (rankedEntry: RankedEntry): PublicRankedUser
         schema: 1,
         level: rankedEntry.level,
         levelProgress: rankedEntry.levelProgress
-      }
+      },
+      activePunishments: activePunishments
     }
   }
 }

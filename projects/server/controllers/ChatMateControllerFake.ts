@@ -64,14 +64,14 @@ export default class ChatMateControllerFake implements IChatMateController {
           levelProgress: asLt(asGte(Math.random(), 0), 1),
           totalExperience: asGte(randomInt(0, 100000), 0)
         }
-        const user: PublicUser = userChannelAndLevelToPublicUser({ ...pickRandom(users), ...level })
+        const user: PublicUser = userChannelAndLevelToPublicUser({ ...pickRandom(users), ...level }, [])
   
         events.push({
-          schema: 2,
+          schema: 3,
           timestamp: new Date().getTime(),
           type: 'levelUp',
           levelUpData: {
-            schema: 1,
+            schema: 2,
             newLevel: newLevel,
             oldLevel: newLevel - 1,
             user
@@ -81,7 +81,7 @@ export default class ChatMateControllerFake implements IChatMateController {
       } else {
         // new follower event
         events.push({
-          schema: 2,
+          schema: 3,
           timestamp: new Date().getTime(),
           type: 'newTwitchFollower',
           levelUpData: null,

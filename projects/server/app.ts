@@ -43,6 +43,11 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
+import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentStore from '@rebel/server/stores/PunishmentStore'
+import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
+import PunishmentController from '@rebel/server/controllers/PunishmentController'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -64,7 +69,6 @@ const globalContext = ContextProvider.create()
   .withProperty('channelId', env('channelId'))
   .withProperty('liveId', liveId)
   .withProperty('dataPath', dataPath)
-  .withProperty('isMockLivestream', env('isMockLivestream'))
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
   .withProperty('disableExternalApis', env('useFakeControllers') === true)
@@ -77,6 +81,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('timerHelpers', TimerHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
+  .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('logService', LogService)
   .withClass('masterchatStatusService', StatusService)
@@ -96,12 +101,15 @@ const globalContext = ContextProvider.create()
   .withClass('channelStore', ChannelStore)
   .withClass('chatStore', ChatStore)
   .withClass('channelService', ChannelService)
+  .withClass('punishmentStore', PunishmentStore)
+  .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
+  .withClass('twurpleService', TwurpleService)
+  .withClass('punishmentService', PunishmentService)
   .withClass('experienceService', ExperienceService)
   .withClass('customEmojiStore', CustomEmojiStore)
   .withClass('emojiService', EmojiService)
   .withClass('chatService', ChatService)
   .withClass('chatFetchService', ChatFetchService)
-  .withClass('twurpleService', TwurpleService)
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
   .build()
@@ -127,6 +135,7 @@ app.use(async (req, res, next) => {
     .withClass('emojiController', EmojiController)
     .withClass('experienceController', ExperienceController)
     .withClass('userController', UserController)
+    .withClass('punishmentController', PunishmentController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -148,7 +157,8 @@ Server.buildServices(app,
   ChatController,
   EmojiController,
   ExperienceController,
-  UserController
+  UserController,
+  PunishmentController
 )
 
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })

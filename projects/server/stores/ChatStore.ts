@@ -28,7 +28,7 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */
-  public async addChat (chatItem: ChatItem, userId: number, channelId: string, platform: ChatPlatform) {
+  public async addChat (chatItem: ChatItem, userId: number, channelId: string) {
     // there is a race condition where the client may request messages whose message parts haven't yet been
     // completely written to the DB. bundle everything into a single transaction to solve this.
     await this.db.$transaction(async (db) => {
@@ -36,9 +36,10 @@ export default class ChatStore extends ContextClass {
         create: {
           time: new Date(chatItem.timestamp),
           externalId: chatItem.id,
+          contextToken: chatItem.platform === 'youtube' ? chatItem.contextToken : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
           user: { connect: { id: userId }},
-          youtubeChannel: platform === 'youtube' ? { connect: { youtubeId: channelId }} : platform === 'twitch' ? undefined : assertUnreachable(platform),
-          twitchChannel: platform === 'twitch' ? { connect: { twitchId: channelId }} : platform === 'youtube' ? undefined : assertUnreachable(platform),
+          youtubeChannel: chatItem.platform === 'youtube' ? { connect: { youtubeId: channelId }} : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
+          twitchChannel: chatItem.platform === 'twitch' ? { connect: { twitchId: channelId }} : chatItem.platform === 'youtube' ? undefined : assertUnreachable(chatItem),
           livestream: { connect: { id: this.livestreamStore.currentLivestream.id }}
         },
         update: {},
@@ -55,6 +56,14 @@ export default class ChatStore extends ContextClass {
         }
         await db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) })
       }
+    })
+  }
+
+  public async getLastChatByYoutubeChannel (youtubeChannelId: number): Promise<ChatItemWithRelations | null> {
+    return await this.db.chatMessage.findFirst({
+      where: { youtubeChannel: { id: youtubeChannelId }},
+      orderBy: { time: 'desc' },
+      include: chatMessageIncludeRelations
     })
   }
 

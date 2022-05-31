@@ -1,10 +1,12 @@
-import { ChatResponse, Metadata } from '@rebel/masterchat'
+import { ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { IMasterchat } from '@rebel/server/interfaces'
 import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
+
+type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout'>
 
 type Deps = Dependencies<{
   logService: LogService
@@ -17,9 +19,9 @@ export default class MasterchatProxyService extends ContextClass implements IMas
 
   private readonly logService: LogService
   private readonly statusService: StatusService
-  private readonly masterchat: IMasterchat
+  private readonly masterchat: PartialMasterchat
 
-  private readonly wrappedMasterchat: IMasterchat
+  private readonly wrappedMasterchat: PartialMasterchat
 
   private requestId: number
 
@@ -34,22 +36,47 @@ export default class MasterchatProxyService extends ContextClass implements IMas
     this.requestId = 0
   }
 
-  public fetch (chatToken?: string): Promise<ChatResponse> {
-    return this.wrappedMasterchat.fetch(chatToken)
+  public async fetch (chatToken?: string): Promise<ChatResponse> {
+    // this quirky code is required for typescript to recognise which overloaded `fetch` method we are using
+    if (chatToken == null) {
+      return await this.wrappedMasterchat.fetch()
+    } else {
+      return await this.wrappedMasterchat.fetch(chatToken)
+    }
   }
 
   public fetchMetadata (): Promise<Metadata> {
     return this.wrappedMasterchat.fetchMetadata()
   }
 
+  public async banYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
+    // only returns null if the action is not available in the context menu, e.g. if the user is already banned
+    const result = await this.wrappedMasterchat.hide(contextMenuEndpointParams)
+    return result != null
+  }
+
+  /** Times out the channel by 5 minutes. This cannot be undone. */
+  public async timeout (contextMenuEndpointParams: string): Promise<boolean> {
+    const result = await this.wrappedMasterchat.timeout(contextMenuEndpointParams)
+    return result != null
+  }
+
+  public async unbanYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
+    const result = await this.wrappedMasterchat.unhide(contextMenuEndpointParams)
+    return result != null
+  }
+
   // insert some middleware to deal with automatic logging and status updates :)
-  private createWrapper = (): IMasterchat => {
+  private createWrapper = (): PartialMasterchat => {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
     const fetch = this.wrapRequest((...args) => this.masterchat.fetch(...args), 'masterchat.fetch')
     const fetchMetadata = this.wrapRequest(() => this.masterchat.fetchMetadata(), 'masterchat.fetchMetadata')
+    const hide = this.wrapRequest((arg) => this.masterchat.hide(arg), 'masterchat.hide')
+    const unhide = this.wrapRequest((arg) => this.masterchat.unhide(arg), 'masterchat.unhide')
+    const timeout = this.wrapRequest((arg) => this.masterchat.timeout(arg), 'masterchat.timeout')
 
-    return { fetch, fetchMetadata }
+    return { fetch, fetchMetadata, hide, unhide, timeout }
   }
 
   private wrapRequest<TQuery extends any[], TResponse> (

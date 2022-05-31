@@ -108,6 +108,14 @@ export default class MockMasterchat implements IMasterchat {
     }
   }
 
+  public banYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
+    return new Promise(() => true)
+  }
+
+  public unbanYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
+    return new Promise(() => true)
+  }
+
   private static buildResponse (action?: Action): Promise<ChatResponse> {
     return new Promise((resolve, _) => resolve({
       actions: action ? [action] : [],
@@ -123,6 +131,7 @@ function generateFakeChatItem (text: string): ChatItemWithRelations {
     id: 1,
     livestreamId: 1,
     userId: 1,
+    contextToken: null,
     twitchChannel: null,
     twitchChannelId: null,
     youtubeChannelId: 1,

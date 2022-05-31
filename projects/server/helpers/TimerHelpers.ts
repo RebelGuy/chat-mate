@@ -22,11 +22,12 @@ export type TimerOptions = {
 
 export default class TimerHelpers extends ContextClass {
   // automatically release timers that have been disposed
-  private timers: Set<Timer>
+  private timers: Map<number, Timer>
+  private _id: number = 0
 
   constructor () {
     super()
-    this.timers = new Set()
+    this.timers = new Map()
   }
 
   /**
@@ -34,11 +35,12 @@ export default class TimerHelpers extends ContextClass {
    *
    * Note: `runImmediately` is overridden to `true` if no `initialInterval` is given for a `dynamic` timer.
    */
-  public async createRepeatingTimer (options: TimerOptions, runImmediately: true): Promise<void>
-  public createRepeatingTimer (options: TimerOptions, runImmediately?: false): void
-  public createRepeatingTimer (options: TimerOptions, runImmediately?: boolean): Promise<void> | void {
+  public async createRepeatingTimer (options: TimerOptions, runImmediately: true): Promise<number>
+  public createRepeatingTimer (options: TimerOptions, runImmediately?: false): number
+  public createRepeatingTimer (options: TimerOptions, runImmediately?: boolean): Promise<number> | number {
     const timer = new Timer(options)
-    this.timers.add(timer)
+    const id = this._id++
+    this.timers.set(id, timer)
 
     if (runImmediately) {
       // we can't make the function implementation async without making all overloads async as well,
@@ -47,7 +49,7 @@ export default class TimerHelpers extends ContextClass {
       return new Promise(async (resolve, reject) => {
         try {
           await timer.next()
-          resolve()
+          resolve(id)
         } catch (e) {
           // there would probably be unexpected behaviour if we don't rethrow errors like this, so
           // let's just do it to be safe.
@@ -55,8 +57,16 @@ export default class TimerHelpers extends ContextClass {
         }
       })
     } else {
-      return
+      return id
     }
+  }
+
+  public disposeSingle (timerId: number): boolean {
+    if (this.timers.has(timerId)) {
+      this.timers.get(timerId)!.dispose()
+      return true
+    }
+    return false
   }
 
   public override dispose () {
@@ -106,6 +116,10 @@ class Timer {
     }
 
     const result = await this.callback()
+    if (this.disposed) {
+      this.stopTimer()
+      return
+    }
 
     if (this.behaviour === 'end') {
       this.startTimer(this.interval)

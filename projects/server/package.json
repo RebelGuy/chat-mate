@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "main": "../../dist/release/server/app.js",
   "scripts": {
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
@@ -68,7 +68,7 @@
     "jest": "^27.4.5",
     "jest-mock-extended": "^2.0.4",
     "listr": "^0.14.3",
-    "node-fetch": "^3.2.3",
+    "node-fetch": "2.6.6",
     "nodemon": "^2.0.15",
     "prisma": "^3.6.0",
     "ts-jest": "^27.1.2",
