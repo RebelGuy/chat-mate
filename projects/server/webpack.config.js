@@ -88,29 +88,27 @@ module.exports = (env) => {
         }
       }),
 
-      // required for prisma to find the schema file
-      // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
+      // https://webpack.js.org/plugins/copy-webpack-plugin/
+      // note: path.resolve doesn't work with glob patterns
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: path.resolve(__dirname, './node_modules/.prisma/client/query_engine-windows.dll.node'),
+            // the file we are interested in has 'engine' in its name.
+            // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
+            from: './node_modules/.prisma/client/*engine*', // `query_engine-windows.dll.node` for windows
             to: outPath,
           },
           {
+            // required for prisma to find the schema file
+            // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
             from: path.resolve(__dirname, './node_modules/.prisma/client/schema.prisma'),
             to: outPath,
           },
           {
-            from: path.resolve(__dirname, '../../node_modules/ngrok/bin/ngrok.exe'),
-            to: path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it (folder is automatically created)
+            from: '../../node_modules/ngrok/bin/**', // `ngrok.exe` for windows
+            to: path.resolve(outPath, '../bin/') // it has to go here exactly, otherwise ngrok won't find it (folder is automatically created)
           }
         ],
-      }),
-
-      // required for prisma to get an updated generated client
-      // this doesn't seem to do anything...
-      new WebpackShellPluginNext({
-        onBuildEnd: [isDebug ? 'yarn generate' : 'yarn migrate:release']
       })
     ]
   }
