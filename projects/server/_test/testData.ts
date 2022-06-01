@@ -107,6 +107,7 @@ export const twitchChannel4 = 'twitchChannel4'
 export const chatItem1: ChatItem = {
   id: 'chat_id1',
   platform: 'youtube',
+  contextToken: 'params1',
   author: author1,
   timestamp: time1.getTime(),
   messageParts: []

@@ -3,7 +3,9 @@ import { buildPath, ControllerDependencies, In, Out } from '@rebel/server/contro
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
+import { punishmentToPublicObject } from '@rebel/server/models/punishment'
 import ExperienceService from '@rebel/server/services/ExperienceService'
+import PunishmentService from '@rebel/server/services/PunishmentService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { unique } from '@rebel/server/util/arrays'
 import { Path } from 'typescript-rest'
@@ -11,16 +13,19 @@ import { Path } from 'typescript-rest'
 export type ChatControllerDeps = ControllerDependencies<{
   chatStore: ChatStore,
   experienceService: ExperienceService
+  punishmentService: PunishmentService
 }>
 
 @Path(buildPath('chat'))
 export default class ChatControllerReal implements IChatController {
   readonly chatStore: ChatStore
   readonly experienceService: ExperienceService
+  readonly punishmentService: PunishmentService
 
   constructor (deps: ChatControllerDeps) {
     this.chatStore = deps.resolve('chatStore')
     this.experienceService = deps.resolve('experienceService')
+    this.punishmentService = deps.resolve('punishmentService')
   }
 
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
@@ -32,7 +37,10 @@ export default class ChatControllerReal implements IChatController {
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
       const level = levelData.get(chat.userId)!
-      chatItems.push(chatAndLevelToPublicChatItem(chat, level))
+      const punishments = (await this.punishmentService.getCurrentPunishments())
+        .filter(p => p.userId === chat.userId)
+        .map(punishmentToPublicObject)
+      chatItems.push(chatAndLevelToPublicChatItem(chat, level, punishments))
     }
 
     return builder.success({

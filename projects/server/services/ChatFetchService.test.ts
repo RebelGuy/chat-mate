@@ -9,8 +9,11 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { mockGetter, nameof, single } from '@rebel/server/_test/utils'
-import { mock, MockProxy } from 'jest-mock-extended'
+import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
+
+// jest is having trouble mocking the correct overload method, so we have to force it into the correct type
+type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
 
 const token1 = 'token1'
 const token2 = 'token2'
@@ -75,8 +78,10 @@ beforeEach(() => {
   mockChatStore.getChatSince.mockResolvedValue([])
 
   // automatically execute callback passed to TimerHelpers
-  mockTimerHelpers.createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
+  const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
+  createRepeatingTimer.mockImplementation(async (options, runImmediately) => {
     await options.callback()
+    return 0
   })
 
   chatFetchService = new ChatFetchService(new Dependencies({

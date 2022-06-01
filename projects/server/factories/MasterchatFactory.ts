@@ -1,5 +1,4 @@
 import { Dependencies } from '@rebel/server/context/context'
-import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import { Masterchat } from '@rebel/masterchat'
 import Factory from '@rebel/server/factories/Factory'
@@ -10,7 +9,7 @@ type Deps = Dependencies<{
   logService: LogService
 }>
 
-export default class MasterchatFactory extends Factory<IMasterchat> {
+export default class MasterchatFactory extends Factory<Masterchat> {
   readonly name = MasterchatFactory.name
 
   private readonly channelId: string
@@ -24,7 +23,7 @@ export default class MasterchatFactory extends Factory<IMasterchat> {
     this.logService = deps.resolve('logService')
   }
 
-  public override create (liveId: string): IMasterchat {
+  public override create (liveId: string): Masterchat {
     this.logService.logDebug(this, 'Created new masterchat for liveId', liveId)
     return new Masterchat(liveId, this.channelId, { mode: 'live', credentials: this.auth })
   }

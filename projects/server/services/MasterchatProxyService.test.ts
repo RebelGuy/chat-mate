@@ -1,4 +1,5 @@
-import { ChatResponse, Metadata } from '@rebel/masterchat'
+import { ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
+import { YTAction } from '@rebel/masterchat/interfaces/yt/chat'
 import { Dependencies } from '@rebel/server/context/context'
 import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
@@ -13,14 +14,14 @@ const liveId = 'liveId'
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
 let mockMasterchatFactory: MockProxy<MasterchatFactory>
-let mockMasterchat: MockProxy<IMasterchat>
+let mockMasterchat: MockProxy<Masterchat>
 let masterchatProxyService: MasterchatProxyService
 
 beforeEach(() => {
   mockLogService = mock<LogService>()
   mockStatusService = mock<StatusService>()
   mockMasterchatFactory = mock<MasterchatFactory>()
-  mockMasterchat = mock<IMasterchat>()
+  mockMasterchat = mock<Masterchat>()
 
   mockMasterchatFactory.create.calledWith(liveId).mockReturnValue(mockMasterchat)
 
@@ -37,8 +38,8 @@ describe(nameof(MasterchatProxyService, 'addMasterchat'), () => {
   test('creates masterchat instance with specified liveId', async () => {
     const testLiveId1 = 'testLiveId1'
     const testLiveId2 = 'testLiveId2'
-    const testMasterchat1 = mock<IMasterchat>()
-    const testMasterchat2 = mock<IMasterchat>()
+    const testMasterchat1 = mock<Masterchat>()
+    const testMasterchat2 = mock<Masterchat>()
     mockMasterchatFactory.create.mockClear()
     mockMasterchatFactory.create.calledWith(testLiveId1).mockReturnValue(testMasterchat1)
     mockMasterchatFactory.create.calledWith(testLiveId2).mockReturnValue(testMasterchat2)
@@ -54,8 +55,8 @@ describe(nameof(MasterchatProxyService, 'addMasterchat'), () => {
     testMasterchat1.fetch.mockResolvedValue(chatResponse1)
     testMasterchat2.fetch.mockResolvedValue(chatResponse2)
     
-    const result1 = await masterchatProxyService.fetch(testLiveId1)
-    const result2 = await masterchatProxyService.fetch(testLiveId2)
+    const result1 = await masterchatProxyService.fetch(testLiveId1, undefined)
+    const result2 = await masterchatProxyService.fetch(testLiveId2, undefined)
 
     expect(result1).toBe(chatResponse1)
     expect(result2).toBe(chatResponse2)
@@ -68,10 +69,7 @@ describe(nameof(MasterchatProxyService, 'fetch'), () => {
     const token: string = 'test token'
     mockMasterchat.fetch.calledWith(token).mockResolvedValue(expectedResponse)
 
-    const actualResponse = await masterchatProxyService.fetch(liveId, token)
-
-    expect(actualResponse).toBe(expectedResponse)
-    verifyServicesUsed(false)
+    await testSuccessful(() => masterchatProxyService.fetch(liveId, token), expectedResponse)
   })
 
   test('failed request', async () => {
@@ -79,19 +77,11 @@ describe(nameof(MasterchatProxyService, 'fetch'), () => {
     const token: string = 'test token'
     mockMasterchat.fetch.calledWith(token).mockRejectedValue(expectedResponse)
 
-    let actualResponse
-    try {
-      await masterchatProxyService.fetch(liveId, token)
-    } catch (e: any) {
-      actualResponse = e
-    }
-
-    expect(actualResponse).toBe(expectedResponse)
-    verifyServicesUsed(true)
+    await testFailing(() => masterchatProxyService.fetch(liveId, token), expectedResponse)
   })
 
   test('throws if invalid liveId', async () => {
-    await expect(masterchatProxyService.fetch('invalidId')).rejects.toThrow()
+    await expect(masterchatProxyService.fetch('invalidId', undefined)).rejects.toThrow()
   })
 })
 
@@ -100,25 +90,62 @@ describe(nameof(MasterchatProxyService, 'fetchMetadata'), () => {
     const expectedResponse: Metadata = {} as any
     mockMasterchat.fetchMetadata.calledWith().mockResolvedValue(expectedResponse)
 
-    const actualResponse = await masterchatProxyService.fetchMetadata(liveId)
-
-    expect(actualResponse).toBe(expectedResponse)
-    verifyServicesUsed(false)
+    await testSuccessful(() => masterchatProxyService.fetchMetadata(liveId), expectedResponse)
   })
 
   test('failed request', async () => {
     const expectedResponse = new Error()
     mockMasterchat.fetchMetadata.calledWith().mockRejectedValue(expectedResponse)
 
-    let actualResponse
-    try {
-      await masterchatProxyService.fetchMetadata(liveId)
-    } catch (e: any) {
-      actualResponse = e
-    }
+    await testFailing(() => masterchatProxyService.fetchMetadata(liveId), expectedResponse)
+  })
+})
 
-    expect(actualResponse).toBe(expectedResponse)
-    verifyServicesUsed(true)
+describe(nameof(MasterchatProxyService, 'banYoutubeChannel'), () => {
+  test('successful request with user banned', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.hide.calledWith(contextMenuEndpointParams).mockResolvedValue([])
+
+    await testSuccessful(() => masterchatProxyService.banYoutubeChannel(contextMenuEndpointParams), true)
+  })
+
+  test('successful request with user not banned', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.hide.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
+
+    await testSuccessful(() => masterchatProxyService.banYoutubeChannel(contextMenuEndpointParams), false)
+  })
+
+  test('failed request', async () => {
+    const contextMenuEndpointParams = 'test'
+    const error = new Error()
+    mockMasterchat.hide.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
+
+    await testFailing(() => masterchatProxyService.banYoutubeChannel(contextMenuEndpointParams), error)
+  })
+})
+
+describe(nameof(MasterchatProxyService, 'unbanYoutubeChannel'), () => {
+  test('successful request with user unbanned', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.unhide.calledWith(contextMenuEndpointParams).mockResolvedValue([])
+
+    await testSuccessful(() => masterchatProxyService.unbanYoutubeChannel(contextMenuEndpointParams), true)
+  })
+
+  test('successful request with user not unbanned', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.unhide.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
+
+    await testSuccessful(() => masterchatProxyService.unbanYoutubeChannel(contextMenuEndpointParams), false)
+  })
+
+  test('failed request', async () => {
+    const contextMenuEndpointParams = 'test'
+    const error = new Error()
+    mockMasterchat.unhide.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
+
+    await testFailing(() => masterchatProxyService.unbanYoutubeChannel(contextMenuEndpointParams), error)
   })
 
   test('throws if invalid liveId', async () => {
@@ -130,9 +157,28 @@ describe(nameof(MasterchatProxyService, 'removeMasterchat'), () => {
   test('creates masterchat instance with specified liveId', async () => {
     masterchatProxyService.removeMasterchat(liveId)
 
-    await expect(masterchatProxyService.fetch(liveId)).rejects.toThrow()
+    await expect(masterchatProxyService.fetch(liveId, undefined)).rejects.toThrow()
   })
 })
+
+async function testSuccessful (request: () => Promise<any>, expected: any) {
+  const actualResponse = await request()
+
+  expect(actualResponse).toBe(expected)
+  verifyServicesUsed(false)
+}
+
+async function testFailing (request: () => Promise<any>, expected: any) {
+  let actualResponse
+  try {
+    await request()
+  } catch (e: any) {
+    actualResponse = e
+  }
+
+  expect(actualResponse).toBe(expected)
+  verifyServicesUsed(true)
+}
 
 function verifyServicesUsed (expectError: boolean) {
   expect(mockLogService.logApiRequest.mock.calls.length).toBe(1)

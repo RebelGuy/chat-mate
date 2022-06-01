@@ -9,6 +9,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import ChannelStore, { ChannelWithLatestInfo, CreateOrUpdateChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/server/util/typescript'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 
 type ChatEvents = {
   newChatItem: {
@@ -22,7 +23,8 @@ type Deps = Dependencies<{
   experienceService: ExperienceService,
   viewershipStore: ViewershipStore,
   channelStore: ChannelStore,
-  emojiService: EmojiService
+  emojiService: EmojiService,
+  eventDispatchService: EventDispatchService
 }>
 
 export default class ChatService extends ContextClass {
@@ -33,6 +35,7 @@ export default class ChatService extends ContextClass {
   private readonly viewershipStore: ViewershipStore
   private readonly channelStore: ChannelStore
   private readonly emojiService: EmojiService
+  private readonly eventDispatchService: EventDispatchService
 
   constructor (deps: Deps) {
     super()
@@ -42,6 +45,11 @@ export default class ChatService extends ContextClass {
     this.viewershipStore = deps.resolve('viewershipStore')
     this.channelStore = deps.resolve('channelStore')
     this.emojiService = deps.resolve('emojiService')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
+  }
+
+  public override initialise () {
+    this.eventDispatchService.onData('chatItem', data => this.onNewChatItem(data))
   }
 
   /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
@@ -93,7 +101,7 @@ export default class ChatService extends ContextClass {
       // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
       // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
       // visual inconsitency. so for now just acknowledge this and leave it.
-      await this.chatStore.addChat(item, channel.userId, externalId, platform)
+      await this.chatStore.addChat(item, channel.userId, externalId)
       addedChat = true
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)

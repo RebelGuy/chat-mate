@@ -28,6 +28,17 @@ Assumes that steps 1-3 of the previous section have been run.
 5. `yarn start:release` to run the release server
 
 
+## Authentication
+### YouTube
+Run `yarn auth` and log in using the streaming account, or a moderator account. After the Electron app closes, note the authentication token in the console and use it as the `AUTH` environment variable.
+
+### Twitch
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future.
+
+For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<debug|release>` and sign in manually. After the Electron app closes, note the access token and refresh token printed in the console and set the relevant environment variables. The next time the project is run, these will be stored in the database (`twitch_auth` table) and retrieved thereon, so the variables can be safely removed before subsequent runs.
+
+Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you delete the single row in the `twitch_auth` table and follow the steps above to repeat the initial authentication process.
+
 # .env
 Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template.
 
@@ -39,7 +50,7 @@ The following environment variables must be set in the `.env` file:
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_ACCESS_TOKEN`: The access token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
 - `TWITCH_REFRESH_TOKEN`: The refresh token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
-- `TWITCH_CHANNEL_NAME`: The Twitch channel's name to which we should connect.
+- `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -67,6 +78,13 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 `yarn migrate:release` deploys changes to the production environment. Only uses migration files, NOT the Prisma schema file.
 
+## Punishments
+Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
+
+Currently there are 3 punishment types:
+1. `mute`: This is an internal punishment, and is used by the client to hide messages of a certain user. A mute can be temporary or permanent.
+2. `timeout`: This is both internal and external (i.e. sent to YouTube and Twitch) and completely stops the user from sending messages in the livestream chat. It is always temporary. Due to limitations with the Masterchat implementation, timeouts must be at least 5 minutes long. Furthermore, we have a service that refreshes YouTube timeouts periodically if they are longer than 5 minutes.
+3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
 `yarn test` performs the test suite.
@@ -92,6 +110,7 @@ Key:
   - 🟢 getUserByChannelName
   - 🟢 getUserById
 - 🟢 ChatService
+  - 🟢 initialise
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
   - 🟢 initialise
@@ -103,6 +122,7 @@ Key:
   - 🟢 getLevel
   - 🟢 getLevelDiffs
   - 🟢 modifyExperience
+- ⚪ EventDispatchService
 - 🟢 LivestreamService
   - 🟢 initialise
   - 🟢 deactivateLivestream
@@ -112,13 +132,32 @@ Key:
   - 🟢 fetch
   - 🟢 fetchMetadata
   - 🟢 removeMasterchat
+- 🟢 PunishmentService
+  - 🟢 initialise
+  - 🟢 banUser
+  - 🟢 isUserPunished
+  - 🟢 muteUser
+  - 🟢 timeoutUser
+  - 🟢 getCurrentPunishments
+  - 🟢 unbanUser
+  - 🟢 unmuteUser
+  - 🟢 untimeoutUser
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
 - 🟢 TwurpleApiProxyService
+  - ⚪ ban
   - 🟢 fetchMetadata
+  - ⚪ say
+  - ⚪ timeout
 - 🟢 TwurpleService
+  - 🟢 banChannel
   - 🟢 initialise
+  - 🟢 unbanChannel
+- 🟢 youtubeTimeoutRefreshService
+  - 🟢 calculateNextInterval
+  - 🟢 startTrackingTimeout
+  - 🟢 stopTrackingTimeout
 - ⚪ FileService
 - ⚪ LogService
 
@@ -130,10 +169,14 @@ Key:
   - 🟢 createOrUpdate
   - 🟢 getCurrentUserIds
   - 🟢 getCurrentUserNames
+  - 🟢 getTwitchUserNameFromChannelId
+  - 🟢 getYoutubeChannelNameFromChannelId
   - 🟢 getUserId
+  - 🟢 getUserOwnedChannels
 - 🟢 ChatStore
   - 🟢 addChat
   - 🟢 getChatSince
+  - 🟢 getLastChatByYoutubeChannel
   - 🟢 getLastChatByUser
 - 🟢 CustomEmojiStore
   - 🟢 addCustomEmoji
@@ -156,6 +199,11 @@ Key:
   - 🟢 setActiveLivestream
   - 🟢 setContinuationToken
   - 🟢 setTimes
+- 🟢 PunishmentStore
+  - 🟢 addPunishment
+  - 🟢 getPunishments
+  - 🟢 getPunishmentsForUser
+  - 🟢 revokePunishment
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation
@@ -180,6 +228,7 @@ Key:
   - 🟢 calculateViewershipMultiplier
 - 🟢 TimerHelpers
   - 🟢 createRepeatingTimer
+  - 🟢 disposeSingle
   - 🟢 dispose
 
 **Misc**
@@ -211,7 +260,7 @@ Any data in the request body should also have a schema. This is always in sync w
 Path: `/chat`.
 
 ### `GET`
-*Current schema: 6.*
+*Current schema: 7.*
 
 Retrieves the latest chat items.
 
@@ -237,7 +286,7 @@ Returns data with the following properties:
 - `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Gets the events that have occurred since the specified time.
 
@@ -308,7 +357,7 @@ Can return the following errors:
 Path: `/experience`.
 
 ### `GET /leaderboard`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Gets the ranked experience list of all users.
 
@@ -316,7 +365,7 @@ Returns data with the following properties:
 - `rankedUsers` (`PublicRankedUser[]`): The array of every user's rank, sorted in ascending order.
 
 ### `GET /rank`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Gets the rank of a specific user, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
@@ -332,7 +381,7 @@ Can return the following errors:
 - `404`: When no channel could be matched against the search query.
 
 ### `POST /modify`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Modifies a player's experience by adding a special admin transaction.
 
@@ -348,11 +397,139 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `404`: When the given user is not found.
 
+## Punishment Endpoints
+Path: `/punishment`.
+
+### `GET /:id`
+*Current schema: 1.*
+
+Gets a punishment by id.
+
+Path parameters:
+- `id` (`number`): *Required.* The ID of the punishment to retrieve.
+
+Returns data with the following properties:
+- `punishment` (`PublicPunishment`): The punishment matching the specified id.
+
+Can return the following errors:
+- `404`: When a punishment with the specifed id could not be found.
+
+### `GET`
+*Current schema: 1.*
+
+Gets the list of all punishments for a user.
+
+Query parameters:
+- `userId` (`number`): *Optional.* The ID of the user for which to get punishments. If not provided, returns punishments for all users.
+- `activeOnly` (`boolean`): *Optional.* If true, returns only punishments that are currently active.
+
+Returns data with the following properties:
+- `punishments` (`PublicPunishment[]`): The list of punishments of the user, in descending order by time issued.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+
+### `POST /ban`
+*Current schema: 2.*
+
+Applies a punishment of type `ban` to the user. This is essentially a permanent `timeout`.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `message` (`string`): *Optional.* The reason for the punishment.
+
+Returns data with the following properties:
+- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /unban`
+*Current schema: 2.*
+
+Revokes an existing `ban` punishment from the user. This may also be used to remove any residual bans on the external platforms.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the punishment should be revoked.
+- `message` (`string`): *Optional.* The reason for revoking the punishment.
+
+Returns data with the following properties:
+- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /timeout`
+*Current schema: 2.*
+
+Applies a punishment of type `timeout` to the user. This is essentially a temporary `ban`.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `message` (`string`): *Optional.* The reason for the punishment.
+- `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 5 minutes.
+
+Returns data with the following properties:
+- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /revokeTimeout`
+*Current schema: 2.*
+
+Revokes an existing `timeout` punishment from the user. This may also be used to remove any residual timeouts on the external platforms.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the punishment should be revoked.
+- `message` (`string`): *Optional.* The reason for revoking the punishment.
+
+Returns data with the following properties:
+- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /mute`
+*Current schema: 1.*
+
+Applies a punishment of type `mute` to the user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `message` (`string`): *Optional.* The reason for the punishment.
+- `durationSeconds` (`number`): *Optional.* The duration of the punishment, in seconds. If 0 or not provided, the punishment is permanent.
+
+Returns data with the following properties:
+- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /unmute`
+*Current schema: 1.*
+
+Revokes an existing `mute` punishment from the user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the punishment should be revoked.
+- `message` (`string`): *Optional.* The reason for revoking the punishment.
+
+Returns data with the following properties:
+- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
 ## User Endpoints
 Path: `/user`.
 
 ### `POST /search`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Search for a specific user.
 

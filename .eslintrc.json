@@ -22,7 +22,8 @@
   "ignorePatterns": [
     "node_modules/*",
     "dist/*",
-    "data/*"
+    "data/*",
+    "projects/masterchat/*"
   ],
   "rules": {
     // see https://eslint.org/docs/rules/

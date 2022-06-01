@@ -145,6 +145,7 @@ describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
       userId: 1,
       externalId: 'chat id',
       livestreamId: 1,
+      contextToken: null,
       youtubeChannelId: 1,
       twitchChannelId: null,
       twitchChannel: null,

@@ -13,6 +13,8 @@ import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLiv
 import ChannelService from '@rebel/server/services/ChannelService'
 import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
+import PunishmentService from '@rebel/server/services/PunishmentService'
+import { punishmentToPublicObject } from '@rebel/server/models/punishment'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
@@ -23,6 +25,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   experienceService: ExperienceService
   channelService: ChannelService
   followerStore: FollowerStore
+  punishmentService: PunishmentService
   livestreamService: LivestreamService
 }>
 
@@ -34,6 +37,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly experienceService: ExperienceService
   readonly channelService: ChannelService
   readonly followerStore: FollowerStore
+  readonly punishmentService: PunishmentService
   readonly livestreamService: LivestreamService
 
   constructor (deps: ChatMateControllerDeps) {
@@ -44,6 +48,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     this.experienceService = deps.resolve('experienceService')
     this.channelService = deps.resolve('channelService')
     this.followerStore = deps.resolve('followerStore')
+    this.punishmentService = deps.resolve('punishmentService')
     this.livestreamService = deps.resolve('livestreamService')
   }
 
@@ -63,19 +68,21 @@ export default class ChatMateControllerReal implements IChatMateController {
 
     const userChannels = nonNull(await Promise.all(diffs.map(d => this.channelService.getActiveUserChannel(d.userId))))
     const levelInfo = await Promise.all(diffs.map(d => this.experienceService.getLevel(d.userId)))
+    const punishments = await this.punishmentService.getCurrentPunishments()
     const channels = zip(userChannels, levelInfo)
 
     let events: PublicChatMateEvent[] = []
     for (let i = 0; i < diffs.length; i++) {
       const diff = diffs[i]
-      const user: PublicUser = userChannelAndLevelToPublicUser(channels[i])
+      const activePunishments = punishments.filter(p => p.userId === channels[i].channel.userId).map(punishmentToPublicObject)
+      const user: PublicUser = userChannelAndLevelToPublicUser(channels[i], activePunishments)
 
       events.push({
-        schema: 2,
+        schema: 3,
         type: 'levelUp',
         timestamp: diff.timestamp,
         levelUpData: {
-          schema: 1,
+          schema: 2,
           newLevel: diff.endLevel.level,
           oldLevel: diff.startLevel.level,
           user
@@ -88,7 +95,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     for (let i = 0; i < newFollowers.length; i++) {
       const follower = newFollowers[i]
       events.push({
-        schema: 2,
+        schema: 3,
         type: 'newTwitchFollower',
         timestamp: follower.date.getTime(),
         levelUpData: null,

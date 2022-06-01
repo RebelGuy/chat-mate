@@ -12,10 +12,16 @@ type Class = new (...args: any[]) => any
 
 type ClassMember<C extends Class> = Exclude<keyof InstanceType<C> & string, 'name'>
 
-export function nameof<C extends Class, MemberName extends ClassMember<C>> (obj: C, memberName: MemberName): string {
-  return `${obj.name}.${memberName}`
+/** Typed name of a class or function. */
+export function nameof<C extends Class, MemberName extends ClassMember<C>> (obj: C, memberName: MemberName): string
+export function nameof<F extends (...args: any[]) => any> (obj: F): string
+export function nameof<O extends Class | ((...args: any[]) => any)> (obj: O, memberName?: string): string {
+  if (memberName != null) {
+    return `${obj.name}.${memberName}`
+  } else {
+    return obj.name
+  }
 }
-
 
 // stolen from jest
 type NonFunctionPropertyNames<T> = {

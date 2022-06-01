@@ -273,6 +273,44 @@ export default () => {
     })
   })
 
+  describe(nameof(ChannelStore, 'getTwitchUserNameFromChannelId'), () => {
+    test('gets correct name', async () => {
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [twitchChannelInfo1]} }
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [twitchChannelInfo2]} }
+      }})
+
+      const result = await channelStore.getTwitchUserNameFromChannelId(2)
+
+      expect(result).toEqual(twitchChannelInfo2.userName)
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getYoutubeChannelNameFromChannelId'), () => {
+    test('gets correct name', async () => {
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo1]} }
+      }})
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo3]} }
+      }})
+
+      const result = await channelStore.getYoutubeChannelNameFromChannelId(2)
+
+      expect(result).toEqual(channelInfo3.name)
+    })
+  })
+
   describe(nameof(ChannelStore, 'getUserId'), () => {
     test('throws if channel with given not found', async () => {
       await db.channel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})
@@ -297,6 +335,37 @@ export default () => {
       const result = await channelStore.getUserId('test_twitch')
 
       expect(result).not.toBeNull()
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getUserOwnedChannels'), () => {
+    test('throws if user does not exist', async () => {
+      await expect(() => channelStore.getUserOwnedChannels(1)).rejects.toThrow()
+    })
+
+    test('returns all youtube and twitch channel ids for this user', async () => {
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}}
+      }})
+      await db.channel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { connect: { id: 1 }}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { connect: { id: 1 }}
+      }})
+
+      const result = await channelStore.getUserOwnedChannels(1)
+
+      expect(result.userId).toBe(1)
+      expect(result.youtubeChannels).toEqual([1, 2])
+      expect(result.twitchChannels).toEqual([2])
     })
   })
 }

@@ -20,13 +20,22 @@ export function parseAddBannerToLiveChatCommand(
   if (bannerRdr.contents.liveChatTextMessageRenderer == null) {
     return null
   }
+  
+  // banner
+  const actionId = bannerRdr.actionId;
+  const targetId = bannerRdr.targetId;
+  const viewerIsCreator = bannerRdr.viewerIsCreator;
 
-  const title = bannerRdr.header.liveChatBannerHeaderRenderer.text.runs;
-  const message = bannerRdr.contents.liveChatTextMessageRenderer.message.runs;
+  // header
+  const header = bannerRdr.header.liveChatBannerHeaderRenderer;
+  const title = header.text.runs;
+
+  // contents
   const liveChatRdr = bannerRdr.contents.liveChatTextMessageRenderer;
+  const id = liveChatRdr.id;
+  const message = liveChatRdr.message.runs;
   const timestampUsec = liveChatRdr.timestampUsec;
   const timestamp = tsToDate(timestampUsec);
-
   const authorName = stringify(liveChatRdr.authorName);
   const authorPhoto = pickThumbUrl(liveChatRdr.authorPhoto);
   const authorChannelId = liveChatRdr.authorExternalChannelId;
@@ -42,7 +51,9 @@ export function parseAddBannerToLiveChatCommand(
 
   const parsed: AddBannerAction = {
     type: "addBannerAction",
-    id: bannerRdr.actionId,
+    actionId,
+    targetId,
+    id,
     title,
     message,
     timestampUsec,
@@ -54,6 +65,7 @@ export function parseAddBannerToLiveChatCommand(
     isOwner,
     isModerator,
     membership,
+    viewerIsCreator,
     contextMenuEndpointParams:
       liveChatRdr.contextMenuEndpoint?.liveChatItemContextMenuEndpoint.params,
   };

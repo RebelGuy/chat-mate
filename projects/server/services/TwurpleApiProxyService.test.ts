@@ -8,12 +8,15 @@ import { nameof } from '@rebel/server/_test/utils'
 import { HelixStream } from '@twurple/api/lib/api/helix/stream/HelixStream'
 import { ApiClient } from '@twurple/api'
 import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'
+import { ChatClient } from '@twurple/chat/lib'
+import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 
 const twitchChannelName = 'test_channel'
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
 let twurpleApiProxyService: TwurpleApiProxyService
 let mockApiClient: DeepMockProxy<ApiClient>
+let mockChatClient: MockProxy<ChatClient>
 
 beforeEach(() => {
   mockLogService = mock()
@@ -21,12 +24,15 @@ beforeEach(() => {
   mockApiClient = mock()
   mockApiClient = mock({ streams: mock() }) as any // the compiler wants us to mock every property individually?
   const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => mockApiClient })
+  mockChatClient = mock()
+  const mockTwurpleChatClientProvider = mock<TwurpleChatClientProvider>({ get: () => mockChatClient })
 
   twurpleApiProxyService = new TwurpleApiProxyService(new Dependencies({
     logService: mockLogService,
     twitchChannelName: twitchChannelName,
     twurpleApiClientProvider: mockTwurpleApiClientProvider,
-    twurpleStatusService: mockStatusService
+    twurpleChatClientProvider: mockTwurpleChatClientProvider,
+    twurpleStatusService: mockStatusService,
   }))
   twurpleApiProxyService.initialise()
 })

@@ -15,6 +15,7 @@ import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/Chann
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { DeepPartial } from '@rebel/server/types'
+import PunishmentService from '@rebel/server/services/PunishmentService'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -23,6 +24,7 @@ let mockViewershipStore: MockProxy<ViewershipStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let mockChannelService: MockProxy<ChannelService>
+let mockPunishmentService: MockProxy<PunishmentService>
 let experienceService: ExperienceService
 beforeEach(() => {
   mockExperienceHelpers = mock<ExperienceHelpers>()
@@ -32,6 +34,7 @@ beforeEach(() => {
   mockChannelStore = mock<ChannelStore>()
   mockChatStore = mock<ChatStore>()
   mockChannelService = mock<ChannelService>()
+  mockPunishmentService = mock<PunishmentService>()
 
   mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(data.livestream3)
 
@@ -42,7 +45,8 @@ beforeEach(() => {
     viewershipStore: mockViewershipStore,
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
-    channelService: mockChannelService
+    channelService: mockChannelService,
+    punishmentService: mockPunishmentService
   }))
 })
 
@@ -51,6 +55,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       platform: 'youtube',
+      contextToken: 'params',
       timestamp: data.time3.getTime(),
       author: data.author1,
       messageParts: [],
@@ -78,11 +83,26 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
 
+  test('does not add experience if user is punished', async () => {
+    const chatItem = {
+      platform: 'youtube',
+      author: data.author1
+    } as ChatItem
+    const userId = 5
+    mockChannelStore.getUserId.calledWith(data.author1.channelId).mockResolvedValue(userId)
+    mockPunishmentService.isUserPunished.calledWith(userId).mockResolvedValue(true)
+
+    await experienceService.addExperienceForChat(chatItem)
+
+    expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
+  })
+
   test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, does not notify ViewershipStore', async () => {
     const userId = 1
     const chatItem: ChatItem = {
       id: 'chat1',
       platform: 'youtube',
+      contextToken: 'params',
       timestamp: addTime(data.livestream3.start!, 'seconds', 5).getTime(),
       author: data.author1,
       messageParts: [],
@@ -118,6 +138,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     const chatItems: Partial<ChatItemWithRelations>[] = [{ userId }]
 
     mockChannelStore.getUserId.calledWith(chatItem.author.channelId).mockResolvedValue(userId)
+    mockPunishmentService.isUserPunished.calledWith(userId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(userId).mockResolvedValue(prevData)
     mockViewershipStore.getLivestreamViewership.calledWith(userId).mockResolvedValue([
       { ...data.livestream1, userId: userId, viewed: true },
