@@ -1,4 +1,5 @@
 import { ObjectComparator, ValueComparator } from '@rebel/server/types'
+import { values } from '@rebel/server/util/arrays'
 
 export function assert (condition: any, msg: string): asserts condition {
   if (!condition) {
@@ -82,3 +83,8 @@ export function assertNotNull<T, K extends keyof T> (x: T, key: K, msg: string):
 
 /** This function's sole purpose is to remind us of some required implementation updates if a property of type T changes. */
 export function reminder<T extends string> (x: Record<T, true>): void { /* no op */ }
+
+export function firstOrDefault<T, Default> (map: Map<any, T>, def: Default): T | Default {
+  const v = values(map ?? new Map())
+  return v.length === 0 ? def : v[0]
+}

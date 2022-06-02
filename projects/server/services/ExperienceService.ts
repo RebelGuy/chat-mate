@@ -69,7 +69,7 @@ export default class ExperienceService extends ContextClass {
     this.punishmentService = deps.resolve('punishmentService')
   }
 
-  /** Adds experience only for chat messages sent during the live chat.
+  /** Adds experience only for chat messages sent during the livestream for unpunished users.
    * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItem: ChatItem): Promise<void> {
     // ensure that an active public stream exists and is live

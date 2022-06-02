@@ -250,7 +250,7 @@ export default () => {
       mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
       const chatItem = makeYtChatItem(text1)
 
-      await chatStore.addChat(chatItem, youtubeUserId, extYoutubeChannel, 'youtube')
+      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
 
       const savedChatMessage = await db.chatMessage.findFirst()
       expect(savedChatMessage!.livestreamId).toBeNull()

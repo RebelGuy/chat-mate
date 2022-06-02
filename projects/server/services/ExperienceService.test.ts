@@ -3,12 +3,12 @@ import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHe
 import ExperienceService, { Level, RankedEntry } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { getGetterMock, mockGetter, nameof, single } from '@rebel/server/_test/utils'
+import { getGetterMock, mockData, mockGetter, nameof, single } from '@rebel/server/_test/utils'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { asGte, asLt, asRange, sum } from '@rebel/server/util/math'
-import { ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
+import { ChatMessage, ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
 import { addTime } from '@rebel/server/util/datetime'
 import { ChatItem, ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
@@ -72,6 +72,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       platform: 'youtube',
+      contextToken: 'token',
       timestamp: data.time3.getTime(),
       author: data.author1,
       messageParts: [],
@@ -130,7 +131,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
         chatMessageId: 1,
         experienceTransactionId: 1,
         spamMultiplier: 0.8,
-        chatMessage: null!
+        chatMessage: mockData<ChatMessage>({ livestreamId: data.livestream3.id })
       }
     }
 

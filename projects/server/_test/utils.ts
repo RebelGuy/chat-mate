@@ -63,3 +63,8 @@ export function expectStrictIncreasing (...values: number[]) {
     expect(values[i - 1]).toBeLessThan(values[i])
   }
 }
+
+/** Shorthand for casting a partial type to its full version, such as `{} as Partial<T> as T`. */
+export function mockData<T> (data: Partial<T>): T {
+  return data as T
+}

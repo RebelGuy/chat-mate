@@ -5,6 +5,7 @@ import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
+import { firstOrDefault } from '@rebel/server/util/typescript'
 
 type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout'>
 
@@ -21,6 +22,7 @@ export default class MasterchatProxyService extends ContextClass {
   private readonly statusService: StatusService
   private readonly masterchatFactory: MasterchatFactory
 
+  // note that some endpoints are livestream-agnostic
   private readonly wrappedMasterchats: Map<string, PartialMasterchat>
 
   private requestId: number
@@ -59,21 +61,36 @@ export default class MasterchatProxyService extends ContextClass {
     return await this.wrappedMasterchats.get(liveId)!.fetchMetadata()
   }
 
+  /** Returns true if the channel was banned. False indicates that the 'hide channel' option
+   * was not included in the latest chat item's context menu. */
   public async banYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
     // only returns null if the action is not available in the context menu, e.g. if the user is already banned
-    const result = await this.wrappedMasterchat.hide(contextMenuEndpointParams)
+    const result = await this.getFirst().hide(contextMenuEndpointParams)
     return result != null
   }
 
-  /** Times out the channel by 5 minutes. This cannot be undone. */
+  /** Times out the channel by 5 minutes. This cannot be undone.
+   * 
+   * Returns true if the channel was banned. False indicates that the 'timeout channel'
+   * option was not included in the latest chat item's context menu. */
   public async timeout (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.wrappedMasterchat.timeout(contextMenuEndpointParams)
+    const result = await this.getFirst().timeout(contextMenuEndpointParams)
     return result != null
   }
 
+  /** Returns true if the channel was banned. False indicates that the 'unhide channel' option
+   * was not included in the latest chat item's context menu. */
   public async unbanYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.wrappedMasterchat.unhide(contextMenuEndpointParams)
+    const result = await this.getFirst().unhide(contextMenuEndpointParams)
     return result != null
+  }
+
+  private getFirst () {
+    const masterchat = firstOrDefault(this.wrappedMasterchats, null)
+    if (masterchat == null) {
+      throw new Error('No masterchat instance exists')
+    }
+    return masterchat
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
