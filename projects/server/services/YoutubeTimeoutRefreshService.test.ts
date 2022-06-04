@@ -1,73 +1,145 @@
 import { Dependencies } from '@rebel/server/context/context'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import YoutubeTimeoutRefreshService, { BUFFER, calculateNextInterval, YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
+import YoutubeTimeoutRefreshService, { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import { addTime } from '@rebel/server/util/datetime'
 import { nameof, single } from '@rebel/server/_test/utils'
-import { mock, MockProxy, notNull } from 'jest-mock-extended'
+import { mock, MockProxy } from 'jest-mock-extended'
+
+type DynamicTimerOptions = Extract<TimerOptions, { behaviour: 'dynamicEnd' }>
+
+type CreateTimerArgs = [DynamicTimerOptions, boolean]
+
+const now = new Date()
+const punishmentId = 5
+const timerId = 2
+let refreshCount = 0
+// eslint-disable-next-line @typescript-eslint/require-await
+const onRefresh = async () => { refreshCount++ }
 
 let mockTimerHelpers: MockProxy<TimerHelpers>
+let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
 
 beforeEach(() => {
   mockTimerHelpers = mock()
+  mockTimerHelpers.createRepeatingTimer.mockReturnValue(timerId)
+  
+  mockDateTimeHelpers = mock()
+  mockDateTimeHelpers.ts.mockImplementation(() => new Date().getTime())
   
   youtubeTimeoutRefreshService = new YoutubeTimeoutRefreshService(new Dependencies({
-    timerHelpers: mockTimerHelpers
+    timerHelpers: mockTimerHelpers,
+    logService: mock(),
+    dateTimeHelpers: mockDateTimeHelpers
   }))
+
+  refreshCount = 0
 })
 
 describe(nameof(YoutubeTimeoutRefreshService, 'startTrackingTimeout'), () => {
-  test('creates deferred repeating timer when startImmediately is false', async () => {
-    const punishmentId = 5
-    const onRefresh = () => Promise.reject('Timeout should not have refreshed')
-    const timerId = 2
-    mockTimerHelpers.createRepeatingTimer.mockReturnValue(timerId)
+  test('[on initilisation] skips refresh if difference is less than 5 minutes', async () => {
+    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 1), true, onRefresh)
 
-    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(new Date(), 'hours', 1), false, onRefresh)
+    expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
+  })
 
-    const createTimerArgs: [options: TimerOptions, runImmediately?: false | undefined] = single(mockTimerHelpers.createRepeatingTimer.mock.calls)
-    expect(createTimerArgs[0]).toEqual(expect.objectContaining<Partial<TimerOptions>>({ behaviour: 'dynamicEnd', initialInterval: YOUTUBE_TIMEOUT_DURATION - BUFFER }))
-    expect(createTimerArgs[1]).toEqual(false)
+  test('[on initialisation] refreshes immediately and creates single-use timer if difference is between 5 and 10 minutes', async () => {
+    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
+    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 1).getTime())
+
+    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 6), true, onRefresh)
+    expect(refreshCount).toBe(1)
+
+    const [options, runImmediately] = single(mockTimerHelpers.createRepeatingTimer.mock.calls) as CreateTimerArgs
+    expect(runImmediately).toBe(true)
+    expect(options.initialInterval).toBe(60_000)
+
+    await options.callback()
+    expect(refreshCount).toBe(2)
+  })
+
+  test('[on initialisation] refreshes immediately and creates multi-use timer if difference is greater than 10 minutes', async () => {
+    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
+    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 5).getTime())
+    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 6).getTime())
+
+    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 11), true, onRefresh)
+
+    const [options, runImmediately] = single(mockTimerHelpers.createRepeatingTimer.mock.calls) as CreateTimerArgs
+    expect(runImmediately).toBe(true)
+    expect(options.initialInterval).toBe(300_000)
+    expect(refreshCount).toBe(1)
+
+    const nextInterval = await options.callback()
+    expect(nextInterval).toBe(60_000)
+    expect(refreshCount).toBe(2)
+
+    await options.callback()
+    expect(refreshCount).toBe(3)
+
+    const disposedArgs = single(mockTimerHelpers.disposeSingle.mock.calls)
+    expect(disposedArgs).toEqual([timerId])
+  })
+
+  test('[during runtime] skips refresh if difference is 5 minutes', async () => {
+    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 5), false, onRefresh)
+
+    expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
+  })
+
+  test('[during runtime] creates single-use timer if difference is between 5 and 10 minutes', async () => {
+    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
+    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 1).getTime())
+
+    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 6), false, onRefresh)
+    expect(refreshCount).toBe(0)
+
+    const [options, runImmediately] = single(mockTimerHelpers.createRepeatingTimer.mock.calls) as CreateTimerArgs
+    expect(runImmediately).toBe(false)
+    expect(options.initialInterval).toBe(60_000)
+
+    await options.callback()
+    expect(refreshCount).toBe(1)
+  })
+
+  test('[during runtime] creates multi-use timer if difference is greater than 10 minutes', async () => {
+    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
+    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 5).getTime())
+    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 6).getTime())
+
+    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 11), false, onRefresh)
+
+    const [options, runImmediately] = single(mockTimerHelpers.createRepeatingTimer.mock.calls) as CreateTimerArgs
+    expect(runImmediately).toBe(false)
+    expect(options.initialInterval).toBe(300_000)
+    expect(refreshCount).toBe(0)
+
+    const nextInterval = await options.callback()
+    expect(nextInterval).toBe(60_000)
+    expect(refreshCount).toBe(1)
+
+    await options.callback()
+    expect(refreshCount).toBe(2)
+
+    const disposedArgs = single(mockTimerHelpers.disposeSingle.mock.calls)
+    expect(disposedArgs).toEqual([timerId])
   })
 })
 
 describe(nameof(YoutubeTimeoutRefreshService, 'stopTrackingTimeout'), () => {
   test('removes timer', async () => {
-    const punishmentId = 5
-    const onRefresh = () => Promise.reject('Timeout should not have refreshed')
-    const timerId = 2
-    mockTimerHelpers.createRepeatingTimer.mockReturnValue(timerId)
-    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(new Date(), 'hours', 1), false, onRefresh)
+    await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'hours', 1), false, onRefresh)
 
     youtubeTimeoutRefreshService.stopTrackingTimeout(punishmentId)
 
     const disposeSingleArgs = single(mockTimerHelpers.disposeSingle.mock.calls)
     expect(disposeSingleArgs).toEqual([timerId])
   })
-})
 
-describe(nameof(calculateNextInterval), () => {
-  test('returns maximum interval if expiration date is far in the future', () => {
-    const expiration = addTime(new Date(), 'minutes', 20)
+  test(`does nothing if timer doesn't exist`, () => {
+    youtubeTimeoutRefreshService.stopTrackingTimeout(punishmentId)
 
-    const result = calculateNextInterval(expiration)
-
-    expect(result).toBe(YOUTUBE_TIMEOUT_DURATION - BUFFER)
-  })
-
-  test('returns a small interval if expiration date is between 1 and 2 youtube-periods in the future', () => {
-    const expiration = addTime(new Date(), 'minutes', 7)
-
-    const result = calculateNextInterval(expiration)
-
-    expect(result).toBeLessThan(YOUTUBE_TIMEOUT_DURATION - BUFFER)
-  })
-
-  test('returns null if expiration date is less than 1 youtube-period in the future', () => {
-    const expiration = addTime(new Date(), 'minutes', 1)
-
-    const result = calculateNextInterval(expiration)
-
-    expect(result).toBeNull()
+    expect(mockTimerHelpers.disposeSingle.mock.calls.length).toBe(0)
   })
 })

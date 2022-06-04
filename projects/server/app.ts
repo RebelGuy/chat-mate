@@ -49,6 +49,7 @@ import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutR
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -78,6 +79,7 @@ const globalContext = ContextProvider.create()
   .withProperty('twitchRefreshToken', twitchRefreshToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
+  .withHelpers('dateTimeHelpers', DateTimeHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)
