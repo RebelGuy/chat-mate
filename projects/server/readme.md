@@ -151,8 +151,7 @@ Key:
   - 🟢 banChannel
   - 🟢 initialise
   - 🟢 unbanChannel
-- 🟢 youtubeTimeoutRefreshService
-  - 🟢 calculateNextInterval
+- 🟢 YoutubeTimeoutRefreshService
   - 🟢 startTrackingTimeout
   - 🟢 stopTrackingTimeout
 - ⚪ FileService
@@ -212,6 +211,9 @@ Key:
   - 🟢 initialise
 
 **Helpers**
+- ⚪ DateTimeHelpers
+  - ⚪ now
+  - ⚪ ts
 - 🟢 ExperienceHelpers
   - 🟢 calculateChatMessageQuality
   - 🟢 calculateExperience

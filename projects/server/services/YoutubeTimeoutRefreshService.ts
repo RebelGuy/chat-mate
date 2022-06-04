@@ -1,26 +1,48 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import { clamp } from '@rebel/server/util/math'
+import LogService from '@rebel/server/services/LogService'
 
 // Clicking on the "timeout" option in a chat context menu times out the user by 5 minutes. This cannot be
 // changed without access to the Youtube API, so we have to manually refresh this timeout.
 export const YOUTUBE_TIMEOUT_DURATION = 5 * 60 * 1000
-export const BUFFER = 5000
+
+// we have to ensure continuity between intents of interval calculations.
+// for example, if we know we should only refresh once more, then that should be
+// honoured in subsequent calculations. this solves the issue of applying spam timeouts
+// in oreer to get as close to thefinal timeout time as possible.
+export type NextInterval = {
+  type: 'noMore'
+} | {
+  type: 'oneMore'
+  interval: number
+} | {
+  type: 'manyMore'
+  interval: number
+}
 
 type Deps = Dependencies<{
   timerHelpers: TimerHelpers
+  logService: LogService
+  dateTimeHelpers: DateTimeHelpers
 }>
 
 export default class YoutubeTimeoutRefreshService extends ContextClass {
-  private readonly timerHelpers: TimerHelpers
+  readonly name = YoutubeTimeoutRefreshService.name
 
-  private punishmentTimerMap: Map<number, number> = new Map()
+  private readonly timerHelpers: TimerHelpers
+  private readonly logService: LogService
+  private readonly dateTime: DateTimeHelpers
+
+  private punishmentTimerMap: Map<number, [NextInterval, number]> = new Map()
 
   constructor (deps: Deps) {
     super()
 
     this.timerHelpers = deps.resolve('timerHelpers')
+    this.logService = deps.resolve('logService')
+    this.dateTime = deps.resolve('dateTimeHelpers')
   }
 
   /** Periodically calls the onRefresh method such that the timeout on Youtube expires at the provided time.
@@ -28,20 +50,19 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
   public async startTrackingTimeout (punishmentId: number, expirationTime: Date, startImmediately: boolean, onRefresh: () => Promise<void>) {
     this.stopTrackingTimeout(punishmentId)
 
-    const initialInterval = calculateNextInterval(expirationTime)
-    if (initialInterval == null) {
-      if (startImmediately) {
-        // don't need a timer - only a single refresh will do
-        await onRefresh()
-        return
-      } else {
-        return
-      }
+    const initialInterval = this.calculateNextInterval(expirationTime, null)
+    
+    if (startImmediately) {
+      await onRefresh()
+    }
+
+    if (initialInterval.type === 'noMore') {
+      return
     }
 
     const options: TimerOptions = {
       behaviour: 'dynamicEnd',
-      initialInterval: initialInterval,
+      initialInterval: initialInterval.interval,
       callback: () => this.onElapsed(punishmentId, expirationTime, onRefresh)
     }
 
@@ -52,48 +73,55 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
       timerId = this.timerHelpers.createRepeatingTimer(options, false)
     }
 
-    this.punishmentTimerMap.set(punishmentId, timerId)
+    this.punishmentTimerMap.set(punishmentId, [initialInterval, timerId])
   }
 
   /** Should be called when the punishment has been revoked. It will take up to 5 minutes for the revokation to come into effect on Youtube. */
   public stopTrackingTimeout (punishmentId: number) {
     if (this.punishmentTimerMap.has(punishmentId)) {
-      this.timerHelpers.disposeSingle(this.punishmentTimerMap.get(punishmentId)!)
-    }
-  }
-
-  private async onElapsed (punishmentId: number, expirationTime: Date, onRefresh: () => Promise<void>): Promise<any> {
-    const nextInterval = calculateNextInterval(expirationTime)
-    if (nextInterval == null) {      
-      // stop
-      const timerId = this.punishmentTimerMap.get(punishmentId)!
-      this.punishmentTimerMap.delete(punishmentId)
+      const timerId = this.punishmentTimerMap.get(punishmentId)![1]
       this.timerHelpers.disposeSingle(timerId)
+      this.punishmentTimerMap.delete(punishmentId)
     } else {
-      // refresh
-      await onRefresh()
-      return nextInterval
+      this.logService.logWarning(this, 'Tried to stop tracking timeout for punishment with id', punishmentId, ', but no active timer was present.')
     }
   }
-}
 
-export function calculateNextInterval (expirationTime: Date): number | null {
-  const now = new Date().getTime()
-  const expiration = expirationTime.getTime()
-  const remainder = expiration - now
+  private async onElapsed (punishmentId: number, expirationTime: Date, onRefresh: () => Promise<void>): Promise<number> {
+    const [prevInterval, timerId] = this.punishmentTimerMap.get(punishmentId)!
 
-  const maxInterval = YOUTUBE_TIMEOUT_DURATION - BUFFER
+    if (prevInterval.type === 'noMore') {      
+      this.stopTrackingTimeout(punishmentId)
+      return 0
 
-  if (remainder < maxInterval) {
-    // this is the last interval
-    return null
-  } else if (remainder > maxInterval * 2) {
-    return maxInterval
-  } else {
-    // remainder is between maxInterval and 2*maxInterval
-    // since the timeout always lasts for the same period, we have to make sure we set up the refreshes so the timeout expires at the desired time.
-    // we can fine-tune the expiration time only if we are more than 1 period from expiration (now is a good time).
-    // we return a smaller-than-maximum interval so that, after the next refresh, we can just naturally let the timeout expire.
-    return clamp(remainder - YOUTUBE_TIMEOUT_DURATION, 0, maxInterval)
+    } else {
+      await onRefresh()
+      const nextInterval = this.calculateNextInterval(expirationTime, prevInterval)
+      this.punishmentTimerMap.set(punishmentId, [nextInterval, timerId])
+      if (nextInterval.type === 'noMore') {
+        this.stopTrackingTimeout(punishmentId)
+        return 0
+      } else {
+        return nextInterval.interval
+      }
+    }
+  }
+
+  /** Providing lastInterval aids in maintaining a continuation of intent. */
+  private calculateNextInterval (expirationTime: Date, prevInterval: NextInterval | null): NextInterval {
+    const remainder = expirationTime.getTime() - this.dateTime.ts()
+    const lastType = prevInterval?.type
+
+    if (remainder <= YOUTUBE_TIMEOUT_DURATION && (lastType == null || lastType === 'noMore' || lastType === 'oneMore')) {
+      return { type: 'noMore' }
+    } else if (remainder > YOUTUBE_TIMEOUT_DURATION * 2) {
+      return { type: 'manyMore', interval: YOUTUBE_TIMEOUT_DURATION }
+    } else {
+      // remainder is between YOUTUBE_TIMEOUT_DURATION and 2 * YOUTUBE_TIMEOUT_DURATION
+      // since the timeout always lasts for the same period, we have to make sure we set up the refreshes so the timeout expires at the desired time.
+      // we can fine-tune the expiration time only if we are more than 1 period from expiration (now is a good time).
+      // we return a smaller-than-maximum interval so that, after the next refresh, we can just naturally let the timeout expire.
+      return { type: 'oneMore', interval: remainder - YOUTUBE_TIMEOUT_DURATION }
+    }
   }
 }
