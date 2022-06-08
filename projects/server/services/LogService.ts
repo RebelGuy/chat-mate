@@ -59,7 +59,14 @@ export default class LogService extends ContextClass {
       consoleLogger(prefix, ...args)
     }
 
-    const content = args.map(a => JSON.stringify(a) ?? 'undefined').join(' ')
+    const content = args.map(a => {
+      try {
+        return JSON.stringify(a) ?? 'undefined'
+      } catch (e: any) {
+        const type = a?.constructor?.name ?? 'Unknown'
+        return `<<LogService: Unable to stringify object of type ${type}: ${e.message}>>`
+      }
+    }).join(' ')
     const message = `${prefix} ${content}`
     this.fileService.writeLine(this.logFile, message, { append: true })
   }
