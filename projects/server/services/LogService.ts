@@ -61,7 +61,11 @@ export default class LogService extends ContextClass {
 
     const content = args.map(a => {
       try {
-        return JSON.stringify(a) ?? 'undefined'
+        if (typeof a === 'string') {
+          return a
+        } else {
+          return JSON.stringify(a) ?? 'undefined'
+        }
       } catch (e: any) {
         const type = a?.constructor?.name ?? 'Unknown'
         return `<<LogService: Unable to stringify object of type ${type}: ${e.message}>>`

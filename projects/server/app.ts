@@ -57,7 +57,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 //
 
 const port = env('port')
-const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)
+const dataPath = path.resolve(__dirname, `../../data/`)
 const twitchClientId = env('twitchClientId')
 const twitchClientSecret = env('twitchClientSecret')
 const twitchChannelName = env('twitchChannelName')

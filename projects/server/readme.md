@@ -3,7 +3,7 @@ The server is responsible for fetching data from Youtube via the `masterchat` pr
 
 
 # Project Details
-Debug and release environments both have their own folders in `./data` and `./dist` to ensure that ongoing development does not interfere with the ability to run release versions.
+Built JavaScript files live in the `./dist` folder, while generated data lives in the `./data` folder.
 
 Note: If fetching Youtube metadata incurs a "Rate limit exceeded" error, then Youtube has flagged us as a bot. A (temporary?) solution is to regenerate an auth token (see below).
 
@@ -23,7 +23,7 @@ If building fails because the Prisma client could not be found, please run `yarn
 
 ## Scripts for production:
 Assumes that steps 1-3 of the previous section have been run.
-3. `yarn build:release` bundles the application as `./dist/release/server/app.js`.
+3. `yarn build:release` bundles the application as `./dist/server/app.js`.
 4. `yarn migrate:release` migrate the database to the latest schema
 5. `yarn start:release` to run the release server
 
