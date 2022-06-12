@@ -132,7 +132,8 @@ export default class ChatMateControllerReal implements IChatMateController {
       return args.builder.failure(422, `Cannot set active livestream ${liveId} because another livestream is already active.`)
     }
 
-    return args.builder.success({})
+    const livestream = this.livestreamStore.activeLivestream
+    return args.builder.success({ livestreamLink: livestream == null ? null : getLivestreamLink(livestream.liveId) })
   }
 
   private async getLivestreamStatus (): Promise<PublicLivestreamStatus | null> {

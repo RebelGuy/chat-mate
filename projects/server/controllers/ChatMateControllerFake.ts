@@ -123,6 +123,6 @@ export default class ChatMateControllerFake implements IChatMateController {
       return args.builder.failure(422, `Cannot set active livestream ${liveId} because another livestream is already active.`)
     }
 
-    return args.builder.success({})
+    return args.builder.success({ livestreamLink: this.liveId == null ? null : getLivestreamLink(this.liveId) })
   }
 }

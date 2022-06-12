@@ -25,9 +25,9 @@ export type GetStatusEndpoint = Endpoint<3, {}, GetStatusResponse>
 
 export type GetEventsEndpoint = Endpoint<4, { since: number }, GetEventsResponse>
 
-export type SetActiveLivestreamRequest = ApiRequest<1, { schema: 1, livestream: string | null }>
-export type SetActiveLivestreamResponse = ApiResponse<1, EmptyObject>
-export type SetActiveLivestreamEndpoint = Endpoint<1, Omit<SetActiveLivestreamRequest, 'schema'>, SetActiveLivestreamResponse>
+export type SetActiveLivestreamRequest = ApiRequest<2, { schema: 2, livestream: string | null }>
+export type SetActiveLivestreamResponse = ApiResponse<2, { livestreamLink: string | null }>
+export type SetActiveLivestreamEndpoint = Endpoint<2, Omit<SetActiveLivestreamRequest, 'schema'>, SetActiveLivestreamResponse>
 
 export interface IChatMateController {
   getStatus: GetStatusEndpoint
@@ -76,9 +76,9 @@ export default class ChatMateController extends ControllerBase {
   @PATCH
   @Path('livestream')
   public async setActiveLivestream (request: SetActiveLivestreamRequest): Promise<SetActiveLivestreamResponse> {
-    const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream', 1)
+    const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream', 2)
     if (request == null || request.livestream === undefined) {
-      return builder.failure(400, `A value for 'livestream' must be provided.`)
+      return builder.failure(400, `A value for 'livestream' must be provided or set to null.`)
     }
 
     try {

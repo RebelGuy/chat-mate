@@ -295,7 +295,7 @@ Gets the events that have occurred since the specified time.
 Query parameters:
 - `since` (`number`): *Required.* Gets only events **after** the given time (unix ms).
 
-Returns an data with the following properties:
+Returns data with the following properties:
 - `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp.
 
@@ -303,14 +303,15 @@ Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
 ### `PATCH /livestream`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
 
 Request data (body):
 - `livestream` (`string | null`): *Required.* The livestream link or id to set as active. If `null`, the active stream will be deactivated.
 
-Returns an empty response body - if the status code is 200, it signifies that the action succeeded.
+Returns data with the following properties:
+- `livestreamLink` (`string | null`): The new livestream link.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
