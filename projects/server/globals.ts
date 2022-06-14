@@ -33,6 +33,11 @@ type EnvironmentVariables = {
 
   // replaces some controllers with fake ones
   useFakeControllers?: DebugVariable<boolean>
+
+  applicationinsightsConnectionString: string
+
+  // if false, will still log warnings and errors
+  enableDbLogging: boolean
 }
 
 // if an environment variable is included in this list, it must be set using the `cross-env` package.

@@ -37,6 +37,7 @@
     "@twurple/eventsub-ngrok": "^5.0.18",
     "@types/eslint": "^8.4.1",
     "@types/node": "^16.11.7",
+    "applicationinsights": "^2.3.3",
     "copy-webpack-plugin": "^10.2.0",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",

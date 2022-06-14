@@ -104,6 +104,7 @@ Key:
 - ⚪: Won't do
 
 **Services**
+- ⚪ ApplicationInsightsService
 - 🟢 ChannelService
   - 🟢 getActiveUserChannel
   - 🟢 getActiveUserChannels

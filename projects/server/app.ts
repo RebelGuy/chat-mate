@@ -1,5 +1,6 @@
 require('./_config')
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
+import * as ApplicationInsights from 'applicationinsights'
 import express from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'
@@ -50,6 +51,7 @@ import PunishmentController from '@rebel/server/controllers/PunishmentController
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -63,6 +65,9 @@ const twitchClientSecret = env('twitchClientSecret')
 const twitchChannelName = env('twitchChannelName')
 const twitchAccessToken = env('twitchAccessToken')
 const twitchRefreshToken = env('twitchRefreshToken')
+const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
+const enableDbLogging = env('enableDbLogging')
+const isLocal = true // todo
 
 const globalContext = ContextProvider.create()
   .withProperty('port', port)
@@ -77,6 +82,9 @@ const globalContext = ContextProvider.create()
   .withProperty('twitchChannelName', twitchChannelName)
   .withProperty('twitchAccessToken', twitchAccessToken)
   .withProperty('twitchRefreshToken', twitchRefreshToken)
+  .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
+  .withProperty('enableDbLogging', enableDbLogging)
+  .withProperty('isLocal', isLocal)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -84,6 +92,7 @@ const globalContext = ContextProvider.create()
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
+  .withClass('applicationInsightsService', ApplicationInsightsService)
   .withClass('logService', LogService)
   .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
