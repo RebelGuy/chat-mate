@@ -4,18 +4,18 @@ import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/Publ
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import StatusService from '@rebel/server/services/StatusService'
-import ChannelStore, { ChannelWithLatestInfo, UserChannel } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { getLivestreamLink } from '@rebel/server/util/text'
+import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
 import { nonNull, zip } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
-import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController } from '@rebel/server/controllers/ChatMateController'
+import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/PunishmentService'
 import { punishmentToPublicObject } from '@rebel/server/models/punishment'
+import LivestreamService from '@rebel/server/services/LivestreamService'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -26,6 +26,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   channelService: ChannelService
   followerStore: FollowerStore
   punishmentService: PunishmentService
+  livestreamService: LivestreamService
 }>
 
 export default class ChatMateControllerReal implements IChatMateController {
@@ -37,6 +38,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly channelService: ChannelService
   readonly followerStore: FollowerStore
   readonly punishmentService: PunishmentService
+  readonly livestreamService: LivestreamService
 
   constructor (deps: ChatMateControllerDeps) {
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -47,6 +49,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     this.channelService = deps.resolve('channelService')
     this.followerStore = deps.resolve('followerStore')
     this.punishmentService = deps.resolve('punishmentService')
+    this.livestreamService = deps.resolve('livestreamService')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -109,8 +112,36 @@ export default class ChatMateControllerReal implements IChatMateController {
     })
   }
 
-  private async getLivestreamStatus (): Promise<PublicLivestreamStatus> {
-    const livestream = this.livestreamStore.currentLivestream
+  public async setActiveLivestream (args: In<SetActiveLivestreamEndpoint>): Out<SetActiveLivestreamEndpoint> {
+    let liveId: string | null
+    if (args.livestream == null) {
+      liveId = null
+    } else {
+      try {
+        liveId = getLiveId(args.livestream)
+      } catch (e: any) {
+        return args.builder.failure(400, `Cannot parse the liveId: ${e.message}`)
+      }
+    }
+
+    if (this.livestreamStore.activeLivestream == null && liveId != null) {
+      await this.livestreamService.setActiveLivestream(liveId)
+    } else if (this.livestreamStore.activeLivestream != null && liveId == null) {
+      await this.livestreamService.deactivateLivestream()
+    } else if (!(this.livestreamStore.activeLivestream == null && liveId == null || this.livestreamStore.activeLivestream!.liveId === liveId)) {
+      return args.builder.failure(422, `Cannot set active livestream ${liveId} because another livestream is already active.`)
+    }
+
+    const livestream = this.livestreamStore.activeLivestream
+    return args.builder.success({ livestreamLink: livestream == null ? null : getLivestreamLink(livestream.liveId) })
+  }
+
+  private async getLivestreamStatus (): Promise<PublicLivestreamStatus | null> {
+    const livestream = this.livestreamStore.activeLivestream
+    if (livestream == null) {
+      return null
+    }
+    
     const link = getLivestreamLink(livestream.liveId)
 
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null

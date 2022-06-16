@@ -1,11 +1,11 @@
-import { Livestream } from '@prisma/client'
+import { Livestream, LivestreamType } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
+import { reminder } from '@rebel/server/util/typescript'
 
 type Deps = Dependencies<{
-  liveId: string,
   dbProvider: DbProvider,
   logService: LogService
 }>
@@ -13,64 +13,86 @@ type Deps = Dependencies<{
 export default class LivestreamStore extends ContextClass {
   readonly name: string = LivestreamStore.name
 
-  private readonly liveId: string
   private readonly db: Db
   private readonly logService: LogService
 
-  private _currentLivestream: Livestream | null = null
-  public get currentLivestream () {
-    if (this._currentLivestream) {
-      return this._currentLivestream
-    } else {
-      throw new Error('Current livestream has not been created yet')
-    }
-  }
+  private _activeLivestream!: Livestream | null
+  /** Gets the public *livestream* that is currently active. */
+  public get activeLivestream (): Livestream | null { return this._activeLivestream } // please remind me why we are using a getter here?
 
   constructor (deps: Deps) {
     super()
-    this.liveId = deps.resolve('liveId')
     this.db = deps.resolve('dbProvider').get()
     this.logService = deps.resolve('logService')
   }
 
   public override async initialise () {
-    await this.createLivestream()
+    const maybeLivestream = await this.db.livestream.findFirst({ where: { isActive: true, type: 'publicLivestream' }})
+    this._activeLivestream = maybeLivestream ?? null
   }
 
-  public async setContinuationToken (continuationToken: string | null): Promise<Livestream> {
-    if (!this._currentLivestream) {
-      throw new Error('No current livestream exists')
+  /** Sets the current active livestream to inactive such that `LivestreamStore.activeLivestream` returns null. */
+  public async deactivateLivestream (): Promise<void> {
+    if (this.activeLivestream == null) {
+      return
     }
 
-    return this._currentLivestream = await this.db.livestream.update({
-      where: { liveId: this._currentLivestream.liveId },
-      data: { ...this._currentLivestream, continuationToken }
+    await this.db.livestream.update({
+      where: { liveId: this.activeLivestream!.liveId },
+      data: { isActive: false }
     })
+
+    this._activeLivestream = null
   }
 
-  public async setTimes (updatedTimes: Pick<Livestream, 'start' | 'end'>): Promise<Livestream> {
-    if (!this._currentLivestream) {
-      throw new Error('No current livestream exists')
+  // todo: in the future, we can pass more options into this function, e.g. if a livestream is considered unlisted
+  /** Sets the given livestream as active, such that `LivestreamStore.activeLivestream` returns this stream.
+   * Please ensure you deactivate the previous livestream first, if applicable. */
+  public async setActiveLivestream (liveId: string, type: LivestreamType): Promise<Livestream> {
+    if (this._activeLivestream != null) {
+      if (this._activeLivestream.liveId === liveId) {
+        return this._activeLivestream
+      } else {
+        throw new Error('Cannot set an active livestream while another livestream is already active. Please ensure you deactivate the existing livestream first.')
+      }
     }
 
-    return this._currentLivestream = await this.db.livestream.update({
-      where: { liveId: this.liveId },
-      data: { ...updatedTimes }
-    })
+    return this.updateCachedLivestream(
+      await this.db.livestream.upsert({
+        create: { liveId, createdAt: new Date(), isActive: true, type },
+        update: { isActive: true },
+        where: { liveId }
+      })
+    )
   }
 
-  private async createLivestream (): Promise<Livestream> {
-    const existingLivestream = await this.db.livestream.findUnique({ where: { liveId: this.liveId }})
+  public async setContinuationToken (liveId: string, continuationToken: string | null): Promise<Livestream> {
+    return this.updateCachedLivestream(
+      await this.db.livestream.update({
+        where: { liveId },
+        data: { continuationToken }
+      })
+    )
+  }
 
-    if (!existingLivestream) {
-      this._currentLivestream = await this.db.livestream.create({ data: {
-        createdAt: new Date(),
-        liveId: this.liveId
-      }})
-    } else {
-      this._currentLivestream = existingLivestream
+  public async setTimes (liveId: string, updatedTimes: Pick<Livestream, 'start' | 'end'>): Promise<Livestream> {
+    return this.updateCachedLivestream(
+      await this.db.livestream.update({
+        where: { liveId },
+        data: { ...updatedTimes }
+      })
+    )
+  }
+
+  private updateCachedLivestream (livestream: Livestream) {
+    if (this._activeLivestream != null && this._activeLivestream.liveId !== livestream.liveId) {
+      // for the new type (probably "unlistedLivestream"), we will need to add a new cached livestream
+      reminder<LivestreamType>({ publicLivestream: true })
+
+      throw new Error('Cannot update cached livestream because the liveIds do not match. This suggests there are two active livestreams. Before adding an active livestream, ensure that the previous one has been deactivated.')
     }
 
-    return this._currentLivestream
+    this._activeLivestream = livestream
+    return this._activeLivestream = livestream
   }
 }

@@ -16,10 +16,10 @@
       "sourceMaps": true,
     },
     {
-      "name": "start:debug",
+      "name": "start:local",
       "request": "launch",
       "cwd": "${workspaceFolder}/projects/server",
-      "runtimeArgs": ["start:debug"],
+      "runtimeArgs": ["start:local"],
       "runtimeExecutable": "yarn",
       "skipFiles": [
         "<node_internals>/**"

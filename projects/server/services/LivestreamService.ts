@@ -9,6 +9,7 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
+import { addTime } from '@rebel/server/util/datetime'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
@@ -26,8 +27,8 @@ export default class LivestreamService extends ContextClass {
   readonly name: string = LivestreamService.name
 
   private readonly livestreamStore: LivestreamStore
-  private readonly masterchat: IMasterchat
-  private readonly twurple: ITwurpleApi
+  private readonly masterchatProxyService: MasterchatProxyService
+  private readonly twurpleApiProxyService: ITwurpleApi
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
   private readonly viewershipStore: ViewershipStore
@@ -36,8 +37,8 @@ export default class LivestreamService extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.masterchat = deps.resolve('masterchatProxyService')
-    this.twurple = deps.resolve('twurpleApiProxyService')
+    this.masterchatProxyService = deps.resolve('masterchatProxyService')
+    this.twurpleApiProxyService = deps.resolve('twurpleApiProxyService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')
@@ -49,6 +50,10 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
+    if (this.livestreamStore.activeLivestream != null) {
+      this.masterchatProxyService.addMasterchat(this.livestreamStore.activeLivestream.liveId)
+    }
+
     const timerOptions: TimerOptions = {
       behaviour: 'start',
       callback: () => this.updateLivestreamMetadata(),
@@ -57,9 +62,29 @@ export default class LivestreamService extends ContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  private async fetchYoutubeMetadata (): Promise<Metadata | null> {
+  /** Sets the current livestream as inactive, also removing the associated masterchat instance. */
+  public async deactivateLivestream () {
+    if (this.livestreamStore.activeLivestream == null) {
+      return
+    }
+
+    const liveId = this.livestreamStore.activeLivestream.liveId
+    await this.livestreamStore.deactivateLivestream()
+    this.masterchatProxyService.removeMasterchat(liveId)
+    this.logService.logInfo(this, `Livestream with id ${liveId} has been deactivated.`)
+  }
+
+  /** Sets the given livestream as active, and creates a masterchat instance.
+   * Please ensure you deactivate the previous livestream first, if applicable. */
+  public async setActiveLivestream (liveId: string) {
+    await this.livestreamStore.setActiveLivestream(liveId, 'publicLivestream')
+    this.masterchatProxyService.addMasterchat(liveId)
+    this.logService.logInfo(this, `Livestream with id ${liveId} has been activated.`)
+  }
+
+  private async fetchYoutubeMetadata (liveId: string): Promise<Metadata | null> {
     try {
-      return await this.masterchat.fetchMetadata()
+      return await this.masterchatProxyService.fetchMetadata(liveId)
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching youtube metadata.', e.message)
       return null
@@ -68,7 +93,7 @@ export default class LivestreamService extends ContextClass {
 
   private async fetchTwitchMetadata (): Promise<TwitchMetadata | null> {
     try {
-      return await this.twurple.fetchMetadata()
+      return await this.twurpleApiProxyService.fetchMetadata()
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching twitch metadata.', e.message)
       return null
@@ -76,9 +101,20 @@ export default class LivestreamService extends ContextClass {
   }
 
   private async updateLivestreamMetadata () {
+    const activeLivestream = this.livestreamStore.activeLivestream
+    if (activeLivestream == null) {
+      return
+    } else if (activeLivestream.end != null && new Date() > addTime(activeLivestream.end, 'minutes', 2)) {
+      // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
+      // (after some delay), so there is no need to keep it around.
+      this.logService.logInfo(this, 'Automatically deactivating current livestream because it has ended.')
+      await this.deactivateLivestream()
+      return
+    }
+
     // deliberately require that youtube metadata is always called successfully, as it
     // is used as the source of truth for the stream status
-    const youtubeMetadata = await this.fetchYoutubeMetadata()
+    const youtubeMetadata = await this.fetchYoutubeMetadata(activeLivestream.liveId)
     if (youtubeMetadata == null) {
       return
     }
@@ -86,10 +122,10 @@ export default class LivestreamService extends ContextClass {
     const twitchMetadata = await this.fetchTwitchMetadata()
 
     try {
-      const updatedTimes = this.getUpdatedLivestreamTimes(this.livestreamStore.currentLivestream, youtubeMetadata)
+      const updatedTimes = this.getUpdatedLivestreamTimes(activeLivestream, youtubeMetadata)
 
       if (updatedTimes) {
-        await this.livestreamStore.setTimes(updatedTimes)
+        await this.livestreamStore.setTimes(activeLivestream.liveId, updatedTimes)
       }
 
       if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {

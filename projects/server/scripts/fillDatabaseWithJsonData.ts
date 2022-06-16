@@ -9,6 +9,10 @@ import DbProvider from '@rebel/server/providers/DbProvider'
 import { ChatSave } from '@rebel/server/stores/ChatStore'
 import { Prisma } from '@prisma/client'
 
+// ************************************
+// ************ DEPRECATED ************
+// ************************************
+
 // run using
 //   yarn workspace server cross-env NODE_ENV=debug node --inspect dist/debug/server/scripts/fillDatabaseWithJsonData.js
 

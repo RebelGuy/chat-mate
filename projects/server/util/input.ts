@@ -18,6 +18,9 @@ export async function promptInput (text: string): Promise<string> {
   })
 
   return new Promise<string>(resolve => {
-    readline.question(text.endsWith(' ') ? text : text + ' ', res => resolve(res))
+    readline.question(text.endsWith(' ') ? text : text + ' ', res => {
+      readline.close()
+      resolve(res)
+    })
   })
 }

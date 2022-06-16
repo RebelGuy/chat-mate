@@ -2,6 +2,8 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { NodeEnv } from '@rebel/server/globals'
 import { ILoggable } from '@rebel/server/interfaces'
+import DbProvider from '@rebel/server/providers/DbProvider'
+import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import FileService from '@rebel/server/services/FileService'
 import { formatDate, formatTime } from '@rebel/server/util/datetime'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -10,29 +12,24 @@ import { LogLevel } from '@twurple/chat'
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
 type Deps = Dependencies<{
-  liveId: string
-  isLive: boolean
+  isLocal: boolean
   fileService: FileService
+  applicationInsightsService: ApplicationInsightsService
+  enableDbLogging: boolean
 }>
 
 export default class LogService extends ContextClass {
-  private readonly liveId: string
-  private readonly isLive: boolean
   private readonly fileService: FileService
-  private readonly logFile: string
+  private readonly applicationInsightsService: ApplicationInsightsService
+  private readonly enableDbLogging: boolean
+  private readonly logFile: string | null
 
   constructor (deps: Deps) {
     super()
-    this.liveId = deps.resolve('liveId')
-    this.isLive = deps.resolve('isLive')
     this.fileService = deps.resolve('fileService')
-
-    const existingFile = this.fileService.getDataFiles().find(file => file.startsWith('log_') && file.includes(this.liveId))
-    if (existingFile) {
-      this.logFile = this.fileService.getDataFilePath(existingFile)
-    } else {
-      this.logFile = this.fileService.getDataFilePath(`log_${formatDate()}_${this.liveId}.txt`)
-    }
+    this.applicationInsightsService = deps.resolve('applicationInsightsService')
+    this.enableDbLogging = deps.resolve('enableDbLogging')
+    this.logFile = deps.resolve('isLocal') ? this.fileService.getDataFilePath(`log_${formatDate()}.txt`) : null
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
@@ -61,6 +58,10 @@ export default class LogService extends ContextClass {
   }
 
   private log (logger: ILoggable, logType: LogType, args: any[]) {
+    if (!this.enableDbLogging && logger.name === DbProvider.name && (logType === 'debug' || logType === 'info')) {
+      return
+    }
+
     const prefix = `${formatTime()} ${logType.toUpperCase()} > [${logger.name}]`
     if (!(logType === 'api' || logType === 'debug')) {
       // don't print api or debug logs to the console as they are very verbose
@@ -71,9 +72,27 @@ export default class LogService extends ContextClass {
       consoleLogger(prefix, ...args)
     }
 
-    const content = args.map(a => JSON.stringify(a) ?? 'undefined').join(' ')
+    const content = args.map(a => {
+      try {
+        if (typeof a === 'string') {
+          return a
+        } else {
+          return JSON.stringify(a) ?? 'undefined'
+        }
+      } catch (e: any) {
+        const type = a?.constructor?.name ?? 'Unknown'
+        return `<<LogService: Unable to stringify object of type ${type}: ${e.message}>>`
+      }
+    }).join(' ')
     const message = `${prefix} ${content}`
-    this.fileService.writeLine(this.logFile, message, { append: true })
+
+    if (logType === 'error') {
+      this.applicationInsightsService.trackException(args)
+    }
+
+    if (this.logFile != null) {
+      this.fileService.writeLine(this.logFile, message, { append: true })
+    }
   }
 }
 

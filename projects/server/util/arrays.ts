@@ -174,6 +174,23 @@ export function nonNull<T> (arr: (T | null)[]): T[] {
   return arr.filter(value => value != null) as T[]
 }
 
+export function values<T> (map: Map<any, T>): T[] {
+  return kvp(map).map(pair => pair.value)
+}
+
+export function kvp<K, V> (map: Map<K, V>): { key: K, value: V }[] {
+  let array: { key: K, value: V }[] = []
+
+  const iterator = map.entries()
+  let result = iterator.next()
+  while (!result.done) {
+    array.push({ key: result.value[0], value: result.value[1] })
+    result = iterator.next()
+  }
+
+  return array
+}
+
 export function compareArrays<T> (first: T[], second: T[], comparator?: (a: T, b: T) => boolean) {
   if (first.length !== second.length) {
     return false

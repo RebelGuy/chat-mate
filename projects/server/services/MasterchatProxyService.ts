@@ -2,26 +2,28 @@ import { ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { IMasterchat } from '@rebel/server/interfaces'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
+import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
+import { firstOrDefault } from '@rebel/server/util/typescript'
 
 type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout'>
 
 type Deps = Dependencies<{
   logService: LogService
   masterchatStatusService: StatusService
-  masterchatProvider: MasterchatProvider
+  masterchatFactory: MasterchatFactory
 }>
 
-export default class MasterchatProxyService extends ContextClass implements IMasterchat {
+export default class MasterchatProxyService extends ContextClass {
   public name = MasterchatProxyService.name
 
   private readonly logService: LogService
   private readonly statusService: StatusService
-  private readonly masterchat: PartialMasterchat
+  private readonly masterchatFactory: MasterchatFactory
 
-  private readonly wrappedMasterchat: PartialMasterchat
+  // note that some endpoints are livestream-agnostic
+  private readonly wrappedMasterchats: Map<string, PartialMasterchat>
 
   private requestId: number
 
@@ -29,52 +31,77 @@ export default class MasterchatProxyService extends ContextClass implements IMas
     super()
     this.logService = deps.resolve('logService')
     this.statusService = deps.resolve('masterchatStatusService')
-    this.masterchat = deps.resolve('masterchatProvider').get()
+    this.masterchatFactory = deps.resolve('masterchatFactory')
 
-    this.wrappedMasterchat = this.createWrapper()
+    this.wrappedMasterchats = new Map()
 
     this.requestId = 0
   }
 
-  public async fetch (chatToken?: string): Promise<ChatResponse> {
+  public addMasterchat (liveId: string) {
+    const newMasterchat = this.createWrapper(liveId, this.masterchatFactory.create(liveId))
+    this.wrappedMasterchats.set(liveId, newMasterchat)
+  }
+
+  public removeMasterchat (liveId: string) {
+    this.wrappedMasterchats.delete(liveId)
+  }
+
+  // the second argument is not optional to avoid bugs where `fetch(continuationToken)` is erroneously called.
+  public async fetch (liveId: string, continuationToken: string | undefined): Promise<ChatResponse> {
     // this quirky code is required for typescript to recognise which overloaded `fetch` method we are using
-    if (chatToken == null) {
-      return await this.wrappedMasterchat.fetch()
+    if (continuationToken == null) {
+      return await this.wrappedMasterchats.get(liveId)!.fetch()
     } else {
-      return await this.wrappedMasterchat.fetch(chatToken)
+      return await this.wrappedMasterchats.get(liveId)!.fetch(continuationToken)
     }
   }
 
-  public fetchMetadata (): Promise<Metadata> {
-    return this.wrappedMasterchat.fetchMetadata()
+  public async fetchMetadata (liveId: string): Promise<Metadata> {
+    return await this.wrappedMasterchats.get(liveId)!.fetchMetadata()
   }
 
+  /** Returns true if the channel was banned. False indicates that the 'hide channel' option
+   * was not included in the latest chat item's context menu. */
   public async banYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
     // only returns null if the action is not available in the context menu, e.g. if the user is already banned
-    const result = await this.wrappedMasterchat.hide(contextMenuEndpointParams)
+    const result = await this.getFirst().hide(contextMenuEndpointParams)
     return result != null
   }
 
-  /** Times out the channel by 5 minutes. This cannot be undone. */
+  /** Times out the channel by 5 minutes. This cannot be undone.
+   * 
+   * Returns true if the channel was banned. False indicates that the 'timeout channel'
+   * option was not included in the latest chat item's context menu. */
   public async timeout (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.wrappedMasterchat.timeout(contextMenuEndpointParams)
+    const result = await this.getFirst().timeout(contextMenuEndpointParams)
     return result != null
   }
 
+  /** Returns true if the channel was banned. False indicates that the 'unhide channel' option
+   * was not included in the latest chat item's context menu. */
   public async unbanYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.wrappedMasterchat.unhide(contextMenuEndpointParams)
+    const result = await this.getFirst().unhide(contextMenuEndpointParams)
     return result != null
+  }
+
+  private getFirst () {
+    const masterchat = firstOrDefault(this.wrappedMasterchats, null)
+    if (masterchat == null) {
+      throw new Error('No masterchat instance exists')
+    }
+    return masterchat
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
-  private createWrapper = (): PartialMasterchat => {
+  private createWrapper = (liveId: string, masterchat: Masterchat): PartialMasterchat => {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
-    const fetch = this.wrapRequest((...args) => this.masterchat.fetch(...args), 'masterchat.fetch')
-    const fetchMetadata = this.wrapRequest(() => this.masterchat.fetchMetadata(), 'masterchat.fetchMetadata')
-    const hide = this.wrapRequest((arg) => this.masterchat.hide(arg), 'masterchat.hide')
-    const unhide = this.wrapRequest((arg) => this.masterchat.unhide(arg), 'masterchat.unhide')
-    const timeout = this.wrapRequest((arg) => this.masterchat.timeout(arg), 'masterchat.timeout')
+    const fetch = this.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`)
+    const fetchMetadata = this.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`)
+    const hide = this.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`)
+    const unhide = this.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`)
+    const timeout = this.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`)
 
     return { fetch, fetchMetadata, hide, unhide, timeout }
   }

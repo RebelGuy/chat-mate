@@ -15,7 +15,9 @@ const livestream: Livestream = {
   continuationToken: 'token',
   createdAt: new Date(),
   start: new Date(),
-  end: null
+  end: null,
+  isActive: true,
+  type: 'publicLivestream'
 }
 
 const youtube1UserId = 1
@@ -147,7 +149,7 @@ export default () => {
     const dbProvider = await startTestDb()
 
     mockLivestreamStore = mock<LivestreamStore>()
-    mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(livestream)
+    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(livestream)
 
     chatStore = new ChatStore(new Dependencies({
       dbProvider,
@@ -242,6 +244,16 @@ export default () => {
       await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage).toBe(1)
+    })
+
+    test('adds chat without connecting to livestream if no active livestream', async () => {
+      mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+      const chatItem = makeYtChatItem(text1)
+
+      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+
+      const savedChatMessage = await db.chatMessage.findFirst()
+      expect(savedChatMessage!.livestreamId).toBeNull()
     })
   })
 

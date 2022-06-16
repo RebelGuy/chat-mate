@@ -4,25 +4,27 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
-import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { NoNulls } from '@rebel/server/types'
+import { assertNotNull } from '@rebel/server/util/typescript'
 
 export type ChatExperience =
-  NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'user' | 'experienceDataChatMessage' | 'livestream'>>
+  NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'user' | 'experienceDataChatMessage'>>
   & { experienceDataChatMessage: { chatMessage: ChatMessage} }
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
   'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier' | 'repetitionPenalty'>
   & { externalId: string }
 
+type ChatExperienceTransaction = ChatExperience & {
+    experienceDataChatMessage: ExperienceDataChatMessage & { chatMessage: ChatMessage }
+  }
+
 type Deps = Dependencies<{
   dbProvider: DbProvider
-  livestreamStore: LivestreamStore
 }>
 
 export default class ExperienceStore extends ContextClass {
   private readonly db: Db
-  private readonly livestreamStore: LivestreamStore
 
   // key is userId
   // value is null if we know there is no data for a particular user
@@ -36,7 +38,6 @@ export default class ExperienceStore extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
-    this.livestreamStore = deps.resolve('livestreamStore')
     this.previousChatExperienceMap = new Map()
     this.lastTransactionTime = null
   }
@@ -60,10 +61,15 @@ export default class ExperienceStore extends ContextClass {
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
       where: { user: { id: userId }, experienceDataChatMessage: { isNot: null }},
       orderBy: { time: 'desc' },
-      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
+      include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
     })
 
-    return this.cacheChatExperience(userId, experienceTransaction)
+    if (experienceTransaction != null) {
+      assertNotNull(experienceTransaction, 'experienceDataChatMessage', `experienceDataChatMessage of the chat experience transaction ${experienceTransaction.id} is null`)
+      return this.cacheChatExperience(userId, experienceTransaction)
+    } else {
+      return this.cacheChatExperience(userId, null)
+    }
   }
 
   public async addChatExperience (userId: number, timestamp: number, xp: number, data: ChatExperienceData) {
@@ -77,7 +83,6 @@ export default class ExperienceStore extends ContextClass {
       data: {
         time: new Date(timestamp),
         user: { connect: { id: userId }},
-        livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
         delta: xp,
         experienceDataChatMessage: { create: {
           baseExperience: data.baseExperience,
@@ -89,17 +94,21 @@ export default class ExperienceStore extends ContextClass {
           chatMessage: { connect: { externalId: data.externalId }}
         }}
       },
-      include: { livestream: true, experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
+      include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
     })
 
-    this.cacheChatExperience(userId, experienceTransaction)
+    if (experienceTransaction != null) {
+      assertNotNull(experienceTransaction, 'experienceDataChatMessage', `experienceDataChatMessage of the chat experience transaction ${experienceTransaction.id} is null`)
+      return this.cacheChatExperience(userId, experienceTransaction)
+    } else {
+      return this.cacheChatExperience(userId, null)
+    }
   }
 
   public async addManualExperience (userId: number, xp: number, message: string | null) {
     const experienceTransaction = await this.db.experienceTransaction.create({ data: {
       time: new Date(),
       user: { connect: { id: userId }},
-      livestream: { connect: { id: this.livestreamStore.currentLivestream.id }},
       delta: xp,
       experienceDataAdmin: { create: {
         adminUser: { connect: { id: this.ADMIN_USER_ID }},
@@ -156,10 +165,9 @@ export default class ExperienceStore extends ContextClass {
     return transactions
   }
 
-  private cacheChatExperience (userId: number, experienceTransaction: (Omit<ChatExperience, 'experienceDataChatMessage'> & { experienceDataChatMessage: (ExperienceDataChatMessage & { chatMessage: ChatMessage }) | null }) | null)
-    : ChatExperience | null {
+  private cacheChatExperience (userId: number, experienceTransaction: ChatExperienceTransaction | null) : ChatExperience | null {
     let result: ChatExperience | null
-    if (experienceTransaction) {
+    if (experienceTransaction != null) {
       result = {
         ...experienceTransaction,
         // no way to narrow this down using type guards... thanks typescript!
