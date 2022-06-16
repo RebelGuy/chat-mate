@@ -3,8 +3,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import * as AI from 'applicationinsights'
 
 type Deps = Dependencies<{
-  isLocal: boolean
-  applicationInsightsConnectionString: string
+  applicationInsightsConnectionString: string | null
 }>
 
 export default class ApplicationInsightsService extends ContextClass {
@@ -13,11 +12,12 @@ export default class ApplicationInsightsService extends ContextClass {
   constructor (deps: Deps) {
     super()
 
-    if (deps.resolve('isLocal')) {
+    const connectionString = deps.resolve('applicationInsightsConnectionString')
+    if (connectionString == null) {
       this.client = null
     } else {
       console.debug('Starting ApplicationInsights client...')
-      AI.setup(deps.resolve('applicationInsightsConnectionString'))
+      AI.setup(connectionString)
         .setAutoCollectConsole(true, true)
         .setSendLiveMetrics(true) // so we can monitor the app in real-time
         .start()

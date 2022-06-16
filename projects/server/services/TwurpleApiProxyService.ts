@@ -18,7 +18,7 @@ type Deps = Dependencies<{
   twitchChannelName: string
 }>
 
-/** Provides access to Twurple API calls - should not be a general proxy, not chat-mate specific (that's what the TwurpleService is for). */
+/** Provides access to Twurple API calls - should be a general proxy, not chat-mate specific (that's what the TwurpleService is for). */
 export default class TwurpleApiProxyService extends ContextClass implements ITwurpleApi {
   public name = TwurpleApiProxyService.name
 
