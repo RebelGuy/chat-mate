@@ -8,8 +8,9 @@
     "auth:twitch:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env electron ../../dist/server/scripts/TwitchAuth.js",
 
     "watch": "tsc --build --watch",
+    "start:local":  "cross-env NODE_ENV=debug BUILD=tsc IS_LOCAL=true nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
-    "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true nodemon --watch ../../dist --inspect ../../dist/server/app.js",
+    "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true IS_LOCAL=true nodemon --watch ../../dist --inspect ../../dist/server/app.js",
     "test": "cross-env NODE_ENV=debug BUILD=tsc dotenv -e test.env jest --detectOpenHandles=true --verbose=true",
     "test:db": "dotenv -e test.env yarn prisma migrate deploy",
     "generate": "dotenv -e debug.env npx prisma generate",

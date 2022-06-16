@@ -60,7 +60,6 @@ The following environment variables must be set in the `.env` file:
 
 The following set of environment variables is available only for **local development** (that is, where `IS_LOCAL` is `true`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
-- `IS_MOCK_LIVESTREAM`: *Deprecated* [Optional, debug only] If true, uses the chat data of the `LIVE_ID` to replay its chat events, and no longer connect to YouTube. See `MockMasterchat` for more options, such as hardcoding the set of messages to send, or taking console user input for specifying the next message text.
 
 The following set of environmnet variables is available only for **deployed instances** (that is, where `IS_LOCAL` is `false`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service

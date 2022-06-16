@@ -1,6 +1,5 @@
 require('./_config')
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
-import * as ApplicationInsights from 'applicationinsights'
 import express from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'
@@ -12,7 +11,6 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import MasterchatProvider from '@rebel/server/factories/MasterchatFactory'
 import path from 'node:path'
 import FileService from '@rebel/server/services/FileService'
-import { getLiveId } from '@rebel/server/util/text'
 import LogService, { createLogContext } from '@rebel/server/services/LogService'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'

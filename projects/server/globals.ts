@@ -38,10 +38,6 @@ type EnvironmentVariables = {
   channelId: string
   databaseUrl: string
 
-  // id for auto-replaying chat messages
-  /** @deprecated */
-  isMockLivestream: OptionalLocalVariable<boolean, false>
-
   // replaces some controllers with fake ones
   useFakeControllers: OptionalLocalVariable<boolean, false>
 
@@ -63,7 +59,6 @@ function getAllKeys () {
     'enableDbLogging': true,
     'hostName': true,
     'isLocal': true,
-    'isMockLivestream': true,
     'nodeEnv': true,
     'port': true,
     'twitchAccessToken': true,
@@ -105,7 +100,6 @@ injectedVariables.map(variable => {
 
 // local variables can only be accessed when running the server locally, and return null otherwise.
 const localVariables: Record<VariablesOfType<'local'>, true> = {
-  isMockLivestream: true,
   useFakeControllers: true
 }
 
@@ -117,7 +111,6 @@ const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
 
 // optional variables resolve to the default value if they are not included in the environment definition.
 const optionalVariables: OptionalVariablesWithDefaults = {
-  isMockLivestream: false,
   useFakeControllers: false,
   enableDbLogging: false,
   isLocal: false
@@ -161,7 +154,7 @@ const isLocal = parseValue<ValueType<'isLocal'>>(allEnvVariables[toConstCase(isL
 // before continuing, check that all non-optional variables have been provided
 let missingVars: string[] = []
 for (const key of allKeys) {
-  if (isOptionalVar(key) || isLocal && isLocalVar(key) || !isLocal && isDeploymentVar(key)) {
+  if (isOptionalVar(key) || isLocal && isDeploymentVar(key) || !isLocal && isLocalVar(key)) {
     continue
   }
 
