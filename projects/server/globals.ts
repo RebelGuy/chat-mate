@@ -139,16 +139,6 @@ if (dotenvResult.error) {
   dotenvResult.parsed = {}
 }
 
-// for some reason doing `...process.env` doesn't work, so we reassign relevant keys to a normal recrod
-let _env: Record<string, string> = {}
-for (const key of allKeys) {
-  const varKey = toConstCase(key)
-  const value = process.env[varKey]
-  if (value !== undefined) {
-    _env[varKey] = value
-  }
-}
-
 // we can't just read everything off process.env
 // because webpack thinks it knows what env variables
 // we will have and over-optimises the code.
@@ -156,7 +146,7 @@ const allEnvVariables: Record<string, string | undefined> = {
   ...dotenvResult.parsed,
 
   // injected variables take precedence
-  ..._env
+  ...process.env
 }
 
 // `isLocal` is special because it modifies the environment variable collection

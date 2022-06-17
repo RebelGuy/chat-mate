@@ -9,6 +9,7 @@ const PACKAGE = require('./package.json')
 const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
+  env['BUILD'] = 'webpack'
   const isLocal = env.IS_LOCAL ?? false
   const outPath = path.resolve(__dirname, `../../dist/server`)
 
@@ -101,15 +102,6 @@ module.exports = (env) => {
     },
     plugins: [
       new webpack.BannerPlugin(banner),
-      new webpack.DefinePlugin({
-        'process.env': {
-          // in the built file, webpack will replace `process.env.[variable]` with the
-          // provided string value, unwrapping one layer of quotation marks
-          'NODE_ENV': `"${env.NODE_ENV}"`,
-          'BUILD': `"webpack"`,
-          'IS_LOCAL': `"${isLocal}"`
-        }
-      }),
 
       // https://webpack.js.org/plugins/copy-webpack-plugin/
       new CopyWebpackPlugin({ patterns: copyPatters })
