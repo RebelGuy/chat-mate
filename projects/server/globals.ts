@@ -142,9 +142,10 @@ if (dotenvResult.error) {
 // for some reason doing `...process.env` doesn't work, so we reassign relevant keys to a normal recrod
 let _env: Record<string, string> = {}
 for (const key of allKeys) {
-  const value = process.env[key]
+  const varKey = toConstCase(key)
+  const value = process.env[varKey]
   if (value !== undefined) {
-    _env[key] = value
+    _env[varKey] = value
   }
 }
 
