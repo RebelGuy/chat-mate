@@ -2,7 +2,7 @@ import { NoNever, OptionalKeys, Primitive } from '@rebel/server/types'
 import dotenv from 'dotenv'
 import { toConstCase } from '@rebel/server/util/text'
 import assert from 'node:assert'
-console.log(process.env)
+
 /** Always returns T if running the server locally, otherwise null. */
 type LocalVariable<T extends Primitive | null> = { type: 'local', value: T | null }
 
@@ -85,19 +85,6 @@ type OptionalVariablesWithDefaults = NoNever<{
 
 type ValueType<V extends keyof EnvironmentVariables> = EnvironmentVariables[V] extends { value: infer Value } ? Value : EnvironmentVariables[V]
 
-// if an environment variable is included in this list, it must be set using the `cross-env` package.
-const injectedVariables: (keyof EnvironmentVariables)[] = [
-  'nodeEnv',
-  'build',
-  'isLocal' // has to be injected because it's used by webpack
-]
-
-injectedVariables.map(variable => {
-  const envName = toConstCase(variable)
-  const keys = Object.keys(process.env).filter(key => !key.startsWith('npm_'))
-  assert(keys.includes(envName), `Environment variable '${envName}' must be injected. Process.env keys: ${keys.join(', ')}`)
-})
-
 // local variables can only be accessed when running the server locally, and return null otherwise.
 const localVariables: Record<VariablesOfType<'local'>, true> = {
   useFakeControllers: true
@@ -126,6 +113,29 @@ function isLocalVar<V extends keyof EnvironmentVariables> (variable: V): boolean
 
 function isDeploymentVar<V extends keyof EnvironmentVariables> (variable: V): boolean {
   return Object.keys(deploymentVariables).includes(variable)
+}
+
+// if an environment variable is included in this list, it must be set using the `cross-env` package.
+const injectedVariables: (keyof EnvironmentVariables)[] = [
+  'nodeEnv',
+  'build',
+  'isLocal' // has to be injected because it's used by webpack
+]
+
+let missingInjectedVars: string[] = []
+for (const key of injectedVariables) {
+  if (isOptionalVar(key)) {
+    continue
+  }
+
+  const envName = toConstCase(key)
+  if (process.env[envName] === undefined) {
+    missingInjectedVars.push(envName)
+  }
+}
+
+if (missingInjectedVars.length > 0) {
+  throw new Error('The following required environment variables have not been set: ' + missingInjectedVars.join(', ') + '. The list of set variables is: ' + Object.keys(process.env).join(', '))
 }
 
 // separate debug/release .env files
