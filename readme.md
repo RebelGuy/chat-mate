@@ -4,10 +4,11 @@ A work-in-progress is the `./projects/studio` project. It is a (for now) private
 
 To get things running, ensure Node 16 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
 
-Recommended extensions:
+Recommended VSCode extensions:
 - `ESLint`
 - `GitLens`
 - `Prisma`
+- `GitHub Actions`
 
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.

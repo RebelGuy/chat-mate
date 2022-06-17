@@ -9,7 +9,6 @@
     "editor.formatOnSave": true
   },
   "files.exclude": {
-    "**/.github": true,
     "**/.husky": true,
     "**/data": true,
     "**/dist": true,
