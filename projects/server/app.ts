@@ -66,7 +66,7 @@ const twitchRefreshToken = env('twitchRefreshToken')
 const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
 const enableDbLogging = env('enableDbLogging')
 const isLocal = env('isLocal')
-const hostName = env('hostName')
+const hostName = env('websiteHostname')
 
 const globalContext = ContextProvider.create()
   .withProperty('port', port)

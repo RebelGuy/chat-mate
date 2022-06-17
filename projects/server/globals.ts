@@ -2,7 +2,7 @@ import { NoNever, OptionalKeys, Primitive } from '@rebel/server/types'
 import dotenv from 'dotenv'
 import { toConstCase } from '@rebel/server/util/text'
 import assert from 'node:assert'
-
+console.log(process.env)
 /** Always returns T if running the server locally, otherwise null. */
 type LocalVariable<T extends Primitive | null> = { type: 'local', value: T | null }
 
@@ -42,7 +42,7 @@ type EnvironmentVariables = {
   useFakeControllers: OptionalLocalVariable<boolean, false>
 
   applicationinsightsConnectionString: DeploymentVariable<string>
-  hostName: DeploymentVariable<string>
+  websiteHostname: DeploymentVariable<string>
 
   // if false, will still log warnings and errors
   enableDbLogging: OptionalVariable<boolean, false>
@@ -57,7 +57,7 @@ function getAllKeys () {
     'channelId': true,
     'databaseUrl': true,
     'enableDbLogging': true,
-    'hostName': true,
+    'websiteHostname': true,
     'isLocal': true,
     'nodeEnv': true,
     'port': true,
@@ -106,7 +106,7 @@ const localVariables: Record<VariablesOfType<'local'>, true> = {
 // deployment variables can only be accessed when running the server in Azure, and return null otherwise.
 const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
   applicationinsightsConnectionString: true,
-  hostName: true
+  websiteHostname: true
 }
 
 // optional variables resolve to the default value if they are not included in the environment definition.

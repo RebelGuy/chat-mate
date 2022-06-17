@@ -63,7 +63,7 @@ The following set of environment variables is available only for **local develop
 
 The following set of environmnet variables is available only for **deployed instances** (that is, where `IS_LOCAL` is `false`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
-- `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`
+- `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`. *This is set automatically by Azure.*
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
 - `NODE_ENV`: Either `debug` or `release` to indicate whether we are connecting to debug or release servers.
