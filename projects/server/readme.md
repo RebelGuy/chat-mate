@@ -42,7 +42,7 @@ For the initial authentication, you will need to start the Electron app via `yar
 Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you delete the single row in the `twitch_auth` table and follow the steps above to repeat the initial authentication process.
 
 # .env
-Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template.
+Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
 
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
@@ -62,7 +62,7 @@ The following set of environment variables is available only for **local develop
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
 
 The following set of environmnet variables is available only for **deployed instances** (that is, where `IS_LOCAL` is `false`):
-- `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service
+- `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
 - `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:

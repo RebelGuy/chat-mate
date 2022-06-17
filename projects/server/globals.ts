@@ -132,9 +132,11 @@ function isDeploymentVar<V extends keyof EnvironmentVariables> (variable: V): bo
 const dotenvFile = `./${process.env.NODE_ENV}.env`
 const dotenvResult = dotenv.config({ path: dotenvFile})
 if (dotenvResult.error) {
-  throw new Error(`Unable to load dot-env file at ${dotenvFile} : ` + dotenvResult.error.message)
+  console.error(`Unable to load dot-env file at ${dotenvFile} : ` + dotenvResult.error.message)
+  dotenvResult.parsed = {}
 } else if (dotenvResult.parsed == null) {
-  throw new Error(`Managed to load dot-env file at ${dotenvFile} but result was null`)
+  console.error(`Managed to load dot-env file at ${dotenvFile} but result was null`)
+  dotenvResult.parsed = {}
 }
 
 // we can't just read everything off process.env
