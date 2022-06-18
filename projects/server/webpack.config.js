@@ -27,6 +27,14 @@ module.exports = (env) => {
       // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
       from: path.resolve(__dirname, './node_modules/.prisma/client/schema.prisma'),
       to: outPath,
+    },
+    {
+      from: path.resolve(__dirname, './key.pem'),
+      to: outPath
+    },
+    {
+      from: path.resolve(__dirname, './certificate.pem'),
+      to: outPath
     }
   ]
 
