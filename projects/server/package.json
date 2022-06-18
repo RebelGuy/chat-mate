@@ -7,7 +7,7 @@
     "auth:twitch:debug": "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env electron ../../dist/server/scripts/TwitchAuth.js",
     "auth:twitch:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env electron ../../dist/server/scripts/TwitchAuth.js",
 
-    "watch": "tsc --build --watch",
+    "watch": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true",
     "start:local":  "cross-env NODE_ENV=debug BUILD=tsc IS_LOCAL=true nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
     "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true IS_LOCAL=true nodemon --watch ../../dist --inspect ../../dist/server/app.js",

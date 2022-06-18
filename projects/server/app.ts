@@ -1,4 +1,3 @@
-require('./_config')
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
 import express from 'express'
 import { Server } from 'typescript-rest'
@@ -56,6 +55,12 @@ import { Express } from 'express-serve-static-core'
 // "Over-engineering is the best thing since sliced bread."
 //   - some Rebel Guy
 //
+
+console.log('This is a test log')
+console.debug('This is a test debug')
+console.info('This is a test info')
+console.warn('This is a test warn')
+console.error('This is a test error')
 
 const app: Express = express()
 
@@ -128,6 +133,8 @@ const globalContext = ContextProvider.create()
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
   .build()
+
+app.get('/', (_, res) => res.sendFile('index.html', { root: __dirname }))
 
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it

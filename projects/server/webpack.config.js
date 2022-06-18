@@ -35,6 +35,9 @@ module.exports = (env) => {
     {
       from: path.resolve(__dirname, './certificate.pem'),
       to: outPath
+    },
+    { from: path.resolve(__dirname, './index.html'),
+      to: outPath
     }
   ]
 
@@ -80,14 +83,25 @@ module.exports = (env) => {
       'utf-8-validate': 'utf-8-validate',
 
       // this is in the node_modules/ws/lib/buffer-util.js file, and is safe to ignore as there is a fallback mechanism for when the module doesn't exist
-      'bufferutil': 'bufferutil'
+      'bufferutil': 'bufferutil',
+
+      // webpack is unable to find some modules required by applicationinsights, but everything seems to work fine so make it shut up 
+      'applicationinsights-native-metrics': 'commonjs applicationinsights-native-metrics',
+      '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
+      '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
     },
     target: 'node',
 
     // better stack traces in production errors, but slow builds
-    devtool: 'source-map',
+    devtool: isLocal ? 'eval-source-map' : 'source-map',
 
     ignoreWarnings: [/Critical dependency: the request of a dependency is an expression/],
+
+    watchOptions: isLocal ? {
+      poll: 1000,
+      aggregateTimeout: 500,
+      ignored: ['**/node_modules', '**/dist']
+    } : {},
 
     output: {
       path: outPath,
