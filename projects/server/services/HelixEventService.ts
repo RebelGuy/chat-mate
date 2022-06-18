@@ -124,12 +124,12 @@ export default class HelixEventService extends ContextClass {
       // debug the Ngrok server at http://localhost:4040/inspect/http
       return new NgrokAdapter()
     } else {
-      const key = this.fileService.read('key.pem')
+      const key = this.fileService.read('./server/key.pem')
       if (key == null) {
         throw new Error(`Unable to read SSL private key because the 'key.pem' file could not be found`)
       }
 
-      const cert = this.fileService.read('certificate.pem')
+      const cert = this.fileService.read('./server/certificate.pem')
       if (cert == null) {
         throw new Error(`Unable to read SSL certificate because the 'certificate.pem' file could not be found`)
       }
