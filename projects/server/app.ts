@@ -50,11 +50,14 @@ import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
+import { Express } from 'express-serve-static-core'
 
 //
 // "Over-engineering is the best thing since sliced bread."
 //   - some Rebel Guy
 //
+
+const app: Express = express()
 
 const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/`)
@@ -69,6 +72,7 @@ const isLocal = env('isLocal')
 const hostName = env('websiteHostname')
 
 const globalContext = ContextProvider.create()
+  .withObject('app', app)
   .withProperty('port', port)
   .withProperty('auth', env('auth'))
   .withProperty('channelId', env('channelId'))
@@ -125,7 +129,6 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .build()
 
-const app = express()
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it
 // reaches the controllers.
@@ -151,6 +154,7 @@ app.use(async (req, res, next) => {
   await context.initialise()
   setContextProvider(req, context)
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   res.on('finish', async () => {
     await context.dispose()
   })

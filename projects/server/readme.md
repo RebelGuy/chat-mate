@@ -133,6 +133,7 @@ Key:
   - 🟢 getLevelDiffs
   - 🟢 modifyExperience
 - ⚪ EventDispatchService
+- ⚪ HelixEventService
 - 🟢 LivestreamService
   - 🟢 initialise
   - 🟢 deactivateLivestream
