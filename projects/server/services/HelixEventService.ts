@@ -105,6 +105,7 @@ export default class HelixEventService extends ContextClass {
         secret: this.getSecret()
       })
       await middleware.apply(this.app)
+      await middleware.markAsReady()
       eventSubBase = middleware
     }
 
