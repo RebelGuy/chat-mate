@@ -22,6 +22,7 @@ export default class LogService extends ContextClass {
   private readonly fileService: FileService
   private readonly applicationInsightsService: ApplicationInsightsService
   private readonly enableDbLogging: boolean
+  private readonly isLocal: boolean
   private readonly logFile: string | null
 
   constructor (deps: Deps) {
@@ -29,7 +30,8 @@ export default class LogService extends ContextClass {
     this.fileService = deps.resolve('fileService')
     this.applicationInsightsService = deps.resolve('applicationInsightsService')
     this.enableDbLogging = deps.resolve('enableDbLogging')
-    this.logFile = deps.resolve('isLocal') ? this.fileService.getDataFilePath(`log_${formatDate()}.txt`) : null
+    this.isLocal = deps.resolve('isLocal')
+    this.logFile = this.isLocal ? this.fileService.getDataFilePath(`log_${formatDate()}.txt`) : null
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
@@ -63,7 +65,7 @@ export default class LogService extends ContextClass {
     }
 
     const prefix = `${formatTime()} ${logType.toUpperCase()} > [${logger.name}]`
-    if (!(logType === 'api' || logType === 'debug')) {
+    if (!(logType === 'api' || logType === 'debug') || !this.isLocal) {
       // don't print api or debug logs to the console as they are very verbose
       const consoleLogger = logType === 'error' ? console.error
         : logType === 'warning' ? console.warn
