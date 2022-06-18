@@ -56,6 +56,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'chat-mate-sandbox'
-          slot-name: 'Sandbox'
+          slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9BBD3D4C46274FCD94006579EB592F31 }}
           package: .
