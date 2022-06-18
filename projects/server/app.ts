@@ -56,12 +56,6 @@ import { Express } from 'express-serve-static-core'
 //   - some Rebel Guy
 //
 
-console.log('This is a test log')
-console.debug('This is a test debug')
-console.info('This is a test info')
-console.warn('This is a test warn')
-console.error('This is a test error')
-
 const app: Express = express()
 
 const port = env('port')
@@ -199,5 +193,8 @@ if (env('useFakeControllers')) {
 globalContext.initialise().then(() => {
   app.listen(port, () => {
     logContext.logInfo(`Server is listening on ${port}`)
+    logContext.logDebug('This is a test debug message')
+    logContext.logWarning('This is a test warning')
+    logContext.logError('This is a test error')
   })
 })

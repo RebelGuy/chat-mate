@@ -90,14 +90,14 @@ export default class HelixEventService extends ContextClass {
     // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
     await this.eventSubApi.deleteAllSubscriptions()
 
-    let eventSubBase: EventSubBase
     if (this.isLocal) {
       this.listener = this.createNewListener()
       await this.listener.listen()
       this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
-      eventSubBase = this.listener
+      await this.subscribeToEvents(this.listener)    
+      this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Ngrok listener]')
     } else {
-      // can't use the listener - have to injecet the middleware
+      // can't use the listener - have to inject the middleware
       const middleware = new EventSubMiddleware({
         apiClient: this.twurpleApiClientProvider.getClientApi(),
         pathPrefix: '/twitch',
@@ -105,12 +105,17 @@ export default class HelixEventService extends ContextClass {
         secret: this.getSecret()
       })
       await middleware.apply(this.app)
-      await middleware.markAsReady()
-      eventSubBase = middleware
-    }
 
-    await this.subscribeToEvents(eventSubBase)    
-    this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API')
+      // hack: only mark as ready once we are starting the app so no events get lost
+      // - assume this happens in the next 5 seconds (generous delay - we are in no rush)
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      setTimeout(async () => {
+        await middleware.markAsReady()
+        await this.subscribeToEvents(middleware)    
+        this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Middleware listener]')
+      }, 5000)
+      this.logService.logInfo(this, 'Subscription to Helix events via the EventSub API has been set up and will be initialised in 5 seconds')
+    }
   }
 
   private async refreshNgrok () {
