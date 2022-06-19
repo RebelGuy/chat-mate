@@ -93,7 +93,7 @@ module.exports = (env) => {
     target: 'node',
 
     // better stack traces in production errors, but slow builds
-    devtool: isLocal ? 'eval-source-map' : 'source-map',
+    devtool: 'source-map',
 
     ignoreWarnings: [/Critical dependency: the request of a dependency is an expression/],
 

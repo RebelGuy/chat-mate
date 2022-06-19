@@ -64,8 +64,9 @@ export default class LogService extends ContextClass {
       return
     }
 
+    const isVerbose = logType === 'api' || logType === 'debug'
     const prefix = `${formatTime()} ${logType.toUpperCase()} > [${logger.name}]`
-    if (!(logType === 'api' || logType === 'debug') || !this.isLocal) {
+    if (!isVerbose) {
       // don't print api or debug logs to the console as they are very verbose
       const consoleLogger = logType === 'error' ? console.error
         : logType === 'warning' ? console.warn
@@ -78,6 +79,8 @@ export default class LogService extends ContextClass {
       try {
         if (typeof a === 'string') {
           return a
+        } else if (a instanceof Error) {
+          return `{ name: ${a.name}, message: ${a.message}, stack: ${a.stack} }`
         } else {
           return JSON.stringify(a) ?? 'undefined'
         }
@@ -94,6 +97,10 @@ export default class LogService extends ContextClass {
 
     if (this.logFile != null) {
       this.fileService.writeLine(this.logFile, message, { append: true })
+    }
+
+    if (!isVerbose) {
+      this.applicationInsightsService.trackTrace(logType, message)
     }
   }
 }

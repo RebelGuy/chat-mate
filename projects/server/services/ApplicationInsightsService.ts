@@ -1,6 +1,8 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import { assertUnreachable } from '@rebel/server/util/typescript'
 import * as AI from 'applicationinsights'
+import { SeverityLevel } from 'applicationinsights/out/Declarations/Contracts'
 
 type Deps = Dependencies<{
   applicationInsightsConnectionString: string | null
@@ -18,7 +20,7 @@ export default class ApplicationInsightsService extends ContextClass {
     } else {
       console.debug('Starting ApplicationInsights client...')
       AI.setup(connectionString)
-        .setAutoCollectConsole(true, true)
+        .setAutoCollectConsole(false) // doesn't seem to work properly - instead, we manually track these via `trackTrace()` for better control
         .setSendLiveMetrics(true) // so we can monitor the app in real-time
         .start()
       this.client = AI.defaultClient
@@ -26,6 +28,7 @@ export default class ApplicationInsightsService extends ContextClass {
     }
   }
 
+  // for some reason, this doesn't show up in ApplicationInsights (there should be an `Exception` event type for this)
   public trackException (args: any[]) {
     if (this.client == null) {
       return
@@ -39,8 +42,33 @@ export default class ApplicationInsightsService extends ContextClass {
         exception: error,
         properties: {
           additionalData: data
-        }
+        },
+        severity: SeverityLevel.Error
       })
+
     }
+
+    if (errors.length > 0) {
+      this.client.flush()
+    }
+  }
+
+  public trackTrace (type: 'info' | 'warning' | 'error', message: string) {
+    if (this.client == null) {
+      return
+    }
+
+    let severity: SeverityLevel
+    if (type === 'info') {
+      severity = SeverityLevel.Information
+    } else if (type === 'warning') {
+      severity = SeverityLevel.Warning
+    } else if (type === 'error') {
+      severity = SeverityLevel.Error
+    } else {
+      assertUnreachable(type)
+    }
+
+    this.client.trackTrace({ message, severity })
   }
 }
