@@ -193,8 +193,5 @@ if (env('useFakeControllers')) {
 globalContext.initialise().then(() => {
   app.listen(port, () => {
     logContext.logInfo(`Server is listening on ${port}`)
-    logContext.logDebug('This is a test debug message') // doesn't show up
-    logContext.logWarning('This is a test warning') // shows up with severity warning
-    logContext.logError('This is a test error', new Error()) // shows up with severity warning
   })
 })

@@ -31,7 +31,7 @@ export default class LogService extends ContextClass {
     this.applicationInsightsService = deps.resolve('applicationInsightsService')
     this.enableDbLogging = deps.resolve('enableDbLogging')
     this.isLocal = deps.resolve('isLocal')
-    this.logFile = this.isLocal ? this.fileService.getDataFilePath(`log_${formatDate()}.txt`) : null
+    this.logFile = this.fileService.getDataFilePath(`log_${formatDate()}.txt`)
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
