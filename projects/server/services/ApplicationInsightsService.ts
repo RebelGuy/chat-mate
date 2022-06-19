@@ -58,9 +58,11 @@ export default class ApplicationInsightsService extends ContextClass {
       return
     }
 
+    // for now, keep the Application Insights organised by only sending important messages.
+    // everything else can be read manually from the log file if required.
     let severity: SeverityLevel
     if (type === 'info') {
-      severity = SeverityLevel.Information
+      return
     } else if (type === 'warning') {
       severity = SeverityLevel.Warning
     } else if (type === 'error') {

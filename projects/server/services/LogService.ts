@@ -23,7 +23,6 @@ export default class LogService extends ContextClass {
   private readonly applicationInsightsService: ApplicationInsightsService
   private readonly enableDbLogging: boolean
   private readonly isLocal: boolean
-  private readonly logFile: string | null
 
   constructor (deps: Deps) {
     super()
@@ -31,7 +30,6 @@ export default class LogService extends ContextClass {
     this.applicationInsightsService = deps.resolve('applicationInsightsService')
     this.enableDbLogging = deps.resolve('enableDbLogging')
     this.isLocal = deps.resolve('isLocal')
-    this.logFile = this.fileService.getDataFilePath(`log_${formatDate()}.txt`)
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
@@ -95,13 +93,16 @@ export default class LogService extends ContextClass {
       this.applicationInsightsService.trackException(args)
     }
 
-    if (this.logFile != null) {
-      this.fileService.writeLine(this.logFile, message, { append: true })
-    }
+    this.fileService.writeLine(this.getLogFile(), message, { append: true })
 
     if (!isVerbose) {
       this.applicationInsightsService.trackTrace(logType, message)
     }
+  }
+
+  // automatically write to a new file every day so they don't get too large
+  private getLogFile () {
+    return this.fileService.getDataFilePath(`log_${formatDate()}.txt`)
   }
 }
 
@@ -143,7 +144,7 @@ export function onTwurpleClientLog (context: LogContext, level: LogLevel, messag
       context.logDebug('[DEBUG]', message)
       break
     case LogLevel.TRACE:
-      context.logDebug('[TRACE]', message)
+      // don't log - trace events are extremely verbose and not helpful to us
       break
     default:
       assertUnreachable(level)
