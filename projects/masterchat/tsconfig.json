@@ -5,7 +5,7 @@
     "composite": true,
     "target": "es2020",
     "module": "commonjs",
-    "outDir": "../../dist/debug/masterchat",
+    "outDir": "../../dist/masterchat",
     // the first dir is required so the debugger can find sourcemaps,
     // the second is required for the actual compilation
     "rootDirs": ["./", "./src"]

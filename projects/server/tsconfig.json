@@ -5,7 +5,7 @@
   ],
   "compilerOptions": {
     "composite": true,
-    "outDir": "../../dist/debug/server",
+    "outDir": "../../dist/server",
     "module": "commonjs",
     "target": "es2020", // required because masterchat uses BigInt
     "lib": ["ES6", "DOM"], // DOM is required to make `fetch` work

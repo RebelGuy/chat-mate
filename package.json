@@ -8,8 +8,8 @@
     ]
   },
   "_moduleAliases": {
-    "@rebel/server": "./dist/debug/server",
-    "@rebel/masterchat": "./dist/debug/masterchat/src"
+    "@rebel/server": "./dist/server",
+    "@rebel/masterchat": "./dist/masterchat/src"
   },
   "devDependencies": {
     "@types/eslint": "^8.4.1",

@@ -14,7 +14,7 @@
     "test": "npm run build && cross-env DEBUG=masterchat jest"
   },
   "files": [
-    "../../dist/debug/masterchat"
+    "../../dist/masterchat"
   ],
   "dependencies": {
     "axios": "^0.26.1",

@@ -1,4 +1,3 @@
-require('./_config')
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
 import express from 'express'
 import { Server } from 'typescript-rest'
@@ -8,10 +7,9 @@ import { ContextProvider, setContextProvider } from '@rebel/server/context/conte
 import ChatService from '@rebel/server/services/ChatService'
 import ServiceFactory from '@rebel/server/context/CustomServiceFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import MasterchatProvider from '@rebel/server/providers/MasterchatProvider'
+import MasterchatProvider from '@rebel/server/factories/MasterchatFactory'
 import path from 'node:path'
 import FileService from '@rebel/server/services/FileService'
-import { getLiveId } from '@rebel/server/util/text'
 import LogService, { createLogContext } from '@rebel/server/services/LogService'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -48,27 +46,35 @@ import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
+import { Express } from 'express-serve-static-core'
 
 //
 // "Over-engineering is the best thing since sliced bread."
 //   - some Rebel Guy
 //
 
+const app: Express = express()
+
 const port = env('port')
-const dataPath = path.resolve(__dirname, `../../../data/${env('nodeEnv')}/`)
-const liveId = getLiveId(env('liveId'))
+const dataPath = path.resolve(__dirname, `../../data/`)
 const twitchClientId = env('twitchClientId')
 const twitchClientSecret = env('twitchClientSecret')
 const twitchChannelName = env('twitchChannelName')
 const twitchAccessToken = env('twitchAccessToken')
 const twitchRefreshToken = env('twitchRefreshToken')
+const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
+const enableDbLogging = env('enableDbLogging')
+const isLocal = env('isLocal')
+const hostName = env('websiteHostname')
 
 const globalContext = ContextProvider.create()
+  .withObject('app', app)
   .withProperty('port', port)
   .withProperty('auth', env('auth'))
   .withProperty('channelId', env('channelId'))
-  .withProperty('liveId', liveId)
   .withProperty('dataPath', dataPath)
   .withProperty('isLive', env('nodeEnv') === 'release')
   .withProperty('databaseUrl', env('databaseUrl'))
@@ -78,6 +84,10 @@ const globalContext = ContextProvider.create()
   .withProperty('twitchChannelName', twitchChannelName)
   .withProperty('twitchAccessToken', twitchAccessToken)
   .withProperty('twitchRefreshToken', twitchRefreshToken)
+  .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
+  .withProperty('enableDbLogging', enableDbLogging)
+  .withProperty('isLocal', isLocal)
+  .withProperty('hostName', hostName)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -85,7 +95,9 @@ const globalContext = ContextProvider.create()
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
+  .withClass('applicationInsightsService', ApplicationInsightsService)
   .withClass('logService', LogService)
+  .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
   .withClass('twurpleStatusService', StatusService)
   .withClass('dbProvider', DbProvider)
@@ -116,7 +128,8 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .build()
 
-const app = express()
+app.get('/', (_, res) => res.sendFile('index.html', { root: __dirname }))
+
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it
 // reaches the controllers.
@@ -142,6 +155,7 @@ app.use(async (req, res, next) => {
   await context.initialise()
   setContextProvider(req, context)
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   res.on('finish', async () => {
     await context.dispose()
   })
@@ -175,8 +189,6 @@ process.on('unhandledRejection', (error) => {
 if (env('useFakeControllers')) {
   logContext.logInfo(`Using fake controllers`)
 }
-
-logContext.logInfo(`Using live ID ${liveId}`)
 
 globalContext.initialise().then(() => {
   app.listen(port, () => {

@@ -1,3 +1,4 @@
+import ChatMateManager from '@rebel/studio/ChatMateManager'
 import React from 'react'
 import './App.css'
 import CustomEmojiManager from './CustomEmojiManager'
@@ -5,7 +6,7 @@ import CustomEmojiManager from './CustomEmojiManager'
 type Props = {}
 
 type State = {
-  currentPage: null | 'customEmoji'
+  currentPage: null | 'customEmoji' | 'chatMate'
 }
 
 export default class App extends React.PureComponent<Props, State> {
@@ -17,6 +18,10 @@ export default class App extends React.PureComponent<Props, State> {
     }
   }
 
+  onSelectChatMatePage = () => {
+    this.setState({ currentPage: 'chatMate' })
+  }
+
   onSelectCustomEmojiPage = () => {
     this.setState({ currentPage: 'customEmoji' })
   }
@@ -25,7 +30,11 @@ export default class App extends React.PureComponent<Props, State> {
     return (
       <div className="App">
         <h1>ChatMate Studio</h1>
-        {this.state.currentPage === null && <button onClick={this.onSelectCustomEmojiPage}>Custom Emoji Manager</button>}
+        {this.state.currentPage === null && <div>
+          <button onClick={this.onSelectCustomEmojiPage} style={{ display: 'block', margin: 'auto' }}>Custom Emoji Manager</button>
+          <button onClick={this.onSelectChatMatePage} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
+        </div>}
+        {this.state.currentPage === 'chatMate' && <ChatMateManager />}
         {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
       </div>
     )

@@ -9,9 +9,44 @@ const PACKAGE = require('./package.json')
 const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
-  env.BUILD = 'webpack'
-  const isDebug = env.NODE_ENV === 'debug'
-  const outPath = path.resolve(__dirname, `../../dist/${env.NODE_ENV}/server`)
+  env['BUILD'] = 'webpack'
+  const isLocal = env.IS_LOCAL ?? false
+  const outPath = path.resolve(__dirname, `../../dist/server`)
+
+  // note: path.resolve doesn't work with glob patterns
+  /** @type CopyWebpackPlugin.Pattern[] */
+  const copyPatters = [
+    {
+      // the file we are interested in has 'engine' in its name.
+      // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
+      from: './node_modules/.prisma/client/*engine*', // `query_engine-windows.dll.node` for windows
+      to: path.resolve(outPath, './[name][ext]'), // place the file directly to the output directory instead of copying the directory tree, otherwise Prisma won't find it
+    },
+    {
+      // required for prisma to find the schema file
+      // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
+      from: path.resolve(__dirname, './node_modules/.prisma/client/schema.prisma'),
+      to: outPath,
+    },
+    {
+      from: path.resolve(__dirname, './key.pem'),
+      to: outPath
+    },
+    {
+      from: path.resolve(__dirname, './certificate.pem'),
+      to: outPath
+    },
+    { from: path.resolve(__dirname, './index.html'),
+      to: outPath
+    }
+  ]
+
+  if (isLocal) {
+    copyPatters.push({
+      from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
+      to: path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it (folder is automatically created)
+    })
+  }
 
   return {
     // this opts out of automatic optimisations - do NOT set this to production as the app
@@ -48,7 +83,12 @@ module.exports = (env) => {
       'utf-8-validate': 'utf-8-validate',
 
       // this is in the node_modules/ws/lib/buffer-util.js file, and is safe to ignore as there is a fallback mechanism for when the module doesn't exist
-      'bufferutil': 'bufferutil'
+      'bufferutil': 'bufferutil',
+
+      // webpack is unable to find some modules required by applicationinsights, but everything seems to work fine so make it shut up 
+      'applicationinsights-native-metrics': 'commonjs applicationinsights-native-metrics',
+      '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
+      '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
     },
     target: 'node',
 
@@ -57,9 +97,14 @@ module.exports = (env) => {
 
     ignoreWarnings: [/Critical dependency: the request of a dependency is an expression/],
 
+    watchOptions: isLocal ? {
+      poll: 1000,
+      aggregateTimeout: 500,
+      ignored: ['**/node_modules', '**/dist']
+    } : {},
+
     output: {
       path: outPath,
-      // output path is already dist somehow
       filename: `./app.js`
     },
     module: {
@@ -79,37 +124,9 @@ module.exports = (env) => {
     },
     plugins: [
       new webpack.BannerPlugin(banner),
-      new webpack.DefinePlugin({
-        'process.env':{
-          // in the built file, webpack will replace `process.env.[variable]` with the
-          // provided string value, unwrapping one layer of quotation marks
-          'NODE_ENV': `"${env.NODE_ENV}"`,
-          'BUILD': `"webpack"`
-        }
-      }),
 
       // https://webpack.js.org/plugins/copy-webpack-plugin/
-      // note: path.resolve doesn't work with glob patterns
-      new CopyWebpackPlugin({
-        patterns: [
-          {
-            // the file we are interested in has 'engine' in its name.
-            // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
-            from: './node_modules/.prisma/client/*engine*', // `query_engine-windows.dll.node` for windows
-            to: outPath,
-          },
-          {
-            // required for prisma to find the schema file
-            // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
-            from: path.resolve(__dirname, './node_modules/.prisma/client/schema.prisma'),
-            to: outPath,
-          },
-          {
-            from: '../../node_modules/ngrok/bin/**', // `ngrok.exe` for windows
-            to: path.resolve(outPath, '../bin/') // it has to go here exactly, otherwise ngrok won't find it (folder is automatically created)
-          }
-        ],
-      })
+      new CopyWebpackPlugin({ patterns: copyPatters })
     ]
   }
 }

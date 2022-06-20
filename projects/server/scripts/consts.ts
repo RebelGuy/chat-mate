@@ -6,7 +6,7 @@ export const IS_DEBUG = process.env.NODE_ENV === 'debug'
 
 export const IS_LIVE = !IS_DEBUG
 
-export const DATA_PATH = path.join(__dirname, `../../../../data/${IS_LIVE ? 'release' : 'debug'}`)
+export const DATA_PATH = path.join(__dirname, `../../../data`)
 
 export const DATABASE_URL = process.env.DATABASE_URL!
 

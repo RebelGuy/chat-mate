@@ -42,6 +42,9 @@ export type NoNulls<T> = {
   [P in keyof T]: Exclude<T[P], null>
 }
 
+/** Returns T but with all `never` properties removed. */
+export type NoNever<T extends GenericObject> = Omit<T, { [K in keyof T]: T[K] extends never ? K : never }[keyof T]>
+
 export type Nullify<T> = {
   [P in keyof T]: T[P] | null
 }

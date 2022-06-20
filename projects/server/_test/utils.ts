@@ -32,7 +32,8 @@ type NonFunctionPropertyNames<T> = {
 export function mockGetter<T, GetterName extends NonFunctionPropertyNames<T>> (obj: MockProxy<T>, getterName: GetterName) {
   const mockedGetter = jest.fn() as jest.Mock<T[GetterName], []>
   Object.defineProperty(obj, getterName, {
-    get: mockedGetter
+    get: mockedGetter,
+    configurable: true // allow this to be overwritten if it already exists
   })
 
   return mockedGetter
@@ -61,4 +62,9 @@ export function expectStrictIncreasing (...values: number[]) {
   for (let i = 1; i < values.length; i++) {
     expect(values[i - 1]).toBeLessThan(values[i])
   }
+}
+
+/** Shorthand for casting a partial type to its full version, such as `{} as Partial<T> as T`. */
+export function mockData<T> (data: Partial<T>): T {
+  return data as T
 }

@@ -7,6 +7,7 @@ import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel
 import { nameof, single } from '@rebel/server/_test/utils'
 import { mock } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
+import { addTime } from '@rebel/server/util/datetime'
 
 export default () => {
   let followerStore: FollowerStore
@@ -50,7 +51,8 @@ export default () => {
 
       await followerStore.saveNewFollower('12345', 'testuser', 'TestUser')
 
-      const maxDate = new Date().getTime()
+      // add a second because db time could be slightly different apparently
+      const maxDate = addTime(new Date(), 'seconds', 1).getTime()
       const expected: Partial<TwitchFollower> = {
         twitchId: '12345',
         userName: 'testuser',

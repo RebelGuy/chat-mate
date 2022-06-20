@@ -3,12 +3,12 @@ import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHe
 import ExperienceService, { Level, RankedEntry } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { getGetterMock, mockGetter, nameof, single } from '@rebel/server/_test/utils'
+import { getGetterMock, mockData, mockGetter, nameof, single } from '@rebel/server/_test/utils'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { asGte, asLt, asRange, sum } from '@rebel/server/util/math'
-import { ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
+import { ChatMessage, ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
 import { addTime } from '@rebel/server/util/datetime'
 import { ChatItem, ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
@@ -36,7 +36,7 @@ beforeEach(() => {
   mockChannelService = mock<ChannelService>()
   mockPunishmentService = mock<PunishmentService>()
 
-  mockGetter(mockLivestreamStore, 'currentLivestream').mockReturnValue(data.livestream3)
+  mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(data.livestream3)
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -51,7 +51,7 @@ beforeEach(() => {
 })
 
 describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
-  test('does not add experience if livestream not live', async () => {
+  test('does not add experience if no current livestream exists', async () => {
     const chatItem: ChatItem = {
       id: 'chat1',
       platform: 'youtube',
@@ -60,10 +60,24 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       author: data.author1,
       messageParts: [],
     }
+    getGetterMock(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
 
-    const livestreamGetter = getGetterMock(mockLivestreamStore, 'currentLivestream')
-    livestreamGetter.mockClear()
-    livestreamGetter.mockReturnValue(data.livestream1)
+    await experienceService.addExperienceForChat(chatItem)
+
+    expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
+
+  })
+
+  test('does not add experience if livestream not live', async () => {
+    const chatItem: ChatItem = {
+      id: 'chat1',
+      platform: 'youtube',
+      contextToken: 'token',
+      timestamp: data.time3.getTime(),
+      author: data.author1,
+      messageParts: [],
+    }
+    getGetterMock(mockLivestreamStore, 'activeLivestream').mockReturnValue(data.livestream1)
 
     await experienceService.addExperienceForChat(chatItem)
 
@@ -111,14 +125,13 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       user: { id: userId },
       delta: 100,
       time: data.livestream3.start!,
-      livestream: data.livestream3,
       experienceDataChatMessage: {
         ...experienceData,
         id: 1,
         chatMessageId: 1,
         experienceTransactionId: 1,
         spamMultiplier: 0.8,
-        chatMessage: null!
+        chatMessage: mockData<ChatMessage>({ livestreamId: data.livestream3.id })
       }
     }
 
@@ -256,11 +269,11 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const experienceSnapshot2: ExperienceSnapshot = { id: 2, userId: userId2, experience: 500, time: time2 }
     
     const transactions: ExperienceTransaction[] = [
-      { id: 1, userId: userId1, livestreamId: 1, time: time3, delta: 10 },
-      { id: 2, userId: userId1, livestreamId: 1, time: time4, delta: 20 },
-      { id: 3, userId: userId2, livestreamId: 1, time: time5, delta: 150 },
-      { id: 4, userId: userId2, livestreamId: 1, time: time6, delta: 160 },
-      { id: 5, userId: userId2, livestreamId: 1, time: time7, delta: 1 },
+      { id: 1, userId: userId1, time: time3, delta: 10 },
+      { id: 2, userId: userId1, time: time4, delta: 20 },
+      { id: 3, userId: userId2, time: time5, delta: 150 },
+      { id: 4, userId: userId2, time: time6, delta: 160 },
+      { id: 5, userId: userId2, time: time7, delta: 1 },
     ]
 
     mockExperienceStore.getSnapshot.calledWith(userId1).mockResolvedValue(experienceSnapshot1)
@@ -283,7 +296,7 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     // if a user's level has decreased over the event period, we don't want to be notified
     const time1 = new Date()
     const time2 = addTime(time1, 'seconds', 1)
-    const transactions: ExperienceTransaction[] = [{ id: 1, userId: 1, livestreamId: 1, time: time1, delta: -500 }]
+    const transactions: ExperienceTransaction[] = [{ id: 1, userId: 1, time: time1, delta: -500 }]
 
     mockExperienceStore.getSnapshot.mockResolvedValue(null)
     mockExperienceStore.getTotalDeltaStartingAt.mockResolvedValue(-100)

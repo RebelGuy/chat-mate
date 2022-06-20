@@ -29,6 +29,13 @@ export default class ChatStore extends ContextClass {
 
   /** Adds the chat item, quietly ignoring duplicates. */
   public async addChat (chatItem: ChatItem, userId: number, channelId: string) {
+    let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
+    if (this.livestreamStore.activeLivestream == null) {
+      livestreamPart = undefined
+    } else {
+      livestreamPart = { connect: { id: this.livestreamStore.activeLivestream.id }}
+    }
+
     // there is a race condition where the client may request messages whose message parts haven't yet been
     // completely written to the DB. bundle everything into a single transaction to solve this.
     await this.db.$transaction(async (db) => {
@@ -40,7 +47,7 @@ export default class ChatStore extends ContextClass {
           user: { connect: { id: userId }},
           youtubeChannel: chatItem.platform === 'youtube' ? { connect: { youtubeId: channelId }} : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
           twitchChannel: chatItem.platform === 'twitch' ? { connect: { twitchId: channelId }} : chatItem.platform === 'youtube' ? undefined : assertUnreachable(chatItem),
-          livestream: { connect: { id: this.livestreamStore.currentLivestream.id }}
+          livestream: livestreamPart
         },
         update: {},
         where: { externalId: chatItem.id },
