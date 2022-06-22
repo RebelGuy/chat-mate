@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:  
-  deploy:
+  production:
     uses: ./.github/workflows/build-and-deploy.yml
     with:
       NODE_ENV: 'release'
