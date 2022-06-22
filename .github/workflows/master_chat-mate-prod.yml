@@ -11,13 +11,11 @@ on:
 
 jobs:
   build:
-    steps:
-      - uses: ./.github/workflows/build.yml
-        with:
-          NODE_ENV: 'release'
+    uses: ./.github/workflows/build.yml
+    with:
+      NODE_ENV: 'release'
   
   deploy:
-    steps:
-      - uses: ./.github/workflows/deploy.yml
-        with:
-          publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8650F90DDD1E477C9336809BAAEEE87F }}
+    uses: ./.github/workflows/deploy.yml
+    with:
+      publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8650F90DDD1E477C9336809BAAEEE87F }}

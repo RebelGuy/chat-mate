@@ -3,7 +3,6 @@ name: Deploy Server/Studio
 on:
   workflow_call:
     inputs:
-      NODE_ENV:
       publishProfile:
         type: string
         required: true
