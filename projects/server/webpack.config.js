@@ -4,7 +4,14 @@ const nodeExternals = require('webpack-node-externals');
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const WebpackShellPluginNext = require('webpack-shell-plugin-next')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-require('dotenv').config() // loads the .env file generated during the Github Actions process
+const loaded = require('dotenv').config() // loads the .env file generated during the Github Actions process
+
+if (loaded.error != null) {
+  throw loaded.error
+}
+if (loaded.parsed.NAME == null) {
+  throw new Error('NAME not defined')
+}
 
 // add the version number to the top of the app.js file
 const PACKAGE = require('./package.json')
