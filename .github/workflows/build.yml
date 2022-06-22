@@ -19,7 +19,7 @@ jobs:
       - name: Create .env file
         run: |
           touch .env
-          echo NODE_ENV=${{ input.NODE_ENV }} >> .env
+          echo NODE_ENV=${{ inputs.NODE_ENV }} >> .env
           echo IS_LOCAL=false >> .env
 
       - name: Set up Node.js
@@ -32,7 +32,7 @@ jobs:
         run: yarn install
 
       - name: Build typescript project
-        run: yarn workspace server build:${{ input.NODE_ENV }}
+        run: yarn workspace server build:${{ inputs.NODE_ENV }}
 
       # todo: this won't work yet - skip it for now
       # - name: Run test
