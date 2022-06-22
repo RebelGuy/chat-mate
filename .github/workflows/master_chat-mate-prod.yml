@@ -14,5 +14,6 @@ jobs:
     uses: ./.github/workflows/build-and-deploy.yml
     with:
       NODE_ENV: 'release'
+      deploy: true
     secrets:
       publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8650F90DDD1E477C9336809BAAEEE87F }}

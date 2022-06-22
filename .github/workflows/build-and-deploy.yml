@@ -7,18 +7,53 @@ on:
         # `debug` or `release`
         type: string
         required: true
+      deploy:
+        type: boolean
+        required: true
     secrets:
       publishProfile:
-        required: true
+        # must be set if `deploy` is `true`
+        required: false
         description: 'App Service secret'
 
 jobs:
   build:
-    uses: ./.github/workflows/build.yml
-    with:
-      NODE_ENV: ${{ inputs.NODE_ENV }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create .env file
+        run: |
+          touch .env
+          echo NODE_ENV=${{ inputs.NODE_ENV }} >> .env
+          echo IS_LOCAL=false >> .env
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'yarn'
+
+      - name: Install node modules
+        run: yarn install
+
+      - name: Build typescript project
+        run: yarn workspace server build:${{ inputs.NODE_ENV }}
+
+      # todo: this won't work yet - skip it for now
+      # - name: Run test
+      #   run: yarn workspace server test
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v2
+        with:
+          name: Built files
+          path: ./dist/**
       
   deploy:
+    if: input.deploy == true
     runs-on: ubuntu-latest
     needs: build
     environment:
