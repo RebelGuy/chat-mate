@@ -17,5 +17,5 @@ jobs:
   
   deploy:
     uses: ./.github/workflows/deploy.yml
-    with:
+    secrets:
       publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8650F90DDD1E477C9336809BAAEEE87F }}

@@ -2,10 +2,10 @@ name: Deploy Server/Studio
 
 on:
   workflow_call:
-    inputs:
+    secrets:
       publishProfile:
-        type: string
         required: true
+        description: 'App Service secret'
 
 jobs: 
   deploy:
