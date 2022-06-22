@@ -26,11 +26,11 @@ jobs:
 
       - name: Create .env file
         run: |
-          touch .env
-          echo NODE_ENV=${{ inputs.NODE_ENV }} >> .env
-          echo IS_LOCAL=false >> .env
-          echo "NAME=\"${{ github.sha }} - ${{ github.event_name }} - ${{ github.head_ref || github.ref_name }}\"" >> .env
-          cat .env
+          touch ./projects/server/.env
+          echo NODE_ENV=${{ inputs.NODE_ENV }} >> ./projects/server/.env
+          echo IS_LOCAL=false >> ./projects/server/.env
+          echo "NAME=\"${{ github.sha }} - ${{ github.event_name }} - ${{ github.head_ref || github.ref_name }}\"" >> ./projects/server/.env
+          cat ./projects/server/.env
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
