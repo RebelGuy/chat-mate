@@ -1,13 +1,23 @@
-name: Deploy Server/Studio
+name: Build and Deploy Server/Studio
 
 on:
   workflow_call:
+    inputs:
+      NODE_ENV:
+        # `debug` or `release`
+        type: string
+        required: true
     secrets:
       publishProfile:
         required: true
         description: 'App Service secret'
 
-jobs: 
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      NODE_ENV: ${{ inputs.NODE_ENV }}
+      
   deploy:
     runs-on: ubuntu-latest
     needs: build
