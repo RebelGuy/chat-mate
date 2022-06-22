@@ -44,7 +44,7 @@ module.exports = (env) => {
     { from: path.resolve(__dirname, './robots.txt'),
       to: outPath
     },
-    { from: path.resolve(__dirname, `./favicon_${nodeEnv}.html`),
+    { from: path.resolve(__dirname, `./favicon_${nodeEnv}.ico`),
       to: outPath
     }
   ]
