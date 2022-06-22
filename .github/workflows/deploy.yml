@@ -27,5 +27,5 @@ jobs:
         with:
           app-name: 'chat-mate-prod'
           slot-name: 'Production'
-          publish-profile: ${{ input.publishProfile }}
+          publish-profile: ${{ secrets.publishProfile }}
           package: .
