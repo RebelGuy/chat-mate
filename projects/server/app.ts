@@ -128,7 +128,7 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .build()
 
-app.get('/', (_, res) => res.sendFile('index.html', { root: __dirname }))
+app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
 
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it

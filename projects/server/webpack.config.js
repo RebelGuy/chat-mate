@@ -3,6 +3,7 @@ const webpack = require('webpack')
 const nodeExternals = require('webpack-node-externals');
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const WebpackShellPluginNext = require('webpack-shell-plugin-next')
+require('dotenv').config() // loads the .env file generated during the Github Actions process
 
 // add the version number to the top of the app.js file
 const PACKAGE = require('./package.json')
@@ -10,8 +11,9 @@ const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().
 
 module.exports = (env) => {
   env['BUILD'] = 'webpack'
-  const isLocal = env.IS_LOCAL ?? false
+  const isLocal = process.env.IS_LOCAL ?? env.IS_LOCAL ?? false
   const outPath = path.resolve(__dirname, `../../dist/server`)
+  const nodeEnv = env.NODE_ENV ?? 'debug'
 
   // note: path.resolve doesn't work with glob patterns
   /** @type CopyWebpackPlugin.Pattern[] */
@@ -36,7 +38,13 @@ module.exports = (env) => {
       from: path.resolve(__dirname, './certificate.pem'),
       to: outPath
     },
-    { from: path.resolve(__dirname, './index.html'),
+    { from: path.resolve(__dirname, './default.html'),
+      to: outPath
+    },
+    { from: path.resolve(__dirname, './robots.txt'),
+      to: outPath
+    },
+    { from: path.resolve(__dirname, `./favicon_${nodeEnv}.html`),
       to: outPath
     }
   ]

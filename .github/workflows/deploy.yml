@@ -1,0 +1,32 @@
+name: Deploy Server/Studio
+
+on:
+  workflow_call:
+    inputs:
+      NODE_ENV:
+      publishProfile:
+        type: string
+        required: true
+
+jobs: 
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v2
+        with:
+          name: Built files
+
+      - name: Deploy to Azure
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'chat-mate-prod'
+          slot-name: 'Production'
+          publish-profile: ${{ input.publishProfile }}
+          package: .

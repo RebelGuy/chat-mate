@@ -61,7 +61,6 @@ export default class ViewershipStore extends ContextClass {
    */
   public async addViewershipForChatParticipation (userId: number, timestamp: number): Promise<void> {
     if (this.livestreamStore.activeLivestream == null) {
-      this.logService.logWarning(this, 'Tried adding viewership for chat participation but there is no active public livestream')
       return
     }
 
