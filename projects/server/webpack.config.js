@@ -6,13 +6,6 @@ const WebpackShellPluginNext = require('webpack-shell-plugin-next')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const loaded = require('dotenv').config() // loads the .env file generated during the Github Actions process
 
-if (loaded.error != null) {
-  throw loaded.error
-}
-if (loaded.parsed.NAME == null) {
-  throw new Error('NAME not defined')
-}
-
 // add the version number to the top of the app.js file
 const PACKAGE = require('./package.json')
 const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().toISOString()}`
@@ -21,7 +14,7 @@ module.exports = (env) => {
   env['BUILD'] = 'webpack'
 
   // the following env variables are defined in the Github Actions
-  const isLocal = process.env.IS_LOCAL ?? env.IS_LOCAL ?? false
+  const isLocal = Boolean(process.env.IS_LOCAL ?? env.IS_LOCAL ?? false)
   const nodeEnv = env.NODE_ENV ?? 'debug'
   const NAME = process.env.NAME ?? ''
 

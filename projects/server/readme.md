@@ -102,7 +102,7 @@ Currently there are 3 punishment types:
 3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
-`yarn test` performs the test suite.
+`yarn test` performs the test suite. The `test:debug` and `test:release` scripts are for use by CI.
 `yarn test:db` Sets up the test database.
 `yarn test <file regex>` includes only tests within files matching the expression.
 

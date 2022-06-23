@@ -44,26 +44,43 @@ jobs:
       - name: Build typescript project
         run: yarn workspace server build:${{ inputs.NODE_ENV }}
 
-      # todo: this won't work yet - skip it for now
-      # - name: Run test
-      #   run: yarn workspace server test
-
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
         with:
           name: Built files
           path: ./dist/**
-      
+  
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download built files
+        uses: actions/download-artifact@v2
+        with:
+          name: Built files
+
+      - name: Create .env file
+        run: |
+          touch ./projects/server/test.env
+          echo "DATABASE_URL=\"mysql://${{ secrets.DATABSE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/chat_mate_test${{ inputs.NODE_ENV == 'debug' && '_debug' || '' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
+
+      - name: Set up test database
+        run: yarn workspace server test:db
+
+      - name: Run tests
+        run: yarn workspace server test:${{ inputs.NODE_ENV }}
+
   deploy:
     if: inputs.deploy == true
     runs-on: ubuntu-latest
-    needs: build
+    needs: test
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
-      - name: Download artifact from build job
+      - name: Download built files
         uses: actions/download-artifact@v2
         with:
           name: Built files
