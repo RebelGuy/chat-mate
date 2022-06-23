@@ -63,11 +63,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Create .env file
+      - name: Create test.env file
         run: |
           touch ./projects/server/test.env
           echo "DATABASE_URL=\"mysql://${{ secrets.DATABSE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/chat_mate_test${{ inputs.NODE_ENV == 'debug' && '_debug' || '' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
-      
+          cat ./projects/server/test.env
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -79,6 +80,9 @@ jobs:
 
       - name: Set up test database
         run: yarn workspace server test:db
+          
+      - name: Generate Prisma client
+        run: yarn workspace server generate
 
       - name: Run tests
         timeout-minutes: 10
