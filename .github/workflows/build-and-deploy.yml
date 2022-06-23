@@ -24,6 +24,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # required for webpack
       - name: Create .env file
         run: |
           touch ./projects/server/.env
@@ -52,23 +53,35 @@ jobs:
   
   test:
     runs-on: ubuntu-latest
+    # technically we don't **need** the build job to complete, but if the build fails there's no
+    # easy way to cancel the test job (which might run for a while until hitting a runtime error).
+    # this depencency ensures that we only bother running tests if the build passed
     needs: build
 
     steps:
-      - name: Download built files
-        uses: actions/download-artifact@v2
-        with:
-          name: Built files
+      # note: we don't use the built artifact because `ts-jest` builds TS files on the fly
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Create .env file
         run: |
           touch ./projects/server/test.env
           echo "DATABASE_URL=\"mysql://${{ secrets.DATABSE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/chat_mate_test${{ inputs.NODE_ENV == 'debug' && '_debug' || '' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'yarn'
+
+      - name: Install node modules
+        run: yarn install
 
       - name: Set up test database
         run: yarn workspace server test:db
 
       - name: Run tests
+        timeout-minutes: 10
         run: yarn workspace server test:${{ inputs.NODE_ENV }}
 
   deploy:
