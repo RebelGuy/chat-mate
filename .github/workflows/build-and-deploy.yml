@@ -111,7 +111,7 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'chat-mate-prod'
+          app-name: ${{ inputs.NODE_ENV == 'debug' && 'chat-mate-sandbox' || 'chat-mate-prod' }} 'chat-mate-prod'
           slot-name: 'Production'
           publish-profile: ${{ secrets.publishProfile }}
           package: .
