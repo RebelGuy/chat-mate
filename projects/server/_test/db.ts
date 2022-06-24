@@ -1,7 +1,6 @@
 import { PrismaClient, PrismaPromise } from '@prisma/client'
 import { mockDeep } from 'jest-mock-extended'
 import DbProvider from '@rebel/server/providers/DbProvider'
-import env from '@rebel/server/globals'
 import { Dependencies } from '@rebel/server/context/context'
 import LogService from '@rebel/server/services/LogService'
 import Semaphore from '@rebel/server/util/Semaphore'
@@ -13,7 +12,7 @@ export const DB_TEST_TIMEOUT = 30000
 const semaphore: Semaphore = new Semaphore()
 const dbProvider = new DbProvider(new Dependencies({
   logService: mockDeep<LogService>(),
-  databaseUrl: env('databaseUrl')
+  databaseUrl: process.env.DATABASE_URL!
 }))
 let connected = false
 
