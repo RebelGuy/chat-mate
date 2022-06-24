@@ -18,3 +18,5 @@ jobs:
       deploy: true
     secrets:
       publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9BBD3D4C46274FCD94006579EB592F31 }}
+      DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
+      DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
