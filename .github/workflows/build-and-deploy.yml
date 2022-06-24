@@ -16,10 +16,8 @@ on:
         required: false
         description: 'App Service secret'
       DATABASE_USERNAME:
-        type: string
         required: true
       DATABSE_PASSWORD:
-        type: string
         required: true
 
 jobs:

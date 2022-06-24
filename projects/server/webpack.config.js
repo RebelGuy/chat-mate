@@ -17,6 +17,7 @@ module.exports = (env) => {
   const isLocal = Boolean(process.env.IS_LOCAL ?? env.IS_LOCAL ?? false)
   const nodeEnv = env.NODE_ENV ?? 'debug'
   const NAME = process.env.NAME ?? ''
+  const NOW = new Date()
 
   const outPath = path.resolve(__dirname, `../../dist/server`)
 
@@ -144,7 +145,7 @@ module.exports = (env) => {
         favicon: `./favicon_${nodeEnv}.ico`,
         chunks: [], // don't inject javascript
         version: PACKAGE.version,
-        date: new Date().toISOString(),
+        date: NOW.toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', hour12: false }),
         build: NAME,
       })
     ]
