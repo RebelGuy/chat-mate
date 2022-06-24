@@ -20,4 +20,8 @@ module.exports = {
       tsconfig: '<rootDir>/tsconfig.json',
       stringifyContentPathRegex: '\\.html$'
     },
-  },}
+  }
+}
+
+// for database tests, these pesky little things. CHAT-78
+jest.setTimeout(30000)
