@@ -22,6 +22,3 @@ module.exports = {
     },
   }
 }
-
-// for database tests, these pesky little things. CHAT-78
-jest.setTimeout(30000)
