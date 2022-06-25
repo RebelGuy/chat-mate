@@ -152,7 +152,7 @@ jobs:
           publish-profile: ${{ secrets.publishProfile }}
           package: .
 
-  deploy-studio
+  deploy-studio:
     if: inputs.deploy == true
     name: Deploy Studio
     runs-on: ubuntu-latest
