@@ -47,7 +47,7 @@ export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew): Promise<A
 
 export async function setActiveLivestream (newLivestream: string | null): Promise<SetActiveLivestreamResponse> {
   const request: SetActiveLivestreamRequest = {
-    schema: 1,
+    schema: 2,
     livestream: newLivestream
   }
 
