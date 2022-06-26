@@ -135,18 +135,12 @@ jobs:
           name: built-studio-files
           path: ./projects/studio/build/**
 
-  deploy-server:
+  # this must be done in a different run so we don't upload the generated files here during deployment
+  migrate-database:
     if: inputs.deploy == true
-    name: Deploy Server
+    name: Migrate database
     runs-on: ubuntu-latest
     needs: [build-server, test-server]
-
-    # sets the GitHub environment
-    environment:
-      name: ${{ inputs.NODE_ENV == 'debug' && 'Production' || 'Sandbox' }}
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    outputs:
-      server-url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
       - name: Checkout code
@@ -163,11 +157,6 @@ jobs:
       - name: Install node modules
         run: yarn install
 
-      - name: Download built server files
-        uses: actions/download-artifact@v2
-        with:
-          name: built-server-files
-      
       - name: Create .env file
         run: |
           touch .env
@@ -176,6 +165,24 @@ jobs:
 
       - name: Migrate database
         run: dotenv yarn prisma migrate deploy
+
+  deploy-server:
+    if: inputs.deploy == true
+    name: Deploy Server
+    runs-on: ubuntu-latest
+    needs: [migrate-database]
+
+    environment:
+      name: ${{ inputs.NODE_ENV == 'debug' && 'Production' || 'Sandbox' }}
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    outputs:
+      server-url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+      - name: Download built server files
+        uses: actions/download-artifact@v2
+        with:
+          name: built-server-files
 
       - name: Deploy to Azure
         id: deploy-to-webapp
