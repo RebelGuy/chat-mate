@@ -1,8 +1,9 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/server/controllers/EmojiController'
 import { GetStatusResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
+import { SERVER_API_URL } from '@rebel/studio/global'
 
-const baseUrl = 'http://localhost:3010/api'
+const baseUrl = SERVER_API_URL
 
 export async function getAllCustomEmojis (): Promise<GetCustomEmojisResponse> {
   const response = await fetch(baseUrl + '/emoji/custom')
