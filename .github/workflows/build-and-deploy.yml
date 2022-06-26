@@ -32,7 +32,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # required for webpack
+      # required for webpack and deployment
       - name: Create .env file
         run: |
           touch ./projects/server/.env
@@ -72,7 +72,7 @@ jobs:
         # we are using separate test tables for the develop/master tests so they can run in parallel if needed
         run: |
           touch ./projects/server/test.env
-          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/chat_mate_test${{ inputs.NODE_ENV == 'debug' && '_debug' || '' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
+          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_test_debug' || 'chat_mate_test' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
           cat ./projects/server/test.env
 
       - name: Set up Node.js
@@ -149,10 +149,28 @@ jobs:
       server-url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'yarn'
+
+      - name: Install node modules
+        run: yarn install
+
       - name: Download built server files
         uses: actions/download-artifact@v2
         with:
           name: built-server-files
+      
+      - name: Create .env file
+        run: |
+          touch .env
+          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_debug' || 'chat_mate' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> .env
+          cat .env
+
+      - name: Migrate database
+        run: dotenv yarn prisma migrate deploy
 
       - name: Deploy to Azure
         id: deploy-to-webapp
