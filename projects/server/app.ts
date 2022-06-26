@@ -128,6 +128,12 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .build()
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
+  next()
+})
+
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
 
 // this is middleware - we can supply an ordered collection of such functions,
@@ -139,9 +145,6 @@ app.use((req, res, next) => {
   // go to the next handler
   next()
 })
-
-// for some reason ChatMate Studio can't POST requests due to some CORS issue. adding this middleware magically fixes it
-app.use(cors())
 
 app.use(async (req, res, next) => {
   const context = globalContext.asParent()
