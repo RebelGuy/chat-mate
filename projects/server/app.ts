@@ -50,6 +50,9 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
+import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProvider'
+import LogQueryService from '@rebel/server/services/LogQueryService'
+import LogController from '@rebel/server/controllers/LogController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -69,6 +72,8 @@ const applicationInsightsConnectionString = env('applicationinsightsConnectionSt
 const enableDbLogging = env('enableDbLogging')
 const isLocal = env('isLocal')
 const hostName = env('websiteHostname')
+const managedIdentityClientId = env('managedIdentityClientId')
+const logAnalyticsWorkspaceId = env('logAnalyticsWorkspaceId')
 
 const globalContext = ContextProvider.create()
   .withObject('app', app)
@@ -88,6 +93,8 @@ const globalContext = ContextProvider.create()
   .withProperty('enableDbLogging', enableDbLogging)
   .withProperty('isLocal', isLocal)
   .withProperty('hostName', hostName)
+  .withProperty('managedIdentityClientId', managedIdentityClientId)
+  .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -96,7 +103,9 @@ const globalContext = ContextProvider.create()
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('applicationInsightsService', ApplicationInsightsService)
+  .withClass('logsQueryClientProvider', LogsQueryClientProvider)
   .withClass('logService', LogService)
+  .withClass('logQueryService', LogQueryService)
   .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
   .withClass('twurpleStatusService', StatusService)
@@ -154,6 +163,7 @@ app.use(async (req, res, next) => {
     .withClass('experienceController', ExperienceController)
     .withClass('userController', UserController)
     .withClass('punishmentController', PunishmentController)
+    .withClass('logController', LogController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -177,7 +187,8 @@ Server.buildServices(app,
   EmojiController,
   ExperienceController,
   UserController,
-  PunishmentController
+  PunishmentController,
+  LogController
 )
 
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })

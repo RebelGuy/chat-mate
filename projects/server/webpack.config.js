@@ -104,6 +104,7 @@ module.exports = (env) => {
       'applicationinsights-native-metrics': 'commonjs applicationinsights-native-metrics',
       '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
       '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
+      '@azure/identity-vscode': 'commonjs @azure/identity-vscode',
     },
     target: 'node',
 

@@ -46,6 +46,9 @@ type EnvironmentVariables = {
 
   // if false, will still log warnings and errors
   enableDbLogging: OptionalVariable<boolean, false>
+
+  managedIdentityClientId: DeploymentVariable<string>
+  logAnalyticsWorkspaceId: string
 }
 
 function getAllKeys () {
@@ -66,7 +69,9 @@ function getAllKeys () {
     'twitchClientId': true,
     'twitchClientSecret': true,
     'twitchRefreshToken': true,
-    'useFakeControllers': true
+    'useFakeControllers': true,
+    'managedIdentityClientId': true,
+    'logAnalyticsWorkspaceId': true
   }
   return Object.keys(allEnvVariables) as (keyof EnvironmentVariables)[]
 }
@@ -93,7 +98,8 @@ const localVariables: Record<VariablesOfType<'local'>, true> = {
 // deployment variables can only be accessed when running the server in Azure, and return null otherwise.
 const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
   applicationinsightsConnectionString: true,
-  websiteHostname: true
+  websiteHostname: true,
+  managedIdentityClientId: true
 }
 
 // optional variables resolve to the default value if they are not included in the environment definition.

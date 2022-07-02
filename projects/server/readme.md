@@ -47,6 +47,13 @@ When deployed, we use Application Insights to track all error and warning messag
 
 At all times, we are logging all messages to the file system. On Azure, the data folder lives under `/site/data` and can be accessed via FileZilla.
 
+The retrieval of logs from Application Insights is achieved automatically (and exposed via the LogsController) using Azure's Log Analytics Workspaces and the [`monitor-query` package](https://docs.microsoft.com/en-us/javascript/api/overview/azure/monitor-query-readme?view=azure-node-latest). Note that we use the pay-as-you go pricing tier ($3.22 per GB) with a free 5 GB per month. It works by telling Application Insights to feed its data to the workspace (done via Monitoring -> Diagnostic Settings), which can then be queried via the API.
+
+**[Authentication](https://github.com/Azure/azure-sdk-for-js/blob/@azure/monitor-query_1.0.2/sdk/identity/identity/README.md#defaultazurecredential) of the `monitor-query` package**
+When developing locally, we [authenticate](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/identity/identity/README.md#authenticate-via-visual-studio-code) via the Azure Account extension (**version 0.9.10**). Run the `sign in` VSCode command to commence the session. When generating the client during runtime, the `DefaultAzureCredential` will automatically read this sign-in session from VSCode.
+
+When deployed to Azure, the `MANAGED_IDENTITY_CLIENT_ID` points the credential handler to the managed identity that we want to use, and no further authentication should be required to get things working.
+
 # .env
 Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
 
@@ -63,6 +70,8 @@ The following environment variables must be set in the `.env` file:
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
 - `ENABLE_DB_LOGGING`: [Optional, defaults to `false`] Whether to include database-related actions in the logs. Note that, even if this is `false`, any warning and errors will still be included.
+- `MANAGED_IDENTITY_CLIENT_ID`: The Client ID of the Managed Identity that is used to access the Log Analytics workspace for querying logs.
+- `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
 The following set of environment variables is available only for **local development** (that is, where `IS_LOCAL` is `true`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
@@ -146,6 +155,8 @@ Key:
   - 🟢 initialise
   - 🟢 deactivateLivestream
   - 🟢 setActiveLivestream
+- 🟢 LogQueryService
+  - 🟢 queryCriticalLogs
 - 🟢 MasterchatProxyService
   - 🟢 addMasterchat
   - 🟢 fetch
@@ -231,6 +242,7 @@ Key:
   - 🟢 getLivestreamViewership
 
 **Providers**
+- ⚪ LogsQueryClientProvider
 - 🟢 TwurpleAuthProvider
   - 🟢 initialise
 

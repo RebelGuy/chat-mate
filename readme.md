@@ -9,6 +9,7 @@ Recommended VSCode extensions:
 - `GitLens`
 - `Prisma`
 - `GitHub Actions`
+- `Azure Account`
 
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
