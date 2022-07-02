@@ -1,10 +1,11 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicLogTimestamps } from '@rebel/server/controllers/public/log/PublicLogTimestamps'
 import LogQueryService from '@rebel/server/services/LogQueryService'
-import { GET, Path, QueryParam } from 'typescript-rest'
+import { GET, Path } from 'typescript-rest'
 
-export type GetCriticalLogsRequest = ApiRequest<1, { schema: 1 }>
-
-export type GetCriticalLogsResponse = ApiResponse<1, any>
+export type GetTimestampsResponse = ApiResponse<1, {
+  timestamps: Tagged<1, PublicLogTimestamps>
+}>
 
 type Deps = ControllerDependencies<{
   logQueryService: LogQueryService
@@ -20,18 +21,18 @@ export default class LogController extends ControllerBase {
   }
 
   @GET
-  @Path('/critical')
-  public async getCriticalLogs (
-    @QueryParam('since') since: number
-  ): Promise<GetCriticalLogsResponse> {
-    const builder = super.registerResponseBuilder<GetCriticalLogsResponse>('GET /critical', 1)
-    if (since == null) {
-      return builder.failure(400, '`since` query parameter is missing')
-    }
-
+  @Path('/timestamps')
+  public getTimestamps (): GetTimestampsResponse {
+    const builder = super.registerResponseBuilder<GetTimestampsResponse>('GET /critical', 1)
     try {
-      const logs = await this.logQueryService.queryCriticalLogs(since)
-      return builder.success(logs)
+      const logs = this.logQueryService.queryCriticalLogs()
+      return builder.success({
+        timestamps: {
+          schema: 1,
+          warnings: logs.errors,
+          errors: logs.errors
+        }
+      })
     } catch (e: any) {
       return builder.failure(e)
     }

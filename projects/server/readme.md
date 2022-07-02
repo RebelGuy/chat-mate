@@ -156,7 +156,10 @@ Key:
   - 🟢 deactivateLivestream
   - 🟢 setActiveLivestream
 - 🟢 LogQueryService
+  - ⚪ onWarning
+  - ⚪ onError
   - 🟢 queryCriticalLogs
+  - ⚪ queryCriticalLogs_
 - 🟢 MasterchatProxyService
   - 🟢 addMasterchat
   - 🟢 fetch
@@ -430,6 +433,17 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `404`: When the given user is not found.
+
+## Log Endpoints
+Path: `/log`.
+
+### `GET /timestamps`
+*Current schema: 1.*
+
+Gets timestamps of warnings and errors encountered within the last 24 hours.
+
+Returns data with the following properties:
+- `timestamps` (`PublicLogTimestamps`): The timestamps of warnings and errors.
 
 ## Punishment Endpoints
 Path: `/punishment`.

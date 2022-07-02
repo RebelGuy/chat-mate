@@ -7,6 +7,7 @@ import { vsCodePlugin } from '@azure/identity-vscode'
 
 type Deps = Dependencies<{
   managedIdentityClientId: string | null
+  isLocal: boolean
 }>
 
 export default class LogsQueryClientProvider extends ContextClass implements IProvider<LogsQueryClient> {
@@ -15,12 +16,16 @@ export default class LogsQueryClientProvider extends ContextClass implements IPr
   constructor (deps: Deps) {
     super()
 
-    useIdentityPlugin(vsCodePlugin)
+    // register the VSCode plugin for authentication
+    if (deps.resolve('isLocal')) {
+      useIdentityPlugin(vsCodePlugin)
+    }
 
     // https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/identity/identity/samples/AzureIdentityExamples.md#authenticating-a-user-assigned-managed-identity-with-defaultazurecredential
     const managedIdentityClientId = deps.resolve('managedIdentityClientId')
+
+    // it will try a number of authentication methods until one works.
     const credential = new DefaultAzureCredential({ managedIdentityClientId: managedIdentityClientId ?? undefined })
-    // const credential = new VisualStudioCodeCredential()
     this.logsQueryClient = new LogsQueryClient(credential)
     
   }
