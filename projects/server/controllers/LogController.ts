@@ -23,7 +23,7 @@ export default class LogController extends ControllerBase {
   @GET
   @Path('/timestamps')
   public getTimestamps (): GetTimestampsResponse {
-    const builder = super.registerResponseBuilder<GetTimestampsResponse>('GET /critical', 1)
+    const builder = super.registerResponseBuilder<GetTimestampsResponse>('GET /timestamps', 1)
     try {
       const logs = this.logQueryService.queryCriticalLogs()
       return builder.success({
