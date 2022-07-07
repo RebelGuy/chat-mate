@@ -29,7 +29,7 @@ export default class LogController extends ControllerBase {
       return builder.success({
         timestamps: {
           schema: 1,
-          warnings: logs.errors,
+          warnings: logs.warnings,
           errors: logs.errors
         }
       })

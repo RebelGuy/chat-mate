@@ -47,7 +47,7 @@ export default class LogSummary extends React.PureComponent<Props, State> {
         return null
       } else {
         const last = timestamps.at(-1)!
-        return <div>(last at {formatTime(new Date(last))})</div>
+        return ` (last at ${formatTime(new Date(last))})`
       }
     }
 
