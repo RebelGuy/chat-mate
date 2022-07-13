@@ -6,7 +6,7 @@ import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel
 import { mockGetter, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
-import { ChannelInfo, Livestream, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelInfo, Livestream, TwitchChannelInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
 
 const livestream: Livestream = {
@@ -95,7 +95,7 @@ const cheer1: PartialCheerChatMessage = {
   name: 'Mr Cheerer'
 }
 
-function authorToChannelInfo (a: Author, time?: Date): Omit<ChannelInfo, 'channelId' | 'id'> {
+function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelInfo, 'channelId' | 'id'> {
   return {
     isVerified: a.attributes.isVerified,
     isModerator: a.attributes.isModerator,
@@ -157,7 +157,7 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.channel.create({ data: {
+    await db.youtubeChannel.create({ data: {
       user: { create: {}},
       youtubeId: ytAuthor1.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor1)}
@@ -167,7 +167,7 @@ export default () => {
       twitchId: twitchAuthor.userId,
       infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
     }})
-    await db.channel.create({ data: {
+    await db.youtubeChannel.create({ data: {
       user: { connect: { id: youtube1UserId }},
       youtubeId: ytAuthor2.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor2)}

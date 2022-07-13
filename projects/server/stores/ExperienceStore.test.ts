@@ -37,7 +37,7 @@ export default () => {
 
     const channelId1 = 1
     const channelId2 = 2
-    await db.channel.createMany({ data: [{ userId: user1, youtubeId: data.channel1 }, { userId: user2, youtubeId: data.channel2}, { userId: user3, youtubeId: ADMIN_YOUTUBE_ID }] })
+    await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2}, { userId: user3, youtubeId: ADMIN_YOUTUBE_ID }] })
 
     chatMessage1 = await data.addChatMessage(db, data.time1, null, user1, channelId1)
     chatMessage2 = await data.addChatMessage(db, data.time2, null, user1, channelId1)

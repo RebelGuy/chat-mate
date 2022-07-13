@@ -34,7 +34,7 @@ export default class PunishmentStore extends ContextClass {
   }
 
   public override async initialise (): Promise<void> {
-    const adminUser = await this.db.channel.findUnique({
+    const adminUser = await this.db.youtubeChannel.findUnique({
       where: { youtubeId: ADMIN_YOUTUBE_ID },
       rejectOnNotFound: true,
       select: { userId: true }

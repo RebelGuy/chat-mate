@@ -1,4 +1,4 @@
-import { ChannelInfo, ChatMessage, ChatUser, Livestream, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelInfo, ChatMessage, ChatUser, Livestream, TwitchChannelInfo } from '@prisma/client'
 import { Author, ChatItem, TwitchAuthor } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
@@ -43,14 +43,14 @@ export const user1: ChatUser = { id: 1 }
 export const user2: ChatUser = { id: 2 }
 export const user3: ChatUser = { id: 3 }
 
-export const channel1 = 'channel1'
+export const youtubeChannel1 = 'channel1'
 export const author1: Author = {
   attributes: { isModerator: true, isOwner: false, isVerified: false },
-  channelId: channel1,
+  channelId: youtubeChannel1,
   image: 'author1.image',
   name: 'author1.name'
 }
-export const channelInfo1: Omit<ChannelInfo, 'id' | 'channelId'> = {
+export const youtubeChannelInfo1: Omit<YoutubeChannelInfo, 'id' | 'channelId'> = {
   isModerator: author1.attributes.isModerator,
   isOwner: author1.attributes.isOwner,
   isVerified: author1.attributes.isVerified,
@@ -59,14 +59,14 @@ export const channelInfo1: Omit<ChannelInfo, 'id' | 'channelId'> = {
   time: time1
 }
 
-export const channel2 = 'channel2'
+export const youtubeChannel2 = 'channel2'
 export const author2: Author = {
   attributes: { isModerator: false, isOwner: false, isVerified: true },
-  channelId: channel2,
+  channelId: youtubeChannel2,
   image: 'author2.image',
   name: 'author2.name'
 }
-export const channelInfo2: Omit<ChannelInfo, 'id' | 'channelId'> = {
+export const youtubeChannelInfo2: Omit<YoutubeChannelInfo, 'id' | 'channelId'> = {
   isModerator: author2.attributes.isModerator,
   isOwner: author2.attributes.isOwner,
   isVerified: author2.attributes.isVerified,

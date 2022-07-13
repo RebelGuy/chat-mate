@@ -1,4 +1,4 @@
-import { ChannelInfo, Prisma, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelInfo, Prisma, TwitchChannelInfo } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatPlatform } from '@rebel/server/models/chat'
@@ -10,10 +10,10 @@ import { assertUnreachable, compare } from '@rebel/server/util/typescript'
 
 export const ADMIN_YOUTUBE_ID = 'UCBDVDOdE6HOvWdVHsEOeQRA'
 
-export type CreateOrUpdateChannelArgs = Omit<New<ChannelInfo>, 'channelId'>
+export type CreateOrUpdateYoutubeChannelArgs = Omit<New<YoutubeChannelInfo>, 'channelId'>
 export type CreateOrUpdateTwitchChannelArgs = Omit<New<TwitchChannelInfo>, 'channelId'>
 
-export type ChannelWithLatestInfo = Omit<Entity.Channel, 'chatMessages' | 'user'>
+export type YoutubeChannelWithLatestInfo = Omit<Entity.YoutubeChannel, 'chatMessages' | 'user'>
 export type TwitchChannelWithLatestInfo = Omit<Entity.TwitchChannel, 'chatMessages' | 'user'>
 
 /** Contains the most recent name of each channel that the user owns. */
@@ -28,7 +28,7 @@ export type UserOwnedChannels = {
 
 export type UserChannel = {
   platform: Extract<ChatPlatform, 'youtube'>
-  channel: ChannelWithLatestInfo
+  channel: YoutubeChannelWithLatestInfo
 } | {
   platform: Extract<ChatPlatform, 'twitch'>
   channel: TwitchChannelWithLatestInfo
@@ -46,13 +46,13 @@ export default class ChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async createOrUpdate (platform: Extract<ChatPlatform, 'youtube'>, externalId: string, channelInfo: CreateOrUpdateChannelArgs): Promise<ChannelWithLatestInfo>
+  public async createOrUpdate (platform: Extract<ChatPlatform, 'youtube'>, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs): Promise<YoutubeChannelWithLatestInfo>
   public async createOrUpdate (platform: Extract<ChatPlatform, 'twitch'>, externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo>
-  public async createOrUpdate (platform: ChatPlatform, externalId: string, channelInfo: CreateOrUpdateChannelArgs | CreateOrUpdateTwitchChannelArgs): Promise<ChannelWithLatestInfo | TwitchChannelWithLatestInfo> {
+  public async createOrUpdate (platform: ChatPlatform, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs | CreateOrUpdateTwitchChannelArgs): Promise<YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo> {
     // the reason we don't have separate createOrUpdate methods for each platform is that there is some shared logic that we don't want to replicate.
     // I toyed with adding an adapter, and making the method generic, but setting up the prisma validators was a pain so I opted for this.
   
-    let currentChannel: ChannelWithLatestInfo | TwitchChannelWithLatestInfo | null
+    let currentChannel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo | null
     if (platform === 'youtube') {
       currentChannel = await this.tryGetChannelWithLatestInfo(externalId)
     } else if (platform === 'twitch') {
@@ -62,14 +62,14 @@ export default class ChannelStore extends ContextClass {
     }
     const storedInfo = currentChannel?.infoHistory[0] ?? null
 
-    let channel: ChannelWithLatestInfo | TwitchChannelWithLatestInfo
+    let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
     if (currentChannel != null) {
       // check if anything has changed - if so, update info
       if (channelInfoHasChanged(platform, storedInfo!, channelInfo)) {
         if (platform === 'youtube') {
-          channel = await this.db.channel.update({
+          channel = await this.db.youtubeChannel.update({
             where: { youtubeId: externalId },
-            data: { infoHistory: { create: channelInfo as CreateOrUpdateChannelArgs } },
+            data: { infoHistory: { create: channelInfo as CreateOrUpdateYoutubeChannelArgs } },
             include: channelQuery_includeLatestChannelInfo
           })
         } else if (platform === 'twitch') {
@@ -88,11 +88,11 @@ export default class ChannelStore extends ContextClass {
     } else {
       // create new channel
       if (platform === 'youtube') {
-        channel = await this.db.channel.create({
+        channel = await this.db.youtubeChannel.create({
           data: {
             youtubeId: externalId,
             user: { create: {}},
-            infoHistory: { create: channelInfo as CreateOrUpdateChannelArgs }
+            infoHistory: { create: channelInfo as CreateOrUpdateYoutubeChannelArgs }
           },
           include: channelQuery_includeLatestChannelInfo
         })
@@ -119,7 +119,7 @@ export default class ChannelStore extends ContextClass {
 
   /** Returns the most current names of all channels of a user (unordered). */
   public async getCurrentUserNames (): Promise<UserNames[]> {
-    const currentChannelInfos = await this.db.channelInfo.findMany({
+    const currentChannelInfos = await this.db.youtubeChannelInfo.findMany({
       distinct: ['channelId'],
       orderBy: { time: 'desc' },
       select: {
@@ -163,7 +163,7 @@ export default class ChannelStore extends ContextClass {
   }
 
   public async getYoutubeChannelNameFromChannelId (youtubeChannelId: number): Promise<string> {
-    const channel = await this.db.channel.findUnique({
+    const channel = await this.db.youtubeChannel.findUnique({
       where: { id: youtubeChannelId },
       rejectOnNotFound: true,
       include: channelQuery_includeLatestChannelInfo
@@ -173,7 +173,7 @@ export default class ChannelStore extends ContextClass {
 
   /** Gets the userId that is associated with the channel that has the given external id. Throws if none is found. */
   public async getUserId (externalId: string): Promise<number> {
-    const channel = await this.db.channel.findUnique({ where: { youtubeId: externalId } })
+    const channel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalId } })
     if (channel != null) {
       return channel.userId
     }
@@ -205,7 +205,7 @@ export default class ChannelStore extends ContextClass {
   }
 
   private async tryGetChannelWithLatestInfo (youtubeChannelId: string) {
-    return await this.db.channel.findUnique({
+    return await this.db.youtubeChannel.findUnique({
       where: { youtubeId: youtubeChannelId },
       include: channelQuery_includeLatestChannelInfo
     })
@@ -219,14 +219,14 @@ export default class ChannelStore extends ContextClass {
   }
 }
 
-const channelQuery_includeLatestChannelInfo = Prisma.validator<Prisma.ChannelInclude>()({
+const channelQuery_includeLatestChannelInfo = Prisma.validator<Prisma.YoutubeChannelInclude>()({
   infoHistory: {
     orderBy: { time: 'desc' },
     take: 1
   }
 })
 
-const youtubeChannelInfoComparator: ObjectComparator<CreateOrUpdateChannelArgs> = {
+const youtubeChannelInfoComparator: ObjectComparator<CreateOrUpdateYoutubeChannelArgs> = {
   imageUrl: 'default',
   name: 'default',
   time: null,
@@ -247,8 +247,8 @@ const twitchChannelInfoComparator: ObjectComparator<CreateOrUpdateTwitchChannelA
   colour: 'default'
 }
 
-function channelInfoHasChanged (platform: ChatPlatform, storedInfo: ChannelInfo | TwitchChannelInfo, newInfo: CreateOrUpdateChannelArgs | CreateOrUpdateTwitchChannelArgs): boolean {
-  let comparator: ObjectComparator<CreateOrUpdateChannelArgs> | ObjectComparator<CreateOrUpdateTwitchChannelArgs>
+function channelInfoHasChanged (platform: ChatPlatform, storedInfo: YoutubeChannelInfo | TwitchChannelInfo, newInfo: CreateOrUpdateYoutubeChannelArgs | CreateOrUpdateTwitchChannelArgs): boolean {
+  let comparator: ObjectComparator<CreateOrUpdateYoutubeChannelArgs> | ObjectComparator<CreateOrUpdateTwitchChannelArgs>
   if (platform === 'youtube') {
     comparator = youtubeChannelInfoComparator
   } else if (platform === 'twitch') {

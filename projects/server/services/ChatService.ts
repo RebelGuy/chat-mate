@@ -6,7 +6,7 @@ import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import ContextClass from '@rebel/server/context/ContextClass'
-import ChannelStore, { ChannelWithLatestInfo, CreateOrUpdateChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
@@ -55,12 +55,12 @@ export default class ChatService extends ContextClass {
   /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
   public async onNewChatItem (item: ChatItem): Promise<boolean> {
     let addedChat: boolean = false
-    let channel: ChannelWithLatestInfo | TwitchChannelWithLatestInfo
+    let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
     let externalId: string
     let platform: ChatPlatform
     try {
       if (item.platform === 'youtube') {
-        const channelInfo: CreateOrUpdateChannelArgs = {
+        const channelInfo: CreateOrUpdateYoutubeChannelArgs = {
           name: item.author.name ?? '',
           time: new Date(item.timestamp),
           imageUrl: item.author.image,

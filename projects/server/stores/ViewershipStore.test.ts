@@ -40,7 +40,7 @@ export default () => {
       { liveId: 'id3', continuationToken: null, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' }
     ]})
     await db.chatUser.createMany({ data: [{}, {}]})
-    await db.channel.createMany({ data: [{ userId: user1, youtubeId: data.channel1 }, { userId: user2, youtubeId: data.channel2 }]})
+    await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2 }]})
     await db.twitchChannel.createMany({ data: [{ userId: user1, twitchId: data.twitchChannel3 }, { userId: user2, twitchId: data.twitchChannel4 }]})
 
     // irrelevant data to make for more realistic setup - we only test things relating to channel1/twitchChannel3/user1

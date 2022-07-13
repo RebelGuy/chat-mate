@@ -26,8 +26,8 @@ export namespace Entity {
   export type Livestream = FullPayload<'Livestream'>
 
   export type ChatUser = FullPayload<'ChatUser'>
-  export type Channel = FullPayload<'Channel'>
-  export type ChannelInfo = FullPayload<'ChannelInfo'>
+  export type YoutubeChannel = FullPayload<'YoutubeChannel'>
+  export type YoutubeChannelInfo = FullPayload<'YoutubeChannelInfo'>
   export type TwitchChannel = FullPayload<'TwitchChannel'>
   export type TwitchChannelInfo = FullPayload<'TwitchChannelInfo'>
 
@@ -56,7 +56,7 @@ export type New<E> = NullableToOptional<Omit<E, 'id'>>
 export type WithChildren<M extends Models, C extends keyof Omit<Includes[M], '_count'> = any> = GetPayloads<FullSelect<Selects[M]> & IncludeSpecificChildren<Includes[M], C>>[M]
 
 type Models = 'Livestream' |
-  'ChatUser' | 'Channel' | 'ChannelInfo' | 'TwitchChannel' | 'TwitchChannelInfo' |
+  'ChatUser' | 'YoutubeChannel' | 'YoutubeChannelInfo' | 'TwitchChannel' | 'TwitchChannelInfo' |
   'ChatMessage' | 'ChatMessagePart' | 'ChatEmoji' | 'ChatText' | 'ChatCheer' |
   'ExperienceTransaction' | 'ExperienceSnapshot' | 'ExperienceDataChatMessage' | 'ViewingBlock' |
   'CustomEmoji'
@@ -64,8 +64,8 @@ type Models = 'Livestream' |
 type Includes = DbDefine<{
   Livestream: Prisma.LivestreamInclude,
   ChatUser: Prisma.ChatUserInclude,
-  Channel: Prisma.ChannelInclude,
-  ChannelInfo: Prisma.ChannelInfoInclude,
+  YoutubeChannel: Prisma.YoutubeChannelInclude,
+  YoutubeChannelInfo: Prisma.YoutubeChannelInfoInclude,
   TwitchChannel: Prisma.TwitchChannelInclude,
   TwitchChannelInfo: Prisma.TwitchChannelInfoInclude,
   ChatMessage: Prisma.ChatMessageInclude,
@@ -84,8 +84,8 @@ type Includes = DbDefine<{
 type GetPayloads<T> = DbDefine<{
   Livestream: Prisma.LivestreamGetPayload<T>,
   ChatUser: Prisma.ChatUserGetPayload<T>,
-  Channel: Prisma.ChannelGetPayload<T>,
-  ChannelInfo: Prisma.ChannelInfoGetPayload<T>,
+  YoutubeChannel: Prisma.YoutubeChannelGetPayload<T>,
+  YoutubeChannelInfo: Prisma.YoutubeChannelInfoGetPayload<T>,
   TwitchChannel: Prisma.TwitchChannelGetPayload<T>,
   TwitchChannelInfo: Prisma.TwitchChannelInfoGetPayload<T>,
   ChatMessage: Prisma.ChatMessageGetPayload<T>,
@@ -103,8 +103,8 @@ type GetPayloads<T> = DbDefine<{
 type Selects = DbDefine<{
   Livestream: Prisma.LivestreamSelect,
   ChatUser: Prisma.ChatUserSelect,
-  Channel: Prisma.ChannelSelect,
-  ChannelInfo: Prisma.ChannelInfoSelect,
+  YoutubeChannel: Prisma.YoutubeChannelSelect,
+  YoutubeChannelInfo: Prisma.YoutubeChannelInfoSelect,
   TwitchChannel: Prisma.TwitchChannelSelect,
   TwitchChannelInfo: Prisma.TwitchChannelInfoSelect,
   ChatMessage: Prisma.ChatMessageSelect,

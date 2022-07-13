@@ -63,11 +63,22 @@ module.exports = (env) => {
     })
   }
 
+  // for development purposes, we need to emit special javascript files, such as scripts, so we can run them separate from the main app.
+  // the key for these will be used for the `[name]` placeholder in the `output` config of webpack.
+  // these have to be placed in the root output folder, otherwise there is an issue where `schema.prisma` can't be found
+  const additionalEntryFiles = isLocal ? {
+    migrateSchema: './scripts/migrations/migrateSchema.ts',
+    applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts'
+  } : {}
+
   return {
     // this opts out of automatic optimisations - do NOT set this to production as the app
     // will crash and the error message is so big it lags out everything
     mode: 'none',
-    entry: './app.ts',
+    entry: {
+      ...additionalEntryFiles,
+      app: './app.ts'
+    },
     resolve: {
       extensions: ['.js', '.ts'],
       alias: {
@@ -121,7 +132,8 @@ module.exports = (env) => {
 
     output: {
       path: outPath,
-      filename: `./app.js`
+      // map each named entry .ts file to its corresponding .js output file
+      filename: `[name].js`
     },
     module: {
       rules: [

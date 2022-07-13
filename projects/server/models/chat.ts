@@ -1,4 +1,4 @@
-import { ChatMessage, ChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, Channel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel } from '@prisma/client'
+import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { PublicMessageCheer } from '@rebel/server/controllers/public/chat/PublicMessageCheer'
@@ -183,7 +183,7 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
 }
 
 export type ChatItemWithRelations = (ChatMessage & {
-  youtubeChannel: Channel & { infoHistory: ChannelInfo[] } | null
+  youtubeChannel: YoutubeChannel & { infoHistory: YoutubeChannelInfo[] } | null
   twitchChannel: TwitchChannel & { infoHistory: TwitchChannelInfo[] } | null
   chatMessageParts: (ChatMessagePart & {
       emoji: ChatEmoji | null

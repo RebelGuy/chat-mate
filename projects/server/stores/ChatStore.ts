@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { ChatItem, ChatItemWithRelations, ChatPlatform, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -142,7 +142,7 @@ export default class ChatStore extends ContextClass {
 }
 
 const includeChannelInfo = {
-  include: Prisma.validator<Prisma.ChannelInclude | Prisma.TwitchChannelInclude>()({
+  include: Prisma.validator<Prisma.YoutubeChannelInclude | Prisma.TwitchChannelInclude>()({
     infoHistory: {
       orderBy: { time: 'desc' },
       take: 1

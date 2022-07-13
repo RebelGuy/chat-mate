@@ -1,11 +1,10 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelService from '@rebel/server/services/ChannelService'
-import ChannelStore, { ChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserNames } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserNames } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
-import * as data from '@rebel/server/_test/testData'
 
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
@@ -31,7 +30,7 @@ describe(nameof(ChannelService, 'getActiveUserChannel'), () => {
   })
 
   test('returns active youtube channel', async () => {
-    const channel: ChannelWithLatestInfo = {} as any
+    const channel: YoutubeChannelWithLatestInfo = {} as any
     const chatItem: Partial<ChatItemWithRelations> = {
       userId: 2,
       youtubeChannelId: 5, youtubeChannel: channel,
@@ -69,7 +68,7 @@ describe(nameof(ChannelService, 'getActiveUserChannel'), () => {
 
 describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
   test('returns all active user channels', async () => {
-    const channel1: ChannelWithLatestInfo = {} as any
+    const channel1: YoutubeChannelWithLatestInfo = {} as any
     const chatItem1: Partial<ChatItemWithRelations> = {
       userId: 1,
       youtubeChannelId: 10, youtubeChannel: channel1,

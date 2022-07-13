@@ -74,7 +74,7 @@ model ChatUser {
   id Int @id @default(autoincrement())
 
   // the channels associated with the user
-  youtubeChannels Channel[]
+  youtubeChannels YoutubeChannel[]
   twitchChannels  TwitchChannel[]
 
   chatMessages               ChatMessage[]
@@ -88,7 +88,7 @@ model ChatUser {
   @@map("chat_users")
 }
 
-model ChannelInfo {
+model YoutubeChannelInfo {
   id          Int     @id @default(autoincrement())
   name        String  @db.VarChar(255)
   imageUrl    String  @db.VarChar(511)
@@ -100,25 +100,25 @@ model ChannelInfo {
   time DateTime
 
   channelId Int
-  channel   Channel @relation(fields: [channelId], references: [id], map: "channel_info_channelId_fkey")
+  channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_info_channelId_fkey")
 
-  @@index([channelId], map: "channel_info_channelId_fkey")
-  @@map("channel_info")
+  @@index([channelId], map: "youtube_channel_info_channelId_fkey")
+  @@map("youtube_channel_info")
 }
 
-model Channel {
+model YoutubeChannel {
   id        Int    @id @default(autoincrement())
   youtubeId String @db.VarChar(63) // unique
 
   userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "channel_userId_fkey")
+  user   ChatUser @relation(fields: [userId], references: [id], map: "youtube_channel_userId_fkey")
 
-  infoHistory  ChannelInfo[]
+  infoHistory  YoutubeChannelInfo[]
   chatMessages ChatMessage[]
 
-  @@unique([youtubeId], map: "Channel_youtubeId_key")
-  @@index([userId], map: "channel_userId_fkey")
-  @@map("channel")
+  @@unique([youtubeId], map: "youtube_channel_youtubeId_key")
+  @@index([userId], map: "youtube_channel_userId_fkey")
+  @@map("youtube_channel")
 }
 
 model TwitchChannelInfo {
@@ -287,7 +287,7 @@ model ChatMessage {
 
   // youtube and twitch ids are used to ensure we know what actual platform account authored the message
   youtubeChannelId Int?
-  youtubeChannel   Channel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
+  youtubeChannel   YoutubeChannel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
 
   twitchChannelId Int?
   twitchChannel   TwitchChannel? @relation(fields: [twitchChannelId], references: [id], map: "chat_message_twitchChannelId_fkey")
