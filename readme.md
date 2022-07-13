@@ -14,13 +14,14 @@ Recommended VSCode extensions:
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
 - Set up the livestream on YouTube (e.g. via scheduling) and get its link or ID
-- Set the ID to the `LIVE_ID` variable in the `release.env` file
-- Ensure the database is running by starting up Workbench and closing it again
-- `yarn install`
-- `yarn workspace server migrate:release` to get the database up-to-date
-- `yarn workspace server build:release` to transpile and bundle up the application
-- `yarn workspace server start:release` in a console window during the livestream
-- Once done, CTRL+C or close the console window
+- ~~Set the ID to the `LIVE_ID` variable in the `release.env` file~~
+- ~~Ensure the database is running by starting up Workbench and closing it again~~
+- ~~`yarn install`~~
+- ~~`yarn workspace server migrate:release` to get the database up-to-date~~
+- ~~`yarn workspace server build:release` to transpile and bundle up the application~~
+- ~~`yarn workspace server start:release` in a console window during the livestream~~
+- ~~Once done, CTRL+C or close the console window~~
+- Set the livestream ID either via the Client's dashboard page, or via the Studio form
 
 ## Adding the `masterchat` Subtree link
 
@@ -38,6 +39,18 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.14 - The Deployment Update [13/7/2022]
+- Server
+  - Added CI for building and testing the project when pushing to GitHub, including automatic deployment to Azure
+  - Livestreams are now dynamic - the server can function just fine without an active livestream, and can have the current livestream switched during runtime
+  - Removed the old output folder structure. Everything now builds into the `dist` folder
+  - Added better environment variable definitions and validity checks
+  - Logged error/warning times are now cached during runtime for quick notifications of potential problems
+- Studio
+  - Added CI for building when pushing to GitHub, including automatic deployment to Azure
+  - Added the ability to get and set the current active livestream
+  - A summary of the server's logged errors/warnings is now shown
+
 ## v1.13 - The Punishment Update [30/5/2022]
 - Server
   - Added ability to apply punishments to livestream participants
