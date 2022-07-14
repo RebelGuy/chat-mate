@@ -3,7 +3,6 @@ import { LogsQueryClient } from '@azure/monitor-query'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import IProvider from '@rebel/server/providers/IProvider'
-import { vsCodePlugin } from '@azure/identity-vscode'
 
 type Deps = Dependencies<{
   managedIdentityClientId: string | null
@@ -18,7 +17,9 @@ export default class LogsQueryClientProvider extends ContextClass implements IPr
 
     // register the VSCode plugin for authentication
     if (deps.resolve('isLocal')) {
-      useIdentityPlugin(vsCodePlugin)
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const identityVsCode = require('@azure/identity-vscode')
+      useIdentityPlugin(identityVsCode.vsCodePlugin)
     }
 
     // https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/identity/identity/samples/AzureIdentityExamples.md#authenticating-a-user-assigned-managed-identity-with-defaultazurecredential
