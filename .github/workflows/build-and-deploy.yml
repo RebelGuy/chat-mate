@@ -59,6 +59,14 @@ jobs:
         with:
           name: built-server-files
           path: ./dist/**
+      
+      - name: Cache files for Studio job
+        if: inputs.deploy != true
+        uses: actions/cache@v3
+        with:
+          # unique to this instance
+          key: ${{ github.sha }}
+          path: ./dist/**
   
   test-server:
     name: Test Server
@@ -106,10 +114,19 @@ jobs:
         with:
           submodules: true
 
-      - name: Download built server files
+      - name: Download built Server files
+        if: inputs.deploy == true
         uses: actions/download-artifact@v2
         with:
           name: built-server-files
+          path: ./dist/
+        
+      - name: Use cache from Server build
+        if: inputs.deploy != true
+        uses: actions/cache@v3
+        with:
+          # unique to this instance
+          key: ${{ github.sha }}
           path: ./dist/
 
       - name: Set up Node.js
