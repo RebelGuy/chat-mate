@@ -54,18 +54,9 @@ jobs:
         run: yarn workspace server build:${{ inputs.NODE_ENV }}
 
       - name: Upload artifact for deployment job
-        if: inputs.deploy == true
         uses: actions/upload-artifact@v2
         with:
           name: built-server-files
-          path: ./dist/**
-      
-      - name: Cache files for Studio job
-        if: inputs.deploy != true
-        uses: actions/cache@v3
-        with:
-          # unique to this instance
-          key: ${{ github.sha }}
           path: ./dist/**
   
   test-server:
@@ -115,18 +106,9 @@ jobs:
           submodules: true
 
       - name: Download built Server files
-        if: inputs.deploy == true
         uses: actions/download-artifact@v2
         with:
           name: built-server-files
-          path: ./dist/
-        
-      - name: Use cache from Server build
-        if: inputs.deploy != true
-        uses: actions/cache@v3
-        with:
-          # unique to this instance
-          key: ${{ github.sha }}
           path: ./dist/
 
       - name: Set up Node.js
@@ -236,3 +218,14 @@ jobs:
           action: upload
           skip_app_build: true
           app_location: .
+
+  cleanup:
+    name: Clean up
+    runs-on: ubuntu-latest
+    needs: deploy-server
+    steps:
+      - name: Remove Server artifacts
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: built-server-files
+          failOnError: false
