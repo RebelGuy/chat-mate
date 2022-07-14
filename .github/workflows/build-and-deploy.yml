@@ -221,6 +221,7 @@ jobs:
 
   cleanup:
     name: Clean up
+    if: always()
     runs-on: ubuntu-latest
     needs: deploy-server
     steps:
