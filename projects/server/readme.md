@@ -18,6 +18,9 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
 1. `yarn install`.
 2. `yarn auth` to fetch the authentication credentials for YouTube, and `yarn auth:twitch:<debug|release>`. Copy them from the console and set them in the [`.env`](#.env) file.
 3. `yarn watch` while developing
+  - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
+  - Rely on VSCode for checking types if using this mode
+  - Use `yarn watch:check` to use `ts-loader` and enable type checking
 4. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options. Note that this does not bundle up the application. For a debug bundle that mirrors the release build, use `yarn build:debug`.
 
 Alternatively, run `yarn build:debug` to bundle the debug app to the same format as what is used in release.

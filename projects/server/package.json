@@ -7,7 +7,8 @@
     "auth:twitch:debug": "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env electron ../../dist/server/scripts/TwitchAuth.js",
     "auth:twitch:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env electron ../../dist/server/scripts/TwitchAuth.js",
 
-    "watch": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true",
+    "watch": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true SKIP_TYPE_CHECKS=true",
+    "watch:check": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true",
     "start:local":  "cross-env NODE_ENV=debug BUILD=tsc IS_LOCAL=true nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
     "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true IS_LOCAL=true nodemon --watch ../../dist --inspect ../../dist/server/app.js",
@@ -59,6 +60,7 @@
   },
   "devDependencies": {
     "@azure/identity-vscode": "^1.0.0",
+    "@swc/core": "^1.2.213",
     "@types/cors": "^2.8.12",
     "@types/express": "^4.17.13",
     "@types/fs-extra": "^9.0.13",
@@ -77,6 +79,7 @@
     "node-fetch": "2.6.6",
     "nodemon": "^2.0.15",
     "prisma": "^3.6.0",
+    "swc-loader": "^0.2.3",
     "ts-jest": "^27.1.2",
     "ts-loader": "^9.2.6",
     "ts-node": "^10.4.0",
