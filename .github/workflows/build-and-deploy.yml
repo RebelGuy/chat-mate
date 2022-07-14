@@ -54,6 +54,7 @@ jobs:
         run: yarn workspace server build:${{ inputs.NODE_ENV }}
 
       - name: Upload artifact for deployment job
+        if: inputs.deploy == true
         uses: actions/upload-artifact@v2
         with:
           name: built-server-files
@@ -130,6 +131,7 @@ jobs:
         run: yarn workspace studio build
 
       - name: Upload artifact for deployment job
+        if: inputs.deploy == true
         uses: actions/upload-artifact@v2
         with:
           name: built-studio-files
