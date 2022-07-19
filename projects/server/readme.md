@@ -38,7 +38,7 @@ Assumes that steps 1-3 of the previous section have been run.
 Run `yarn auth` and log in using the streaming account, or a moderator account. After the Electron app closes, note the authentication token in the console and use it as the `AUTH` environment variable.
 
 ### Twitch
-Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future.
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
 
 For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<debug|release>` and sign in manually. After the Electron app closes, note the access token and refresh token printed in the console and set the relevant environment variables. The next time the project is run, these will be stored in the database (`twitch_auth` table) and retrieved thereon, so the variables can be safely removed before subsequent runs.
 

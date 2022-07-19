@@ -4,8 +4,9 @@
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
-    "auth:twitch:debug": "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env electron ../../dist/server/scripts/TwitchAuth.js",
-    "auth:twitch:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env electron ../../dist/server/scripts/TwitchAuth.js",
+    "auth:twitch:local": "cross-env NODE_ENV=debug BUILD=tsc IS_LOCAL=true dotenv -e debug.env electron ../../dist/server/TwitchAuth.js",
+    "auth:twitch:debug": "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env electron ../../dist/server/TwitchAuth.js",
+    "auth:twitch:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env electron ../../dist/server/TwitchAuth.js",
 
     "watch": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true SKIP_TYPE_CHECKS=true",
     "watch:check": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true",

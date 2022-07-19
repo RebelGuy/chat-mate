@@ -144,6 +144,8 @@ app.use((req, res, next) => {
 })
 
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
+app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
 
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it

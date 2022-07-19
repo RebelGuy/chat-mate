@@ -71,7 +71,8 @@ module.exports = (env) => {
   // these have to be placed in the root output folder, otherwise there is an issue where `schema.prisma` can't be found
   const additionalEntryFiles = isLocal ? {
     migrateSchema: './scripts/migrations/migrateSchema.ts',
-    applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts'
+    applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts',
+    TwitchAuth: './scripts/TwitchAuth.ts'
   } : {}
 
   // skip type checking
@@ -158,6 +159,8 @@ module.exports = (env) => {
       '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
       '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
       '@azure/identity-vscode': 'commonjs @azure/identity-vscode',
+
+      electron: 'require("electron")'
     },
     target: 'node',
 
