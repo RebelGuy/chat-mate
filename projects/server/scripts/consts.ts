@@ -15,7 +15,7 @@ export const DB = refreshDb()
 
 export const DB_NAME = IS_DEBUG ? 'chat_mate_debug' : 'chat_mate'
 
-export const MIGRATIONS_FOLDER = path.join(__dirname, '../../../projects/server/prisma/migrations')
+export const MIGRATIONS_FOLDER = path.join(__dirname, '../../projects/server/prisma/migrations')
 
 export const MIGRATION_SCRIPTS_FOLDER = path.join(__dirname, './migrations')
 

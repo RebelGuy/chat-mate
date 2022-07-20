@@ -47,7 +47,7 @@ model Livestream {
   chatMessages  ChatMessage[]
   viewingBlocks ViewingBlock[]
 
-  @@unique([liveId], map: "Livestream_liveId_key")
+  @@unique([liveId], map: "livestream_liveId_key")
   @@map("livestream")
 }
 
@@ -62,10 +62,10 @@ model LiveViewers {
   twitchViewCount  Int
 
   livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "LiveViewers_livestreamId_fkey")
+  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "live_viewer_livestreamId_fkey")
 
-  @@index([livestreamId], map: "LiveViewers_livestreamId_fkey")
-  @@map("liveviewers")
+  @@index([livestreamId], map: "live_viewer_livestreamId_fkey")
+  @@map("live_viewer")
 }
 
 /// USERS
@@ -82,10 +82,10 @@ model ChatUser {
   experienceSnapshots        ExperienceSnapshot[]
   viewingBlocks              ViewingBlock[]
   experienceDataAdministered ExperienceDataAdmin[]
-  receivedPunishments        Punishment[]            @relation("punishments_user")
-  administeredPunishments    Punishment[]            @relation("punishments_adminUser")
+  receivedPunishments        Punishment[]            @relation("punishment_user")
+  administeredPunishments    Punishment[]            @relation("punishment_adminUser")
 
-  @@map("chat_users")
+  @@map("chat_user")
 }
 
 model YoutubeChannelInfo {
@@ -148,14 +148,14 @@ model TwitchChannel {
   twitchId String @db.VarChar(32) // unique
 
   userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channels_userId_fkey")
+  user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channel_userId_fkey")
 
   infoHistory  TwitchChannelInfo[]
   chatMessages ChatMessage[]
 
-  @@unique([twitchId], map: "twitch_channels_twitchId_key")
-  @@index([userId], map: "twitch_channels_userId_fkey")
-  @@map("twitch_channels")
+  @@unique([twitchId], map: "twitch_channel_twitchId_key")
+  @@index([userId], map: "twitch_channel_userId_fkey")
+  @@map("twitch_channel")
 }
 
 model TwitchFollower {
@@ -165,8 +165,8 @@ model TwitchFollower {
   userName    String
   displayName String
 
-  @@unique([twitchId], map: "twitch_followers_twitchId_key")
-  @@map("twitch_followers")
+  @@unique([twitchId], map: "twitch_follower_twitchId_key")
+  @@map("twitch_follower")
 }
 
 // CHAT
@@ -219,7 +219,7 @@ model ChatCheer {
   // technically messagePart should always be defined
   messagePart ChatMessagePart?
 
-  @@map("chat_cheers")
+  @@map("chat_cheer")
 }
 
 model ChatCustomEmoji {
@@ -374,7 +374,6 @@ model ExperienceDataAdmin {
   experienceTransactionId Int // unique
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id], map: "experience_data_admin_experienceTransactionId_fkey")
 
-  // @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
   @@unique([experienceTransactionId], map: "experience_data_admin_experienceTransactionId_key")
   @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
   @@map("experience_data_admin")
@@ -411,8 +410,8 @@ model CustomEmoji {
 
   ChatCustomEmoji ChatCustomEmoji[]
 
-  @@unique([symbol], map: "CustomEmoji_symbol_key")
-  @@map("customemoji")
+  @@unique([symbol], map: "custom_emoji_symbol_key")
+  @@map("custom_emoji")
 }
 
 model Punishment {
@@ -429,14 +428,14 @@ model Punishment {
   revokeMessage String?   @db.VarChar(1024)
 
   userId Int
-  user   ChatUser @relation("punishments_user", fields: [userId], references: [id], map: "punishments_userId_fkey")
+  user   ChatUser @relation("punishment_user", fields: [userId], references: [id], map: "punishment_userId_fkey")
 
   adminUserId Int
-  adminUser   ChatUser @relation("punishments_adminUser", fields: [adminUserId], references: [id], map: "punishments_adminUserId_fkey")
+  adminUser   ChatUser @relation("punishment_adminUser", fields: [adminUserId], references: [id], map: "punishment_adminUserId_fkey")
 
-  @@index([userId], map: "punishments_userId_fkey")
-  @@index([adminUserId], map: "punishments_adminUserId_fkey")
-  @@map("punishments")
+  @@index([userId], map: "punishment_userId_fkey")
+  @@index([adminUserId], map: "punishment_adminUserId_fkey")
+  @@map("punishment")
 }
 
 enum PunishmentType {
