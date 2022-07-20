@@ -11,7 +11,7 @@ jobs:
     uses: ./.github/workflows/build-and-deploy.yml
     with:
       NODE_ENV: 'debug'
-      deploy: ${{ github.ref_name == 'develop' && !contains(${{ github.event.head_commit.message }}, '--skip-deploy') }}
+      deploy: ${{ github.ref_name }} == 'develop' && !contains(${{ github.event.head_commit.message }}, '--skip-deploy')
     secrets:
       publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9BBD3D4C46274FCD94006579EB592F31 }}
       STATIC_WEB_APPS_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_NICE_COAST_05A39C31E }}
