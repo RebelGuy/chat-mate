@@ -23,6 +23,9 @@ module.exports = (env) => {
   const NAME = process.env.NAME ?? ''
   const NOW = new Date()
 
+  // special env variable passed to webpack during local development for faster building
+  const skipTypeChecks = parseBoolean(env.SKIP_TYPE_CHECKS) ?? false
+
   const outPath = path.resolve(__dirname, `../../dist/server`)
 
   // note: path.resolve doesn't work with glob patterns
@@ -68,8 +71,48 @@ module.exports = (env) => {
   // these have to be placed in the root output folder, otherwise there is an issue where `schema.prisma` can't be found
   const additionalEntryFiles = isLocal ? {
     migrateSchema: './scripts/migrations/migrateSchema.ts',
-    applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts'
+    applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts',
+    TwitchAuth: './scripts/TwitchAuth.ts'
   } : {}
+
+  // skip type checking
+  let typescriptLoader
+  if (skipTypeChecks) {
+    console.log('Skipping type checks - use `yarn workspace server watch:check` to enable type checking')
+    typescriptLoader = {
+      loader: "swc-loader",
+      // instead of using a .swcrc file, we can set the options in here directly
+      // more options: https://swc.rs/docs/configuration/compilation
+      options: {
+        jsc: {
+          parser: {
+            syntax: "typescript",
+            decorators: true,
+            dynamicImport: true
+          },
+          // `decorators: true` will cause a successful compilation, but there will be runtime errors.
+          // enabling these transformations fixes things
+          transform: {
+            legacyDecorator: true,
+            decoratorMetadata: true
+          }
+        },
+        module: {
+          // required to fix masterchat export issues
+          type: 'commonjs'
+        }
+      }
+    }
+  } else {
+    typescriptLoader = { 
+      loader: 'ts-loader',
+      options: {
+        // this is the equivalent of adding the --build flag to tsc.
+        // see https://medium.com/@nickexcell/using-typescript-project-references-with-ts-loader-and-webpack-part-1-5d0c3cd7c603
+        projectReferences: true,
+      }
+    }
+  }
 
   return {
     // this opts out of automatic optimisations - do NOT set this to production as the app
@@ -116,6 +159,8 @@ module.exports = (env) => {
       '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
       '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
       '@azure/identity-vscode': 'commonjs @azure/identity-vscode',
+
+      electron: 'require("electron")'
     },
     target: 'node',
 
@@ -139,14 +184,8 @@ module.exports = (env) => {
       rules: [
         {
           test: /\.ts$/,
-          use: { 
-            'loader': 'ts-loader',
-            'options': {
-              // this is the equivalent of adding the --build flag to tsc.
-              // see https://medium.com/@nickexcell/using-typescript-project-references-with-ts-loader-and-webpack-part-1-5d0c3cd7c603
-              'projectReferences': true
-            }
-          }
+          exclude: /node_modules/,
+          use: typescriptLoader
         }
       ]
     },
