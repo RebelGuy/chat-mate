@@ -141,7 +141,7 @@ jobs:
     if: inputs.deploy == true
     name: Migrate database
     runs-on: ubuntu-latest
-    needs: [build-server, test-server]
+    needs: [build-server, test-server, build-studio]
 
     steps:
       - name: Checkout code
@@ -198,7 +198,7 @@ jobs:
     if: inputs.deploy == true
     name: Deploy Studio
     runs-on: ubuntu-latest
-    needs: [build-studio]
+    needs: [build-server, test-server, build-studio]
     environment:
       name: ${{ inputs.NODE_ENV == 'debug' && 'Production' || 'Sandbox' }}
       url: ${{ inputs.NODE_ENV == 'debug' && 'https://nice-coast-05a39c31e.1.azurestaticapps.net' || 'https://kind-rock-0d2509e10.1.azurestaticapps.net' }}
