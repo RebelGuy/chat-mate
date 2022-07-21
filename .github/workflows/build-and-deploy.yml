@@ -72,7 +72,7 @@ jobs:
         # we are using separate test tables for the develop/master tests so they can run in parallel if needed
         run: |
           touch ./projects/server/test.env
-          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_test_debug' || 'chat_mate_test' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
+          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_test_debug' || 'chat_mate_test' }}?pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
           cat ./projects/server/test.env
 
       - name: Set up Node.js

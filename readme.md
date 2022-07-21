@@ -11,6 +11,13 @@ Recommended VSCode extensions:
 - `GitHub Actions`
 - `Azure Account`
 
+## CI and deployment
+Github Actions is used for automatically building and deploying the Server/Studio projects when pushed.
+
+Pushing to any branch will trigger the build process. Pushing to `master` or `develop` will also trigger automatic deployment to the production or sandbox environments, respectively, unless the string `--skip-deploy` is contained in the commit message.
+
+Deployment of the Server includes an automatic migration of the database.
+
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
 - Set up the livestream on YouTube (e.g. via scheduling) and get its link or ID

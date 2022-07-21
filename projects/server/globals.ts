@@ -47,6 +47,9 @@ type EnvironmentVariables = {
   // if false, will still log warnings and errors
   enableDbLogging: OptionalVariable<boolean, false>
 
+  dbSemaphoreConcurrent: OptionalVariable<number, 1000>
+  dbSemaphoreTimeout: OptionalVariable<number | null, null>
+
   managedIdentityClientId: DeploymentVariable<string>
   logAnalyticsWorkspaceId: string
 }
@@ -60,6 +63,8 @@ function getAllKeys () {
     'channelId': true,
     'databaseUrl': true,
     'enableDbLogging': true,
+    'dbSemaphoreConcurrent': true,
+    'dbSemaphoreTimeout': true,
     'websiteHostname': true,
     'isLocal': true,
     'nodeEnv': true,
@@ -106,6 +111,8 @@ const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
 const optionalVariables: OptionalVariablesWithDefaults = {
   useFakeControllers: false,
   enableDbLogging: false,
+  dbSemaphoreConcurrent: 1000,
+  dbSemaphoreTimeout: null,
   isLocal: false
 }
 
@@ -211,7 +218,7 @@ export default function env<V extends keyof EnvironmentVariables> (variable: V):
 
 function parseValue<T extends Primitive | null> (value: string | null | undefined): T {
   let result
-  if (value == null || value.length === 0) {
+  if (value == null || value.length === 0 || value === 'null') {
     result = null
   } else {
     const processedValue = value.trim().toLowerCase()

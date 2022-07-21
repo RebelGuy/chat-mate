@@ -73,6 +73,8 @@ The following environment variables must be set in the `.env` file:
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
 - `ENABLE_DB_LOGGING`: [Optional, defaults to `false`] Whether to include database-related actions in the logs. Note that, even if this is `false`, any warning and errors will still be included.
+- `DB_SEMAPHORE_CONCURRENT`: [Optional, defaults to `1000`] How many concurrent database requests to allow, before queuing any new requests. Note that operations on the Prisma Client generate many direct database requests, so this number shouldn't be too low (> 50).
+- `DB_SEMAPHORE_TIMEOUT`: [Optional, defaults to `null`] The maximum number of milliseconds that a database request can be queued before timing it out. If null, does not timeout requests in the queue.
 - `MANAGED_IDENTITY_CLIENT_ID`: The Client ID of the Managed Identity that is used to access the Log Analytics workspace for querying logs.
 - `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
