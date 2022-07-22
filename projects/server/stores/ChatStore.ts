@@ -55,14 +55,17 @@ export default class ChatStore extends ContextClass {
       })
 
       // add the records individually because we can't access relations (emoji/text) in a createMany() query
+      let createParts = []
       for (let i = 0; i < chatItem.messageParts.length; i++) {
         const part = chatItem.messageParts[i]
         if (chatMessage.chatMessageParts.find(existing => existing.order === i)) {
           // message part already exists
           continue
         }
-        await db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) })
+        createParts.push(db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) }))
       }
+
+      await Promise.all(createParts)
     })
   }
 

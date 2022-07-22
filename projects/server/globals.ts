@@ -208,7 +208,7 @@ export default function env<V extends keyof EnvironmentVariables> (variable: V):
     value = allEnvVariables[envName]!
   } else if (isOptionalVar(variable)) {
     // disgusting casting
-    return optionalVariables[isLocalKey as keyof OptionalVariablesWithDefaults] as ValueType<V>
+    return optionalVariables[variable as keyof OptionalVariablesWithDefaults] as ValueType<V>
   } else {
     throw new Error(`Cannot find non-optional environment variable ${envName}`)
   }
