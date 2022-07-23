@@ -1,3 +1,5 @@
+import { TimeoutError } from '@rebel/server/util/error'
+
 export default class Semaphore {
   private readonly maxParallel: number
   private readonly timeout: number | null
@@ -10,35 +12,41 @@ export default class Semaphore {
     this.timeout = timeout
   }
 
-  /** Await this. If the promise resolves, then the code has entered the semaphore and you MUST call `exit()` when done. */
+  /**
+   * If the promise resolves, then the code has entered the semaphore and you MUST call `exit()` when done.
+   * 
+   * If the waiting time exceeds the timeout for this semaphore (if set), the promise will reject with a `TimeoutError`.
+   */
   public async enter (): Promise<void> {
     if (this.current < this.maxParallel) {
       this.current++
       return
 
     } else {
-      // hold on to the queued resolve-callback
       let cb: () => void
-      const promise = new Promise<void>(resolve => {
-        this.wait(resolve)
+      const enterPromise = new Promise<void>(resolve => {
         cb = resolve
+        this.wait(resolve)
       })
 
-      const timeout = new Promise((_, reject) => {
+      let timer: NodeJS.Timeout
+      const timeoutPromise = new Promise<void>((_, reject) => {
         if (this.timeout == null) {
           return
         }
 
-        setTimeout(() => {
-          // it is important that we clear the resolve-callback from the queue,
-          // otherwise it will enter the semaphore (increment this.current) without
-          // the caller knowing, and thus will never be able to exit
-          this.queue = this.queue.filter(x => x === cb)
-          reject(new Error('Request timed out.'))
+        timer = setTimeout(() => {
+          // make sure we remove the resolve-callback from the queue, because `exit()` would never be called
+          // and we would be stuck in a deadlock.
+          this.queue = this.queue.filter(x => x !== cb)
+          reject(new TimeoutError('Request timed out.', this.timeout!))
         }, this.timeout)
       })
 
-      return Promise.race([timeout, promise]) as Promise<void>
+      await Promise.race([enterPromise, timeoutPromise])
+
+      // just because the enterPromise resolves doesn't stop the timeout from firing
+      clearTimeout(timer!)
     }
   }
 

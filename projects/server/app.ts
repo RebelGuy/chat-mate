@@ -53,6 +53,7 @@ import { Express } from 'express-serve-static-core'
 import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProvider'
 import LogQueryService from '@rebel/server/services/LogQueryService'
 import LogController from '@rebel/server/controllers/LogController'
+import { TimeoutError } from '@rebel/server/util/error'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -200,6 +201,15 @@ Server.buildServices(app,
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
 process.on('unhandledRejection', (error) => {
+  if (error instanceof TimeoutError) {
+    // when a db request queues a high number of callbacks in the semaphore, timing out the first
+    // callback will correctly fail the request, but there may be more callbacks whose timeout
+    // error takes a bit longer to fire. at that point, though, there won't be a listener anymore
+    // (because the original request has already failed) and errors will bubble up to this point.
+    // we can safely ignore them
+    return
+  }
+
   // from https://stackoverflow.com/questions/46629778/debug-unhandled-promise-rejections
   // to debug timers quietly failing: https://github.com/nodejs/node/issues/22149#issuecomment-410706698
   logContext.logError('process.unhandledRejection', error)
