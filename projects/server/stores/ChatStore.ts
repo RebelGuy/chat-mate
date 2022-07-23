@@ -12,19 +12,22 @@ export type ChatSave = {
 }
 
 type Deps = Dependencies<{
-  dbProvider: DbProvider,
-  livestreamStore: LivestreamStore,
+  dbProvider: DbProvider
+  livestreamStore: LivestreamStore
+  dbTransactionTimeout: number
 }>
 
 export default class ChatStore extends ContextClass {
   readonly name = ChatStore.name
   private readonly db: Db
   private readonly livestreamStore: LivestreamStore
+  private readonly dbTransactionTimeout: number
 
-  constructor (dep: Deps) {
+  constructor (deps: Deps) {
     super()
-    this.db = dep.resolve('dbProvider').get()
-    this.livestreamStore = dep.resolve('livestreamStore')
+    this.db = deps.resolve('dbProvider').get()
+    this.livestreamStore = deps.resolve('livestreamStore')
+    this.dbTransactionTimeout = deps.resolve('dbTransactionTimeout')
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */
@@ -66,6 +69,8 @@ export default class ChatStore extends ContextClass {
       }
 
       await Promise.all(createParts)
+    }, {
+      timeout: this.dbTransactionTimeout ?? undefined
     })
   }
 

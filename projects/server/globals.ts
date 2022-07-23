@@ -49,6 +49,7 @@ type EnvironmentVariables = {
 
   dbSemaphoreConcurrent: OptionalVariable<number, 1000>
   dbSemaphoreTimeout: OptionalVariable<number | null, null>
+  dbTransactionTimeout: OptionalVariable<number, 5000>
 
   managedIdentityClientId: DeploymentVariable<string>
   logAnalyticsWorkspaceId: string
@@ -65,6 +66,7 @@ function getAllKeys () {
     'enableDbLogging': true,
     'dbSemaphoreConcurrent': true,
     'dbSemaphoreTimeout': true,
+    'dbTransactionTimeout': true,
     'websiteHostname': true,
     'isLocal': true,
     'nodeEnv': true,
@@ -113,6 +115,7 @@ const optionalVariables: OptionalVariablesWithDefaults = {
   enableDbLogging: false,
   dbSemaphoreConcurrent: 1000,
   dbSemaphoreTimeout: null,
+  dbTransactionTimeout: 5000,
   isLocal: false
 }
 
