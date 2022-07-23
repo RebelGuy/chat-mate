@@ -154,6 +154,7 @@ export default () => {
     chatStore = new ChatStore(new Dependencies({
       dbProvider,
       livestreamStore: mockLivestreamStore,
+      dbTransactionTimeout: 5000
     }))
     db = dbProvider.get()
 
