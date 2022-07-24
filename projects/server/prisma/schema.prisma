@@ -324,6 +324,7 @@ model ExperienceTransaction {
   user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
 
   @@index([userId], map: "experience_transaction_userId_fkey")
+  @@index([userId, time], map: "experience_transaction_userId_time_key")
   @@map("experience_transaction")
 }
 
