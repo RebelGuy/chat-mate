@@ -5,6 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const WebpackShellPluginNext = require('webpack-shell-plugin-next')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const loaded = require('dotenv').config() // loads the .env file generated during the Github Actions process
+const execSync = require('child_process').execSync
 
 function parseBoolean (str) {
   return str === 'true' ? true : str === 'false' ? false : null
@@ -12,7 +13,12 @@ function parseBoolean (str) {
 
 // add the version number to the top of the app.js file
 const PACKAGE = require('./package.json')
-const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().toISOString()}`
+const currentCommit = execSync(`git rev-parse --short HEAD`).toString().trim()
+const numCommits = execSync(`git rev-list ${currentCommit} --count`).toString().trim()
+const versionParts = PACKAGE.version.split('.')
+versionParts[2] = `${numCommits}`
+const version = versionParts.join('.')
+const banner =  `${PACKAGE.name} - ${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
   env['BUILD'] = 'webpack'
@@ -200,7 +206,7 @@ module.exports = (env) => {
         template: './default.html',
         favicon: `./favicon_${nodeEnv}.ico`,
         chunks: [], // don't inject javascript
-        version: PACKAGE.version,
+        version: version,
         date: NOW.toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', hour12: false }),
         build: NAME,
       })

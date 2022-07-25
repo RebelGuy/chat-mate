@@ -147,7 +147,13 @@ const globalContext = ContextProvider.create()
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
-  next()
+  res.header('Access-Control-Allow-Headers', '*')
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200)
+  } else {
+    next()
+  }
 })
 
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
