@@ -24,37 +24,33 @@ export default class ChannelService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
   }
 
-  /** Gets the user's channel with the most recent activity. Given that users rarely use multiple accounts at once,
-   * this is probably the most relevant channel we want to associate with the user at the current time. */
-  public async getActiveUserChannel (userId: number): Promise<UserChannel | null> {
+  /** Returns active user channels for each user. A user's active channel is the one with which the user
+   * has last participated in chat. It is null if the user has not yet participated in chat.
+   * 
+   * Given that users rarely use multiple accounts at once, this is probably the most relevant
+   * channel we want to associate with the user at the current time. */
+  public async getActiveUserChannels (userIds: number[] | 'all'): Promise<UserChannel[]> {
     if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
 
-    const chat = await this.chatStore.getLastChatByUser(userId)
+    const chatMessages = await this.chatStore.getLastChatOfUsers(userIds)
 
-    if (chat == null) {
-      return null
-    } else if (chat.youtubeChannel != null) {
-      return {
-        platform: 'youtube',
-        channel: chat.youtubeChannel
+    return chatMessages.map(chat => {
+      if (chat.youtubeChannel != null) {
+        return {
+          platform: 'youtube',
+          channel: chat.youtubeChannel
+        }
+      } else if (chat.twitchChannel != null) {
+        return {
+          platform: 'twitch',
+          channel: chat.twitchChannel
+        }
+      } else {
+        throw new Error('Cannot get active channel for user because the latest chat item has no channel attached to it')
       }
-    } else if (chat.twitchChannel != null) {
-      return {
-        platform: 'twitch',
-        channel: chat.twitchChannel
-      }
-    } else {
-      throw new Error('Cannot get active channel for user because the latest chat item has no channel attached to it')
-    }
-  }
-
-  /** Returns all active user channels. Each user has exactly one active user channel. */
-  public async getActiveUserChannels (): Promise<UserChannel[]> {
-    const allIds = await this.channelStore.getCurrentUserIds()
-    const userChannels = await Promise.all(allIds.map(id => this.getActiveUserChannel(id)))
-    return nonNull(userChannels)
+    })
   }
 
   /** Returns channels matching the given name, sorted in ascending order of channel name length (i.e. best sequential match is first). */

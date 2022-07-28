@@ -20,78 +20,40 @@ beforeEach(() => {
   }))
 })
 
-describe(nameof(ChannelService, 'getActiveUserChannel'), () => {
-  test('returns null if user not found', async () => {
-    mockChatStore.getLastChatByUser.mockResolvedValue(null)
-
-    const result = await channelService.getActiveUserChannel(1)
-
-    expect(result).toBeNull()
-  })
-
-  test('returns active youtube channel', async () => {
-    const channel: YoutubeChannelWithLatestInfo = {} as any
-    const chatItem: Partial<ChatItemWithRelations> = {
-      userId: 2,
-      youtubeChannelId: 5, youtubeChannel: channel,
-      twitchChannelId: null, twitchChannel: null
-    }
-    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem as ChatItemWithRelations)
-
-    const result = await channelService.getActiveUserChannel(2)
-
-    expect(result!.platform).toBe('youtube')
-    expect(result!.channel).toBe(channel)
-  })
-  
-  test('returns active twitch channel', async () => {
-    const channel: TwitchChannelWithLatestInfo = {} as any
-    const chatItem: Partial<ChatItemWithRelations> = {
-      userId: 2,
-      youtubeChannelId: null, youtubeChannel: null,
-      twitchChannelId: 5, twitchChannel: channel
-    }
-    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem as ChatItemWithRelations)
-
-    const result = await channelService.getActiveUserChannel(2)
-
-    expect(result!.platform).toBe('twitch')
-    expect(result!.channel).toBe(channel)
-  })
-
-  test('throws if no channels attached to chat item', async () => {
-    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue({ userId: 2 } as any)
-
-    await expect(() => channelService.getActiveUserChannel(2)).rejects.toThrow()
-  })
-})
-
 describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
+  const channel1: YoutubeChannelWithLatestInfo = {} as any
+  const chatItem1: Partial<ChatItemWithRelations> = {
+    userId: 1,
+    youtubeChannelId: 10, youtubeChannel: channel1,
+    twitchChannelId: null, twitchChannel: null,
+  }
+  const channel2: TwitchChannelWithLatestInfo = {} as any
+  const chatItem2: Partial<ChatItemWithRelations> = {
+    userId: 2,
+    youtubeChannelId: null, youtubeChannel: null,
+    twitchChannelId: 5, twitchChannel: channel2
+  }
+
   test('returns all active user channels', async () => {
-    const channel1: YoutubeChannelWithLatestInfo = {} as any
-    const chatItem1: Partial<ChatItemWithRelations> = {
-      userId: 1,
-      youtubeChannelId: 10, youtubeChannel: channel1,
-      twitchChannelId: null, twitchChannel: null,
-    }
-    const channel2: TwitchChannelWithLatestInfo = {} as any
-    const chatItem2: Partial<ChatItemWithRelations> = {
-      userId: 2,
-      youtubeChannelId: null, youtubeChannel: null,
-      twitchChannelId: 5, twitchChannel: channel2
-    }
+    mockChatStore.getLastChatOfUsers.calledWith('all').mockResolvedValue([chatItem1 as ChatItemWithRelations, chatItem2 as ChatItemWithRelations])
 
-    mockChatStore.getLastChatByUser.calledWith(1).mockResolvedValue(chatItem1 as ChatItemWithRelations)
-    mockChatStore.getLastChatByUser.calledWith(2).mockResolvedValue(chatItem2 as ChatItemWithRelations)
-    mockChannelStore.getCurrentUserIds.mockResolvedValue([1, 2])
-
-    const result = await channelService.getActiveUserChannels()
+    const result = await channelService.getActiveUserChannels('all')
 
     expect(result.length).toBe(2)
     expect(result[0].platform).toBe('youtube')
     expect(result[0].channel).toBe(channel1)
     expect(result[1].platform).toBe('twitch')
     expect(result[1].channel).toBe(channel2)
+  })
+
+  test('returns specified active user channels', async () => {
+    mockChatStore.getLastChatOfUsers.calledWith(expect.arrayContaining([1])).mockResolvedValue([chatItem1 as ChatItemWithRelations])
+
+    const result = await channelService.getActiveUserChannels([1])
+
+    expect(result.length).toBe(1)
+    expect(result[0].platform).toBe('youtube')
+    expect(result[0].channel).toBe(channel1)
   })
 })
 

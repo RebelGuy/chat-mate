@@ -116,17 +116,19 @@ export abstract class ControllerBase extends ContextClass {
 export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
   private readonly logContext: LogContext
   private readonly endpointName: string
+  private readonly start: number
 
   public readonly schema: Schema
 
   constructor (logContext: LogContext, endpointName: string, schema: Schema) {
     this.logContext = logContext
     this.endpointName = endpointName
+    this.start = new Date().getTime()
     this.schema = schema
   }
 
   public success (data: T): ApiResponse<Schema, T> {
-    this.logContext.logDebug(`Endpoint ${this.endpointName} processed the request successfully.`)
+    this.logContext.logDebug(`Endpoint ${this.endpointName} processed the request successfully after ${this.getDuration()} ms.`)
 
     return {
       success: true,
@@ -142,7 +144,7 @@ export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
     const errorCode: ErrorCode = typeof arg1 === 'number' ? arg1 : 500
     const error = this.getErrorObject(typeof arg1 === 'number' ? arg2! : arg1)
 
-    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error: `, error)
+    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error after ${this.getDuration()} ms: `, error)
     
     return {
       success: false,
@@ -166,5 +168,9 @@ export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
     } else {
       return { message: 'CANNOT CONVERT ERROR TO STRING' }
     }
+  }
+
+  private getDuration (): number {
+    return new Date().getTime() - this.start
   }
 }

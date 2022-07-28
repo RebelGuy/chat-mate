@@ -65,7 +65,7 @@ export default class LogService extends ContextClass {
   }
 
   private log (logger: ILoggable, logType: LogType, args: any[]) {
-    if (!this.enableDbLogging && logger.name === DbProvider.name && (logType === 'debug' || logType === 'info')) {
+    if (!this.enableDbLogging && logger.name === DbProvider.name && logType === 'debug') {
       return
     }
 

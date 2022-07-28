@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client'
+import { ChatMessage, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -82,12 +82,17 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** Returns the last chat item authored by the user, if any, regardless of which channel was used. */
-  public async getLastChatByUser (userId: number): Promise<ChatItemWithRelations | null> {
-    return await this.db.chatMessage.findFirst({
-      where: { userId: userId },
-      orderBy: { time: 'desc' },
-      include: chatMessageIncludeRelations
+  /** For each user, returns the last chat item authored by the user, if any, regardless of which channel was used. */
+  public async getLastChatOfUsers (userIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
+    const filter = userIds === 'all' ? undefined : { userId: { in: userIds }}
+
+    return await this.db.chatMessage.findMany({
+      distinct: ['userId'],
+      orderBy: {
+        time: 'desc'
+      },
+      include: chatMessageIncludeRelations,
+      where: filter
     })
   }
 

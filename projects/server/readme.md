@@ -138,7 +138,6 @@ Key:
 **Services**
 - ⚪ ApplicationInsightsService
 - 🟢 ChannelService
-  - 🟢 getActiveUserChannel
   - 🟢 getActiveUserChannels
   - 🟢 getUserByChannelName
   - 🟢 getUserById
@@ -215,7 +214,7 @@ Key:
   - 🟢 addChat
   - 🟢 getChatSince
   - 🟢 getLastChatByYoutubeChannel
-  - 🟢 getLastChatByUser
+  - 🟢 getLastChatOfUsers
 - 🟢 CustomEmojiStore
   - 🟢 addCustomEmoji
   - 🟢 getAllCustomEmojis
