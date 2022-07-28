@@ -66,7 +66,7 @@ export default class ChatMateControllerReal implements IChatMateController {
 
     const diffs = await this.experienceService.getLevelDiffs(since + 1)
 
-    const userChannels = nonNull(await Promise.all(diffs.map(d => this.channelService.getActiveUserChannel(d.userId))))
+    const userChannels = await this.channelService.getActiveUserChannels(diffs.map(d => d.userId))
     const levelInfo = await Promise.all(diffs.map(d => this.experienceService.getLevel(d.userId)))
     const punishments = await this.punishmentService.getCurrentPunishments()
     const channels = zip(userChannels, levelInfo)

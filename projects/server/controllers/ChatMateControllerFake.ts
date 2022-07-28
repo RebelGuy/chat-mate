@@ -54,7 +54,7 @@ export default class ChatMateControllerFake implements IChatMateController {
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
-    const users = await this.channelService.getActiveUserChannels()
+    const users = await this.channelService.getActiveUserChannels('all')
 
     let events: PublicChatMateEvent[] = []
     const N = Math.sqrt(Math.random() * 100) - 5
