@@ -13,8 +13,7 @@ function parseBoolean (str) {
 
 // add the version number to the top of the app.js file
 const PACKAGE = require('./package.json')
-const currentCommit = execSync(`git rev-parse --short HEAD`).toString().trim()
-const numCommits = execSync(`git rev-list ${currentCommit} --count`).toString().trim()
+const numCommits = execSync(`git rev-list HEAD --count`).toString().trim()
 const versionParts = PACKAGE.version.split('.')
 versionParts[2] = `${numCommits}`
 const version = versionParts.join('.')
