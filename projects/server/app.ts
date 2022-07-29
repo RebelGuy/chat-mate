@@ -164,6 +164,10 @@ app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname 
 // and they will run in order to do common operations on the request before it
 // reaches the controllers.
 app.use((req, res, next) => {
+  req.on('error', (e) => logContext.logError('Express encountered error for the request at ' + req.url + ':', e))
+  res.on('error', (e) => logContext.logError('Express encountered error for the response at ' + req.url + ':', e))
+
+
   // todo: do auth here, and fail if not authorised
 
   // go to the next handler
@@ -189,8 +193,6 @@ app.use(async (req, res, next) => {
   res.on('finish', async () => {
     await context.dispose()
   })
-
-  res.on('error', (e) => logContext.logError('Express encountered error for request at ' + req.url + ':', e))
 
   next()
 })
