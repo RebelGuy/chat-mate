@@ -108,7 +108,6 @@ export default class LogService extends ContextClass {
       }
     } catch (e: any) {
       console.error('LogService encountered an error:', e)
-      throw e
     }
   }
 
