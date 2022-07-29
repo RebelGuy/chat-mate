@@ -150,6 +150,10 @@ export default class ExperienceStore extends ContextClass {
 
   /** Gets the total experience of the specified users, sorted in descending order. */
   public async getExperience (userIds: number[]): Promise<UserExperience[]> {
+    if (userIds.length === 0) {
+      return []
+    }
+
     // for each user, sums the total experience since the last snapshot (if one exists), then
     // adds the snapshot experience to get the current total experience. 
     return await this.db.$queryRaw<UserExperience[]>`

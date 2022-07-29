@@ -182,6 +182,12 @@ export default () => {
         { userId: 3, experience: 10 + 20 + 30 },
       ]))
     })
+
+    test('returns empty array if the provided array of user ids is empty', async () => {
+      const result = await experienceStore.getExperience([])
+
+      expect(result.length).toBe(0)
+    })
   })
 
   describe(nameof(ExperienceStore, 'getSnapshot'), () => {
