@@ -170,6 +170,8 @@ app.use((req, res, next) => {
   next()
 })
 
+const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
+
 app.use(async (req, res, next) => {
   const context = globalContext.asParent()
     .withClass('chatMateController', ChatMateController)
@@ -188,6 +190,8 @@ app.use(async (req, res, next) => {
     await context.dispose()
   })
 
+  res.on('error', (e) => logContext.logError('Express encountered error for request at ' + req.url + ':', e))
+
   next()
 })
 
@@ -205,8 +209,6 @@ Server.buildServices(app,
   PunishmentController,
   LogController
 )
-
-const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
 process.on('unhandledRejection', (error) => {
   if (error instanceof TimeoutError) {
