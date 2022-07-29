@@ -151,7 +151,7 @@ Key:
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
   - 🟢 getLeaderboard
-  - 🟢 getLevel
+  - 🟢 getLevels
   - 🟢 getLevelDiffs
   - 🟢 modifyExperience
 - ⚪ EventDispatchService
@@ -222,6 +222,7 @@ Key:
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
   - 🟢 addManualExperience
+  - 🟢 getExperience
   - 🟢 getSnapshot
   - 🟢 getPreviousChatExperience
   - 🟢 getAllTransactionsStartingAt

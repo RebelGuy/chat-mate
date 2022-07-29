@@ -94,6 +94,34 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
   return [...map.values()]
 }
 
+/** Merges the two arrays on the given key. Both arrays must be the same lenght and overlap exactly on the key, but no other property.
+ * The merged object has the same order as the first array, relative to the keys. */
+export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (first: T[], second: U[], key: Key): (T & U)[] {
+  if (first.length !== second.length) {
+    throw new Error('Cannot strict-zip arrays with different lengths')
+  }
+
+  const firstKeys = unique(first.map(x => x[key]))
+  const secondKeys = unique(second.map(y => y[key]))
+  if (firstKeys.length !== secondKeys.length || firstKeys.length !== first.length) {
+    throw new Error('Cannot strict-zip arrays with non-unique keys')
+  }
+
+  if (firstKeys.find(x => x == null) || secondKeys.find(y => y == null)) {
+    throw new Error('Cannot strict-zip arrays when at least one element is null')
+  }
+
+  // since keys are unique, and since both sets of keys should be exactly overlapping,
+  // the grouped values should be the exact same set
+  const groupedKeys = groupedSingle([...firstKeys, ...secondKeys], x => x)
+  if (firstKeys.length !== groupedKeys.length) {
+    throw new Error('Cannot strict-zip arrays with differing keys')
+  }
+
+  const result = first.map(x => ({ ...x, ...second.find(y => y[key] === x[key])! }))
+  return result
+}
+
 /** Returns a new array that is the inverse of the input array. */
 export function reverse<T> (arr: T[]): T[] {
   let result: T[] = []

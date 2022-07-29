@@ -1,9 +1,9 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelService from '@rebel/server/services/ChannelService'
-import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserNames } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserNames, UserChannel } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { nameof } from '@rebel/server/_test/utils'
+import { nameof, single } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockChannelStore: MockProxy<ChannelStore>
@@ -40,10 +40,16 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
     const result = await channelService.getActiveUserChannels('all')
 
     expect(result.length).toBe(2)
-    expect(result[0].platform).toBe('youtube')
-    expect(result[0].channel).toBe(channel1)
-    expect(result[1].platform).toBe('twitch')
-    expect(result[1].channel).toBe(channel2)
+    expect(result[0]).toEqual(expect.objectContaining<UserChannel>({
+      platform: 'youtube',
+      channel: channel1,
+      userId: 1
+    }))
+    expect(result[1]).toEqual(expect.objectContaining<UserChannel>({
+      platform: 'twitch',
+      channel: channel2,
+      userId: 2
+    }))
   })
 
   test('returns specified active user channels', async () => {
@@ -51,9 +57,11 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
 
     const result = await channelService.getActiveUserChannels([1])
 
-    expect(result.length).toBe(1)
-    expect(result[0].platform).toBe('youtube')
-    expect(result[0].channel).toBe(channel1)
+    expect(single(result)).toEqual(expect.objectContaining<UserChannel>({
+      platform: 'youtube',
+      channel: channel1,
+      userId: 1
+    }))
   })
 })
 

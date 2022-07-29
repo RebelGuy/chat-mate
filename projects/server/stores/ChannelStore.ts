@@ -27,9 +27,11 @@ export type UserOwnedChannels = {
 }
 
 export type UserChannel = {
+  userId: number
   platform: Extract<ChatPlatform, 'youtube'>
   channel: YoutubeChannelWithLatestInfo
 } | {
+  userId: number
   platform: Extract<ChatPlatform, 'twitch'>
   channel: TwitchChannelWithLatestInfo
 }

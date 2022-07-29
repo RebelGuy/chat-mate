@@ -39,11 +39,13 @@ export default class ChannelService extends ContextClass {
     return chatMessages.map(chat => {
       if (chat.youtubeChannel != null) {
         return {
+          userId: chat.userId,
           platform: 'youtube',
           channel: chat.youtubeChannel
         }
       } else if (chat.twitchChannel != null) {
         return {
+          userId: chat.userId,
           platform: 'twitch',
           channel: chat.twitchChannel
         }

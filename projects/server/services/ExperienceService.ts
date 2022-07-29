@@ -10,15 +10,21 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { sortBy, zip } from '@rebel/server/util/arrays'
-import { asGte, asLt, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
+import { sortBy, zip, zipOnStrict } from '@rebel/server/util/arrays'
+import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
+import { single } from '@rebel/server/_test/utils'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
   totalExperience: GreaterThanOrEqual<0>,
   /** Linear progress. For example, 0.5 signifies that half of the experience between the current level and the next has been collected. */
   levelProgress: GreaterThanOrEqual<0> & LessThan<1>
+}
+
+export type UserLevel = {
+  userId: number
+  level: Level
 }
 
 export type LevelDiff = {
@@ -117,24 +123,33 @@ export default class ExperienceService extends ContextClass {
   /** Sorted in ascending order. */
   public async getLeaderboard (): Promise<RankedEntry[]> {
     const userNames = await this.channelService.getActiveUserChannels('all')
-    const allLevels = await Promise.all(userNames.map(user => this.getLevel(user.channel.userId)))
-    const ordered = sortBy(zip(userNames, allLevels), item => item.totalExperience, 'desc')
-    return ordered.map((item, i) => ({
+    const userLevels = await this.getLevels(userNames.map(user => user.channel.userId))
+
+    const orderedUserLevelChannels = zipOnStrict(userLevels, userNames, 'userId')
+    return orderedUserLevelChannels.map((item, i) => ({
       rank: i + 1,
       userId: item.channel.userId,
       userName: getUserName(item),
-      level: item.level,
-      levelProgress: item.levelProgress
+      level: item.level.level,
+      levelProgress: item.level.levelProgress
     }))
   }
 
-  public async getLevel (userId: number): Promise<Level> {
-    const totalExperience = await this.getTotalExperience(userId)
-    const level = this.experienceHelpers.calculateLevel(totalExperience)
-    return {
-      totalExperience,
-      ...level
-    }
+  /** Sorted in descending order by experience. */
+  public async getLevels (userIds: number[]): Promise<UserLevel[]> {
+    const userExperiences = await this.experienceStore.getExperience(userIds)
+
+    return userExperiences.map(xp => {
+      const totalExperience = clamp(xp.experience, 0, null)
+      const level = this.experienceHelpers.calculateLevel(totalExperience)
+      return {
+        userId: xp.userId,
+        level: {
+          totalExperience: totalExperience,
+          ...level
+        }
+      }
+    })
   }
 
   /** Returns the level difference between now and the start time (inclusive) for
@@ -155,13 +170,14 @@ export default class ExperienceService extends ContextClass {
       userTxs.get(userId)!.push(tx)
     }
 
+    const userExperiences = await this.experienceStore.getExperience([...userTxs.keys()])
     const diffs: LevelDiff[] = []
     for (const [userId, txs] of userTxs) {
       if (txs.length === 0) {
         continue
       }
 
-      const endXp = await this.getTotalExperience(userId)
+      const endXp = userExperiences.find(x => x.userId === userId)!.experience
       const totalDelta = sum(txs.map(tx => tx.delta))
       if (endXp <= 0 || totalDelta <= 0 || endXp - totalDelta < 0) {
         // these are unusual edge cases that we get only when playing around with negative xp, especially at low levels, e.g. for spammers
@@ -171,7 +187,7 @@ export default class ExperienceService extends ContextClass {
       // this was the experience *before the starting tx*
       const startXp = asGte(endXp - totalDelta, 0)
       const startLevel = this.experienceHelpers.calculateLevel(startXp)
-      const endLevel = this.experienceHelpers.calculateLevel(endXp)
+      const endLevel = this.experienceHelpers.calculateLevel(asGte(endXp, 0))
       if (startLevel.level >= endLevel.level) {
         continue
       }
@@ -191,7 +207,7 @@ export default class ExperienceService extends ContextClass {
         userId: userId,
         timestamp: transitionTime!,
         startLevel: { ...startLevel, totalExperience: startXp },
-        endLevel: { ...endLevel, totalExperience: endXp }
+        endLevel: { ...endLevel, totalExperience: asGte(endXp, 0) }
       })
     }
 
@@ -199,8 +215,12 @@ export default class ExperienceService extends ContextClass {
   }
 
   public async modifyExperience (userId: number, levelDelta: number, message: string | null): Promise<Level> {
-    const currentExperience = await this.getTotalExperience(userId)
-    const currentLevel = this.experienceHelpers.calculateLevel(currentExperience)
+    const currentExperiences = await this.experienceStore.getExperience([userId])
+
+    // current experience may be negative - this is intentional
+    const currentExperience = single(currentExperiences).experience
+    const effectiveExperience = clamp(currentExperience, 0, null)
+    const currentLevel = this.experienceHelpers.calculateLevel(effectiveExperience)
     const currentLevelFrac = currentLevel.level + currentLevel.levelProgress
     const newLevelFrac = Math.max(0, currentLevelFrac + levelDelta)
 
@@ -214,18 +234,8 @@ export default class ExperienceService extends ContextClass {
     const experienceDelta = requiredExperience - currentExperience
     await this.experienceStore.addManualExperience(userId, experienceDelta, message)
 
-    const updatedLevel = await this.getLevel(userId)
-    return updatedLevel
-  }
-
-  private async getTotalExperience (userId: number): Promise<GreaterThanOrEqual<0>> {
-    const snapshot = await this.experienceStore.getSnapshot(userId)
-    const baseExperience = snapshot?.experience ?? 0
-
-    const startingTime = snapshot?.time.getTime() ?? 0
-    const totalDelta = await this.experienceStore.getTotalDeltaStartingAt(userId, startingTime)
-    const total = baseExperience + totalDelta
-    return total >= 0 ? total as GreaterThanOrEqual<0> : 0
+    const updatedLevel = await this.getLevels([userId])
+    return single(updatedLevel).level
   }
 
   private async getViewershipMultiplier (userId: number): Promise<GreaterThanOrEqual<1>> {
