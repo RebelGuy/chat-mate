@@ -96,14 +96,19 @@ export default class LogService extends ContextClass {
     }).join(' ')
     const message = `${prefix} ${content}`
 
-    if (logType === 'error') {
-      this.applicationInsightsService.trackException(args)
-    }
+    try {
+      if (logType === 'error') {
+        this.applicationInsightsService.trackException(args)
+      }
 
-    this.fileService.writeLine(this.getLogFile(), message, { append: true })
+      this.fileService.writeLine(this.getLogFile(), message, { append: true })
 
-    if (!isVerbose) {
-      this.applicationInsightsService.trackTrace(logType, message)
+      if (!isVerbose) {
+        this.applicationInsightsService.trackTrace(logType, message)
+      }
+    } catch (e: any) {
+      console.error('LogService encountered an error:', e)
+      throw e
     }
   }
 
