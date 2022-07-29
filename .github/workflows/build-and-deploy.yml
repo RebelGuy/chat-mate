@@ -66,7 +66,10 @@ jobs:
     steps:
       # note: we don't use the built artifact because `ts-jest` builds TS files on the fly
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+          # fetch all commits, not just the latest one, so that webpack can correctly set the version based on the commit count
+          fetch-depth: 0
 
       - name: Create test.env file
         # we are using separate test tables for the develop/master tests so they can run in parallel if needed

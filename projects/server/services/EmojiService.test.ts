@@ -161,7 +161,12 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 })
 
 function setupLevel (level: number) {
-  mockExperienceService.getLevel.calledWith(userId).mockResolvedValue({ level: asGte(level, 0), levelProgress: asLte(0, 1), totalExperience: 0 })
+  mockExperienceService.getLevels
+    .calledWith(expect.arrayContaining([userId]))
+    .mockResolvedValue([{
+      userId: userId,
+      level: { level: asGte(level, 0), levelProgress: asLte(0, 1), totalExperience: 0 }
+    }])
 }
 
 function expectedCustomEmojiPart (customEmoji: Entity.CustomEmoji, originalText: PartialTextChatMessage): PartialCustomEmojiChatMessage {

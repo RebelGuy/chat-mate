@@ -51,13 +51,10 @@ export default class ChatControllerReal implements IChatController {
 
   private async getLevelData (userIds: number[]): Promise<Map<number, LevelData>> {
     const uniqueIds = unique(userIds)
-
-    // since this is only a fetch request, we can run everything in parallel safely
-    const promises = uniqueIds.map(id => this.experienceService.getLevel(id))
-    const results = await Promise.all(promises)
+    const results = await this.experienceService.getLevels(uniqueIds)
 
     const map: Map<number, LevelData> = new Map(
-      results.map((lv, i) => [uniqueIds[i], { level: lv.level, levelProgress: lv.levelProgress }])
+      results.map((lv, i) => [uniqueIds[i], { level: lv.level.level, levelProgress: lv.level.levelProgress }])
     )
     return map
   }

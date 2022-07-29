@@ -15,7 +15,13 @@ const main = async () => {
   })
   console.log(`Successfully retrieved experience data for ${result.length} users.`)
 
-  await Promise.all(result.map(r => createSnapshot(r.userId, r._sum.delta ?? 0)))
+  await DB.experienceSnapshot.createMany({
+    data: result.map(r => ({
+      userId: r.userId,
+      experience: r._sum.delta ?? 0,
+      time: new Date()
+    }))
+  })
   console.log(`Successfully created new snapshots.`)
 
   const totalTransaction = (await DB.experienceTransaction.aggregate({ _sum: { delta: true }}))._sum.delta
@@ -27,11 +33,11 @@ const main = async () => {
   }
 }
 
-async function createSnapshot (userId: number, experience: number) {
+async function createSnapshot (userId: number, time: Date, experience: number) {
   await DB.experienceSnapshot.create({data: {
     userId,
     experience,
-    time: new Date()
+    time
   }})
 }
 

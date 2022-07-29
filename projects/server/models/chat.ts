@@ -238,11 +238,13 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   let userChannel: UserChannel
   if (chat.youtubeChannel != null) {
     userChannel = {
+      userId: chat.userId,
       platform: 'youtube',
       channel: chat.youtubeChannel
     }
   } else if (chat.twitchChannel != null) {
     userChannel = {
+      userId: chat.userId,
       platform: 'twitch',
       channel: chat.twitchChannel
     }

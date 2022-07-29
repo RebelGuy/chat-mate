@@ -214,7 +214,7 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
-  public async modifyExperience (userId: number, levelDelta: number, message: string | null): Promise<Level> {
+  public async modifyExperience (userId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
     const currentExperiences = await this.experienceStore.getExperience([userId])
 
     // current experience may be negative - this is intentional
@@ -235,7 +235,7 @@ export default class ExperienceService extends ContextClass {
     await this.experienceStore.addManualExperience(userId, experienceDelta, message)
 
     const updatedLevel = await this.getLevels([userId])
-    return single(updatedLevel).level
+    return single(updatedLevel)
   }
 
   private async getViewershipMultiplier (userId: number): Promise<GreaterThanOrEqual<1>> {

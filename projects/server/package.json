@@ -10,6 +10,7 @@
 
     "watch": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true SKIP_TYPE_CHECKS=true",
     "watch:check": "webpack --watch --progress --env NODE_ENV=debug IS_LOCAL=true",
+    "watch:tsc": "tsc --build --watch",
     "start:local":  "cross-env NODE_ENV=debug BUILD=tsc IS_LOCAL=true nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
     "start:debug":  "cross-env NODE_ENV=debug BUILD=tsc nodemon --watch ../../dist/ --inspect ../../dist/server/app.js",
     "start:mock":   "cross-env NODE_ENV=debug BUILD=tsc IS_MOCK_LIVESTREAM=true IS_LOCAL=true nodemon --watch ../../dist --inspect ../../dist/server/app.js",
@@ -28,8 +29,8 @@
     "build:release": "yarn run generate && webpack --env NODE_ENV=release",
     "start:release": "cross-env NODE_ENV=release node ../../dist/server/app.js",
 
-    "snapshot:debug":   "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/server/scripts/RefreshSnapshots.js",
-    "snapshot:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env node ../../dist/server/scripts/RefreshSnapshots.js"
+    "snapshot:debug":   "cross-env NODE_ENV=debug BUILD=tsc dotenv -e debug.env node ../../dist/server/RefreshSnapshots.js",
+    "snapshot:release": "cross-env NODE_ENV=release BUILD=tsc dotenv -e release.env node ../../dist/server/RefreshSnapshots.js"
   },
   "dependencies": {
     "@azure/identity": "^2.0.5",

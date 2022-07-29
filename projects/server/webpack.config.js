@@ -78,7 +78,8 @@ module.exports = (env) => {
   const additionalEntryFiles = isLocal ? {
     migrateSchema: './scripts/migrations/migrateSchema.ts',
     applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts',
-    TwitchAuth: './scripts/TwitchAuth.ts'
+    TwitchAuth: './scripts/TwitchAuth.ts',
+    RefreshSnapshots: './scripts/RefreshSnapshots.ts'
   } : {}
 
   // skip type checking
@@ -170,8 +171,9 @@ module.exports = (env) => {
     },
     target: 'node',
 
-    // better stack traces in production errors, but slow builds
-    devtool: 'source-map',
+    // better stack traces in production errors, but slow builds.
+    // no point doing this when we aren't transpiling typescript
+    devtool: skipTypeChecks ? false : 'source-map',
 
     ignoreWarnings: [/Critical dependency: the request of a dependency is an expression/],
 

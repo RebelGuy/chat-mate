@@ -4,6 +4,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
+import { single } from '@rebel/server/_test/utils'
 
 type SearchResult = {
   searchTerm: string,
@@ -88,11 +89,11 @@ export default class EmojiService extends ContextClass {
   }
 
   private async getEligibleEmojis (userId: number): Promise<CustomEmoji[]> {
-    const levelPromise = this.experienceService.getLevel(userId)
+    const levelPromise = this.experienceService.getLevels([userId])
     const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
-    const level = await levelPromise
+    const level = single(await levelPromise)
 
-    return allEmojis.filter(e => level.level >= e.levelRequirement)
+    return allEmojis.filter(e => level.level.level >= e.levelRequirement)
   }
 
   /** Attempts to match the search terms, ignoring casings. Returns ordered search results. */

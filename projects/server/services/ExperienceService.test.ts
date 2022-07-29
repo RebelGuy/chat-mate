@@ -327,7 +327,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
     expect(call).toEqual<typeof call>([userId, 500, 'Test'])
-    expect(result).toEqual<Level>({ ...updatedLevel, totalExperience: asGte(650, 0) })
+    expect(result).toEqual<UserLevel>({ userId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
   })
 
   test('level does not fall below 0', async () => {
@@ -344,7 +344,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
     expect(call).toEqual<typeof call>([userId, -100, 'Test'])
-    expect(result).toEqual<Level>({ level: 0, levelProgress: 0 as any, totalExperience: 0 })
+    expect(result).toEqual<UserLevel>({ userId, level: { level: 0, levelProgress: 0 as any, totalExperience: 0 }})
 
   })
 })

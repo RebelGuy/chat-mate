@@ -67,7 +67,8 @@ export default class ChatMateControllerFake implements IChatMateController {
           levelProgress: asLt(asGte(Math.random(), 0), 1),
           totalExperience: asGte(randomInt(0, 100000), 0)
         }
-        const user: PublicUser = userChannelAndLevelToPublicUser({ ...pickRandom(users), ...level }, [])
+        const userChannel = pickRandom(users)
+        const user: PublicUser = userChannelAndLevelToPublicUser({ ...userChannel, userId: userChannel.userId, level }, [])
   
         events.push({
           schema: 3,
