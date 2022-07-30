@@ -46,6 +46,13 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+
+## v1.15 - The Stress Test Update [30/7/2022]
+- Server
+  - Significantly improved performance of the GET /experience/leaderboard endpoint
+  - Significantly improved Webpack building times by adding an option to skip type checks
+  - Fixed DB timeout during busy periods requiring App restart to fix
+
 ## v1.14 - The Deployment Update [13/7/2022]
 - Server
   - Added CI for building and testing the project when pushing to GitHub, including automatic deployment to Azure
