@@ -3,10 +3,10 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { mockGetter, nameof } from '@rebel/server/_test/utils'
+import { mockGetter, nameof, single } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
-import { ChannelInfo, Livestream, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelInfo, Livestream, TwitchChannelInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
 
 const livestream: Livestream = {
@@ -95,7 +95,7 @@ const cheer1: PartialCheerChatMessage = {
   name: 'Mr Cheerer'
 }
 
-function authorToChannelInfo (a: Author, time?: Date): Omit<ChannelInfo, 'channelId' | 'id'> {
+function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelInfo, 'channelId' | 'id'> {
   return {
     isVerified: a.attributes.isVerified,
     isModerator: a.attributes.isModerator,
@@ -154,10 +154,11 @@ export default () => {
     chatStore = new ChatStore(new Dependencies({
       dbProvider,
       livestreamStore: mockLivestreamStore,
+      dbTransactionTimeout: 5000
     }))
     db = dbProvider.get()
 
-    await db.channel.create({ data: {
+    await db.youtubeChannel.create({ data: {
       user: { create: {}},
       youtubeId: ytAuthor1.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor1)}
@@ -167,7 +168,7 @@ export default () => {
       twitchId: twitchAuthor.userId,
       infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
     }})
-    await db.channel.create({ data: {
+    await db.youtubeChannel.create({ data: {
       user: { connect: { id: youtube1UserId }},
       youtubeId: ytAuthor2.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor2)}
@@ -316,14 +317,14 @@ export default () => {
     })
   })
 
-  describe(nameof(ChatStore, 'getLastChatByUser'), () => {
-    test('return null if user does not exist', async () => {
-      const result = await chatStore.getLastChatByUser(10)
-
-      expect(result).toBeNull()
+  describe(nameof(ChatStore, 'getLastChatOfUsers'), () => {
+    let user3: number
+    beforeEach(async () => {
+      // user 3 has no chat messages
+      user3 = (await db.chatUser.create({ data: {}})).id
     })
 
-    test('returns latest chat item of user', async () => {
+    const setupMessages = async () => {
       // user 1 now has a youtube and twitch channel
       const newExtTwitchId = 'second channel'
       await db.twitchChannel.create({ data: {
@@ -331,26 +332,80 @@ export default () => {
         twitchId: newExtTwitchId,
         infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
       }})
-      await db.chatMessage.createMany({ data: [{
-        livestreamId: 1,
-        time: data.time1,
-        userId: 1,
-        externalId: 'msg 1',
-        youtubeChannelId: 1
-      }, {
-        livestreamId: 1,
-        time: data.time2,
-        userId: 1,
-        externalId: 'msg 2',
-        twitchChannelId: 1
-      }]})
+      await db.chatMessage.createMany({ data: [
+        // user 1:
+        {
+          livestreamId: 1,
+          time: data.time1,
+          userId: 1,
+          externalId: 'user 1 msg 1',
+          youtubeChannelId: 1
+        }, {
+          livestreamId: 1,
+          time: data.time3,
+          userId: 1,
+          externalId: 'user 1 msg 3',
+          twitchChannelId: 1
+        }, {
+          livestreamId: 1,
+          time: data.time2,
+          userId: 1,
+          externalId: 'user 1 msg 2',
+          youtubeChannelId: 2
+        },
+        
+        // user 2:
+        {
+          livestreamId: 1,
+          time: data.time2,
+          userId: twitchUserId,
+          externalId: 'user 2 msg 1',
+          twitchChannelId: 1
+        }, {
+          livestreamId: 1,
+          time: data.time3,
+          userId: twitchUserId,
+          externalId: 'user 2 msg 2',
+          twitchChannelId: 1
+        }
+      ]})
+    }
+      
+    test('returns empty array if no chat item exists for any users', async () => {
+      const result = await chatStore.getLastChatOfUsers('all')
 
-      const msg = await chatStore.getLastChatByUser(1)
+      expect(result.length).toBe(0)
+    })
+    
+    test('returns empty array if no chat item exists for specified users, or users do not exist', async () => {
+      await setupMessages()
 
-      expect(msg!.externalId).toBe('msg 2')
-      expect(msg!.userId).toBe(1)
-      expect(msg!.youtubeChannelId).toBeNull()
-      expect(msg!.twitchChannelId).toBe(1)
+      const result = await chatStore.getLastChatOfUsers([user3, 10000])
+
+      expect(result.length).toBe(0)
+    })
+
+    test('returns the latest chat item of all users', async () => {
+      await setupMessages()
+
+      const lastMessages = await chatStore.getLastChatOfUsers('all')
+
+      expect(lastMessages.length).toBe(2)
+
+      const lastMessageUser1 = lastMessages.find(msg => msg.userId === 1)!
+      expect(lastMessageUser1.externalId).toBe('user 1 msg 3')
+
+      const lastMessageUser2 = lastMessages.find(msg => msg.userId === twitchUserId)!
+      expect(lastMessageUser2.externalId).toBe('user 2 msg 2')
+    })
+
+    test('returns the latest chat item of a specific user', async () => {
+      await setupMessages()
+
+      const lastMessages = await chatStore.getLastChatOfUsers([1])
+
+      const msg = single(lastMessages)
+      expect(msg.externalId).toBe('user 1 msg 3')
     })
   })
 }

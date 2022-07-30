@@ -12,7 +12,9 @@ export const DB_TEST_TIMEOUT = 30000
 const semaphore: Semaphore = new Semaphore()
 const dbProvider = new DbProvider(new Dependencies({
   logService: mockDeep<LogService>(),
-  databaseUrl: process.env.DATABASE_URL!
+  databaseUrl: process.env.DATABASE_URL!,
+  dbSemaphoreConcurrent: 1000,
+  dbSemaphoreTimeout: null
 }))
 let connected = false
 

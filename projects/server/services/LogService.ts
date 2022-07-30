@@ -1,10 +1,10 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { NodeEnv } from '@rebel/server/globals'
 import { ILoggable } from '@rebel/server/interfaces'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import FileService from '@rebel/server/services/FileService'
+import LogQueryService from '@rebel/server/services/LogQueryService'
 import { formatDate, formatTime } from '@rebel/server/util/datetime'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import { LogLevel } from '@twurple/chat'
@@ -16,6 +16,9 @@ type Deps = Dependencies<{
   fileService: FileService
   applicationInsightsService: ApplicationInsightsService
   enableDbLogging: boolean
+
+  // temporary dependency on LogQueryService until we get the analytics workspace queries to work
+  logQueryService: LogQueryService
 }>
 
 export default class LogService extends ContextClass {
@@ -23,6 +26,7 @@ export default class LogService extends ContextClass {
   private readonly applicationInsightsService: ApplicationInsightsService
   private readonly enableDbLogging: boolean
   private readonly isLocal: boolean
+  private readonly logQueryService: LogQueryService
 
   constructor (deps: Deps) {
     super()
@@ -30,6 +34,7 @@ export default class LogService extends ContextClass {
     this.applicationInsightsService = deps.resolve('applicationInsightsService')
     this.enableDbLogging = deps.resolve('enableDbLogging')
     this.isLocal = deps.resolve('isLocal')
+    this.logQueryService = deps.resolve('logQueryService')
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
@@ -51,14 +56,16 @@ export default class LogService extends ContextClass {
 
   public logWarning (logger: ILoggable, ...args: any[]) {
     this.log(logger, 'warning', args)
+    this.logQueryService.onWarning()
   }
 
   public logError (logger: ILoggable, ...args: any[]) {
     this.log(logger, 'error', args)
+    this.logQueryService.onError()
   }
 
   private log (logger: ILoggable, logType: LogType, args: any[]) {
-    if (!this.enableDbLogging && logger.name === DbProvider.name && (logType === 'debug' || logType === 'info')) {
+    if (!this.enableDbLogging && logger.name === DbProvider.name && logType === 'debug') {
       return
     }
 
@@ -89,14 +96,18 @@ export default class LogService extends ContextClass {
     }).join(' ')
     const message = `${prefix} ${content}`
 
-    if (logType === 'error') {
-      this.applicationInsightsService.trackException(args)
-    }
+    try {
+      if (logType === 'error') {
+        this.applicationInsightsService.trackException(args)
+      }
 
-    this.fileService.writeLine(this.getLogFile(), message, { append: true })
+      this.fileService.writeLine(this.getLogFile(), message, { append: true })
 
-    if (!isVerbose) {
-      this.applicationInsightsService.trackTrace(logType, message)
+      if (!isVerbose) {
+        this.applicationInsightsService.trackTrace(logType, message)
+      }
+    } catch (e: any) {
+      console.error('LogService encountered an error:', e)
     }
   }
 

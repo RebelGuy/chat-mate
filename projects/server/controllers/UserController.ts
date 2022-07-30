@@ -51,8 +51,8 @@ export default class UserController extends ControllerBase {
 
     try {
       const matches = await this.channelService.getUserByChannelName(request.searchTerm)
-      const userChannels = nonNull(await Promise.all(matches.map(m => this.channelService.getActiveUserChannel(m.userId))))
-      const levels = await Promise.all(matches.map(m => this.experienceService.getLevel(m.userId)))
+      const userChannels = await this.channelService.getActiveUserChannels(matches.map(m => m.userId))
+      const levels = await this.experienceService.getLevels(matches.map(m => m.userId))
       const punishments = await this.punishmentService.getCurrentPunishments()
       const users = zip(zip(matches, levels), userChannels).map(data => {
         const userPunishments = punishments.filter(p => p.userId === data.userId).map(punishmentToPublicObject)

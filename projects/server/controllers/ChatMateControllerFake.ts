@@ -54,7 +54,7 @@ export default class ChatMateControllerFake implements IChatMateController {
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
-    const users = await this.channelService.getActiveUserChannels()
+    const users = await this.channelService.getActiveUserChannels('all')
 
     let events: PublicChatMateEvent[] = []
     const N = Math.sqrt(Math.random() * 100) - 5
@@ -67,7 +67,8 @@ export default class ChatMateControllerFake implements IChatMateController {
           levelProgress: asLt(asGte(Math.random(), 0), 1),
           totalExperience: asGte(randomInt(0, 100000), 0)
         }
-        const user: PublicUser = userChannelAndLevelToPublicUser({ ...pickRandom(users), ...level }, [])
+        const userChannel = pickRandom(users)
+        const user: PublicUser = userChannelAndLevelToPublicUser({ ...userChannel, userId: userChannel.userId, level }, [])
   
         events.push({
           schema: 3,

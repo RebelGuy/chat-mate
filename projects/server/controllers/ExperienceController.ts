@@ -76,9 +76,9 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      let user = await this.channelService.getActiveUserChannel(id)
-      if (user == null) {
-        return builder.failure(404, `Could not find a user matching id '${id}'`)
+      let userChannels = await this.channelService.getActiveUserChannels([id])
+      if (userChannels.length == 0) {
+        return builder.failure(404, `Could not find an active channel for user ${id}.`)
       }
 
       const leaderboard = await this.experienceService.getLeaderboard()
@@ -120,15 +120,16 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      const user = await this.channelService.getActiveUserChannel(request.userId)
-      if (user == null) {
-        return builder.failure(404, 'Cannot find user.')
+      const userChannels = await this.channelService.getActiveUserChannels([request.userId])
+      const userChannel = userChannels[0]
+      if (userChannel == null) {
+        return builder.failure(404, `Could not find an active channel for user ${request.userId}.`)
       }
 
       const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
       const activePunishments = await this.punishmentService.getCurrentPunishments()
       const userPunishments = activePunishments.filter(p => p.userId === request.userId).map(punishmentToPublicObject)
-      const publicUser = userChannelAndLevelToPublicUser({ ...user, ...level }, userPunishments)
+      const publicUser = userChannelAndLevelToPublicUser({ ...userChannel, ...level }, userPunishments)
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {
       return builder.failure(e)

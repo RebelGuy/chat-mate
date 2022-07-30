@@ -46,6 +46,13 @@ type EnvironmentVariables = {
 
   // if false, will still log warnings and errors
   enableDbLogging: OptionalVariable<boolean, false>
+
+  dbSemaphoreConcurrent: OptionalVariable<number, 1000>
+  dbSemaphoreTimeout: OptionalVariable<number | null, null>
+  dbTransactionTimeout: OptionalVariable<number, 5000>
+
+  managedIdentityClientId: DeploymentVariable<string>
+  logAnalyticsWorkspaceId: string
 }
 
 function getAllKeys () {
@@ -57,6 +64,9 @@ function getAllKeys () {
     'channelId': true,
     'databaseUrl': true,
     'enableDbLogging': true,
+    'dbSemaphoreConcurrent': true,
+    'dbSemaphoreTimeout': true,
+    'dbTransactionTimeout': true,
     'websiteHostname': true,
     'isLocal': true,
     'nodeEnv': true,
@@ -66,7 +76,9 @@ function getAllKeys () {
     'twitchClientId': true,
     'twitchClientSecret': true,
     'twitchRefreshToken': true,
-    'useFakeControllers': true
+    'useFakeControllers': true,
+    'managedIdentityClientId': true,
+    'logAnalyticsWorkspaceId': true
   }
   return Object.keys(allEnvVariables) as (keyof EnvironmentVariables)[]
 }
@@ -93,13 +105,17 @@ const localVariables: Record<VariablesOfType<'local'>, true> = {
 // deployment variables can only be accessed when running the server in Azure, and return null otherwise.
 const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
   applicationinsightsConnectionString: true,
-  websiteHostname: true
+  websiteHostname: true,
+  managedIdentityClientId: true
 }
 
 // optional variables resolve to the default value if they are not included in the environment definition.
 const optionalVariables: OptionalVariablesWithDefaults = {
   useFakeControllers: false,
   enableDbLogging: false,
+  dbSemaphoreConcurrent: 1000,
+  dbSemaphoreTimeout: null,
+  dbTransactionTimeout: 5000,
   isLocal: false
 }
 
@@ -195,7 +211,7 @@ export default function env<V extends keyof EnvironmentVariables> (variable: V):
     value = allEnvVariables[envName]!
   } else if (isOptionalVar(variable)) {
     // disgusting casting
-    return optionalVariables[isLocalKey as keyof OptionalVariablesWithDefaults] as ValueType<V>
+    return optionalVariables[variable as keyof OptionalVariablesWithDefaults] as ValueType<V>
   } else {
     throw new Error(`Cannot find non-optional environment variable ${envName}`)
   }
@@ -205,7 +221,7 @@ export default function env<V extends keyof EnvironmentVariables> (variable: V):
 
 function parseValue<T extends Primitive | null> (value: string | null | undefined): T {
   let result
-  if (value == null || value.length === 0) {
+  if (value == null || value.length === 0 || value === 'null') {
     result = null
   } else {
     const processedValue = value.trim().toLowerCase()

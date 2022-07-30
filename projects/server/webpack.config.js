@@ -5,6 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const WebpackShellPluginNext = require('webpack-shell-plugin-next')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const loaded = require('dotenv').config() // loads the .env file generated during the Github Actions process
+const execSync = require('child_process').execSync
 
 function parseBoolean (str) {
   return str === 'true' ? true : str === 'false' ? false : null
@@ -12,7 +13,11 @@ function parseBoolean (str) {
 
 // add the version number to the top of the app.js file
 const PACKAGE = require('./package.json')
-const banner =  `${PACKAGE.name} - ${PACKAGE.version} generated at ${new Date().toISOString()}`
+const numCommits = execSync(`git rev-list HEAD --count`).toString().trim()
+const versionParts = PACKAGE.version.split('.')
+versionParts[2] = `${numCommits}`
+const version = versionParts.join('.')
+const banner =  `${PACKAGE.name} - ${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
   env['BUILD'] = 'webpack'
@@ -22,6 +27,9 @@ module.exports = (env) => {
   const nodeEnv = env.NODE_ENV ?? 'debug'
   const NAME = process.env.NAME ?? ''
   const NOW = new Date()
+
+  // special env variable passed to webpack during local development for faster building
+  const skipTypeChecks = parseBoolean(env.SKIP_TYPE_CHECKS) ?? false
 
   const outPath = path.resolve(__dirname, `../../dist/server`)
 
@@ -63,11 +71,63 @@ module.exports = (env) => {
     })
   }
 
+  // for development purposes, we need to emit special javascript files, such as scripts, so we can run them separate from the main app.
+  // the key for these will be used for the `[name]` placeholder in the `output` config of webpack.
+  // these have to be placed in the root output folder, otherwise there is an issue where `schema.prisma` can't be found
+  const additionalEntryFiles = isLocal ? {
+    migrateSchema: './scripts/migrations/migrateSchema.ts',
+    applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts',
+    TwitchAuth: './scripts/TwitchAuth.ts',
+    RefreshSnapshots: './scripts/RefreshSnapshots.ts'
+  } : {}
+
+  // skip type checking
+  let typescriptLoader
+  if (skipTypeChecks) {
+    console.log('Skipping type checks - use `yarn workspace server watch:check` to enable type checking')
+    typescriptLoader = {
+      loader: "swc-loader",
+      // instead of using a .swcrc file, we can set the options in here directly
+      // more options: https://swc.rs/docs/configuration/compilation
+      options: {
+        jsc: {
+          parser: {
+            syntax: "typescript",
+            decorators: true,
+            dynamicImport: true
+          },
+          // `decorators: true` will cause a successful compilation, but there will be runtime errors.
+          // enabling these transformations fixes things
+          transform: {
+            legacyDecorator: true,
+            decoratorMetadata: true
+          }
+        },
+        module: {
+          // required to fix masterchat export issues
+          type: 'commonjs'
+        }
+      }
+    }
+  } else {
+    typescriptLoader = { 
+      loader: 'ts-loader',
+      options: {
+        // this is the equivalent of adding the --build flag to tsc.
+        // see https://medium.com/@nickexcell/using-typescript-project-references-with-ts-loader-and-webpack-part-1-5d0c3cd7c603
+        projectReferences: true,
+      }
+    }
+  }
+
   return {
     // this opts out of automatic optimisations - do NOT set this to production as the app
     // will crash and the error message is so big it lags out everything
     mode: 'none',
-    entry: './app.ts',
+    entry: {
+      ...additionalEntryFiles,
+      app: './app.ts'
+    },
     resolve: {
       extensions: ['.js', '.ts'],
       alias: {
@@ -104,11 +164,15 @@ module.exports = (env) => {
       'applicationinsights-native-metrics': 'commonjs applicationinsights-native-metrics',
       '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
       '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
+      '@azure/identity-vscode': 'commonjs @azure/identity-vscode',
+
+      electron: 'require("electron")'
     },
     target: 'node',
 
-    // better stack traces in production errors, but slow builds
-    devtool: 'source-map',
+    // better stack traces in production errors, but slow builds.
+    // no point doing this when we aren't transpiling typescript
+    devtool: skipTypeChecks ? false : 'source-map',
 
     ignoreWarnings: [/Critical dependency: the request of a dependency is an expression/],
 
@@ -120,20 +184,15 @@ module.exports = (env) => {
 
     output: {
       path: outPath,
-      filename: `./app.js`
+      // map each named entry .ts file to its corresponding .js output file
+      filename: `[name].js`
     },
     module: {
       rules: [
         {
           test: /\.ts$/,
-          use: { 
-            'loader': 'ts-loader',
-            'options': {
-              // this is the equivalent of adding the --build flag to tsc.
-              // see https://medium.com/@nickexcell/using-typescript-project-references-with-ts-loader-and-webpack-part-1-5d0c3cd7c603
-              'projectReferences': true
-            }
-          }
+          exclude: /node_modules/,
+          use: typescriptLoader
         }
       ]
     },
@@ -148,7 +207,7 @@ module.exports = (env) => {
         template: './default.html',
         favicon: `./favicon_${nodeEnv}.ico`,
         chunks: [], // don't inject javascript
-        version: PACKAGE.version,
+        version: version,
         date: NOW.toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', hour12: false }),
         build: NAME,
       })

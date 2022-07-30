@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { NgrokAdapter } from '@twurple/eventsub-ngrok'
-import { ConnectionAdapter, DirectConnectionAdapter, EventSubListener, EventSubMiddleware } from '@twurple/eventsub'
+import { ConnectionAdapter, DirectConnectionAdapter, EventSubChannelFollowEvent, EventSubListener, EventSubMiddleware } from '@twurple/eventsub'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
 import { HelixEventSubApi, HelixUser } from '@twurple/api/lib'
@@ -86,11 +86,12 @@ export default class HelixEventService extends ContextClass {
     }
     this.user = user
 
-    // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
-    // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
-    await this.eventSubApi.deleteAllSubscriptions()
-
     if (this.isLocal) {
+      // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
+      // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
+      // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
+      await this.eventSubApi.deleteAllSubscriptions()
+
       this.listener = this.createNewListener()
       await this.listener.listen()
       this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
@@ -111,7 +112,19 @@ export default class HelixEventService extends ContextClass {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       setTimeout(async () => {
         await middleware.markAsReady()
-        await this.subscribeToEvents(middleware)    
+        
+        const subscriptions = await this.eventSubApi.getSubscriptions()
+        const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
+        this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions:', readableSubscriptions)
+        if (subscriptions.total !== subscriptions.data.length) {
+          throw new Error('Time to implement pagination')
+        }
+
+        middleware.onVerify((success, subscription) => this.logService.logInfo(this, 'middleware.onVerify', 'success:', success, 'subscription:', subscription.id))
+        middleware.onRevoke((subscription) => this.logService.logInfo(this, 'middleware.onRevoke', 'subscription:', subscription.id))
+        
+        // from what I understand we can safely re-subscribe to events when using the middleware
+        await this.subscribeToEvents(middleware)
         this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Middleware listener]')
       }, 5000)
       this.logService.logInfo(this, 'Subscription to Helix events via the EventSub API has been set up and will be initialised in 5 seconds')

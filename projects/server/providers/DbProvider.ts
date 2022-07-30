@@ -3,6 +3,7 @@ import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
 import ContextClass from '@rebel/server/context/ContextClass'
+import Semaphore from '@rebel/server/util/Semaphore'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
@@ -12,6 +13,8 @@ export type Db = Omit<PrismaClient, UnusedPrismaProperties>
 type Deps = Dependencies<{
   logService: LogService
   databaseUrl: string
+  dbSemaphoreConcurrent: number
+  dbSemaphoreTimeout: number | null
 }>
 
 export default class DbProvider extends ContextClass implements IProvider<Db> {
@@ -20,11 +23,13 @@ export default class DbProvider extends ContextClass implements IProvider<Db> {
   private readonly logService: LogService
   private readonly databaseUrl: string
   private readonly prismaClient: PrismaClient
+  private readonly semaphore: Semaphore
 
   constructor (deps: Deps) {
     super()
     this.logService = deps.resolve('logService')
     this.databaseUrl = deps.resolve('databaseUrl')
+    this.semaphore = new Semaphore(deps.resolve('dbSemaphoreConcurrent'), deps.resolve('dbSemaphoreTimeout'))
 
     // inline options and definition required to enable event subscription below
     const client = new PrismaClient({
@@ -47,21 +52,33 @@ export default class DbProvider extends ContextClass implements IProvider<Db> {
     client.$on('warn', e => {
       this.logService.logWarning(this, e.message)
     })
-    client.$on('error', e => {
-      this.logService.logError(this, e.message)
-    })
 
     // middleware for logging errors - this way we don't have to care about errors manually every time we use the client
     // https://www.prisma.io/docs/reference/api-reference/error-reference
     client.$use(async (params: Prisma.MiddlewareParams, next) => {
+      // CHAT-362 by limiting the number of concurrent queries, we can reduce the chance of a database timeout.
+      // furthermore, by manually timing out individual requests, we ensure that a long running query does
+      // not cause too much traffic to build up - it is generally more desirable to time out after a number
+      // of seconds, instead of having to wait for potentially minutes.
+      await this.semaphore.enter()
+
       try {
-        return await next(params)
+        const result = await next(params)
+        this.semaphore.exit()
+        return result
       } catch (e: any) {
+        this.semaphore.exit()
         this.logService.logError(this, 'Prisma encountered an error while trying to execute a request.')
         this.logService.logError(this, 'PARAMS:', params)
         this.logService.logError(this, 'ERROR:', e)
-        this.logService.logError(this, 'MESSAGE:', e.message)
-        this.logService.logError(this, 'STACK:', e.stack)
+
+        // CHAT-362 During periods of dense traffic, the db can timeout and will remain in a broken state
+        // until either the app is restarted, or the connection is reset.
+        // we disconnect here, and the next request will automatically re-establish the connection.
+        if (isPrismaTimeout(e)) {
+          this.logService.logInfo(this, 'Detected Prisma timeout, now reconnecting to the database.')
+          await this.prismaClient.$disconnect()
+        }
         throw e
       }
     })
@@ -80,4 +97,9 @@ export default class DbProvider extends ContextClass implements IProvider<Db> {
   public override async dispose () {
     await this.prismaClient.$disconnect()
   }
+}
+
+function isPrismaTimeout (e: any) {
+  const message = e.message as string | null
+  return message != null && message.includes('Timed out fetching a new connection from the connection pool.')
 }

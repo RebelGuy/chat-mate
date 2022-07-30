@@ -1,9 +1,9 @@
 import { ChatMessage } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ExperienceStore from '@rebel/server/stores/ExperienceStore'
+import ExperienceStore, { UserExperience } from '@rebel/server/stores/ExperienceStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { deleteProps, nameof } from '@rebel/server/_test/utils'
+import { deleteProps, nameof, single } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
@@ -37,7 +37,7 @@ export default () => {
 
     const channelId1 = 1
     const channelId2 = 2
-    await db.channel.createMany({ data: [{ userId: user1, youtubeId: data.channel1 }, { userId: user2, youtubeId: data.channel2}, { userId: user3, youtubeId: ADMIN_YOUTUBE_ID }] })
+    await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2}, { userId: user3, youtubeId: ADMIN_YOUTUBE_ID }] })
 
     chatMessage1 = await data.addChatMessage(db, data.time1, null, user1, channelId1)
     chatMessage2 = await data.addChatMessage(db, data.time2, null, user1, channelId1)
@@ -98,6 +98,95 @@ export default () => {
       expect(added.delta).toBe(-200)
       expect(added.experienceDataAdmin?.adminUserId).toBe(3)
       expect(added.experienceDataAdmin?.message).toBe('This is a test')
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'getExperience'), () => {
+    test('returns 0 if user has no experience data', async () => {
+      const result = await experienceStore.getExperience([1])
+
+      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
+        userId: 1,
+        experience: 0
+      }))
+    })
+
+    test('returns the snapshot value if there are no later experience transactions', async () => {
+      const xp = 1000
+      await db.experienceSnapshot.create({ data: { experience: xp, time: data.time2, userId: 1 }})
+
+      const result = await experienceStore.getExperience([1])
+
+      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
+        userId: 1,
+        experience: xp
+      }))
+    })
+
+    test('returns the sum of the deltas if there is no snapshot', async () => {
+      const xp1 = 100
+      const xp2 = 200
+      const xp3 = 500
+      await db.experienceTransaction.createMany({ data: [
+        { delta: xp1, time: data.time1, userId: 1 },
+        { delta: xp2, time: data.time1, userId: 1 },
+        { delta: xp3, time: data.time1, userId: 1 }
+      ]})
+
+      const result = await experienceStore.getExperience([1])
+
+      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
+        userId: 1,
+        experience: xp1 + xp2 + xp3
+      }))
+    })
+
+    test('returns the snapshot plus the sum of the deltas of transactions coming after the snapshot', async () => {
+      const xp1 = 100
+      const xp2 = 200
+      const xp3 = 500
+      const xpSnap = 1000
+      await db.experienceTransaction.createMany({ data: [
+        { delta: xp1, time: data.time2, userId: 1 }, // same time as snapshot
+        { delta: xp2, time: data.time3, userId: 1 },
+        { delta: xp3, time: data.time3, userId: 1 }
+      ]})
+      await db.experienceSnapshot.create({ data: { experience: xpSnap, time: data.time2, userId: 1 }})
+
+      const result = await experienceStore.getExperience([1])
+
+      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
+        userId: 1,
+        experience: xpSnap + xp2 + xp3
+      }))
+    })
+
+    test('returns information for multiple users', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { delta: 10, time: data.time1, userId: 2 },
+        { delta: 11, time: data.time3, userId: 2 },
+        { delta: 10, time: data.time1, userId: 3 },
+        { delta: 20, time: data.time2, userId: 3 },
+        { delta: 30, time: data.time3, userId: 3 }
+      ]})
+      await db.experienceSnapshot.createMany({ data: [
+        { experience: 100, time: data.time2, userId: 1 },
+        { experience: 200, time: data.time2, userId: 2 }
+      ]})
+
+      const result = await experienceStore.getExperience([1, 2, 3])
+
+      expect(result).toEqual(expect.arrayContaining<UserExperience>([
+        { userId: 1, experience: 100 },
+        { userId: 2, experience: 200 + 11 },
+        { userId: 3, experience: 10 + 20 + 30 },
+      ]))
+    })
+
+    test('returns empty array if the provided array of user ids is empty', async () => {
+      const result = await experienceStore.getExperience([])
+
+      expect(result.length).toBe(0)
     })
   })
 

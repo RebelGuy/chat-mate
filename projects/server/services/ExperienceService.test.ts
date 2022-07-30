@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
-import ExperienceService, { Level, RankedEntry } from '@rebel/server/services/ExperienceService'
-import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
+import ExperienceService, { Level, RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
+import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { getGetterMock, mockData, mockGetter, nameof, single } from '@rebel/server/_test/utils'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
@@ -180,16 +180,16 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 })
 
 describe(nameof(ExperienceService, 'getLeaderboard'), () => {
-  test('returns levels for all users', async () => {
+  test('returns ordered levels for all users', async () => {
     const userId1 = 1
     const userId2 = 2
     const channelName1 = 'channel 1'
     const channelName2 = 'channel 2'
-    const userChannel1: DeepPartial<UserChannel> = { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } }
-    const userChannel2: DeepPartial<UserChannel> = { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } }
+    const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } }
+    const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } }
     mockChannelService.getActiveUserChannels.mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId1, 0).mockResolvedValue(130)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId2, 0).mockResolvedValue(811)
+    mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId1, userId2]))
+      .mockResolvedValue([{ userId: userId2, experience: 811 }, { userId: userId1, experience: 130 }]) // descending order
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const leaderboard = await experienceService.getLeaderboard()
@@ -200,47 +200,51 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
   })
 })
 
-describe(nameof(ExperienceService, 'getLevel'), () => {
-  test('returns 0 for new user', async () => {
-    mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue({ level: 0, levelProgress: asLt(asGte(0), 1) })
+describe(nameof(ExperienceService, 'getLevels'), () => {
+  test('gets experience and calculates level', async () => {
+    const userExperiences: UserExperience[] = [{ userId: 1, experience: 0 }, { userId: 2, experience: 100 }]
+    mockExperienceStore.getExperience.calledWith(expect.arrayContaining([1, 2])).mockResolvedValue(userExperiences)
 
-    const result = await experienceService.getLevel(1)
+    const level0: LevelData = { level: 0, levelProgress: asLt(0, 1) }
+    const level1: LevelData = { level: asGte(1, 0), levelProgress: asLt(asGte(0.5, 0), 1) }
+    mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue(level0)
+    mockExperienceHelpers.calculateLevel.calledWith(asGte(100, 0)).mockReturnValue(level1)
 
-    const expected: Level = {
-      level: 0,
-      totalExperience: 0,
-      levelProgress: asLt(asGte(0), 1)
-    }
-    expect(result).toEqual(expected)
+    const result = await experienceService.getLevels([1, 2])
+
+    const expectedArray: UserLevel[] = [{
+      userId: 1,
+      level: {
+        level: 0,
+        totalExperience: 0,
+        levelProgress: asLt(asGte(0), 1)
+      }
+    }, {
+      userId: 2,
+      level: {
+        level: asGte(1, 0),
+        totalExperience: asGte(100, 0),
+        levelProgress: asLt(asGte(0.5, 0), 1)
+      }
+    }]
+    expect(result).toEqual(expect.arrayContaining(expectedArray))
   })
 
-  test('uses results from ExperienceHelper and ExperienceStore', async () => {
-    const userId = 1
-    const experienceSnapshot: ExperienceSnapshot = {
-      id: 1,
-      userId: userId,
-      experience: 100,
-      time: data.time1
+  test('clamps negative values', async () => {
+    mockExperienceStore.getExperience.calledWith(expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, experience: -100 }])
+    mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue({ level: 0, levelProgress: asLt(0, 1) })
+
+    const result = await experienceService.getLevels([1])
+
+    const expected: UserLevel = {
+      userId: 1,
+      level: {
+        level: 0,
+        totalExperience: 0,
+        levelProgress: asLt(asGte(0), 1)
+      }
     }
-    const expectedTotalXp = 100 + 15
-    mockExperienceStore.getSnapshot.calledWith(userId).mockResolvedValue(experienceSnapshot)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId, data.time1.getTime()).mockResolvedValue(15)
-    mockExperienceHelpers.calculateLevel.calledWith(asGte(expectedTotalXp, 0)).mockReturnValue({ level: asGte(2, 0), levelProgress: asLt(asGte(0.1, 0), 1) })
-
-    const result = await experienceService.getLevel(userId)
-
-    expect(result).toEqual({ level: 2, levelProgress: 0.1, totalExperience: expectedTotalXp})
-  })
-
-  test('correctly handles missing snapshot', async () => {
-    const userId = 1
-    mockExperienceStore.getSnapshot.calledWith(userId).mockResolvedValue(null)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId, 0).mockResolvedValue(15)
-    mockExperienceHelpers.calculateLevel.calledWith(asGte(15, 0)).mockReturnValue({ level: asGte(2, 0), levelProgress: asLt(asGte(0.1, 0), 1) })
-
-    const result = await experienceService.getLevel(userId)
-
-    expect(result).toEqual({ level: 2, levelProgress: 0.1, totalExperience: 15})
+    expect(single(result)).toEqual(expected)
   })
 })
 
@@ -265,9 +269,8 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const userId1 = 1
     const userId2 = 2
 
-    const experienceSnapshot1: ExperienceSnapshot = { id: 1, userId: userId1, experience: 100, time: time1 }
-    const experienceSnapshot2: ExperienceSnapshot = { id: 2, userId: userId2, experience: 500, time: time2 }
-    
+    const user1BaseXp = 100
+    const user2BaseXp = 500
     const transactions: ExperienceTransaction[] = [
       { id: 1, userId: userId1, time: time3, delta: 10 },
       { id: 2, userId: userId1, time: time4, delta: 20 },
@@ -276,11 +279,12 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
       { id: 5, userId: userId2, time: time7, delta: 1 },
     ]
 
-    mockExperienceStore.getSnapshot.calledWith(userId1).mockResolvedValue(experienceSnapshot1)
-    mockExperienceStore.getSnapshot.calledWith(userId2).mockResolvedValue(experienceSnapshot2)
+    mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId1, userId2]))
+      .mockResolvedValue([
+        { userId: userId1, experience: user1BaseXp + 10 + 20 },
+        { userId: userId2, experience: user2BaseXp + 150 + 160 + 1}
+      ])
     mockExperienceStore.getAllTransactionsStartingAt.calledWith(time3.getTime()).mockResolvedValue(transactions)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId1, experienceSnapshot1.time.getTime()).mockResolvedValue(30)
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId2, experienceSnapshot2.time.getTime()).mockResolvedValue(311)
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const result = await experienceService.getLevelDiffs(time3.getTime())
@@ -298,9 +302,8 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const time2 = addTime(time1, 'seconds', 1)
     const transactions: ExperienceTransaction[] = [{ id: 1, userId: 1, time: time1, delta: -500 }]
 
-    mockExperienceStore.getSnapshot.mockResolvedValue(null)
-    mockExperienceStore.getTotalDeltaStartingAt.mockResolvedValue(-100)
-    mockExperienceStore.getAllTransactionsStartingAt.mockResolvedValue(transactions)
+    mockExperienceStore.getExperience.calledWith(expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, experience: -100 }])
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time2.getTime()).mockResolvedValue(transactions)
 
     const result = await experienceService.getLevelDiffs(time2.getTime())
 
@@ -313,8 +316,9 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     const time1 = new Date()
     const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
     const userId = 1
-    mockExperienceStore.getSnapshot.calledWith(userId).mockResolvedValue({ id: 1, userId: userId, experience: 100, time: time1 })
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId, time1.getTime()).mockResolvedValueOnce(50).mockResolvedValueOnce(550)
+    mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId]))
+      .mockResolvedValueOnce([{ userId: userId, experience: 150 }])
+      .mockResolvedValueOnce([{ userId: userId, experience: 650 }])
     mockExperienceHelpers.calculateLevel.calledWith(asGte(150, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0.5 as any })
     mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 5 as any, levelProgress: 5.1 - 5 as any })).mockReturnValue(asGte(650.1, 0))
@@ -323,14 +327,15 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
     expect(call).toEqual<typeof call>([userId, 500, 'Test'])
-    expect(result).toEqual<Level>({ ...updatedLevel, totalExperience: asGte(650, 0) })
+    expect(result).toEqual<UserLevel>({ userId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
   })
 
   test('level does not fall below 0', async () => {
     const time1 = new Date()
     const userId = 1
-    mockExperienceStore.getSnapshot.calledWith(userId).mockResolvedValue({ id: 1, userId: userId, experience: 0, time: time1 })
-    mockExperienceStore.getTotalDeltaStartingAt.calledWith(userId, time1.getTime()).mockResolvedValueOnce(100).mockResolvedValueOnce(0)
+    mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId]))
+      .mockResolvedValueOnce([{ userId: userId, experience: 100 }])
+      .mockResolvedValueOnce([{ userId: userId, experience: 0 }])
     mockExperienceHelpers.calculateLevel.calledWith(asGte(100, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0 as any })
     mockExperienceHelpers.calculateLevel.calledWith(asGte(0, 0)).mockReturnValue({ level: 0, levelProgress: 0 as any })
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 0, levelProgress: 0 })).mockReturnValue(0)
@@ -339,7 +344,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
     expect(call).toEqual<typeof call>([userId, -100, 'Test'])
-    expect(result).toEqual<Level>({ level: 0, levelProgress: 0 as any, totalExperience: 0 })
+    expect(result).toEqual<UserLevel>({ userId, level: { level: 0, levelProgress: 0 as any, totalExperience: 0 }})
 
   })
 })

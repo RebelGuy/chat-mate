@@ -1,7 +1,7 @@
-import { Prisma } from '@prisma/client'
+import { ChatMessage, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { ChatItem, ChatItemWithRelations, ChatPlatform, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -12,19 +12,22 @@ export type ChatSave = {
 }
 
 type Deps = Dependencies<{
-  dbProvider: DbProvider,
-  livestreamStore: LivestreamStore,
+  dbProvider: DbProvider
+  livestreamStore: LivestreamStore
+  dbTransactionTimeout: number
 }>
 
 export default class ChatStore extends ContextClass {
   readonly name = ChatStore.name
   private readonly db: Db
   private readonly livestreamStore: LivestreamStore
+  private readonly dbTransactionTimeout: number
 
-  constructor (dep: Deps) {
+  constructor (deps: Deps) {
     super()
-    this.db = dep.resolve('dbProvider').get()
-    this.livestreamStore = dep.resolve('livestreamStore')
+    this.db = deps.resolve('dbProvider').get()
+    this.livestreamStore = deps.resolve('livestreamStore')
+    this.dbTransactionTimeout = deps.resolve('dbTransactionTimeout')
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */
@@ -55,14 +58,19 @@ export default class ChatStore extends ContextClass {
       })
 
       // add the records individually because we can't access relations (emoji/text) in a createMany() query
+      let createParts = []
       for (let i = 0; i < chatItem.messageParts.length; i++) {
         const part = chatItem.messageParts[i]
         if (chatMessage.chatMessageParts.find(existing => existing.order === i)) {
           // message part already exists
           continue
         }
-        await db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) })
+        createParts.push(db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) }))
       }
+
+      await Promise.all(createParts)
+    }, {
+      timeout: this.dbTransactionTimeout ?? undefined
     })
   }
 
@@ -74,12 +82,17 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** Returns the last chat item authored by the user, if any, regardless of which channel was used. */
-  public async getLastChatByUser (userId: number): Promise<ChatItemWithRelations | null> {
-    return await this.db.chatMessage.findFirst({
-      where: { userId: userId },
-      orderBy: { time: 'desc' },
-      include: chatMessageIncludeRelations
+  /** For each user, returns the last chat item authored by the user, if any, regardless of which channel was used. */
+  public async getLastChatOfUsers (userIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
+    const filter = userIds === 'all' ? undefined : { userId: { in: userIds }}
+
+    return await this.db.chatMessage.findMany({
+      distinct: ['userId'],
+      orderBy: {
+        time: 'desc'
+      },
+      include: chatMessageIncludeRelations,
+      where: filter
     })
   }
 
@@ -142,7 +155,7 @@ export default class ChatStore extends ContextClass {
 }
 
 const includeChannelInfo = {
-  include: Prisma.validator<Prisma.ChannelInclude | Prisma.TwitchChannelInclude>()({
+  include: Prisma.validator<Prisma.YoutubeChannelInclude | Prisma.TwitchChannelInclude>()({
     infoHistory: {
       orderBy: { time: 'desc' },
       take: 1

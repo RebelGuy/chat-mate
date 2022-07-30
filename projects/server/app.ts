@@ -50,6 +50,10 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
+import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProvider'
+import LogQueryService from '@rebel/server/services/LogQueryService'
+import LogController from '@rebel/server/controllers/LogController'
+import { TimeoutError } from '@rebel/server/util/error'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -69,6 +73,11 @@ const applicationInsightsConnectionString = env('applicationinsightsConnectionSt
 const enableDbLogging = env('enableDbLogging')
 const isLocal = env('isLocal')
 const hostName = env('websiteHostname')
+const managedIdentityClientId = env('managedIdentityClientId')
+const logAnalyticsWorkspaceId = env('logAnalyticsWorkspaceId')
+const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
+const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
+const dbTransactionTimeout = env('dbTransactionTimeout')
 
 const globalContext = ContextProvider.create()
   .withObject('app', app)
@@ -86,8 +95,13 @@ const globalContext = ContextProvider.create()
   .withProperty('twitchRefreshToken', twitchRefreshToken)
   .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
   .withProperty('enableDbLogging', enableDbLogging)
+  .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
+  .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
+  .withProperty('dbTransactionTimeout', dbTransactionTimeout)
   .withProperty('isLocal', isLocal)
   .withProperty('hostName', hostName)
+  .withProperty('managedIdentityClientId', managedIdentityClientId)
+  .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -96,6 +110,8 @@ const globalContext = ContextProvider.create()
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('applicationInsightsService', ApplicationInsightsService)
+  .withClass('logsQueryClientProvider', LogsQueryClientProvider)
+  .withClass('logQueryService', LogQueryService)
   .withClass('logService', LogService)
   .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
@@ -128,20 +144,37 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .build()
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
+  res.header('Access-Control-Allow-Headers', '*')
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200)
+  } else {
+    next()
+  }
+})
+
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
+app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
 
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it
 // reaches the controllers.
 app.use((req, res, next) => {
+  req.on('error', (e) => logContext.logError('Express encountered error for the request at ' + req.url + ':', e))
+  res.on('error', (e) => logContext.logError('Express encountered error for the response at ' + req.url + ':', e))
+
+
   // todo: do auth here, and fail if not authorised
 
   // go to the next handler
   next()
 })
 
-// for some reason ChatMate Studio can't POST requests due to some CORS issue. adding this middleware magically fixes it
-app.use(cors())
+const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
 app.use(async (req, res, next) => {
   const context = globalContext.asParent()
@@ -151,6 +184,7 @@ app.use(async (req, res, next) => {
     .withClass('experienceController', ExperienceController)
     .withClass('userController', UserController)
     .withClass('punishmentController', PunishmentController)
+    .withClass('logController', LogController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -174,12 +208,20 @@ Server.buildServices(app,
   EmojiController,
   ExperienceController,
   UserController,
-  PunishmentController
+  PunishmentController,
+  LogController
 )
 
-const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
-
 process.on('unhandledRejection', (error) => {
+  if (error instanceof TimeoutError) {
+    // when a db request queues a high number of callbacks in the semaphore, timing out the first
+    // callback will correctly fail the request, but there may be more callbacks whose timeout
+    // error takes a bit longer to fire. at that point, though, there won't be a listener anymore
+    // (because the original request has already failed) and errors will bubble up to this point.
+    // we can safely ignore them
+    return
+  }
+
   // from https://stackoverflow.com/questions/46629778/debug-unhandled-promise-rejections
   // to debug timers quietly failing: https://github.com/nodejs/node/issues/22149#issuecomment-410706698
   logContext.logError('process.unhandledRejection', error)

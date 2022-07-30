@@ -1,12 +1,15 @@
 import ChatMateManager from '@rebel/studio/ChatMateManager'
+import CustomEmojiManager from '@rebel/studio/CustomEmojiManager'
+import Home from '@rebel/studio/Home'
+import HomePageButton from '@rebel/studio/HomePageButton'
+import { Page } from '@rebel/studio/types'
 import React from 'react'
 import './App.css'
-import CustomEmojiManager from './CustomEmojiManager'
 
 type Props = {}
 
 type State = {
-  currentPage: null | 'customEmoji' | 'chatMate'
+  currentPage: Page
 }
 
 export default class App extends React.PureComponent<Props, State> {
@@ -14,26 +17,24 @@ export default class App extends React.PureComponent<Props, State> {
     super(props)
 
     this.state = {
-      currentPage: null
+      currentPage: 'home'
     }
   }
 
-  onSelectChatMatePage = () => {
-    this.setState({ currentPage: 'chatMate' })
+  onSelectPage = (page: Page) => {
+    this.setState({ currentPage: page })
   }
 
-  onSelectCustomEmojiPage = () => {
-    this.setState({ currentPage: 'customEmoji' })
+  onSelectHomePage = () => {
+    this.setState({ currentPage: 'home' })
   }
 
   override render () {
     return (
       <div className="App">
         <h1>ChatMate Studio</h1>
-        {this.state.currentPage === null && <div>
-          <button onClick={this.onSelectCustomEmojiPage} style={{ display: 'block', margin: 'auto' }}>Custom Emoji Manager</button>
-          <button onClick={this.onSelectChatMatePage} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
-        </div>}
+        {this.state.currentPage !== 'home' && <HomePageButton onHome={this.onSelectHomePage} />}
+        {this.state.currentPage === 'home' && <Home onSelectPage={this.onSelectPage} />} 
         {this.state.currentPage === 'chatMate' && <ChatMateManager />}
         {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
       </div>

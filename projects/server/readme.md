@@ -18,6 +18,9 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
 1. `yarn install`.
 2. `yarn auth` to fetch the authentication credentials for YouTube, and `yarn auth:twitch:<debug|release>`. Copy them from the console and set them in the [`.env`](#.env) file.
 3. `yarn watch` while developing
+  - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
+  - Rely on VSCode for checking types if using this mode
+  - Use `yarn watch:check` to use `ts-loader` and enable type checking
 4. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options. Note that this does not bundle up the application. For a debug bundle that mirrors the release build, use `yarn build:debug`.
 
 Alternatively, run `yarn build:debug` to bundle the debug app to the same format as what is used in release.
@@ -35,7 +38,7 @@ Assumes that steps 1-3 of the previous section have been run.
 Run `yarn auth` and log in using the streaming account, or a moderator account. After the Electron app closes, note the authentication token in the console and use it as the `AUTH` environment variable.
 
 ### Twitch
-Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future.
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
 
 For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<debug|release>` and sign in manually. After the Electron app closes, note the access token and refresh token printed in the console and set the relevant environment variables. The next time the project is run, these will be stored in the database (`twitch_auth` table) and retrieved thereon, so the variables can be safely removed before subsequent runs.
 
@@ -46,6 +49,13 @@ Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the
 When deployed, we use Application Insights to track all error and warning messages via the Trace event.
 
 At all times, we are logging all messages to the file system. On Azure, the data folder lives under `/site/data` and can be accessed via FileZilla.
+
+The retrieval of logs from Application Insights is achieved automatically (and exposed via the LogsController) using Azure's Log Analytics Workspaces and the [`monitor-query` package](https://docs.microsoft.com/en-us/javascript/api/overview/azure/monitor-query-readme?view=azure-node-latest). Note that we use the pay-as-you go pricing tier ($3.22 per GB) with a free 5 GB per month. It works by telling Application Insights to feed its data to the workspace (done via Monitoring -> Diagnostic Settings), which can then be queried via the API.
+
+**[Authentication](https://github.com/Azure/azure-sdk-for-js/blob/@azure/monitor-query_1.0.2/sdk/identity/identity/README.md#defaultazurecredential) of the `monitor-query` package**
+When developing locally, we [authenticate](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/identity/identity/README.md#authenticate-via-visual-studio-code) via the Azure Account extension (**version 0.9.10**). Run the `sign in` VSCode command to commence the session. When generating the client during runtime, the `DefaultAzureCredential` will automatically read this sign-in session from VSCode.
+
+When deployed to Azure, the `MANAGED_IDENTITY_CLIENT_ID` points the credential handler to the managed identity that we want to use, and no further authentication should be required to get things working.
 
 # .env
 Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
@@ -63,6 +73,11 @@ The following environment variables must be set in the `.env` file:
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
 - `ENABLE_DB_LOGGING`: [Optional, defaults to `false`] Whether to include database-related actions in the logs. Note that, even if this is `false`, any warning and errors will still be included.
+- `DB_SEMAPHORE_CONCURRENT`: [Optional, defaults to `1000`] How many concurrent database requests to allow, before queuing any new requests. Note that operations on the Prisma Client generate many direct database requests, so this number shouldn't be too low (> 50).
+- `DB_SEMAPHORE_TIMEOUT`: [Optional, defaults to `null`] The maximum number of milliseconds that a database request can be queued before timing it out. If null, does not timeout requests in the queue.
+- `DB_TRANSACTION_TIMEOUT`: [Optional, defaults to `5000`] The maximum number of milliseconds a Prisma transaction can run before being cancelled and rolled back.
+- `MANAGED_IDENTITY_CLIENT_ID`: The Client ID of the Managed Identity that is used to access the Log Analytics workspace for querying logs.
+- `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
 The following set of environment variables is available only for **local development** (that is, where `IS_LOCAL` is `true`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
@@ -81,17 +96,19 @@ For testing, define a `test.env` file that sets only a subset of the above varia
 
 ## Database
 
-The `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` database is named `chat_mate_test`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
+The `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
 At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. This should also be run if the project structure changes in some way. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, see https://www.prisma.io/docs/concepts/components/prisma-client.
 
+
+### Migrations
 Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:debug`.
 
 During a migration, ensure that the `.sql` is checked and edited to avoid data loss, but avoid making manual changes that affect the database schema, other than the ones already present.
 
-`yarn migrate:release` deploys changes to the production environment. Only uses migration files, NOT the Prisma schema file.
+Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow a expand and contract pattern.
 
 ## Punishments
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
@@ -121,7 +138,6 @@ Key:
 **Services**
 - ⚪ ApplicationInsightsService
 - 🟢 ChannelService
-  - 🟢 getActiveUserChannel
   - 🟢 getActiveUserChannels
   - 🟢 getUserByChannelName
   - 🟢 getUserById
@@ -135,7 +151,7 @@ Key:
 - 🟢 ExperienceService
   - 🟢 addExperienceForChat
   - 🟢 getLeaderboard
-  - 🟢 getLevel
+  - 🟢 getLevels
   - 🟢 getLevelDiffs
   - 🟢 modifyExperience
 - ⚪ EventDispatchService
@@ -144,6 +160,11 @@ Key:
   - 🟢 initialise
   - 🟢 deactivateLivestream
   - 🟢 setActiveLivestream
+- 🟢 LogQueryService
+  - ⚪ onWarning
+  - ⚪ onError
+  - 🟢 queryCriticalLogs
+  - ⚪ queryCriticalLogs_
 - 🟢 MasterchatProxyService
   - 🟢 addMasterchat
   - 🟢 fetch
@@ -193,7 +214,7 @@ Key:
   - 🟢 addChat
   - 🟢 getChatSince
   - 🟢 getLastChatByYoutubeChannel
-  - 🟢 getLastChatByUser
+  - 🟢 getLastChatOfUsers
 - 🟢 CustomEmojiStore
   - 🟢 addCustomEmoji
   - 🟢 getAllCustomEmojis
@@ -201,6 +222,7 @@ Key:
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
   - 🟢 addManualExperience
+  - 🟢 getExperience
   - 🟢 getSnapshot
   - 🟢 getPreviousChatExperience
   - 🟢 getAllTransactionsStartingAt
@@ -229,6 +251,7 @@ Key:
   - 🟢 getLivestreamViewership
 
 **Providers**
+- ⚪ LogsQueryClientProvider
 - 🟢 TwurpleAuthProvider
   - 🟢 initialise
 
@@ -416,6 +439,17 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `404`: When the given user is not found.
+
+## Log Endpoints
+Path: `/log`.
+
+### `GET /timestamps`
+*Current schema: 1.*
+
+Gets timestamps of warnings and errors encountered within the last 24 hours.
+
+Returns data with the following properties:
+- `timestamps` (`PublicLogTimestamps`): The timestamps of warnings and errors.
 
 ## Punishment Endpoints
 Path: `/punishment`.
