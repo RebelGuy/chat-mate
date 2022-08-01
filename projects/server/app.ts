@@ -159,6 +159,8 @@ app.use((req, res, next) => {
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
 app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
 app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+app.get('/favicon_debug.ico', (_, res) => res.sendFile('favicon_debug.ico', { root: __dirname }))
+app.get('/favicon_release.txt', (_, res) => res.sendFile('favicon_release.ico', { root: __dirname }))
 
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it
