@@ -150,6 +150,27 @@ export function tally<T> (arr: T[], comparator?: (a: T, b: T) => boolean): { val
   return sortBy(result, r => r.count, 'desc')
 }
 
+/** Assigns items to multi-member groups. The order of a group is retained depending on when it was first encountered.
+ * Items within that group are ordered depending on when they were added to the gorup. */
+export function group<T, G> (arr: T[], grouper: (item: T) => G): { group: G, items: T[] }[] {
+  let groupIndices: Map<G, number> = new Map()
+  let nextGroupIndex = 0
+  let groups: { group: G, items: T[] }[] = []
+
+  for(const item of arr) {
+    const group = grouper(item)
+    if (!groupIndices.has(group)) {
+      groups.push({ group, items: [item] })
+      groupIndices.set(group, nextGroupIndex)
+      nextGroupIndex++
+    } else {
+      groups[groupIndices.get(group)!].items.push(item)
+    }
+  }
+
+  return groups
+}
+
 /** Assigns items to single-member groups on a first-come, first-serve basis. The resulting array is also ordered. */
 export function groupedSingle<T, G> (arr: T[], grouper: (item: T) => G): T[] {
   let groups: Set<G> = new Set()

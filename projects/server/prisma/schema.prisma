@@ -84,6 +84,9 @@ model ChatUser {
   experienceDataAdministered ExperienceDataAdmin[]
   receivedPunishments        Punishment[]            @relation("punishment_user")
   administeredPunishments    Punishment[]            @relation("punishment_adminUser")
+  userRanks                  UserRank[]              @relation("user_rank_userId")
+  administeredUserRanks      UserRank[]              @relation("user_rank_assignedByUserId")
+  revokedUserRanks           UserRank[]              @relation("user_rank_revokedByUserId")
 
   @@map("chat_user")
 }
@@ -413,6 +416,70 @@ model CustomEmoji {
 
   @@unique([symbol], map: "custom_emoji_symbol_key")
   @@map("custom_emoji")
+}
+
+// Ranks
+
+model Rank {
+  id Int @id @default(autoincrement())
+
+  name        RankName
+  displayName String    @db.VarChar(64)
+  description String?   @db.VarChar(1024)
+  group       RankGroup
+
+  userRanks UserRank[]
+
+  @@unique([name], map: "rank_name_key")
+  @@map("rank")
+}
+
+enum RankName {
+  owner
+  famous
+  mod
+}
+
+enum RankGroup {
+  cosmetic
+  administration
+  punishment
+  donation
+}
+
+model UserRank {
+  id Int @id @default(autoincrement())
+
+  issuedAt       DateTime
+  /// `null` if rank never expires
+  expirationTime DateTime?
+  /// optional assignment message
+  message        String?   @db.VarChar(1024)
+
+  /// only set if the rank has been revoked
+  revokedTime   DateTime?
+  /// optional revocation message
+  revokeMessage String?   @db.VarChar(1024)
+
+  rankId Int
+  rank   Rank @relation(fields: [rankId], references: [id], map: "user_rank_rankId_fkey")
+
+  userId Int
+  user   ChatUser @relation("user_rank_userId", fields: [userId], references: [id], map: "user_rank_userId_fkey")
+
+  /// if null, was assigned by the system
+  assignedByUserId Int?
+  assignedByUser   ChatUser? @relation("user_rank_assignedByUserId", fields: [assignedByUserId], references: [id], map: "user_rank_assignedByUserId_fkey")
+
+  /// if null, was revoked by the system. only relevant when `revokedTime` is non-null, or the rank has expired
+  revokedByUserId Int?
+  revokedByUser   ChatUser? @relation("user_rank_revokedByUserId", fields: [revokedByUserId], references: [id], map: "user_rank_revokedByUserId_fkey")
+
+  @@index([rankId], map: "user_rank_rankId_fkey")
+  @@index([userId], map: "user_rank_userId_fkey")
+  @@index([expirationTime], map: "user_rank_expirationTime_key")
+  @@index([revokedTime], map: "user_rank_revokedTime_key")
+  @@map("user_rank")
 }
 
 model Punishment {

@@ -45,7 +45,7 @@ async function clearDatabase (client: PrismaClient) {
 
   for (const { tablename } of tablenames) {
     if (tablename !== '_prisma_migrations') {
-      transactions.push(client.$executeRawUnsafe(`TRUNCATE ${tablename};`))
+      transactions.push(client.$executeRawUnsafe(`TRUNCATE \`${tablename}\`;`))
     }
   }
 

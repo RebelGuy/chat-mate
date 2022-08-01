@@ -242,6 +242,10 @@ Key:
   - 🟢 getPunishments
   - 🟢 getPunishmentsForUser
   - 🟢 revokePunishment
+- 🟢 RankStore
+  - 🟢 addUserRank
+  - 🟢 getUserRanks
+  - 🟢 removeUserRank
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation

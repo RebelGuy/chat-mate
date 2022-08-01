@@ -6,6 +6,7 @@ import ViewershipStoreSuite from '@rebel/server/stores/ViewershipStore.test'
 import CustomEmojiStoreSuite from '@rebel/server/stores/CustomEmojiStore.test'
 import FollowerStoreSuite from '@rebel/server/stores/FollowerStore.test'
 import PunishmentStoreSuite from '@rebel/server/stores/PunishmentStore.test'
+import RankStoreSuite from '@rebel/server/stores/RankStore.test'
 
 // keep an eye on this one: https://github.com/prisma/prisma/issues/732
 // it would HUGELY improve efficiency if we can use an in-memory mock database for testing.
@@ -26,5 +27,7 @@ describeFn('FollowerStore Suite', FollowerStoreSuite)
 describeFn('LivestreamStore Suite', LivestreamStoreSuite)
 
 describeFn('PunishmentStore Suite', PunishmentStoreSuite)
+
+describeFn('RankStore Suite', RankStoreSuite)
 
 describeFn('ViewershipStore Suite', ViewershipStoreSuite)

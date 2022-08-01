@@ -10,7 +10,7 @@ export function single<T> (array: ArrayLike<T>): T {
 
 type Class = new (...args: any[]) => any
 
-type ClassMember<C extends Class> = Exclude<keyof InstanceType<C> & string, 'name'>
+type ClassMember<C extends Class> = Exclude<keyof InstanceType<C> & string, 'name' | 'initialise' | 'onReady' | 'dispose'>
 
 /** Typed name of a class or function. */
 export function nameof<C extends Class, MemberName extends ClassMember<C>> (obj: C, memberName: MemberName): string
