@@ -52,10 +52,9 @@ export default class RankStore extends ContextClass {
 
   /** Adds the rank to the user. Throws if a user-rank of that type is already active. */
   public async addUserRank (args: AddUserRankArgs) {
-    // note: there is a DB trigger that ensures the rank doesn't already exist.
-    // this avoids any potential race conditions that may arise if we were to
-    // check this server-side.
-  
+    // note: there is a BEFORE INSERT trigger in the `user_rank` table that ensures the user-rank doesn't already exist.
+    // this avoids any potential race conditions that may arise if we were to check this server-side.
+
     await this.db.userRank.create({ data: {
       user: { connect: { id: args.userId }},
       rank: { connect: { name: args.rank }},

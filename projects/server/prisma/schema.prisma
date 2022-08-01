@@ -447,6 +447,7 @@ enum RankGroup {
   donation
 }
 
+// this table has a BEFORE INSERT trigger `TRG_CHECK_EXISTING_ACTIVE_RANK`
 model UserRank {
   id Int @id @default(autoincrement())
 
@@ -456,7 +457,7 @@ model UserRank {
   /// optional assignment message
   message        String?   @db.VarChar(1024)
 
-  /// only set if the rank has been revoked
+  /// only set if the rank has been revoked. acts as a "deactivated" flag
   revokedTime   DateTime?
   /// optional revocation message
   revokeMessage String?   @db.VarChar(1024)
