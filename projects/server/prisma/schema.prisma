@@ -436,8 +436,13 @@ model Rank {
 
 enum RankName {
   owner
-  famous
   mod
+
+  famous
+
+  muted
+  timed_out
+  banned
 }
 
 enum RankGroup {
