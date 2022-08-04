@@ -1,15 +1,15 @@
 import { Dependencies } from '@rebel/server/context/context'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import { Db } from '@rebel/server/providers/DbProvider'
-import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
-import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
-import { Rank, UserRank } from '@prisma/client'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { Rank, RankName, UserRank } from '@prisma/client'
+import { nameof } from '@rebel/server/_test/utils'
+import { single, sortBy, unique } from '@rebel/server/util/arrays'
+import { UserRankNotFoundError, UserRankAlreadyExistsError } from '@rebel/server/util/error'
 
 
 export default () => {
@@ -25,6 +25,8 @@ export default () => {
   let ownerRank: Rank
   let famousRank: Rank
   let modRank: Rank
+  let bannedRank: Rank
+  let mutedRank: Rank
 
   let db: Db
   let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
@@ -48,6 +50,8 @@ export default () => {
     ownerRank = await db.rank.create({ data: { name: 'owner', displayName: 'owner', group: 'administration' }})
     famousRank = await db.rank.create({ data: { name: 'famous', displayName: 'famous', group: 'cosmetic' }})
     modRank = await db.rank.create({ data: { name: 'mod', displayName: 'mod', group: 'administration' }})
+    bannedRank = await db.rank.create({ data: { name: 'banned', displayName: 'banned', group: 'punishment' }})
+    mutedRank = await db.rank.create({ data: { name: 'muted', displayName: 'muted', group: 'punishment' }})
 
     await rankStore.initialise()
   }, DB_TEST_TIMEOUT)
@@ -67,10 +71,11 @@ export default () => {
         expirationTime: null
       }
 
-      await rankStore.addUserRank(args)
+      const result = await rankStore.addUserRank(args)
 
       expectRowCount(db.userRank).toBe(1)
       const saved = (await db.userRank.findFirst())!
+      expect(result).toEqual(expect.objectContaining(saved))
       expect(saved).toEqual(expect.objectContaining<Omit<UserRank, 'id'>>({
         userId: args.userId,
         assignedByUserId: args.assignee,
@@ -94,10 +99,11 @@ export default () => {
         expirationTime: time2
       }
 
-      await rankStore.addUserRank(args)
+      const result = await rankStore.addUserRank(args)
 
       expectRowCount(db.userRank).toBe(1)
       const saved = (await db.userRank.findFirst())!
+      expect(result).toEqual(expect.objectContaining(saved))
       expect(saved).toEqual(expect.objectContaining<Omit<UserRank, 'id'>>({
         userId: args.userId,
         assignedByUserId: args.assignee,
@@ -111,7 +117,7 @@ export default () => {
       }))
     })
 
-    test('Throws if the user-rank already exists', async () => {
+    test('Throws UserRankAlreadyExistsError if the user-rank already exists', async () => {
       await db.userRank.create({ data: {
         userId: user1,
         issuedAt: time1,
@@ -127,7 +133,7 @@ export default () => {
       }
       mockDateTimeHelpers.now.mockReturnValue(time2)
 
-      await expect(async () => await rankStore.addUserRank(args)).rejects.toThrow()
+      await expect(async () => await rankStore.addUserRank(args)).rejects.toThrowError(UserRankAlreadyExistsError)
     })
 
     test('Allows adding a duplicate rank if the existing one is no longer active', async () => {
@@ -147,10 +153,11 @@ export default () => {
       }
       mockDateTimeHelpers.now.mockReturnValue(time5)
 
-      await rankStore.addUserRank(args)
+      const result = await rankStore.addUserRank(args)
 
       expectRowCount(db.userRank).toBe(3)
       const saved = (await db.userRank.findUnique({ where: { id: 3 }}))!
+      expect(result).toEqual(expect.objectContaining(saved))
       expect(saved).toEqual(expect.objectContaining<Omit<UserRank, 'id'>>({
         userId: args.userId,
         assignedByUserId: args.assignee,
@@ -219,8 +226,60 @@ export default () => {
     })
   })
 
+  describe(nameof(RankStore, 'getUserRanksForGroup'), () => {
+    test('Returns active user ranks of the specified group', async () => {
+      mockDateTimeHelpers.now.mockReturnValue(time6)
+
+      // user 1: muted, user 2: muted and banned
+      await db.userRank.createMany({
+        data: [
+          { userId: user1, issuedAt: time1, rankId: famousRank.id },
+          { userId: user1, issuedAt: time1, rankId: ownerRank.id },
+          { userId: user1, issuedAt: time1, rankId: mutedRank.id },
+          { userId: user1, issuedAt: time1, rankId: modRank.id, revokedTime: time2 },
+          { userId: user2, issuedAt: time1, rankId: mutedRank.id, expirationTime: time2 },
+          { userId: user2, issuedAt: time1, rankId: bannedRank.id, revokedTime: time4 },
+          { userId: user2, issuedAt: time2, rankId: mutedRank.id },
+          { userId: user2, issuedAt: time1, rankId: bannedRank.id },
+        ]
+      })
+
+      let result = await rankStore.getUserRanksForGroup('punishment')
+
+      result = sortBy(result, r => `${r.userId}${r.rank}`)
+      expect(result.length).toBe(3)
+      expect(result[0].userId).toBe(user1)
+      expect(result[0].rank.name).toBe('muted')
+      expect(result[1].userId).toBe(user2)
+      expect(result[1].rank.name).toBe('banned')
+      expect(result[2].userId).toBe(user2)
+      expect(result[2].rank.name).toBe('muted')
+    })
+  })
+
+  describe(nameof(RankStore, 'getUserRankHistory'), () => {
+    test('Gets all user-rank changes for the specified user, sorted in descending order', async () => {
+      await db.userRank.createMany({
+        data: [
+          { userId: user1, issuedAt: time2, rankId: modRank.id, revokedTime: time3 },
+          { userId: user2, issuedAt: time2, rankId: mutedRank.id }, // user 2
+          { userId: user1, issuedAt: time5, rankId: modRank.id },
+          { userId: user1, issuedAt: time1, rankId: famousRank.id },
+          { userId: user2, issuedAt: time1, rankId: bannedRank.id, revokedTime: time4 }, // user 2
+          { userId: user1, issuedAt: time3, rankId: mutedRank.id, expirationTime: time4 },
+        ]
+      })
+
+      const result = await rankStore.getUserRankHistory(user1)
+
+      expect(result.length).toBe(4)
+      expect(single(unique(result.map(r => r.userId)))).toBe(user1)
+      expect(result.map(r => r.rank.name)).toEqual(expect.arrayContaining<RankName>(['famous', 'mod', 'mod', 'muted']))
+    })
+  })
+
   describe(nameof(RankStore, 'removeUserRank'), () => {
-    test('Throws if no active rank of the specified type exists for the user', async () => {
+    test('Throws UserRankNotFoundError if no active rank of the specified type exists for the user', async () => {
       await db.userRank.createMany({
         data: [
           { userId: user1, issuedAt: time1, rankId: famousRank.id, expirationTime: time2 },
@@ -236,7 +295,7 @@ export default () => {
       }
       mockDateTimeHelpers.now.mockReturnValue(time6)
 
-      await expect(() => rankStore.removeUserRank(args)).rejects.toThrow()
+      await expect(() => rankStore.removeUserRank(args)).rejects.toThrowError(UserRankNotFoundError)
     })
 
     test('Revokes the rank', async () => {
@@ -256,10 +315,11 @@ export default () => {
       }
       mockDateTimeHelpers.now.mockReturnValue(time6)
 
-      await rankStore.removeUserRank(args)
+      const result = await rankStore.removeUserRank(args)
       
       expectRowCount(db.userRank).toBe(3)
       const saved = (await db.userRank.findUnique({ where: { id: 3 }}))!
+      expect(result).toEqual(expect.objectContaining(saved))
       expect(saved).toEqual(expect.objectContaining<Omit<UserRank, 'id'>>({
         userId: args.userId,
         assignedByUserId: null,

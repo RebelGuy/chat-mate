@@ -3,7 +3,8 @@ import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/Client
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleAuthProvider, { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { mock, MockProxy } from 'jest-mock-extended'
 

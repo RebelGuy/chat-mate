@@ -1,20 +1,21 @@
-import { Punishment } from '@prisma/client'
 import { PublicPunishment } from '@rebel/server/controllers/public/punishment/PublicPunishment'
+import { isRankActive } from '@rebel/server/models/rank'
+import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
-export function punishmentToPublicObject (punishment: Punishment): PublicPunishment {
+export function punishmentToPublicObject (punishment: UserRankWithRelations): PublicPunishment {
+  if (punishment.rank.name !== 'banned' && punishment.rank.name !== 'muted' && punishment.rank.name !== 'timed_out') {
+    throw new Error('Invalid punishment rank name: ' + punishment.rank.name)
+  }
+
   return {
-    schema: 1,
+    schema: 2,
     id: punishment.id,
-    type: punishment.punishmentType,
+    type: punishment.rank.name,
     issuedAt: punishment.issuedAt.getTime(),
     expirationTime: punishment.expirationTime?.getTime() ?? null,
     message: punishment.message,
     revokedAt: punishment.revokedTime?.getTime() ?? null,
     revokeMessage: punishment.revokeMessage,
-    isActive: isPunishmentActive(punishment)
+    isActive: isRankActive(punishment)
   }
-}
-
-export function isPunishmentActive (punishment: Punishment): boolean {
-  return (punishment.expirationTime == null || punishment.expirationTime > new Date()) && punishment.revokedTime == null
 }

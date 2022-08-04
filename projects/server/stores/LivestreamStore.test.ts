@@ -3,7 +3,8 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 export default () => {

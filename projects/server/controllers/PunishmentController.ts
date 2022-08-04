@@ -1,7 +1,7 @@
 import { Punishment } from '@prisma/client'
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicPunishment } from '@rebel/server/controllers/public/punishment/PublicPunishment'
-import { isPunishmentActive, punishmentToPublicObject } from '@rebel/server/models/punishment'
+import { punishmentToPublicObject } from '@rebel/server/models/punishment'
 import PunishmentService, { TwitchPunishmentResult, YoutubePunishmentResult } from '@rebel/server/services/PunishmentService'
 import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import { sortBy } from '@rebel/server/util/arrays'
@@ -10,56 +10,58 @@ import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutR
 import { PublicChannelPunishment } from '@rebel/server/controllers/public/punishment/PublicChannelPunishment'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { assertUnreachable } from '@rebel/server/util/typescript'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { isRankActive } from '@rebel/server/models/rank'
 
-export type GetSinglePunishment = ApiResponse<1, { punishment: Tagged<1, PublicPunishment> }>
+export type GetSinglePunishment = ApiResponse<1, { punishment: Tagged<2, PublicPunishment> }>
 
-export type GetUserPunishments = ApiResponse<1, { punishments: Tagged<1, PublicPunishment>[] }>
+export type GetUserPunishments = ApiResponse<2, { punishments: Tagged<2, PublicPunishment>[] }>
 
 export type BanUserRequest = ApiRequest<2, { schema: 2, userId: number, message: string | null }>
 export type BanUserResponse = ApiResponse<2, {
-  newPunishment: Tagged<1, PublicPunishment>
+  newPunishment: Tagged<2, PublicPunishment>
   channelPunishments: Tagged<1, PublicChannelPunishment>[]
 }>
 
 export type UnbanUserRequest = ApiRequest<2, { schema: 2, userId: number, message: string | null }>
 export type UnbanUserResponse = ApiResponse<2, {
-  updatedPunishment: Tagged<1, PublicPunishment> | null
+  updatedPunishment: Tagged<2, PublicPunishment> | null
   channelPunishments: Tagged<1, PublicChannelPunishment>[]
 }>
 
 export type TimeoutUserRequest = ApiRequest<2, { schema: 2, userId: number, message: string | null, durationSeconds: number }>
 export type TimeoutUserResponse = ApiResponse<2, {
-  newPunishment: Tagged<1, PublicPunishment>
+  newPunishment: Tagged<2, PublicPunishment>
   channelPunishments: Tagged<1, PublicChannelPunishment>[]
 }>
 
 export type RevokeTimeoutRequest = ApiRequest<2, { schema: 2, userId: number, message: string | null }>
 export type RevokeTimeoutResponse = ApiResponse<2, {
-  updatedPunishment: Tagged<1, PublicPunishment> | null
+  updatedPunishment: Tagged<2, PublicPunishment> | null
   channelPunishments: Tagged<1, PublicChannelPunishment>[]
 }>
 
 export type MuteUserRequest = ApiRequest<1, { schema: 1, userId: number, message: string | null, durationSeconds: number | null }>
-export type MuteUserResponse = ApiResponse<1, { newPunishment: Tagged<1, PublicPunishment> }>
+export type MuteUserResponse = ApiResponse<1, { newPunishment: Tagged<2, PublicPunishment> }>
 
 export type UnmuteUserRequest = ApiRequest<1, { schema: 1, userId: number, message: string | null }>
-export type UnmuteUserResponse = ApiResponse<1, { updatedPunishment: Tagged<1, PublicPunishment> | null }>
+export type UnmuteUserResponse = ApiResponse<1, { updatedPunishment: Tagged<2, PublicPunishment> | null }>
 
 type Deps = ControllerDependencies<{
-  punishmentStore: PunishmentStore
+  rankStore: RankStore
   punishmentService: PunishmentService
   channelStore: ChannelStore
 }>
 
 @Path(buildPath('punishment'))
 export default class PunishmentController extends ControllerBase {
-  private readonly punishmentStore: PunishmentStore
+  private readonly rankStore: RankStore
   private readonly punishmentService: PunishmentService
   private readonly channelStore: ChannelStore
 
   constructor (deps: Deps) {
     super(deps, 'punishment')
-    this.punishmentStore = deps.resolve('punishmentStore')
+    this.rankStore = deps.resolve('rankStore')
     this.punishmentService = deps.resolve('punishmentService')
     this.channelStore = deps.resolve('channelStore')
   }
@@ -71,9 +73,9 @@ export default class PunishmentController extends ControllerBase {
   ): Promise<GetSinglePunishment> {
     const builder = this.registerResponseBuilder<GetSinglePunishment>('GET /:id', 1)
     try {
-      const punishment = (await this.punishmentStore.getPunishments()).find(p => p.id === id)
+      const punishment = (await this.punishmentService.getCurrentPunishments()).find(p => p.id === id)
       if (punishment == null) {
-        return builder.failure(404, `Cannot find punishment with id ${id}.`)
+        return builder.failure(404, `Cannot find an active punishment with id ${id}.`)
       } else {
         return builder.success({ punishment: punishmentToPublicObject(punishment) })
       }
@@ -85,19 +87,23 @@ export default class PunishmentController extends ControllerBase {
   @GET
   public async getPunishments (
     @QueryParam('userId') userId?: number, // if not provided, returns all
-    @QueryParam('activeOnly') activeOnly?: boolean // if not set, return all
+    @QueryParam('includeInactive') includeInactive?: boolean // if not set, return all
   ): Promise<GetUserPunishments> {
-    const builder = this.registerResponseBuilder<GetUserPunishments>('GET', 1)
+    const builder = this.registerResponseBuilder<GetUserPunishments>('GET', 2)
     try {
-      let punishments: Punishment[]
-      if (userId != null) {
-        punishments = await this.punishmentStore.getPunishmentsForUser(userId)
+      let punishments: UserRankWithRelations[]
+
+      if (includeInactive === true) {
+        if (userId == null) {
+          return builder.failure(400, 'A user ID must be provided when getting the punishment history')
+        }
+        punishments = await this.rankStore.getUserRankHistory(userId)
+
       } else {
-        punishments = await this.punishmentStore.getPunishments()
-      }
-      
-      if (activeOnly === true) {
-        punishments = punishments.filter(isPunishmentActive)
+        punishments = await this.punishmentService.getCurrentPunishments()
+        if (userId != null) {
+          punishments = punishments.filter(p => p.userId === userId)
+        }
       }
 
       punishments = sortBy(punishments, p => p.issuedAt.getTime(), 'desc')

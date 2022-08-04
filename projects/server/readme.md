@@ -177,6 +177,7 @@ Key:
   - 🟢 muteUser
   - 🟢 timeoutUser
   - 🟢 getCurrentPunishments
+  - 🟢 getPunishmentHistory
   - 🟢 unbanUser
   - 🟢 unmuteUser
   - 🟢 untimeoutUser
@@ -245,6 +246,8 @@ Key:
 - 🟢 RankStore
   - 🟢 addUserRank
   - 🟢 getUserRanks
+  - 🟢 getUserRanksForGroup
+  - 🟢 getUserRankHistory
   - 🟢 removeUserRank
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
@@ -473,19 +476,19 @@ Can return the following errors:
 - `404`: When a punishment with the specifed id could not be found.
 
 ### `GET`
-*Current schema: 1.*
+*Current schema: 2.*
 
-Gets the list of all punishments for a user.
+Gets the list of current or historical punishments.
 
 Query parameters:
-- `userId` (`number`): *Optional.* The ID of the user for which to get punishments. If not provided, returns punishments for all users.
-- `activeOnly` (`boolean`): *Optional.* If true, returns only punishments that are currently active.
+- `userId` (`number`): *Required if `includeInactive` is `true`, otherwise optional.* The ID of the user for which to get the punishment list. If not provided, returns active punishments for all users.
+- `includeInactive` (`boolean`): *Optional.* If true, returns the list of historical punishments (active and inactive) for a user. If false, returns punishments that are currently active, either for all users or the provided user.
 
 Returns data with the following properties:
 - `punishments` (`PublicPunishment[]`): The list of punishments of the user, in descending order by time issued.
 
 Can return the following errors:
-- `400`: When the required query parameters have not been provided.
+- `400`: When the required query parameters have not been provided, or the query parameters are incompatible.
 
 ### `POST /ban`
 *Current schema: 2.*

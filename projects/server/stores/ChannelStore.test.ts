@@ -4,7 +4,8 @@ import ChannelStore, { UserNames, CreateOrUpdateYoutubeChannelArgs, CreateOrUpda
 import { sortBy } from '@rebel/server/util/arrays'
 import { randomString } from '@rebel/server/util/random'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 
 const ytChannelId1 = 'channelId1'
 const ytChannelId2 = 'channelId2'

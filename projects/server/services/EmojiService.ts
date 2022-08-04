@@ -4,7 +4,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
-import { single } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 
 type SearchResult = {
   searchTerm: string,

@@ -54,6 +54,7 @@ import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProv
 import LogQueryService from '@rebel/server/services/LogQueryService'
 import LogController from '@rebel/server/controllers/LogController'
 import { TimeoutError } from '@rebel/server/util/error'
+import RankStore from '@rebel/server/stores/RankStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -134,6 +135,7 @@ const globalContext = ContextProvider.create()
   .withClass('punishmentStore', PunishmentStore)
   .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
   .withClass('twurpleService', TwurpleService)
+  .withClass('rankStore', RankStore)
   .withClass('punishmentService', PunishmentService)
   .withClass('experienceService', ExperienceService)
   .withClass('customEmojiStore', CustomEmojiStore)

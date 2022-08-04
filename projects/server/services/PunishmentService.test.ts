@@ -1,89 +1,116 @@
-import { Punishment } from '@prisma/client'
+import { Punishment, Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import PunishmentService, { TwitchPunishmentResult, YoutubePunishmentResult } from '@rebel/server/services/PunishmentService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import PunishmentStore, { CreatePunishmentArgs } from '@rebel/server/stores/PunishmentStore'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import { any, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
+import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { NotFoundError } from 'typescript-rest/dist/server-errors'
+import { UserRankNotFoundError } from '@rebel/server/util/error'
 
-export const userId1 = 2
+const userId1 = 2
 
-export const expiredTimeout: Punishment = {
+const banRank: Rank = { id: 1, name: 'banned', group: 'punishment', displayName: '', description: null }
+const timeoutRank: Rank = { id: 2, name: 'timed_out', group: 'punishment', displayName: '', description: null }
+const muteRank: Rank = { id: 3, name: 'muted', group: 'punishment', displayName: '', description: null }
+
+export const expiredTimeout: UserRankWithRelations = {
   id: 1,
-  adminUserId: 1,
   userId: userId1,
   expirationTime: addTime(data.time1, 'seconds', 1),
-  punishmentType: 'timeout',
+  rank: timeoutRank,
   issuedAt: data.time1,
   message: null,
   revokeMessage: null,
-  revokedTime: null
+  revokedTime: null,
+  assignedByUserId: null,
+  revokedByUserId: null
 }
-export const activeTimeout: Punishment = {
+export const activeTimeout: UserRankWithRelations = {
   id: 2,
-  adminUserId: 1,
   userId: userId1,
   expirationTime: addTime(new Date(), 'hours', 1),
-  punishmentType: 'timeout',
+  rank: timeoutRank,
   issuedAt: data.time1,
   message: null,
   revokeMessage: null,
-  revokedTime: null
+  revokedTime: null,
+  assignedByUserId: null,
+  revokedByUserId: null
 }
-export const revokedBan: Punishment = {
+export const revokedBan: UserRankWithRelations = {
   id: 3,
-  adminUserId: 1,
   userId: userId1,
   expirationTime: null,
-  punishmentType: 'ban',
+  rank: banRank,
   issuedAt: data.time1,
   message: null,
   revokeMessage: null,
-  revokedTime: addTime(data.time1, 'seconds', 1)
+  revokedTime: addTime(data.time1, 'seconds', 1),
+  assignedByUserId: null,
+  revokedByUserId: null
 }
-export const activeBan: Punishment = {
+export const activeBan: UserRankWithRelations = {
   id: 4,
-  adminUserId: 1,
   userId: userId1,
   expirationTime: null,
-  punishmentType: 'ban',
+  rank: banRank,
   issuedAt: data.time1,
   message: null,
   revokeMessage: null,
-  revokedTime: null
+  revokedTime: null,
+  assignedByUserId: null,
+  revokedByUserId: null
 }
-export const expiredMute: Punishment = {
+export const expiredMute: UserRankWithRelations = {
   id: 5,
-  adminUserId: 1,
   userId: userId1,
   expirationTime: addTime(data.time1, 'seconds', 1),
-  punishmentType: 'mute',
+  rank: muteRank,
   issuedAt: data.time1,
   message: null,
   revokeMessage: null,
-  revokedTime: null
+  revokedTime: null,
+  assignedByUserId: null,
+  revokedByUserId: null
 }
-export const activeMute: Punishment = {
+export const activeMute: UserRankWithRelations = {
   id: 6,
-  adminUserId: 1,
   userId: userId1,
   expirationTime: addTime(new Date(), 'hours', 1),
-  punishmentType: 'mute',
+  rank: muteRank,
   issuedAt: data.time1,
   message: null,
   revokeMessage: null,
-  revokedTime: null
+  revokedTime: null,
+  assignedByUserId: null,
+  revokedByUserId: null
+}
+const activeModRank: UserRankWithRelations = {
+  id: 7,
+  userId: userId1,
+  expirationTime: null,
+  rank: { name: 'mod', group: 'administration' } as Rank,
+  issuedAt: data.time1,
+  message: null,
+  revokeMessage: null,
+  revokedTime: null,
+  assignedByUserId: null,
+  revokedByUserId: null
+
 }
 
 let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
-let mockPunishmentStore: MockProxy<PunishmentStore>
+let mockRankStore: MockProxy<RankStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let mockTwurpleService: MockProxy<TwurpleService>
@@ -92,7 +119,7 @@ let punishmentService: PunishmentService
 
 beforeEach(() => {
   mockMasterchatProxyService = mock()
-  mockPunishmentStore = mock()
+  mockRankStore = mock()
   mockChannelStore = mock()
   mockChatStore = mock()
   mockTwurpleService = mock()
@@ -101,7 +128,7 @@ beforeEach(() => {
   punishmentService = new PunishmentService(new Dependencies({
     logService: mock(),
     masterchatProxyService: mockMasterchatProxyService,
-    punishmentStore: mockPunishmentStore,
+    rankStore: mockRankStore,
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
     twurpleService: mockTwurpleService,
@@ -111,20 +138,20 @@ beforeEach(() => {
 
 describe(nameof(PunishmentService, 'initialise'), () => {
   test('sets up timeout refreshing timers', async () => {
-    const timeout1: Partial<Punishment> = {
-      punishmentType: 'timeout',
+    const timeout1: Partial<UserRankWithRelations> = {
+      rank: timeoutRank,
       id: 1,
       userId: 3,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    const timeout2: Partial<Punishment> = {
-      punishmentType: 'timeout',
+    const timeout2: Partial<UserRankWithRelations> = {
+      rank: timeoutRank,
       id: 2,
       userId: 4,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    const currentPunishments: Partial<Punishment>[] = [{ punishmentType: 'ban' }, timeout1, timeout2]
-    mockPunishmentStore.getPunishments.mockResolvedValue(currentPunishments as Punishment[])
+    const currentPunishments: Partial<UserRankWithRelations>[] = [activeBan, timeout1, timeout2]
+    mockRankStore.getUserRanksForGroup.mockResolvedValue(currentPunishments as UserRankWithRelations[])
 
     const contextToken1 = 'token1'
     const contextToken2 = 'token2'
@@ -173,12 +200,13 @@ describe(nameof(PunishmentService, 'banUser'), () => {
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'banned' })).mockRejectedValue(new UserRankNotFoundError())
     const newPunishment: any = {}
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'ban' })).mockResolvedValue(newPunishment)
+    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'banned' })).mockResolvedValue(newPunishment)
 
     const result = await punishmentService.banUser(userId1, 'test')
 
+    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
     expect(result.punishment).toBe(newPunishment)
     expect(result.youtubeResults).toEqual<YoutubePunishmentResult[]>([
       { youtubeChannelId: 1, error: null },
@@ -197,30 +225,12 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     const suppliedTwitchChannelIds = mockTwurpleService.banChannel.mock.calls.map(c => c[0])
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
   })
-
-  test('re-applies ban in database if one already exists', async () => {
-    mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeBan])
-    const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'ban' })).mockResolvedValue(expectedResult)
-
-    const result = await punishmentService.banUser(userId1, 'test')
-
-    const revokedArgs = single(mockPunishmentStore.revokePunishment.mock.calls)
-    expect(revokedArgs[0]).toBe(activeBan.id)
-    expect(result.punishment).toBe(expectedResult)
-  })
 })
 
 describe(nameof(PunishmentService, 'isUserPunished'), () => {
   test('returns false if there are no active punishments for the user', async () => {
-    const punishment1: Partial<Punishment> = {
-      expirationTime: addTime(new Date(), 'hours', -1)
-    }
-    const punishment2: Partial<Punishment> = {
-      revokedTime: addTime(new Date(), 'hours', -1)
-    }
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([punishment1 as Punishment, punishment2 as Punishment])
+    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1]))
+      .mockResolvedValue([{ userId: userId1, ranks: [activeModRank] }])
   
     const result = await punishmentService.isUserPunished(userId1)
 
@@ -228,10 +238,8 @@ describe(nameof(PunishmentService, 'isUserPunished'), () => {
   })
 
   test('returns true if there are active punishments for the user', async () => {
-    const punishment: Partial<Punishment> = {
-      expirationTime: addTime(new Date(), 'hours', 1)
-    }
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([punishment as Punishment])
+    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1]))
+      .mockResolvedValue([{ userId: userId1, ranks: [activeModRank, activeMute] }])
   
     const result = await punishmentService.isUserPunished(userId1)
 
@@ -241,39 +249,31 @@ describe(nameof(PunishmentService, 'isUserPunished'), () => {
 
 describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
-    const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(
-      expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute', expirationTime: expect.any(Date) })
-    ).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank
+      .calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'muted' }))
+      .mockRejectedValue(new UserRankNotFoundError())
+    const newPunishment: any = {}
+    mockRankStore.addUserRank
+      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'muted', expirationTime: expect.any(Date) }))
+      .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, 'test', 10)
 
-    expect(result).toBe(expectedResult)
-  })
-
-  test('re-applies mute in database if one already exists', async () => {
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeBan, activeMute])
-    const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(
-      expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute', expirationTime: expect.any(Date) })
-    ).mockResolvedValue(expectedResult)
-
-    const result = await punishmentService.muteUser(userId1, 'test', 100)
-
-    const revokedArgs = single(mockPunishmentStore.revokePunishment.mock.calls)
-    expect(revokedArgs[0]).toBe(activeMute.id)
-    expect(result).toBe(expectedResult)
+    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
+    expect(result).toBe(newPunishment)
   })
 
   test('mute is permanent if duration is null', async () => {
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
-    const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'mute', expirationTime: null })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.mockResolvedValue({} as any)
+    const newPunishment: any = {}
+    mockRankStore.addUserRank
+      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'muted', expirationTime: null }))
+      .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, 'test', null)
 
-    expect(result).toBe(expectedResult)
+    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
+    expect(result).toBe(newPunishment)
   })
 })
 
@@ -295,16 +295,18 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([])
-    const newPunishment: Partial<Punishment> = {
+
+    const newPunishment: Partial<UserRankWithRelations> = {
       id: 5,
       userId: userId1,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'timeout' })).mockResolvedValue(newPunishment as Punishment)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'timed_out' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'timed_out' })).mockResolvedValue(newPunishment as UserRankWithRelations)
 
     const result = await punishmentService.timeoutUser(userId1, 'test', 1000)
 
+    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
     expect(result.punishment).toBe(newPunishment)
     expect(result.youtubeResults).toEqual<YoutubePunishmentResult[]>([
       { youtubeChannelId: 1, error: error1 },
@@ -333,32 +335,26 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     const resuppliedContextTokens = mockMasterchatProxyService.timeout.mock.calls.map(c => single(c))
     expect(resuppliedContextTokens).toEqual([contextToken1, contextToken2])
   })
-
-  test('re-applies timeout in database if one already exists', async () => {
-    mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeTimeout, activeBan, activeMute])
-    const expectedResult: any = {}
-    mockPunishmentStore.addPunishment.calledWith(expect.objectContaining<Partial<CreatePunishmentArgs>>({ userId: userId1, type: 'timeout' })).mockResolvedValue(expectedResult)
-
-    const result = await punishmentService.timeoutUser(userId1, 'test', 10)
-
-    const revokedArgs = single(mockPunishmentStore.revokePunishment.mock.calls)
-    expect(revokedArgs[0]).toBe(activeTimeout.id)
-
-    const stopTrackingArgs = single(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls)
-    expect(stopTrackingArgs[0]).toBe(activeTimeout.id)
-
-    expect(result.punishment).toBe(expectedResult)
-  })
 })
 
 describe(nameof(PunishmentService, 'getCurrentPunishments'), () => {
   test('gets punishments that are active', async () => {
-    mockPunishmentStore.getPunishments.mockResolvedValue([expiredTimeout, activeTimeout, revokedBan, activeBan])
+    mockRankStore.getUserRanksForGroup.calledWith('punishment').mockResolvedValue([ activeTimeout, activeBan])
   
     const result = await punishmentService.getCurrentPunishments()
 
     expect(result).toEqual([activeTimeout, activeBan])
+  })
+})
+
+describe(nameof(PunishmentService, 'getPunishmentHistory'), () => {
+  test('gets history from store and returns', async () => {
+    const history = [activeBan, activeModRank, revokedBan, expiredMute]
+    mockRankStore.getUserRankHistory.calledWith(userId1).mockResolvedValue(history)
+
+    const result = await punishmentService.getPunishmentHistory(userId1)
+
+    expect(result).toEqual([activeBan, revokedBan, expiredMute])
   })
 })
 
@@ -377,9 +373,8 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeBan])
     const revokedPunishment: any = {}
-    mockPunishmentStore.revokePunishment.calledWith(activeBan.id, any(), any()).mockResolvedValue(revokedPunishment)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'banned' })).mockResolvedValue(revokedPunishment)
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
@@ -404,21 +399,19 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
   test('returns null and does not make database change if ban is already revoked', async () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([revokedBan])
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'banned' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
     expect(result.punishment).toBeNull()
-    expect(mockPunishmentStore.addPunishment.mock.calls.length).toBe(0)
   })
 })
 
 
 describe(nameof(PunishmentService, 'unmuteUser'), () => {
   test('adds mute to database', async () => {
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeMute])
     const expectedResult: any = {}
-    mockPunishmentStore.revokePunishment.calledWith(activeMute.id, any(), any()).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'muted' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.unmuteUser(userId1, 'test')
 
@@ -426,12 +419,11 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
   })
 
   test('returns null and does not make database change if there is no active mute', async () => {
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([expiredMute])
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'muted' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.unmuteUser(userId1, 'test')
     
     expect(result).toBeNull()
-    expect(mockPunishmentStore.addPunishment.mock.calls.length).toBe(0)
   })
 })
 
@@ -442,9 +434,9 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([activeTimeout])
+    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeTimeout, activeModRank] }])
     const expectedResult: any = {}
-    mockPunishmentStore.revokePunishment.calledWith(activeTimeout.id, any(), any()).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timed_out' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     
@@ -469,14 +461,14 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     expect(stopTrackingArgs[0]).toBe(activeTimeout.id)
   })
 
-  test('returns null and does not make database change if ban is already revoked', async () => {
+  test('returns null and does not make database change if timeout is already revoked', async () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockPunishmentStore.getPunishmentsForUser.calledWith(userId1).mockResolvedValue([revokedBan])
+    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeModRank] }])
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timed_out' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     
     expect(result.punishment).toBeNull()
-    expect(mockPunishmentStore.addPunishment.mock.calls.length).toBe(0)
     expect(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls.length).toBe(0)
   })
 })

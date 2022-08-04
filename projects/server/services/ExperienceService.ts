@@ -13,7 +13,7 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { sortBy, zip, zipOnStrict } from '@rebel/server/util/arrays'
 import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
-import { single } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,

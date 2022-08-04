@@ -15,16 +15,37 @@ export function unique<T> (array: T[]): T[] {
   return Array.from(values)
 }
 
+export function single<T> (array: T[]): T {
+  if (array.length === 1) {
+    return array[0]
+  } else {
+    throw new Error(`Expected 1 element in the array but found ${array.length}`)
+  }
+}
+
+export function singleOrNull<T> (array: T[]): T | null {
+  if (array.length === 0) {
+    return null
+  } else if (array.length === 1) {
+    return array[0]
+  } else {
+    throw new Error(`Expected 0 or 1 elements in the array but found ${array.length}`)
+  }
+}
+
 export function sortByLength (array: string[], direction?: 'asc' | 'desc'): string[] {
   return sortBy(array.map(str => ({ value: str })), item => item.value.length, direction).map(item => item.value)
 }
 
+/** Sort by number. */
 export function sortBy<T extends GenericObject> (array: T[], selector: (item: T) => number, direction?: 'asc' | 'desc'): T[]
+/** Sort by string comparison (case sensitive). */
+export function sortBy<T extends GenericObject> (array: T[], selector: (item: T) => string, direction?: 'asc' | 'desc'): T[]
 export function sortBy<T extends GenericObject, K extends keyof NumberOnly<T>> (array: T[], key: K, direction?: 'asc' | 'desc'): T[]
-export function sortBy<T extends GenericObject> (array: T[], selector: keyof T | ((item: T) => number), direction: 'asc' | 'desc' = 'asc'): T[] {
-  let getValue: (item: T) => number
+export function sortBy<T extends GenericObject> (array: T[], selector: keyof T | ((item: T) => number | string), direction: 'asc' | 'desc' = 'asc'): T[] {
+  let getValue: (item: T) => number | string
   if (typeof selector === 'string' || typeof selector === 'number' || typeof selector === 'symbol') {
-    getValue = (item: T) => item[selector] as number
+    getValue = (item: T) => item[selector] as number | string
   } else if (typeof selector === 'function') {
     getValue = selector
   } else {
@@ -34,7 +55,16 @@ export function sortBy<T extends GenericObject> (array: T[], selector: keyof T |
   return Array.from(array).sort((a: T, b: T) => {
     const x = getValue(a)
     const y = getValue(b)
-    return direction === 'asc' ? x - y : y - x
+
+    let diff: number
+    if (typeof x === 'number' && typeof y === 'number') {
+      diff = x - y
+    } else if (typeof x === 'string' && typeof y === 'string') {
+      diff = x.localeCompare(y)
+    } else {
+      throw new Error('Unexpected type')
+    }
+    return direction === 'asc' ? diff : -diff
   })
 }
 

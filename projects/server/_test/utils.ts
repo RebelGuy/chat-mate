@@ -1,16 +1,8 @@
 import { MockProxy } from 'jest-mock-extended'
 
-export function single<T> (array: ArrayLike<T>): T {
-  if (array.length === 1) {
-    return array[0]
-  } else {
-    throw new Error(`Expected 1 element in the array but found ${array.length}`)
-  }
-}
-
 type Class = new (...args: any[]) => any
 
-type ClassMember<C extends Class> = Omit<keyof InstanceType<C> & string, 'name'>
+type ClassMember<C extends Class> = Exclude<keyof InstanceType<C> & string, 'name'>
 
 /** Typed name of a class or function. */
 export function nameof<C extends Class, MemberName extends ClassMember<C>> (obj: C, memberName: MemberName): string

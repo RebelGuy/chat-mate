@@ -3,7 +3,8 @@ import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserNames, UserChannel } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockChannelStore: MockProxy<ChannelStore>

@@ -1,7 +1,7 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicPunishment = PublicObject<1, {
-  schema: 1
+export type PublicPunishment = PublicObject<2, {
+  schema: 2
 
   /** The id of the punishment object. */
   id: number
@@ -11,7 +11,7 @@ export type PublicPunishment = PublicObject<1, {
    * `timeout`: User is timed out on the external platforms for a period of time. No chat will come through.
    * `mute`: User is not punished on external platforms, and chat will still come through. For internal use only.
   */
-  type: 'ban' | 'timeout' | 'mute'
+  type: 'banned' | 'timed_out' | 'muted'
 
   /** The time at which the punishment was originally issued. */
   issuedAt: number
