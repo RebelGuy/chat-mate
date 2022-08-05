@@ -14,8 +14,8 @@ import ChannelService from '@rebel/server/services/ChannelService'
 import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/PunishmentService'
-import { punishmentToPublicObject } from '@rebel/server/models/punishment'
 import LivestreamService from '@rebel/server/services/LivestreamService'
+import { userRankToPublicObject } from '@rebel/server/models/rank'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -74,15 +74,15 @@ export default class ChatMateControllerReal implements IChatMateController {
     let events: PublicChatMateEvent[] = []
     for (let i = 0; i < diffs.length; i++) {
       const diff = diffs[i]
-      const activePunishments = punishments.filter(p => p.userId === channels[i].channel.userId).map(punishmentToPublicObject)
+      const activePunishments = punishments.filter(p => p.userId === channels[i].channel.userId).map(userRankToPublicObject)
       const user: PublicUser = userChannelAndLevelToPublicUser(channels[i], activePunishments)
 
       events.push({
-        schema: 3,
+        schema: 4,
         type: 'levelUp',
         timestamp: diff.timestamp,
         levelUpData: {
-          schema: 2,
+          schema: 3,
           newLevel: diff.endLevel.level,
           oldLevel: diff.startLevel.level,
           user
@@ -95,7 +95,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     for (let i = 0; i < newFollowers.length; i++) {
       const follower = newFollowers[i]
       events.push({
-        schema: 3,
+        schema: 4,
         type: 'newTwitchFollower',
         timestamp: follower.date.getTime(),
         levelUpData: null,

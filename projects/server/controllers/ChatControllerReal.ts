@@ -3,7 +3,7 @@ import { buildPath, ControllerDependencies, In, Out } from '@rebel/server/contro
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
-import { punishmentToPublicObject } from '@rebel/server/models/punishment'
+import { userRankToPublicObject } from '@rebel/server/models/rank'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/PunishmentService'
 import ChatStore from '@rebel/server/stores/ChatStore'
@@ -39,7 +39,7 @@ export default class ChatControllerReal implements IChatController {
       const level = levelData.get(chat.userId)!
       const punishments = (await this.punishmentService.getCurrentPunishments())
         .filter(p => p.userId === chat.userId)
-        .map(punishmentToPublicObject)
+        .map(userRankToPublicObject)
       chatItems.push(chatAndLevelToPublicChatItem(chat, level, punishments))
     }
 

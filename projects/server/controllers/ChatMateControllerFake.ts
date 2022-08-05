@@ -71,11 +71,11 @@ export default class ChatMateControllerFake implements IChatMateController {
         const user: PublicUser = userChannelAndLevelToPublicUser({ ...userChannel, userId: userChannel.userId, level }, [])
   
         events.push({
-          schema: 3,
+          schema: 4,
           timestamp: new Date().getTime(),
           type: 'levelUp',
           levelUpData: {
-            schema: 2,
+            schema: 3,
             newLevel: newLevel,
             oldLevel: newLevel - 1,
             user
@@ -85,7 +85,7 @@ export default class ChatMateControllerFake implements IChatMateController {
       } else {
         // new follower event
         events.push({
-          schema: 3,
+          schema: 4,
           timestamp: new Date().getTime(),
           type: 'newTwitchFollower',
           levelUpData: null,

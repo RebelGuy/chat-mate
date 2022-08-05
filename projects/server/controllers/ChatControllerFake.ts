@@ -4,7 +4,7 @@ import { buildPath, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItemWithRelations, chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
-import { punishmentToPublicObject } from '@rebel/server/models/punishment'
+import { userRankToPublicObject } from '@rebel/server/models/rank'
 import PunishmentService from '@rebel/server/services/PunishmentService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { asGte, asLt } from '@rebel/server/util/math'
@@ -44,7 +44,7 @@ export default class ChatControllerFake implements IChatController {
       }
       const punishments = (await this.punishmentService.getCurrentPunishments())
         .filter(p => p.userId === item.userId)
-        .map(punishmentToPublicObject)
+        .map(userRankToPublicObject)
       items.push(chatAndLevelToPublicChatItem(item, level, punishments))      
     }
 

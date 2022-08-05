@@ -6,7 +6,7 @@ import { PublicMessageCustomEmoji } from '@rebel/server/controllers/public/chat/
 import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/PublicMessageEmoji'
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
-import { PublicPunishment } from '@rebel/server/controllers/public/punishment/PublicPunishment'
+import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
@@ -228,7 +228,7 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   }
 }
 
-export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activePunishments: PublicPunishment[]): PublicChatItem {
+export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[]): PublicChatItem {
   const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
   if (PLATFORM_TYPES !== 'youtube' && PLATFORM_TYPES !== 'twitch') {
@@ -264,17 +264,17 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   }
 
   const newItem: PublicChatItem = {
-    schema: 3,
+    schema: 4,
     id: chat.id,
     timestamp: chat.time.getTime(),
     platform: userChannel.platform,
     messageParts,
     author: {
-      schema: 2,
+      schema: 3,
       id: chat.userId,
       userInfo,
       levelInfo,
-      activePunishments: activePunishments
+      activeRanks: activeRanks
     }
   }
   return newItem

@@ -79,7 +79,7 @@ export default class PunishmentService extends ContextClass {
 
   public override async initialise () {
     const currentPunishments = await this.getCurrentPunishments()
-    const timeouts = currentPunishments.filter(p => p.rank.name === 'timed_out')
+    const timeouts = currentPunishments.filter(p => p.rank.name === 'timeout')
 
     // this never throws an error even if any of the promises reject
     await Promise.allSettled(timeouts.map(t => this.youtubeTimeoutRefreshService.startTrackingTimeout(
@@ -102,7 +102,7 @@ export default class PunishmentService extends ContextClass {
   public async banUser (userId: number, message: string | null): Promise<AppliedPunishmentResult> {
     const removeArgs: RemoveUserRankArgs = {
       userId: userId,
-      rank: 'banned',
+      rank: 'ban',
       message: 'Automatic removal - a new ban is about to be applied',
       removedBy: null,
     }
@@ -113,7 +113,7 @@ export default class PunishmentService extends ContextClass {
     const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'ban')))  
 
     const args: AddUserRankArgs = {
-      rank: 'banned',
+      rank: 'ban',
       message: message,
       userId: userId,
       expirationTime: null,
@@ -133,7 +133,7 @@ export default class PunishmentService extends ContextClass {
   public async muteUser (userId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
     const removeArgs: RemoveUserRankArgs = {
       userId: userId,
-      rank: 'muted',
+      rank: 'mute',
       message: 'Automatic removal - a new mute is about to be applied',
       removedBy: null,
     }
@@ -141,7 +141,7 @@ export default class PunishmentService extends ContextClass {
 
     const now = new Date()
     const args: AddUserRankArgs = {
-      rank: 'muted',
+      rank: 'mute',
       expirationTime: durationSeconds == null ? null : addTime(now, 'seconds', durationSeconds),
       message: message,
       userId: userId,
@@ -154,7 +154,7 @@ export default class PunishmentService extends ContextClass {
   public async timeoutUser (userId: number, message: string | null, durationSeconds: number): Promise<AppliedPunishmentResult> {
     const removeArgs: RemoveUserRankArgs = {
       userId: userId,
-      rank: 'timed_out',
+      rank: 'timeout',
       message: 'Automatic removal - a new timeout is about to be applied',
       removedBy: null,
     }
@@ -166,7 +166,7 @@ export default class PunishmentService extends ContextClass {
 
     const now = new Date()
     const args: AddUserRankArgs = {
-      rank: 'timed_out',
+      rank: 'timeout',
       expirationTime: addTime(now, 'seconds', durationSeconds),
       message: message,
       userId: userId,
@@ -187,7 +187,7 @@ export default class PunishmentService extends ContextClass {
     let punishment: UserRankWithRelations | null
     try {
       const args: RemoveUserRankArgs = {
-        rank: 'banned',
+        rank: 'ban',
         userId: userId,
         message: unbanMessage,
         removedBy: null // todo: CHAT-385 use logged-in user details
@@ -207,7 +207,7 @@ export default class PunishmentService extends ContextClass {
   public async unmuteUser (userId: number, revokeMessage: string | null): Promise<UserRankWithRelations | null> {
     try {
       const args: RemoveUserRankArgs = {
-        rank: 'muted',
+        rank: 'mute',
         userId: userId,
         message: revokeMessage,
         removedBy: null // todo: CHAT-385 use logged-in user details
@@ -225,7 +225,7 @@ export default class PunishmentService extends ContextClass {
 
   public async untimeoutUser (userId: number, revokeMessage: string | null): Promise<RevokedPunishmentResult> {
     const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
-    const timeout = singleOrNull(currentPunishments.ranks.filter(p => p.rank.name === 'timed_out'))
+    const timeout = singleOrNull(currentPunishments.ranks.filter(p => p.rank.name === 'timeout'))
 
     if (timeout != null) {
       this.youtubeTimeoutRefreshService.stopTrackingTimeout(timeout.id)
@@ -237,7 +237,7 @@ export default class PunishmentService extends ContextClass {
     let punishment: UserRankWithRelations | null
     try {
       const args: RemoveUserRankArgs = {
-        rank: 'timed_out',
+        rank: 'timeout',
         userId: userId,
         message: revokeMessage,
         removedBy: null // todo: CHAT-385 use logged-in user details

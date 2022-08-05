@@ -19,9 +19,9 @@ import { UserRankNotFoundError } from '@rebel/server/util/error'
 
 const userId1 = 2
 
-const banRank: Rank = { id: 1, name: 'banned', group: 'punishment', displayName: '', description: null }
-const timeoutRank: Rank = { id: 2, name: 'timed_out', group: 'punishment', displayName: '', description: null }
-const muteRank: Rank = { id: 3, name: 'muted', group: 'punishment', displayName: '', description: null }
+const banRank: Rank = { id: 1, name: 'ban', group: 'punishment', displayNameNoun: '', displayNameAdjective: '', description: null }
+const timeoutRank: Rank = { id: 2, name: 'timeout', group: 'punishment', displayNameNoun: '', displayNameAdjective: '', description: null }
+const muteRank: Rank = { id: 3, name: 'mute', group: 'punishment', displayNameNoun: '', displayNameAdjective: '', description: null }
 
 export const expiredTimeout: UserRankWithRelations = {
   id: 1,
@@ -200,9 +200,9 @@ describe(nameof(PunishmentService, 'banUser'), () => {
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'banned' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
     const newPunishment: any = {}
-    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'banned' })).mockResolvedValue(newPunishment)
+    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'ban' })).mockResolvedValue(newPunishment)
 
     const result = await punishmentService.banUser(userId1, 'test')
 
@@ -250,11 +250,11 @@ describe(nameof(PunishmentService, 'isUserPunished'), () => {
 describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
     mockRankStore.removeUserRank
-      .calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'muted' }))
+      .calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'mute' }))
       .mockRejectedValue(new UserRankNotFoundError())
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'muted', expirationTime: expect.any(Date) }))
+      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'mute', expirationTime: expect.any(Date) }))
       .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, 'test', 10)
@@ -267,7 +267,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
     mockRankStore.removeUserRank.mockResolvedValue({} as any)
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'muted', expirationTime: null }))
+      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'mute', expirationTime: null }))
       .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, 'test', null)
@@ -301,8 +301,8 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
       userId: userId1,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'timed_out' })).mockRejectedValue(new UserRankNotFoundError())
-    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'timed_out' })).mockResolvedValue(newPunishment as UserRankWithRelations)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
 
     const result = await punishmentService.timeoutUser(userId1, 'test', 1000)
 
@@ -374,7 +374,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
       twitchChannels: [1, 2]
     })
     const revokedPunishment: any = {}
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'banned' })).mockResolvedValue(revokedPunishment)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'ban' })).mockResolvedValue(revokedPunishment)
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
@@ -399,7 +399,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
   test('returns null and does not make database change if ban is already revoked', async () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'banned' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
@@ -411,7 +411,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 describe(nameof(PunishmentService, 'unmuteUser'), () => {
   test('adds mute to database', async () => {
     const expectedResult: any = {}
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'muted' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'mute' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.unmuteUser(userId1, 'test')
 
@@ -419,7 +419,7 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
   })
 
   test('returns null and does not make database change if there is no active mute', async () => {
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'muted' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'mute' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.unmuteUser(userId1, 'test')
     
@@ -436,7 +436,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     })
     mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeTimeout, activeModRank] }])
     const expectedResult: any = {}
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timed_out' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     
@@ -464,7 +464,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
   test('returns null and does not make database change if timeout is already revoked', async () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
     mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeModRank] }])
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timed_out' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     

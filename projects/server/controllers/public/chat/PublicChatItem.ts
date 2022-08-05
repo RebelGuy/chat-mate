@@ -2,8 +2,8 @@ import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 
-export type PublicChatItem = PublicObject<3, {
-  schema: 3
+export type PublicChatItem = PublicObject<4, {
+  schema: 4
 
   /** Internal id of the message. */
   id: number
@@ -18,5 +18,5 @@ export type PublicChatItem = PublicObject<3, {
   messageParts: Tagged<3, PublicMessagePart>[]
 
   /** The user that authored the message. */
-  author: Tagged<2, PublicUser>
+  author: Tagged<3, PublicUser>
 }>
