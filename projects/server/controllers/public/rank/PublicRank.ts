@@ -5,6 +5,7 @@ export type PublicRank = PublicObject<1, {
 
   /** The internal, unique name of the rank. */
   name:
+    'admin' |
     'owner' |
     'famous' |
     'mod' |

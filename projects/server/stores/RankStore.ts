@@ -113,6 +113,7 @@ export default class RankStore extends ContextClass {
     }))
   }
 
+  /** Gets the active user-ranks that are part of the given group. */
   public async getUserRanksForGroup (rankGroup: RankGroup): Promise<UserRankWithRelations[]> {
     return await this.db.userRank.findMany({
       where: {

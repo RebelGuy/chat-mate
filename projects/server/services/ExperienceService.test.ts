@@ -3,7 +3,7 @@ import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHe
 import ExperienceService, { Level, RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { getGetterMock, mockData, mockGetter, nameof } from '@rebel/server/_test/utils'
+import { getGetterMock, cast, mockGetter, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -132,7 +132,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
         chatMessageId: 1,
         experienceTransactionId: 1,
         spamMultiplier: 0.8,
-        chatMessage: mockData<ChatMessage>({ livestreamId: data.livestream3.id })
+        chatMessage: cast<ChatMessage>({ livestreamId: data.livestream3.id })
       }
     }
 

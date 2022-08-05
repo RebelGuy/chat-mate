@@ -2,13 +2,13 @@ import { ChatMessage } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ExperienceStore, { UserExperience } from '@rebel/server/stores/ExperienceStore'
-import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
+import { DB_TEST_TIMEOUT, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { deleteProps, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
-import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
+import AdminService from '@rebel/server/services/AdminService'
 
 export default () => {
   const chatExperienceData1 = deleteProps(data.chatExperienceData1, 'externalId')
@@ -16,7 +16,6 @@ export default () => {
   const chatExperienceData3 = deleteProps(data.chatExperienceData3, 'externalId')
   const user1 = 1
   const user2 = 2
-  const user3 = 3
 
   /** time 1, channel 1 */
   let chatMessage1: ChatMessage
@@ -25,12 +24,16 @@ export default () => {
   /** time 3, channel 2 */
   let chatMessage3: ChatMessage
 
+  let mockAdminService: MockProxy<AdminService>
   let experienceStore: ExperienceStore
   let db: Db
   beforeEach(async () => {
     const dbProvider = await startTestDb()
+    mockAdminService = mock()
+
     experienceStore = new ExperienceStore(new Dependencies({
-      dbProvider
+      dbProvider,
+      adminService: mockAdminService
     }))
     db = dbProvider.get()
 
@@ -38,7 +41,7 @@ export default () => {
 
     const channelId1 = 1
     const channelId2 = 2
-    await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2}, { userId: user3, youtubeId: ADMIN_YOUTUBE_ID }] })
+    await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2}] })
 
     chatMessage1 = await data.addChatMessage(db, data.time1, null, user1, channelId1)
     chatMessage2 = await data.addChatMessage(db, data.time2, null, user1, channelId1)
@@ -89,6 +92,10 @@ export default () => {
 
   describe(nameof(ExperienceStore, 'addManualExperience'), () => {
     test('correctly adds experience', async () => {
+      const admin1 = 3
+      const admin2 = 4
+      mockAdminService.getAdminUsers.mockResolvedValue([{ id: admin1 }, { id: admin2 }])
+
       await experienceStore.addManualExperience(1, -200, 'This is a test')
 
       const added = (await db.experienceTransaction.findFirst({ include: {
@@ -97,7 +104,7 @@ export default () => {
       }}))!
       expect(added.userId).toBe(1)
       expect(added.delta).toBe(-200)
-      expect(added.experienceDataAdmin?.adminUserId).toBe(3)
+      expect(added.experienceDataAdmin?.adminUserId).toBe(admin1)
       expect(added.experienceDataAdmin?.message).toBe('This is a test')
     })
   })

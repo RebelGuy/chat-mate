@@ -33,6 +33,14 @@ export function singleOrNull<T> (array: T[]): T | null {
   }
 }
 
+export function first<T> (array: T[]): T {
+  if (array.length < 1) {
+    throw new Error(`Expected at least 1 element in the array but found none`)
+  } else {
+    return array[0]
+  }
+}
+
 export function sortByLength (array: string[], direction?: 'asc' | 'desc'): string[] {
   return sortBy(array.map(str => ({ value: str })), item => item.value.length, direction).map(item => item.value)
 }

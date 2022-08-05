@@ -436,6 +436,7 @@ model Rank {
 }
 
 enum RankName {
+  admin
   owner
   mod
 

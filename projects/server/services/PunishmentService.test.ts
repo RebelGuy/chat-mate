@@ -23,7 +23,7 @@ const banRank: Rank = { id: 1, name: 'ban', group: 'punishment', displayNameNoun
 const timeoutRank: Rank = { id: 2, name: 'timeout', group: 'punishment', displayNameNoun: '', displayNameAdjective: '', description: null }
 const muteRank: Rank = { id: 3, name: 'mute', group: 'punishment', displayNameNoun: '', displayNameAdjective: '', description: null }
 
-export const expiredTimeout: UserRankWithRelations = {
+const expiredTimeout: UserRankWithRelations = {
   id: 1,
   userId: userId1,
   expirationTime: addTime(data.time1, 'seconds', 1),
@@ -35,7 +35,7 @@ export const expiredTimeout: UserRankWithRelations = {
   assignedByUserId: null,
   revokedByUserId: null
 }
-export const activeTimeout: UserRankWithRelations = {
+const activeTimeout: UserRankWithRelations = {
   id: 2,
   userId: userId1,
   expirationTime: addTime(new Date(), 'hours', 1),
@@ -47,7 +47,7 @@ export const activeTimeout: UserRankWithRelations = {
   assignedByUserId: null,
   revokedByUserId: null
 }
-export const revokedBan: UserRankWithRelations = {
+const revokedBan: UserRankWithRelations = {
   id: 3,
   userId: userId1,
   expirationTime: null,
@@ -59,7 +59,7 @@ export const revokedBan: UserRankWithRelations = {
   assignedByUserId: null,
   revokedByUserId: null
 }
-export const activeBan: UserRankWithRelations = {
+const activeBan: UserRankWithRelations = {
   id: 4,
   userId: userId1,
   expirationTime: null,
@@ -71,7 +71,7 @@ export const activeBan: UserRankWithRelations = {
   assignedByUserId: null,
   revokedByUserId: null
 }
-export const expiredMute: UserRankWithRelations = {
+const expiredMute: UserRankWithRelations = {
   id: 5,
   userId: userId1,
   expirationTime: addTime(data.time1, 'seconds', 1),
@@ -83,7 +83,7 @@ export const expiredMute: UserRankWithRelations = {
   assignedByUserId: null,
   revokedByUserId: null
 }
-export const activeMute: UserRankWithRelations = {
+const activeMute: UserRankWithRelations = {
   id: 6,
   userId: userId1,
   expirationTime: addTime(new Date(), 'hours', 1),
@@ -106,7 +106,6 @@ const activeModRank: UserRankWithRelations = {
   revokedTime: null,
   assignedByUserId: null,
   revokedByUserId: null
-
 }
 
 let mockMasterchatProxyService: MockProxy<MasterchatProxyService>

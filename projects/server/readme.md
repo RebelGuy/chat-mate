@@ -136,6 +136,8 @@ Key:
 - ⚪: Won't do
 
 **Services**
+- 🟢 AdminService
+  - 🟢 getAdminUsers
 - ⚪ ApplicationInsightsService
 - 🟢 ChannelService
   - 🟢 getActiveUserChannels

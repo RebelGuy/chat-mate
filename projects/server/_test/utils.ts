@@ -57,6 +57,8 @@ export function expectStrictIncreasing (...values: number[]) {
 }
 
 /** Shorthand for casting a partial type to its full version, such as `{} as Partial<T> as T`. */
-export function mockData<T> (data: Partial<T>): T {
+export function cast<T> (data: Partial<T>): T
+export function cast<T extends Array<any>> (data: Partial<(T extends Array<infer A> ? A : never)>[]): T // the array's underlying type should be made partial, not the array type itself
+export function cast<T> (data: Partial<T>): T {
   return data as T
 }
