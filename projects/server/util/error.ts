@@ -12,7 +12,7 @@ export class TimeoutError extends Error {
 
 export class UserRankNotFoundError extends Error {
   constructor (message?: string){ 
-    super(message)
+    super(message ?? 'The user-rank could not be found.')
 
     Object.setPrototypeOf(this, UserRankNotFoundError.prototype)
   }
@@ -20,7 +20,7 @@ export class UserRankNotFoundError extends Error {
 
 export class UserRankAlreadyExistsError extends Error {
   constructor (message?: string){ 
-    super(message)
+    super(message ?? 'The user-rank already exists.')
 
     Object.setPrototypeOf(this, UserRankAlreadyExistsError.prototype)
   }

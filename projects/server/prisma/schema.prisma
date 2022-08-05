@@ -423,10 +423,11 @@ model CustomEmoji {
 model Rank {
   id Int @id @default(autoincrement())
 
-  name        RankName
-  displayName String    @db.VarChar(64)
-  description String?   @db.VarChar(1024)
-  group       RankGroup
+  name                 RankName
+  displayNameNoun      String    @db.VarChar(64)
+  displayNameAdjective String    @db.VarChar(64)
+  description          String?   @db.VarChar(1024)
+  group                RankGroup
 
   userRanks UserRank[]
 
@@ -440,9 +441,9 @@ enum RankName {
 
   famous
 
-  muted
-  timed_out
-  banned
+  mute
+  timeout
+  ban
 }
 
 enum RankGroup {

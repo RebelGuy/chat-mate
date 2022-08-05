@@ -47,11 +47,11 @@ export default () => {
     user2 = (await db.chatUser.create({ data: {}})).id
     user3 = (await db.chatUser.create({ data: {}})).id
 
-    ownerRank = await db.rank.create({ data: { name: 'owner', displayName: 'owner', group: 'administration' }})
-    famousRank = await db.rank.create({ data: { name: 'famous', displayName: 'famous', group: 'cosmetic' }})
-    modRank = await db.rank.create({ data: { name: 'mod', displayName: 'mod', group: 'administration' }})
-    bannedRank = await db.rank.create({ data: { name: 'banned', displayName: 'banned', group: 'punishment' }})
-    mutedRank = await db.rank.create({ data: { name: 'muted', displayName: 'muted', group: 'punishment' }})
+    ownerRank = await db.rank.create({ data: { name: 'owner', displayNameNoun: '', displayNameAdjective: '', group: 'administration' }})
+    famousRank = await db.rank.create({ data: { name: 'famous', displayNameNoun: '', displayNameAdjective: '', group: 'cosmetic' }})
+    modRank = await db.rank.create({ data: { name: 'mod', displayNameNoun: '', displayNameAdjective: '', group: 'administration' }})
+    bannedRank = await db.rank.create({ data: { name: 'ban', displayNameNoun: '', displayNameAdjective: '', group: 'punishment' }})
+    mutedRank = await db.rank.create({ data: { name: 'mute', displayNameNoun: '', displayNameAdjective: '', group: 'punishment' }})
 
     await rankStore.initialise()
   }, DB_TEST_TIMEOUT)
@@ -172,6 +172,37 @@ export default () => {
     })
   })
 
+  describe(nameof(RankStore, 'getUserRankById'), () => {
+    test('Returns the correct rank', async () => {
+      await db.userRank.createMany({ data: [
+        {
+          userId: user1,
+          issuedAt: time1,
+          rankId: ownerRank.id
+        }, {
+          userId: user2,
+          issuedAt: time2,
+          rankId: famousRank.id
+        }
+      ]})
+
+      const result = await rankStore.getUserRankById(2)
+
+      expect(result.id).toBe(2)
+      expect(result.rank).toEqual(expect.objectContaining(famousRank))
+    })
+
+    test('Throws if the rank does not exist', async () => {
+      await db.userRank.create({ data: {
+        userId: user1,
+        issuedAt: time1,
+        rankId: ownerRank.id
+      }})
+
+      await expect(() => rankStore.getUserRankById(2)).rejects.toThrowError(UserRankNotFoundError)
+    })
+  })
+
   describe(nameof(RankStore, 'getUserRanks'), () => {
     test('Returns empty array if no user-ranks are present for the specified users', async () => {
       mockDateTimeHelpers.now.mockReturnValue(time2)
@@ -274,7 +305,7 @@ export default () => {
 
       expect(result.length).toBe(4)
       expect(single(unique(result.map(r => r.userId)))).toBe(user1)
-      expect(result.map(r => r.rank.name)).toEqual(expect.arrayContaining<RankName>(['famous', 'mod', 'mod', 'muted']))
+      expect(result.map(r => r.rank.name)).toEqual(expect.arrayContaining<RankName>(['famous', 'mod', 'mod', 'mute']))
     })
   })
 

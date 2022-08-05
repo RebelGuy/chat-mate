@@ -81,6 +81,21 @@ export default class RankStore extends ContextClass {
     }
   }
 
+  /** Gets the user rank that has the specified id.
+   * @throws {@link UserRankNotFoundError}: When no user-rank with the given id is found. */
+  public async getUserRankById (userRankId: number): Promise<UserRankWithRelations> {
+    const result = await this.db.userRank.findUnique({
+      where: { id: userRankId },
+      include: { rank: true }
+    })
+
+    if (result == null) {
+      throw new UserRankNotFoundError()
+    } else {
+      return result
+    }
+  }
+
   /** Gets the active ranks for each of the provided users. */
   public async getUserRanks (userIds: number[]): Promise<UserRanks[]> {
     const result = await this.db.userRank.findMany({

@@ -245,6 +245,7 @@ Key:
   - 🟢 revokePunishment
 - 🟢 RankStore
   - 🟢 addUserRank
+  - 🟢 getUserRankById
   - 🟢 getUserRanks
   - 🟢 getUserRanksForGroup
   - 🟢 getUserRankHistory
@@ -462,7 +463,7 @@ Returns data with the following properties:
 Path: `/punishment`.
 
 ### `GET /:id`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Gets a punishment by id.
 
@@ -470,7 +471,7 @@ Path parameters:
 - `id` (`number`): *Required.* The ID of the punishment to retrieve.
 
 Returns data with the following properties:
-- `punishment` (`PublicPunishment`): The punishment matching the specified id.
+- `punishment` (`PublicUserRank`): The punishment matching the specified id.
 
 Can return the following errors:
 - `404`: When a punishment with the specifed id could not be found.
@@ -485,13 +486,13 @@ Query parameters:
 - `includeInactive` (`boolean`): *Optional.* If true, returns the list of historical punishments (active and inactive) for a user. If false, returns punishments that are currently active, either for all users or the provided user.
 
 Returns data with the following properties:
-- `punishments` (`PublicPunishment[]`): The list of punishments of the user, in descending order by time issued.
+- `punishments` (`PublicUserRank[]`): The list of punishments of the user, in descending order by time issued.
 
 Can return the following errors:
 - `400`: When the required query parameters have not been provided, or the query parameters are incompatible.
 
 ### `POST /ban`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Applies a punishment of type `ban` to the user. This is essentially a permanent `timeout`.
 
@@ -500,14 +501,14 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for the punishment.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `newPunishment` (`PublicUserRank`): The new punishment that was created as a result of this request.
 - `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /unban`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Revokes an existing `ban` punishment from the user. This may also be used to remove any residual bans on the external platforms.
 
@@ -516,14 +517,14 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `updatedPunishment` (`PublicUserRank | null`): The updated punishment data. Null if no current punishment was found.
 - `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /timeout`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Applies a punishment of type `timeout` to the user. This is essentially a temporary `ban`.
 
@@ -533,14 +534,14 @@ Request data (body):
 - `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 5 minutes.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `newPunishment` (`PublicUserRank`): The new punishment that was created as a result of this request.
 - `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /revokeTimeout`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Revokes an existing `timeout` punishment from the user. This may also be used to remove any residual timeouts on the external platforms.
 
@@ -549,14 +550,14 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `updatedPunishment` (`PublicUserRank | null`): The updated punishment data. Null if no current punishment was found.
 - `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /mute`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Applies a punishment of type `mute` to the user.
 
@@ -566,13 +567,13 @@ Request data (body):
 - `durationSeconds` (`number`): *Optional.* The duration of the punishment, in seconds. If 0 or not provided, the punishment is permanent.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `newPunishment` (`PublicUserRank`): The new punishment that was created as a result of this request.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /unmute`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Revokes an existing `mute` punishment from the user.
 
@@ -581,7 +582,7 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `updatedPunishment` (`PublicUserRank | null`): The updated punishment data. Null if no current punishment was found.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.

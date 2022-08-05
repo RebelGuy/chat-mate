@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `rank` MODIFY `name` ENUM('owner', 'mod', 'famous', 'muted', 'timed_out', 'banned') NOT NULL;
+ALTER TABLE `rank` MODIFY `name` ENUM('owner', 'mod', 'famous', 'mute', 'timeout', 'ban') NOT NULL;
 
 -- populate ranks
 INSERT INTO `rank` (`name`, `displayName`, `group`)
@@ -7,9 +7,9 @@ VALUES
   ('owner', 'owner', 'administration'),
   ('mod', 'mod', 'administration'),
   ('famous', 'famous', 'cosmetic'),
-  ('banned', 'banned', 'punishment'),
-  ('timed_out', 'timed out', 'punishment'),
-  ('muted', 'muted', 'punishment');
+  ('ban', 'banned', 'punishment'),
+  ('timeout', 'timed out', 'punishment'),
+  ('mute', 'muted', 'punishment');
 
 -- copy punishment data
 INSERT INTO user_rank (issuedAt, expirationTime, message, revokedTime, revokeMessage, rankId, userId, assignedByUserId)
@@ -24,9 +24,9 @@ SELECT
     FROM `rank`
     WHERE `name` = (
 	  CASE
-        WHEN punishmentType = 'ban' THEN 'banned'
-        WHEN punishmentType = 'timeout' THEN 'timed_out'
-        WHEN punishmentType = 'mute' THEN 'muted'
+        WHEN punishmentType = 'ban' THEN 'ban'
+        WHEN punishmentType = 'timeout' THEN 'timeout'
+        WHEN punishmentType = 'mute' THEN 'mute'
       END
     )
     LIMIT 1
