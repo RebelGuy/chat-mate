@@ -17,7 +17,11 @@ export type PublicRank = PublicObject<1, {
     'timeout' |
 
     // User is not punished on external platforms, and chat will still come through. For internal use only.
-    'mute'
+    'mute' |
+
+    'donator' |
+    'supporter' |
+    'member'
 
   /** The rank group to which this rank belongs to. */
   group:
