@@ -5,7 +5,7 @@ import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChat
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItemWithRelations, chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { asGte, asLt } from '@rebel/server/util/math'
 import { chooseWeightedRandom, randomInt } from '@rebel/server/util/random'

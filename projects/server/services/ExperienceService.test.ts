@@ -16,7 +16,7 @@ import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/Chann
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { DeepPartial } from '@rebel/server/types'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>

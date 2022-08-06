@@ -1,5 +1,5 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
-import PunishmentService, { TwitchPunishmentResult, YoutubePunishmentResult } from '@rebel/server/services/PunishmentService'
+import PunishmentService, { TwitchPunishmentResult, YoutubePunishmentResult } from '@rebel/server/services/rank/PunishmentService'
 import { sortBy } from '@rebel/server/util/arrays'
 import { Path, GET, QueryParam, POST, PathParam } from 'typescript-rest'
 import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'

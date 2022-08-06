@@ -41,7 +41,7 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
@@ -55,7 +55,7 @@ import LogQueryService from '@rebel/server/services/LogQueryService'
 import LogController from '@rebel/server/controllers/LogController'
 import { TimeoutError } from '@rebel/server/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
-import AdminService from '@rebel/server/services/AdminService'
+import AdminService from '@rebel/server/services/rank/AdminService'
 
 //
 // "Over-engineering is the best thing since sliced bread."

@@ -6,7 +6,7 @@ import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import { GET, Path, POST, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<4, {

@@ -1,6 +1,6 @@
 import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
-import AdminService from '@rebel/server/services/AdminService'
+import AdminService from '@rebel/server/services/rank/AdminService'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { cast, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'

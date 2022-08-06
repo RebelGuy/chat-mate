@@ -8,7 +8,7 @@ import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
-import AdminService from '@rebel/server/services/AdminService'
+import AdminService from '@rebel/server/services/rank/AdminService'
 
 export default () => {
   const chatExperienceData1 = deleteProps(data.chatExperienceData1, 'externalId')

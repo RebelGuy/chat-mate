@@ -13,7 +13,7 @@ import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLiv
 import ChannelService from '@rebel/server/services/ChannelService'
 import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 
