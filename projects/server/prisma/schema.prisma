@@ -445,6 +445,10 @@ enum RankName {
   mute
   timeout
   ban
+
+  donator
+  supporter
+  member
 }
 
 enum RankGroup {
