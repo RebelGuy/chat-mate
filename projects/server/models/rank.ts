@@ -1,6 +1,7 @@
 import { Rank } from '@prisma/client'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
+import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
 export function userRankToPublicObject (userRank: UserRankWithRelations): PublicUserRank {
@@ -13,7 +14,7 @@ export function userRankToPublicObject (userRank: UserRankWithRelations): Public
     message: userRank.message,
     revokedAt: userRank.revokedTime?.getTime() ?? null,
     revokeMessage: userRank.revokeMessage,
-    isActive: isRankActive(userRank)
+    isActive: new RankHelpers().isRankActive(userRank) // I guess we can do this with helpers..
   }
 }
 
@@ -26,8 +27,4 @@ export function rankToPublicObject (rank: Rank): PublicRank {
     displayNameAdjective: rank.displayNameAdjective,
     description: rank.description
   }
-}
-
-export function isRankActive (rank: UserRankWithRelations): boolean {
-  return (rank.expirationTime == null || rank.expirationTime > new Date()) && rank.revokedTime == null
 }

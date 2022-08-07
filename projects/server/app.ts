@@ -56,6 +56,7 @@ import LogController from '@rebel/server/controllers/LogController'
 import { TimeoutError } from '@rebel/server/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
+import RankHelpers from '@rebel/server/helpers/RankHelpers'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -107,6 +108,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
+  .withHelpers('rankHelpers', RankHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)

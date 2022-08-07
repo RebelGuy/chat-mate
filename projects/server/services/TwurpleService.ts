@@ -68,6 +68,11 @@ export default class TwurpleService extends ContextClass {
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.ban(twitchUserName, reason ?? undefined)
   }
+
+  public async modChannel (twitchChannelId: number) {
+    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.mod(this.twitchChannelName, twitchUserName)
+  }
   
   public async timeout (twitchChannelId: number, reason: string | null, durationSeconds: number) {
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
@@ -80,6 +85,11 @@ export default class TwurpleService extends ContextClass {
     this.twurpleApiProxyService.say(`/unban ${twitchUserName}`)
   }
 
+  public async unmodChannel (twitchChannelId: number) {
+    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.unmod(this.twitchChannelName, twitchUserName)
+  }
+  
   public async untimeout (twitchChannelId: number, reason: string | null) {
     // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)

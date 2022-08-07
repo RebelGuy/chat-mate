@@ -172,6 +172,13 @@ Key:
   - 🟢 fetch
   - 🟢 fetchMetadata
   - 🟢 removeMasterchat
+  - 🟢 banYoutubeChannel
+  - 🔴 timeout
+  - 🟢 unbanYoutubeChannel
+  - 🔴 mod
+  - 🔴 unmod
+- 🔴 ModService
+  - 🔴 setModRank
 - 🟢 PunishmentService
   - 🟢 initialise
   - 🟢 banUser
@@ -189,12 +196,16 @@ Key:
 - 🟢 TwurpleApiProxyService
   - ⚪ ban
   - 🟢 fetchMetadata
+  - ⚪ mod
   - ⚪ say
   - ⚪ timeout
+  - ⚪ unmod
 - 🟢 TwurpleService
   - 🟢 banChannel
   - 🟢 initialise
+  - 🔴 modChannel
   - 🟢 unbanChannel
+  - 🔴 unmodChannel
 - 🟢 YoutubeTimeoutRefreshService
   - 🟢 startTrackingTimeout
   - 🟢 stopTrackingTimeout
@@ -278,6 +289,8 @@ Key:
   - 🟢 calculateRepetitionPenalty
   - 🟢 calculateSpamMultiplier
   - 🟢 calculateViewershipMultiplier
+- 🟢 RankHelpers
+  - 🟢 isRankActive
 - 🟢 TimerHelpers
   - 🟢 createRepeatingTimer
   - 🟢 disposeSingle
@@ -588,6 +601,47 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
+
+
+## Rank Endpoints
+Path: `/rank`.
+
+Note: For punishment-specific functionality, refer to the [punishment endpoints](#punishment-endpoints).
+
+### `POST /mod`
+*Current schema: 1.*
+
+Add the `mod` rank to the specified user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the rank should be added.
+- `message` (`string`): *Optional.* A custom message to accompany the rank addition.
+
+Returns data with the following properties:
+- `newRank` (`PublicUserRank | null`): The new rank that was added, if successful.
+- `newRankError` (`string | null`): If `newRank` is `null`, the error that was encountered when attempting to add the rank.
+- `channelModChanges` (`PublicChannelRankChange[]`): The external updates made to channels on YouTube or Twitch.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `DELETE /mod`
+*Current schema: 1.*
+
+Remove the `mod` rank from the specified user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the rank should be removed.
+- `message` (`string`): *Optional.* A custom message to accompany the rank removal.
+
+Returns data with the following properties:
+- `removedRank` (`PublicUserRank | null`): The rank that was removed, if successful.
+- `removeddRankError` (`string | null`): If `removedRank` is `null`, the error that was encountered when attempting to remove the rank.
+- `channelModChanges` (`PublicChannelRankChange[]`): The external updates made to channels on YouTube or Twitch.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
 
 ## User Endpoints
 Path: `/user`.
