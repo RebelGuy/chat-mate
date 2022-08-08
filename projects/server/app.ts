@@ -57,6 +57,8 @@ import { TimeoutError } from '@rebel/server/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankController from '@rebel/server/controllers/RankController'
+import ModService from '@rebel/server/services/rank/ModService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -148,6 +150,7 @@ const globalContext = ContextProvider.create()
   .withClass('chatFetchService', ChatFetchService)
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
+  .withClass('modService', ModService)
   .build()
 
 app.use((req, res, next) => {
@@ -191,6 +194,7 @@ app.use(async (req, res, next) => {
     .withClass('userController', UserController)
     .withClass('punishmentController', PunishmentController)
     .withClass('logController', LogController)
+    .withClass('rankController', RankController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -215,7 +219,8 @@ Server.buildServices(app,
   ExperienceController,
   UserController,
   PunishmentController,
-  LogController
+  LogController,
+  RankController
 )
 
 process.on('unhandledRejection', (error) => {

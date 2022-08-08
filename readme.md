@@ -10,6 +10,7 @@ Recommended VSCode extensions:
 - `Prisma`
 - `GitHub Actions`
 - `Azure Account`
+- `Thunder Client`
 
 ## CI and deployment
 Github Actions is used for automatically building and deploying the Server/Studio projects when pushed.

@@ -1,0 +1,17 @@
+[
+  {
+    "_id": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "colName": "ChatMate API",
+    "created": "2022-08-08T11:03:55.974Z",
+    "sortNum": 10000,
+    "folders": [
+      {
+        "_id": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+        "name": "rank",
+        "containerId": "",
+        "created": "2022-08-08T11:04:09.001Z",
+        "sortNum": 10000
+      }
+    ]
+  }
+]

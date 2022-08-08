@@ -1,0 +1,78 @@
+[
+  {
+    "_id": "92a537b5-10bb-41a5-b88c-474f50fb0eba",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Add Mod Rank (Twitch)",
+    "url": "{{ServerApiUrl}}/rank/mod",
+    "method": "POST",
+    "sortNum": 10000,
+    "created": "2022-08-08T11:03:55.976Z",
+    "modified": "2022-08-08T11:04:10.583Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"schema\": 1,\n  \"userId\": 227,\n  \"message\": \"Test\"\n}",
+      "form": []
+    },
+    "tests": []
+  },
+  {
+    "_id": "71f2103e-f42c-4a73-a49d-a30fd00d4871",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Remove Mod Rank (Youtube)",
+    "url": "{{ServerApiUrl}}/rank/mod",
+    "method": "DELETE",
+    "sortNum": 20000,
+    "created": "2022-08-08T11:06:27.727Z",
+    "modified": "2022-08-08T11:18:57.081Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"schema\": 1,\n  \"userId\": 56,\n  \"message\": \"Test Removal\"\n}",
+      "form": []
+    },
+    "tests": []
+  },
+  {
+    "_id": "c894d255-4cf1-4d48-bea7-6348f725595a",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Add Mod Rank (Youtube)",
+    "url": "{{ServerApiUrl}}/rank/mod",
+    "method": "POST",
+    "sortNum": 5000,
+    "created": "2022-08-08T11:17:18.358Z",
+    "modified": "2022-08-08T11:18:50.953Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"schema\": 1,\n  \"userId\": 56,\n  \"message\": \"Test\"\n}",
+      "form": []
+    },
+    "tests": []
+  },
+  {
+    "_id": "0828fcde-a567-4835-bf15-965ad049a579",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Remove Mod Rank (Twitch)",
+    "url": "{{ServerApiUrl}}/rank/mod",
+    "method": "DELETE",
+    "sortNum": 30000,
+    "created": "2022-08-08T11:17:41.015Z",
+    "modified": "2022-08-08T11:17:41.015Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"schema\": 1,\n  \"userId\": 227,\n  \"message\": \"Test Removal\"\n}",
+      "form": []
+    },
+    "tests": []
+  }
+]

@@ -18,4 +18,8 @@
   "typescript.implementationsCodeLens.enabled": true,
   "typescript.referencesCodeLens.enabled": true,
   "typescript.referencesCodeLens.showOnAllFunctions": false,
+  "thunder-client.saveToWorkspace": true,
+  "thunder-client.htmlView": "Preview",
+  "thunder-client.showActivityFromCollection": true,
+  "thunder-client.workspaceRelativePath": "projects/server",
 }

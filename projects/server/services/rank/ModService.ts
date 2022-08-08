@@ -151,8 +151,11 @@ export default class ModService extends ContextClass {
 
       this.logService.logInfo(this, `Request to ${type} twitch channel ${twitchChannelId} succeeded.`)
     } catch (e: any) {
-      this.logService.logError(this, `Request to ${type} twitch channel ${twitchChannelId} failed:`, e.message)
-      error = e.message + errorSuffix
+      this.logService.logWarning(this, `Request to ${type} twitch channel ${twitchChannelId} failed:`, e.message)
+
+      // `chatClient.onNotice` will have the actual error, but we probably know what the issue is
+      const message = e.message ?? (isMod ? `Channel is likely already a moderator.` : `Channel is likely not a moderator.`)
+      error = message + errorSuffix
     }
 
     return { error, twitchChannelId }

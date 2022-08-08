@@ -38,7 +38,7 @@ type Deps = Dependencies<{
 }>
 
 @Path(buildPath('rank'))
-export default class PunishmentController extends ControllerBase {
+export default class RankController extends ControllerBase {
   private readonly modService: ModService
   private readonly channelStore: ChannelStore
 

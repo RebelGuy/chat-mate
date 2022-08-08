@@ -74,7 +74,7 @@ export default class RankStore extends ContextClass {
     } catch (e: any) {
       // annoyingly we don't have access to the inner server object, as it is only included in serialised form in the message directly
       if (e instanceof PrismaClientUnknownRequestError && e.message.includes('DUPLICATE_RANK')) {
-        throw new UserRankAlreadyExistsError(e.message)
+        throw new UserRankAlreadyExistsError(`Rank ${args.rank} is already active for user ${args.userId}.`)
       }
 
       throw e
@@ -90,7 +90,7 @@ export default class RankStore extends ContextClass {
     })
 
     if (result == null) {
-      throw new UserRankNotFoundError()
+      throw new UserRankNotFoundError(`Could not find a user-rank with ID ${userRankId}.`)
     } else {
       return result
     }
@@ -150,7 +150,7 @@ export default class RankStore extends ContextClass {
       })
     } catch (e: any) {
       if (e.name === 'NotFoundError') {
-        throw new UserRankNotFoundError(e.message)
+        throw new UserRankNotFoundError(`Could not find an active ${args.rank} rank for user ${args.userId}.`)
       }
 
       throw e
