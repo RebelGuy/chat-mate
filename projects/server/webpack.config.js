@@ -1,4 +1,5 @@
 const path = require('path')
+const fs = require('fs')
 const webpack = require('webpack')
 const nodeExternals = require('webpack-node-externals');
 const CopyWebpackPlugin = require('copy-webpack-plugin')
@@ -35,13 +36,28 @@ module.exports = (env) => {
 
   // note: path.resolve doesn't work with glob patterns
   /** @type CopyWebpackPlugin.Pattern[] */
-  const copyPatters = [
-    {
+  let copyPatterns = []
+
+  // only copy the prisma engine file if it doesn't already exist, otherwise we get a crash if the server is currently running due to the file being locked
+  if (!fs.readdirSync(outPath).filter(file => file.includes('engine'))) {
+    copyPatterns.push({
       // the file we are interested in has 'engine' in its name.
       // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
       from: './node_modules/.prisma/client/*engine*', // `query_engine-windows.dll.node` for windows
       to: path.resolve(outPath, './[name][ext]'), // place the file directly to the output directory instead of copying the directory tree, otherwise Prisma won't find it
-    },
+    })
+  }
+
+  // similarly, only copy ngrok if it doesn't already exist
+  const ngrokPath = path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it
+  if (isLocal && !fs.readdirSync(ngrokPath).filter(file => file.includes('ngrok.exe'))) {
+    copyPatterns.push({
+      from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
+      to: ngrokPath // folder is automatically created
+    })
+  }
+
+  copyPatterns.push(...[  
     {
       // required for prisma to find the schema file
       // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
@@ -62,14 +78,7 @@ module.exports = (env) => {
     { from: path.resolve(__dirname, `./favicon_${nodeEnv}.ico`),
       to: outPath
     }
-  ]
-
-  if (isLocal) {
-    copyPatters.push({
-      from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
-      to: path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it (folder is automatically created)
-    })
-  }
+  ])
 
   // for development purposes, we need to emit special javascript files, such as scripts, so we can run them separate from the main app.
   // the key for these will be used for the `[name]` placeholder in the `output` config of webpack.
@@ -206,7 +215,7 @@ module.exports = (env) => {
       new webpack.BannerPlugin(banner),
 
       // https://webpack.js.org/plugins/copy-webpack-plugin/
-      new CopyWebpackPlugin({ patterns: copyPatters }),
+      new CopyWebpackPlugin({ patterns: copyPatterns }),
 
       new HtmlWebpackPlugin({
         filename: './default.html',
