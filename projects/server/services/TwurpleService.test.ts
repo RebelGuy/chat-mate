@@ -103,3 +103,27 @@ describe(nameof(TwurpleService, 'unbanChannel'), () => {
     expect(single(mockTwurpleApiProxyService.say.mock.calls)).toEqual([`/unban ${channelName}`])
   })
 })
+
+describe(nameof(TwurpleService, 'modChannel'), () => {
+  test('gets channel name and makes a request to mod', async () => {
+    const channelId = 5
+    const userChannelName = 'testChannelName'
+    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(userChannelName)
+
+    await twurpleService.modChannel(channelId)
+
+    expect(single(mockTwurpleApiProxyService.mod.mock.calls)).toEqual([twitchChannelName, userChannelName])
+  })
+})
+
+describe(nameof(TwurpleService, 'unmodChannel'), () => {
+  test('gets channel name and makes a request to unmod', async () => {
+    const channelId = 5
+    const userChannelName = 'testChannelName'
+    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(userChannelName)
+
+    await twurpleService.unmodChannel(channelId)
+
+    expect(single(mockTwurpleApiProxyService.unmod.mock.calls)).toEqual([twitchChannelName, userChannelName])
+  })
+})

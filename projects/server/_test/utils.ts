@@ -62,3 +62,7 @@ export function cast<T extends Array<any>> (data: Partial<(T extends Array<infer
 export function cast<T> (data: Partial<T>): T {
   return data as T
 }
+
+export function expectObject<T> (data: Partial<T>): T {
+  return expect.objectContaining(data)
+}

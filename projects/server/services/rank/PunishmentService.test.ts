@@ -1,11 +1,10 @@
-import { Punishment, Rank } from '@prisma/client'
+import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import PunishmentService, { TwitchPunishmentResult, YoutubePunishmentResult } from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import PunishmentStore, { CreatePunishmentArgs } from '@rebel/server/stores/PunishmentStore'
-import { nameof } from '@rebel/server/_test/utils'
+import { cast, nameof, expectObject } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { any, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -14,7 +13,6 @@ import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { NotFoundError } from 'typescript-rest/dist/server-errors'
 import { UserRankNotFoundError } from '@rebel/server/util/error'
 
 const userId1 = 2
@@ -190,18 +188,18 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     const error2 = 'error2'
     mockMasterchatProxyService.banYoutubeChannel.calledWith(contextToken1).mockResolvedValue(true)
     mockMasterchatProxyService.banYoutubeChannel.calledWith(contextToken2).mockRejectedValue(new Error(error2))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue({ contextToken: contextToken1 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue({ contextToken: contextToken2 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue({ contextToken: null } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
     const newPunishment: any = {}
-    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'ban' })).mockResolvedValue(newPunishment)
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'ban' })).mockResolvedValue(newPunishment)
 
     const result = await punishmentService.banUser(userId1, 'test')
 
@@ -249,11 +247,11 @@ describe(nameof(PunishmentService, 'isUserPunished'), () => {
 describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
     mockRankStore.removeUserRank
-      .calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'mute' }))
+      .calledWith(expectObject<RemoveUserRankArgs>({ rank: 'mute' }))
       .mockRejectedValue(new UserRankNotFoundError())
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'mute', expirationTime: expect.any(Date) }))
+      .calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'mute', expirationTime: expect.any(Date) }))
       .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, 'test', 10)
@@ -266,7 +264,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
     mockRankStore.removeUserRank.mockResolvedValue({} as any)
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'mute', expirationTime: null }))
+      .calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'mute', expirationTime: null }))
       .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, 'test', null)
@@ -285,9 +283,9 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     mockMasterchatProxyService.timeout.calledWith(contextToken1).mockRejectedValue(new Error(error1))
     mockMasterchatProxyService.timeout.calledWith(contextToken2).mockResolvedValue(true)
     mockTwurpleService.timeout.calledWith(1, 'test', 1000).mockRejectedValue(new Error(error3))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue({ contextToken: contextToken1 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue({ contextToken: contextToken2 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue({ contextToken: null } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
@@ -300,8 +298,8 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
       userId: userId1,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
-    mockRankStore.addUserRank.calledWith(expect.objectContaining<Partial<AddUserRankArgs>>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
 
     const result = await punishmentService.timeoutUser(userId1, 'test', 1000)
 
@@ -363,9 +361,9 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     const contextToken2 = 'testToken2'
     mockMasterchatProxyService.unbanYoutubeChannel.calledWith(contextToken1).mockResolvedValue(true)
     mockMasterchatProxyService.unbanYoutubeChannel.calledWith(contextToken2).mockResolvedValue(true)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue({ contextToken: contextToken1 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue({ contextToken: contextToken2 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue({ contextToken: null } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
@@ -373,7 +371,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
       twitchChannels: [1, 2]
     })
     const revokedPunishment: any = {}
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'ban' })).mockResolvedValue(revokedPunishment)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'ban' })).mockResolvedValue(revokedPunishment)
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
@@ -398,7 +396,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
   test('returns null and does not make database change if ban is already revoked', async () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
@@ -410,7 +408,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 describe(nameof(PunishmentService, 'unmuteUser'), () => {
   test('adds mute to database', async () => {
     const expectedResult: any = {}
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'mute' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'mute' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.unmuteUser(userId1, 'test')
 
@@ -418,7 +416,7 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
   })
 
   test('returns null and does not make database change if there is no active mute', async () => {
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'mute' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'mute' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.unmuteUser(userId1, 'test')
     
@@ -435,7 +433,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     })
     mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeTimeout, activeModRank] }])
     const expectedResult: any = {}
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     
@@ -463,7 +461,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
   test('returns null and does not make database change if timeout is already revoked', async () => {
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
     mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeModRank] }])
-    mockRankStore.removeUserRank.calledWith(expect.objectContaining<Partial<RemoveUserRankArgs>>({ userId: userId1, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     

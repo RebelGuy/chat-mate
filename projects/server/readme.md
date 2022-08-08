@@ -173,12 +173,12 @@ Key:
   - 🟢 fetchMetadata
   - 🟢 removeMasterchat
   - 🟢 banYoutubeChannel
-  - 🔴 timeout
+  - 🟢 timeout
   - 🟢 unbanYoutubeChannel
-  - 🔴 mod
-  - 🔴 unmod
-- 🔴 ModService
-  - 🔴 setModRank
+  - 🟢 mod
+  - 🟢 unmod
+- 🟢 ModService
+  - 🟢 setModRank
 - 🟢 PunishmentService
   - 🟢 initialise
   - 🟢 banUser
@@ -203,9 +203,9 @@ Key:
 - 🟢 TwurpleService
   - 🟢 banChannel
   - 🟢 initialise
-  - 🔴 modChannel
+  - 🟢 modChannel
   - 🟢 unbanChannel
-  - 🔴 unmodChannel
+  - 🟢 unmodChannel
 - 🟢 YoutubeTimeoutRefreshService
   - 🟢 startTrackingTimeout
   - 🟢 stopTrackingTimeout
@@ -299,6 +299,7 @@ Key:
 **Misc**
 - 🔴 util/math
 - 🔴 util/score
+- 🔴 util/arrays
 
 
 # API Endpoints
