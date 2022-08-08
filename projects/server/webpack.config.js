@@ -184,6 +184,12 @@ module.exports = (env) => {
 
     output: {
       path: outPath,
+      devtoolModuleFilenameTemplate: (info) => {
+        // sourcemaps to files in different projects in the app.js.map file reference the server project, so the javascript debugger can't load them
+        // https://github.com/webpack/webpack/issues/3603
+        const rel = path.relative(outPath, info.absoluteResourcePath)
+        return `webpack:///${rel}`
+      },
       // map each named entry .ts file to its corresponding .js output file
       filename: `[name].js`
     },
