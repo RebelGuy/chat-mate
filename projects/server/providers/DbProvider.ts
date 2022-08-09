@@ -68,9 +68,9 @@ export default class DbProvider extends ContextClass implements IProvider<Db> {
         return result
       } catch (e: any) {
         this.semaphore.exit()
-        this.logService.logError(this, 'Prisma encountered an error while trying to execute a request.')
-        this.logService.logError(this, 'PARAMS:', params)
-        this.logService.logError(this, 'ERROR:', e)
+        this.logService.logWarning(this, 'Prisma encountered an error while trying to execute a request.')
+        this.logService.logWarning(this, 'PARAMS:', params)
+        this.logService.logWarning(this, 'ERROR:', e)
 
         // CHAT-362 During periods of dense traffic, the db can timeout and will remain in a broken state
         // until either the app is restarted, or the connection is reset.

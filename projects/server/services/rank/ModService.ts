@@ -127,7 +127,7 @@ export default class ModService extends ContextClass {
       
       this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)
       if (!result) {
-        error = `Request succeeded, but action was not applied. Most likely, the user is already ${type}ed.` + errorSuffix
+        error = `Request succeeded, but action was not applied. Most likely, the user is already ${type}ded.` + errorSuffix
       }
     } catch (e: any) {
       this.logService.logError(this, `Request to ${type} youtube channel ${youtubeChannelId} failed:`, e.message)
