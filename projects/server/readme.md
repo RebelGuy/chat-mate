@@ -620,6 +620,55 @@ Path: `/rank`.
 
 Note: For punishment-specific functionality, refer to the [punishment endpoints](#punishment-endpoints).
 
+### `GET`
+*Current schema: 1.*
+
+Gets the list of current or historical user-ranks.
+
+Query parameters:
+- `userId` (`number`): *Required.* The ID of the user for which to get the list of ranks.
+- `includeInactive` (`boolean`): *Optional.* If true, returns the list of historical ranks (active and inactive) for a user. If false, returns only ranks that are currently active.
+
+Returns data with the following properties:
+- `ranks` (`PublicUserRank[]`): The list of ranks of the user, in descending order by time issued.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+
+## `POST`
+*Current schema: 1.*
+
+Adds a regular rank to the specified user.
+
+Request data (body):
+- `rank` (`string`): *Required.* The name of the rank to add. Should be one of the following: `famous`, `donator`, `supporter`, `member`.
+- `userId` (`int`): *Required.* The user to which the rank should be added.
+- `message` (`string`): *Optional.* A custom message to accompany the rank addition.
+- `expirationTime` (`timestamp`): *Optional.* The timestamp of when the rank should automatically expire. If not set, the rank is permanent.
+
+Returns data with the following properties:
+- `newRank` (`PublicUserRank`): The new user-rank that was added.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly. This error is also returned when a rank of the specified type is already active for the given user.
+
+## `DELETE`
+*Current schema: 1.*
+
+Removes a regular rank from the specified user.
+
+Request data (body):
+- `rank` (`string`): *Required.* The name of the rank to remove. Should be one of the following: `famous`, `donator`, `supporter`, `member`.
+- `userId` (`int`): *Required.* The user from which the rank should be removed.
+- `message` (`string`): *Optional.* A custom message to accompany the rank removal.
+
+Returns data with the following properties:
+- `removedRank` (`PublicUserRank`): The rank that was removed.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When an active rank of the specified type was not found for the given user.
+
 ### `POST /mod`
 *Current schema: 1.*
 

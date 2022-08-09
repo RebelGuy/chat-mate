@@ -107,5 +107,68 @@
     "headers": [],
     "params": [],
     "tests": []
+  },
+  {
+    "_id": "9eeda688-126f-497b-806d-8d2c0d616eda",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Get Active Ranks",
+    "url": "{{ServerApiUrl}}/rank?userId=226&includeInactive=true",
+    "method": "GET",
+    "sortNum": 2500,
+    "created": "2022-08-09T03:18:05.248Z",
+    "modified": "2022-08-09T03:19:06.887Z",
+    "headers": [],
+    "params": [
+      {
+        "name": "userId",
+        "value": "226",
+        "isPath": false
+      },
+      {
+        "name": "includeInactive",
+        "value": "true",
+        "isPath": false
+      }
+    ],
+    "tests": []
+  },
+  {
+    "_id": "e51d702f-23ee-44fa-8da2-17526d81a21b",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Add Rank",
+    "url": "{{ServerApiUrl}}/rank",
+    "method": "POST",
+    "sortNum": 3750,
+    "created": "2022-08-09T09:10:22.050Z",
+    "modified": "2022-08-09T09:16:10.882Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"schema\": 1,\n  \"rank\": \"member\",\n  \"userId\": 56,\n  \"message\": \"Test message\"\n}",
+      "form": []
+    },
+    "tests": []
+  },
+  {
+    "_id": "9086a31f-dd07-470a-88ce-58f355a240dc",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Remove Rank",
+    "url": "{{ServerApiUrl}}/rank",
+    "method": "DELETE",
+    "sortNum": 4375,
+    "created": "2022-08-09T09:16:31.116Z",
+    "modified": "2022-08-09T09:16:49.963Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"schema\": 1,\n  \"rank\": \"member\",\n  \"userId\": 56,\n  \"message\": \"Remove message\"\n}",
+      "form": []
+    },
+    "tests": []
   }
 ]

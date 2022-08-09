@@ -83,8 +83,8 @@ export default class PunishmentController extends ControllerBase {
 
   @GET
   public async getPunishments (
-    @QueryParam('userId') userId?: number, // if not provided, returns all
-    @QueryParam('includeInactive') includeInactive?: boolean // if not set, return all
+    @QueryParam('userId') userId?: number, // if not provided, returns punishments of all users
+    @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active punishments
   ): Promise<GetUserPunishments> {
     const builder = this.registerResponseBuilder<GetUserPunishments>('GET', 2)
     try {

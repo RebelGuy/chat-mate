@@ -16,6 +16,9 @@ export type UserRankWithRelations = Omit<UserRank, 'rankId'> & {
   rank: Rank
 }
 
+/** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
+export type RegularRank = Extract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
+
 export type AddUserRankArgs = {
   rank: RankName
   userId: number
@@ -74,7 +77,7 @@ export default class RankStore extends ContextClass {
     } catch (e: any) {
       // annoyingly we don't have access to the inner server object, as it is only included in serialised form in the message directly
       if (e instanceof PrismaClientUnknownRequestError && e.message.includes('DUPLICATE_RANK')) {
-        throw new UserRankAlreadyExistsError(`Rank ${args.rank} is already active for user ${args.userId}.`)
+        throw new UserRankAlreadyExistsError(`The '${args.rank}' rank is already active for user ${args.userId}.`)
       }
 
       throw e
@@ -150,7 +153,7 @@ export default class RankStore extends ContextClass {
       })
     } catch (e: any) {
       if (e.name === 'NotFoundError') {
-        throw new UserRankNotFoundError(`Could not find an active ${args.rank} rank for user ${args.userId}.`)
+        throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for user ${args.userId}.`)
       }
 
       throw e

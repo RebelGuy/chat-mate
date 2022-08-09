@@ -6,8 +6,35 @@ import { userRankToPublicObject } from '@rebel/server/models/rank'
 import LogService from '@rebel/server/services/LogService'
 import ModService, { TwitchModResult, YoutubeModResult } from '@rebel/server/services/rank/ModService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import { single, sortBy } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { DELETE, Path, POST } from 'typescript-rest'
+import { DELETE, GET, Path, POST, QueryParam } from 'typescript-rest'
+import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { isOneOf } from '@rebel/server/util/validation'
+import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+
+type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
+
+type AddUserRankRequest = ApiRequest<1, {
+  schema: 1,
+  userId: number,
+  message: string | null,
+  expirationTime: number | null,
+  rank: 'famous' | 'donator' | 'supporter' | 'member'
+}>
+type AddUserRankResponse = ApiResponse<1, {
+  newRank: Tagged<1, PublicUserRank>
+}>
+
+type RemoveUserRankRequest = ApiRequest<1, {
+  schema: 1,
+  userId: number,
+  message: string | null,
+  rank: 'famous' | 'donator' | 'supporter' | 'member'
+}>
+type RemoveUserRankResponse = ApiResponse<1, {
+  removedRank: Tagged<1, PublicUserRank>
+}>
 
 type AddModRankRequest = ApiRequest<1, {
   schema: 1,
@@ -35,17 +62,99 @@ type Deps = Dependencies<{
   logService: LogService
   channelStore: ChannelStore
   modService: ModService
+  rankStore: RankStore
 }>
 
 @Path(buildPath('rank'))
 export default class RankController extends ControllerBase {
   private readonly modService: ModService
   private readonly channelStore: ChannelStore
+  private readonly rankStore: RankStore
 
   constructor (deps: Deps) {
     super(deps, 'rank')
     this.modService = deps.resolve('modService')
     this.channelStore = deps.resolve('channelStore')
+    this.rankStore = deps.resolve('rankStore')
+  }
+
+  @GET
+  public async getUserRanks (
+    @QueryParam('userId') userId: number,
+    @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active ranks
+  ): Promise<GetUserRanksResponse> {
+    const builder = this.registerResponseBuilder<GetUserRanksResponse>('GET', 1)
+    if (userId == null) {
+      return builder.failure(400, 'A user ID must be provided')
+    }
+
+    try {
+      let ranks: UserRankWithRelations[]
+      
+      if (includeInactive === true) {
+        ranks = await this.rankStore.getUserRankHistory(userId)
+      } else {
+        ranks = single(await this.rankStore.getUserRanks([userId])).ranks
+      }
+
+      ranks = sortBy(ranks, p => p.issuedAt.getTime(), 'desc')
+      return builder.success({ ranks: ranks.map(e => userRankToPublicObject(e)) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  public async addUserRank (request: AddUserRankRequest): Promise<AddUserRankResponse> {
+    const builder = this.registerResponseBuilder<AddUserRankResponse>('POST', 1)
+    if (request == null || request.schema !== builder.schema || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
+      return builder.failure(400, 'Invalid request data.')
+    }
+
+    try {
+      const args: AddUserRankArgs = {
+        rank: request.rank,
+        userId: request.userId,
+        message: request.message,
+        expirationTime: request.expirationTime ? new Date(request.expirationTime) : null,
+        assignee: null // todo: CHAT-385 use logged-in user details
+      }
+      const result = await this.rankStore.addUserRank(args)
+
+      return builder.success({ newRank: userRankToPublicObject(result) })
+    } catch (e: any) {
+      if (e instanceof UserRankAlreadyExistsError) {
+        return builder.failure(400, e)
+      } else {
+        return builder.failure(e)
+      }
+    }
+  }
+
+  @DELETE
+  public async removeUserRank (request: RemoveUserRankRequest): Promise<RemoveUserRankResponse> {
+    const builder = this.registerResponseBuilder<RemoveUserRankResponse>('DELETE', 1)
+    if (request == null || request.schema !== builder.schema || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
+      return builder.failure(400, 'Invalid request data.')
+    }
+
+    try {
+      const args: RemoveUserRankArgs = {
+        rank: request.rank,
+        userId: request.userId,
+        message: request.message,
+        removedBy: null // todo: CHAT-385 use logged-in user details
+      }
+      const result = await this.rankStore.removeUserRank(args)
+
+      return builder.success({ removedRank: userRankToPublicObject(result) })
+    } catch (e: any) {
+      if (e instanceof UserRankNotFoundError) {
+        return builder.failure(404, e)
+      } else {
+        return builder.failure(e)
+      }
+    }
   }
 
   @POST
