@@ -11,6 +11,7 @@ import {
   DisabledChatError,
   EndReason,
   InvalidArgumentError,
+  LoggedOutError,
   MasterchatError,
   MembersOnlyError,
   NoPermissionError,
@@ -114,6 +115,9 @@ export class Masterchat extends EventEmitter {
   public channelName?: string;
   public title?: string;
 
+  /** If true, either the credentials have not been set or have expired. Some actions require masterchat to be authenticated and will fail. */
+  public isLoggedOut: boolean = true;
+
   private axiosInstance: AxiosInstance;
   private credentials?: Credentials;
   private listener: ChatListener | null = null;
@@ -185,6 +189,7 @@ export class Masterchat extends EventEmitter {
     }
 
     this.credentials = credentials;
+    this.isLoggedOut = credentials == null;
   }
 
   /**
@@ -359,7 +364,7 @@ export class Masterchat extends EventEmitter {
 
     loop: while (true) {
       try {
-        payload = (await this.post(requestUrl, requestBody)).data;
+        payload = (await this.post(false, requestUrl, requestBody)).data;
       } catch (err) {
         // handle user cancallation
         if ((err as any)?.message === "canceled") {
@@ -599,6 +604,7 @@ export class Masterchat extends EventEmitter {
     });
 
     const res = await this.postWithRetry<YTActionResponse>(
+      true,
       constants.EP_SM,
       body
     );
@@ -638,6 +644,7 @@ export class Masterchat extends EventEmitter {
   async remove(chatId: string) {
     const params = rmp(chatId, this.cvPair());
     const res = await this.postWithRetry<YTActionResponse>(
+      true,
       constants.EP_M,
       withContext({
         params,
@@ -710,7 +717,7 @@ export class Masterchat extends EventEmitter {
     const url = actionInfo.url;
     let res;
     if (actionInfo.isPost) {
-      res = await this.post(url, withContext({ params: actionInfo.params }))
+      res = await this.post(true, url, withContext({ params: actionInfo.params }))
     } else {
       res = await this.get(url);
     }
@@ -735,6 +742,7 @@ export class Masterchat extends EventEmitter {
     });
     const endpoint = constants.EP_GICM + "&" + query.toString();
     const response = await this.postWithRetry<YTGetItemContextMenuResponse>(
+      true,
       endpoint,
       withContext(),
       {
@@ -762,7 +770,7 @@ export class Masterchat extends EventEmitter {
     }
 
     if (response.responseContext?.mainAppWebResponseContext?.loggedOut === true) {
-      throw new Error('Youtube user is not logged in.')
+      throw new LoggedOutError('Youtube user is not logged in.')
     }
 
     let items: ActionCatalog = {};
@@ -840,6 +848,7 @@ export class Masterchat extends EventEmitter {
    * Private API
    */
   private async postWithRetry<T>(
+    requireLoggedIn: boolean, 
     input: string,
     body: any,
     options?: RetryOptions
@@ -852,7 +861,7 @@ export class Masterchat extends EventEmitter {
 
     while (true) {
       try {
-        const res = await this.post(input, body);
+        const res = await this.post(requireLoggedIn, input, body);
         return res.data;
       } catch (err) {
         if (err instanceof Error) {
@@ -877,6 +886,7 @@ export class Masterchat extends EventEmitter {
   }
 
   private async post(
+    requireLoggedIn: boolean,
     input: string,
     body: any,
     config: AxiosRequestConfig = {}
@@ -885,7 +895,7 @@ export class Masterchat extends EventEmitter {
       input = constants.DO + input;
     }
 
-    return this.axiosInstance.request({
+    const response = await this.axiosInstance.request({
       ...config,
       url: input,
       signal: this.listenerAbortion.signal,
@@ -898,6 +908,13 @@ export class Masterchat extends EventEmitter {
       },
       data: body,
     });
+
+    this.isLoggedOut = response?.data?.responseContext?.mainAppWebResponseContext?.loggedOut === true
+    if (requireLoggedIn && this.isLoggedOut) {
+      throw new LoggedOutError('Youtube user is not logged in.')
+    } else {
+      return response
+    }
   }
 
   private get(input: string, config: AxiosRequestConfig = {}) {

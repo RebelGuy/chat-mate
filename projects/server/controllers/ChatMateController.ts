@@ -29,10 +29,15 @@ export type SetActiveLivestreamRequest = ApiRequest<2, { schema: 2, livestream: 
 export type SetActiveLivestreamResponse = ApiResponse<2, { livestreamLink: string | null }>
 export type SetActiveLivestreamEndpoint = Endpoint<2, Omit<SetActiveLivestreamRequest, 'schema'>, SetActiveLivestreamResponse>
 
+export type GetMasterchatAuthenticationResponse = ApiResponse<1, { authenticated: boolean | null }>
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type GetMasterchatAuthenticationEndpoint = Endpoint<1, {}, GetMasterchatAuthenticationResponse>
+
 export interface IChatMateController {
   getStatus: GetStatusEndpoint
   getEvents: GetEventsEndpoint
   setActiveLivestream: SetActiveLivestreamEndpoint
+  getMasterchatAuthentication: GetMasterchatAuthenticationEndpoint
 }
 
 @Path(buildPath('chatMate'))
@@ -85,6 +90,17 @@ export default class ChatMateController extends ControllerBase {
       return await this.implementation.setActiveLivestream({ builder, ...request })
     } catch (e: any) {
       return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('masterchat/authentication')
+  public async getMasterchatAuthentication (): Promise<GetMasterchatAuthenticationResponse> {
+    const builder = this.registerResponseBuilder<GetMasterchatAuthenticationResponse>('GET /masterchat/authentication', 1)
+    try {
+      return await this.implementation.getMasterchatAuthentication({ builder })
+    } catch (e: any) {
+      return await builder.failure(e)
     }
   }
 }

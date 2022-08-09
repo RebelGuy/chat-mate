@@ -381,6 +381,17 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `422`: When an active livestream already exists.
 
+### `GET /masterchat/authentication`
+*Current schema: 1.*
+
+Check whether the currently active Masterchat instance is authenticated.
+
+Returns data with the following properties:
+- `authenticated` (`boolean | null`): Whether the Masterchat instance is authenticated.
+  - `true`: The Masterchat instance is authenticated.
+  - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
+  - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
+
 ## Emoji Endpoints
 Path: `/emoji`.
 

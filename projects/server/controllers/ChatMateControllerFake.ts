@@ -1,6 +1,6 @@
 import { In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
-import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
+import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import { chooseWeightedRandom, pickRandom, randomInt, randomString } from '@rebel/server/util/random'
 import { addTime } from '@rebel/server/util/datetime'
@@ -12,6 +12,7 @@ import { Level } from '@rebel/server/services/ExperienceService'
 import { asGte, asLt } from '@rebel/server/util/math'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
+import { promised } from '@rebel/server/_test/utils'
 
 export default class ChatMateControllerFake implements IChatMateController {
   private channelService: ChannelService
@@ -125,5 +126,11 @@ export default class ChatMateControllerFake implements IChatMateController {
     }
 
     return args.builder.success({ livestreamLink: this.liveId == null ? null : getLivestreamLink(this.liveId) })
+  }
+
+  public getMasterchatAuthentication (args: In<GetMasterchatAuthenticationEndpoint>): Out<GetMasterchatAuthenticationEndpoint> {
+    return promised(args.builder.success({
+      authenticated: true
+    }))
   }
 }

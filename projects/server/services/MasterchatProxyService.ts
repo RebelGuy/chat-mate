@@ -7,7 +7,10 @@ import StatusService from '@rebel/server/services/StatusService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import { firstOrDefault } from '@rebel/server/util/typescript'
 
-type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'>
+type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'> & {
+  // underlying instance
+  masterchat: Masterchat
+}
 
 type Deps = Dependencies<{
   logService: LogService
@@ -45,6 +48,17 @@ export default class MasterchatProxyService extends ContextClass {
 
   public removeMasterchat (liveId: string) {
     this.wrappedMasterchats.delete(liveId)
+  }
+
+  /** If an instance of masterchat is active, returns whether the credentials are currently active and valid.
+   * If false, no user is authenticated and some requests will fail. */
+  public checkCredentials () {
+    const masterchat = firstOrDefault(this.wrappedMasterchats, null)
+    if (masterchat == null) {
+      return null
+    } else {
+      return !masterchat.masterchat.isLoggedOut
+    }
   }
 
   // the second argument is not optional to avoid bugs where `fetch(continuationToken)` is erroneously called.
@@ -119,7 +133,7 @@ export default class MasterchatProxyService extends ContextClass {
     const addModerator = this.wrapRequest((arg) => masterchat.addModerator(arg), `masterchat[${liveId}].addModerator`)
     const removeModerator = this.wrapRequest((arg) => masterchat.removeModerator(arg), `masterchat[${liveId}].removeModerator`)
 
-    return { fetch, fetchMetadata, hide, unhide, timeout, addModerator, removeModerator }
+    return { masterchat, fetch, fetchMetadata, hide, unhide, timeout, addModerator, removeModerator }
   }
 
   private wrapRequest<TQuery extends any[], TResponse> (

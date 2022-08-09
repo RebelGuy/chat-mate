@@ -25,14 +25,14 @@
     "name": "Remove Mod Rank (Youtube)",
     "url": "{{ServerApiUrl}}/rank/mod",
     "method": "DELETE",
-    "sortNum": 20000,
+    "sortNum": 7500,
     "created": "2022-08-08T11:06:27.727Z",
-    "modified": "2022-08-08T11:18:57.081Z",
+    "modified": "2022-08-08T20:20:08.717Z",
     "headers": [],
     "params": [],
     "body": {
       "type": "json",
-      "raw": "{\n  \"schema\": 1,\n  \"userId\": 56,\n  \"message\": \"Test Removal\"\n}",
+      "raw": "{\n  \"schema\": 1,\n  \"userId\": 226,\n  \"message\": \"Test Removal\"\n}",
       "form": []
     },
     "tests": []
@@ -46,12 +46,12 @@
     "method": "POST",
     "sortNum": 5000,
     "created": "2022-08-08T11:17:18.358Z",
-    "modified": "2022-08-08T11:18:50.953Z",
+    "modified": "2022-08-08T20:19:39.168Z",
     "headers": [],
     "params": [],
     "body": {
       "type": "json",
-      "raw": "{\n  \"schema\": 1,\n  \"userId\": 56,\n  \"message\": \"Test\"\n}",
+      "raw": "{\n  \"schema\": 1,\n  \"userId\": 226,\n  \"message\": \"Test\"\n}",
       "form": []
     },
     "tests": []
@@ -73,6 +73,39 @@
       "raw": "{\n  \"schema\": 1,\n  \"userId\": 227,\n  \"message\": \"Test Removal\"\n}",
       "form": []
     },
+    "tests": []
+  },
+  {
+    "_id": "c9898d28-106e-42c7-a2d1-5397f96f1e65",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "3c929407-5209-4962-8c10-3cec2982e3c8",
+    "name": "Set Livestream",
+    "url": "{{ServerApiUrl}}/chatmate/livestream",
+    "method": "PATCH",
+    "sortNum": 40000,
+    "created": "2022-08-08T20:21:05.870Z",
+    "modified": "2022-08-08T20:21:38.012Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"schema\": 2,\n  \"livestream\": \"6B0aXlf5qy4\"\n}",
+      "form": []
+    },
+    "tests": []
+  },
+  {
+    "_id": "cb558b03-1812-4f1a-ae81-e56ac5df5227",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "3c929407-5209-4962-8c10-3cec2982e3c8",
+    "name": "Check Masterchat Authentication",
+    "url": "{{ServerApiUrl}}/chatmate/masterchat/authentication",
+    "method": "GET",
+    "sortNum": 50000,
+    "created": "2022-08-09T01:58:13.816Z",
+    "modified": "2022-08-09T02:03:14.551Z",
+    "headers": [],
+    "params": [],
     "tests": []
   }
 ]
