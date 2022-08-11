@@ -190,6 +190,8 @@ Key:
   - 🟢 unbanUser
   - 🟢 unmuteUser
   - 🟢 untimeoutUser
+- 🟢 RankService
+  - 🟢 getAccessibleRanks
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
@@ -258,6 +260,7 @@ Key:
   - 🟢 revokePunishment
 - 🟢 RankStore
   - 🟢 addUserRank
+  - 🟢 getRanks
   - 🟢 getUserRankById
   - 🟢 getUserRanks
   - 🟢 getUserRanksForGroup
@@ -635,10 +638,19 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
-## `POST`
+
+### `GET /accessible`
 *Current schema: 1.*
 
-Adds a regular rank to the specified user.
+Gets the ranks accessible to the current user. At the moment, it returns all Regular ranks.
+
+Returns data with the following properties:
+- `accessibleRanks` (`PublicRank[]`): The list of ranks accessible to the user.
+
+### `POST`
+*Current schema: 1.*
+
+Adds a Regular rank to the specified user.
 
 Request data (body):
 - `rank` (`string`): *Required.* The name of the rank to add. Should be one of the following: `famous`, `donator`, `supporter`, `member`.
@@ -652,7 +664,7 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly. This error is also returned when a rank of the specified type is already active for the given user.
 
-## `DELETE`
+### `DELETE`
 *Current schema: 1.*
 
 Removes a regular rank from the specified user.
@@ -697,7 +709,7 @@ Request data (body):
 
 Returns data with the following properties:
 - `removedRank` (`PublicUserRank | null`): The rank that was removed, if successful.
-- `removeddRankError` (`string | null`): If `removedRank` is `null`, the error that was encountered when attempting to remove the rank.
+- `removedRankError` (`string | null`): If `removedRank` is `null`, the error that was encountered when attempting to remove the rank.
 - `channelModChanges` (`PublicChannelRankChange[]`): The external updates made to channels on YouTube or Twitch.
 
 Can return the following errors:

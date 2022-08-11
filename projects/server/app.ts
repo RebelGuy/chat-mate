@@ -59,6 +59,7 @@ import AdminService from '@rebel/server/services/rank/AdminService'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import RankController from '@rebel/server/controllers/RankController'
 import ModService from '@rebel/server/services/rank/ModService'
+import RankService from '@rebel/server/services/rank/RankService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -151,6 +152,7 @@ const globalContext = ContextProvider.create()
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
   .withClass('modService', ModService)
+  .withClass('rankService', RankService)
   .build()
 
 app.use((req, res, next) => {

@@ -7,7 +7,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
 import { Rank, RankName, UserRank } from '@prisma/client'
-import { nameof } from '@rebel/server/_test/utils'
+import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { single, sortBy, unique } from '@rebel/server/util/arrays'
 import { UserRankNotFoundError, UserRankAlreadyExistsError } from '@rebel/server/util/error'
 
@@ -27,6 +27,7 @@ export default () => {
   let modRank: Rank
   let bannedRank: Rank
   let mutedRank: Rank
+  let donatorRank: Rank
 
   let db: Db
   let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
@@ -52,6 +53,7 @@ export default () => {
     modRank = await db.rank.create({ data: { name: 'mod', displayNameNoun: '', displayNameAdjective: '', group: 'administration' }})
     bannedRank = await db.rank.create({ data: { name: 'ban', displayNameNoun: '', displayNameAdjective: '', group: 'punishment' }})
     mutedRank = await db.rank.create({ data: { name: 'mute', displayNameNoun: '', displayNameAdjective: '', group: 'punishment' }})
+    donatorRank = await db.rank.create({ data: { name: 'donator', displayNameNoun: '', displayNameAdjective: '', group: 'donation' }})
 
     await rankStore.initialise()
   }, DB_TEST_TIMEOUT)
@@ -169,6 +171,14 @@ export default () => {
         revokedByUserId: null,
         revokedTime: null
       }))
+    })
+  })
+
+  describe.only(nameof(RankStore, 'getRanks'), () => {
+    test('Returns Standard ranks', async () => {
+      const result = await rankStore.getRanks()
+
+      expect(result).toEqual(expectArray([famousRank, donatorRank]))
     })
   })
 

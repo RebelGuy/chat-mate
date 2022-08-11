@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
-import { userRankToPublicObject } from '@rebel/server/models/rank'
+import { userRankToPublicObject, rankToPublicObject } from '@rebel/server/models/rank'
 import LogService from '@rebel/server/services/LogService'
 import ModService, { TwitchModResult, YoutubeModResult } from '@rebel/server/services/rank/ModService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -12,8 +12,12 @@ import { DELETE, GET, Path, POST, QueryParam } from 'typescript-rest'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { isOneOf } from '@rebel/server/util/validation'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
+import RankService from '@rebel/server/services/rank/RankService'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
+
+type GetAccessibleRanksResponse = ApiResponse<1, { accessibleRanks: PublicRank[] }>
 
 type AddUserRankRequest = ApiRequest<1, {
   schema: 1,
@@ -63,6 +67,7 @@ type Deps = Dependencies<{
   channelStore: ChannelStore
   modService: ModService
   rankStore: RankStore
+  rankService: RankService
 }>
 
 @Path(buildPath('rank'))
@@ -70,12 +75,14 @@ export default class RankController extends ControllerBase {
   private readonly modService: ModService
   private readonly channelStore: ChannelStore
   private readonly rankStore: RankStore
+  private readonly rankService: RankService
 
   constructor (deps: Deps) {
     super(deps, 'rank')
     this.modService = deps.resolve('modService')
     this.channelStore = deps.resolve('channelStore')
     this.rankStore = deps.resolve('rankStore')
+    this.rankService = deps.resolve('rankService')
   }
 
   @GET
@@ -99,6 +106,20 @@ export default class RankController extends ControllerBase {
 
       ranks = sortBy(ranks, p => p.issuedAt.getTime(), 'desc')
       return builder.success({ ranks: ranks.map(e => userRankToPublicObject(e)) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/accessible')
+  public async getAccessibleRanks (): Promise<GetAccessibleRanksResponse> {
+    const builder = this.registerResponseBuilder<GetAccessibleRanksResponse>('GET /accessible', 1)
+    const accessibleRanks = await this.rankService.getAccessibleRanks()
+    try {
+      return builder.success({
+        accessibleRanks: accessibleRanks.map(rankToPublicObject)
+      })
     } catch (e: any) {
       return builder.failure(e)
     }

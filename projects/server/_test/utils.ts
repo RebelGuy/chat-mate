@@ -66,3 +66,7 @@ export function cast<T> (data: Partial<T>): T {
 export function expectObject<T> (data: Partial<T>): T {
   return expect.objectContaining(data)
 }
+
+export function expectArray<T> (data: Partial<T>[]): T[] {
+  return expect.arrayContaining(data)
+}

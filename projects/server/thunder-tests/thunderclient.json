@@ -170,5 +170,19 @@
       "form": []
     },
     "tests": []
+  },
+  {
+    "_id": "3cb17e1a-6a15-433f-aefa-50e3a1202749",
+    "colId": "5a707db6-9a61-428e-8cc2-007b49cd1b7e",
+    "containerId": "dccd0129-1960-43a6-82d0-a2b18db5b8c5",
+    "name": "Get Accessible Ranks",
+    "url": "{{ServerApiUrl}}/rank/accessible",
+    "method": "GET",
+    "sortNum": 3125,
+    "created": "2022-08-11T00:11:27.657Z",
+    "modified": "2022-08-11T00:13:11.642Z",
+    "headers": [],
+    "params": [],
+    "tests": []
   }
 ]

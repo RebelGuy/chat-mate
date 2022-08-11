@@ -16,9 +16,6 @@ export type UserRankWithRelations = Omit<UserRank, 'rankId'> & {
   rank: Rank
 }
 
-/** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
-export type RegularRank = Extract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
-
 export type AddUserRankArgs = {
   rank: RankName
   userId: number
@@ -82,6 +79,11 @@ export default class RankStore extends ContextClass {
 
       throw e
     }
+  }
+
+  /** Gets all ranks. */
+  public async getRanks (): Promise<Rank[]> {
+    return await this.db.rank.findMany()
   }
 
   /** Gets the user rank that has the specified id.
