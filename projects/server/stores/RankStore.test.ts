@@ -174,7 +174,7 @@ export default () => {
     })
   })
 
-  describe.only(nameof(RankStore, 'getRanks'), () => {
+  describe(nameof(RankStore, 'getRanks'), () => {
     test('Returns Standard ranks', async () => {
       const result = await rankStore.getRanks()
 
