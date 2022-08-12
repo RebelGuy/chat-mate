@@ -14,6 +14,7 @@ import { isOneOf } from '@rebel/server/util/validation'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import { addTime } from '@rebel/server/util/datetime'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
@@ -23,7 +24,7 @@ type AddUserRankRequest = ApiRequest<1, {
   schema: 1,
   userId: number,
   message: string | null,
-  expirationTime: number | null,
+  durationSeconds: number | null,
   rank: 'famous' | 'donator' | 'supporter' | 'member'
 }>
 type AddUserRankResponse = ApiResponse<1, {
@@ -137,7 +138,7 @@ export default class RankController extends ControllerBase {
         rank: request.rank,
         userId: request.userId,
         message: request.message,
-        expirationTime: request.expirationTime ? new Date(request.expirationTime) : null,
+        expirationTime: request.durationSeconds ? addTime(new Date(), 'seconds', request.durationSeconds) : null,
         assignee: null // todo: CHAT-385 use logged-in user details
       }
       const result = await this.rankStore.addUserRank(args)

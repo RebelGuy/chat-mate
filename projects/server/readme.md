@@ -661,7 +661,7 @@ Request data (body):
 - `rank` (`string`): *Required.* The name of the rank to add. Should be one of the following: `famous`, `donator`, `supporter`, `member`.
 - `userId` (`int`): *Required.* The user to which the rank should be added.
 - `message` (`string`): *Optional.* A custom message to accompany the rank addition.
-- `expirationTime` (`timestamp`): *Optional.* The timestamp of when the rank should automatically expire. If not set, the rank is permanent.
+- `durationSeconds` (`number`): *Optional.* The duration of the rank, in seconds, after which it should automatically expire. If 0 or not provided, the rank is permanent.
 
 Returns data with the following properties:
 - `newRank` (`PublicUserRank`): The new user-rank that was added.
