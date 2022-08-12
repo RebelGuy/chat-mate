@@ -1,7 +1,8 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
-import ModService, { InternalRankResult, TwitchModResult, YoutubeModResult } from '@rebel/server/services/rank/ModService'
+import ModService from '@rebel/server/services/rank/ModService'
+import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
@@ -60,13 +61,13 @@ describe(nameof(ModService, 'setModRank'), () => {
     const result = await modService.setModRank(userId1, true, testMessage)
 
     expect(result.rankResult.rank).toBe(newRank)
-    expect(result.youtubeResults).toEqual<YoutubeModResult[]>([
+    expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: null },
       { youtubeChannelId: 2, error: expect.stringContaining(error2) },
       { youtubeChannelId: 3, error: expect.anything() },
       { youtubeChannelId: 4, error: expect.anything() }
     ])
-    expect(result.twitchResults).toEqual<TwitchModResult[]>([
+    expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: null },
       { twitchChannelId: 2, error: null }
     ])
@@ -105,13 +106,13 @@ describe(nameof(ModService, 'setModRank'), () => {
     const result = await modService.setModRank(userId1, false, testMessage)
 
     expect(result.rankResult.rank).toBe(updatedRank)
-    expect(result.youtubeResults).toEqual<YoutubeModResult[]>([
+    expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: null },
       { youtubeChannelId: 2, error: expect.stringContaining(error2) },
       { youtubeChannelId: 3, error: expect.anything() },
       { youtubeChannelId: 4, error: expect.anything() }
     ])
-    expect(result.twitchResults).toEqual<TwitchModResult[]>([
+    expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: null },
       { twitchChannelId: 2, error: null }
     ])

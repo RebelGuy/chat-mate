@@ -522,23 +522,24 @@ Can return the following errors:
 - `400`: When the required query parameters have not been provided, or the query parameters are incompatible.
 
 ### `POST /ban`
-*Current schema: 3.*
+*Current schema: 4.*
 
-Applies a punishment of type `ban` to the user. This is essentially a permanent `timeout`.
+Applies a punishment of type `ban` to the user, which is essentially a permanent `timeout`. This endpoint may also be used to apply bans to any channels which may not currently be banned.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
 - `message` (`string`): *Optional.* The reason for the punishment.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicUserRank`): The new punishment that was created as a result of this request.
-- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
+- `newPunishment` (`PublicUserRank | null`): The new punishment that was created as a result of this request, if successful.
+- `newPunishmentError` (`string | null`): If `newPunishment` is `null`, the error that was encountered when attempting to add the punishment.
+- `channelPunishments` (`PublicChannelRankChanges[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /unban`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Revokes an existing `ban` punishment from the user. This may also be used to remove any residual bans on the external platforms.
 
@@ -547,16 +548,17 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicUserRank | null`): The updated punishment data. Null if no current punishment was found.
-- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
+- `removedPunishment` (`PublicUserRank | null`): The punishment that was removed, if successful.
+- `removedPunishmentError` (`string | null`): If `removedPunishment` is `null`, the error that was encountered when attempting to remove the punishment.
+- `channelPunishments` (`PublicChannelRankChanges[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /timeout`
-*Current schema: 3.*
+*Current schema: 4.*
 
-Applies a punishment of type `timeout` to the user. This is essentially a temporary `ban`.
+Applies a punishment of type `timeout` to the user, which is essentially a temporary `ban`. This endpoint may also be used to apply timeouts to any channels which may not currently be timed out.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
@@ -564,8 +566,9 @@ Request data (body):
 - `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 5 minutes.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicUserRank`): The new punishment that was created as a result of this request.
-- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
+- `newPunishment` (`PublicUserRank | null`): The new punishment that was created as a result of this request, if successful.
+- `newPunishmentError` (`string | null`): If `newPunishment` is `null`, the error that was encountered when attempting to add the punishment.
+- `channelPunishments` (`PublicChannelRankChanges[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
@@ -580,7 +583,8 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicUserRank | null`): The updated punishment data. Null if no current punishment was found.
+- `removedPunishment` (`PublicUserRank | null`): The punishment that was removed, if successful.
+- `removedPunishmentError` (`string | null`): If `removedPunishment` is `null`, the error that was encountered when attempting to remove the punishment.
 - `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
@@ -600,10 +604,10 @@ Returns data with the following properties:
 - `newPunishment` (`PublicUserRank`): The new punishment that was created as a result of this request.
 
 Can return the following errors:
-- `400`: When the request data is not sent, or is formatted incorrectly.
+- `400`: When the request data is not sent, or is formatted incorrectly. This error is also returned when a mute is already active for the given user.
 
 ### `POST /unmute`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Revokes an existing `mute` punishment from the user.
 
@@ -612,10 +616,11 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicUserRank | null`): The updated punishment data. Null if no current punishment was found.
+- `removedPunishment` (`PublicUserRank`): The rank that was removed.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When an active mute was not found for the given user.
 
 
 ## Rank Endpoints

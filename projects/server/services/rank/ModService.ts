@@ -2,20 +2,11 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-
-export type SetModResult = {
-  rankResult: InternalRankResult
-  youtubeResults: YoutubeModResult[]
-  twitchResults: TwitchModResult[]
-}
-
-export type InternalRankResult = { rank: UserRankWithRelations, error: null } | { rank: null, error: string }
-export type YoutubeModResult = { youtubeChannelId: number, error: string | null }
-export type TwitchModResult = { twitchChannelId: number, error: string | null }
+import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 
 type Deps = Dependencies<{
   rankStore: RankStore
@@ -51,7 +42,7 @@ export default class ModService extends ContextClass {
   // should we also handle discrepancies between the data, e.g. when the external rank differs from the expected rank?
 
   /** Add or remove the mod user-rank and notify the external platforms. Doesn't throw. */
-  public async setModRank (userId: number, isMod: boolean, message: string | null): Promise<SetModResult> {
+  public async setModRank (userId: number, isMod: boolean, message: string | null): Promise<SetActionRankResult> {
     const internalRankResult = await this.setInternalModRank(userId, isMod, message)
 
     // we have no way of knowing the _current_ external state (only from the previous message sent from that channel), so, to be safe, apply the rank
@@ -101,7 +92,7 @@ export default class ModService extends ContextClass {
     }
   }
 
-  private async trySetYoutubeMod (youtubeChannelId: number, isMod: boolean) {
+  private async trySetYoutubeMod (youtubeChannelId: number, isMod: boolean): Promise<YoutubeRankResult> {
     const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(youtubeChannelId)
   
     const errorSuffix = ' If this is unexpected, please retry the action. Failure to do so may lead to an out-of-sync state with undefined behaviour.'
@@ -137,7 +128,7 @@ export default class ModService extends ContextClass {
     return { error, youtubeChannelId }
   }
 
-  private async trySetTwitchMod (twitchChannelId: number, isMod: boolean) {
+  private async trySetTwitchMod (twitchChannelId: number, isMod: boolean): Promise<TwitchRankResult> {
     const type = isMod ? 'mod' : 'unmod'
     const errorSuffix = ' If this is unexpected, please retry the action. Failure to do so may lead to an out-of-sync state with undefined behaviour.'
     let error: string | null = null
@@ -161,8 +152,3 @@ export default class ModService extends ContextClass {
     return { error, twitchChannelId }
   }
 }
-
-// todo: check what happens on yt when we attempt to:
-// - unmodding a user that was never modded
-// - modding a user that is already modded
-// - mod a user, then, before they send the next message (and thus regenerate the context token), unmod them again

@@ -1,7 +1,7 @@
 import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
-import PunishmentService, { TwitchPunishmentResult, YoutubePunishmentResult } from '@rebel/server/services/rank/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { cast, nameof, expectObject } from '@rebel/server/_test/utils'
@@ -13,7 +13,8 @@ import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { UserRankNotFoundError } from '@rebel/server/util/error'
+import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 
 const userId1 = 2
 
@@ -197,21 +198,19 @@ describe(nameof(PunishmentService, 'banUser'), () => {
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
     const newPunishment: any = {}
     mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'ban' })).mockResolvedValue(newPunishment)
 
     const result = await punishmentService.banUser(userId1, 'test')
 
-    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
-    expect(result.punishment).toBe(newPunishment)
-    expect(result.youtubeResults).toEqual<YoutubePunishmentResult[]>([
+    expect(result.rankResult.rank).toBe(newPunishment)
+    expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: null },
       { youtubeChannelId: 2, error: error2 },
       { youtubeChannelId: 3, error: expect.anything() },
       { youtubeChannelId: 4, error: expect.anything() }
     ])
-    expect(result.twitchResults).toEqual<TwitchPunishmentResult[]>([
+    expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: null },
       { twitchChannelId: 2, error: null }
     ])
@@ -221,6 +220,16 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     
     const suppliedTwitchChannelIds = mockTwurpleService.banChannel.mock.calls.map(c => c[0])
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
+  })
+
+  test('Catches error and returns error message', async () => {
+    const error = 'Test error'
+    mockChannelStore.getUserOwnedChannels.mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
+    mockRankStore.addUserRank.mockRejectedValue(new Error(error))
+
+    const result = await punishmentService.banUser(1, null)
+
+    expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
 })
 
@@ -246,9 +255,6 @@ describe(nameof(PunishmentService, 'isUserPunished'), () => {
 
 describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
-    mockRankStore.removeUserRank
-      .calledWith(expectObject<RemoveUserRankArgs>({ rank: 'mute' }))
-      .mockRejectedValue(new UserRankNotFoundError())
     const newPunishment: any = {}
     mockRankStore.addUserRank
       .calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'mute', expirationTime: expect.any(Date) }))
@@ -256,12 +262,10 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
 
     const result = await punishmentService.muteUser(userId1, 'test', 10)
 
-    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
     expect(result).toBe(newPunishment)
   })
 
   test('mute is permanent if duration is null', async () => {
-    mockRankStore.removeUserRank.mockResolvedValue({} as any)
     const newPunishment: any = {}
     mockRankStore.addUserRank
       .calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'mute', expirationTime: null }))
@@ -269,8 +273,14 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
 
     const result = await punishmentService.muteUser(userId1, 'test', null)
 
-    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
     expect(result).toBe(newPunishment)
+  })
+
+  test('Rethrows store error', async () => {
+    const error = new UserRankAlreadyExistsError()
+    mockRankStore.addUserRank.mockRejectedValue(error)
+
+    await expect(() => punishmentService.muteUser(1, null, null)).rejects.toThrowError(error)
   })
 })
 
@@ -298,20 +308,18 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
       userId: userId1,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
     mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
 
     const result = await punishmentService.timeoutUser(userId1, 'test', 1000)
 
-    expect(mockRankStore.removeUserRank).toHaveBeenCalled()
-    expect(result.punishment).toBe(newPunishment)
-    expect(result.youtubeResults).toEqual<YoutubePunishmentResult[]>([
+    expect(result.rankResult.rank).toBe(newPunishment)
+    expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: error1 },
       { youtubeChannelId: 2, error: null },
       { youtubeChannelId: 3, error: expect.anything() },
       { youtubeChannelId: 4, error: expect.anything() }
     ])
-    expect(result.twitchResults).toEqual<TwitchPunishmentResult[]>([
+    expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: error3 },
       { twitchChannelId: 2, error: null }
     ])
@@ -331,6 +339,16 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     await onRefresh()
     const resuppliedContextTokens = mockMasterchatProxyService.timeout.mock.calls.map(c => single(c))
     expect(resuppliedContextTokens).toEqual([contextToken1, contextToken2])
+  })
+
+  test('Catches error and returns error message', async () => {
+    const error = 'Test error'
+    mockChannelStore.getUserOwnedChannels.mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
+    mockRankStore.addUserRank.mockRejectedValue(new Error(error))
+
+    const result = await punishmentService.timeoutUser(1, null, 1)
+
+    expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
 })
 
@@ -375,14 +393,14 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
-    expect(result.punishment).toBe(revokedPunishment)
-    expect(result.youtubeResults).toEqual<YoutubePunishmentResult[]>([
+    expect(result.rankResult.rank).toBe(revokedPunishment)
+    expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: null },
       { youtubeChannelId: 2, error: null },
       { youtubeChannelId: 3, error: expect.anything() },
       { youtubeChannelId: 4, error: expect.anything() }
     ])
-    expect(result.twitchResults).toEqual<TwitchPunishmentResult[]>([
+    expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: null },
       { twitchChannelId: 2, error: null }
     ])
@@ -394,13 +412,14 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
   })
 
-  test('returns null and does not make database change if ban is already revoked', async () => {
+  test('Catches error and returns error message', async () => {
+    const error = 'Test error'
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError(error))
 
     const result = await punishmentService.unbanUser(userId1, 'test')
     
-    expect(result.punishment).toBeNull()
+    expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
 })
 
@@ -415,12 +434,11 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
     expect(result).toBe(expectedResult)
   })
 
-  test('returns null and does not make database change if there is no active mute', async () => {
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'mute' })).mockRejectedValue(new UserRankNotFoundError())
+  test('Rethrows store error', async () => {
+    const error = new UserRankNotFoundError()
+    mockRankStore.removeUserRank.mockRejectedValue(error)
 
-    const result = await punishmentService.unmuteUser(userId1, 'test')
-    
-    expect(result).toBeNull()
+    await expect(() => punishmentService.unmuteUser(1, null)).rejects.toThrowError(error)
   })
 })
 
@@ -431,20 +449,19 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
       youtubeChannels: [1, 2, 3, 4],
       twitchChannels: [1, 2]
     })
-    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeTimeout, activeModRank] }])
-    const expectedResult: any = {}
+    const expectedResult = cast<UserRankWithRelations>({ id: 5 })
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     
-    expect(result.punishment).toBe(expectedResult)
-    expect(result.youtubeResults).toEqual<YoutubePunishmentResult[]>([
+    expect(result.rankResult.rank).toBe(expectedResult)
+    expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: expect.stringContaining(`YouTube timeouts expire automatically`) },
       { youtubeChannelId: 2, error: expect.stringContaining(`YouTube timeouts expire automatically`) },
       { youtubeChannelId: 3, error: expect.anything() },
       { youtubeChannelId: 4, error: expect.anything() }
     ])
-    expect(result.twitchResults).toEqual<TwitchPunishmentResult[]>([
+    expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: null },
       { twitchChannelId: 2, error: null }
     ])
@@ -455,17 +472,16 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
 
     const stopTrackingArgs = single(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls)
-    expect(stopTrackingArgs[0]).toBe(activeTimeout.id)
+    expect(stopTrackingArgs[0]).toBe(expectedResult.id)
   })
 
-  test('returns null and does not make database change if timeout is already revoked', async () => {
+  test('Catches error and returns error message', async () => {
+    const error = 'Test error'
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1])).mockResolvedValue([{ userId: userId1, ranks: [activeMute, activeModRank] }])
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError(error))
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
     
-    expect(result.punishment).toBeNull()
-    expect(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls.length).toBe(0)
+    expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
 })

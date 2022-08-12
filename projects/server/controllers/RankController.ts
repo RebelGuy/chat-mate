@@ -4,7 +4,7 @@ import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/P
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { userRankToPublicObject, rankToPublicObject } from '@rebel/server/models/rank'
 import LogService from '@rebel/server/services/LogService'
-import ModService, { TwitchModResult, YoutubeModResult } from '@rebel/server/services/rank/ModService'
+import ModService from '@rebel/server/services/rank/ModService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { single, sortBy } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -13,7 +13,7 @@ import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations }
 import { isOneOf } from '@rebel/server/util/validation'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
-import RankService from '@rebel/server/services/rank/RankService'
+import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
@@ -218,7 +218,7 @@ export default class RankController extends ControllerBase {
     }
   }
 
-  private async getChannelRankChanges (results: { youtubeResults: YoutubeModResult[], twitchResults: TwitchModResult[] }): Promise<PublicChannelRankChange[]> {
+  private async getChannelRankChanges (results: { youtubeResults: YoutubeRankResult[], twitchResults: TwitchRankResult[] }): Promise<PublicChannelRankChange[]> {
     const makePublicResult = async (channelId: number, platform: 'youtube' | 'twitch', error: string | null): Promise<PublicChannelRankChange> => {
       let channelName: string
       if (platform === 'youtube') {
