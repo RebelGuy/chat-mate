@@ -6,7 +6,7 @@ import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
-import { nonNull, zip } from '@rebel/server/util/arrays'
+import { nonNull, zip, zipOnStrict } from '@rebel/server/util/arrays'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { Path, POST } from 'typescript-rest'
 
@@ -54,7 +54,7 @@ export default class UserController extends ControllerBase {
       const userChannels = await this.channelService.getActiveUserChannels(matches.map(m => m.userId))
       const levels = await this.experienceService.getLevels(matches.map(m => m.userId))
       const punishments = await this.punishmentService.getCurrentPunishments()
-      const users = zip(zip(matches, levels), userChannels).map(data => {
+      const users = zipOnStrict(zipOnStrict(matches, levels, 'userId'), userChannels, 'userId').map(data => {
         const userPunishments = punishments.filter(p => p.userId === data.userId).map(userRankToPublicObject)
         return userNamesAndLevelToPublicUserNames(data, userPunishments)
       })

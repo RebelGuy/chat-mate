@@ -7,7 +7,7 @@ import StatusService from '@rebel/server/services/StatusService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
-import { nonNull, zip } from '@rebel/server/util/arrays'
+import { nonNull, zip, zipOnStrict } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import ChannelService from '@rebel/server/services/ChannelService'
@@ -74,7 +74,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     const userChannels = await this.channelService.getActiveUserChannels(diffs.map(d => d.userId))
     const levelInfo = await this.experienceService.getLevels(diffs.map(d => d.userId))
     const punishments = await this.punishmentService.getCurrentPunishments()
-    const channels = zip(userChannels, levelInfo)
+    const channels = zipOnStrict(userChannels, levelInfo, 'userId')
 
     let events: PublicChatMateEvent[] = []
     for (let i = 0; i < diffs.length; i++) {

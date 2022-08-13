@@ -60,6 +60,7 @@ import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import RankController from '@rebel/server/controllers/RankController'
 import ModService from '@rebel/server/services/rank/ModService'
 import RankService from '@rebel/server/services/rank/RankService'
+import * as fs from 'fs'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -170,6 +171,8 @@ app.use((req, res, next) => {
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
 app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
 app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
+app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
 
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it

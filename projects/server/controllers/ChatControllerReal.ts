@@ -32,11 +32,12 @@ export default class ChatControllerReal implements IChatController {
     let { builder, limit, since } = args
     since = since ?? 0
     const items = await this.chatStore.getChatSince(since, limit)
-    const levelData = await this.getLevelData(items.map(c => c.userId))
-    
+    const userIds = unique(items.map(c => c.userId))
+    const levels = await this.experienceService.getLevels(userIds)
+
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
-      const level = levelData.get(chat.userId)!
+      const level = levels.find(l => l.userId === chat.userId)!.level
       const punishments = (await this.punishmentService.getCurrentPunishments())
         .filter(p => p.userId === chat.userId)
         .map(userRankToPublicObject)
@@ -47,15 +48,5 @@ export default class ChatControllerReal implements IChatController {
       reusableTimestamp: items.at(-1)?.time.getTime() ?? since,
       chat: chatItems
     })
-  }
-
-  private async getLevelData (userIds: number[]): Promise<Map<number, LevelData>> {
-    const uniqueIds = unique(userIds)
-    const results = await this.experienceService.getLevels(uniqueIds)
-
-    const map: Map<number, LevelData> = new Map(
-      results.map((lv, i) => [uniqueIds[i], { level: lv.level.level, levelProgress: lv.level.levelProgress }])
-    )
-    return map
   }
 }
