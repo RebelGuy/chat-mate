@@ -101,31 +101,39 @@ export default () => {
   })
 
   describe(nameof(LivestreamStore, 'setContinuationToken'), () => {
-    test('continuation token is updated', async () => {
+    test('continuation token is updated for active livestream', async () => {
       await db.livestream.create({ data: { liveId, isActive: true, type: 'publicLivestream' } })
       await livestreamStore.initialise()
 
       const stream = await livestreamStore.setContinuationToken(liveId, 'token')
 
-      expect(stream.continuationToken).toBe('token')
+      expect(stream!.continuationToken).toBe('token')
       expect((await db.livestream.findFirst())!.continuationToken).toBe('token')
     })
 
     test('throws if invalid id', async () => {
       await expect(livestreamStore.setContinuationToken('id', 'test')).rejects.toThrow()
     })
+
+    test('Returns null if livestream is no longer active', async () => {
+      await livestreamStore.initialise()
+
+      const result = await livestreamStore.setContinuationToken(liveId, 'token')
+
+      expect(result).toBeNull()
+    })
   })
 
   describe(nameof(LivestreamStore, 'setTimes'), () => {
-    test('times are updated correctly', async () => {
+    test('times are updated correctly for active livestream', async () => {
       const time = new Date()
       await db.livestream.create({ data: { liveId, isActive: true, type: 'publicLivestream' } })
       await livestreamStore.initialise()
 
       const returnedStream = await livestreamStore.setTimes(liveId, { start: time, end: null })
 
-      expect(returnedStream.start).toEqual(time)
-      expect(returnedStream.end).toBeNull()
+      expect(returnedStream!.start).toEqual(time)
+      expect(returnedStream!.end).toBeNull()
 
       const savedStream = (await db.livestream.findFirst())!
       expect(savedStream.start).toEqual(time)
@@ -134,6 +142,15 @@ export default () => {
 
     test('throws if livestream not yet created', async () => {
       await expect(livestreamStore.setTimes(liveId, { start: null, end: null })).rejects.toThrow()
+    })
+
+    test('Returns null if livestream is no longer active', async () => {
+      await db.livestream.create({ data: { liveId, isActive: false, type: 'publicLivestream' } })
+      await livestreamStore.initialise()
+
+      const result = await livestreamStore.setTimes(liveId, { start: null, end: null })
+
+      expect(result).toBeNull()
     })
   })
 

@@ -54,6 +54,7 @@ import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProv
 import LogQueryService from '@rebel/server/services/LogQueryService'
 import LogController from '@rebel/server/controllers/LogController'
 import { TimeoutError } from '@rebel/server/util/error'
+import * as fs from 'fs'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -159,6 +160,8 @@ app.use((req, res, next) => {
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
 app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
 app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
+app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
 
 // this is middleware - we can supply an ordered collection of such functions,
 // and they will run in order to do common operations on the request before it

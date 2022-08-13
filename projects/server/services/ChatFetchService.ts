@@ -112,6 +112,7 @@ export default class ChatFetchService extends ContextClass {
         if (!anyFailed) {
           // purposefully only set this AFTER everything has been added. if we set it before,
           // and something goes wrong with adding chat, the chat messages will be lost forever.
+          // todo: maybe we want it to be lost forever - perhaps there was bad data in the chat message, and now we are stuck in an infinite loop...
           await this.livestreamStore.setContinuationToken(livestream.liveId, response.continuation.token)
         }
       }
