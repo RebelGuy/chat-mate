@@ -100,7 +100,7 @@ export default class PunishmentController extends ControllerBase {
         if (userId == null) {
           return builder.failure(400, 'A user ID must be provided when getting the punishment history')
         }
-        punishments = await this.rankStore.getUserRankHistory(userId)
+        punishments = await this.punishmentService.getPunishmentHistory(userId)
 
       } else {
         punishments = await this.punishmentService.getCurrentPunishments()

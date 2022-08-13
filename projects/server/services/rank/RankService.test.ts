@@ -17,14 +17,15 @@ beforeEach(() => {
 
 describe(nameof(RankService, 'getAccessibleRanks'), () => {
   test('Returns Regular ranks', async () => {
-    const ownerRank = cast<Rank>({ name: 'owner' })
-    const famousRank = cast<Rank>({ name: 'famous' })
-    const donatorRank = cast<Rank>({ name: 'donator' })
-    const bannedRank = cast<Rank>({ name: 'ban' })
-    mockRankStore.getRanks.mockResolvedValue([ownerRank, famousRank, donatorRank, bannedRank])
+    const ownerRank = cast<Rank>({ name: 'owner', group: 'administration' })
+    const famousRank = cast<Rank>({ name: 'famous', group: 'cosmetic' })
+    const donatorRank = cast<Rank>({ name: 'donator', group: 'donation' })
+    const adminRank = cast<Rank>({ name: 'admin', group: 'administration' })
+    const bannedRank = cast<Rank>({ name: 'ban', group: 'punishment' })
+    mockRankStore.getRanks.mockResolvedValue([ownerRank, famousRank, donatorRank, adminRank, bannedRank])
   
     const result = await rankService.getAccessibleRanks()
 
-    expect(result).toEqual([famousRank, donatorRank])
+    expect(result).toEqual([famousRank, donatorRank, bannedRank])
   })
 })

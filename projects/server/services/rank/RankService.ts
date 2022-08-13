@@ -37,6 +37,6 @@ export default class RankService extends ContextClass {
 
     // todo: CHAT-385 use logged-in user details to determine accessible ranks.
     // also create rank hierarchy, so that ranks have only access to ranks on an equal/lower level
-    return ranks.filter(rank => isOneOf<RegularRank[]>(rank.name, 'famous', 'donator', 'member', 'supporter'))
+    return ranks.filter(rank => isOneOf<RegularRank[]>(rank.name, 'famous', 'donator', 'member', 'supporter') || rank.group === 'punishment' || rank.name === 'mod')
   }
 }
