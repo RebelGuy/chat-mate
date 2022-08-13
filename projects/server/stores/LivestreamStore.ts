@@ -57,7 +57,7 @@ export default class LivestreamStore extends ContextClass {
       }
     }
 
-    return this.updateCachedLivestream(
+    return this.updateCachedLivestream(true,
       await this.db.livestream.upsert({
         create: { liveId, createdAt: new Date(), isActive: true, type },
         update: { isActive: true },
@@ -66,8 +66,8 @@ export default class LivestreamStore extends ContextClass {
     )
   }
 
-  public async setContinuationToken (liveId: string, continuationToken: string | null): Promise<Livestream> {
-    return this.updateCachedLivestream(
+  public async setContinuationToken (liveId: string, continuationToken: string | null): Promise<Livestream | null> {
+    return this.updateCachedLivestream(false,
       await this.db.livestream.update({
         where: { liveId },
         data: { continuationToken }
@@ -75,8 +75,8 @@ export default class LivestreamStore extends ContextClass {
     )
   }
 
-  public async setTimes (liveId: string, updatedTimes: Pick<Livestream, 'start' | 'end'>): Promise<Livestream> {
-    return this.updateCachedLivestream(
+  public async setTimes (liveId: string, updatedTimes: Pick<Livestream, 'start' | 'end'>): Promise<Livestream | null> {
+    return this.updateCachedLivestream(false,
       await this.db.livestream.update({
         where: { liveId },
         data: { ...updatedTimes }
@@ -84,12 +84,17 @@ export default class LivestreamStore extends ContextClass {
     )
   }
 
-  private updateCachedLivestream (livestream: Livestream) {
+  private updateCachedLivestream (allowSet: true, livestream: Livestream): Livestream
+  private updateCachedLivestream (allowSet: false, livestream: Livestream): Livestream | null
+  private updateCachedLivestream (allowSet: boolean, livestream: Livestream): Livestream | null {
     if (this._activeLivestream != null && this._activeLivestream.liveId !== livestream.liveId) {
       // for the new type (probably "unlistedLivestream"), we will need to add a new cached livestream
       reminder<LivestreamType>({ publicLivestream: true })
-
       throw new Error('Cannot update cached livestream because the liveIds do not match. This suggests there are two active livestreams. Before adding an active livestream, ensure that the previous one has been deactivated.')
+
+    } else if (this._activeLivestream == null && !allowSet) {
+      this.logService.logWarning(this, 'Cannot update cached livestream because no active livestream exists. This should only happen after a livestream has recently been deactivated, but some requests had not yet finished and thus assume the livestream is still active.')
+      return null
     }
 
     this._activeLivestream = livestream
