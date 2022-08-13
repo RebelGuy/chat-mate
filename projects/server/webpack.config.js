@@ -39,7 +39,7 @@ module.exports = (env) => {
   let copyPatterns = []
 
   // only copy the prisma engine file if it doesn't already exist, otherwise we get a crash if the server is currently running due to the file being locked
-  if (fs.existsSync(outPath) && !fs.readdirSync(outPath).filter(file => file.includes('engine'))) {
+  if (fs.existsSync(outPath) && !fs.readdirSync(outPath).find(file => file.includes('engine'))) {
     copyPatterns.push({
       // the file we are interested in has 'engine' in its name.
       // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
@@ -50,7 +50,7 @@ module.exports = (env) => {
 
   // similarly, only copy ngrok if it doesn't already exist
   const ngrokPath = path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it
-  if (isLocal && fs.existsSync(outPath) && !fs.readdirSync(ngrokPath).filter(file => file.includes('ngrok.exe'))) {
+  if (isLocal && fs.existsSync(outPath) && !fs.readdirSync(ngrokPath).find(file => file.includes('ngrok.exe'))) {
     copyPatterns.push({
       from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
       to: ngrokPath // folder is automatically created
