@@ -647,7 +647,7 @@ Can return the following errors:
 ### `GET /accessible`
 *Current schema: 1.*
 
-Gets the ranks accessible to the current user. At the moment, it returns all Regular ranks.
+Gets the ranks accessible to the current user. At the moment, it returns all Regular ranks and Punishment ranks.
 
 Returns data with the following properties:
 - `accessibleRanks` (`PublicRank[]`): The list of ranks accessible to the user.
