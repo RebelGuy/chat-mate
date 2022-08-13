@@ -158,6 +158,45 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
     expectedResult.text = part
     expect(single(result)).toEqual(expectedResult)
   })
+
+  test('secondary troll emoji is matched if the user has access', async () => {
+    setupLevel(100)
+    const trollEmoji: Entity.CustomEmoji = { id: 1, name: 'Troll', symbol: 'troll', levelRequirement: 0, image: Buffer.from('') }
+    mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue([customEmoji1, customEmoji2, trollEmoji])
+    const part: PartialTextChatMessage = {
+      type: 'text',
+      text: `:troll:🧌`,
+      isBold: false,
+      isItalics: false
+    }
+
+    const result = await emojiService.applyCustomEmojis(part, userId)
+
+    expect(result.length).toBe(2)
+    expect(result[0]).toEqual(expectedCustomEmojiPart(trollEmoji, part))
+
+    const secondaryTrollEmoji = {
+      ...trollEmoji,
+      symbol: '🧌'
+    }
+    expect(result[1]).toEqual(expectedCustomEmojiPart(secondaryTrollEmoji, part, e => e.symbol))
+  })
+
+  test('secondary troll emoji is not matched if the user does not have access', async () => {
+    setupLevel(0)
+    const trollEmoji: Entity.CustomEmoji = { id: 1, name: 'Troll', symbol: 'troll', levelRequirement: 100, image: Buffer.from('') }
+    mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue([customEmoji1, customEmoji2, trollEmoji])
+    const part: PartialTextChatMessage = {
+      type: 'text',
+      text: `:troll:🧌`,
+      isBold: false,
+      isItalics: false
+    }
+
+    const result = await emojiService.applyCustomEmojis(part, userId)
+
+    expect(single(result)).toEqual(expectedTextPart(part.text, part))
+  })
 })
 
 function setupLevel (level: number) {
@@ -169,13 +208,13 @@ function setupLevel (level: number) {
     }])
 }
 
-function expectedCustomEmojiPart (customEmoji: Entity.CustomEmoji, originalText: PartialTextChatMessage): PartialCustomEmojiChatMessage {
+function expectedCustomEmojiPart (customEmoji: Entity.CustomEmoji, originalText: PartialTextChatMessage, symbolGetter?: (emoji: Entity.CustomEmoji) => string): PartialCustomEmojiChatMessage {
   return {
     type: 'customEmoji',
     customEmojiId: customEmoji.id,
     text: expect.objectContaining<PartialTextChatMessage>({
       type: 'text',
-      text: `:${customEmoji.symbol}:`,
+      text: symbolGetter ? symbolGetter(customEmoji) : `:${customEmoji.symbol}:`,
       isBold: originalText.isBold,
       isItalics: originalText.isItalics
     }),
