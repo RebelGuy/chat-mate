@@ -33,8 +33,17 @@ export default class EmojiService extends ContextClass {
       throw new Error('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
     }
 
-    const eligibleEmojis = await this.getEligibleEmojis(userId)
-    const searchTerms = eligibleEmojis.map(e => `:${e.symbol}:`)
+    let eligibleEmojis = await this.getEligibleEmojis(userId)    
+    
+    // ok I don't know what the proper way to do this is, but typing `:troll:` in YT will convert the message
+    // into a troll emoji of type text... so I guess if the troll emoji is available, we add a special rule here
+    const troll = eligibleEmojis.find(em => em.symbol.toLowerCase() === 'troll')
+    if (troll != null) {
+      const secondaryTrollEmoji: CustomEmoji = { ...troll, symbol: '🧌' }
+      eligibleEmojis = [...eligibleEmojis, secondaryTrollEmoji]
+    }
+
+    const searchTerms = eligibleEmojis.map(getSymbolToMatch)
 
     if (part.type === 'emoji') {
       // youtube emoji - check if it has the same symbol (label) as one of our custom emojis.
@@ -73,7 +82,7 @@ export default class EmojiService extends ContextClass {
 
       result.push({
         type: 'customEmoji',
-        customEmojiId: eligibleEmojis.find(e => `:${e.symbol}:` === searchResult.searchTerm)!.id,
+        customEmojiId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.id,
         text: removed,
         emoji: null
       })
@@ -117,4 +126,9 @@ export default class EmojiService extends ContextClass {
 
     return results
   }
+}
+
+// includes the troll hack, as above
+function getSymbolToMatch (customEmoji: CustomEmoji): string {
+  return customEmoji.symbol === '🧌' ? '🧌' : `:${customEmoji.symbol}:`
 }
