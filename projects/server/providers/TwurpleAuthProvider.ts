@@ -2,19 +2,19 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
+import { NodeEnv } from '@rebel/server/globals'
 import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { compareArrays } from '@rebel/server/util/arrays'
 import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 // see https://dev.twitch.tv/docs/authentication/scopes
-// if you edit the scope here, you must request a new access token via `yarn auth:twitch:<env>`, set it in the .env file, and delete the saved token from the `twitch_auth` table.
+// if you edit the scope here, you must request a new access token via `yarn auth:twitch:<env>`.
 export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate']
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
-  isLive: boolean
-  isLocal: boolean
+  nodeEnv: NodeEnv
   twitchClientId: string
   twitchClientSecret: string
   logService: LogService
@@ -27,8 +27,7 @@ export default class TwurpleAuthProvider extends ContextClass {
   readonly name = TwurpleAuthProvider.name
 
   private readonly disableExternalApis: boolean
-  private readonly isLive: boolean
-  private readonly isLocal: boolean
+  private readonly nodeEnv: NodeEnv
   private readonly clientId: string
   private readonly clientSecret: string
   private readonly logService: LogService
@@ -40,8 +39,7 @@ export default class TwurpleAuthProvider extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.disableExternalApis = deps.resolve('disableExternalApis')
-    this.isLive = deps.resolve('isLive')
-    this.isLocal = deps.resolve('isLocal')
+    this.nodeEnv = deps.resolve('nodeEnv')
     this.clientId = deps.resolve('twitchClientId')
     this.clientSecret = deps.resolve('twitchClientSecret')
     this.logService = deps.resolve('logService')
@@ -59,7 +57,7 @@ export default class TwurpleAuthProvider extends ContextClass {
     try {
       token = await this.authStore.loadAccessToken()
     } catch (e: any) {
-      const scriptName = `yarn workspace server auth:twitch:${this.isLive ? 'release' : this.isLocal ? 'local' : 'debug'}`
+      const scriptName = `yarn workspace server auth:twitch:${this.nodeEnv}`
       throw new Error(`Unable to authenticate Twurple.\n${e.message}\nPlease run the following script:\n\n    ${scriptName}`)  
     }
 

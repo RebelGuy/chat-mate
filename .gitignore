@@ -7,3 +7,4 @@ debug.env
 release.env
 projects/server/test.env
 projects/server/thunder-tests/thunderActivity.json
+projects/server/local.env

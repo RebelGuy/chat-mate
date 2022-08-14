@@ -31,8 +31,7 @@ beforeEach(() => {
 
   twurpleAuthProvider = new TwurpleAuthProvider(new Dependencies({
     disableExternalApis: false,
-    isLive: true,
-    isLocal: false,
+    nodeEnv: 'release',
     twitchClientId: clientId,
     twitchClientSecret: clientSecret,
     logService: mock(),

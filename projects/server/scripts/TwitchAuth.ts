@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/quotes */
-require('../_config')
 // https://www.electronjs.org/docs/api/session
 import { app, BrowserWindow } from 'electron'
 import { URL } from 'url'

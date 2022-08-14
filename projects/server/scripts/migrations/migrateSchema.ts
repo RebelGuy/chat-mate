@@ -1,7 +1,6 @@
-require('../../_config')
-import { promptInput } from '../../util/input'
-import { toParamCase } from '../../util/text'
-import { execAsync } from '../../util/node'
+import { promptInput } from '@rebel/server/util/input'
+import { toParamCase } from '@rebel/server/util/text'
+import { execAsync } from '@rebel/server/util/node'
 import path from 'node:path'
 import { getAvailableMigrationsSorted, getOutstandingMigrationNames } from './util'
 import env from '@rebel/server/globals'

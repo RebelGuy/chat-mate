@@ -26,12 +26,6 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
 Alternatively, run `yarn build:debug` to bundle the debug app to the same format as what is used in release.
 If building fails because the Prisma client could not be found, please run `yarn generate`.
 
-## Scripts for production:
-Assumes that steps 1-3 of the previous section have been run.
-3. `yarn build:release` bundles the application as `./dist/server/app.js`.
-4. `yarn migrate:release` migrate the database to the latest schema
-5. `yarn start:release` to run the release server
-
 
 ## Authentication
 ### YouTube
@@ -85,9 +79,7 @@ The following set of environmnet variables is available only for **deployed inst
 - `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`. *This is set automatically by Azure.*
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
-- `NODE_ENV`: Either `debug` or `release` to indicate whether we are connecting to debug or release servers.
-- `BUILD`: Either `tsc` or `webpack` to indicate the build method. This is used for some module resolution workarounds at runtime.
-- `IS_LOCAL`: [Optional, defaults to `false`] Whether we are running the server locally, or in a deployed environment.
+- `NODE_ENV`: Either `local`, `debug` or `release` to indicate which servers we are connecting to. Some behaviour is different when running the server locally than when the server is deployed.
 
 For testing, define a `test.env` file that sets only a subset of the above variables:
 - `DATABASE_URL`

@@ -12,7 +12,6 @@ import { LogLevel } from '@twurple/chat'
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
 type Deps = Dependencies<{
-  isLocal: boolean
   fileService: FileService
   applicationInsightsService: ApplicationInsightsService
   enableDbLogging: boolean
@@ -25,7 +24,6 @@ export default class LogService extends ContextClass {
   private readonly fileService: FileService
   private readonly applicationInsightsService: ApplicationInsightsService
   private readonly enableDbLogging: boolean
-  private readonly isLocal: boolean
   private readonly logQueryService: LogQueryService
 
   constructor (deps: Deps) {
@@ -33,7 +31,6 @@ export default class LogService extends ContextClass {
     this.fileService = deps.resolve('fileService')
     this.applicationInsightsService = deps.resolve('applicationInsightsService')
     this.enableDbLogging = deps.resolve('enableDbLogging')
-    this.isLocal = deps.resolve('isLocal')
     this.logQueryService = deps.resolve('logQueryService')
   }
 

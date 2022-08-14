@@ -3,10 +3,10 @@ const fs = require('fs')
 const webpack = require('webpack')
 const nodeExternals = require('webpack-node-externals');
 const CopyWebpackPlugin = require('copy-webpack-plugin')
-const WebpackShellPluginNext = require('webpack-shell-plugin-next')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const loaded = require('dotenv').config() // loads the .env file generated during the Github Actions process
 const execSync = require('child_process').execSync
+
+require('dotenv').config() // loads the .env file generated during the Github Actions process
 
 function parseBoolean (str) {
   return str === 'true' ? true : str === 'false' ? false : null
@@ -21,12 +21,9 @@ const version = versionParts.join('.')
 const banner =  `${PACKAGE.name} - ${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
-  env['BUILD'] = 'webpack'
-
-  // the following env variables are defined in the Github Actions
-  const isLocal = parseBoolean(process.env.IS_LOCAL) ?? parseBoolean(env.IS_LOCAL) ?? false
-  const nodeEnv = env.NODE_ENV ?? 'debug'
-  const NAME = process.env.NAME ?? ''
+  const nodeEnv = env.NODE_ENV ?? 'local'
+  const isLocal = nodeEnv === 'local'
+  const NAME = process.env.NAME ?? '' // env variable defined in CI (e.g. '74d8a7029d5c30e332fe59c075a42a75aa6deffd - push - master')
   const NOW = new Date()
 
   // special env variable passed to webpack during local development for faster building
