@@ -8,6 +8,10 @@ export const IS_LIVE = !IS_DEBUG
 
 export const DATABASE_URL = process.env.DATABASE_URL!
 
+export const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID!
+
+export const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET!
+
 // required so we get the most up-to-date client, even if the schema changes during the lifespan of the process
 export const refreshDb = () => new PrismaClient({ datasources: { db: { url: DATABASE_URL }},  }) as PrismaClient
 

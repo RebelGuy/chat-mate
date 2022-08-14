@@ -32,8 +32,6 @@ type EnvironmentVariables = {
   twitchClientId: string
   twitchClientSecret: string
   twitchChannelName: string
-  twitchAccessToken: string
-  twitchRefreshToken: string
 
   channelId: string
   databaseUrl: string
@@ -71,11 +69,9 @@ function getAllKeys () {
     'isLocal': true,
     'nodeEnv': true,
     'port': true,
-    'twitchAccessToken': true,
     'twitchChannelName': true,
     'twitchClientId': true,
     'twitchClientSecret': true,
-    'twitchRefreshToken': true,
     'useFakeControllers': true,
     'managedIdentityClientId': true,
     'logAnalyticsWorkspaceId': true

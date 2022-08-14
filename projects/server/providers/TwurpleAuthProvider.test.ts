@@ -10,8 +10,6 @@ import { mock, MockProxy } from 'jest-mock-extended'
 
 let clientId: string
 let clientSecret: string
-let accessToken: string | null
-let refreshToken: string | null
 let mockAuthStore: MockProxy<AuthStore>
 let mockRefreshingAuthProvider: MockProxy<RefreshingAuthProvider>
 let mockRefreshingAuthProviderFactory: MockProxy<RefreshingAuthProviderFactory>
@@ -22,8 +20,6 @@ let twurpleAuthProvider: TwurpleAuthProvider
 beforeEach(() => {
   clientId = 'client id'
   clientSecret = 'client secret'
-  accessToken = 'access token'
-  refreshToken = 'refresh token'
   mockAuthStore = mock()
   mockRefreshingAuthProvider = mock()
   mockRefreshingAuthProviderFactory = mock()
@@ -36,10 +32,9 @@ beforeEach(() => {
   twurpleAuthProvider = new TwurpleAuthProvider(new Dependencies({
     disableExternalApis: false,
     isLive: true,
+    isLocal: false,
     twitchClientId: clientId,
     twitchClientSecret: clientSecret,
-    twitchAccessToken: accessToken,
-    twitchRefreshToken: refreshToken,
     logService: mock(),
     authStore: mockAuthStore,
     refreshingAuthProviderFactory: mockRefreshingAuthProviderFactory,
@@ -54,16 +49,6 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     await expect(() => twurpleAuthProvider.initialise()).rejects.toThrow()
   })
 
-  test('uses fallback token details if no access token exists for RefreshingAuthProvider', async () => {
-    mockAuthStore.loadAccessToken.mockResolvedValue(null)
-
-    await twurpleAuthProvider.initialise()
-
-    const [_, initialToken] = single(mockRefreshingAuthProviderFactory.create.mock.calls)
-    expect(initialToken.accessToken).toBe(accessToken)
-    expect(initialToken.refreshToken).toBe(refreshToken)
-  })
-
   test('uses loaded token details if access token exists for RefreshingAuthProvider', async () => {
     const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE }
     mockAuthStore.loadAccessToken.mockResolvedValue(loadedToken as AccessToken)
@@ -76,6 +61,9 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
   })
 
   test('provides correct client details to RefreshingAuthProvider and saves refresh token when available', async () => {
+    const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE }
+    mockAuthStore.loadAccessToken.mockResolvedValue(loadedToken as AccessToken)
+
     await twurpleAuthProvider.initialise()
 
     const [config, _] = single(mockRefreshingAuthProviderFactory.create.mock.calls)
@@ -88,6 +76,9 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
   })
 
   test('uses client id and client secret for the ClientCredentialsAuthProvider', async () => {
+    const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE }
+    mockAuthStore.loadAccessToken.mockResolvedValue(loadedToken as AccessToken)
+
     await twurpleAuthProvider.initialise()
 
     const [providedClientId, providedClientSecret] = single(mockClientCredentialsAuthProviderFactory.create.mock.calls)

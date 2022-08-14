@@ -40,9 +40,9 @@ Run `yarn auth` and log in using the streaming account, or a moderator account. 
 ### Twitch
 Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
 
-For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<debug|release>` and sign in manually. After the Electron app closes, note the access token and refresh token printed in the console and set the relevant environment variables. The next time the project is run, these will be stored in the database (`twitch_auth` table) and retrieved thereon, so the variables can be safely removed before subsequent runs.
+For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<local|debug|release>` and sign in manually with the relevant ChatMate account. The access token and refresh token will automatically be stored in the database (`twitch_auth` table) and retrieved/updated automatically thereon.
 
-Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you delete the single row in the `twitch_auth` table and follow the steps above to repeat the initial authentication process.
+Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
 
 ## Logging
 
@@ -66,8 +66,6 @@ The following environment variables must be set in the `.env` file:
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
-- `TWITCH_ACCESS_TOKEN`: The access token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
-- `TWITCH_REFRESH_TOKEN`: The refresh token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
 - `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`

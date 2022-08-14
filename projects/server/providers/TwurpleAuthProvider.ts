@@ -14,10 +14,9 @@ export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moder
 type Deps = Dependencies<{
   disableExternalApis: boolean
   isLive: boolean
+  isLocal: boolean
   twitchClientId: string
   twitchClientSecret: string
-  twitchAccessToken: string | null
-  twitchRefreshToken: string | null
   logService: LogService
   authStore: AuthStore
   refreshingAuthProviderFactory: RefreshingAuthProviderFactory
@@ -29,10 +28,9 @@ export default class TwurpleAuthProvider extends ContextClass {
 
   private readonly disableExternalApis: boolean
   private readonly isLive: boolean
+  private readonly isLocal: boolean
   private readonly clientId: string
   private readonly clientSecret: string
-  private readonly fallbackAccessToken: string | null
-  private readonly fallbackRefreshToken: string | null
   private readonly logService: LogService
   private readonly authStore: AuthStore
   private readonly refreshingAuthProviderFactory: RefreshingAuthProviderFactory
@@ -43,10 +41,9 @@ export default class TwurpleAuthProvider extends ContextClass {
     super()
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.isLive = deps.resolve('isLive')
+    this.isLocal = deps.resolve('isLocal')
     this.clientId = deps.resolve('twitchClientId')
     this.clientSecret = deps.resolve('twitchClientSecret')
-    this.fallbackAccessToken = deps.resolve('twitchAccessToken')
-    this.fallbackRefreshToken = deps.resolve('twitchRefreshToken')
     this.logService = deps.resolve('logService')
     this.authStore = deps.resolve('authStore')
     this.refreshingAuthProviderFactory = deps.resolve('refreshingAuthProviderFactory')
@@ -58,26 +55,17 @@ export default class TwurpleAuthProvider extends ContextClass {
       return
     }
 
-    // no error handling on purpose - if this fails, it should be considered a fatal error
-    let token = await this.authStore.loadAccessToken()
+    let token: AccessToken
+    try {
+      token = await this.authStore.loadAccessToken()
+    } catch (e: any) {
+      const scriptName = `yarn workspace server auth:twitch:${this.isLive ? 'release' : this.isLocal ? 'local' : 'debug'}`
+      throw new Error(`Unable to authenticate Twurple.\n${e.message}\nPlease run the following script:\n\n    ${scriptName}`)  
+    }
 
-    if (token != null) {
-      this.logService.logDebug(this, 'Loaded database access token')
-      if (!this.compareScopes(TWITCH_SCOPE, token.scope)) {
-        throw new Error('The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
-      }
-
-    } else if (this.fallbackAccessToken != null && this.fallbackRefreshToken != null) {
-      this.logService.logDebug(this, 'Using fallback access token')
-      token = {
-        accessToken: this.fallbackAccessToken,
-        refreshToken: this.fallbackRefreshToken,
-        expiresIn: 0, // refresh immediately
-        obtainmentTimestamp: 0,
-        scope: TWITCH_SCOPE
-      }
-    } else {
-      this.throwAuthError('No access token could be found in the database, and no fallback access token and refresh token have been provided in the .env file.')
+    this.logService.logDebug(this, 'Loaded database access token')
+    if (!this.compareScopes(TWITCH_SCOPE, token.scope)) {
+      throw new Error('The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
     }
 
     this.auth = this.refreshingAuthProviderFactory.create({
@@ -95,11 +83,6 @@ export default class TwurpleAuthProvider extends ContextClass {
 
   getClientAuthProvider () {
     return this.clientAuth
-  }
-
-  private throwAuthError (message: string) {
-    const scriptName = `yarn workspace server auth:twitch:${this.isLive ? 'release' : 'debug'}`
-    throw new Error(`Unable to authenticate Twurple.\n${message}\nPlease run the following script:\n\n    ${scriptName}`)
   }
 
   private async saveAccessToken (token: AccessToken) {
