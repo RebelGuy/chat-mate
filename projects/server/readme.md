@@ -3,7 +3,7 @@ The server is responsible for fetching data from Youtube via the `masterchat` pr
 
 
 # Project Details
-Built JavaScript files live in the `./dist` folder, while generated data lives in the `./data` folder.
+Built JavaScript files live in the `./dist` folder, while generated data (e.g. logs) live in the `./data` folder.
 
 Note: If fetching Youtube metadata incurs a "Rate limit exceeded" error, then Youtube has flagged us as a bot. A (temporary?) solution is to regenerate an auth token (see below).
 
@@ -16,14 +16,13 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
 
 ## Scripts for development:
 1. `yarn install`.
-2. `yarn auth` to fetch the authentication credentials for YouTube, and `yarn auth:twitch:<debug|release>`. Copy them from the console and set them in the [`.env`](#.env) file.
+2. `yarn auth` to fetch the authentication credentials for YouTube (once done, copy the token from the console and set it in the respective [`.env`](#.env) file), and `yarn auth:twitch:<local|debug|release>` to refresh Twitch authentication.
 3. `yarn watch` while developing
   - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
   - Rely on VSCode for checking types if using this mode
   - Use `yarn watch:check` to use `ts-loader` and enable type checking
-4. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options. Note that this does not bundle up the application. For a debug bundle that mirrors the release build, use `yarn build:debug`.
+4. `yarn start:local` to run the server locally, or `yarn start:mock` to use fake implementations of controllers, where available.
 
-Alternatively, run `yarn build:debug` to bundle the debug app to the same format as what is used in release.
 If building fails because the Prisma client could not be found, please run `yarn generate`.
 
 
@@ -52,7 +51,7 @@ When developing locally, we [authenticate](https://github.com/Azure/azure-sdk-fo
 When deployed to Azure, the `MANAGED_IDENTITY_CLIENT_ID` points the credential handler to the managed identity that we want to use, and no further authentication should be required to get things working.
 
 # .env
-Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
+Define `local.env`, `debug.env` and `release.env` files that set the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
 
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
@@ -71,10 +70,10 @@ The following environment variables must be set in the `.env` file:
 - `MANAGED_IDENTITY_CLIENT_ID`: The Client ID of the Managed Identity that is used to access the Log Analytics workspace for querying logs.
 - `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
-The following set of environment variables is available only for **local development** (that is, where `IS_LOCAL` is `true`):
+The following set of environment variables is available only for **local development** (that is, where `NODE_ENV`=`local`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
 
-The following set of environmnet variables is available only for **deployed instances** (that is, where `IS_LOCAL` is `false`):
+The following set of environmnet variables is available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
 - `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`. *This is set automatically by Azure.*
 
@@ -86,7 +85,7 @@ For testing, define a `test.env` file that sets only a subset of the above varia
 
 ## Database
 
-The `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
+The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
@@ -94,11 +93,11 @@ At any point where the prisma file (`prisma.schema` - the database schema) is mo
 
 
 ### Migrations
-Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:debug`.
+Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:apply`.
 
 During a migration, ensure that the `.sql` is checked and edited to avoid data loss, but avoid making manual changes that affect the database schema, other than the ones already present.
 
-Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow a expand and contract pattern.
+Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow an expand and contract pattern.
 
 ## Punishments
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
@@ -109,7 +108,7 @@ Currently there are 3 punishment types:
 3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
-`yarn test` performs the test suite. The `test:debug` and `test:release` scripts are for use by CI.
+`yarn test` performs the test suite.
 `yarn test:db` Sets up the test database.
 `yarn test <file regex>` includes only tests within files matching the expression.
 
