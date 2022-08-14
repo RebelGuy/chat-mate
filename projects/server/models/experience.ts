@@ -1,24 +1,25 @@
-import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
+import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { RankedEntry } from '@rebel/server/services/ExperienceService'
+import { UserRanks } from '@rebel/server/stores/RankStore'
 
-export function rankedEntryToPublic (rankedEntry: RankedEntry, activeRanks: PublicUserRank[]): PublicRankedUser {
+export function rankedEntryToPublic (data: RankedEntry & UserRanks): PublicRankedUser {
   return {
     schema: 3,
-    rank: rankedEntry.rank,
+    rank: data.rank,
     user: {
       schema: 3,
-      id: rankedEntry.userId,
+      id: data.userId,
       userInfo: {
         schema: 1,
-        channelName: rankedEntry.userName
+        channelName: data.userName
       },
       levelInfo: {
         schema: 1,
-        level: rankedEntry.level,
-        levelProgress: rankedEntry.levelProgress
+        level: data.level,
+        levelProgress: data.levelProgress
       },
-      activeRanks: activeRanks
+      activeRanks: data.ranks.map(userRankToPublicObject)
     }
   }
 }

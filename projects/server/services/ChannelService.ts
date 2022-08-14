@@ -40,14 +40,18 @@ export default class ChannelService extends ContextClass {
       if (chat.youtubeChannel != null) {
         return {
           userId: chat.userId,
-          platform: 'youtube',
-          channel: chat.youtubeChannel
+          platformInfo: {
+            platform: 'youtube',
+            channel: chat.youtubeChannel
+          }
         }
       } else if (chat.twitchChannel != null) {
         return {
           userId: chat.userId,
-          platform: 'twitch',
-          channel: chat.twitchChannel
+          platformInfo: {
+            platform: 'twitch',
+            channel: chat.twitchChannel
+          }
         }
       } else {
         throw new Error('Cannot get active channel for user because the latest chat item has no channel attached to it')
@@ -80,11 +84,11 @@ export default class ChannelService extends ContextClass {
 }
 
 export function getUserName (userChannel: UserChannel) {
-  if (userChannel.platform === 'youtube') {
-    return userChannel.channel.infoHistory[0].name
-  } else if (userChannel.platform === 'twitch') {
-    return userChannel.channel.infoHistory[0].displayName
+  if (userChannel.platformInfo.platform === 'youtube') {
+    return userChannel.platformInfo.channel.infoHistory[0].name
+  } else if (userChannel.platformInfo.platform === 'twitch') {
+    return userChannel.platformInfo.channel.infoHistory[0].displayName
   } else {
-    assertUnreachable(userChannel)
+    assertUnreachable(userChannel.platformInfo)
   }
 }

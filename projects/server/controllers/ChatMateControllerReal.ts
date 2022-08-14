@@ -7,17 +7,18 @@ import StatusService from '@rebel/server/services/StatusService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
-import { nonNull, zip, zipOnStrict } from '@rebel/server/util/arrays'
+import { nonNull, zip, zipOnStrict, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import ChannelService from '@rebel/server/services/ChannelService'
-import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
+import { userDataToPublicUser } from '@rebel/server/models/user'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { promised } from '@rebel/server/_test/utils'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import RankStore from '@rebel/server/stores/RankStore'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -30,6 +31,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   punishmentService: PunishmentService
   livestreamService: LivestreamService
   masterchatProxyService: MasterchatProxyService
+  rankStore: RankStore
 }>
 
 export default class ChatMateControllerReal implements IChatMateController {
@@ -43,6 +45,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly punishmentService: PunishmentService
   readonly livestreamService: LivestreamService
   readonly masterchatProxyService: MasterchatProxyService
+  readonly rankStore: RankStore
 
   constructor (deps: ChatMateControllerDeps) {
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -55,6 +58,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     this.punishmentService = deps.resolve('punishmentService')
     this.livestreamService = deps.resolve('livestreamService')
     this.masterchatProxyService = deps.resolve('masterchatProxyService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -73,14 +77,13 @@ export default class ChatMateControllerReal implements IChatMateController {
 
     const userChannels = await this.channelService.getActiveUserChannels(diffs.map(d => d.userId))
     const levelInfo = await this.experienceService.getLevels(diffs.map(d => d.userId))
-    const punishments = await this.punishmentService.getCurrentPunishments()
-    const channels = zipOnStrict(userChannels, levelInfo, 'userId')
+    const ranks = await this.rankStore.getUserRanks(diffs.map(d => d.userId))
+    const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
 
     let events: PublicChatMateEvent[] = []
     for (let i = 0; i < diffs.length; i++) {
       const diff = diffs[i]
-      const activePunishments = punishments.filter(p => p.userId === channels[i].channel.userId).map(userRankToPublicObject)
-      const user: PublicUser = userChannelAndLevelToPublicUser(channels[i], activePunishments)
+      const user: PublicUser = userDataToPublicUser(userData[i])
 
       events.push({
         schema: 4,

@@ -123,12 +123,12 @@ export default class ExperienceService extends ContextClass {
   /** Sorted in ascending order. */
   public async getLeaderboard (): Promise<RankedEntry[]> {
     const userNames = await this.channelService.getActiveUserChannels('all')
-    const userLevels = await this.getLevels(userNames.map(user => user.channel.userId))
+    const userLevels = await this.getLevels(userNames.map(user => user.userId))
 
     const orderedUserLevelChannels = zipOnStrict(userLevels, userNames, 'userId')
     return orderedUserLevelChannels.map((item, i) => ({
       rank: i + 1,
-      userId: item.channel.userId,
+      userId: item.userId,
       userName: getUserName(item),
       level: item.level.level,
       levelProgress: item.level.levelProgress

@@ -186,8 +186,8 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
     const userId2 = 2
     const channelName1 = 'channel 1'
     const channelName2 = 'channel 2'
-    const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } }
-    const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } }
+    const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } }
+    const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } }
     mockChannelService.getActiveUserChannels.mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
     mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId1, userId2]))
       .mockResolvedValue([{ userId: userId2, experience: 811 }, { userId: userId1, experience: 130 }]) // descending order

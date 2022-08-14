@@ -3,10 +3,12 @@ import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRa
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
-import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
+import { userDataToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
+import RankStore from '@rebel/server/stores/RankStore'
+import { single, zipOnStrict } from '@rebel/server/util/arrays'
 import { GET, Path, POST, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<4, {
@@ -33,6 +35,7 @@ type Deps = ControllerDependencies<{
   channelService: ChannelService
   experienceService: ExperienceService
   punishmentService: PunishmentService
+  rankStore: RankStore
 }>
 
 @Path(buildPath('experience'))
@@ -40,12 +43,14 @@ export default class ExperienceController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
   private readonly punishmentService: PunishmentService
+  private readonly rankStore: RankStore
 
   constructor (deps: Deps) {
     super(deps, 'experience')
     this.channelService = deps.resolve('channelService')
     this.experienceService = deps.resolve('experienceService')
     this.punishmentService = deps.resolve('punishmentService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   @GET
@@ -54,11 +59,8 @@ export default class ExperienceController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 4)
     try {
       const leaderboard = await this.experienceService.getLeaderboard()
-      const activePunishments = await this.punishmentService.getCurrentPunishments()
-      const publicLeaderboard = leaderboard.map(entry => {
-        const userPunishments = activePunishments.filter(p => p.userId === entry.userId).map(userRankToPublicObject)
-        return rankedEntryToPublic(entry, userPunishments)
-      })
+      const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId))
+      const publicLeaderboard = zipOnStrict(leaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
       return builder.failure(e)
@@ -96,11 +98,8 @@ export default class ExperienceController extends ControllerBase {
       }
       const upperRank = lowerRank + rankPadding * 2
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
-      const activePunishments = await this.punishmentService.getCurrentPunishments()
-      const publicLeaderboard = prunedLeaderboard.map(entry => {
-        const userPunishments = activePunishments.filter(p => p.userId === entry.userId).map(userRankToPublicObject)
-        return rankedEntryToPublic(entry, userPunishments)
-      })
+      const activeRanks = await this.rankStore.getUserRanks(prunedLeaderboard.map(entry => entry.userId))
+      const publicLeaderboard = zipOnStrict(prunedLeaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
 
       return builder.success({
         relevantIndex: prunedLeaderboard.findIndex(l => l === match),
@@ -127,9 +126,8 @@ export default class ExperienceController extends ControllerBase {
       }
 
       const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
-      const activePunishments = await this.punishmentService.getCurrentPunishments()
-      const userPunishments = activePunishments.filter(p => p.userId === request.userId).map(userRankToPublicObject)
-      const publicUser = userChannelAndLevelToPublicUser({ ...userChannel, ...level }, userPunishments)
+      const activeRanks = single(await this.rankStore.getUserRanks([request.userId]))
+      const publicUser = userDataToPublicUser({ ...userChannel, ...level, ...activeRanks })
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {
       return builder.failure(e)

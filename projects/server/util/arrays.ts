@@ -1,5 +1,6 @@
-import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys } from '@rebel/server/types'
+import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys, UnionToIntersection } from '@rebel/server/types'
 import { assertUnreachable } from '@rebel/server/util/typescript'
+import { Key } from 'readline'
 
 // uses default equality comparison
 export function unique<T> (array: T[]): T[] {
@@ -157,6 +158,28 @@ export function zipOnStrict<T extends GenericObject, U extends GenericObject, Ke
   }
 
   const result = first.map(x => ({ ...x, ...second.find(y => y[key] === x[key])! }))
+  return result
+}
+
+type UnwrapArray<T> = T extends Array<infer A> ? UnwrapArray<A> : T
+
+// this is an amazing feat of engineering. the last 2 (3?) hours were well spent. it has been a dream of mine to get this to work for a while now.
+// the return type, `A[] & B[] & ...` is equivalent to `(A & B & ...)[]`, but unwrapping the array causes weird `never`s to pop up for some reason.
+// note: this won't work when your top-level objects are themselves unioned - you will need to place this union at a deeper level.
+export function zipOnStrictMany<
+  T extends GenericObject,
+  Key extends PrimitiveKeys<T>,
+  Args extends GenericObject & (Pick<T, Key> extends infer Obj ? Obj[] : never)[]
+> (firstArray: T[], key: Key, ...arrays: Args): UnionToIntersection<T | UnwrapArray<Args[number]>>[] {
+  // unfortunately, the typings in here aren't quite as cooperative
+  let result: any = firstArray
+  for (let i = 0; i < arrays.length; i++) {
+    try {
+      result = zipOnStrict(result, arrays[i] as any, key as any)
+    } catch (e: any) {
+      throw new Error(`Unable to zip additional array at index ${i} onto the existing result: ${e.message}`)
+    }
+  }
   return result
 }
 

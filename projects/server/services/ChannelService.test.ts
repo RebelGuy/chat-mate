@@ -42,14 +42,18 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expect.objectContaining<UserChannel>({
-      platform: 'youtube',
-      channel: channel1,
-      userId: 1
+      userId: 1,
+      platformInfo: {
+        platform: 'youtube',
+        channel: channel1
+      }
     }))
     expect(result[1]).toEqual(expect.objectContaining<UserChannel>({
-      platform: 'twitch',
-      channel: channel2,
-      userId: 2
+      userId: 2,
+      platformInfo: {
+        platform: 'twitch',
+        channel: channel2
+      }
     }))
   })
 
@@ -59,9 +63,11 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
     const result = await channelService.getActiveUserChannels([1])
 
     expect(single(result)).toEqual(expect.objectContaining<UserChannel>({
-      platform: 'youtube',
-      channel: channel1,
-      userId: 1
+      userId: 1,
+      platformInfo: {
+        platform: 'youtube',
+        channel: channel1
+      }
     }))
   })
 })

@@ -1,31 +1,30 @@
 import { GetChatEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
 import { buildPath, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
-import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChatStore from '@rebel/server/stores/ChatStore'
+import RankStore from '@rebel/server/stores/RankStore'
 import { unique } from '@rebel/server/util/arrays'
 import { Path } from 'typescript-rest'
 
 export type ChatControllerDeps = ControllerDependencies<{
   chatStore: ChatStore,
   experienceService: ExperienceService
-  punishmentService: PunishmentService
+  rankStore: RankStore
 }>
 
 @Path(buildPath('chat'))
 export default class ChatControllerReal implements IChatController {
   readonly chatStore: ChatStore
   readonly experienceService: ExperienceService
-  readonly punishmentService: PunishmentService
+  readonly rankStore: RankStore
 
   constructor (deps: ChatControllerDeps) {
     this.chatStore = deps.resolve('chatStore')
     this.experienceService = deps.resolve('experienceService')
-    this.punishmentService = deps.resolve('punishmentService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
@@ -34,14 +33,13 @@ export default class ChatControllerReal implements IChatController {
     const items = await this.chatStore.getChatSince(since, limit)
     const userIds = unique(items.map(c => c.userId))
     const levels = await this.experienceService.getLevels(userIds)
+    const ranks = await this.rankStore.getUserRanks(userIds)
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
       const level = levels.find(l => l.userId === chat.userId)!.level
-      const punishments = (await this.punishmentService.getCurrentPunishments())
-        .filter(p => p.userId === chat.userId)
-        .map(userRankToPublicObject)
-      chatItems.push(chatAndLevelToPublicChatItem(chat, level, punishments))
+      const activeRanks = ranks.find(r => r.userId === chat.userId)!.ranks.map(userRankToPublicObject)
+      chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks))
     }
 
     return builder.success({

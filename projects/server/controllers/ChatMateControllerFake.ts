@@ -7,20 +7,24 @@ import { addTime } from '@rebel/server/util/datetime'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
-import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
+import { userDataToPublicUser } from '@rebel/server/models/user'
 import { Level } from '@rebel/server/services/ExperienceService'
 import { asGte, asLt } from '@rebel/server/util/math'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
 import { promised } from '@rebel/server/_test/utils'
+import RankStore from '@rebel/server/stores/RankStore'
+import { single } from '@rebel/server/util/arrays'
 
 export default class ChatMateControllerFake implements IChatMateController {
   private channelService: ChannelService
+  private rankStore: RankStore
 
   private liveId: string | null = 'CkOgjC9wjog'
 
   constructor (deps: ChatMateControllerDeps) {
     this.channelService = deps.resolve('channelService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   public getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -69,7 +73,8 @@ export default class ChatMateControllerFake implements IChatMateController {
           totalExperience: asGte(randomInt(0, 100000), 0)
         }
         const userChannel = pickRandom(users)
-        const user: PublicUser = userChannelAndLevelToPublicUser({ ...userChannel, userId: userChannel.userId, level }, [])
+        const ranks = single(await this.rankStore.getUserRanks([userChannel.userId])).ranks
+        const user: PublicUser = userDataToPublicUser({ ...userChannel, userId: userChannel.userId, level, ranks })
   
         events.push({
           schema: 4,

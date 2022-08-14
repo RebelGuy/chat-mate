@@ -1,12 +1,11 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicUserNames } from '@rebel/server/controllers/public/user/PublicUserNames'
-import { userRankToPublicObject } from '@rebel/server/models/rank'
-import { userNamesAndLevelToPublicUserNames } from '@rebel/server/models/user'
+import { userDataToPublicUserNames } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
-import { nonNull, zip, zipOnStrict } from '@rebel/server/util/arrays'
+import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
+import RankStore from '@rebel/server/stores/RankStore'
+import { zipOnStrictMany } from '@rebel/server/util/arrays'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { Path, POST } from 'typescript-rest'
 
@@ -23,7 +22,7 @@ type Deps = ControllerDependencies<{
   channelService: ChannelService,
   channelStore: ChannelStore
   experienceService: ExperienceService
-  punishmentService: PunishmentService
+  rankStore: RankStore
 }>
 
 @Path(buildPath('user'))
@@ -31,14 +30,14 @@ export default class UserController extends ControllerBase {
   readonly channelService: ChannelService
   readonly channelStore: ChannelStore
   readonly experienceService: ExperienceService
-  readonly punishmentService: PunishmentService
+  readonly rankStore: RankStore
 
   constructor (deps: Deps) {
     super(deps, 'user')
     this.channelService = deps.resolve('channelService')
     this.channelStore = deps.resolve('channelStore')
     this.experienceService = deps.resolve('experienceService')
-    this.punishmentService = deps.resolve('punishmentService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   @POST
@@ -53,13 +52,10 @@ export default class UserController extends ControllerBase {
       const matches = await this.channelService.getUserByChannelName(request.searchTerm)
       const userChannels = await this.channelService.getActiveUserChannels(matches.map(m => m.userId))
       const levels = await this.experienceService.getLevels(matches.map(m => m.userId))
-      const punishments = await this.punishmentService.getCurrentPunishments()
-      const users = zipOnStrict(zipOnStrict(matches, levels, 'userId'), userChannels, 'userId').map(data => {
-        const userPunishments = punishments.filter(p => p.userId === data.userId).map(userRankToPublicObject)
-        return userNamesAndLevelToPublicUserNames(data, userPunishments)
-      })
+      const ranks = await this.rankStore.getUserRanks(matches.map(m => m.userId))
+      const userData = zipOnStrictMany(matches, 'userId', userChannels, levels, ranks).map(userDataToPublicUserNames)
 
-      return builder.success({ results: users })
+      return builder.success({ results: userData })
     } catch (e: any) {
       return builder.failure(e)
     }

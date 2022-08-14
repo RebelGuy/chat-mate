@@ -117,6 +117,7 @@ export default () => {
     })
 
     test('Returns null if livestream is no longer active', async () => {
+      await db.livestream.create({ data: { liveId, isActive: false, type: 'publicLivestream' } })
       await livestreamStore.initialise()
 
       const result = await livestreamStore.setContinuationToken(liveId, 'token')

@@ -239,14 +239,18 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   if (chat.youtubeChannel != null) {
     userChannel = {
       userId: chat.userId,
-      platform: 'youtube',
-      channel: chat.youtubeChannel
+      platformInfo: {
+        platform: 'youtube',
+        channel: chat.youtubeChannel
+      }
     }
   } else if (chat.twitchChannel != null) {
     userChannel = {
       userId: chat.userId,
-      platform: 'twitch',
-      channel: chat.twitchChannel
+      platformInfo: {
+        platform: 'twitch',
+        channel: chat.twitchChannel
+      }
     }
   } else {
     throw new Error(`Cannot determine platform of chat item ${chat.id} because both the channel and twitchChannel are null`)
@@ -267,7 +271,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     schema: 4,
     id: chat.id,
     timestamp: chat.time.getTime(),
-    platform: userChannel.platform,
+    platform: userChannel.platformInfo.platform,
     messageParts,
     author: {
       schema: 3,
