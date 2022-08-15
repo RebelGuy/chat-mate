@@ -42,7 +42,7 @@ module.exports = (env) => {
   let copyPatterns = []
 
   // only copy the prisma engine file if it doesn't already exist, otherwise we get a crash if the server is currently running due to the file being locked
-  if (fs.existsSync(outPath) && !fs.readdirSync(outPath).find(file => file.includes('engine'))) {
+  if (!isLocal || fs.existsSync(outPath) && !fs.readdirSync(outPath).find(file => file.includes('engine'))) {
     copyPatterns.push({
       // the file we are interested in has 'engine' in its name.
       // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
