@@ -10,6 +10,9 @@ on:
       STUDIO_URL:
         type: string
         required: true
+      SERVER_URL:
+        type: string
+        required: true
       deploy:
         type: boolean
         required: true
@@ -129,7 +132,7 @@ jobs:
       - name: Create .env file
         run: |
           touch ./projects/studio/.env
-          echo REACT_APP_SERVER_API_URL=${{ inputs.NODE_ENV == 'debug' && 'https://chat-mate-sandbox.azurewebsites.net/api' || 'https://chat-mate-prod.azurewebsites.net/api' }} >> ./projects/studio/.env
+          echo REACT_APP_SERVER_URL=${{ inputs.SERVER_URL }} >> ./projects/studio/.env
           cat ./projects/studio/.env
       
       - name: Build typescript project

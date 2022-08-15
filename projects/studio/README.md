@@ -12,7 +12,7 @@ The following environment variables are required to run the studio app. They can
 
 All environment variables **must** be of the form `REACT_APP_<VARIABLE_NAME>` and will be baked directly into the built files - **they must be provided during the build, as they cannot be modified at runtime**.
 
-- `SERVER_API_URL`: The API base path of the server without a trailing slash.
+- `SERVER_URL`: The URL of the server without a trailing slash.
 
 ## Scripts
 
