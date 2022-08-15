@@ -2,7 +2,6 @@ import { Punishment, PunishmentType } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
 
 export type CreatePunishmentArgs = {
   issuedAt: Date
@@ -33,14 +32,14 @@ export default class PunishmentStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public override async initialise (): Promise<void> {
-    const adminUser = await this.db.youtubeChannel.findUnique({
-      where: { youtubeId: ADMIN_YOUTUBE_ID },
-      rejectOnNotFound: true,
-      select: { userId: true }
-    })
+  public override initialise (): void {
+    // const adminUser = await this.db.youtubeChannel.findFirst({
+    //   where: { userId: ADMIN_YOUTUBE_ID },
+    //   rejectOnNotFound: true,
+    //   select: { userId: true }
+    // })
 
-    this.ADMIN_USER_ID = adminUser.userId
+    this.ADMIN_USER_ID = 1 //adminUser.userId
   }
 
   public async addPunishment (args: CreatePunishmentArgs): Promise<Punishment> {

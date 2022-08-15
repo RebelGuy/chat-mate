@@ -1,13 +1,5 @@
 import { MockProxy } from 'jest-mock-extended'
 
-export function single<T> (array: ArrayLike<T>): T {
-  if (array.length === 1) {
-    return array[0]
-  } else {
-    throw new Error(`Expected 1 element in the array but found ${array.length}`)
-  }
-}
-
 type Class = new (...args: any[]) => any
 
 type ClassMember<C extends Class> = Exclude<keyof InstanceType<C> & string, 'name'>
@@ -65,6 +57,16 @@ export function expectStrictIncreasing (...values: number[]) {
 }
 
 /** Shorthand for casting a partial type to its full version, such as `{} as Partial<T> as T`. */
-export function mockData<T> (data: Partial<T>): T {
+export function cast<T> (data: Partial<T>): T
+export function cast<T extends Array<any>> (data: Partial<(T extends Array<infer A> ? A : never)>[]): T // the array's underlying type should be made partial, not the array type itself
+export function cast<T> (data: Partial<T>): T {
   return data as T
+}
+
+export function expectObject<T> (data: Partial<T>): T {
+  return expect.objectContaining(data)
+}
+
+export function expectArray<T> (data: Partial<T>[]): T[] {
+  return expect.arrayContaining(data)
 }

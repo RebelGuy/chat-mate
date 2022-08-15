@@ -3,7 +3,8 @@ import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHe
 import ExperienceService, { Level, RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { getGetterMock, mockData, mockGetter, nameof, single } from '@rebel/server/_test/utils'
+import { getGetterMock, cast, mockGetter, nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
@@ -15,7 +16,7 @@ import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/Chann
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { DeepPartial } from '@rebel/server/types'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -131,7 +132,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
         chatMessageId: 1,
         experienceTransactionId: 1,
         spamMultiplier: 0.8,
-        chatMessage: mockData<ChatMessage>({ livestreamId: data.livestream3.id })
+        chatMessage: cast<ChatMessage>({ livestreamId: data.livestream3.id })
       }
     }
 
@@ -185,8 +186,8 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
     const userId2 = 2
     const channelName1 = 'channel 1'
     const channelName2 = 'channel 2'
-    const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } }
-    const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } }
+    const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } }
+    const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } }
     mockChannelService.getActiveUserChannels.mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
     mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId1, userId2]))
       .mockResolvedValue([{ userId: userId2, experience: 811 }, { userId: userId1, experience: 130 }]) // descending order

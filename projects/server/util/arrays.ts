@@ -1,5 +1,6 @@
-import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys } from '@rebel/server/types'
+import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys, UnionToIntersection } from '@rebel/server/types'
 import { assertUnreachable } from '@rebel/server/util/typescript'
+import { Key } from 'readline'
 
 // uses default equality comparison
 export function unique<T> (array: T[]): T[] {
@@ -15,16 +16,45 @@ export function unique<T> (array: T[]): T[] {
   return Array.from(values)
 }
 
+export function single<T> (array: T[]): T {
+  if (array.length === 1) {
+    return array[0]
+  } else {
+    throw new Error(`Expected 1 element in the array but found ${array.length}`)
+  }
+}
+
+export function singleOrNull<T> (array: T[]): T | null {
+  if (array.length === 0) {
+    return null
+  } else if (array.length === 1) {
+    return array[0]
+  } else {
+    throw new Error(`Expected 0 or 1 elements in the array but found ${array.length}`)
+  }
+}
+
+export function first<T> (array: T[]): T {
+  if (array.length < 1) {
+    throw new Error(`Expected at least 1 element in the array but found none`)
+  } else {
+    return array[0]
+  }
+}
+
 export function sortByLength (array: string[], direction?: 'asc' | 'desc'): string[] {
   return sortBy(array.map(str => ({ value: str })), item => item.value.length, direction).map(item => item.value)
 }
 
+/** Sort by number. */
 export function sortBy<T extends GenericObject> (array: T[], selector: (item: T) => number, direction?: 'asc' | 'desc'): T[]
+/** Sort by string comparison (case sensitive). */
+export function sortBy<T extends GenericObject> (array: T[], selector: (item: T) => string, direction?: 'asc' | 'desc'): T[]
 export function sortBy<T extends GenericObject, K extends keyof NumberOnly<T>> (array: T[], key: K, direction?: 'asc' | 'desc'): T[]
-export function sortBy<T extends GenericObject> (array: T[], selector: keyof T | ((item: T) => number), direction: 'asc' | 'desc' = 'asc'): T[] {
-  let getValue: (item: T) => number
+export function sortBy<T extends GenericObject> (array: T[], selector: keyof T | ((item: T) => number | string), direction: 'asc' | 'desc' = 'asc'): T[] {
+  let getValue: (item: T) => number | string
   if (typeof selector === 'string' || typeof selector === 'number' || typeof selector === 'symbol') {
-    getValue = (item: T) => item[selector] as number
+    getValue = (item: T) => item[selector] as number | string
   } else if (typeof selector === 'function') {
     getValue = selector
   } else {
@@ -34,7 +64,16 @@ export function sortBy<T extends GenericObject> (array: T[], selector: keyof T |
   return Array.from(array).sort((a: T, b: T) => {
     const x = getValue(a)
     const y = getValue(b)
-    return direction === 'asc' ? x - y : y - x
+
+    let diff: number
+    if (typeof x === 'number' && typeof y === 'number') {
+      diff = x - y
+    } else if (typeof x === 'string' && typeof y === 'string') {
+      diff = x.localeCompare(y)
+    } else {
+      throw new Error('Unexpected type')
+    }
+    return direction === 'asc' ? diff : -diff
   })
 }
 
@@ -122,6 +161,27 @@ export function zipOnStrict<T extends GenericObject, U extends GenericObject, Ke
   return result
 }
 
+type UnwrapArray<T> = T extends Array<infer A> ? UnwrapArray<A> : T
+
+// this is an amazing feat of engineering. the last 2 (3?) hours were well spent. it has been a dream of mine to get this to work for a while now.
+// note: this won't work when your top-level objects are themselves unioned - you will need to place this union at a deeper level.
+export function zipOnStrictMany<
+  T extends GenericObject,
+  Key extends PrimitiveKeys<T>,
+  Args extends GenericObject & (Pick<T, Key> extends infer Obj ? Obj[] : never)[]
+> (firstArray: T[], key: Key, ...arrays: Args): UnionToIntersection<T | UnwrapArray<Args[number]>>[] {
+  // unfortunately, the typings in here aren't quite as cooperative
+  let result: any = firstArray
+  for (let i = 0; i < arrays.length; i++) {
+    try {
+      result = zipOnStrict(result, arrays[i] as any, key as any)
+    } catch (e: any) {
+      throw new Error(`Unable to zip additional array at index ${i} onto the existing result: ${e.message}`)
+    }
+  }
+  return result
+}
+
 /** Returns a new array that is the inverse of the input array. */
 export function reverse<T> (arr: T[]): T[] {
   let result: T[] = []
@@ -148,6 +208,27 @@ export function tally<T> (arr: T[], comparator?: (a: T, b: T) => boolean): { val
   }
 
   return sortBy(result, r => r.count, 'desc')
+}
+
+/** Assigns items to multi-member groups. The order of a group is retained depending on when it was first encountered.
+ * Items within that group are ordered depending on when they were added to the gorup. */
+export function group<T, G> (arr: T[], grouper: (item: T) => G): { group: G, items: T[] }[] {
+  let groupIndices: Map<G, number> = new Map()
+  let nextGroupIndex = 0
+  let groups: { group: G, items: T[] }[] = []
+
+  for (const item of arr) {
+    const group = grouper(item)
+    if (!groupIndices.has(group)) {
+      groups.push({ group, items: [item] })
+      groupIndices.set(group, nextGroupIndex)
+      nextGroupIndex++
+    } else {
+      groups[groupIndices.get(group)!].items.push(item)
+    }
+  }
+
+  return groups
 }
 
 /** Assigns items to single-member groups on a first-come, first-serve basis. The resulting array is also ordered. */

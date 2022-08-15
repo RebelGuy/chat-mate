@@ -1,14 +1,15 @@
-import { PublicPunishment } from '@rebel/server/controllers/public/punishment/PublicPunishment'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { PublicUserNames } from '@rebel/server/controllers/public/user/PublicUserNames'
+import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import { UserLevel } from '@rebel/server/services/ExperienceService'
 import { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
+import { UserRanks } from '@rebel/server/stores/RankStore'
 
-export function userChannelAndLevelToPublicUser (data: UserChannel & UserLevel, activePunishments: PublicPunishment[]): PublicUser {
+export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks): PublicUser {
   return {
-    schema: 2,
-    id: data.channel.userId,
+    schema: 3,
+    id: data.userId,
     userInfo: {
       schema: 1,
       channelName: getUserName(data)
@@ -18,14 +19,14 @@ export function userChannelAndLevelToPublicUser (data: UserChannel & UserLevel, 
       level: data.level.level,
       levelProgress: data.level.levelProgress
     },
-    activePunishments: activePunishments
+    activeRanks: data.ranks.map(userRankToPublicObject)
   }
 }
 
-export function userNamesAndLevelToPublicUserNames (data: UserNames & UserChannel & UserLevel, activePunishments: PublicPunishment[]): PublicUserNames {
+export function userDataToPublicUserNames (data: UserNames & UserChannel & UserLevel & UserRanks): PublicUserNames {
   return {
-    schema: 2,
-    user: userChannelAndLevelToPublicUser(data, activePunishments),
+    schema: 3,
+    user: userDataToPublicUser(data),
     youtubeChannelNames: data.youtubeNames,
     twitchChannelNames: data.twitchNames,
   }

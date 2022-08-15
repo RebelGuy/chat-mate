@@ -1,11 +1,11 @@
 import { ChatMessage, ExperienceDataChatMessage, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
-import { Sql } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
+import AdminService from '@rebel/server/services/rank/AdminService'
 import { NoNulls } from '@rebel/server/types'
+import { first } from '@rebel/server/util/arrays'
 import { assertNotNull } from '@rebel/server/util/typescript'
 
 export type ChatExperience =
@@ -24,16 +24,16 @@ type ChatExperienceTransaction = ChatExperience & {
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
+  adminService: AdminService
 }>
 
 export default class ExperienceStore extends ContextClass {
   private readonly db: Db
+  private readonly adminService: AdminService
 
   // key is userId
   // value is null if we know there is no data for a particular user
   private readonly previousChatExperienceMap: Map<number, ChatExperience | null>
-
-  private ADMIN_USER_ID!: number
 
   // the timestamp cache of the last experience transaction for any user, if known
   private lastTransactionTime: number | null
@@ -41,18 +41,9 @@ export default class ExperienceStore extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
+    this.adminService = deps.resolve('adminService')
     this.previousChatExperienceMap = new Map()
     this.lastTransactionTime = null
-  }
-
-  public override async initialise (): Promise<void> {
-    const adminUser = await this.db.youtubeChannel.findUnique({
-      where: { youtubeId: ADMIN_YOUTUBE_ID },
-      rejectOnNotFound: true,
-      select: { userId: true }
-    })
-
-    this.ADMIN_USER_ID = adminUser.userId
   }
 
   // returns the previous chat experience, may not be for the current livestream
@@ -109,12 +100,13 @@ export default class ExperienceStore extends ContextClass {
   }
 
   public async addManualExperience (userId: number, xp: number, message: string | null) {
+    const adminUser = first(await this.adminService.getAdminUsers()) 
     const experienceTransaction = await this.db.experienceTransaction.create({ data: {
       time: new Date(),
       user: { connect: { id: userId }},
       delta: xp,
       experienceDataAdmin: { create: {
-        adminUser: { connect: { id: this.ADMIN_USER_ID }},
+        adminUser: { connect: { id: adminUser.id }},
         message
       }}
     }})

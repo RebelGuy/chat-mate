@@ -15,7 +15,7 @@ export default class Semaphore {
   /**
    * If the promise resolves, then the code has entered the semaphore and you MUST call `exit()` when done.
    * 
-   * If the waiting time exceeds the timeout for this semaphore (if set), the promise will reject with a `TimeoutError`.
+   * @throws {@link TimeoutError}: When the waiting time exceeds the timeout for this semaphore (if set).
    */
   public async enter (): Promise<void> {
     if (this.current < this.maxParallel) {

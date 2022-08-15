@@ -1,25 +1,30 @@
 import { In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
-import { GetEventsEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
+import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import { chooseWeightedRandom, pickRandom, randomInt, randomString } from '@rebel/server/util/random'
 import { addTime } from '@rebel/server/util/datetime'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
-import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
+import { userDataToPublicUser } from '@rebel/server/models/user'
 import { Level } from '@rebel/server/services/ExperienceService'
 import { asGte, asLt } from '@rebel/server/util/math'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
+import { promised } from '@rebel/server/_test/utils'
+import RankStore from '@rebel/server/stores/RankStore'
+import { single } from '@rebel/server/util/arrays'
 
 export default class ChatMateControllerFake implements IChatMateController {
   private channelService: ChannelService
+  private rankStore: RankStore
 
   private liveId: string | null = 'CkOgjC9wjog'
 
   constructor (deps: ChatMateControllerDeps) {
     this.channelService = deps.resolve('channelService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   public getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -68,14 +73,15 @@ export default class ChatMateControllerFake implements IChatMateController {
           totalExperience: asGte(randomInt(0, 100000), 0)
         }
         const userChannel = pickRandom(users)
-        const user: PublicUser = userChannelAndLevelToPublicUser({ ...userChannel, userId: userChannel.userId, level }, [])
+        const ranks = single(await this.rankStore.getUserRanks([userChannel.userId])).ranks
+        const user: PublicUser = userDataToPublicUser({ ...userChannel, userId: userChannel.userId, level, ranks })
   
         events.push({
-          schema: 3,
+          schema: 4,
           timestamp: new Date().getTime(),
           type: 'levelUp',
           levelUpData: {
-            schema: 2,
+            schema: 3,
             newLevel: newLevel,
             oldLevel: newLevel - 1,
             user
@@ -85,7 +91,7 @@ export default class ChatMateControllerFake implements IChatMateController {
       } else {
         // new follower event
         events.push({
-          schema: 3,
+          schema: 4,
           timestamp: new Date().getTime(),
           type: 'newTwitchFollower',
           levelUpData: null,
@@ -125,5 +131,11 @@ export default class ChatMateControllerFake implements IChatMateController {
     }
 
     return args.builder.success({ livestreamLink: this.liveId == null ? null : getLivestreamLink(this.liveId) })
+  }
+
+  public getMasterchatAuthentication (args: In<GetMasterchatAuthenticationEndpoint>): Out<GetMasterchatAuthenticationEndpoint> {
+    return promised(args.builder.success({
+      authenticated: true
+    }))
   }
 }

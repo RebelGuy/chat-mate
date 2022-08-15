@@ -7,6 +7,12 @@ on:
         # `debug` or `release`
         type: string
         required: true
+      STUDIO_URL:
+        type: string
+        required: true
+      SERVER_URL:
+        type: string
+        required: true
       deploy:
         type: boolean
         required: true
@@ -38,11 +44,11 @@ jobs:
       # required for webpack and deployment
       - name: Create .env file
         run: |
-          touch ./projects/server/.env
-          echo NODE_ENV=${{ inputs.NODE_ENV }} >> ./projects/server/.env
-          echo IS_LOCAL=false >> ./projects/server/.env
-          echo "NAME=\"${{ github.sha }} - ${{ github.event_name }} - ${{ github.head_ref || github.ref_name }}\"" >> ./projects/server/.env
-          cat ./projects/server/.env
+          touch ./projects/server/${{ inputs.NODE_ENV }}.env
+          echo NODE_ENV=${{ inputs.NODE_ENV }} >> ./projects/server/${{ inputs.NODE_ENV }}.env
+          echo "NAME=\"${{ github.sha }} - ${{ github.event_name }} - ${{ github.head_ref || github.ref_name }}\"" >> ./projects/server/${{ inputs.NODE_ENV }}.env
+          echo STUDIO_URL=${{ inputs.STUDIO_URL }} >> ./projects/server/${{ inputs.NODE_ENV }}.env
+          cat ./projects/server/${{ inputs.NODE_ENV }}.env
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -126,7 +132,7 @@ jobs:
       - name: Create .env file
         run: |
           touch ./projects/studio/.env
-          echo REACT_APP_SERVER_API_URL=${{ inputs.NODE_ENV == 'debug' && 'https://chat-mate-sandbox.azurewebsites.net/api' || 'https://chat-mate-prod.azurewebsites.net/api' }} >> ./projects/studio/.env
+          echo REACT_APP_SERVER_URL=${{ inputs.SERVER_URL }} >> ./projects/studio/.env
           cat ./projects/studio/.env
       
       - name: Build typescript project
@@ -177,7 +183,7 @@ jobs:
     needs: [migrate-database]
 
     environment:
-      name: ${{ inputs.NODE_ENV == 'debug' && 'Production' || 'Sandbox' }}
+      name: ${{ inputs.NODE_ENV == 'debug' && 'Sandbox' || 'Production' }}
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     outputs:
       server-url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
@@ -203,8 +209,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-server, test-server, build-studio]
     environment:
-      name: ${{ inputs.NODE_ENV == 'debug' && 'Production' || 'Sandbox' }}
-      url: ${{ inputs.NODE_ENV == 'debug' && 'https://nice-coast-05a39c31e.1.azurestaticapps.net' || 'https://kind-rock-0d2509e10.1.azurestaticapps.net' }}
+      name: ${{ inputs.NODE_ENV == 'debug' && 'Sandbox' || 'Production' }}
+      url: ${{ inputs.STUDIO_URL }}
 
     steps:
       - name: Download built studio files

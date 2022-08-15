@@ -10,6 +10,7 @@ Recommended VSCode extensions:
 - `Prisma`
 - `GitHub Actions`
 - `Azure Account`
+- `Thunder Client`
 
 ## CI and deployment
 Github Actions is used for automatically building and deploying the Server/Studio projects when pushed.
@@ -46,6 +47,16 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+
+## v1.16 - The Rank Update [15/8/2022]
+- Server
+  - Added ranks
+    - They work similar to the existing punishments, but punishments are now simply one of several groups of ranks
+    - Features database-level validation
+    - Notably, there is a mod rank that is backed by the Youtube/Twitch moderator functionality
+  - Standardised build scripts and environments
+- Masterchat
+  - Improved handling for invalid credentials
 
 ## v1.15 - The Stress Test Update [30/7/2022]
 - Server

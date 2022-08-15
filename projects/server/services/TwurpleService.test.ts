@@ -3,7 +3,8 @@ import { ChatItem } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import ChatService from '@rebel/server/services/ChatService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as chat from '@rebel/server/models/chat'
@@ -100,5 +101,29 @@ describe(nameof(TwurpleService, 'unbanChannel'), () => {
     await twurpleService.unbanChannel(channelId)
 
     expect(single(mockTwurpleApiProxyService.say.mock.calls)).toEqual([`/unban ${channelName}`])
+  })
+})
+
+describe(nameof(TwurpleService, 'modChannel'), () => {
+  test('gets channel name and makes a request to mod', async () => {
+    const channelId = 5
+    const userChannelName = 'testChannelName'
+    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(userChannelName)
+
+    await twurpleService.modChannel(channelId)
+
+    expect(single(mockTwurpleApiProxyService.mod.mock.calls)).toEqual([twitchChannelName, userChannelName])
+  })
+})
+
+describe(nameof(TwurpleService, 'unmodChannel'), () => {
+  test('gets channel name and makes a request to unmod', async () => {
+    const channelId = 5
+    const userChannelName = 'testChannelName'
+    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(userChannelName)
+
+    await twurpleService.unmodChannel(channelId)
+
+    expect(single(mockTwurpleApiProxyService.unmod.mock.calls)).toEqual([twitchChannelName, userChannelName])
   })
 })

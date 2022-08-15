@@ -8,4 +8,4 @@ function requireVariable (environmentVariable: `REACT_APP_${string}`): string {
   }
 }
 
-export const SERVER_API_URL = requireVariable('REACT_APP_SERVER_API_URL')
+export const SERVER_URL = requireVariable('REACT_APP_SERVER_URL')

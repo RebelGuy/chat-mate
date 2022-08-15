@@ -13,16 +13,11 @@ type DeploymentVariable<T extends Primitive | null> = { type: 'deployment', valu
 
 type OptionalVariable<T extends Primitive | null, TDefault extends T> = { type: 'optional', value: T, default: TDefault }
 
-export type NodeEnv = 'debug' | 'release'
-
-export type BuildType = 'tsc' | 'webpack'
+export type NodeEnv = 'local' | 'debug' | 'release'
 
 // these can be set either statically in the .env file, or dynamically within the npm script using the `cross-env` package.
 type EnvironmentVariables = {
   nodeEnv: NodeEnv
-  build: BuildType
-  // whether we are running the app locally
-  isLocal: OptionalVariable<boolean, false>
 
   port: number
 
@@ -32,8 +27,6 @@ type EnvironmentVariables = {
   twitchClientId: string
   twitchClientSecret: string
   twitchChannelName: string
-  twitchAccessToken: string
-  twitchRefreshToken: string
 
   channelId: string
   databaseUrl: string
@@ -60,7 +53,6 @@ function getAllKeys () {
   const allEnvVariables: Record<keyof EnvironmentVariables, true> = {
     'applicationinsightsConnectionString': true,
     'auth': true,
-    'build': true,
     'channelId': true,
     'databaseUrl': true,
     'enableDbLogging': true,
@@ -68,14 +60,11 @@ function getAllKeys () {
     'dbSemaphoreTimeout': true,
     'dbTransactionTimeout': true,
     'websiteHostname': true,
-    'isLocal': true,
     'nodeEnv': true,
     'port': true,
-    'twitchAccessToken': true,
     'twitchChannelName': true,
     'twitchClientId': true,
     'twitchClientSecret': true,
-    'twitchRefreshToken': true,
     'useFakeControllers': true,
     'managedIdentityClientId': true,
     'logAnalyticsWorkspaceId': true
@@ -115,8 +104,7 @@ const optionalVariables: OptionalVariablesWithDefaults = {
   enableDbLogging: false,
   dbSemaphoreConcurrent: 1000,
   dbSemaphoreTimeout: null,
-  dbTransactionTimeout: 5000,
-  isLocal: false
+  dbTransactionTimeout: 5000
 }
 
 function isOptionalVar<V extends keyof EnvironmentVariables> (variable: V): boolean {
@@ -134,8 +122,6 @@ function isDeploymentVar<V extends keyof EnvironmentVariables> (variable: V): bo
 // if an environment variable is included in this list, it must be set using the `cross-env` package.
 const injectedVariables: (keyof EnvironmentVariables)[] = [
   'nodeEnv',
-  'build',
-  'isLocal' // has to be injected because it's used by webpack
 ]
 
 let missingInjectedVars: string[] = []
@@ -154,8 +140,13 @@ if (missingInjectedVars.length > 0) {
   throw new Error('The following required environment variables have not been set: ' + missingInjectedVars.join(', ') + '. The list of set variables is: ' + Object.keys(process.env).join(', '))
 }
 
+// `nodeEnv` is special because it modifies the environment variable collection
+const nodeEnvKey: keyof EnvironmentVariables = 'nodeEnv'
+const nodeEnv = parseValue<ValueType<'nodeEnv'>>(process.env[toConstCase(nodeEnvKey)])
+const isLocal = nodeEnv === 'local'
+
 // separate debug/release .env files
-const dotenvFile = `./${process.env.NODE_ENV}.env`
+const dotenvFile = `./${nodeEnv}.env`
 const dotenvResult = dotenv.config({ path: dotenvFile})
 if (dotenvResult.error) {
   console.error(`Unable to load dot-env file at ${dotenvFile} : ` + dotenvResult.error.message)
@@ -174,10 +165,6 @@ const allEnvVariables: Record<string, string | undefined> = {
   // injected variables take precedence
   ...process.env
 }
-
-// `isLocal` is special because it modifies the environment variable collection
-const isLocalKey: keyof EnvironmentVariables = 'isLocal'
-const isLocal = parseValue<ValueType<'isLocal'>>(allEnvVariables[toConstCase(isLocalKey)]) ?? optionalVariables[isLocalKey]
 
 // before continuing, check that all non-optional variables have been provided
 let missingVars: string[] = []

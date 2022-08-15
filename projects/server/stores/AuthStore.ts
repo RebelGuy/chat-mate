@@ -19,20 +19,21 @@ export default class AuthStore extends ContextClass {
     this.dbProvider = deps.resolve('dbProvider')
   }
 
-  /** Loads the Twitch access token for the current client id, if it exists. */
-  public async loadAccessToken (): Promise<AccessToken | null> {
-    const auth = await this.dbProvider.get().twitchAuth.findUnique({ where: { clientId: this.twitchClientId }})
+  /** Loads the Twitch access token for the current client id. Throws if the token doesn't exist. To set the token, use the `TwitchAuth.js` script. */
+  public async loadAccessToken (): Promise<AccessToken> {
+    const auth = await this.dbProvider.get().twitchAuth.findUnique({
+      where: {
+        clientId: this.twitchClientId
+      },
+      rejectOnNotFound: true
+    })
 
-    if (auth == null) {
-      return null
-    } else {
-      return {
-        accessToken: auth.accessToken,
-        refreshToken: auth.refreshToken,
-        expiresIn: auth.expiresIn,
-        obtainmentTimestamp: Number(auth.obtainmentTimestamp),
-        scope: auth.scope.split(',')
-      }
+    return {
+      accessToken: auth.accessToken,
+      refreshToken: auth.refreshToken,
+      expiresIn: auth.expiresIn,
+      obtainmentTimestamp: Number(auth.obtainmentTimestamp),
+      scope: auth.scope.split(',')
     }
   }
 

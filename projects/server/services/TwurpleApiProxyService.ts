@@ -72,6 +72,10 @@ export default class TwurpleApiProxyService extends ContextClass implements ITwu
     }
   }
 
+  public async mod (channel: string, twitchUserName: string) {
+    await this.wrappedChat.mod!(channel, twitchUserName)
+  }
+
   /** Says the message in chat. For the list of available commands that can be said, refer to https://help.twitch.tv/s/article/chat-commands (must include an initial `/`) */
   public async say (message: string) {
     await this.wrappedChat.say!(this.twitchChannelName, message, undefined)
@@ -79,6 +83,10 @@ export default class TwurpleApiProxyService extends ContextClass implements ITwu
 
   public async timeout (channel: string, twitchUserName: string, durationSeconds: number, reason?: string) {
     await this.wrappedChat.timeout!(channel, twitchUserName, durationSeconds, reason)
+  }
+
+  public async unmod (channel: string, twitchUserName: string) {
+    await this.wrappedChat.unmod!(channel, twitchUserName)
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
@@ -96,11 +104,15 @@ export default class TwurpleApiProxyService extends ContextClass implements ITwu
     const ban = this.wrapRequest((channel: string | undefined, twitchUserName: string, reason: string) => this.chat.ban(channel, twitchUserName, reason), 'twurpleChatClient.ban')
     const timeout = this.wrapRequest((channel: string, twitchUserName: string, duration: number, reason: string) => this.chat.timeout(channel, twitchUserName, duration, reason), 'twurpleChatClient.timeout')
     const say = this.wrapRequest((channel: string, message: string, attributes: ChatSayMessageAttributes | undefined) => this.chat.say(channel, message, attributes), 'twurpleChatClient.say')
+    const mod = this.wrapRequest((channel: string, twitchUserName: string) => this.chat.mod(channel, twitchUserName), 'twurpleChatClient.mod')
+    const unmod = this.wrapRequest((channel: string, twitchUserName: string) => this.chat.unmod(channel, twitchUserName), 'twurpleChatClient.unmod')
 
     return {
       ban,
       timeout,
-      say
+      say,
+      mod,
+      unmod
     }
   }
 

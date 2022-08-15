@@ -1,10 +1,10 @@
 import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
-import { PublicPunishment } from '@rebel/server/controllers/public/punishment/PublicPunishment'
+import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 
-export type PublicUser = PublicObject<2, {
-  schema: 2
+export type PublicUser = PublicObject<3, {
+  schema: 3
 
   /** The internal id of the user. */
   id: number
@@ -15,6 +15,6 @@ export type PublicUser = PublicObject<2, {
   /** Current level of the user. */
   levelInfo: Tagged<1, PublicLevelInfo>
 
-  /** The list of active punishments, not sorted in any particular order. */
-  activePunishments: PublicPunishment[]
+  /** The list of active user-ranks, not sorted in any particular order. */
+  activeRanks: PublicUserRank[]
 }>

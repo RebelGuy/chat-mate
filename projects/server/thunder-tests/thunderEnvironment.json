@@ -1,0 +1,37 @@
+[
+  {
+    "_id": "066b9195-d5a0-4383-b393-3727ed18ecdf",
+    "name": "Local Server",
+    "default": true,
+    "sortNum": 10000,
+    "created": "2022-08-08T11:00:07.087Z",
+    "modified": "2022-08-08T11:00:28.181Z",
+    "data": [
+      {
+        "name": "ServerApiUrl",
+        "value": "localhost:3010/api"
+      }
+    ]
+  },
+  {
+    "_id": "3855177c-6f76-468d-83e7-455d10946297",
+    "name": "(Local Env)",
+    "default": false,
+    "global": true,
+    "local": true,
+    "sortNum": -2,
+    "created": "2022-08-08T11:00:58.062Z",
+    "modified": "2022-08-08T11:00:58.062Z",
+    "data": []
+  },
+  {
+    "_id": "b69f6cb7-f26c-4d18-a984-8e19e6009759",
+    "name": "(Global Env)",
+    "default": false,
+    "global": true,
+    "sortNum": -1,
+    "created": "2022-08-08T11:01:03.633Z",
+    "modified": "2022-08-08T11:01:03.633Z",
+    "data": []
+  }
+]

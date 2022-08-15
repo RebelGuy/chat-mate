@@ -12,7 +12,8 @@ export type ErrorCode =
   | "membersOnly" // No permission (members-only)
   | "unarchived" // Live stream recording is not available
   | "denied" // Access denied (429)
-  | "invalid"; // Invalid request
+  | "invalid" // Invalid request
+  | "loggedOut" // Masterchat is not authenticated - credentials have probably expired
 
 export class MasterchatError extends Error {
   public code: ErrorCode;
@@ -75,3 +76,10 @@ export class InvalidArgumentError extends MasterchatError {
 }
 
 export class AbortError extends Error {}
+
+export class LoggedOutError extends MasterchatError {
+  constructor(msg: string) {
+    super("loggedOut", msg);
+    Object.setPrototypeOf(this, LoggedOutError.prototype)
+  }
+}

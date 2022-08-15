@@ -34,12 +34,10 @@ export default () => {
   afterEach(stopTestDb)
 
   describe(nameof(AuthStore, 'loadAccessToken'), () => {
-    test('returns null if no access token exists for client', async () => {
+    test('Throws if no access token exists for client', async () => {
       await addAccessToken(db, 'client2', otherAccessToken)
 
-      const result = await authStore.loadAccessToken()
-
-      expect(result).toBeNull()
+      await expect(() => authStore.loadAccessToken()).rejects.toThrow()
     })
 
     test('returns correct access token for client', async () => {

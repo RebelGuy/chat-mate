@@ -1,10 +1,9 @@
 const path = require('path')
+const fs = require('fs')
 const webpack = require('webpack')
 const nodeExternals = require('webpack-node-externals');
 const CopyWebpackPlugin = require('copy-webpack-plugin')
-const WebpackShellPluginNext = require('webpack-shell-plugin-next')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const loaded = require('dotenv').config() // loads the .env file generated during the Github Actions process
 const execSync = require('child_process').execSync
 
 function parseBoolean (str) {
@@ -20,12 +19,17 @@ const version = versionParts.join('.')
 const banner =  `${PACKAGE.name} - ${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
-  env['BUILD'] = 'webpack'
+  // from `env` because it's injected
+  const nodeEnv = env.NODE_ENV
+  if (nodeEnv == null || nodeEnv === '') {
+    throw new Error('The NODE_ENV variable must be injected when using webpack.')
+  }
 
-  // the following env variables are defined in the Github Actions
-  const isLocal = parseBoolean(process.env.IS_LOCAL) ?? parseBoolean(env.IS_LOCAL) ?? false
-  const nodeEnv = env.NODE_ENV ?? 'debug'
-  const NAME = process.env.NAME ?? ''
+  require('dotenv').config({ path: `${nodeEnv}.env` })
+
+  const isLocal = nodeEnv === 'local'
+  const NAME = process.env.NAME ?? '' // env variable defined in CI (e.g. '74d8a7029d5c30e332fe59c075a42a75aa6deffd - push - master')
+  const STUDIO_URL = process.env.STUDIO_URL ?? env.STUDIO_URL ?? '' // defined in CI or in the .env file when building locally
   const NOW = new Date()
 
   // special env variable passed to webpack during local development for faster building
@@ -35,13 +39,28 @@ module.exports = (env) => {
 
   // note: path.resolve doesn't work with glob patterns
   /** @type CopyWebpackPlugin.Pattern[] */
-  const copyPatters = [
-    {
+  let copyPatterns = []
+
+  // only copy the prisma engine file if it doesn't already exist, otherwise we get a crash if the server is currently running due to the file being locked
+  if (fs.existsSync(outPath) && !fs.readdirSync(outPath).find(file => file.includes('engine'))) {
+    copyPatterns.push({
       // the file we are interested in has 'engine' in its name.
       // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
       from: './node_modules/.prisma/client/*engine*', // `query_engine-windows.dll.node` for windows
       to: path.resolve(outPath, './[name][ext]'), // place the file directly to the output directory instead of copying the directory tree, otherwise Prisma won't find it
-    },
+    })
+  }
+
+  // similarly, only copy ngrok if it doesn't already exist
+  const ngrokPath = path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it
+  if (isLocal && fs.existsSync(outPath) && !fs.readdirSync(ngrokPath).find(file => file.includes('ngrok.exe'))) {
+    copyPatterns.push({
+      from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
+      to: ngrokPath // folder is automatically created
+    })
+  }
+
+  copyPatterns.push(...[  
     {
       // required for prisma to find the schema file
       // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
@@ -62,14 +81,7 @@ module.exports = (env) => {
     { from: path.resolve(__dirname, `./favicon_${nodeEnv}.ico`),
       to: outPath
     }
-  ]
-
-  if (isLocal) {
-    copyPatters.push({
-      from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
-      to: path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it (folder is automatically created)
-    })
-  }
+  ])
 
   // for development purposes, we need to emit special javascript files, such as scripts, so we can run them separate from the main app.
   // the key for these will be used for the `[name]` placeholder in the `output` config of webpack.
@@ -184,6 +196,12 @@ module.exports = (env) => {
 
     output: {
       path: outPath,
+      devtoolModuleFilenameTemplate: (info) => {
+        // sourcemaps to files in different projects in the app.js.map file reference the server project, so the javascript debugger can't load them
+        // https://github.com/webpack/webpack/issues/3603
+        const rel = path.relative(outPath, info.absoluteResourcePath)
+        return `webpack:///${rel}`
+      },
       // map each named entry .ts file to its corresponding .js output file
       filename: `[name].js`
     },
@@ -200,7 +218,7 @@ module.exports = (env) => {
       new webpack.BannerPlugin(banner),
 
       // https://webpack.js.org/plugins/copy-webpack-plugin/
-      new CopyWebpackPlugin({ patterns: copyPatters }),
+      new CopyWebpackPlugin({ patterns: copyPatterns }),
 
       new HtmlWebpackPlugin({
         filename: './default.html',
@@ -210,6 +228,7 @@ module.exports = (env) => {
         version: version,
         date: NOW.toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', hour12: false }),
         build: NAME,
+        studioUrl: STUDIO_URL
       })
     ]
   }

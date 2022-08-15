@@ -3,7 +3,8 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { nameof, single } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 export default () => {
@@ -116,6 +117,7 @@ export default () => {
     })
 
     test('Returns null if livestream is no longer active', async () => {
+      await db.livestream.create({ data: { liveId, isActive: false, type: 'publicLivestream' } })
       await livestreamStore.initialise()
 
       const result = await livestreamStore.setContinuationToken(liveId, 'token')

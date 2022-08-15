@@ -14,25 +14,30 @@ export type GetStatusResponse = ApiResponse<3, {
   twitchApiStatus: Tagged<1, PublicApiStatus>
 }>
 
-type GetEventsResponse = ApiResponse<4, {
+type GetEventsResponse = ApiResponse<5, {
   // include the timestamp so it can easily be used for the next request
   reusableTimestamp: number
-  events: Tagged<3, PublicChatMateEvent>[]
+  events: Tagged<4, PublicChatMateEvent>[]
 }>
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type GetStatusEndpoint = Endpoint<3, {}, GetStatusResponse>
 
-export type GetEventsEndpoint = Endpoint<4, { since: number }, GetEventsResponse>
+export type GetEventsEndpoint = Endpoint<5, { since: number }, GetEventsResponse>
 
 export type SetActiveLivestreamRequest = ApiRequest<2, { schema: 2, livestream: string | null }>
 export type SetActiveLivestreamResponse = ApiResponse<2, { livestreamLink: string | null }>
 export type SetActiveLivestreamEndpoint = Endpoint<2, Omit<SetActiveLivestreamRequest, 'schema'>, SetActiveLivestreamResponse>
 
+export type GetMasterchatAuthenticationResponse = ApiResponse<1, { authenticated: boolean | null }>
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type GetMasterchatAuthenticationEndpoint = Endpoint<1, {}, GetMasterchatAuthenticationResponse>
+
 export interface IChatMateController {
   getStatus: GetStatusEndpoint
   getEvents: GetEventsEndpoint
   setActiveLivestream: SetActiveLivestreamEndpoint
+  getMasterchatAuthentication: GetMasterchatAuthenticationEndpoint
 }
 
 @Path(buildPath('chatMate'))
@@ -61,7 +66,7 @@ export default class ChatMateController extends ControllerBase {
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
-    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events', 4)
+    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events', 5)
     if (since == null) {
       return builder.failure(400, `A value for 'since' must be provided.`)
     }
@@ -85,6 +90,17 @@ export default class ChatMateController extends ControllerBase {
       return await this.implementation.setActiveLivestream({ builder, ...request })
     } catch (e: any) {
       return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('masterchat/authentication')
+  public async getMasterchatAuthentication (): Promise<GetMasterchatAuthenticationResponse> {
+    const builder = this.registerResponseBuilder<GetMasterchatAuthenticationResponse>('GET /masterchat/authentication', 1)
+    try {
+      return await this.implementation.getMasterchatAuthentication({ builder })
+    } catch (e: any) {
+      return await builder.failure(e)
     }
   }
 }

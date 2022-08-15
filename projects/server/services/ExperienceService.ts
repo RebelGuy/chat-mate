@@ -4,7 +4,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem, getExternalId } from '@rebel/server/models/chat'
 import ChannelService, { getUserName } from '@rebel/server/services/ChannelService'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
@@ -13,7 +13,7 @@ import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { sortBy, zip, zipOnStrict } from '@rebel/server/util/arrays'
 import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
-import { single } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
@@ -123,12 +123,12 @@ export default class ExperienceService extends ContextClass {
   /** Sorted in ascending order. */
   public async getLeaderboard (): Promise<RankedEntry[]> {
     const userNames = await this.channelService.getActiveUserChannels('all')
-    const userLevels = await this.getLevels(userNames.map(user => user.channel.userId))
+    const userLevels = await this.getLevels(userNames.map(user => user.userId))
 
     const orderedUserLevelChannels = zipOnStrict(userLevels, userNames, 'userId')
     return orderedUserLevelChannels.map((item, i) => ({
       rank: i + 1,
-      userId: item.channel.userId,
+      userId: item.userId,
       userName: getUserName(item),
       level: item.level.level,
       levelProgress: item.level.levelProgress

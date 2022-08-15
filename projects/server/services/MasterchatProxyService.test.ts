@@ -125,6 +125,30 @@ describe(nameof(MasterchatProxyService, 'banYoutubeChannel'), () => {
   })
 })
 
+describe(nameof(MasterchatProxyService, 'timeout'), () => {
+  test('successful request with user timed out', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.timeout.calledWith(contextMenuEndpointParams).mockResolvedValue([])
+
+    await testSuccessful(() => masterchatProxyService.timeout(contextMenuEndpointParams), true)
+  })
+
+  test('successful request with user not timed out', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.timeout.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
+
+    await testSuccessful(() => masterchatProxyService.timeout(contextMenuEndpointParams), false)
+  })
+
+  test('failed request', async () => {
+    const contextMenuEndpointParams = 'test'
+    const error = new Error()
+    mockMasterchat.timeout.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
+
+    await testFailing(() => masterchatProxyService.timeout(contextMenuEndpointParams), error)
+  })
+})
+
 describe(nameof(MasterchatProxyService, 'unbanYoutubeChannel'), () => {
   test('successful request with user unbanned', async () => {
     const contextMenuEndpointParams = 'test'
@@ -158,6 +182,54 @@ describe(nameof(MasterchatProxyService, 'removeMasterchat'), () => {
     masterchatProxyService.removeMasterchat(liveId)
 
     await expect(masterchatProxyService.fetch(liveId, undefined)).rejects.toThrow()
+  })
+})
+
+describe(nameof(MasterchatProxyService, 'mod'), () => {
+  test('successful request with user modded', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.addModerator.calledWith(contextMenuEndpointParams).mockResolvedValue([])
+
+    await testSuccessful(() => masterchatProxyService.mod(contextMenuEndpointParams), true)
+  })
+
+  test('successful request with user not modded', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.addModerator.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
+
+    await testSuccessful(() => masterchatProxyService.mod(contextMenuEndpointParams), false)
+  })
+
+  test('failed request', async () => {
+    const contextMenuEndpointParams = 'test'
+    const error = new Error()
+    mockMasterchat.addModerator.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
+
+    await testFailing(() => masterchatProxyService.mod(contextMenuEndpointParams), error)
+  })
+})
+
+describe(nameof(MasterchatProxyService, 'unmod'), () => {
+  test('successful request with user unmodded', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.removeModerator.calledWith(contextMenuEndpointParams).mockResolvedValue([])
+
+    await testSuccessful(() => masterchatProxyService.unmod(contextMenuEndpointParams), true)
+  })
+
+  test('successful request with user not unmodded', async () => {
+    const contextMenuEndpointParams = 'test'
+    mockMasterchat.removeModerator.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
+
+    await testSuccessful(() => masterchatProxyService.unmod(contextMenuEndpointParams), false)
+  })
+
+  test('failed request', async () => {
+    const contextMenuEndpointParams = 'test'
+    const error = new Error()
+    mockMasterchat.removeModerator.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
+
+    await testFailing(() => masterchatProxyService.unmod(contextMenuEndpointParams), error)
   })
 })
 

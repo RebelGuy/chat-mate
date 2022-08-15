@@ -3,7 +3,7 @@ The server is responsible for fetching data from Youtube via the `masterchat` pr
 
 
 # Project Details
-Built JavaScript files live in the `./dist` folder, while generated data lives in the `./data` folder.
+Built JavaScript files live in the `./dist` folder, while generated data (e.g. logs) live in the `./data` folder.
 
 Note: If fetching Youtube metadata incurs a "Rate limit exceeded" error, then Youtube has flagged us as a bot. A (temporary?) solution is to regenerate an auth token (see below).
 
@@ -16,21 +16,14 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
 
 ## Scripts for development:
 1. `yarn install`.
-2. `yarn auth` to fetch the authentication credentials for YouTube, and `yarn auth:twitch:<debug|release>`. Copy them from the console and set them in the [`.env`](#.env) file.
+2. `yarn auth` to fetch the authentication credentials for YouTube (once done, copy the token from the console and set it in the respective [`.env`](#.env) file), and `yarn auth:twitch:<local|debug|release>` to refresh Twitch authentication.
 3. `yarn watch` while developing
   - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
   - Rely on VSCode for checking types if using this mode
   - Use `yarn watch:check` to use `ts-loader` and enable type checking
-4. `yarn start:debug` to run the debug server, or `yarn start:mock` to run a mock server that will automatically feed through new messages for easy client-side testing - see `MockMasterchat` for more info and options. Note that this does not bundle up the application. For a debug bundle that mirrors the release build, use `yarn build:debug`.
+4. `yarn start:local` to run the server locally, or `yarn start:mock` to use fake implementations of controllers, where available.
 
-Alternatively, run `yarn build:debug` to bundle the debug app to the same format as what is used in release.
 If building fails because the Prisma client could not be found, please run `yarn generate`.
-
-## Scripts for production:
-Assumes that steps 1-3 of the previous section have been run.
-3. `yarn build:release` bundles the application as `./dist/server/app.js`.
-4. `yarn migrate:release` migrate the database to the latest schema
-5. `yarn start:release` to run the release server
 
 
 ## Authentication
@@ -40,9 +33,9 @@ Run `yarn auth` and log in using the streaming account, or a moderator account. 
 ### Twitch
 Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
 
-For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<debug|release>` and sign in manually. After the Electron app closes, note the access token and refresh token printed in the console and set the relevant environment variables. The next time the project is run, these will be stored in the database (`twitch_auth` table) and retrieved thereon, so the variables can be safely removed before subsequent runs.
+For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<local|debug|release>` and sign in manually with the relevant ChatMate account. The access token and refresh token will automatically be stored in the database (`twitch_auth` table) and retrieved/updated automatically thereon.
 
-Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you delete the single row in the `twitch_auth` table and follow the steps above to repeat the initial authentication process.
+Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
 
 ## Logging
 
@@ -58,7 +51,7 @@ When developing locally, we [authenticate](https://github.com/Azure/azure-sdk-fo
 When deployed to Azure, the `MANAGED_IDENTITY_CLIENT_ID` points the credential handler to the managed identity that we want to use, and no further authentication should be required to get things working.
 
 # .env
-Define a `debug.env` and `release.env` file that sets the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
+Define `local.env`, `debug.env` and `release.env` files that set the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
 
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
@@ -66,8 +59,6 @@ The following environment variables must be set in the `.env` file:
 - `CHANNEL_ID`: The channel ID of the livestream user.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
-- `TWITCH_ACCESS_TOKEN`: The access token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
-- `TWITCH_REFRESH_TOKEN`: The refresh token retrieved from `yarn auth:twitch:debug` or `yarn auth:twitch:release`. This is required only when running the server for the first time, or when prompted.
 - `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -79,24 +70,26 @@ The following environment variables must be set in the `.env` file:
 - `MANAGED_IDENTITY_CLIENT_ID`: The Client ID of the Managed Identity that is used to access the Log Analytics workspace for querying logs.
 - `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
-The following set of environment variables is available only for **local development** (that is, where `IS_LOCAL` is `true`):
+The following set of environment variables is available only for **local development** (that is, where `NODE_ENV`=`local`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
 
-The following set of environmnet variables is available only for **deployed instances** (that is, where `IS_LOCAL` is `false`):
+The following set of environmnet variables is available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
 - `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`. *This is set automatically by Azure.*
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
-- `NODE_ENV`: Either `debug` or `release` to indicate whether we are connecting to debug or release servers.
-- `BUILD`: Either `tsc` or `webpack` to indicate the build method. This is used for some module resolution workarounds at runtime.
-- `IS_LOCAL`: [Optional, defaults to `false`] Whether we are running the server locally, or in a deployed environment.
+- `NODE_ENV`: Either `local`, `debug` or `release` to indicate which servers we are connecting to. Some behaviour is different when running the server locally than when the server is deployed.
+
+Finally, the following environment variables must be present in the `<local|debug|release>.env` file when building via webpack. These are not checked at runtime, and ommitting them leads to undefined behaviour.
+- `NAME`: A unique name to give this build.
+- `STUDIO_URL`: The URL to ChatMate studio.
 
 For testing, define a `test.env` file that sets only a subset of the above variables:
 - `DATABASE_URL`
 
 ## Database
 
-The `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
+The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
@@ -104,11 +97,11 @@ At any point where the prisma file (`prisma.schema` - the database schema) is mo
 
 
 ### Migrations
-Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:debug`.
+Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:apply`.
 
 During a migration, ensure that the `.sql` is checked and edited to avoid data loss, but avoid making manual changes that affect the database schema, other than the ones already present.
 
-Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow a expand and contract pattern.
+Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow an expand and contract pattern.
 
 ## Punishments
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
@@ -119,7 +112,7 @@ Currently there are 3 punishment types:
 3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
-`yarn test` performs the test suite. The `test:debug` and `test:release` scripts are for use by CI.
+`yarn test` performs the test suite.
 `yarn test:db` Sets up the test database.
 `yarn test <file regex>` includes only tests within files matching the expression.
 
@@ -136,6 +129,8 @@ Key:
 - ⚪: Won't do
 
 **Services**
+- 🟢 AdminService
+  - 🟢 getAdminUsers
 - ⚪ ApplicationInsightsService
 - 🟢 ChannelService
   - 🟢 getActiveUserChannels
@@ -170,6 +165,13 @@ Key:
   - 🟢 fetch
   - 🟢 fetchMetadata
   - 🟢 removeMasterchat
+  - 🟢 banYoutubeChannel
+  - 🟢 timeout
+  - 🟢 unbanYoutubeChannel
+  - 🟢 mod
+  - 🟢 unmod
+- 🟢 ModService
+  - 🟢 setModRank
 - 🟢 PunishmentService
   - 🟢 initialise
   - 🟢 banUser
@@ -177,21 +179,28 @@ Key:
   - 🟢 muteUser
   - 🟢 timeoutUser
   - 🟢 getCurrentPunishments
+  - 🟢 getPunishmentHistory
   - 🟢 unbanUser
   - 🟢 unmuteUser
   - 🟢 untimeoutUser
+- 🟢 RankService
+  - 🟢 getAccessibleRanks
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
 - 🟢 TwurpleApiProxyService
   - ⚪ ban
   - 🟢 fetchMetadata
+  - ⚪ mod
   - ⚪ say
   - ⚪ timeout
+  - ⚪ unmod
 - 🟢 TwurpleService
   - 🟢 banChannel
   - 🟢 initialise
+  - 🟢 modChannel
   - 🟢 unbanChannel
+  - 🟢 unmodChannel
 - 🟢 YoutubeTimeoutRefreshService
   - 🟢 startTrackingTimeout
   - 🟢 stopTrackingTimeout
@@ -242,6 +251,14 @@ Key:
   - 🟢 getPunishments
   - 🟢 getPunishmentsForUser
   - 🟢 revokePunishment
+- 🟢 RankStore
+  - 🟢 addUserRank
+  - 🟢 getRanks
+  - 🟢 getUserRankById
+  - 🟢 getUserRanks
+  - 🟢 getUserRanksForGroup
+  - 🟢 getUserRankHistory
+  - 🟢 removeUserRank
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation
@@ -268,6 +285,8 @@ Key:
   - 🟢 calculateRepetitionPenalty
   - 🟢 calculateSpamMultiplier
   - 🟢 calculateViewershipMultiplier
+- 🟢 RankHelpers
+  - 🟢 isRankActive
 - 🟢 TimerHelpers
   - 🟢 createRepeatingTimer
   - 🟢 disposeSingle
@@ -276,6 +295,7 @@ Key:
 **Misc**
 - 🔴 util/math
 - 🔴 util/score
+- 🔴 util/arrays
 
 
 # API Endpoints
@@ -302,7 +322,7 @@ Any data in the request body should also have a schema. This is always in sync w
 Path: `/chat`.
 
 ### `GET`
-*Current schema: 7.*
+*Current schema: 8.*
 
 Retrieves the latest chat items.
 
@@ -328,7 +348,7 @@ Returns data with the following properties:
 - `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
-*Current schema: 4.*
+*Current schema: 5.*
 
 Gets the events that have occurred since the specified time.
 
@@ -356,6 +376,17 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `422`: When an active livestream already exists.
+
+### `GET /masterchat/authentication`
+*Current schema: 1.*
+
+Check whether the currently active Masterchat instance is authenticated.
+
+Returns data with the following properties:
+- `authenticated` (`boolean | null`): Whether the Masterchat instance is authenticated.
+  - `true`: The Masterchat instance is authenticated.
+  - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
+  - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
 
 ## Emoji Endpoints
 Path: `/emoji`.
@@ -400,7 +431,7 @@ Can return the following errors:
 Path: `/experience`.
 
 ### `GET /leaderboard`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Gets the ranked experience list of all users.
 
@@ -408,7 +439,7 @@ Returns data with the following properties:
 - `rankedUsers` (`PublicRankedUser[]`): The array of every user's rank, sorted in ascending order.
 
 ### `GET /rank`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Gets the rank of a specific user, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
@@ -424,7 +455,7 @@ Can return the following errors:
 - `404`: When no channel could be matched against the search query.
 
 ### `POST /modify`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Modifies a player's experience by adding a special admin transaction.
 
@@ -455,7 +486,7 @@ Returns data with the following properties:
 Path: `/punishment`.
 
 ### `GET /:id`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Gets a punishment by id.
 
@@ -463,44 +494,45 @@ Path parameters:
 - `id` (`number`): *Required.* The ID of the punishment to retrieve.
 
 Returns data with the following properties:
-- `punishment` (`PublicPunishment`): The punishment matching the specified id.
+- `punishment` (`PublicUserRank`): The punishment matching the specified id.
 
 Can return the following errors:
 - `404`: When a punishment with the specifed id could not be found.
 
 ### `GET`
-*Current schema: 1.*
-
-Gets the list of all punishments for a user.
-
-Query parameters:
-- `userId` (`number`): *Optional.* The ID of the user for which to get punishments. If not provided, returns punishments for all users.
-- `activeOnly` (`boolean`): *Optional.* If true, returns only punishments that are currently active.
-
-Returns data with the following properties:
-- `punishments` (`PublicPunishment[]`): The list of punishments of the user, in descending order by time issued.
-
-Can return the following errors:
-- `400`: When the required query parameters have not been provided.
-
-### `POST /ban`
 *Current schema: 2.*
 
-Applies a punishment of type `ban` to the user. This is essentially a permanent `timeout`.
+Gets the list of current or historical punishments.
+
+Query parameters:
+- `userId` (`number`): *Required if `includeInactive` is `true`, otherwise optional.* The ID of the user for which to get the punishment list. If not provided, returns active punishments for all users.
+- `includeInactive` (`boolean`): *Optional.* If true, returns the list of historical punishments (active and inactive) for a user. If false, returns punishments that are currently active, either for all users or the provided user.
+
+Returns data with the following properties:
+- `punishments` (`PublicUserRank[]`): The list of punishments of the user, in descending order by time issued.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided, or the query parameters are incompatible.
+
+### `POST /ban`
+*Current schema: 4.*
+
+Applies a punishment of type `ban` to the user, which is essentially a permanent `timeout`. This endpoint may also be used to apply bans to any channels which may not currently be banned.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
 - `message` (`string`): *Optional.* The reason for the punishment.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
-- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
+- `newPunishment` (`PublicUserRank | null`): The new punishment that was created as a result of this request, if successful.
+- `newPunishmentError` (`string | null`): If `newPunishment` is `null`, the error that was encountered when attempting to add the punishment.
+- `channelPunishments` (`PublicChannelRankChanges[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /unban`
-*Current schema: 2.*
+*Current schema: 4.*
 
 Revokes an existing `ban` punishment from the user. This may also be used to remove any residual bans on the external platforms.
 
@@ -509,16 +541,17 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
-- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
+- `removedPunishment` (`PublicUserRank | null`): The punishment that was removed, if successful.
+- `removedPunishmentError` (`string | null`): If `removedPunishment` is `null`, the error that was encountered when attempting to remove the punishment.
+- `channelPunishments` (`PublicChannelRankChanges[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /timeout`
-*Current schema: 2.*
+*Current schema: 4.*
 
-Applies a punishment of type `timeout` to the user. This is essentially a temporary `ban`.
+Applies a punishment of type `timeout` to the user, which is essentially a temporary `ban`. This endpoint may also be used to apply timeouts to any channels which may not currently be timed out.
 
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
@@ -526,14 +559,15 @@ Request data (body):
 - `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 5 minutes.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
-- `channelPunishments` (`PublicChannelPunishment[]`): The external punishments applied to channels on YouTube or Twitch.
+- `newPunishment` (`PublicUserRank | null`): The new punishment that was created as a result of this request, if successful.
+- `newPunishmentError` (`string | null`): If `newPunishment` is `null`, the error that was encountered when attempting to add the punishment.
+- `channelPunishments` (`PublicChannelRankChanges[]`): The external punishments applied to channels on YouTube or Twitch.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /revokeTimeout`
-*Current schema: 2.*
+*Current schema: 3.*
 
 Revokes an existing `timeout` punishment from the user. This may also be used to remove any residual timeouts on the external platforms.
 
@@ -542,14 +576,15 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `removedPunishment` (`PublicUserRank | null`): The punishment that was removed, if successful.
+- `removedPunishmentError` (`string | null`): If `removedPunishment` is `null`, the error that was encountered when attempting to remove the punishment.
 - `channelPunishments` (`PublicChannelPunishment[]`): The external punishments revoked from channels on YouTube or Twitch. Note that these are executed regardless of whether an internal punishment was found or not.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /mute`
-*Current schema: 1.*
+*Current schema: 2.*
 
 Applies a punishment of type `mute` to the user.
 
@@ -559,13 +594,13 @@ Request data (body):
 - `durationSeconds` (`number`): *Optional.* The duration of the punishment, in seconds. If 0 or not provided, the punishment is permanent.
 
 Returns data with the following properties:
-- `newPunishment` (`PublicPunishment`): The new punishment that was created as a result of this request.
+- `newPunishment` (`PublicUserRank`): The new punishment that was created as a result of this request.
 
 Can return the following errors:
-- `400`: When the request data is not sent, or is formatted incorrectly.
+- `400`: When the request data is not sent, or is formatted incorrectly. This error is also returned when a mute is already active for the given user.
 
 ### `POST /unmute`
-*Current schema: 1.*
+*Current schema: 3.*
 
 Revokes an existing `mute` punishment from the user.
 
@@ -574,16 +609,116 @@ Request data (body):
 - `message` (`string`): *Optional.* The reason for revoking the punishment.
 
 Returns data with the following properties:
-- `updatedPunishment` (`PublicPunishment | null`): The updated punishment data. Null if no current punishment was found.
+- `removedPunishment` (`PublicUserRank`): The rank that was removed.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When an active mute was not found for the given user.
+
+
+## Rank Endpoints
+Path: `/rank`.
+
+Note: For punishment-specific functionality, refer to the [punishment endpoints](#punishment-endpoints).
+
+### `GET`
+*Current schema: 1.*
+
+Gets the list of current or historical user-ranks.
+
+Query parameters:
+- `userId` (`number`): *Required.* The ID of the user for which to get the list of ranks.
+- `includeInactive` (`boolean`): *Optional.* If true, returns the list of historical ranks (active and inactive) for a user. If false, returns only ranks that are currently active.
+
+Returns data with the following properties:
+- `ranks` (`PublicUserRank[]`): The list of ranks of the user, in descending order by time issued.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+
+
+### `GET /accessible`
+*Current schema: 1.*
+
+Gets the ranks accessible to the current user. At the moment, it returns all Regular ranks and Punishment ranks.
+
+Returns data with the following properties:
+- `accessibleRanks` (`PublicRank[]`): The list of ranks accessible to the user.
+
+### `POST`
+*Current schema: 1.*
+
+Adds a Regular rank to the specified user.
+
+Request data (body):
+- `rank` (`string`): *Required.* The name of the rank to add. Should be one of the following: `famous`, `donator`, `supporter`, `member`.
+- `userId` (`int`): *Required.* The user to which the rank should be added.
+- `message` (`string`): *Optional.* A custom message to accompany the rank addition.
+- `durationSeconds` (`number`): *Optional.* The duration of the rank, in seconds, after which it should automatically expire. If 0 or not provided, the rank is permanent.
+
+Returns data with the following properties:
+- `newRank` (`PublicUserRank`): The new user-rank that was added.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly. This error is also returned when a rank of the specified type is already active for the given user.
+
+### `DELETE`
+*Current schema: 1.*
+
+Removes a regular rank from the specified user.
+
+Request data (body):
+- `rank` (`string`): *Required.* The name of the rank to remove. Should be one of the following: `famous`, `donator`, `supporter`, `member`.
+- `userId` (`int`): *Required.* The user from which the rank should be removed.
+- `message` (`string`): *Optional.* A custom message to accompany the rank removal.
+
+Returns data with the following properties:
+- `removedRank` (`PublicUserRank`): The rank that was removed.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When an active rank of the specified type was not found for the given user.
+
+### `POST /mod`
+*Current schema: 1.*
+
+Add the `mod` rank to the specified user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user to which the rank should be added.
+- `message` (`string`): *Optional.* A custom message to accompany the rank addition.
+
+Returns data with the following properties:
+- `newRank` (`PublicUserRank | null`): The new rank that was added, if successful.
+- `newRankError` (`string | null`): If `newRank` is `null`, the error that was encountered when attempting to add the rank.
+- `channelModChanges` (`PublicChannelRankChange[]`): The external updates made to channels on YouTube or Twitch.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `DELETE /mod`
+*Current schema: 1.*
+
+Remove the `mod` rank from the specified user.
+
+Request data (body):
+- `userId` (`int`): *Required.* The user from which the rank should be removed.
+- `message` (`string`): *Optional.* A custom message to accompany the rank removal.
+
+Returns data with the following properties:
+- `removedRank` (`PublicUserRank | null`): The rank that was removed, if successful.
+- `removedRankError` (`string | null`): If `removedRank` is `null`, the error that was encountered when attempting to remove the rank.
+- `channelModChanges` (`PublicChannelRankChange[]`): The external updates made to channels on YouTube or Twitch.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
 
 ## User Endpoints
 Path: `/user`.
 
 ### `POST /search`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Search for a specific user.
 

@@ -2,12 +2,10 @@ import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import PunishmentStore, { CreatePunishmentArgs } from '@rebel/server/stores/PunishmentStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb } from '@rebel/server/_test/db'
-import { nameof, single } from '@rebel/server/_test/utils'
-import { mock } from 'jest-mock-extended'
-import { activeTimeout, expiredTimeout, activeBan, revokedBan } from '@rebel/server/services/PunishmentService.test'
+import { nameof } from '@rebel/server/_test/utils'
+import { single } from '@rebel/server/util/arrays'
 import * as data from '@rebel/server/_test/testData'
 import { Punishment, PunishmentType } from '@prisma/client'
-import { ADMIN_YOUTUBE_ID } from '@rebel/server/stores/ChannelStore'
 
 export default () => {
   let db: Db
@@ -21,7 +19,7 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.chatUser.create({ data: { youtubeChannels: { create: { youtubeId: ADMIN_YOUTUBE_ID }}}}) // user 1
+    await db.chatUser.create({ data: {}}) // user 1 [admin]
     await db.chatUser.create({data: {}}) // user 2
     await db.chatUser.create({data: {}}) // user 3
 

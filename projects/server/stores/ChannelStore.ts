@@ -8,8 +8,6 @@ import { ObjectComparator } from '@rebel/server/types'
 import { subGroupedSingle, zipOn } from '@rebel/server/util/arrays'
 import { assertUnreachable, compare } from '@rebel/server/util/typescript'
 
-export const ADMIN_YOUTUBE_ID = 'UCBDVDOdE6HOvWdVHsEOeQRA'
-
 export type CreateOrUpdateYoutubeChannelArgs = Omit<New<YoutubeChannelInfo>, 'channelId'>
 export type CreateOrUpdateTwitchChannelArgs = Omit<New<TwitchChannelInfo>, 'channelId'>
 
@@ -28,12 +26,13 @@ export type UserOwnedChannels = {
 
 export type UserChannel = {
   userId: number
-  platform: Extract<ChatPlatform, 'youtube'>
-  channel: YoutubeChannelWithLatestInfo
-} | {
-  userId: number
-  platform: Extract<ChatPlatform, 'twitch'>
-  channel: TwitchChannelWithLatestInfo
+  platformInfo: {
+    platform: Extract<ChatPlatform, 'youtube'>
+    channel: YoutubeChannelWithLatestInfo
+  } | {
+    platform: Extract<ChatPlatform, 'twitch'>
+    channel: TwitchChannelWithLatestInfo
+  }
 }
 
 type Deps = Dependencies<{

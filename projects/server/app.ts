@@ -41,7 +41,7 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
@@ -54,6 +54,12 @@ import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProv
 import LogQueryService from '@rebel/server/services/LogQueryService'
 import LogController from '@rebel/server/controllers/LogController'
 import { TimeoutError } from '@rebel/server/util/error'
+import RankStore from '@rebel/server/stores/RankStore'
+import AdminService from '@rebel/server/services/rank/AdminService'
+import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankController from '@rebel/server/controllers/RankController'
+import ModService from '@rebel/server/services/rank/ModService'
+import RankService from '@rebel/server/services/rank/RankService'
 import * as fs from 'fs'
 
 //
@@ -68,11 +74,8 @@ const dataPath = path.resolve(__dirname, `../../data/`)
 const twitchClientId = env('twitchClientId')
 const twitchClientSecret = env('twitchClientSecret')
 const twitchChannelName = env('twitchChannelName')
-const twitchAccessToken = env('twitchAccessToken')
-const twitchRefreshToken = env('twitchRefreshToken')
 const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
 const enableDbLogging = env('enableDbLogging')
-const isLocal = env('isLocal')
 const hostName = env('websiteHostname')
 const managedIdentityClientId = env('managedIdentityClientId')
 const logAnalyticsWorkspaceId = env('logAnalyticsWorkspaceId')
@@ -86,26 +89,24 @@ const globalContext = ContextProvider.create()
   .withProperty('auth', env('auth'))
   .withProperty('channelId', env('channelId'))
   .withProperty('dataPath', dataPath)
-  .withProperty('isLive', env('nodeEnv') === 'release')
+  .withProperty('nodeEnv', env('nodeEnv'))
   .withProperty('databaseUrl', env('databaseUrl'))
   .withProperty('disableExternalApis', env('useFakeControllers') === true)
   .withProperty('twitchClientId', twitchClientId)
   .withProperty('twitchClientSecret', twitchClientSecret)
   .withProperty('twitchChannelName', twitchChannelName)
-  .withProperty('twitchAccessToken', twitchAccessToken)
-  .withProperty('twitchRefreshToken', twitchRefreshToken)
   .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
   .withProperty('enableDbLogging', enableDbLogging)
   .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
   .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
   .withProperty('dbTransactionTimeout', dbTransactionTimeout)
-  .withProperty('isLocal', isLocal)
   .withProperty('hostName', hostName)
   .withProperty('managedIdentityClientId', managedIdentityClientId)
   .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
+  .withHelpers('rankHelpers', RankHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)
@@ -128,6 +129,8 @@ const globalContext = ContextProvider.create()
   .withClass('livestreamStore', LivestreamStore)
   .withClass('viewershipStore', ViewershipStore)
   .withClass('livestreamService', LivestreamService)
+  .withClass('rankStore', RankStore)
+  .withClass('adminService', AdminService)
   .withClass('experienceStore', ExperienceStore)
   .withClass('channelStore', ChannelStore)
   .withClass('chatStore', ChatStore)
@@ -143,6 +146,8 @@ const globalContext = ContextProvider.create()
   .withClass('chatFetchService', ChatFetchService)
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
+  .withClass('modService', ModService)
+  .withClass('rankService', RankService)
   .build()
 
 app.use((req, res, next) => {
@@ -160,6 +165,7 @@ app.use((req, res, next) => {
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
 app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
 app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
 app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
 app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
 
@@ -188,6 +194,7 @@ app.use(async (req, res, next) => {
     .withClass('userController', UserController)
     .withClass('punishmentController', PunishmentController)
     .withClass('logController', LogController)
+    .withClass('rankController', RankController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -212,7 +219,8 @@ Server.buildServices(app,
   ExperienceController,
   UserController,
   PunishmentController,
-  LogController
+  LogController,
+  RankController
 )
 
 process.on('unhandledRejection', (error) => {

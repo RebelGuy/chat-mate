@@ -11,6 +11,7 @@ import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
 import { EventSubBase } from '@twurple/eventsub/lib/EventSubBase'
+import { NodeEnv } from '@rebel/server/globals'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -19,8 +20,7 @@ const NGROK_MAX_SESSION = 3600 * 2 * 1000
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
-  isLive: boolean
-  isLocal: boolean
+  nodeEnv: NodeEnv
   twitchChannelName: string
   hostName: string | null
   twurpleApiClientProvider: TwurpleApiClientProvider
@@ -36,8 +36,7 @@ export default class HelixEventService extends ContextClass {
   public readonly name = HelixEventService.name
 
   private readonly disableExternalApis: boolean
-  private readonly isLive: boolean
-  private readonly isLocal: boolean
+  private readonly nodeEnv: NodeEnv
   private readonly twitchChannelName: string
   private readonly hostName: string | null
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
@@ -56,8 +55,7 @@ export default class HelixEventService extends ContextClass {
     super()
 
     this.disableExternalApis = deps.resolve('disableExternalApis')
-    this.isLive = deps.resolve('isLive')
-    this.isLocal = deps.resolve('isLocal')
+    this.nodeEnv = deps.resolve('nodeEnv')
     this.twitchChannelName = deps.resolve('twitchChannelName')
     this.hostName = deps.resolve('hostName')
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
@@ -86,7 +84,7 @@ export default class HelixEventService extends ContextClass {
     }
     this.user = user
 
-    if (this.isLocal) {
+    if (this.nodeEnv === 'local') {
       // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
       // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
       // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
@@ -162,7 +160,7 @@ export default class HelixEventService extends ContextClass {
   }
 
   private createAdapter (): ConnectionAdapter {
-    if (this.isLocal) {
+    if (this.nodeEnv === 'local') {
       // debug the Ngrok server at http://localhost:4040/inspect/http
       return new NgrokAdapter()
     } else {
@@ -185,6 +183,6 @@ export default class HelixEventService extends ContextClass {
   }
 
   private getSecret (): string {
-    return `065adade-b312-11ec-b909-0242ac120002-${this.isLive}-${this.isLocal}`
+    return `065adade-b312-11ec-b909-0242ac120002-${this.nodeEnv}`
   }
 }

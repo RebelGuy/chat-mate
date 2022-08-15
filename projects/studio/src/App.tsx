@@ -1,5 +1,6 @@
 import ChatMateManager from '@rebel/studio/ChatMateManager'
 import CustomEmojiManager from '@rebel/studio/CustomEmojiManager'
+import Footer from '@rebel/studio/Footer'
 import Home from '@rebel/studio/Home'
 import HomePageButton from '@rebel/studio/HomePageButton'
 import { Page } from '@rebel/studio/types'
@@ -37,6 +38,7 @@ export default class App extends React.PureComponent<Props, State> {
         {this.state.currentPage === 'home' && <Home onSelectPage={this.onSelectPage} />} 
         {this.state.currentPage === 'chatMate' && <ChatMateManager />}
         {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
+        <Footer />
       </div>
     )
   }

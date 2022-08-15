@@ -7,7 +7,10 @@ import StatusService from '@rebel/server/services/StatusService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import { firstOrDefault } from '@rebel/server/util/typescript'
 
-type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout'>
+type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'> & {
+  // underlying instance
+  masterchat: Masterchat
+}
 
 type Deps = Dependencies<{
   logService: LogService
@@ -45,6 +48,17 @@ export default class MasterchatProxyService extends ContextClass {
 
   public removeMasterchat (liveId: string) {
     this.wrappedMasterchats.delete(liveId)
+  }
+
+  /** If an instance of masterchat is active, returns whether the credentials are currently active and valid.
+   * If false, no user is authenticated and some requests will fail. */
+  public checkCredentials () {
+    const masterchat = firstOrDefault(this.wrappedMasterchats, null)
+    if (masterchat == null) {
+      return null
+    } else {
+      return !masterchat.masterchat.isLoggedOut
+    }
   }
 
   // the second argument is not optional to avoid bugs where `fetch(continuationToken)` is erroneously called.
@@ -85,6 +99,20 @@ export default class MasterchatProxyService extends ContextClass {
     return result != null
   }
 
+  /** Returns true if the channel was modded. False indicates that the 'add moderator' option
+   * was not included in the latest chat item's context menu. */
+  public async mod (contextMenuEndpointParams: string): Promise<boolean> {
+    const result = await this.getFirst().addModerator(contextMenuEndpointParams)
+    return result != null
+  }
+
+  /** Returns true if the channel was modded. False indicates that the 'remove moderator' option
+   * was not included in the latest chat item's context menu. */
+  public async unmod (contextMenuEndpointParams: string): Promise<boolean> {
+    const result = await this.getFirst().removeModerator(contextMenuEndpointParams)
+    return result != null
+  }
+
   private getFirst () {
     const masterchat = firstOrDefault(this.wrappedMasterchats, null)
     if (masterchat == null) {
@@ -102,8 +130,10 @@ export default class MasterchatProxyService extends ContextClass {
     const hide = this.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`)
     const unhide = this.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`)
     const timeout = this.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`)
+    const addModerator = this.wrapRequest((arg) => masterchat.addModerator(arg), `masterchat[${liveId}].addModerator`)
+    const removeModerator = this.wrapRequest((arg) => masterchat.removeModerator(arg), `masterchat[${liveId}].removeModerator`)
 
-    return { fetch, fetchMetadata, hide, unhide, timeout }
+    return { masterchat, fetch, fetchMetadata, hide, unhide, timeout, addModerator, removeModerator }
   }
 
   private wrapRequest<TQuery extends any[], TResponse> (

@@ -82,8 +82,6 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
       const timerId = this.punishmentTimerMap.get(punishmentId)![1]
       this.timerHelpers.disposeSingle(timerId)
       this.punishmentTimerMap.delete(punishmentId)
-    } else {
-      this.logService.logWarning(this, 'Tried to stop tracking timeout for punishment with id', punishmentId, ', but no active timer was present.')
     }
   }
 

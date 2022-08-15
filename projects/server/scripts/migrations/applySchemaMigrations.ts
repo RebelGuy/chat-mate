@@ -1,6 +1,5 @@
-require('../../_config')
-import { execAsync } from '../../util/node'
-import { promptInput } from '../../util/input'
+import { execAsync } from '@rebel/server/util/node'
+import { promptInput } from '@rebel/server/util/input'
 import { getOutstandingMigrationNames } from './util'
 import env from '@rebel/server/globals'
 
@@ -39,4 +38,4 @@ const main = async () => {
 }
 
 console.log('')
-main()
+void main()

@@ -1,19 +1,20 @@
-/* eslint-disable @typescript-eslint/quotes */
-require('../_config')
 // https://www.electronjs.org/docs/api/session
 import { app, BrowserWindow } from 'electron'
 import { URL } from 'url'
 import fetch from 'node-fetch'
 import { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
+import { DB, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } from '@rebel/server/scripts/consts'
+import AuthStore from '@rebel/server/stores/AuthStore'
+import DbProvider from '@rebel/server/providers/DbProvider'
+import { Dependencies } from '@rebel/server/context/context'
+import { AccessToken } from '@twurple/auth/lib'
 
 
 // stolen from the masterchat auth fetcher, modified according to https://twurple.js.org/docs/examples/chat/basic-bot.html
 
 const REDIRECT_URI = 'http://localhost'
-const CLIENT_ID = process.env.TWITCH_CLIENT_ID
-const CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET
 
-if (REDIRECT_URI == null || CLIENT_ID == null || CLIENT_SECRET == null) {
+if (REDIRECT_URI == null || TWITCH_CLIENT_ID == null || TWITCH_CLIENT_SECRET == null) {
   throw new Error('Invalid env variables')
 }
 
@@ -39,7 +40,7 @@ async function createWindow () {
       contextIsolation: true,
       nodeIntegration: false,
       enableRemoteModule: false,
-    } as any,
+    } as any
   })
 
   /**
@@ -67,7 +68,7 @@ async function createWindow () {
       // we got redirected to our localhost, with a `code` query parameter
       const CODE = new URL(url).searchParams.get('code')
 
-      const authUrl = `https://id.twitch.tv/oauth2/token?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&code=${CODE}&grant_type=authorization_code&redirect_uri=${REDIRECT_URI}`
+      const authUrl = `https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&code=${CODE}&grant_type=authorization_code&redirect_uri=${REDIRECT_URI}`
       const rawResponse = await fetch(authUrl, {
         method: 'POST',
         headers: {
@@ -76,21 +77,35 @@ async function createWindow () {
         },
       })
       const response = await rawResponse.json() as any
+      const accessToken = response.access_token
+      const refreshToken = response.refresh_token
 
-      console.log('----- SUCCESS -----')
-      console.log(`Copy the following variables to the ${process.env.NODE_ENV?.toLowerCase()}.env file:`)
-      console.log('')
-      console.log(`TWITCH_ACCESS_TOKEN=${response.access_token}`)
-      console.log(`TWITCH_REFRESH_TOKEN=${response.refresh_token}`)
-      console.log('')
+      console.log('Successfully retrieved the access token from the response.')
+
+      const partialDbProvider: Pick<DbProvider, 'get'> = { get: () => DB }
+      const authStore = new AuthStore(new Dependencies({
+        dbProvider: partialDbProvider as DbProvider,
+        twitchClientId: TWITCH_CLIENT_ID
+      }))
+      const token: AccessToken = {
+        accessToken,
+        refreshToken,
+        scope: TWITCH_SCOPE,
+        expiresIn: 0,
+        obtainmentTimestamp: 0
+      }
+      await authStore.saveAccessToken(token)
+
       console.log('-------------------')
-       
+      console.log('Successfully saved Twitch credentials.')
+      console.log('-------------------')
+
       app.quit()
     }
   })
 
   const scope = TWITCH_SCOPE.join('+')
-  await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${scope}`)
+  await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${scope}`)
 }
 
 app.on("session-created", (session: any) => {

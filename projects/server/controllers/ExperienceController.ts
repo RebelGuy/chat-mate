@@ -2,37 +2,40 @@ import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependenc
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
-import { punishmentToPublicObject } from '@rebel/server/models/punishment'
-import { userChannelAndLevelToPublicUser } from '@rebel/server/models/user'
+import { userRankToPublicObject } from '@rebel/server/models/rank'
+import { userDataToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import PunishmentService from '@rebel/server/services/PunishmentService'
+import PunishmentService from '@rebel/server/services/rank/PunishmentService'
+import RankStore from '@rebel/server/stores/RankStore'
+import { single, zipOnStrict } from '@rebel/server/util/arrays'
 import { GET, Path, POST, QueryParam } from 'typescript-rest'
 
-type GetLeaderboardResponse = ApiResponse<3, {
-  rankedUsers: Tagged<2, PublicRankedUser>[]
+type GetLeaderboardResponse = ApiResponse<4, {
+  rankedUsers: Tagged<3, PublicRankedUser>[]
 }>
 
-type GetRankResponse = ApiResponse<3, {
+type GetRankResponse = ApiResponse<4, {
   relevantIndex: number
-  rankedUsers: Tagged<2, PublicRankedUser>[]
+  rankedUsers: Tagged<3, PublicRankedUser>[]
 }>
 
-type ModifyExperienceRequest = ApiRequest<2, {
-  schema: 2,
+type ModifyExperienceRequest = ApiRequest<3, {
+  schema: 3,
   userId: number,
   deltaLevels: number,
   message: string | null
 }>
 
-type ModifyExperienceResponse = ApiResponse<2, {
-  updatedUser: Tagged<2, PublicUser>
+type ModifyExperienceResponse = ApiResponse<3, {
+  updatedUser: Tagged<3, PublicUser>
 }>
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService
   experienceService: ExperienceService
   punishmentService: PunishmentService
+  rankStore: RankStore
 }>
 
 @Path(buildPath('experience'))
@@ -40,25 +43,24 @@ export default class ExperienceController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
   private readonly punishmentService: PunishmentService
+  private readonly rankStore: RankStore
 
   constructor (deps: Deps) {
     super(deps, 'experience')
     this.channelService = deps.resolve('channelService')
     this.experienceService = deps.resolve('experienceService')
     this.punishmentService = deps.resolve('punishmentService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   @GET
   @Path('leaderboard')
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
-    const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 3)
+    const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 4)
     try {
       const leaderboard = await this.experienceService.getLeaderboard()
-      const activePunishments = await this.punishmentService.getCurrentPunishments()
-      const publicLeaderboard = leaderboard.map(entry => {
-        const userPunishments = activePunishments.filter(p => p.userId === entry.userId).map(punishmentToPublicObject)
-        return rankedEntryToPublic(entry, userPunishments)
-      })
+      const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId))
+      const publicLeaderboard = zipOnStrict(leaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
       return builder.failure(e)
@@ -70,7 +72,7 @@ export default class ExperienceController extends ControllerBase {
   public async getRank (
     @QueryParam('id') id: number
   ): Promise<GetRankResponse> {
-    const builder = this.registerResponseBuilder<GetRankResponse>('GET /rank', 3)
+    const builder = this.registerResponseBuilder<GetRankResponse>('GET /rank', 4)
     if (id == null) {
       return builder.failure(400, `A value for 'name' or 'id' must be provided.`)
     }
@@ -96,11 +98,8 @@ export default class ExperienceController extends ControllerBase {
       }
       const upperRank = lowerRank + rankPadding * 2
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
-      const activePunishments = await this.punishmentService.getCurrentPunishments()
-      const publicLeaderboard = prunedLeaderboard.map(entry => {
-        const userPunishments = activePunishments.filter(p => p.userId === entry.userId).map(punishmentToPublicObject)
-        return rankedEntryToPublic(entry, userPunishments)
-      })
+      const activeRanks = await this.rankStore.getUserRanks(prunedLeaderboard.map(entry => entry.userId))
+      const publicLeaderboard = zipOnStrict(prunedLeaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
 
       return builder.success({
         relevantIndex: prunedLeaderboard.findIndex(l => l === match),
@@ -114,7 +113,7 @@ export default class ExperienceController extends ControllerBase {
   @POST
   @Path('modify')
   public async modifyExperience (request: ModifyExperienceRequest): Promise<ModifyExperienceResponse> {
-    const builder = this.registerResponseBuilder<ModifyExperienceResponse>('POST /modify', 2)
+    const builder = this.registerResponseBuilder<ModifyExperienceResponse>('POST /modify', 3)
     if (request == null || request.schema !== builder.schema) {
       return builder.failure(400, 'Invalid request data.')
     }
@@ -127,9 +126,8 @@ export default class ExperienceController extends ControllerBase {
       }
 
       const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
-      const activePunishments = await this.punishmentService.getCurrentPunishments()
-      const userPunishments = activePunishments.filter(p => p.userId === request.userId).map(punishmentToPublicObject)
-      const publicUser = userChannelAndLevelToPublicUser({ ...userChannel, ...level }, userPunishments)
+      const activeRanks = single(await this.rankStore.getUserRanks([request.userId]))
+      const publicUser = userDataToPublicUser({ ...userChannel, ...level, ...activeRanks })
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {
       return builder.failure(e)
