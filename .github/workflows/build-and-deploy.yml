@@ -7,6 +7,9 @@ on:
         # `debug` or `release`
         type: string
         required: true
+      STUDIO_URL:
+        type: string
+        required: true
       deploy:
         type: boolean
         required: true
@@ -38,10 +41,11 @@ jobs:
       # required for webpack and deployment
       - name: Create .env file
         run: |
-          touch ./projects/server/.env
-          echo NODE_ENV=${{ inputs.NODE_ENV }} >> ./projects/server/.env
-          echo "NAME=\"${{ github.sha }} - ${{ github.event_name }} - ${{ github.head_ref || github.ref_name }}\"" >> ./projects/server/.env
-          cat ./projects/server/.env
+          touch ./projects/server/${{ inputs.NODE_ENV }}.env
+          echo NODE_ENV=${{ inputs.NODE_ENV }} >> ./projects/server/${{ inputs.NODE_ENV }}.env
+          echo "NAME=\"${{ github.sha }} - ${{ github.event_name }} - ${{ github.head_ref || github.ref_name }}\"" >> ./projects/server/${{ inputs.NODE_ENV }}.env
+          echo STUDIO_URL=${{ inputs.STUDIO_URL }} >> ./projects/server/${{ inputs.NODE_ENV }}.env
+          cat ./projects/server/${{ inputs.NODE_ENV }}.env
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -203,7 +207,7 @@ jobs:
     needs: [build-server, test-server, build-studio]
     environment:
       name: ${{ inputs.NODE_ENV == 'debug' && 'Sandbox' || 'Production' }}
-      url: ${{ inputs.NODE_ENV == 'debug' && 'https://nice-coast-05a39c31e.1.azurestaticapps.net' || 'https://kind-rock-0d2509e10.1.azurestaticapps.net' }}
+      url: ${{ inputs.STUDIO_URL }}
 
     steps:
       - name: Download built studio files

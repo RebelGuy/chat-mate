@@ -6,8 +6,6 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const execSync = require('child_process').execSync
 
-require('dotenv').config() // loads the .env file generated during the Github Actions process
-
 function parseBoolean (str) {
   return str === 'true' ? true : str === 'false' ? false : null
 }
@@ -21,9 +19,17 @@ const version = versionParts.join('.')
 const banner =  `${PACKAGE.name} - ${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
-  const nodeEnv = env.NODE_ENV ?? 'local'
+  // from `env` because it's injected
+  const nodeEnv = env.NODE_ENV
+  if (nodeEnv == null || nodeEnv === '') {
+    throw new Error('The NODE_ENV variable must be injected when using webpack.')
+  }
+
+  require('dotenv').config({ path: `${nodeEnv}.env` })
+
   const isLocal = nodeEnv === 'local'
   const NAME = process.env.NAME ?? '' // env variable defined in CI (e.g. '74d8a7029d5c30e332fe59c075a42a75aa6deffd - push - master')
+  const STUDIO_URL = process.env.STUDIO_URL ?? env.STUDIO_URL ?? '' // defined in CI or in the .env file when building locally
   const NOW = new Date()
 
   // special env variable passed to webpack during local development for faster building
@@ -222,6 +228,7 @@ module.exports = (env) => {
         version: version,
         date: NOW.toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', hour12: false }),
         build: NAME,
+        studioUrl: STUDIO_URL
       })
     ]
   }

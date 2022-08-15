@@ -80,6 +80,10 @@ The following set of environmnet variables is available only for **deployed inst
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
 - `NODE_ENV`: Either `local`, `debug` or `release` to indicate which servers we are connecting to. Some behaviour is different when running the server locally than when the server is deployed.
 
+Finally, the following environment variables must be present in the `<local|debug|release>.env` file when building via webpack. These are not checked at runtime, and ommitting them leads to undefined behaviour.
+- `NAME`: A unique name to give this build.
+- `STUDIO_URL`: The URL to ChatMate studio.
+
 For testing, define a `test.env` file that sets only a subset of the above variables:
 - `DATABASE_URL`
 

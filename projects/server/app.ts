@@ -165,6 +165,7 @@ app.use((req, res, next) => {
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
 app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
 app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
 app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
 app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
 
