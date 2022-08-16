@@ -1,6 +1,8 @@
 import { ObjectComparator, ValueComparator } from '@rebel/server/types'
 import { values } from '@rebel/server/util/arrays'
 
+export const NO_OP = () => { /* Do nothing */ }
+
 export function assert (condition: any, msg: string): asserts condition {
   if (!condition) {
     throw new Error(msg)

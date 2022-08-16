@@ -60,6 +60,7 @@ The following environment variables must be set in the `.env` file:
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
+- `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -71,7 +72,8 @@ The following environment variables must be set in the `.env` file:
 - `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
 The following set of environment variables is available only for **local development** (that is, where `NODE_ENV`=`local`):
-- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
+- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `fa
+lse`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
 
 The following set of environmnet variables is available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
@@ -131,6 +133,7 @@ Key:
 **Services**
 - 🟢 AdminService
   - 🟢 getAdminUsers
+- ⚪ ApiService
 - ⚪ ApplicationInsightsService
 - 🟢 ChannelService
   - 🟢 getActiveUserChannels
@@ -185,6 +188,7 @@ Key:
   - 🟢 untimeoutUser
 - 🟢 RankService
   - 🟢 getAccessibleRanks
+- ⚪ StreamlabsProxyService
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone

@@ -1,11 +1,10 @@
 import { ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import { firstOrDefault } from '@rebel/server/util/typescript'
+import ApiService from '@rebel/server/services/abstract/ApiService'
 
 type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'> & {
   // underlying instance
@@ -18,27 +17,22 @@ type Deps = Dependencies<{
   masterchatFactory: MasterchatFactory
 }>
 
-export default class MasterchatProxyService extends ContextClass {
-  public name = MasterchatProxyService.name
-
-  private readonly logService: LogService
-  private readonly statusService: StatusService
+export default class MasterchatProxyService extends ApiService {
   private readonly masterchatFactory: MasterchatFactory
 
   // note that some endpoints are livestream-agnostic
   private readonly wrappedMasterchats: Map<string, PartialMasterchat>
 
-  private requestId: number
-
   constructor (deps: Deps) {
-    super()
-    this.logService = deps.resolve('logService')
-    this.statusService = deps.resolve('masterchatStatusService')
+    const name = MasterchatProxyService.name
+    const logService = deps.resolve('logService')
+    const statusService = deps.resolve('masterchatStatusService')
+    const timeout = null
+    super(name, logService, statusService, timeout)
+
     this.masterchatFactory = deps.resolve('masterchatFactory')
 
     this.wrappedMasterchats = new Map()
-
-    this.requestId = 0
   }
 
   public addMasterchat (liveId: string) {
@@ -125,50 +119,14 @@ export default class MasterchatProxyService extends ContextClass {
   private createWrapper = (liveId: string, masterchat: Masterchat): PartialMasterchat => {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
-    const fetch = this.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`)
-    const fetchMetadata = this.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`)
-    const hide = this.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`)
-    const unhide = this.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`)
-    const timeout = this.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`)
-    const addModerator = this.wrapRequest((arg) => masterchat.addModerator(arg), `masterchat[${liveId}].addModerator`)
-    const removeModerator = this.wrapRequest((arg) => masterchat.removeModerator(arg), `masterchat[${liveId}].removeModerator`)
+    const fetch = super.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`)
+    const fetchMetadata = super.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`)
+    const hide = super.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`)
+    const unhide = super.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`)
+    const timeout = super.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`)
+    const addModerator = super.wrapRequest((arg) => masterchat.addModerator(arg), `masterchat[${liveId}].addModerator`)
+    const removeModerator = super.wrapRequest((arg) => masterchat.removeModerator(arg), `masterchat[${liveId}].removeModerator`)
 
     return { masterchat, fetch, fetchMetadata, hide, unhide, timeout, addModerator, removeModerator }
-  }
-
-  private wrapRequest<TQuery extends any[], TResponse> (
-    request: (...query: TQuery) => Promise<TResponse>,
-    requestName: string
-  ): (...query: TQuery) => Promise<TResponse> {
-    return async (...query: TQuery) => {
-      // set up
-      const id = this.requestId++
-      const startTime = Date.now()
-
-      // do request
-      let error: any | null = null
-      let response: TResponse | null = null
-      this.logService.logApiRequest(this, id, requestName, { ...query })
-      try {
-        response = await request(...query)
-        this.logService.logApiResponse(this, id, false, response)
-      } catch (e) {
-        error = e
-        this.logService.logApiResponse(this, id, true, e)
-      }
-      const finishTime = Date.now()
-
-      // notify
-      const duration = finishTime - startTime
-      const status = error == null ? 'ok' : 'error'
-      this.statusService.onRequestDone(finishTime, status, duration)
-
-      // return
-      if (error) {
-        throw error
-      } else {
-        return response!
-      }
-    }
   }
 }

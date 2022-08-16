@@ -61,6 +61,7 @@ import RankController from '@rebel/server/controllers/RankController'
 import ModService from '@rebel/server/services/rank/ModService'
 import RankService from '@rebel/server/services/rank/RankService'
 import * as fs from 'fs'
+import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -82,6 +83,7 @@ const logAnalyticsWorkspaceId = env('logAnalyticsWorkspaceId')
 const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
 const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
 const dbTransactionTimeout = env('dbTransactionTimeout')
+const streamlabsAccessToken = env('streamlabsAccessToken')
 
 const globalContext = ContextProvider.create()
   .withObject('app', app)
@@ -103,6 +105,7 @@ const globalContext = ContextProvider.create()
   .withProperty('hostName', hostName)
   .withProperty('managedIdentityClientId', managedIdentityClientId)
   .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
+  .withProperty('streamlabsAccessToken', streamlabsAccessToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -118,6 +121,7 @@ const globalContext = ContextProvider.create()
   .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
   .withClass('twurpleStatusService', StatusService)
+  .withClass('streamlabsStatusService', StatusService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('masterchatProxyService', MasterchatProxyService)
@@ -126,6 +130,7 @@ const globalContext = ContextProvider.create()
   .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
   .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
   .withClass('twurpleApiProxyService', TwurpleApiProxyService)
+  .withClass('streamlabsProxyService', StreamlabsProxyService)
   .withClass('livestreamStore', LivestreamStore)
   .withClass('viewershipStore', ViewershipStore)
   .withClass('livestreamService', LivestreamService)
