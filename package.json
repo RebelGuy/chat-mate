@@ -7,6 +7,9 @@
       "./projects/*"
     ]
   },
+  "engines": {
+    "node": ">=18.7.0"
+  },
   "_moduleAliases": {
     "@rebel/server": "./dist/server",
     "@rebel/masterchat": "./dist/masterchat/src"

@@ -26,6 +26,14 @@ export class UserRankAlreadyExistsError extends Error {
   }
 }
 
+export class ApiResponseError extends Error {
+  constructor (status: number, errorType?: string, errorDescription?: string){ 
+    super(`Request failed with code ${status}: ${errorType ?? 'Unknown error'}. ${errorDescription ?? 'No further details available'}`)
+
+    Object.setPrototypeOf(this, ApiResponseError.prototype)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

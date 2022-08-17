@@ -4,6 +4,12 @@ import ApiService from '@rebel/server/services/abstract/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { single } from '@rebel/server/util/arrays'
+import { ApiResponseError } from '@rebel/server/util/error'
+import { throws } from 'node:assert'
+
+// we have to use this ancient version thanks to the fantastic work of the streamlabs devs!
+// https://stackoverflow.com/a/67447804
+import io from 'socket.io-client'
 
 // https://dev.streamlabs.com/docs/currency-codes
 const CURRENCIES = {
@@ -35,13 +41,12 @@ const REST_BASE_URL = 'https://streamlabs.com/api/v1.0'
 
 const SOCKET_BASE_URL = 'https://sockets.streamlabs.com'
 
-const WEBSOCKET_DISPOSE_CLOSE_CODE = -1
-
 export type CurrencyCode = keyof typeof CURRENCIES
 
 export type StreamlabsDonation = {
   donationId: number
   createdAt: number
+  // for WebSocket respones, the currency is always converted into USD
   currency: CurrencyCode
   amount: number
   name: string
@@ -115,7 +120,7 @@ export default class StreamlabsProxyService extends ApiService {
   private readonly nodeEnv: NodeEnv
 
   private donationCallback: DonationCallback | null
-  private webSocket: WebSocket | null
+  private readonly webSocket: SocketIOClient.Socket
 
   constructor (deps: Deps) {
     const name = StreamlabsProxyService.name
@@ -129,16 +134,25 @@ export default class StreamlabsProxyService extends ApiService {
     this.nodeEnv = deps.resolve('nodeEnv')
 
     this.donationCallback = null
-    this.webSocket = null
+    this.webSocket = io(SOCKET_BASE_URL + `?token=${this.socketToken}`, {
+      reconnection: true,
+      reconnectionDelay: 10000,
+      autoConnect: false
+    })
   }
 
   public override dispose (): void | Promise<void> {
-    this.webSocket?.close(WEBSOCKET_DISPOSE_CLOSE_CODE, `${this.name} is disposing`)
+    this.webSocket.disconnect()
   }
 
   // https://streamlabs.readme.io/docs/donations
-  /** Returns the first 100 donations donations in descending order after the given ID. */
+  /** Returns the first 100 donations donations in descending order after the given ID.
+   * @throws {@link ApiResponseError} */
   public async getDonationsAfterId (id: number | null): Promise<StreamlabsDonation[]> {
+    // todo: the access_token doesn't work (returns 401), so the only way to get this to work
+    // would be to properly implement the OAuth2 flow described in https://rebel-guy.atlassian.net/browse/CHAT-378?focusedCommentId=10079
+    return []
+
     // todo: will need to implement pagination in the future, but will work just fine for low volumes of data
     const params: Stringify<GetDonationsRequestParams> = {
       limit: '100',
@@ -158,27 +172,24 @@ export default class StreamlabsProxyService extends ApiService {
   }
 
   public listen (callback: DonationCallback) {
-    if (this.webSocket != null || this.donationCallback != null) {
+    if (this.donationCallback != null) {
       throw new Error('Already listening')
     }
 
     this.donationCallback = callback
-    this.createWebsocket()
+    this.webSocket.on('event', this.onSocketData)
+    this.webSocket.on('connect', () => this.logService.logInfo(this, 'WebSocket connected'))
+    this.webSocket.on('connect_error', (e: any) => this.logService.logInfo(this, 'WebSocket encountered an error:', e.message))
+    this.webSocket.on('disconnect', (reason: any) => this.logService.logInfo(this, 'WebSocket disconnected. Reason:', reason))
+    this.webSocket.connect()
   }
 
-  private createWebsocket () {
-    this.webSocket = new WebSocket(SOCKET_BASE_URL + `?token=${this.socketToken}`)
-
-    this.webSocket.onmessage = (event) => this.onMessage(event)
-    this.webSocket.onclose = (event) => this.onClose(event)
-  }
-
-  private async onMessage (event: MessageEvent<WebsocketMessage>) {
-    if (event.data.type !== 'donation') {
+  private onSocketData = async (data: WebsocketMessage) => {
+    if (data.type !== 'donation') {
       return
     }
 
-    const message = single(event.data.message)
+    const message = single(data.message)
     const donation: StreamlabsDonation = {
       amount: Number.parseFloat(message.amount),
       createdAt: new Date().getTime(),
@@ -191,16 +202,7 @@ export default class StreamlabsProxyService extends ApiService {
     try {
       await this.donationCallback!(donation)
     } catch (e: any) {
-      super.logService.logError(this, `Donation callback failed to run for donation id ${donation.donationId}:`, e)
-    }
-  }
-
-  private onClose (event: CloseEvent) {
-    const shouldReconnect = event.code !== WEBSOCKET_DISPOSE_CLOSE_CODE
-    super.logService.logInfo(this, `Websocket closed with code ${event.code}. Reason: ${event.reason}. Reconnecting: ${shouldReconnect}`)
-
-    if (shouldReconnect) {
-      this.createWebsocket()
+      this.logService.logError(this, `Donation callback failed to run for donation id ${donation.donationId}:`, e)
     }
   }
 
@@ -209,11 +211,17 @@ export default class StreamlabsProxyService extends ApiService {
     params.append('access_token', this.accessToken)
     
     const requestName = `${method} ${path}`
-    const wrappedRequest = super.wrapRequest(async () => {
+    const wrappedRequest = this.wrapRequest(async () => {
       const response = await fetch(`${REST_BASE_URL}${path}?${params}`, {
         method: method
       })
-      return JSON.parse(await response.json()) as T
+      
+      const json = await response.json()
+      if (response.ok) {
+        return json
+      } else {
+        throw new ApiResponseError(response.status, json.error, json.error_description)
+      }
     }, requestName)
     return await wrappedRequest()
   }
