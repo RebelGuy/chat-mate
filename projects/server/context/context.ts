@@ -38,30 +38,30 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
 
   // add the given class to the context. note that its dependencies can only depend on classes
   // that are already part of the context (will throw otherwise).
-  public withClass<Name extends DepName, ClassType extends ContextClass> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType) {
+  public withClass<Name extends UniqueName<Name, TClasses, TObjects, TProperties>, ClassType extends ContextClass> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties>) => ClassType) {
     this.assertMutable()
     // todo: this should just extend the types, but not do any instantiation...
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
 
   // add the given helper class to the context. it should not have ANY dependencies
-  public withHelpers<Name extends DepName, HelperClassType extends ContextClass> (name: Name, ctor: new () => HelperClassType) {
+  public withHelpers<Name extends UniqueName<Name, TClasses, TObjects, TProperties>, HelperClassType extends ContextClass> (name: Name, ctor: new () => HelperClassType) {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
 
   // add the given factory class to the context. it should not have ANY dependencies
-  public withFactory<Name extends DepName, FactoryClassType extends Factory<any>> (name: Name, ctor: new () => FactoryClassType) {
+  public withFactory<Name extends UniqueName<Name, TClasses, TObjects, TProperties>, FactoryClassType extends Factory<any>> (name: Name, ctor: new () => FactoryClassType) {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
 
-  public withObject<Name extends DepName, T extends Injectable> (name: Name, object: T) {
+  public withObject<Name extends UniqueName<Name, TClasses, TObjects, TProperties>, T extends Injectable> (name: Name, object: T) {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withObject(name, object))
   }
 
-  public withProperty<Name extends DepName, T extends string | boolean | number | null> (name: Name, prop: T) {
+  public withProperty<Name extends UniqueName<Name, TClasses, TObjects, TProperties>, T extends string | boolean | number | null> (name: Name, prop: T) {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withProperty(name, prop))
   }
@@ -124,6 +124,9 @@ type DepName = string
 type StoredClass<Name extends DepName, ClassType extends ContextClass> = { [key in Name]: ClassType }
 type StoredObject<Name extends DepName, Obj extends Injectable> = { [key in Name]: Obj }
 type StoredProperty<Name extends DepName, Prop extends string | boolean | number | null> = { [key in Name]: Prop }
+
+// returns `never` if the given name is not unique
+type UniqueName<Name, SC extends StoredClass<any, any>, SO extends StoredObject<any, any>, SP extends StoredProperty<any, any>> =  SC[Name] extends never ? SO[Name] extends never ? SP[Name] extends never ? DepName : never : never : never
 
 // every service class is expected to have a constructor that takes one argument of this type.
 export class Dependencies<T extends StoredClass<any, any> | StoredObject<any, any> | StoredProperty<any, any>> {

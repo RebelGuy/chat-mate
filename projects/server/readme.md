@@ -61,6 +61,7 @@ The following environment variables must be set in the `.env` file:
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
 - `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
+- `STREAMLABS_SOCKET_TOKEN`: The WebSocket token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -143,6 +144,8 @@ Key:
   - 🟢 initialise
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
+  - 🟢 initialise
+- 🟢 DonationFetchService
   - 🟢 initialise
 - 🟢 EmojiService
   - 🟢 applyCustomEmojis

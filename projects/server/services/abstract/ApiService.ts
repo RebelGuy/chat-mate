@@ -6,7 +6,7 @@ import { NO_OP } from '@rebel/server/util/typescript'
 export default abstract class ApiService extends ContextClass {
   public readonly name: string
 
-  private readonly logService: LogService
+  protected readonly logService: LogService
   private readonly statusService: StatusService
   private readonly timeoutMs: number | null
 

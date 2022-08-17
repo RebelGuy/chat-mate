@@ -62,6 +62,7 @@ import ModService from '@rebel/server/services/rank/ModService'
 import RankService from '@rebel/server/services/rank/RankService'
 import * as fs from 'fs'
 import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
+import DonationFetchService from '@rebel/server/services/DonationFetchService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -84,6 +85,7 @@ const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
 const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
 const dbTransactionTimeout = env('dbTransactionTimeout')
 const streamlabsAccessToken = env('streamlabsAccessToken')
+const streamlabsSocketToken = env('streamlabsSocketToken')
 
 const globalContext = ContextProvider.create()
   .withObject('app', app)
@@ -106,6 +108,7 @@ const globalContext = ContextProvider.create()
   .withProperty('managedIdentityClientId', managedIdentityClientId)
   .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withProperty('streamlabsAccessToken', streamlabsAccessToken)
+  .withProperty('streamlabsSocketToken', streamlabsSocketToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -153,6 +156,7 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .withClass('modService', ModService)
   .withClass('rankService', RankService)
+  .withClass('donationFetchService', DonationFetchService)
   .build()
 
 app.use((req, res, next) => {
