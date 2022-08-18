@@ -235,6 +235,11 @@ Key:
   - 🟢 addCustomEmoji
   - 🟢 getAllCustomEmojis
   - 🟢 updateCustomEmoji
+- 🟢 DonationStore
+  - 🟢 addDonation
+  - 🟢 getDonationsSince
+  - 🟢 getLastStreamlabsId
+  - 🟢 linkUserToDonation
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
   - 🟢 addManualExperience

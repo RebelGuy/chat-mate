@@ -63,6 +63,7 @@ import RankService from '@rebel/server/services/rank/RankService'
 import * as fs from 'fs'
 import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
+import DonationStore from '@rebel/server/stores/DonationStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -156,6 +157,7 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .withClass('modService', ModService)
   .withClass('rankService', RankService)
+  .withClass('donationStore', DonationStore)
   .withClass('donationFetchService', DonationFetchService)
   .build()
 
