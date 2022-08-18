@@ -9,6 +9,7 @@ CREATE TABLE `donation` (
     `message` VARCHAR(256) NULL,
     `linkedUserId` INTEGER NULL,
 
+    UNIQUE INDEX `donation_streamlabsId_key`(`streamlabsId`),
     INDEX `donation_linkedUserId_fkey`(`linkedUserId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

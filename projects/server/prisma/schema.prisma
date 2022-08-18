@@ -528,7 +528,7 @@ enum PunishmentType {
 model Donation {
   id Int @id @default(autoincrement())
 
-  streamlabsId Int
+  streamlabsId Int // unique
   time         DateTime
   currency     String
   amount       Float
@@ -538,6 +538,7 @@ model Donation {
   linkedUserId Int?
   linkedUser   ChatUser? @relation(fields: [linkedUserId], references: [id], map: "donation_linkedUserId_fkey")
 
+  @@unique([streamlabsId], map: "donation_streamlabsId_key")
   @@index([linkedUserId], map: "donation_linkedUserId_fkey")
   @@map("donation")
 }
