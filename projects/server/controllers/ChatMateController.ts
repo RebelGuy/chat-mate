@@ -14,16 +14,16 @@ export type GetStatusResponse = ApiResponse<3, {
   twitchApiStatus: Tagged<1, PublicApiStatus>
 }>
 
-type GetEventsResponse = ApiResponse<5, {
+type GetEventsResponse = ApiResponse<6, {
   // include the timestamp so it can easily be used for the next request
   reusableTimestamp: number
-  events: Tagged<4, PublicChatMateEvent>[]
+  events: Tagged<5, PublicChatMateEvent>[]
 }>
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type GetStatusEndpoint = Endpoint<3, {}, GetStatusResponse>
 
-export type GetEventsEndpoint = Endpoint<5, { since: number }, GetEventsResponse>
+export type GetEventsEndpoint = Endpoint<6, { since: number }, GetEventsResponse>
 
 export type SetActiveLivestreamRequest = ApiRequest<2, { schema: 2, livestream: string | null }>
 export type SetActiveLivestreamResponse = ApiResponse<2, { livestreamLink: string | null }>
@@ -66,7 +66,7 @@ export default class ChatMateController extends ControllerBase {
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
-    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events', 5)
+    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events', 6)
     if (since == null) {
       return builder.failure(400, `A value for 'since' must be provided.`)
     }

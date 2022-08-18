@@ -64,7 +64,8 @@ export default class ChatMateControllerFake implements IChatMateController {
     let events: PublicChatMateEvent[] = []
     const N = Math.sqrt(Math.random() * 100) - 5
     for (let i = 0; i < N; i++) {
-      if (Math.random() < 0.9) {
+      const r = Math.random()
+      if (r < 0.7) {
         // level up event
         const newLevel = randomInt(0, 101)
         const level: Level = {
@@ -77,7 +78,7 @@ export default class ChatMateControllerFake implements IChatMateController {
         const user: PublicUser = userDataToPublicUser({ ...userChannel, userId: userChannel.userId, level, ranks })
   
         events.push({
-          schema: 4,
+          schema: 5,
           timestamp: new Date().getTime(),
           type: 'levelUp',
           levelUpData: {
@@ -86,20 +87,40 @@ export default class ChatMateControllerFake implements IChatMateController {
             oldLevel: newLevel - 1,
             user
           },
-          newTwitchFollowerData: null
+          newTwitchFollowerData: null,
+          donationData: null
         })  
-      } else {
+      } else if (r < 0.85) {
         // new follower event
         events.push({
-          schema: 4,
+          schema: 5,
           timestamp: new Date().getTime(),
           type: 'newTwitchFollower',
           levelUpData: null,
           newTwitchFollowerData: {
             schema: 1,
             displayName: randomString(8)
+          },
+          donationData: null
+        }) 
+      } else {
+        // new donation
+        events.push({
+          schema: 5,
+          timestamp: new Date().getTime(),
+          type: 'donation',
+          levelUpData: null,
+          newTwitchFollowerData: null,
+          donationData: {
+            schema: 1,
+            amount: randomInt(100, 10000) / 100,
+            currency: 'USD',
+            id: 1,
+            message: randomString(128),
+            name: randomString(64),
+            time: new Date().getTime()
           }
-        })  
+        })
       }
     }
 
