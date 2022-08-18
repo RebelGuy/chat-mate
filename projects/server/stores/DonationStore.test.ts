@@ -7,6 +7,7 @@ import { startTestDb, DB_TEST_TIMEOUT, stopTestDb } from '@rebel/server/_test/db
 import { nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { randomInt } from 'crypto'
+import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 
 export default () => {
   let db: Db
@@ -81,26 +82,29 @@ export default () => {
       expect(result.linkedUserId).toBe(user.id)
     })
 
-    test('Overwrites existing user', async () => {
+    test('Throws if a user is already linked', async () => {
       const user1 = await db.chatUser.create({ data: {}})
       const user2 = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ linkedUserId: user1.id })
 
-      const result = await donationStore.linkUserToDonation(donation.id, user2.id)
-
-      expect(result.linkedUserId).toBe(user2.id)
+      await expect(() => donationStore.linkUserToDonation(donation.id, user2.id)).rejects.toThrowError(DonationUserLinkAlreadyExistsError)
     })
-    
-    test('Throws if user not found', async () => {
+  })
+
+  describe(nameof(DonationStore, 'unlinkUserFromDonation'), () => {
+    test('Unlinks the user from the donation', async () => {
+      const user = await db.chatUser.create({ data: {}})
+      const donation = await createDonation({ linkedUserId: user.id })
+
+      const result = await donationStore.unlinkUserFromDonation(donation.id)
+
+      expect(result.linkedUserId).toBeNull()
+    })
+
+    test('Throws if no user is linked to the donation', async () => {
       const donation = await createDonation()
 
-      await expect(() => donationStore.linkUserToDonation(donation.id, 1)).rejects.toThrow()
-    })
-
-    test('Throws if donation not found', async () => {
-      const user = await db.chatUser.create({ data: {}})
-
-      await expect(() => donationStore.linkUserToDonation(1, user.id)).rejects.toThrow()
+      await expect(() => donationStore.unlinkUserFromDonation(donation.id)).rejects.toThrowError(DonationUserLinkNotFoundError)
     })
   })
 

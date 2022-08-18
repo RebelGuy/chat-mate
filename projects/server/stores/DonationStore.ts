@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { New } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -48,10 +49,44 @@ export default class DonationStore extends ContextClass {
     return result?.streamlabsId ?? null
   }
 
+  // we perform side effects when linking/unlinking, so it makes sense to enforce that only a single operation can happen.
+  // we could probably enforce this on a database-level by using a separated link table, but that's overkill
+
+  /** @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, userId: number): Promise<Donation> {
+    const donationWithUser = await this.db.donation.findFirst({
+      where: {
+        id: donationId,
+        linkedUserId: { not: null }
+      }
+    })
+
+    if (donationWithUser != null) {
+      throw new DonationUserLinkAlreadyExistsError()
+    }
+
     return await this.db.donation.update({
       where: { id: donationId },
       data: { linkedUserId: userId }
+    })
+  }
+
+  /** @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
+  public async unlinkUserFromDonation (donationId: number): Promise<Donation> {
+    const donationWithoutUser = await this.db.donation.findFirst({
+      where: {
+        id: donationId,
+        linkedUserId: null
+      }
+    })
+
+    if (donationWithoutUser != null) {
+      throw new DonationUserLinkNotFoundError()
+    }
+
+    return await this.db.donation.update({
+      where: { id: donationId },
+      data: { linkedUserId: null }
     })
   }
 }

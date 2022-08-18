@@ -64,6 +64,7 @@ import * as fs from 'fs'
 import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
 import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationService from '@rebel/server/services/DonationService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -159,6 +160,7 @@ const globalContext = ContextProvider.create()
   .withClass('rankService', RankService)
   .withClass('donationStore', DonationStore)
   .withClass('donationFetchService', DonationFetchService)
+  .withClass('donationService', DonationService)
   .build()
 
 app.use((req, res, next) => {

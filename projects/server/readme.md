@@ -240,6 +240,7 @@ Key:
   - 🟢 getDonationsSince
   - 🟢 getLastStreamlabsId
   - 🟢 linkUserToDonation
+  - 🟢 unlinkUserFromDonation
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
   - 🟢 addManualExperience
@@ -399,6 +400,46 @@ Returns data with the following properties:
   - `true`: The Masterchat instance is authenticated.
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
+
+## Donation Endpoints
+Path: `/donation`.
+
+### `GET /`
+*Current schema: 1.*
+
+Gets all donations.
+
+Returns data with the following properties:
+- `donations` (`PublicDonation[]`): The list of all donations.
+
+### `POST /link`
+*Current schema: 1.*
+
+Links a user to a donation.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation to which the user should be linked.
+- `userId` (`number`): The user to link to the donation.
+
+Returns data with the following properties:
+- `updatedDonation` (`PublicDonation`): The updated donation that now includes the linked user.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or when a user is already linked to the given donation.
+
+### `DELETE /link`
+*Current schema: 1.*
+
+Unlinks a user to a donation.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation from which the user should be unlinked.
+
+Returns data with the following properties:
+- `updatedDonation` (`PublicDonation`): The updated donation that no longer includes the linked user.
+
+Can return the following errors:
+- `404`: When the request data is not sent, or when no user was linked to the given donation.
 
 ## Emoji Endpoints
 Path: `/emoji`.
