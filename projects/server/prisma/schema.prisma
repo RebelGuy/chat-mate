@@ -87,6 +87,7 @@ model ChatUser {
   userRanks                  UserRank[]              @relation("user_rank_userId")
   administeredUserRanks      UserRank[]              @relation("user_rank_assignedByUserId")
   revokedUserRanks           UserRank[]              @relation("user_rank_revokedByUserId")
+  donations                  Donation[]
 
   @@map("chat_user")
 }
@@ -522,4 +523,21 @@ enum PunishmentType {
   ban
   timeout
   mute
+}
+
+model Donation {
+  id Int @id @default(autoincrement())
+
+  streamlabsId Int
+  time         DateTime
+  currency     String
+  amount       Float
+  name         String   @db.VarChar(256)
+  message      String?  @db.VarChar(256)
+
+  linkedUserId Int?
+  linkedUser   ChatUser? @relation(fields: [linkedUserId], references: [id], map: "donation_linkedUserId_fkey")
+
+  @@index([linkedUserId], map: "donation_linkedUserId_fkey")
+  @@map("donation")
 }
