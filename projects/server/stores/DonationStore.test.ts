@@ -8,6 +8,7 @@ import { nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { randomInt } from 'crypto'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
+import { addTime } from '@rebel/server/util/datetime'
 
 export default () => {
   let db: Db
@@ -38,6 +39,22 @@ export default () => {
       const result = await donationStore.addDonation(donationData)
 
       expect(result).toEqual(expect.objectContaining(donationData))
+    })
+  })
+
+  describe(nameof(DonationStore, 'getDonationsByUserId'), () => {
+    test('Returns ordered donations linked to the given user', async () => {
+      const user1 = await db.chatUser.create({ data: {} })
+      const user2 = await db.chatUser.create({ data: {} })
+      const donation1 = await createDonation({ time: data.time1, linkedUserId: user2.id })
+      const donation2 = await createDonation({ time: data.time3, linkedUserId: user1.id })
+      const donation3 = await createDonation({ time: data.time2, linkedUserId: user1.id })
+      const donation4 = await createDonation({ time: addTime(data.time3, 'seconds', 1) })
+
+      const result = await donationStore.getDonationsByUserId(user1.id)
+
+      expect(result.length).toBe(2)
+      expect(result).toEqual([donation3, donation2])
     })
   })
 
@@ -92,13 +109,14 @@ export default () => {
   })
 
   describe(nameof(DonationStore, 'unlinkUserFromDonation'), () => {
-    test('Unlinks the user from the donation', async () => {
+    test('Unlinks the user from the donation, returns the updated donation and userId', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ linkedUserId: user.id })
 
-      const result = await donationStore.unlinkUserFromDonation(donation.id)
+      const [updatedDonation, userId] = await donationStore.unlinkUserFromDonation(donation.id)
 
-      expect(result.linkedUserId).toBeNull()
+      expect(updatedDonation.linkedUserId).toBeNull()
+      expect(userId).toBe(user.id)
     })
 
     test('Throws if no user is linked to the donation', async () => {

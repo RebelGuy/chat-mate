@@ -30,6 +30,14 @@ export default class DonationStore extends ContextClass {
     }})
   }
 
+  /** Returns donations that have been linked to the user, orderd by time in ascending order. */
+  public async getDonationsByUserId (userId: number): Promise<Donation[]> {
+    return await this.db.donation.findMany({
+      where: { linkedUserId: userId },
+      orderBy: { time: 'asc' }
+    })
+  }
+
   /** Returns donations after the given time, ordered by time in ascending order. */
   public async getDonationsSince (time: Date): Promise<Donation[]> {
     return await this.db.donation.findMany({
@@ -71,22 +79,24 @@ export default class DonationStore extends ContextClass {
     })
   }
 
-  /** @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
-  public async unlinkUserFromDonation (donationId: number): Promise<Donation> {
-    const donationWithoutUser = await this.db.donation.findFirst({
+  /** Returns the updated donation, as well as the userId that was unlinked.
+   * @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
+  public async unlinkUserFromDonation (donationId: number): Promise<[Donation, number]> {
+    const donationWitUser = await this.db.donation.findFirst({
       where: {
         id: donationId,
-        linkedUserId: null
+        linkedUserId: { not: null }
       }
     })
 
-    if (donationWithoutUser != null) {
+    if (donationWitUser == null) {
       throw new DonationUserLinkNotFoundError()
     }
 
-    return await this.db.donation.update({
+    const updatedDonation = await this.db.donation.update({
       where: { id: donationId },
       data: { linkedUserId: null }
     })
+    return [updatedDonation, donationWitUser.linkedUserId!]
   }
 }

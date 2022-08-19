@@ -147,6 +147,9 @@ Key:
   - 🟢 initialise
 - 🟢 DonationFetchService
   - 🟢 initialise
+- 🟢 DonationService
+  - 🟢 linkUserToDonation
+  - 🟢 unlinkUserFromDonation
 - 🟢 EmojiService
   - 🟢 applyCustomEmojis
 - 🟢 ExperienceService
@@ -237,6 +240,7 @@ Key:
   - 🟢 updateCustomEmoji
 - 🟢 DonationStore
   - 🟢 addDonation
+  - 🟢 getDonationsByUserId
   - 🟢 getDonationsSince
   - 🟢 getLastStreamlabsId
   - 🟢 linkUserToDonation
@@ -272,6 +276,7 @@ Key:
   - 🟢 getUserRanksForGroup
   - 🟢 getUserRankHistory
   - 🟢 removeUserRank
+  - 🟢 updateRankExpiration
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation
@@ -289,6 +294,10 @@ Key:
 - ⚪ DateTimeHelpers
   - ⚪ now
   - ⚪ ts
+- 🟢 DonationHelpers
+  - 🟢 isEligibleForDonator
+  - 🟢 isEligibleForMember
+  - 🟢 isEligibleForSupporter
 - 🟢 ExperienceHelpers
   - 🟢 calculateChatMessageQuality
   - 🟢 calculateExperience

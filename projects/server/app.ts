@@ -65,6 +65,7 @@ import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyServic
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import DonationService from '@rebel/server/services/DonationService'
+import DonationHelpers from '@rebel/server/helpers/DonationHelpers'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -115,6 +116,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
   .withHelpers('rankHelpers', RankHelpers)
+  .withHelpers('donationHelpers', DonationHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)

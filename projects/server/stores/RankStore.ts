@@ -171,6 +171,25 @@ export default class RankStore extends ContextClass {
       include: { rank: true }
     })
   }
+
+  /** Sets the expiration time for the given user-rank.
+   * @throws {@link UserRankNotFoundError}: When the user-rank was not found.
+  */
+  public async updateRankExpiration (rankId: number, newExpiration: Date | null) {
+    try {
+      return await this.db.userRank.update({
+        where: { id: rankId },
+        data: { expirationTime: newExpiration }
+      })
+    } catch (e: any) {
+      // https://www.prisma.io/docs/reference/api-reference/error-reference#p2025
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new UserRankNotFoundError(`Could not update expiration for rank ${rankId} because it does not exist.`)
+      }
+
+      throw e
+    }
+  }
 }
 
 const activeUserRankFilter = Prisma.validator<Prisma.UserRankWhereInput>()({
