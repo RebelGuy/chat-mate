@@ -4,7 +4,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { group, subGroupedSingle } from '@rebel/server/util/arrays'
+import { group, subGroupedSingle, unique } from '@rebel/server/util/arrays'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 
 export type UserRanks = {
@@ -112,7 +112,7 @@ export default class RankStore extends ContextClass {
     })
 
     const groups = group(result, r => r.userId)
-    return userIds.map(userId => ({
+    return unique(userIds).map(userId => ({
       userId: userId,
       ranks: groups.find(g => g.group === userId)?.items ?? []
     }))
