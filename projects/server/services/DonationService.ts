@@ -37,7 +37,7 @@ export default class DonationService extends ContextClass {
     const currentRanks = single(await this.rankStore.getUserRanks([userId])).ranks
 
     const now = new Date()
-    const yearFromNow = addTime(now, 'days', 365)
+    const longTermExpiration = addTime(now, 'days', 365 / 2)
     const monthFromNow = addTime(now, 'days', 31)
 
     if (this.donationHelpers.isEligibleForDonator(donationAmounts, now)) {
@@ -46,12 +46,12 @@ export default class DonationService extends ContextClass {
         await this.rankStore.addUserRank({
           rank: 'donator',
           userId: userId,
-          expirationTime: yearFromNow,
+          expirationTime: longTermExpiration,
           assignee: null,
           message: null 
         })
       } else {
-        await this.rankStore.updateRankExpiration(existingDonatorRank.id, yearFromNow)
+        await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
       }
     }
 
@@ -61,12 +61,12 @@ export default class DonationService extends ContextClass {
         await this.rankStore.addUserRank({
           rank: 'supporter',
           userId: userId,
-          expirationTime: yearFromNow,
+          expirationTime: longTermExpiration,
           assignee: null,
           message: null 
         })
       } else {
-        await this.rankStore.updateRankExpiration(existingDonatorRank.id, yearFromNow)
+        await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
       }
     }
 
