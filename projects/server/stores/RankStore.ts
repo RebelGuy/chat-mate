@@ -20,12 +20,15 @@ export type AddUserRankArgs = {
   rank: RankName
   userId: number
   message: string | null
-
+  
   // null if assigned by system
   assignee: number | null
-
+  
   // null if the rank shouldn't expire
   expirationTime: Date | null
+  
+  // optionally specify the time at which the rank was added
+  time?: Date
 }
 
 export type RemoveUserRankArgs = {
@@ -64,7 +67,7 @@ export default class RankStore extends ContextClass {
         data: {
           user: { connect: { id: args.userId }},
           rank: { connect: { name: args.rank }},
-          issuedAt: this.dateTimeHelpers.now(),
+          issuedAt: args.time ?? this.dateTimeHelpers.now(),
           assignedByUser: args.assignee == null ? undefined : { connect: { id: args.assignee }},
           message: args.message,
           expirationTime: args.expirationTime

@@ -185,6 +185,7 @@ export default class StreamlabsProxyService extends ApiService {
   }
 
   private onSocketData = async (data: WebsocketMessage) => {
+    this.logService.logDebug(this, 'WebSocket received data:', data)
     if (data.type !== 'donation') {
       return
     }

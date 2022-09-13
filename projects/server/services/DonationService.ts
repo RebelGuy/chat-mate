@@ -1,6 +1,7 @@
 import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationHelpers'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
@@ -12,12 +13,14 @@ type Deps = Dependencies<{
   donationStore: DonationStore
   rankStore: RankStore
   donationHelpers: DonationHelpers
+  dateTimeHelpers: DateTimeHelpers
 }>
 
 export default class DonationService extends ContextClass {
   private readonly donationStore: DonationStore
   private readonly rankStore: RankStore
   private readonly donationHelpers: DonationHelpers
+  private readonly dateTimeHelpers: DateTimeHelpers
 
   constructor (deps: Deps) {
     super()
@@ -25,12 +28,14 @@ export default class DonationService extends ContextClass {
     this.donationStore = deps.resolve('donationStore')
     this.rankStore = deps.resolve('rankStore')
     this.donationHelpers = deps.resolve('donationHelpers')
+    this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
   }
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, userId: number): Promise<Donation> {
-    const updatedDonation = await this.donationStore.linkUserToDonation(donationId, userId)
+    const time = this.dateTimeHelpers.now()
+    const updatedDonation = await this.donationStore.linkUserToDonation(donationId, userId, time)
 
     const allDonations = await this.donationStore.getDonationsByUserId(userId)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
@@ -48,7 +53,8 @@ export default class DonationService extends ContextClass {
           userId: userId,
           expirationTime: longTermExpiration,
           assignee: null,
-          message: null 
+          message: null,
+          time: time
         })
       } else {
         await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
@@ -63,7 +69,8 @@ export default class DonationService extends ContextClass {
           userId: userId,
           expirationTime: longTermExpiration,
           assignee: null,
-          message: null 
+          message: null,
+          time: time
         })
       } else {
         await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
@@ -78,7 +85,8 @@ export default class DonationService extends ContextClass {
           userId: userId,
           expirationTime: monthFromNow,
           assignee: null,
-          message: null 
+          message: null,
+          time: time
         })
       } else {
         await this.rankStore.updateRankExpiration(existingDonatorRank.id, monthFromNow)

@@ -163,6 +163,7 @@ Key:
 - 🟢 LivestreamService
   - 🟢 initialise
   - 🟢 deactivateLivestream
+  - 🟢 getLivestreams
   - 🟢 setActiveLivestream
 - 🟢 LogQueryService
   - ⚪ onWarning
@@ -360,7 +361,7 @@ Returns data with the following properties:
 Path: `/chatMate`.
 
 ### `GET /status`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Gets the latest status information.
 
@@ -532,6 +533,17 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `404`: When the given user is not found.
+
+## Livestream Endpoints
+Path: `/livestream`.
+
+### `GET /`
+*Current schema: 1.*
+
+Gets the list of all livestreams with any status.
+
+Returns data with the following properties:
+- `livestreams` (`PublicLivestream[]`): The list of livestreams, sorted by start time in ascending order. Livestreams that haven't started yet are placed at the end of the array.
 
 ## Log Endpoints
 Path: `/log`.

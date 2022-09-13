@@ -67,6 +67,7 @@ import DonationStore from '@rebel/server/stores/DonationStore'
 import DonationService from '@rebel/server/services/DonationService'
 import DonationHelpers from '@rebel/server/helpers/DonationHelpers'
 import DonationController from '@rebel/server/controllers/DonationController'
+import LivestreamController from '@rebel/server/controllers/LivestreamController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -212,6 +213,7 @@ app.use(async (req, res, next) => {
     .withClass('logController', LogController)
     .withClass('rankController', RankController)
     .withClass('donationController', DonationController)
+    .withClass('livestreamController', LivestreamController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -238,7 +240,8 @@ Server.buildServices(app,
   PunishmentController,
   LogController,
   RankController,
-  DonationController
+  DonationController,
+  LivestreamController
 )
 
 process.on('unhandledRejection', (error) => {

@@ -45,6 +45,18 @@ export default class LivestreamStore extends ContextClass {
     this._activeLivestream = null
   }
 
+  /** Gets the list of all livestreams, sorted by time in ascending order (with no-yet-started livestreams placed at the end). */
+  public async getLivestreams (): Promise<Livestream[]> {
+    const orderedLivestreams = await this.db.livestream.findMany({
+      orderBy: { start: 'asc' }
+    })
+
+    // it places livestreams with null start time at the beginning, but we want them at the end
+    let result = orderedLivestreams.filter(l => l.start != null)
+    result.push(...orderedLivestreams.filter(l => l.start == null))
+    return result
+  }
+
   // todo: in the future, we can pass more options into this function, e.g. if a livestream is considered unlisted
   /** Sets the given livestream as active, such that `LivestreamStore.activeLivestream` returns this stream.
    * Please ensure you deactivate the previous livestream first, if applicable. */

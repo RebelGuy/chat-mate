@@ -19,6 +19,7 @@ import { promised } from '@rebel/server/_test/utils'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import RankStore from '@rebel/server/stores/RankStore'
 import DonationStore from '@rebel/server/stores/DonationStore'
+import { livestreamToPublic } from '@rebel/server/models/livestream'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -182,27 +183,17 @@ export default class ChatMateControllerReal implements IChatMateController {
       return null
     }
     
-    const link = getLivestreamLink(livestream.liveId)
-
+    const publicLivestream = livestreamToPublic(livestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
-    let status: Exclude<LiveStatus, 'unknown'>
-    if (livestream.start == null) {
-      status = 'not_started'
-    } else if (livestream.end == null) {
-      status = 'live'
+    if (publicLivestream.status === 'live') {
       viewers = await this.viewershipStore.getLatestLiveCount()
-    } else {
-      status = 'finished'
     }
 
     return {
-      schema: 2,
-      startTime: livestream.start?.getTime() ?? null,
-      endTime: livestream.end?.getTime() ?? null,
+      schema: 3,
+      livestream: publicLivestream,
       youtubeLiveViewers: viewers?.viewCount ?? null,
       twitchLiveViewers: viewers?.twitchViewCount ?? null,
-      livestreamLink: link,
-      status
     }
   }
 }

@@ -13,8 +13,8 @@ export type PublicDonationData = PublicObject<1, {
   /** The donation amount (decimal number). */
   amount: number
 
-  /** The donation currency code. At the moment, it's always 'USD'. */
-  currency: 'USD'
+  /** The donation currency code. */
+  currency: string
 
   /** The name of the user that posted the donation. */
   name: string

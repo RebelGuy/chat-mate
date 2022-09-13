@@ -535,6 +535,8 @@ model Donation {
   name         String   @db.VarChar(256)
   message      String?  @db.VarChar(256)
 
+  linkedAt DateTime?
+
   linkedUserId Int?
   linkedUser   ChatUser? @relation(fields: [linkedUserId], references: [id], map: "donation_linkedUserId_fkey")
 

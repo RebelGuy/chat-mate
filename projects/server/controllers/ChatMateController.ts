@@ -9,7 +9,7 @@ import ChatMateControllerFake from '@rebel/server/controllers/ChatMateController
 import { EmptyObject } from '@rebel/server/types'
 
 export type GetStatusResponse = ApiResponse<3, {
-  livestreamStatus: Tagged<2, PublicLivestreamStatus> | null
+  livestreamStatus: Tagged<3, PublicLivestreamStatus> | null
   youtubeApiStatus: Tagged<1, PublicApiStatus>
   twitchApiStatus: Tagged<1, PublicApiStatus>
 }>

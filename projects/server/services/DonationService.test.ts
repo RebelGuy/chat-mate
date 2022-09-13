@@ -8,21 +8,25 @@ import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/uti
 import { any, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { single, single2 } from '@rebel/server/util/arrays'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 
 let mockDonationStore: MockProxy<DonationStore>
 let mockDonationHelpers: MockProxy<DonationHelpers>
 let mockRankStore: MockProxy<RankStore>
+let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let donationService: DonationService
 
 beforeEach(() => {
   mockDonationStore = mock()
   mockDonationHelpers = mock()
   mockRankStore = mock()
+  mockDateTimeHelpers = mock()
 
   donationService = new DonationService(new Dependencies({
     donationStore: mockDonationStore,
     donationHelpers: mockDonationHelpers,
-    rankStore: mockRankStore
+    rankStore: mockRankStore,
+    dateTimeHelpers: mockDateTimeHelpers
   }))
 })
 
@@ -30,6 +34,7 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
   test('Links the user to the donation and adds/extends the donation user-ranks that the user is eligible for', async () => {
     const donationId = 2
     const userId = 2
+    const time = new Date()
     const linkedDonation = cast<Donation>({ })
     const allDonations = cast<Donation[]>([
       { time: data.time1, amount: 1 },
@@ -39,7 +44,8 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
 
     // user is currently donator, and eligible for donator and supporter
     const ranks = cast<UserRankWithRelations[]>([{ id: 20, rank: { name: 'donator' } }])
-    mockDonationStore.linkUserToDonation.calledWith(donationId, userId).mockResolvedValue(linkedDonation)
+    mockDateTimeHelpers.now.mockReturnValue(time)
+    mockDonationStore.linkUserToDonation.calledWith(donationId, userId, time).mockResolvedValue(linkedDonation)
     mockDonationStore.getDonationsByUserId.calledWith(userId).mockResolvedValue(allDonations)
     mockRankStore.getUserRanks.calledWith(expectArray<number>([userId])).mockResolvedValue([{ userId, ranks }])
     mockDonationHelpers.isEligibleForDonator
@@ -60,7 +66,7 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
     const providedUpdateArgs = single(mockRankStore.updateRankExpiration.mock.calls)
     expect(providedUpdateArgs).toEqual<typeof providedUpdateArgs>([ranks[0].id, expect.anything()])
     const providedCreateArgs = single2(mockRankStore.addUserRank.mock.calls)
-    expect(providedCreateArgs).toEqual(expectObject<AddUserRankArgs>({ rank: 'supporter' }))
+    expect(providedCreateArgs).toEqual(expectObject<AddUserRankArgs>({ rank: 'supporter', time: time }))
     expect(mockRankStore.removeUserRank).not.toHaveBeenCalled()
   })
 })

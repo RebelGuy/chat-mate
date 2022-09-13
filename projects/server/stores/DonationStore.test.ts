@@ -93,18 +93,21 @@ export default () => {
     test('Links specified user to the donation', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation()
+      const time = new Date()
 
-      const result = await donationStore.linkUserToDonation(donation.id, user.id)
+      const result = await donationStore.linkUserToDonation(donation.id, user.id, time)
 
       expect(result.linkedUserId).toBe(user.id)
+      expect(result.linkedAt).toEqual(time)
     })
 
     test('Throws if a user is already linked', async () => {
       const user1 = await db.chatUser.create({ data: {}})
       const user2 = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ linkedUserId: user1.id })
+      const time = new Date()
 
-      await expect(() => donationStore.linkUserToDonation(donation.id, user2.id)).rejects.toThrowError(DonationUserLinkAlreadyExistsError)
+      await expect(() => donationStore.linkUserToDonation(donation.id, user2.id, time)).rejects.toThrowError(DonationUserLinkAlreadyExistsError)
     })
   })
 

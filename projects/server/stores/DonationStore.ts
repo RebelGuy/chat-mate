@@ -26,6 +26,7 @@ export default class DonationStore extends ContextClass {
       streamlabsId: donation.streamlabsId,
       time: donation.time,
       linkedUserId: null,
+      linkedAt: null,
       message: donation.message ?? null
     }})
   }
@@ -61,7 +62,7 @@ export default class DonationStore extends ContextClass {
   // we could probably enforce this on a database-level by using a separated link table, but that's overkill
 
   /** @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, userId: number): Promise<Donation> {
+  public async linkUserToDonation (donationId: number, userId: number, linkedAt: Date): Promise<Donation> {
     const donationWithUser = await this.db.donation.findFirst({
       where: {
         id: donationId,
@@ -75,7 +76,10 @@ export default class DonationStore extends ContextClass {
 
     return await this.db.donation.update({
       where: { id: donationId },
-      data: { linkedUserId: userId }
+      data: {
+        linkedUserId: userId,
+        linkedAt: linkedAt
+      }
     })
   }
 
@@ -95,7 +99,10 @@ export default class DonationStore extends ContextClass {
 
     const updatedDonation = await this.db.donation.update({
       where: { id: donationId },
-      data: { linkedUserId: null }
+      data: {
+        linkedUserId: null,
+        linkedAt: null
+      }
     })
     return [updatedDonation, donationWitUser.linkedUserId!]
   }
