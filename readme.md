@@ -47,6 +47,14 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.17 - The Donation Update [14/9/2022]
+- Server
+  - Added Websocket for listening to Streamlabs donations
+  - Added the ability to get the list of donations and link/unlink a user to/from a donation
+    - When linking/unlinking a user, that user will have the appropriate donation ranks added/renewed/revoked
+    - Donator rank: The user has made a donation. Active for 6 months.
+    - Supporter rank: The user has made at least $50 in donations over the last 6 months. Active for 6 months.
+    - Member rank: The user has made a donation at least once every month for at least 3 months in a row. Active for 1 month.
 
 ## v1.16 - The Rank Update [15/8/2022]
 - Server

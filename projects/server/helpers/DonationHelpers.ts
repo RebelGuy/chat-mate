@@ -6,11 +6,14 @@ export type DonationAmount = [date: Date, amount: number]
 
 export type DonationRank = Extract<RankName, 'donator' | 'supporter' | 'member'>
 
+export const DONATION_EPOCH_DAYS = 365 / 2
+
+// todo: ideally this should take into account the currency, since 50 units can have drastically different valuations amongst different currencies
 const SUPPORTER_TOTAL_DONATION = 50
 
 const MEMBER_CONSECUTIVE_MONTHS = 3
 
-const TIME_THRESHOLD = 365.25 * 24 * 3600 * 1000
+const TIME_THRESHOLD = DONATION_EPOCH_DAYS * 24 * 3600 * 1000
 
 export default class DonationHelpers extends ContextClass {
   public isEligibleForDonator (donations: DonationAmount[], now: Date): boolean {

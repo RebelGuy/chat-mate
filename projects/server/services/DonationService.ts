@@ -2,7 +2,7 @@ import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
-import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationHelpers'
+import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
@@ -42,7 +42,7 @@ export default class DonationService extends ContextClass {
     const currentRanks = single(await this.rankStore.getUserRanks([userId])).ranks
 
     const now = new Date()
-    const longTermExpiration = addTime(now, 'days', 365 / 2)
+    const longTermExpiration = addTime(now, 'days', DONATION_EPOCH_DAYS)
     const monthFromNow = addTime(now, 'days', 31)
 
     if (this.donationHelpers.isEligibleForDonator(donationAmounts, now)) {

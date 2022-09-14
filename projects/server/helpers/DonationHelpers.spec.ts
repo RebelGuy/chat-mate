@@ -12,7 +12,7 @@ beforeEach(() => {
 describe(nameof(DonationHelpers, 'isEligibleForDonator'), () => {
   const donations: DonationAmount[] = [[data.time1, 1]]
 
-  test('Returns true if the user has donated within the last year', () => {
+  test('Returns true if the user has donated within the last epoch', () => {
     const time = addTime(data.time1, 'days', 1)
 
     const result = donationHelpers.isEligibleForDonator(donations, time)
@@ -20,7 +20,7 @@ describe(nameof(DonationHelpers, 'isEligibleForDonator'), () => {
     expect(result).toBe(true)
   })
 
-  test('Returns false if the user has not donated within the last year', () => {
+  test('Returns false if the user has not donated within the last epoch', () => {
     const time = addTime(data.time1, 'days', 600)
 
     const result = donationHelpers.isEligibleForDonator(donations, time)
@@ -31,13 +31,13 @@ describe(nameof(DonationHelpers, 'isEligibleForDonator'), () => {
 
 describe(nameof(DonationHelpers, 'isEligibleForSupporter'), () => {
   const time1 = data.time1
-  const time2 = addTime(time1, 'days', 300)
+  const time2 = addTime(time1, 'days', 150)
   const donations: DonationAmount[] = [
     [time1, 30],
     [time2, 30],
   ]
 
-  test('Returns true if the user has donated at least $50 within the last year', () => {
+  test('Returns true if the user has donated at least $50 within the last epoch', () => {
     const time = addTime(time2, 'days', 1)
 
     const result = donationHelpers.isEligibleForSupporter(donations, time)
@@ -45,7 +45,7 @@ describe(nameof(DonationHelpers, 'isEligibleForSupporter'), () => {
     expect(result).toBe(true)
   })
 
-  test('Returns false if the user has not donated at least $50 within the last year', () => {
+  test('Returns false if the user has not donated at least $50 within the last epoch', () => {
     const time = addTime(time2, 'days', 200)
 
     const result = donationHelpers.isEligibleForSupporter(donations, time)
