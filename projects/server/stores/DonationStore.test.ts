@@ -28,6 +28,7 @@ export default () => {
     test('Adds the donation to the database and returns the added item', async () => {
       const donationData: New<Donation> = {
         amount: 1.45,
+        formattedAmount: '$1.45',
         currency: 'USD',
         name: 'Test name',
         streamlabsId: 123,
@@ -133,6 +134,7 @@ export default () => {
     return await db.donation.create({
       data: {
         amount: donationData?.amount ?? 1,
+        formattedAmount: `$${donationData?.amount ?? 1}`,
         currency: donationData?.currency ?? 'USD',
         name: donationData?.name ?? 'Test name',
         streamlabsId: donationData?.streamlabsId ?? randomInt(0, 100000000),

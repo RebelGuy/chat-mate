@@ -12,6 +12,7 @@ export function donationToPublicObject (donation: Donation, linkedUser: PublicUs
     id: donation.id,
     time: donation.time.getTime(),
     amount: donation.amount,
+    formattedAmount: donation.formattedAmount,
     currency: donation.currency,
     message: donation.message ?? null,
     name: donation.name,

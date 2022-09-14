@@ -21,6 +21,7 @@ export default class DonationStore extends ContextClass {
   public async addDonation (donation: New<Donation>): Promise<Donation> {
     return await this.db.donation.create({ data: {
       amount: donation.amount,
+      formattedAmount: donation.formattedAmount,
       currency: donation.currency,
       name: donation.name,
       streamlabsId: donation.streamlabsId,

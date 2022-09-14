@@ -13,6 +13,9 @@ export type PublicDonationData = PublicObject<1, {
   /** The donation amount (decimal number). */
   amount: number
 
+  /** The human readable representation of the donation amount. */
+  formattedAmount: string
+
   /** The donation currency code. */
   currency: string
 

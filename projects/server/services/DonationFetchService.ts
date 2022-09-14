@@ -34,6 +34,7 @@ export default class DonationFetchService extends ContextClass {
   private onDonation = async (donation: StreamlabsDonation) => {
     await this.donationStore.addDonation({
       amount: donation.amount,
+      formattedAmount: donation.formattedAmount,
       currency: donation.currency,
       name: donation.name,
       streamlabsId: donation.donationId,

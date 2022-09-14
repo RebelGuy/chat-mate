@@ -134,6 +134,7 @@ export default class ChatMateControllerReal implements IChatMateController {
           id: donation.id,
           time: donation.time.getTime(),
           amount: donation.amount,
+          formattedAmount: donation.formattedAmount,
           currency: donation.currency as 'USD',
           name: donation.name,
           message: donation.message

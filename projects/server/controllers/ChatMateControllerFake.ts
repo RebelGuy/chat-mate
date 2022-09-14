@@ -109,6 +109,7 @@ export default class ChatMateControllerFake implements IChatMateController {
         }) 
       } else {
         // new donation
+        const amount = randomInt(100, 10000) / 100
         events.push({
           schema: 5,
           timestamp: new Date().getTime(),
@@ -117,7 +118,8 @@ export default class ChatMateControllerFake implements IChatMateController {
           newTwitchFollowerData: null,
           donationData: {
             schema: 1,
-            amount: randomInt(100, 10000) / 100,
+            amount: amount,
+            formattedAmount: `$${amount.toFixed(2)}`,
             currency: 'USD',
             id: 1,
             message: randomString(128),

@@ -46,9 +46,9 @@ export type CurrencyCode = keyof typeof CURRENCIES
 export type StreamlabsDonation = {
   donationId: number
   createdAt: number
-  // for WebSocket respones, the currency is always converted into USD
   currency: CurrencyCode
   amount: number
+  formattedAmount: string
   name: string
   message: string | null
 }
@@ -93,15 +93,16 @@ type WebsocketMessage = {
     id: number
     name: string
     amount: string
-    formatted_amount: string
+    formatted_amount: string // e.g. "A$1.00"
     formattedAmount: string
     message: string | null
     currency: CurrencyCode
-    emotes: null
-    iconClassName: string
+    emotes: ''
+    iconClassName: string // e.g. "fab paypal"
     to: { name: string }
     from: string
     from_user_id: null | any // todo: string or number
+    source: string // e.g. paypal
     _id: string
   }]
 } | { type: '' })
@@ -163,6 +164,7 @@ export default class StreamlabsProxyService extends ApiService {
 
     return donations.data.map(d => ({
       amount: Number.parseFloat(d.amount),
+      formattedAmount: d.amount,
       createdAt: Number.parseInt(d.created_at),
       currency: d.currency as CurrencyCode,
       donationId: Number.parseInt(d.donation_id),
@@ -193,6 +195,7 @@ export default class StreamlabsProxyService extends ApiService {
     const message = single(data.message)
     const donation: StreamlabsDonation = {
       amount: Number.parseFloat(message.amount),
+      formattedAmount: message.formattedAmount,
       createdAt: new Date().getTime(),
       currency: message.currency,
       donationId: message.id,
