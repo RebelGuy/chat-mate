@@ -61,6 +61,13 @@ import RankController from '@rebel/server/controllers/RankController'
 import ModService from '@rebel/server/services/rank/ModService'
 import RankService from '@rebel/server/services/rank/RankService'
 import * as fs from 'fs'
+import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
+import DonationFetchService from '@rebel/server/services/DonationFetchService'
+import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationService from '@rebel/server/services/DonationService'
+import DonationHelpers from '@rebel/server/helpers/DonationHelpers'
+import DonationController from '@rebel/server/controllers/DonationController'
+import LivestreamController from '@rebel/server/controllers/LivestreamController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -82,6 +89,8 @@ const logAnalyticsWorkspaceId = env('logAnalyticsWorkspaceId')
 const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
 const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
 const dbTransactionTimeout = env('dbTransactionTimeout')
+const streamlabsAccessToken = env('streamlabsAccessToken')
+const streamlabsSocketToken = env('streamlabsSocketToken')
 
 const globalContext = ContextProvider.create()
   .withObject('app', app)
@@ -103,10 +112,13 @@ const globalContext = ContextProvider.create()
   .withProperty('hostName', hostName)
   .withProperty('managedIdentityClientId', managedIdentityClientId)
   .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
+  .withProperty('streamlabsAccessToken', streamlabsAccessToken)
+  .withProperty('streamlabsSocketToken', streamlabsSocketToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
   .withHelpers('rankHelpers', RankHelpers)
+  .withHelpers('donationHelpers', DonationHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)
@@ -118,6 +130,7 @@ const globalContext = ContextProvider.create()
   .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
   .withClass('twurpleStatusService', StatusService)
+  .withClass('streamlabsStatusService', StatusService)
   .withClass('dbProvider', DbProvider)
   .withClass('masterchatProvider', MasterchatProvider)
   .withClass('masterchatProxyService', MasterchatProxyService)
@@ -126,6 +139,7 @@ const globalContext = ContextProvider.create()
   .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
   .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
   .withClass('twurpleApiProxyService', TwurpleApiProxyService)
+  .withClass('streamlabsProxyService', StreamlabsProxyService)
   .withClass('livestreamStore', LivestreamStore)
   .withClass('viewershipStore', ViewershipStore)
   .withClass('livestreamService', LivestreamService)
@@ -148,6 +162,9 @@ const globalContext = ContextProvider.create()
   .withClass('helixEventService', HelixEventService)
   .withClass('modService', ModService)
   .withClass('rankService', RankService)
+  .withClass('donationStore', DonationStore)
+  .withClass('donationFetchService', DonationFetchService)
+  .withClass('donationService', DonationService)
   .build()
 
 app.use((req, res, next) => {
@@ -195,6 +212,8 @@ app.use(async (req, res, next) => {
     .withClass('punishmentController', PunishmentController)
     .withClass('logController', LogController)
     .withClass('rankController', RankController)
+    .withClass('donationController', DonationController)
+    .withClass('livestreamController', LivestreamController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -220,7 +239,9 @@ Server.buildServices(app,
   UserController,
   PunishmentController,
   LogController,
-  RankController
+  RankController,
+  DonationController,
+  LivestreamController
 )
 
 process.on('unhandledRejection', (error) => {

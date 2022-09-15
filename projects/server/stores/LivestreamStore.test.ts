@@ -6,6 +6,7 @@ import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel
 import { nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
+import * as data from '@rebel/server/_test/testData'
 
 export default () => {
   const liveId = 'id1'
@@ -60,6 +61,22 @@ export default () => {
       const storedLivestream = single(await db.livestream.findMany())
       expect(storedLivestream).toEqual(expect.objectContaining({ liveId, isActive: false }))
       expect(livestreamStore.activeLivestream).toBeNull()
+    })
+  })
+
+  describe(nameof(LivestreamStore, 'getLivestreams'), () => {
+    test('gets the ordered list of livestreams', async () => {
+      await db.livestream.createMany({
+        data: [
+          { liveId: 'puS6DpPKZ3E', type: 'publicLivestream', start: data.time3, end: null, isActive: true },
+          { liveId: 'puS6DpPKZ3f', type: 'publicLivestream', start: null, end: data.time3, isActive: true },
+          { liveId: 'puS6DpPKZ3g', type: 'publicLivestream', start: data.time2, end: data.time3, isActive: false }
+        ],
+      })
+
+      const result = await livestreamStore.getLivestreams()
+
+      expect(result.map(l => l.id)).toEqual([3, 1, 2])
     })
   })
 

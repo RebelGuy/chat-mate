@@ -28,6 +28,9 @@ type EnvironmentVariables = {
   twitchClientSecret: string
   twitchChannelName: string
 
+  streamlabsAccessToken: string
+  streamlabsSocketToken: string
+
   channelId: string
   databaseUrl: string
 
@@ -67,7 +70,9 @@ function getAllKeys () {
     'twitchClientSecret': true,
     'useFakeControllers': true,
     'managedIdentityClientId': true,
-    'logAnalyticsWorkspaceId': true
+    'logAnalyticsWorkspaceId': true,
+    'streamlabsAccessToken': true,
+    'streamlabsSocketToken': true
   }
   return Object.keys(allEnvVariables) as (keyof EnvironmentVariables)[]
 }

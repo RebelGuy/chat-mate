@@ -4,7 +4,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { group, subGroupedSingle } from '@rebel/server/util/arrays'
+import { group, subGroupedSingle, unique } from '@rebel/server/util/arrays'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 
 export type UserRanks = {
@@ -26,6 +26,9 @@ export type AddUserRankArgs = {
 
   // null if the rank shouldn't expire
   expirationTime: Date | null
+
+  // optionally specify the reported time at which the rank was added. if not provided, uses the current time
+  time?: Date
 }
 
 export type RemoveUserRankArgs = {
@@ -64,7 +67,7 @@ export default class RankStore extends ContextClass {
         data: {
           user: { connect: { id: args.userId }},
           rank: { connect: { name: args.rank }},
-          issuedAt: this.dateTimeHelpers.now(),
+          issuedAt: args.time ?? this.dateTimeHelpers.now(),
           assignedByUser: args.assignee == null ? undefined : { connect: { id: args.assignee }},
           message: args.message,
           expirationTime: args.expirationTime
@@ -112,7 +115,7 @@ export default class RankStore extends ContextClass {
     })
 
     const groups = group(result, r => r.userId)
-    return userIds.map(userId => ({
+    return unique(userIds).map(userId => ({
       userId: userId,
       ranks: groups.find(g => g.group === userId)?.items ?? []
     }))
@@ -170,6 +173,25 @@ export default class RankStore extends ContextClass {
       },
       include: { rank: true }
     })
+  }
+
+  /** Sets the expiration time for the given user-rank.
+   * @throws {@link UserRankNotFoundError}: When the user-rank was not found.
+  */
+  public async updateRankExpiration (rankId: number, newExpiration: Date | null) {
+    try {
+      return await this.db.userRank.update({
+        where: { id: rankId },
+        data: { expirationTime: newExpiration }
+      })
+    } catch (e: any) {
+      // https://www.prisma.io/docs/reference/api-reference/error-reference#p2025
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new UserRankNotFoundError(`Could not update expiration for rank ${rankId} because it does not exist.`)
+      }
+
+      throw e
+    }
   }
 }
 

@@ -374,4 +374,18 @@ export default () => {
       }))
     })
   })
+
+  describe(nameof(RankStore, 'updateRankExpiration'), () => {
+    test('Sets time correctly', async () => {
+      const rank = await db.userRank.create({ data: { userId: user1, issuedAt: time5, rankId: famousRank.id } })
+
+      const result = await rankStore.updateRankExpiration(rank.id, data.time1)
+
+      expect(result.expirationTime).toEqual(data.time1)
+    })
+
+    test('Throws error if rank was not found', async () => {
+      await expect(() => rankStore.updateRankExpiration(1, null)).rejects.toThrowError(UserRankNotFoundError)
+    })
+  })
 }

@@ -1,11 +1,14 @@
 {
   "name": "chat-mate",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "private": true,
   "workspaces": {
     "packages": [
       "./projects/*"
     ]
+  },
+  "engines": {
+    "node": ">=18.7.0"
   },
   "_moduleAliases": {
     "@rebel/server": "./dist/server",

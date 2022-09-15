@@ -1,3 +1,4 @@
+import { sortBy } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
 export const MAX_DATE = new Date(8640000000000000)
@@ -77,4 +78,8 @@ export function minTime (...times: Date[]): Date {
     }
   }
   return min
+}
+
+export function sortTimes (...times: Date[]): Date[] {
+  return [...times].sort((a, b) => a.getTime() - b.getTime())
 }

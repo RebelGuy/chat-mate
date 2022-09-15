@@ -7,6 +7,7 @@ import CustomEmojiStoreSuite from '@rebel/server/stores/CustomEmojiStore.test'
 import FollowerStoreSuite from '@rebel/server/stores/FollowerStore.test'
 import PunishmentStoreSuite from '@rebel/server/stores/PunishmentStore.test'
 import RankStoreSuite from '@rebel/server/stores/RankStore.test'
+import DonationStore from '@rebel/server/stores/DonationStore.test'
 
 // keep an eye on this one: https://github.com/prisma/prisma/issues/732
 // it would HUGELY improve efficiency if we can use an in-memory mock database for testing.
@@ -18,7 +19,9 @@ describeFn('ChannelStore Suite', ChannelStoreSuite)
 
 describeFn('ChatStore Suite', ChatStoreSuite)
 
-describeFn('CustomEmoji Suite', CustomEmojiStoreSuite)
+describeFn('CustomEmojiStore Suite', CustomEmojiStoreSuite)
+
+describeFn('DonationStore Suite', DonationStore)
 
 describeFn('ExperienceStore Suite', ExperienceStoreSuite)
 

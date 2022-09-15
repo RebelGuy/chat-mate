@@ -24,6 +24,10 @@ export function single<T> (array: T[]): T {
   }
 }
 
+export function single2<T> (arrayWithinArray: T[][]): T {
+  return single(single(arrayWithinArray))
+}
+
 export function singleOrNull<T> (array: T[]): T | null {
   if (array.length === 0) {
     return null

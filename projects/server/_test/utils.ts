@@ -1,4 +1,5 @@
-import { MockProxy } from 'jest-mock-extended'
+import { DeepPartial } from '@rebel/server/types'
+import { Matcher, MatcherCreator, MockProxy } from 'jest-mock-extended'
 
 type Class = new (...args: any[]) => any
 
@@ -57,16 +58,24 @@ export function expectStrictIncreasing (...values: number[]) {
 }
 
 /** Shorthand for casting a partial type to its full version, such as `{} as Partial<T> as T`. */
-export function cast<T> (data: Partial<T>): T
-export function cast<T extends Array<any>> (data: Partial<(T extends Array<infer A> ? A : never)>[]): T // the array's underlying type should be made partial, not the array type itself
-export function cast<T> (data: Partial<T>): T {
+export function cast<T> (data: DeepPartial<T>): T
+export function cast<T extends Array<any>> (data: DeepPartial<(T extends Array<infer A> ? A : never)>[]): T // the array's underlying type should be made partial, not the array type itself
+export function cast<T> (data: DeepPartial<T>): T {
   return data as T
 }
 
-export function expectObject<T> (data: Partial<T>): T {
+export function expectObject<T> (data: DeepPartial<T>): T {
   return expect.objectContaining(data)
 }
 
 export function expectArray<T> (data: Partial<T>[]): T[] {
   return expect.arrayContaining(data)
+}
+
+/** Matches any date. */
+export function anyDate (): Matcher<Date> {
+  return new Matcher<Date>(
+    (actualDate) => actualDate instanceof Date,
+    'Matches any date.'
+  )
 }

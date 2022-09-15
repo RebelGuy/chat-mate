@@ -25,7 +25,7 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
     const response = await getStatus()
     this.setState({
       loading: false,
-      currentInput: response.success ? response.data.livestreamStatus?.livestreamLink ?? '' : this.state.currentInput,
+      currentInput: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : this.state.currentInput,
       error: response.success ? null : response.error.message
     })
   }

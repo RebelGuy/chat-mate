@@ -7,7 +7,7 @@ import StatusService from '@rebel/server/services/StatusService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
-import { nonNull, zip, zipOnStrict, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { zipOnStrictMany } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import ChannelService from '@rebel/server/services/ChannelService'
@@ -15,10 +15,11 @@ import { userDataToPublicUser } from '@rebel/server/models/user'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
-import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { promised } from '@rebel/server/_test/utils'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import RankStore from '@rebel/server/stores/RankStore'
+import DonationStore from '@rebel/server/stores/DonationStore'
+import { livestreamToPublic } from '@rebel/server/models/livestream'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -32,6 +33,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamService: LivestreamService
   masterchatProxyService: MasterchatProxyService
   rankStore: RankStore
+  donationStore: DonationStore
 }>
 
 export default class ChatMateControllerReal implements IChatMateController {
@@ -46,6 +48,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly livestreamService: LivestreamService
   readonly masterchatProxyService: MasterchatProxyService
   readonly rankStore: RankStore
+  readonly donationStore: DonationStore
 
   constructor (deps: ChatMateControllerDeps) {
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -59,6 +62,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     this.livestreamService = deps.resolve('livestreamService')
     this.masterchatProxyService = deps.resolve('masterchatProxyService')
     this.rankStore = deps.resolve('rankStore')
+    this.donationStore = deps.resolve('donationStore')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -86,7 +90,7 @@ export default class ChatMateControllerReal implements IChatMateController {
       const user: PublicUser = userDataToPublicUser(userData[i])
 
       events.push({
-        schema: 4,
+        schema: 5,
         type: 'levelUp',
         timestamp: diff.timestamp,
         levelUpData: {
@@ -95,21 +99,45 @@ export default class ChatMateControllerReal implements IChatMateController {
           oldLevel: diff.startLevel.level,
           user
         },
-        newTwitchFollowerData: null
+        newTwitchFollowerData: null,
+        donationData: null
       })
     }
 
-    const newFollowers = await this.followerStore.getFollowersSince(since + 1)
+    const newFollowers = await this.followerStore.getFollowersSince(since)
     for (let i = 0; i < newFollowers.length; i++) {
       const follower = newFollowers[i]
       events.push({
-        schema: 4,
+        schema: 5,
         type: 'newTwitchFollower',
         timestamp: follower.date.getTime(),
         levelUpData: null,
         newTwitchFollowerData: {
           schema: 1,
           displayName: follower.displayName
+        },
+        donationData: null
+      })
+    }
+
+    const newDonations = await this.donationStore.getDonationsSince(new Date(since))
+    for (let i = 0; i < newDonations.length; i++) {
+      const donation = newDonations[i]
+      events.push({
+        schema: 5,
+        type: 'donation',
+        timestamp: donation.time.getTime(),
+        levelUpData: null,
+        newTwitchFollowerData: null,
+        donationData: {
+          schema: 1,
+          id: donation.id,
+          time: donation.time.getTime(),
+          amount: donation.amount,
+          formattedAmount: donation.formattedAmount,
+          currency: donation.currency as 'USD',
+          name: donation.name,
+          message: donation.message
         }
       })
     }
@@ -156,27 +184,17 @@ export default class ChatMateControllerReal implements IChatMateController {
       return null
     }
     
-    const link = getLivestreamLink(livestream.liveId)
-
+    const publicLivestream = livestreamToPublic(livestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
-    let status: Exclude<LiveStatus, 'unknown'>
-    if (livestream.start == null) {
-      status = 'not_started'
-    } else if (livestream.end == null) {
-      status = 'live'
+    if (publicLivestream.status === 'live') {
       viewers = await this.viewershipStore.getLatestLiveCount()
-    } else {
-      status = 'finished'
     }
 
     return {
-      schema: 2,
-      startTime: livestream.start?.getTime() ?? null,
-      endTime: livestream.end?.getTime() ?? null,
+      schema: 3,
+      livestream: publicLivestream,
       youtubeLiveViewers: viewers?.viewCount ?? null,
       twitchLiveViewers: viewers?.twitchViewCount ?? null,
-      livestreamLink: link,
-      status
     }
   }
 }

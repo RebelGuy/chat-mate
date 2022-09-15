@@ -60,6 +60,8 @@ The following environment variables must be set in the `.env` file:
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
+- `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
+- `STREAMLABS_SOCKET_TOKEN`: The WebSocket token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -71,7 +73,8 @@ The following environment variables must be set in the `.env` file:
 - `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
 The following set of environment variables is available only for **local development** (that is, where `NODE_ENV`=`local`):
-- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
+- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `fa
+lse`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
 
 The following set of environmnet variables is available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
@@ -131,6 +134,7 @@ Key:
 **Services**
 - 🟢 AdminService
   - 🟢 getAdminUsers
+- ⚪ ApiService
 - ⚪ ApplicationInsightsService
 - 🟢 ChannelService
   - 🟢 getActiveUserChannels
@@ -141,6 +145,11 @@ Key:
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
   - 🟢 initialise
+- 🟢 DonationFetchService
+  - 🟢 initialise
+- 🟢 DonationService
+  - 🟢 linkUserToDonation
+  - 🟢 unlinkUserFromDonation
 - 🟢 EmojiService
   - 🟢 applyCustomEmojis
 - 🟢 ExperienceService
@@ -154,6 +163,7 @@ Key:
 - 🟢 LivestreamService
   - 🟢 initialise
   - 🟢 deactivateLivestream
+  - 🟢 getLivestreams
   - 🟢 setActiveLivestream
 - 🟢 LogQueryService
   - ⚪ onWarning
@@ -185,6 +195,7 @@ Key:
   - 🟢 untimeoutUser
 - 🟢 RankService
   - 🟢 getAccessibleRanks
+- ⚪ StreamlabsProxyService
 - 🟢 StatusService
   - 🟢 getApiStatus
   - 🟢 onRequestDone
@@ -228,6 +239,13 @@ Key:
   - 🟢 addCustomEmoji
   - 🟢 getAllCustomEmojis
   - 🟢 updateCustomEmoji
+- 🟢 DonationStore
+  - 🟢 addDonation
+  - 🟢 getDonationsByUserId
+  - 🟢 getDonationsSince
+  - 🟢 getLastStreamlabsId
+  - 🟢 linkUserToDonation
+  - 🟢 unlinkUserFromDonation
 - 🟢 ExperienceStore
   - 🟢 addChatExperience
   - 🟢 addManualExperience
@@ -259,6 +277,7 @@ Key:
   - 🟢 getUserRanksForGroup
   - 🟢 getUserRankHistory
   - 🟢 removeUserRank
+  - 🟢 updateRankExpiration
 - 🟢 ViewershipStore
   - 🟢 addLiveViewCount
   - 🟢 addViewershipForChatParticipation
@@ -276,6 +295,10 @@ Key:
 - ⚪ DateTimeHelpers
   - ⚪ now
   - ⚪ ts
+- 🟢 DonationHelpers
+  - 🟢 isEligibleForDonator
+  - 🟢 isEligibleForMember
+  - 🟢 isEligibleForSupporter
 - 🟢 ExperienceHelpers
   - 🟢 calculateChatMessageQuality
   - 🟢 calculateExperience
@@ -338,7 +361,7 @@ Returns data with the following properties:
 Path: `/chatMate`.
 
 ### `GET /status`
-*Current schema: 3.*
+*Current schema: 4.*
 
 Gets the latest status information.
 
@@ -387,6 +410,46 @@ Returns data with the following properties:
   - `true`: The Masterchat instance is authenticated.
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
+
+## Donation Endpoints
+Path: `/donation`.
+
+### `GET /`
+*Current schema: 1.*
+
+Gets all donations.
+
+Returns data with the following properties:
+- `donations` (`PublicDonation[]`): The list of all donations.
+
+### `POST /link`
+*Current schema: 1.*
+
+Links a user to a donation.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation to which the user should be linked.
+- `userId` (`number`): The user to link to the donation.
+
+Returns data with the following properties:
+- `updatedDonation` (`PublicDonation`): The updated donation that now includes the linked user.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or when a user is already linked to the given donation.
+
+### `DELETE /link`
+*Current schema: 1.*
+
+Unlinks a user to a donation.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation from which the user should be unlinked.
+
+Returns data with the following properties:
+- `updatedDonation` (`PublicDonation`): The updated donation that no longer includes the linked user.
+
+Can return the following errors:
+- `404`: When the request data is not sent, or when no user was linked to the given donation.
 
 ## Emoji Endpoints
 Path: `/emoji`.
@@ -470,6 +533,17 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `404`: When the given user is not found.
+
+## Livestream Endpoints
+Path: `/livestream`.
+
+### `GET /`
+*Current schema: 1.*
+
+Gets the list of all livestreams with any status.
+
+Returns data with the following properties:
+- `livestreams` (`PublicLivestream[]`): The list of livestreams, sorted by start time in ascending order. Livestreams that haven't started yet are placed at the end of the array.
 
 ## Log Endpoints
 Path: `/log`.

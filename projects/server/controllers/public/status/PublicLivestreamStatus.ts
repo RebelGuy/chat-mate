@@ -1,19 +1,10 @@
-import { PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicLivestream } from '@rebel/server/controllers/public/livestream/PublicLivestream'
 
-export type PublicLivestreamStatus = PublicObject<2, {
-  schema: 2
+export type PublicLivestreamStatus = PublicObject<3, {
+  schema: 3
 
-  /** Link to the YouTube watch page of the livestream. */
-  livestreamLink: string
-
-  /** The current status of the livestream. */
-  status: 'not_started' | 'live' | 'finished'
-
-  /** The start timestamp of the livestream. Null if status is `not_started`. */
-  startTime: number | null
-
-  /** The end timestamp of the livestream. Null if status is not `finished`. */
-  endTime: number | null
+  livestream: Tagged<1, PublicLivestream>
 
   /** The current number of viewers watching the Youtube livestream. Null if status is not `live`. */
   youtubeLiveViewers: number | null
