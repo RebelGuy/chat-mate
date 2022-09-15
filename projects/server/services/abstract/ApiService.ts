@@ -22,7 +22,7 @@ export default abstract class ApiService extends ContextClass {
     this.requestId = 0
   }
 
-  /** Base wrapper that takes care of logging, timeouts, and updating the undserlying status service. */
+  /** Base wrapper that takes care of logging, timeouts, and updating the underlying status service. */
   public wrapRequest<TQuery extends any[], TResponse> (
     request: (...query: TQuery) => Promise<TResponse>,
     requestName: string

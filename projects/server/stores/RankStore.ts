@@ -20,14 +20,14 @@ export type AddUserRankArgs = {
   rank: RankName
   userId: number
   message: string | null
-  
+
   // null if assigned by system
   assignee: number | null
-  
+
   // null if the rank shouldn't expire
   expirationTime: Date | null
-  
-  // optionally specify the time at which the rank was added
+
+  // optionally specify the reported time at which the rank was added. if not provided, uses the current time
   time?: Date
 }
 

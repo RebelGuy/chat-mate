@@ -62,7 +62,8 @@ export default class DonationStore extends ContextClass {
   // we perform side effects when linking/unlinking, so it makes sense to enforce that only a single operation can happen.
   // we could probably enforce this on a database-level by using a separated link table, but that's overkill
 
-  /** @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
+  /** Links the user to the donation, returning the updated donation.
+   * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, userId: number, linkedAt: Date): Promise<Donation> {
     const donationWithUser = await this.db.donation.findFirst({
       where: {

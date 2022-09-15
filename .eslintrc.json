@@ -37,6 +37,7 @@
     "class-methods-use-this": "off", // not all members of a class should have to access `this,
     "prefer-const": "off",
     "no-empty-function": "warn",
+    "no-trailing-spaces": "warn",
     
     // see https://typescript-eslint.io/rules
     "@typescript-eslint/unbound-method": "error",
