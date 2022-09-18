@@ -522,9 +522,19 @@ export class Masterchat extends EventEmitter {
         rawActions = unwrapReplayActions(rawActions);
       }
 
-      const actions = rawActions
-        .map(parseAction)
-        .filter((a): a is Action => a !== undefined);
+      let actions: Action[] = []
+      for (const action of rawActions) {
+        try {
+          const parsed = parseAction(action)
+          if (parsed != null && parsed.type !== 'unknown') {
+            actions.push(parsed)
+          }
+        } catch (e) {
+          // todo CHAT-424: add Masterchat dependency to logService and log error here
+          // this is non-trivial because it means we will need to create a `shared` project first so we can reference the types
+          // also want to convert all calls to `debug` to use the logService instead
+        }
+      }
 
       const chat: ChatResponse = {
         actions,

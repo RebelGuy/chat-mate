@@ -17,7 +17,7 @@ export function parseMarkChatItemAsDeletedAction(
         JSON.stringify(payload)
       );
       throw new Error(
-        `Unrecognized deletion status: ${payload.deletedStateMessage}`
+        `Unrecognized deletion status: ${JSON.stringify(payload.deletedStateMessage)}`
       );
   }
 
