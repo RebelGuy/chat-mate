@@ -2,9 +2,7 @@ import { CustomEmoji } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
-import ExperienceService from '@rebel/server/services/ExperienceService'
-import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
-import { single } from '@rebel/server/util/arrays'
+import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 
 type SearchResult = {
   searchTerm: string,
@@ -12,18 +10,15 @@ type SearchResult = {
 }
 
 type Deps = Dependencies<{
-  customEmojiStore: CustomEmojiStore,
-  experienceService: ExperienceService
+  customEmojiEligibilityService: CustomEmojiEligibilityService
 }>
 
 export default class EmojiService extends ContextClass {
-  private readonly customEmojiStore: CustomEmojiStore
-  private readonly experienceService: ExperienceService
+  private readonly customEmojiEligibilityService: CustomEmojiEligibilityService
 
   constructor (deps: Deps) {
     super()
-    this.customEmojiStore = deps.resolve('customEmojiStore')
-    this.experienceService = deps.resolve('experienceService')
+    this.customEmojiEligibilityService = deps.resolve('customEmojiEligibilityService')
   }
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
@@ -33,8 +28,8 @@ export default class EmojiService extends ContextClass {
       throw new Error('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
     }
 
-    let eligibleEmojis = await this.getEligibleEmojis(userId)    
-    
+    let eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId)
+
     // ok I don't know what the proper way to do this is, but typing `:troll:` in YT will convert the message
     // into a troll emoji of type text... so I guess if the troll emoji is available, we add a special rule here
     const troll = eligibleEmojis.find(em => em.symbol.toLowerCase() === 'troll')
@@ -95,14 +90,6 @@ export default class EmojiService extends ContextClass {
     }
 
     return result
-  }
-
-  private async getEligibleEmojis (userId: number): Promise<CustomEmoji[]> {
-    const levelPromise = this.experienceService.getLevels([userId])
-    const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
-    const level = single(await levelPromise)
-
-    return allEmojis.filter(e => level.level.level >= e.levelRequirement)
   }
 
   /** Attempts to match the search terms, ignoring casings. Returns ordered search results. */

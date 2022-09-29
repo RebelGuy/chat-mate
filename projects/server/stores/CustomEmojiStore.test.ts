@@ -2,9 +2,9 @@ import { CustomEmoji } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Entity, New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
-import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
+import CustomEmojiStore, { EmojiRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { nameof } from '@rebel/server/_test/utils'
+import { expectArray, nameof } from '@rebel/server/_test/utils'
 
 const emoji1: New<Entity.CustomEmoji> = {
   name: 'Emoji 1',
@@ -17,6 +17,18 @@ const emoji2: New<Entity.CustomEmoji> = {
   symbol: 'emoji2',
   image: Buffer.from('emoji2'),
   levelRequirement: 20
+}
+const emoji3: New<Entity.CustomEmoji> = {
+  name: 'Emoji 3',
+  symbol: 'emoji3',
+  image: Buffer.from('emoji3'),
+  levelRequirement: 30
+}
+const emoji4: New<Entity.CustomEmoji> = {
+  name: 'Emoji 4',
+  symbol: 'emoji4',
+  image: Buffer.from('emoji4'),
+  levelRequirement: 40
 }
 
 export default () => {
@@ -55,6 +67,29 @@ export default () => {
       expect(result.length).toBe(2)
       expect(result[0]).toEqual(expect.objectContaining(emoji1))
       expect(result[1]).toEqual(expect.objectContaining(emoji2))
+    })
+  })
+
+  describe(nameof(CustomEmojiStore, 'getCustomEmojiWhitelistedRanks'), () => {
+    test('returns the rank whitelist for each specified emoji', async () => {
+      await db.customEmoji.createMany({ data: [emoji1, emoji2, emoji3, emoji4] })
+      await db.rank.createMany({ data: [
+        { name: 'donator', group: 'cosmetic', displayNameAdjective: 'rank1', displayNameNoun: 'rank2' },
+        { name: 'supporter', group: 'cosmetic', displayNameAdjective: 'rank2', displayNameNoun: 'rank2' }
+      ]})
+      await db.customEmojiRankWhitelist.createMany({ data: [
+        { customEmojiId: 1, rankId: 1 },
+        { customEmojiId: 1, rankId: 2 },
+        { customEmojiId: 2, rankId: 1 },
+        { customEmojiId: 4, rankId: 1 },
+      ]})
+
+      const result = await customEmojiStore.getCustomEmojiWhitelistedRanks([2, 1, 3])
+
+      expect(result.length).toBe(3)
+      expect(result[0]).toEqual<EmojiRankWhitelist>({ emojiId: 2, rankIds: [1] })
+      expect(result[1]).toEqual<EmojiRankWhitelist>({ emojiId: 1, rankIds: [1, 2] })
+      expect(result[2]).toEqual<EmojiRankWhitelist>({ emojiId: 3, rankIds: [] })
     })
   })
 

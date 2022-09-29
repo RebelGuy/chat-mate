@@ -145,6 +145,8 @@ Key:
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
   - 🟢 initialise
+- 🟢 CustomEmojiEligibilityService
+  - 🟢 getEligibleEmojis
 - 🟢 DonationFetchService
   - 🟢 initialise
 - 🟢 DonationService
@@ -238,6 +240,7 @@ Key:
 - 🟢 CustomEmojiStore
   - 🟢 addCustomEmoji
   - 🟢 getAllCustomEmojis
+  - 🟢 getCustomEmojiWhitelistedRanks
   - 🟢 updateCustomEmoji
 - 🟢 DonationStore
   - 🟢 addDonation

@@ -413,10 +413,24 @@ model CustomEmoji {
 
   levelRequirement Int @db.UnsignedSmallInt
 
-  ChatCustomEmoji ChatCustomEmoji[]
+  chatCustomEmoji          ChatCustomEmoji[]
+  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
 
   @@unique([symbol], map: "custom_emoji_symbol_key")
   @@map("custom_emoji")
+}
+
+model CustomEmojiRankWhitelist {
+  id Int @id @default(autoincrement())
+
+  customEmojiId Int
+  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_rank_whitelist_customEmojiId_fkey")
+
+  rankId Int
+  rank   Rank @relation(fields: [rankId], references: [id], map: "custom_emoji_rank_whitelist_rankId_fkey")
+
+  @@unique([customEmojiId, rankId])
+  @@map("custom_emoji_rank_whitelist")
 }
 
 // Ranks
@@ -430,7 +444,8 @@ model Rank {
   description          String?   @db.VarChar(1024)
   group                RankGroup
 
-  userRanks UserRank[]
+  userRanks                UserRank[]
+  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
 
   @@unique([name], map: "rank_name_key")
   @@map("rank")
