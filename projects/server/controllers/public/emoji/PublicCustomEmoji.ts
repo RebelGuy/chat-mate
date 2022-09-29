@@ -4,19 +4,22 @@ export type PublicCustomEmoji = PublicObject<1, {
   schema: 1
 
   /** The internal emoji id. */
-  id: number,
+  id: number
 
   /** The human readable name of the emoji. */
-  name: string,
+  name: string
 
   /** The unique 3-10 character long symbol that identifies this emoji. */
-  symbol: string,
+  symbol: string
 
   /** The Base64 encoded image data, created directly from the buffer. */
   imageData: string
 
   /** The minimum level a user must be to unlock this emoji. */
   levelRequirement: number
+
+  /** The list of ranks that are allowed to use the custom emoji. If empty, all ranks have access. */
+  whitelistedRanks: number[]
 }>
 
 export type PublicCustomEmojiNew = Omit<PublicCustomEmoji, 'id'>

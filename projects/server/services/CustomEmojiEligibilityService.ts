@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import ExperienceService, { UserLevel } from '@rebel/server/services/ExperienceService'
-import CustomEmojiStore, { EmojiRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
+import CustomEmojiStore, { CustomEmojiWhitelistedRanks } from '@rebel/server/stores/CustomEmojiStore'
 import RankStore, { UserRanks } from '@rebel/server/stores/RankStore'
 import { single, intersection } from '@rebel/server/util/arrays'
 
@@ -45,7 +45,7 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     return userLevel.level.level >= emoji.levelRequirement
   }
 
-  private rankEligibilityCheck (userRanks: UserRanks, emojiRankWhitelist: EmojiRankWhitelist) {
+  private rankEligibilityCheck (userRanks: UserRanks, emojiRankWhitelist: CustomEmojiWhitelistedRanks) {
     // the absence of whitelisted ranks implies that all ranks have access to the emoji
     if (emojiRankWhitelist.rankIds.length === 0) {
       return true

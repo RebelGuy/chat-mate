@@ -94,7 +94,10 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
 
 /** Setup all emojis and their rank whitelist */
 function setupCustomEmojis (...whitelist: [Entity.CustomEmoji, Rank[]][]) {
-  mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue(whitelist.map(w => w[0]))
+  mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue(whitelist.map(w => ({
+    ...w[0],
+    whitelistedRanks: w[1].map(r => r.id)
+  })))
 
   mockCustomEmojiStore.getCustomEmojiWhitelistedRanks.mockReset()
     .calledWith(expectArray<number>(whitelist.map(w => w[0].id)))
