@@ -12,6 +12,7 @@ import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLev
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
+import { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { Singular } from '@rebel/server/types'
 import { sortByLength } from '@rebel/server/util/arrays'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
@@ -182,13 +183,18 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
   }
 }
 
+// wtf
 export type ChatItemWithRelations = (ChatMessage & {
   youtubeChannel: YoutubeChannel & { infoHistory: YoutubeChannelInfo[] } | null
   twitchChannel: TwitchChannel & { infoHistory: TwitchChannelInfo[] } | null
   chatMessageParts: (ChatMessagePart & {
       emoji: ChatEmoji | null
       text: ChatText | null
-      customEmoji: (ChatCustomEmoji & { text: ChatText | null, emoji: ChatEmoji | null, customEmoji: CustomEmoji }) | null
+      customEmoji: (ChatCustomEmoji & {
+        text: ChatText | null,
+        emoji: ChatEmoji | null,
+        customEmoji: CustomEmoji & { customEmojiRankWhitelist: { rankId: number }[]}
+      }) | null
       cheer: ChatCheer | null
   })[]
 })
@@ -343,7 +349,8 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
         name: part.customEmoji.customEmoji.name,
         symbol: part.customEmoji.customEmoji.symbol,
         levelRequirement: part.customEmoji.customEmoji.levelRequirement,
-        imageData: part.customEmoji.customEmoji.image.toString('base64')
+        imageData: part.customEmoji.customEmoji.image.toString('base64'),
+        whitelistedRanks: part.customEmoji.customEmoji.customEmojiRankWhitelist.map(w => w.rankId)
       }
     }
   } else if (part.emoji == null && part.text == null && part.customEmoji == null && part.cheer != null) {
