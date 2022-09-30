@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",

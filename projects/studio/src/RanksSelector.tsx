@@ -44,7 +44,6 @@ export default class RanksSelector extends React.PureComponent<Props> {
               <label htmlFor={r.name}>{toSentenceCase(r.displayNameNoun)}</label>
             </div>
           ))}
-          {}
           {inaccessibleRankString}
         </div>
       )
