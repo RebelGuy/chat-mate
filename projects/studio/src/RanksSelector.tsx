@@ -1,30 +1,14 @@
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
-import { getAccessibleRanks } from '@rebel/studio/api'
 import * as React from 'react'
 
 type Props = {
   disabled: boolean
   ranks: number[]
+  accessibleRanks: PublicRank[]
   onChange: (newRanks: number[]) => void
 }
 
-type State = {
-  loading: boolean
-  error: string | null
-  accessibleRanks: PublicRank[]
-}
-
-export default class RanksSelector extends React.PureComponent<Props, State> {
-  constructor (props: Props) {
-    super(props)
-
-    this.state = {
-      loading: false,
-      error: null,
-      accessibleRanks: []
-    }
-  }
-
+export default class RanksSelector extends React.PureComponent<Props> {
   private toggleCheckbox (rankId: number) {
     let ranks = this.props.ranks
     if (ranks.includes(rankId)) {
@@ -35,41 +19,9 @@ export default class RanksSelector extends React.PureComponent<Props, State> {
     this.props.onChange(ranks)
   }
 
-  override async componentDidMount () {
-    this.setState({ loading: true })
-
-    try {
-      const response = await getAccessibleRanks()
-      if (response.success) {
-        this.setState({
-          accessibleRanks: response.data.accessibleRanks,
-          error: null
-        })
-      } else {
-        this.setState({
-          accessibleRanks: [],
-          error: response.error.message
-        })
-      }
-    } catch (e: any) {
-      this.setState({
-        accessibleRanks: [],
-        error: e.message
-      })
-    }
-    
-    this.setState({ loading: false })
-  }
-
   override render (): React.ReactNode {
-    if (this.state.error) {
-      return <div style={{ color: 'red' }}>{this.state.error}</div>
-    } else if (this.state.loading) {
-      return <div>Loading...</div>
-    }
-
-    const whitelistedRanks = this.state.accessibleRanks.filter(r => this.props.ranks.includes(r.id))
-    const inaccessibleRankCount = this.props.ranks.filter(id => !this.state.accessibleRanks.map(r => r.id).includes(id)).length
+    const whitelistedRanks = this.props.accessibleRanks.filter(r => this.props.ranks.includes(r.id))
+    const inaccessibleRankCount = this.props.ranks.filter(id => !this.props.accessibleRanks.map(r => r.id).includes(id)).length
     const inaccessibleRankString = inaccessibleRankCount === 0 ? '' : ` (and ${inaccessibleRankCount} inaccessible ranks)`
 
     if (this.props.disabled) {
@@ -81,7 +33,7 @@ export default class RanksSelector extends React.PureComponent<Props, State> {
     } else {
       return (
         <div style={{ textAlign: 'left' }}>
-          {this.state.accessibleRanks.map(r => (
+          {this.props.accessibleRanks.map(r => (
             <div key={r.id}>
               <input
                 type="checkbox"
