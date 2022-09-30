@@ -18,7 +18,7 @@ import { addTime } from '@rebel/server/util/datetime'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
-type GetAccessibleRanksResponse = ApiResponse<1, { accessibleRanks: PublicRank[] }>
+export type GetAccessibleRanksResponse = ApiResponse<1, { accessibleRanks: PublicRank[] }>
 
 type AddUserRankRequest = ApiRequest<1, {
   schema: 1,

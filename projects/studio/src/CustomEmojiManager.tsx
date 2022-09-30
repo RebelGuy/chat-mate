@@ -2,6 +2,7 @@ import React from 'react'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { addCustomEmoji, getAllCustomEmojis, updateCustomEmoji } from '@rebel/studio/api'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
+import RanksSelector from '@rebel/studio/RanksSelector'
 
 // this code is yuckyu and needs cleaning up, but it works!
 
@@ -28,7 +29,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
         name: '',
         symbol: '',
         levelRequirement: 0,
-        imageData: ''
+        imageData: '',
+        whitelistedRanks: []
       },
       error: null
     }
@@ -75,7 +77,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
           name: '',
           symbol: '',
           levelRequirement: 0,
-          imageData: ''
+          imageData: '',
+          whitelistedRanks: []
         },
         emojis: [...this.state.emojis, result.data.newEmoji],
         error: null
@@ -113,6 +116,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
               <td>Name</td>
               <td>Symbol</td>
               <td>Level Req.</td>
+              <td>Rank Whitelist</td>
               <td>Image</td>
               <td>Action</td>
             </tr>
@@ -142,6 +146,7 @@ function CustomEmojiRow (props: { data: PublicCustomEmoji, actionCell: React.Rea
   const onChangeSymbol = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, symbol: e.currentTarget.value })
   const onChangeLevelReq = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, levelRequirement: Number(e.currentTarget.value) })
   const onChangeImageData = (imageData: string | null) => props.onChange!({ ...props.data, imageData: imageData ?? '' })
+  const onChangeWhitelistedRanks = (newRanks: number[]) => props.onChange!({ ...props.data, whitelistedRanks: newRanks })
   
   const disabled = props.onChange == null
   return (
@@ -149,6 +154,7 @@ function CustomEmojiRow (props: { data: PublicCustomEmoji, actionCell: React.Rea
     <td><input type="text" disabled={disabled} value={props.data.name} onChange={onChangeName} /></td>
     <td><input type="text" disabled={disabled} value={props.data.symbol} onChange={onChangeSymbol} /></td>
     <td><input type="number" disabled={disabled} value={props.data.levelRequirement} onChange={onChangeLevelReq} /></td>
+    <td><RanksSelector disabled={disabled} ranks={props.data.whitelistedRanks} onChange={onChangeWhitelistedRanks} /></td>
     <td><RenderedImage disabled={disabled} imageData={props.data.imageData} onSetImage={onChangeImageData} /></td>
     <td>{props.actionCell}</td>
   </tr>

@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import { Entity, New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
 import CustomEmojiStore, { CustomEmojiCreateData, CustomEmojiUpdateData, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
+import { sortBy } from '@rebel/server/util/arrays'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { expectArray, nameof } from '@rebel/server/_test/utils'
 
@@ -113,25 +114,33 @@ export default () => {
   describe(nameof(CustomEmojiStore, 'updateCustomEmoji'), () => {
     test('updates the custom emoji correctly', async () => {
       const existingEmoji = getEmojiObj(1)
-      await db.customEmoji.create({ data: existingEmoji })
+      const otherEmoji = getEmojiObj(2)
+      await db.customEmoji.createMany({ data: [existingEmoji, otherEmoji] })
       await db.customEmojiRankWhitelist.createMany({ data: [
-        { customEmojiId: 1, rankId: 1 },
-        { customEmojiId: 1, rankId: 2 }
+        { customEmojiId: existingEmoji.id, rankId: 1 },
+        { customEmojiId: existingEmoji.id, rankId: 2 },
+        { customEmojiId: otherEmoji.id, rankId: 1 },
+        { customEmojiId: otherEmoji.id, rankId: 2 }
       ]})
-      const updatedEmoji = { ...getEmojiObj(2), id: existingEmoji.id }
+      const updatedEmoji = { ...getEmojiObj(3), id: existingEmoji.id }
       const data: CustomEmojiUpdateData = { ...updatedEmoji, whitelistedRanks: [rank2, rank3] }
 
       const result = await customEmojiStore.updateCustomEmoji(data)
 
       expect(result).toEqual<CustomEmojiWithRankWhitelist>(data)
-      await expectRowCount(db.customEmoji).toBe(1)
-      await expect(db.customEmoji.findFirst()).resolves.toEqual(expect.objectContaining<CustomEmoji>(updatedEmoji))
+      await expectRowCount(db.customEmoji).toBe(2)
+      const [storedEmoji1, storedEmoji2] = await db.customEmoji.findMany()
+      expect(storedEmoji1).toEqual(expect.objectContaining<CustomEmoji>(updatedEmoji))
+      expect(storedEmoji2).toEqual(expect.objectContaining<CustomEmoji>(otherEmoji))
 
-      // ensure rank whitelists were updated - rank1 should have been removed, and rank3 should have been added
-      await expectRowCount(db.customEmojiRankWhitelist).toBe(2)
-      const [whitelist1, whitelist2] = await db.customEmojiRankWhitelist.findMany()
+      // ensure rank whitelists were updated - rank1 should have been removed, and rank3 should have been added.
+      // the other two whitelist entries should have remained unchanged.
+      await expectRowCount(db.customEmojiRankWhitelist).toBe(4)
+      const [whitelist1, whitelist2, whitelist3, whitelist4] = sortBy(await db.customEmojiRankWhitelist.findMany(), x => x.id)
       expect(whitelist1).toEqual<CustomEmojiRankWhitelist>({ id: 2, customEmojiId: updatedEmoji.id, rankId: rank2 })
-      expect(whitelist2).toEqual<CustomEmojiRankWhitelist>({ id: 3, customEmojiId: updatedEmoji.id, rankId: rank3 })
+      expect(whitelist2).toEqual<CustomEmojiRankWhitelist>({ id: 3, customEmojiId: otherEmoji.id, rankId: rank1 })
+      expect(whitelist3).toEqual<CustomEmojiRankWhitelist>({ id: 4, customEmojiId: otherEmoji.id, rankId: rank2 })
+      expect(whitelist4).toEqual<CustomEmojiRankWhitelist>({ id: 5, customEmojiId: updatedEmoji.id, rankId: rank3 })
     })
 
     test('throws if invalid id', async () => {

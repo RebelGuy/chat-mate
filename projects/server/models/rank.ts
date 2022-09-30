@@ -21,6 +21,7 @@ export function userRankToPublicObject (userRank: UserRankWithRelations): Public
 export function rankToPublicObject (rank: Rank): PublicRank {
   return {
     schema: 1,
+    id: rank.id,
     name: rank.name,
     group: rank.group,
     displayNameNoun: rank.displayNameNoun,

@@ -112,7 +112,10 @@ export default class CustomEmojiStore extends ContextClass {
       })
 
       await db.customEmojiRankWhitelist.deleteMany({
-        where: { rankId: { notIn: data.whitelistedRanks } }
+        where: {
+          rankId: { notIn: data.whitelistedRanks },
+          customEmojiId: data.id
+        }
       })
       await db.customEmojiRankWhitelist.createMany({
         data: data.whitelistedRanks.map(r => ({ customEmojiId: data.id, rankId: r })),
