@@ -321,3 +321,12 @@ export function compareArrays<T> (first: T[], second: T[], comparator?: (a: T, b
 
   return true
 }
+
+/** Produces the set intersection of the two arrays. */
+export function intersection<T> (first: T[], second: T[], comparator?: (a: T, b: T) => boolean): T[] {
+  if (comparator == null) {
+    comparator = (a: T, b: T) => a === b
+  }
+
+  return first.filter(x => second.find(y => comparator!(x, y)) != null)
+}

@@ -1,7 +1,9 @@
 import React from 'react'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
-import { addCustomEmoji, getAllCustomEmojis, updateCustomEmoji } from '@rebel/studio/api'
+import { addCustomEmoji, getAccessibleRanks, getAllCustomEmojis, updateCustomEmoji } from '@rebel/studio/api'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
+import RanksSelector from '@rebel/studio/RanksSelector'
+import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 
 // this code is yuckyu and needs cleaning up, but it works!
 
@@ -10,9 +12,10 @@ type Props = {}
 type State = {
   loading: boolean
   emojis: PublicCustomEmoji[]
+  accessibleRanks: PublicRank[]
   editingEmoji: PublicCustomEmoji | null
   newEmoji: PublicCustomEmojiNew
-  error: string | null
+  error: string[] | null
 }
 
 export default class CustomEmojiManager extends React.PureComponent<Props, State> {
@@ -22,13 +25,15 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     this.state = {
       loading: true,
       emojis: [],
+      accessibleRanks: [],
       editingEmoji: null,
       newEmoji: {
         schema: 1,
         name: '',
         symbol: '',
         levelRequirement: 0,
-        imageData: ''
+        imageData: '',
+        whitelistedRanks: []
       },
       error: null
     }
@@ -54,7 +59,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
         error: null
       })
     } else {
-      this.setState({ error: result.error.message })
+      this.setState({ error: [result.error.message] })
     }
   }
 
@@ -75,25 +80,31 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
           name: '',
           symbol: '',
           levelRequirement: 0,
-          imageData: ''
+          imageData: '',
+          whitelistedRanks: []
         },
         emojis: [...this.state.emojis, result.data.newEmoji],
         error: null
       })
     } else {
-      this.setState({ error: result.error.message })
+      this.setState({ error: [result.error.message] })
     }
   }
 
   override async componentDidMount () {
     const emojis = await getAllCustomEmojis()
-    if (emojis.success) {
+    const accessibleRanks = await getAccessibleRanks()
+    if (emojis.success && accessibleRanks.success) {
       this.setState({
         emojis: emojis.data.emojis,
+        accessibleRanks: accessibleRanks.data.accessibleRanks,
         loading: false
       })
     } else {
-      this.setState({ error: emojis.error.message })
+      this.setState({
+        error: [!emojis.success && emojis.error.message, !accessibleRanks.success && accessibleRanks.error.message].filter(e => typeof e === 'string') as string[],
+        loading: false
+      })
     }
   }
 
@@ -105,7 +116,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     return (
       <>
         {this.state.error && <div style={{ color: 'red', paddingBottom: 12 }}>
-          <strong>{this.state.error}</strong>
+          {this.state.error.map(e => <strong style={{ display: 'block' }}>{e}</strong>)}
         </div>}
         <table style={{ width: '90%', padding: '5%' }}>
           <thead>
@@ -113,6 +124,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
               <td>Name</td>
               <td>Symbol</td>
               <td>Level Req.</td>
+              <td>Rank Whitelist</td>
               <td>Image</td>
               <td>Action</td>
             </tr>
@@ -126,10 +138,10 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                 {isEditing && <button onClick={this.onUpdate}>Submit</button>}
                 {isEditing && <button onClick={this.onCancelEdit}>Cancel</button>}
               </>
-              return <CustomEmojiRow key={emoji.symbol} data={isEditing ? this.state.editingEmoji! : emoji} actionCell={actionCell} onChange={isEditing ? this.onChange : null} />
+              return <CustomEmojiRow key={emoji.symbol} data={isEditing ? this.state.editingEmoji! : emoji} actionCell={actionCell} accessibleRanks={this.state.accessibleRanks} onChange={isEditing ? this.onChange : null} />
             })}
 
-            <CustomEmojiRow data={{ id: -1, ...this.state.newEmoji }} actionCell={<button onClick={this.onAdd}>Add</button>} onChange={this.onChange} />
+            <CustomEmojiRow data={{ id: -1, ...this.state.newEmoji }} actionCell={<button onClick={this.onAdd}>Add</button>} accessibleRanks={this.state.accessibleRanks} onChange={this.onChange} />
           </tbody>
         </table>
       </>
@@ -137,11 +149,12 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
   }
 }
 
-function CustomEmojiRow (props: { data: PublicCustomEmoji, actionCell: React.ReactNode, onChange: ((updatedData: PublicCustomEmoji) => void) | null }) {
+function CustomEmojiRow (props: { data: PublicCustomEmoji, actionCell: React.ReactNode, accessibleRanks: PublicRank[], onChange: ((updatedData: PublicCustomEmoji) => void) | null }) {
   const onChangeName = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, name: e.currentTarget.value })
   const onChangeSymbol = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, symbol: e.currentTarget.value })
   const onChangeLevelReq = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, levelRequirement: Number(e.currentTarget.value) })
   const onChangeImageData = (imageData: string | null) => props.onChange!({ ...props.data, imageData: imageData ?? '' })
+  const onChangeWhitelistedRanks = (newRanks: number[]) => props.onChange!({ ...props.data, whitelistedRanks: newRanks })
   
   const disabled = props.onChange == null
   return (
@@ -149,6 +162,7 @@ function CustomEmojiRow (props: { data: PublicCustomEmoji, actionCell: React.Rea
     <td><input type="text" disabled={disabled} value={props.data.name} onChange={onChangeName} /></td>
     <td><input type="text" disabled={disabled} value={props.data.symbol} onChange={onChangeSymbol} /></td>
     <td><input type="number" disabled={disabled} value={props.data.levelRequirement} onChange={onChangeLevelReq} /></td>
+    <td><RanksSelector disabled={disabled} ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} onChange={onChangeWhitelistedRanks} /></td>
     <td><RenderedImage disabled={disabled} imageData={props.data.imageData} onSetImage={onChangeImageData} /></td>
     <td>{props.actionCell}</td>
   </tr>

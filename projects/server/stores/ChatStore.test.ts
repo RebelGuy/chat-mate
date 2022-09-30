@@ -6,7 +6,7 @@ import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel
 import { mockGetter, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
-import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
+import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
 import { YoutubeChannelInfo, Livestream, TwitchChannelInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
 
@@ -279,6 +279,42 @@ export default () => {
       const result = await chatStore.getChatSince(chatItem1.timestamp)
 
       expect(result.map(r => r.externalId)).toEqual([chatItem2.id, chatItem3.id])
+    })
+
+    test('attaches custom emoji rank whitelist', async () => {
+      const customEmojiMessage: PartialCustomEmojiChatMessage = {
+        customEmojiId: 1,
+        type: 'customEmoji',
+        text: text1,
+        emoji: null
+      }
+      const chatItem: ChatItem = {
+        author: ytAuthor1,
+        id: 'id1',
+        platform: 'youtube',
+        contextToken: 'params1',
+        timestamp: new Date(2021, 5, 1).getTime(),
+        messageParts: [customEmojiMessage]
+      }
+
+      await db.rank.createMany({ data: [
+        { name: 'donator', group: 'cosmetic', displayNameAdjective: 'rank1', displayNameNoun: 'rank1' },
+        { name: 'supporter', group: 'cosmetic', displayNameAdjective: 'rank2', displayNameNoun: 'rank2' },
+        { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
+      ]})
+      await db.customEmoji.create({ data: { symbol: 'test', image: Buffer.from(''), levelRequirement: 1, name: 'Test Emoji' }})
+      await db.customEmojiRankWhitelist.createMany({ data: [
+        { customEmojiId: 1, rankId: 1 },
+        { customEmojiId: 1, rankId: 2 }
+      ]})
+      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.getChatSince(0)
+
+      const emojiResult = single(single(result).chatMessageParts).customEmoji!
+      expect(emojiResult.text!.id).toBe(1)
+      expect(emojiResult.customEmoji.id).toBe(1)
+      expect(emojiResult.customEmoji.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
     })
   })
 

@@ -6,7 +6,7 @@ import { PublicCustomEmoji } from '@rebel/server/controllers/public/emoji/Public
 export type PublicMessageCustomEmoji = PublicObject<2, {
   schema: 2
 
-  /** The text content of this part, if applicable, in the form :<custo_emoji_symbol>:. */
+  /** The text content of this part, if applicable, in the form :<custom_emoji_symbol>:. */
   textData: Tagged<1, PublicMessageText> | null
 
   /** The emoji content of this part, if applicable. */

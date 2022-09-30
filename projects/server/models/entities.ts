@@ -42,7 +42,7 @@ export namespace Entity {
   export type ExperienceDataChatMessage = FullPayload<'ExperienceDataChatMessage'>
   export type ViewingBlock = FullPayload<'ViewingBlock'>
 
-  export type CustomEmoji = Omit<FullPayload<'CustomEmoji'>, 'ChatCustomEmoji'>
+  export type CustomEmoji = Omit<FullPayload<'CustomEmoji'>, 'chatCustomEmoji' | 'customEmojiRankWhitelist'>
 }
 
 // wraps Entity.Object, for creating new entities

@@ -169,7 +169,11 @@ const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>(
     include: {
       emoji: true,
       text: true,
-      customEmoji: { include: { customEmoji: true, text: true, emoji: true }},
+      customEmoji: { include: {
+        customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } },
+        text: true,
+        emoji: true
+      }},
       cheer: true
     },
   },

@@ -1,6 +1,6 @@
 import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
-import { customEmojiToPublicObject, publicObjectToCustomEmoji, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
+import { customEmojiToPublicObject, publicObjectToCustomEmoji as publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji as publicObjectNewToCustomEmojiCreateData } from '@rebel/server/models/emoji'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import { Path, GET, POST, PATCH } from 'typescript-rest'
 
@@ -51,7 +51,7 @@ export default class EmojiController extends ControllerBase {
     }
 
     try {
-      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji))
+      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToCustomEmojiCreateData(request.newEmoji))
       return builder.success({ newEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)
@@ -67,7 +67,7 @@ export default class EmojiController extends ControllerBase {
     }
 
     try {
-      const emoji = await this.customEmojiStore.updateCustomEmoji(publicObjectToCustomEmoji(request.updatedEmoji))
+      const emoji = await this.customEmojiStore.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji))
       return builder.success({ updatedEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)

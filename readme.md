@@ -47,6 +47,12 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.8 - The Quality Update [30/9/2022]
+- Server
+  - Custom emojis can now be assigned a rank requirement (rank whitelist), on top of the existing level requirement. If set, a user must have at least one of the whitelisted rank to be able to use the emoji
+- Studio
+  - Added checkbox selection for choosing whitelisted ranks for a custom emoji
+
 ## v1.17 - The Donation Update [14/9/2022]
 - Server
   - Added Websocket for listening to Streamlabs donations

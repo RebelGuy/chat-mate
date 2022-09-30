@@ -1,6 +1,7 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/server/controllers/EmojiController'
 import { GetStatusResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
 import { GetTimestampsResponse } from '@rebel/server/controllers/LogController'
+import { GetAccessibleRanksResponse } from '@rebel/server/controllers/RankController'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/global'
 
@@ -72,6 +73,12 @@ export async function getStatus (): Promise<GetStatusResponse> {
 
 export async function getLogTimestamps (): Promise<GetTimestampsResponse> {
   const response = await fetch(baseUrl + '/log/timestamps', { method: 'GET' })
+  const body = await response.text()
+  return JSON.parse(body)
+}
+
+export async function getAccessibleRanks (): Promise<GetAccessibleRanksResponse> {
+  const response = await fetch(baseUrl + '/rank/accessible', { method: 'GET' })
   const body = await response.text()
   return JSON.parse(body)
 }

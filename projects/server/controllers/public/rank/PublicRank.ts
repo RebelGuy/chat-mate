@@ -3,6 +3,9 @@ import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 export type PublicRank = PublicObject<1, {
   schema: 1
 
+  /** The internal id of the rank. */
+  id: number
+
   /** The internal, unique name of the rank. */
   name:
     'admin' |
