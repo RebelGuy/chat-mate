@@ -26,7 +26,7 @@ export default class ChannelService extends ContextClass {
 
   /** Returns active user channels for each user. A user's active channel is the one with which the user
    * has last participated in chat. It is null if the user has not yet participated in chat.
-   * 
+   *
    * Given that users rarely use multiple accounts at once, this is probably the most relevant
    * channel we want to associate with the user at the current time. */
   public async getActiveUserChannels (userIds: number[] | 'all'): Promise<UserChannel[]> {

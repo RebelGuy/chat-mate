@@ -92,7 +92,7 @@ export default class PunishmentService extends ContextClass {
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'ban')))
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'ban')))  
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'ban')))
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -136,7 +136,7 @@ export default class PunishmentService extends ContextClass {
       const rank = rankResult.rank
       this.youtubeTimeoutRefreshService.startTrackingTimeout(rank.id, rank.expirationTime!, false, () => this.onRefreshTimeoutForYoutube(rank))
     }
-    
+
     return { rankResult, youtubeResults, twitchResults }
   }
 
@@ -228,7 +228,7 @@ export default class PunishmentService extends ContextClass {
 
   private async tryApplyYoutubePunishment (youtubeChannelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout'): Promise<YoutubeRankResult> {
     const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(youtubeChannelId)
-  
+
     if (lastChatItem == null) {
       const error = `Could not ${type} youtube channel ${youtubeChannelId} because no chat item was found for the channel`
       this.logService.logWarning(this, error)
@@ -238,7 +238,7 @@ export default class PunishmentService extends ContextClass {
       this.logService.logWarning(this, error)
       return { error, youtubeChannelId }
     }
-    
+
     let error: string | null = null
     try {
       let result: boolean
@@ -251,7 +251,7 @@ export default class PunishmentService extends ContextClass {
       } else {
         assertUnreachable(type)
       }
-      
+
       this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)
       if (!result) {
         error = `Request succeeded, but action was not applied.`
@@ -264,7 +264,7 @@ export default class PunishmentService extends ContextClass {
     return { error, youtubeChannelId }
   }
 
-  private async tryApplyTwitchPunishment (twitchChannelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<TwitchRankResult> {   
+  private async tryApplyTwitchPunishment (twitchChannelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<TwitchRankResult> {
     let error: string | null = null
     try {
       // if the punishment is already applied, twitch will just send a Notice message which we can ignore

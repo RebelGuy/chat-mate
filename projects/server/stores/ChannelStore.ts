@@ -52,7 +52,7 @@ export default class ChannelStore extends ContextClass {
   public async createOrUpdate (platform: ChatPlatform, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs | CreateOrUpdateTwitchChannelArgs): Promise<YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo> {
     // the reason we don't have separate createOrUpdate methods for each platform is that there is some shared logic that we don't want to replicate.
     // I toyed with adding an adapter, and making the method generic, but setting up the prisma validators was a pain so I opted for this.
-  
+
     let currentChannel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo | null
     if (platform === 'youtube') {
       currentChannel = await this.tryGetChannelWithLatestInfo(externalId)
@@ -111,7 +111,7 @@ export default class ChannelStore extends ContextClass {
 
     return channel!
   }
-  
+
   /** Returns all user ids. */
   public async getCurrentUserIds (): Promise<number[]> {
     const users = await this.db.chatUser.findMany()
@@ -183,7 +183,7 @@ export default class ChannelStore extends ContextClass {
     if (twitchChannel != null) {
       return twitchChannel.userId
     }
-    
+
     throw new Error('Cannot find user with external id ' + externalId)
   }
 

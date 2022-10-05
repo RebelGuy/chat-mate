@@ -80,7 +80,7 @@ describe(nameof(ChannelService, 'getUserById'), () => {
 
     expect(result).toBeNull()
   })
-  
+
   test('returns correct channel with id', async () => {
     const names: UserNames[] = [
       { userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] },

@@ -57,7 +57,7 @@ export default class ChatMateControllerFake implements IChatMateController {
       lastOk: new Date().getTime(),
       status: chooseWeightedRandom(['ok', 10], ['error', 1])
     }
-    
+
     return new Promise(r => r(builder.success({ livestreamStatus, youtubeApiStatus, twitchApiStatus })))
   }
 
@@ -80,7 +80,7 @@ export default class ChatMateControllerFake implements IChatMateController {
         const userChannel = pickRandom(users)
         const ranks = single(await this.rankStore.getUserRanks([userChannel.userId])).ranks
         const user: PublicUser = userDataToPublicUser({ ...userChannel, userId: userChannel.userId, level, ranks })
-  
+
         events.push({
           schema: 5,
           timestamp: new Date().getTime(),
@@ -93,7 +93,7 @@ export default class ChatMateControllerFake implements IChatMateController {
           },
           newTwitchFollowerData: null,
           donationData: null
-        })  
+        })
       } else if (r < 0.85) {
         // new follower event
         events.push({
@@ -106,7 +106,7 @@ export default class ChatMateControllerFake implements IChatMateController {
             displayName: randomString(8)
           },
           donationData: null
-        }) 
+        })
       } else {
         // new donation
         const amount = randomInt(100, 10000) / 100

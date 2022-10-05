@@ -58,7 +58,7 @@ export default class TwurpleAuthProvider extends ContextClass {
       token = await this.authStore.loadAccessToken()
     } catch (e: any) {
       const scriptName = `yarn workspace server auth:twitch:${this.nodeEnv}`
-      throw new Error(`Unable to authenticate Twurple.\n${e.message}\nPlease run the following script:\n\n    ${scriptName}`)  
+      throw new Error(`Unable to authenticate Twurple.\n${e.message}\nPlease run the following script:\n\n    ${scriptName}`)
     }
 
     this.logService.logDebug(this, 'Loaded database access token')

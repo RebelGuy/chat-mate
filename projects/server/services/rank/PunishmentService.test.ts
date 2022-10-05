@@ -217,7 +217,7 @@ describe(nameof(PunishmentService, 'banUser'), () => {
 
     const suppliedContextTokens = mockMasterchatProxyService.banYoutubeChannel.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
-    
+
     const suppliedTwitchChannelIds = mockTwurpleService.banChannel.mock.calls.map(c => c[0])
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
   })
@@ -237,7 +237,7 @@ describe(nameof(PunishmentService, 'isUserPunished'), () => {
   test('returns false if there are no active punishments for the user', async () => {
     mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1]))
       .mockResolvedValue([{ userId: userId1, ranks: [activeModRank] }])
-  
+
     const result = await punishmentService.isUserPunished(userId1)
 
     expect(result).toBe(false)
@@ -246,7 +246,7 @@ describe(nameof(PunishmentService, 'isUserPunished'), () => {
   test('returns true if there are active punishments for the user', async () => {
     mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1]))
       .mockResolvedValue([{ userId: userId1, ranks: [activeModRank, activeMute] }])
-  
+
     const result = await punishmentService.isUserPunished(userId1)
 
     expect(result).toBe(true)
@@ -326,7 +326,7 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
 
     const suppliedContextTokens = mockMasterchatProxyService.timeout.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
-    
+
     const suppliedTwitchChannelIds = mockTwurpleService.timeout.mock.calls
     expect(suppliedTwitchChannelIds).toEqual([[1, any(), 1000], [2, any(), 1000]])
 
@@ -355,7 +355,7 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
 describe(nameof(PunishmentService, 'getCurrentPunishments'), () => {
   test('gets punishments that are active', async () => {
     mockRankStore.getUserRanksForGroup.calledWith('punishment').mockResolvedValue([ activeTimeout, activeBan])
-  
+
     const result = await punishmentService.getCurrentPunishments()
 
     expect(result).toEqual([activeTimeout, activeBan])
@@ -392,7 +392,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'ban' })).mockResolvedValue(revokedPunishment)
 
     const result = await punishmentService.unbanUser(userId1, 'test')
-    
+
     expect(result.rankResult.rank).toBe(revokedPunishment)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: null },
@@ -418,7 +418,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError(error))
 
     const result = await punishmentService.unbanUser(userId1, 'test')
-    
+
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
 })
@@ -453,7 +453,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
-    
+
     expect(result.rankResult.rank).toBe(expectedResult)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 1, error: expect.stringContaining(`YouTube timeouts expire automatically`) },
@@ -481,7 +481,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError(error))
 
     const result = await punishmentService.untimeoutUser(userId1, 'test')
-    
+
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
 })

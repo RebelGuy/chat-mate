@@ -155,7 +155,7 @@ export default class PunishmentController extends ControllerBase {
       return builder.failure(e)
     }
   }
-  
+
   @POST
   @Path('/timeout')
   public async timeoutUser (request: TimeoutUserRequest): Promise<TimeoutUserResponse> {
@@ -250,7 +250,7 @@ export default class PunishmentController extends ControllerBase {
       } else {
         assertUnreachable(platform)
       }
-      
+
       return {
         schema: 1,
         channelId,
@@ -259,7 +259,7 @@ export default class PunishmentController extends ControllerBase {
         channelName
       }
     }
-    
+
     return await Promise.all([
       ...results.youtubeResults.map(c => makePublicResult(c.youtubeChannelId, 'youtube', c.error)),
       ...results.twitchResults.map(c => makePublicResult(c.twitchChannelId, 'twitch', c.error))

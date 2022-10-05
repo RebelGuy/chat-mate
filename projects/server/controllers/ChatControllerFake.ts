@@ -45,7 +45,7 @@ export default class ChatControllerFake implements IChatController {
         levelProgress: asLt(asGte(Math.random(), 0), 1)
       }
       const ranks = single(await this.rankStore.getUserRanks([item.userId])).ranks.map(userRankToPublicObject)
-      items.push(chatAndLevelToPublicChatItem(item, level, ranks))      
+      items.push(chatAndLevelToPublicChatItem(item, level, ranks))
     }
 
     return builder.success({ reusableTimestamp: since, chat: items })

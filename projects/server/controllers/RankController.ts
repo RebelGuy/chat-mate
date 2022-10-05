@@ -98,7 +98,7 @@ export default class RankController extends ControllerBase {
 
     try {
       let ranks: UserRankWithRelations[]
-      
+
       if (includeInactive === true) {
         ranks = await this.rankStore.getUserRankHistory(userId)
       } else {
@@ -229,7 +229,7 @@ export default class RankController extends ControllerBase {
       } else {
         assertUnreachable(platform)
       }
-      
+
       return {
         schema: 1,
         channelId,
@@ -238,7 +238,7 @@ export default class RankController extends ControllerBase {
         channelName
       }
     }
-    
+
     return await Promise.all([
       ...results.youtubeResults.map(c => makePublicResult(c.youtubeChannelId, 'youtube', c.error)),
       ...results.twitchResults.map(c => makePublicResult(c.twitchChannelId, 'twitch', c.error))

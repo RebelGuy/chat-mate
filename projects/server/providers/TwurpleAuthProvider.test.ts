@@ -25,7 +25,7 @@ beforeEach(() => {
   mockRefreshingAuthProviderFactory = mock()
   mockClientCredentialsAuthProvider = mock()
   mockClientCredentialsAuthProviderFactory = mock()
-  
+
   mockRefreshingAuthProviderFactory.create.mockReturnValue(mockRefreshingAuthProvider)
   mockClientCredentialsAuthProviderFactory.create.mockReturnValue(mockClientCredentialsAuthProvider)
 

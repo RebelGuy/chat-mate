@@ -57,7 +57,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
 
   override async dispose (): Promise<void> {
     await this.chatClient.quit()
-    
+
     this.logService.logInfo(this, 'Disconnected from the Twurple chat client')
   }
 

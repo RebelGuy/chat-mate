@@ -43,7 +43,7 @@ export default abstract class ApiService extends ContextClass {
         } else {
           timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out.')), this.timeoutMs!))
         }
-        
+
         response = await Promise.race([request(...query), timeoutPromise]) as TResponse
         this.logService.logApiResponse(this, id, false, response)
       } catch (e) {

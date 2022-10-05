@@ -23,7 +23,7 @@ type Deps = Dependencies<{
 
 export default class PunishmentStore extends ContextClass {
   private readonly db: Db
-  
+
   private ADMIN_USER_ID!: number
 
   constructor (deps: Deps) {
@@ -56,11 +56,11 @@ export default class PunishmentStore extends ContextClass {
   public async getPunishments () {
     return await this.db.punishment.findMany()
   }
-  
+
   public async getPunishmentsForUser (userId: number) {
     return await this.db.punishment.findMany({ where: { userId: userId }})
   }
-  
+
   public async revokePunishment (punishmentId: number, revokedAt: Date, revokeMessage: string | null): Promise<Punishment> {
     const punishment = await this.db.punishment.findUnique({
       where: { id: punishmentId },

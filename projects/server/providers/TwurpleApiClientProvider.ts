@@ -24,7 +24,7 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
 
   constructor (deps: Deps) {
     super()
-  
+
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
@@ -38,7 +38,7 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
 
     this.apiClient = new ApiClient({
       authProvider: this.twurpleAuthProvider.get(),
-      
+
       // inject custom logging
       logger: {
         custom: {
@@ -49,7 +49,7 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
 
     this.clientApiClient = new ApiClient({
       authProvider: this.twurpleAuthProvider.getClientAuthProvider(),
-            
+
       // inject custom logging
       logger: {
         custom: {
@@ -63,7 +63,7 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
   public get () {
     return this.apiClient
   }
-  
+
   public getClientApi () {
     return this.clientApiClient
   }

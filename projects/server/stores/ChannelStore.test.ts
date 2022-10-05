@@ -110,7 +110,7 @@ export default () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo3]} } 
+        infoHistory: { createMany: { data: [channelInfo3]} }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
@@ -120,10 +120,10 @@ export default () => {
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId2,
         user: { connect: { id: 2 }},
-        infoHistory: { createMany: { data: [twitchChannelInfo3]} } 
+        infoHistory: { createMany: { data: [twitchChannelInfo3]} }
       }})
     })
-    
+
     // each of the following youtube tests is repeated for the twitch-equivalent test
     // the data values are approximately mirrored, so we expect both version of the test
     // to be extremely similar both in set up and expected outcome
@@ -148,7 +148,7 @@ export default () => {
 
     test('updating existing youtube channel works', async () => {
       const result = await channelStore.createOrUpdate('youtube', ytChannelId2, channelInfo4)
-      
+
       expect(result.youtubeId).toBe(ytChannelId2)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo4))
       await expectRowCount(db.youtubeChannel, db.youtubeChannelInfo).toEqual([nChannel, nInfo + 1])
@@ -156,7 +156,7 @@ export default () => {
 
     test('updating existing twitch channel works', async () => {
       const result = await channelStore.createOrUpdate('twitch', extTwitchChannelId2, twitchChannelInfo4)
-      
+
       expect(result.twitchId).toBe(extTwitchChannelId2)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelInfo4))
       await expectRowCount(db.twitchChannel, db.twitchChannelInfo).toEqual([nChannel, nInfo + 1])
@@ -196,7 +196,7 @@ export default () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } } 
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
@@ -218,7 +218,7 @@ export default () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } } 
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
@@ -242,12 +242,12 @@ export default () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } } 
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo3, channelInfo1] } }
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo4] } } 
+        infoHistory: { createMany: { data: [channelInfo4] } }
       }})
       // user 2 has 3 twitch channels
       await db.twitchChannel.create({ data: {

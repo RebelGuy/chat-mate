@@ -48,7 +48,7 @@ export function getAvailableMigrationsSorted (): MigrationFile[] {
 }
 
 // returns the migrations that haven't been applied yet (generally 0 or 1)
-export async function getOutstandingMigrationNames(): Promise<string[]> {
+export async function getOutstandingMigrationNames (): Promise<string[]> {
   const appliedMigrationNames = await getAppliedMigrations()
   const availableMigrationNames = getAvailableMigrationsSorted().map(m => m.name)
 

@@ -24,7 +24,7 @@ export default class DonationService extends ContextClass {
 
   constructor (deps: Deps) {
     super()
-    
+
     this.donationStore = deps.resolve('donationStore')
     this.rankStore = deps.resolve('rankStore')
     this.donationHelpers = deps.resolve('donationHelpers')

@@ -2,7 +2,6 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
-import ChatService from '@rebel/server/services/ChatService'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import LogService from '@rebel/server/services/LogService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
@@ -73,7 +72,7 @@ export default class TwurpleService extends ContextClass {
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.mod(this.twitchChannelName, twitchUserName)
   }
-  
+
   public async timeout (twitchChannelId: number, reason: string | null, durationSeconds: number) {
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.timeout(this.twitchChannelName, twitchUserName, durationSeconds, reason ?? undefined)
@@ -89,7 +88,7 @@ export default class TwurpleService extends ContextClass {
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.unmod(this.twitchChannelName, twitchUserName)
   }
-  
+
   public async untimeout (twitchChannelId: number, reason: string | null) {
     // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
     const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)

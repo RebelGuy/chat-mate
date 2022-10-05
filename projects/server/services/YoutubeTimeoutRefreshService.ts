@@ -2,7 +2,6 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import LogService from '@rebel/server/services/LogService'
 
 // Clicking on the "timeout" option in a chat context menu times out the user by 5 minutes. This cannot be
 // changed without access to the Youtube API, so we have to manually refresh this timeout.
@@ -24,7 +23,6 @@ export type NextInterval = {
 
 type Deps = Dependencies<{
   timerHelpers: TimerHelpers
-  logService: LogService
   dateTimeHelpers: DateTimeHelpers
 }>
 
@@ -32,7 +30,6 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
   readonly name = YoutubeTimeoutRefreshService.name
 
   private readonly timerHelpers: TimerHelpers
-  private readonly logService: LogService
   private readonly dateTime: DateTimeHelpers
 
   private punishmentTimerMap: Map<number, [NextInterval, number]> = new Map()
@@ -41,7 +38,6 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
     super()
 
     this.timerHelpers = deps.resolve('timerHelpers')
-    this.logService = deps.resolve('logService')
     this.dateTime = deps.resolve('dateTimeHelpers')
   }
 
@@ -51,7 +47,7 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
     this.stopTrackingTimeout(punishmentId)
 
     const initialInterval = this.calculateNextInterval(expirationTime, null)
-    
+
     if (startImmediately) {
       await onRefresh()
     }
@@ -88,7 +84,7 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
   private async onElapsed (punishmentId: number, expirationTime: Date, onRefresh: () => Promise<void>): Promise<number> {
     const [prevInterval, timerId] = this.punishmentTimerMap.get(punishmentId)!
 
-    if (prevInterval.type === 'noMore') {      
+    if (prevInterval.type === 'noMore') {
       this.stopTrackingTimeout(punishmentId)
       return 0
 

@@ -183,7 +183,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     if (livestream == null) {
       return null
     }
-    
+
     const publicLivestream = livestreamToPublic(livestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
     if (publicLivestream.status === 'live') {

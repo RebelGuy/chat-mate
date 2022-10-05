@@ -65,7 +65,7 @@ export default class DonationController extends ControllerBase {
     @QueryParam('userId') userId: number
   ): Promise<LinkUserResponse> {
     const builder = this.registerResponseBuilder<LinkUserResponse>('POST /link', 1)
-    
+
     if (donationId == null || userId == null) {
       builder.failure('A donation ID and user ID must be provided.')
     }
@@ -89,7 +89,7 @@ export default class DonationController extends ControllerBase {
     @QueryParam('donationId') donationId: number
   ): Promise<LinkUserResponse> {
     const builder = this.registerResponseBuilder<UnlinkUserResponse>('DELETE /link', 1)
-    
+
     if (donationId == null) {
       builder.failure('A donation ID must be provided.')
     }

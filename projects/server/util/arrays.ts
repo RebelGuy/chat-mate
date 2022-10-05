@@ -96,7 +96,7 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
   // for some reason we must explicitly define `Key extends (string | number | symbol)` otherwise Omit<> is unhappy
   let firstMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
   let secondMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
-  
+
   for (const x of first) {
     const k = x[key]
     if (firstMap.has(k)) {

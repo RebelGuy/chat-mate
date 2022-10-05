@@ -8,7 +8,7 @@ import { EmptyObject, MakeRequired, NullableToOptional } from '@rebel/server/typ
 export namespace Entity {
   /*
   // for selecting specific columns
-  export type specificChannel = Prisma.ChannelGetPayload<Select<Prisma.ChannelSelect, { 
+  export type specificChannel = Prisma.ChannelGetPayload<Select<Prisma.ChannelSelect, {
     id: true,
     youtubeId: true,
 

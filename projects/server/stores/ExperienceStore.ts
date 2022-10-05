@@ -100,7 +100,7 @@ export default class ExperienceStore extends ContextClass {
   }
 
   public async addManualExperience (userId: number, xp: number, message: string | null) {
-    const adminUser = first(await this.adminService.getAdminUsers()) 
+    const adminUser = first(await this.adminService.getAdminUsers())
     const experienceTransaction = await this.db.experienceTransaction.create({ data: {
       time: new Date(),
       user: { connect: { id: userId }},
@@ -147,16 +147,16 @@ export default class ExperienceStore extends ContextClass {
     }
 
     // for each user, sums the total experience since the last snapshot (if one exists), then
-    // adds the snapshot experience to get the current total experience. 
+    // adds the snapshot experience to get the current total experience.
     return await this.db.$queryRaw<UserExperience[]>`
       SELECT User.id AS userId, (COALESCE(SUM(TxsAfterSnap.xp), 0) + COALESCE(Snapshot.experience, 0)) AS experience
       FROM experience_snapshot AS Snapshot
-      # not all users are guaranteed to have snapshots - we generate a null-row by right joining the users table
+      -- not all users are guaranteed to have snapshots - we generate a null-row by right joining the users table
       RIGHT JOIN chat_user User ON User.id = Snapshot.userId
-      # after the join, the new right entries might be null, meaning that a user hasn't had experience transacted since the snapshot on the left
+      -- after the join, the new right entries might be null, meaning that a user hasn't had experience transacted since the snapshot on the left
       LEFT JOIN (
-        # this selects the total xp since the snapshot for each user that had experience transacted since the snapshot.
-        # if no snapshot exists, gets the total xp since the beginning of time
+        -- this selects the total xp since the snapshot for each user that had experience transacted since the snapshot.
+        -- if no snapshot exists, gets the total xp since the beginning of time
         SELECT tx.userId, SUM(delta) AS xp
         FROM experience_transaction AS tx
         LEFT JOIN experience_snapshot AS InnerSnapshot ON InnerSnapshot.userId = tx.userId
@@ -164,7 +164,7 @@ export default class ExperienceStore extends ContextClass {
         GROUP BY tx.userId
       ) AS TxsAfterSnap ON TxsAfterSnap.userId = User.Id
       WHERE User.id IN (${Prisma.join(userIds)})
-      # grouping required because of the aggregation 'SUM()' in the selection
+      -- grouping required because of the aggregation 'SUM()' in the selection
       GROUP BY User.id, Snapshot.experience
       ORDER BY experience DESC;
     `

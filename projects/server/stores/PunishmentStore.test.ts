@@ -64,7 +64,7 @@ export default () => {
         { ...getCreateArgs('timeout'), userId: 3 },
         { ...getCreateArgs('ban'), userId: 3 }
       ]})
-      
+
       const result = await punishmentstore.getPunishments()
 
       expect(result.length).toBe(3)

@@ -54,7 +54,7 @@ describe(nameof(MasterchatProxyService, 'addMasterchat'), () => {
     const chatResponse2: ChatResponse = {} as any
     testMasterchat1.fetch.mockResolvedValue(chatResponse1)
     testMasterchat2.fetch.mockResolvedValue(chatResponse2)
-    
+
     const result1 = await masterchatProxyService.fetch(testLiveId1, undefined)
     const result2 = await masterchatProxyService.fetch(testLiveId2, undefined)
 

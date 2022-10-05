@@ -93,7 +93,7 @@ export default class HelixEventService extends ContextClass {
       this.listener = this.createNewListener()
       await this.listener.listen()
       this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
-      await this.subscribeToEvents(this.listener)    
+      await this.subscribeToEvents(this.listener)
       this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Ngrok listener]')
     } else {
       // can't use the listener - have to inject the middleware
@@ -110,7 +110,7 @@ export default class HelixEventService extends ContextClass {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       setTimeout(async () => {
         await middleware.markAsReady()
-        
+
         const subscriptions = await this.eventSubApi.getSubscriptions()
         const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
         this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions:', readableSubscriptions)
@@ -120,7 +120,7 @@ export default class HelixEventService extends ContextClass {
 
         middleware.onVerify((success, subscription) => this.logService.logInfo(this, 'middleware.onVerify', 'success:', success, 'subscription:', subscription.id))
         middleware.onRevoke((subscription) => this.logService.logInfo(this, 'middleware.onRevoke', 'subscription:', subscription.id))
-        
+
         // from what I understand we can safely re-subscribe to events when using the middleware
         await this.subscribeToEvents(middleware)
         this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Middleware listener]')

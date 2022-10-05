@@ -15,19 +15,19 @@ export class TimeoutError extends CustomError {
 }
 
 export class UserRankNotFoundError extends CustomError {
-  constructor (message?: string){ 
+  constructor (message?: string){
     super(UserRankNotFoundError.prototype, message ?? 'The user-rank could not be found.')
   }
 }
 
 export class UserRankAlreadyExistsError extends CustomError {
-  constructor (message?: string){ 
+  constructor (message?: string){
     super(UserRankAlreadyExistsError.prototype, message ?? 'The user-rank already exists.')
   }
 }
 
 export class ApiResponseError extends CustomError {
-  constructor (status: number, errorType?: string, errorDescription?: string) { 
+  constructor (status: number, errorType?: string, errorDescription?: string) {
     super(ApiResponseError.prototype, `Request failed with code ${status}: ${errorType ?? 'Unknown error'}. ${errorDescription ?? 'No further details available'}`)
   }
 }

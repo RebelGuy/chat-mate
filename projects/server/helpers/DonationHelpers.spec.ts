@@ -62,7 +62,7 @@ describe(nameof(DonationHelpers, 'isEligibleForMember'), () => {
 
 
   test('Returns true if the user has donated for at least 3 months, within the last month', () => {
-    const donations: DonationAmount[] = [[time1, 1], [time2, 1], [time3, 1], [time4, 1]]    
+    const donations: DonationAmount[] = [[time1, 1], [time2, 1], [time3, 1], [time4, 1]]
     const time = addTime(time4, 'days', 20)
 
     const result = donationHelpers.isEligibleForMember(donations, time)
@@ -71,7 +71,7 @@ describe(nameof(DonationHelpers, 'isEligibleForMember'), () => {
   })
 
   test('Returns false if the user has donated for at least 3 months, but not within the last month', () => {
-    const donations: DonationAmount[] = [[time1, 1], [time2, 1], [time3, 1], [time4, 1]]    
+    const donations: DonationAmount[] = [[time1, 1], [time2, 1], [time3, 1], [time4, 1]]
     const time = addTime(time4, 'days', 40)
 
     const result = donationHelpers.isEligibleForMember(donations, time)
@@ -80,7 +80,7 @@ describe(nameof(DonationHelpers, 'isEligibleForMember'), () => {
   })
 
   test('Returns false if the user donations have gaps of longer than 1 month', () => {
-    const donations: DonationAmount[] = [[addTime(time1, 'days', -20), 1], [time2, 1], [time3, 1], [time4, 1]]    
+    const donations: DonationAmount[] = [[addTime(time1, 'days', -20), 1], [time2, 1], [time3, 1], [time4, 1]]
     const time = addTime(time4, 'days', 20)
 
     const result = donationHelpers.isEligibleForMember(donations, time)

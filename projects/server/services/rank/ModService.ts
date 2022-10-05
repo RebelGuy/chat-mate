@@ -37,7 +37,7 @@ export default class ModService extends ContextClass {
     this.chatStore = deps.resolve('chatStore')
     this.logService = deps.resolve('logService')
   }
-  
+
   // todo: currently, ChatMate is assumed to be the source of truth of rank data.
   // should we also handle discrepancies between the data, e.g. when the external rank differs from the expected rank?
 
@@ -94,7 +94,7 @@ export default class ModService extends ContextClass {
 
   private async trySetYoutubeMod (youtubeChannelId: number, isMod: boolean): Promise<YoutubeRankResult> {
     const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(youtubeChannelId)
-  
+
     const errorSuffix = ' If this is unexpected, please retry the action. Failure to do so may lead to an out-of-sync state with undefined behaviour.'
     const type = isMod ? 'mod' : 'unmod'
     if (lastChatItem == null) {
@@ -106,7 +106,7 @@ export default class ModService extends ContextClass {
       this.logService.logWarning(this, error)
       return { error, youtubeChannelId }
     }
-    
+
     let error: string | null = null
     try {
       let result: boolean
@@ -115,7 +115,7 @@ export default class ModService extends ContextClass {
       } else {
         result = await this.masterchatProxyService.unmod(lastChatItem.contextToken)
       }
-      
+
       this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)
       if (!result) {
         error = `Request succeeded, but action was not applied. Most likely, the user is already ${type}ded.` + errorSuffix

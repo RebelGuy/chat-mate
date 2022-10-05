@@ -27,7 +27,7 @@ export type ApiRequest<Schema extends number, T extends {schema: Schema } & Publ
 /** The root of the response data can be primitives or PublicObjects, and does not directly need to be schema-tagged. */
 export type ResponseData<T extends ResponseData<T>> = {
   // Note: the `extends self` condition is useful so that we get compile errors - otherwise, our typing will just remove (`never`) ineligible properties from T.
-  
+
   // each property must be one of the following types:
   [K in keyof T]
     // nullable primitive types
@@ -42,7 +42,7 @@ export type ResponseData<T extends ResponseData<T>> = {
 
     // arrays of schema-tagged object types
     : T[K] extends Array<infer ArrObj> ? (ArrObj extends PublicObject<any, infer PO> ? PO[] : never)
-  
+
     // don't allow anything else
     : never
 }
@@ -137,7 +137,7 @@ export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
       data
     }
   }
-  
+
   public failure (error: ErrorType): ApiResponse<Schema, any>
   public failure (errorCode: ErrorCode, error: ErrorType): ApiResponse<Schema, any>
   public failure (arg1: ErrorCode | ErrorType, arg2?: ErrorType): ApiResponse<Schema, any> {
@@ -145,7 +145,7 @@ export class ResponseBuilder<Schema extends number, T extends ResponseData<T>> {
     const error = this.getErrorObject(typeof arg1 === 'number' ? arg2! : arg1)
 
     this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error after ${this.getDuration()} ms: `, error)
-    
+
     return {
       success: false,
       timestamp: new Date().getTime(),

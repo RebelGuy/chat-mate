@@ -129,7 +129,7 @@ export default class StreamlabsProxyService extends ApiService {
     const statusService = deps.resolve('streamlabsStatusService')
     const timeout = null
     super(name, logService, statusService, timeout)
-  
+
     this.accessToken = deps.resolve('streamlabsAccessToken')
     this.socketToken = deps.resolve('streamlabsSocketToken')
     this.nodeEnv = deps.resolve('nodeEnv')
@@ -213,13 +213,13 @@ export default class StreamlabsProxyService extends ApiService {
   private async makeRequest<T> (method: 'GET' | 'POST', path: `/${string}`, params?: URLSearchParams): Promise<T> {
     params = params ?? new URLSearchParams()
     params.append('access_token', this.accessToken)
-    
+
     const requestName = `${method} ${path}`
     const wrappedRequest = this.wrapRequest(async () => {
       const response = await fetch(`${REST_BASE_URL}${path}?${params}`, {
         method: method
       })
-      
+
       const json = await response.json()
       if (response.ok) {
         return json

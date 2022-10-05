@@ -37,14 +37,14 @@ describe(nameof(LogQueryService, 'queryCriticalLogs'), () => {
       .mockReturnValueOnce(t5_warning)
       .mockReturnValueOnce(t6_warning)
     mockDateTimeHelpers.now.mockReturnValue(now)
-    
+
     logQueryService.onWarning()
     logQueryService.onWarning()
     logQueryService.onWarning()
     logQueryService.onError()
     logQueryService.onError()
     logQueryService.onError()
-    
+
     const result = logQueryService.queryCriticalLogs()
 
     expect(result).toEqual<LogTimestamps>({

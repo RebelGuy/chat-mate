@@ -52,12 +52,12 @@ export default class LogQueryService extends ContextClass {
     }
   }
 
-  // CHAT-334 not used until the query authentication is fixed 
+  // CHAT-334 not used until the query authentication is fixed
   public async queryCriticalLogs_ (sinceTimestamp: number): Promise<LogsTable[]> {
     const duration: QueryTimeInterval = {
       startTime: new Date(sinceTimestamp + 1),
       endTime: addTime(new Date(), 'seconds', 5)
-    } 
+    }
     const options = {
       includeVisualization: true
     }

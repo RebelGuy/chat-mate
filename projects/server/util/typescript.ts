@@ -25,7 +25,7 @@ export function comparePrimitives<T> (a: T, b: T, ...ignoreKeys: (keyof T)[]): b
   for (const prop of allKeys.filter(k => !ignoreKeys.includes(k))) {
     const value1: unknown = a[prop]
     const value2: unknown = b[prop]
-  
+
     if (isPrimitive(value1) || isPrimitive(value2)) {
       if (value1 === value2) {
         continue
@@ -54,7 +54,7 @@ export function compare<T> (a: T, b: T, comparator: ObjectComparator<T>) {
     if (c == null) {
       continue
     }
-    
+
     const v1 = a[key]
     const v2 = b[key]
     if (c === 'default') {

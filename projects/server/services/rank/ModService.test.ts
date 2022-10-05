@@ -74,7 +74,7 @@ describe(nameof(ModService, 'setModRank'), () => {
 
     const suppliedContextTokens = mockMasterchatProxyService.mod.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
-    
+
     const suppliedTwitchChannelIds = mockTwurpleService.modChannel.mock.calls.map(c => c[0])
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
   })
@@ -119,7 +119,7 @@ describe(nameof(ModService, 'setModRank'), () => {
 
     const suppliedContextTokens = mockMasterchatProxyService.unmod.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
-    
+
     const suppliedTwitchChannelIds = mockTwurpleService.unmodChannel.mock.calls.map(c => c[0])
     expect(suppliedTwitchChannelIds).toEqual([1, 2])
   })

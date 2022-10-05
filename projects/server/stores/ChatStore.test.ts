@@ -390,7 +390,7 @@ export default () => {
           externalId: 'user 1 msg 2',
           youtubeChannelId: 2
         },
-        
+
         // user 2:
         {
           livestreamId: 1,
@@ -407,13 +407,13 @@ export default () => {
         }
       ]})
     }
-      
+
     test('returns empty array if no chat item exists for any users', async () => {
       const result = await chatStore.getLastChatOfUsers('all')
 
       expect(result.length).toBe(0)
     })
-    
+
     test('returns empty array if no chat item exists for specified users, or users do not exist', async () => {
       await setupMessages()
 

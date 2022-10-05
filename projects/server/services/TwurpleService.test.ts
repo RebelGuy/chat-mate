@@ -64,7 +64,7 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     const chatItem: ChatItem = {} as any
     const evalMockFn = jest.spyOn(chat, 'evalTwitchPrivateMessage').mockImplementation(msg_ => chatItem)
     twurpleService.initialise()
-    
+
     const callback = mockChatClient.onMessage.mock.calls[0][0]
     callback('channel', 'user', 'message', twitchMessage)
 

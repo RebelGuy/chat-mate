@@ -70,7 +70,7 @@ export default class ChatMateController extends ControllerBase {
     if (since == null) {
       return builder.failure(400, `A value for 'since' must be provided.`)
     }
-    
+
     try {
       return await this.implementation.getEvents({ builder, since })
     } catch (e: any) {

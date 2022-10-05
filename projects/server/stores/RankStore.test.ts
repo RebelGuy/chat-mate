@@ -32,7 +32,7 @@ export default () => {
   let db: Db
   let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
   let rankStore: RankStore
-  
+
   beforeEach(async () => {
     mockDateTimeHelpers = mock()
 
@@ -327,7 +327,7 @@ export default () => {
           { userId: user1, issuedAt: time3, rankId: famousRank.id, revokedTime: time4 },
         ]
       })
-      
+
       const args: RemoveUserRankArgs = {
         userId: user1,
         message: 'Test',
@@ -347,7 +347,7 @@ export default () => {
           { userId: user1, issuedAt: time5, rankId: famousRank.id },
         ]
       })
-      
+
       const args: RemoveUserRankArgs = {
         userId: user1,
         message: 'Test',
@@ -357,7 +357,7 @@ export default () => {
       mockDateTimeHelpers.now.mockReturnValue(time6)
 
       const result = await rankStore.removeUserRank(args)
-      
+
       expectRowCount(db.userRank).toBe(3)
       const saved = (await db.userRank.findUnique({ where: { id: 3 }}))!
       expect(result).toEqual(expect.objectContaining(saved))

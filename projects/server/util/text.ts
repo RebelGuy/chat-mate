@@ -55,7 +55,7 @@ export function getLivestreamLink (liveId: string) {
 }
 
 // converts a camelCase or PascalCase word to CONSTANT_CASE.
-// short sequential characters like 'ID' are treated as a single part of the word. 
+// short sequential characters like 'ID' are treated as a single part of the word.
 export function toConstCase (word: string): string {
   word = word.trim()
   if (word.includes(' ')) {

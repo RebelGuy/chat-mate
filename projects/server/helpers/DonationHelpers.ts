@@ -34,12 +34,12 @@ export default class DonationHelpers extends ContextClass {
 
     const monthMs = (365.25 / 12) * 24 * 3600 * 1000
     const times = donations.map(d => d[0].getTime()).sort().reverse()
-    
+
     // last donation must have been made within the last month
     if (now.getTime() - times[0] > monthMs) {
       return false
     }
-    
+
     // check if the last donations form a chain at least 3 months long with no more than 1 month between each donations
     let chainLength = 0
     for (let i = 1; i < times.length; i++) {

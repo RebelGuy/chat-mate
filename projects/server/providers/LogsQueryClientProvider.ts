@@ -29,7 +29,7 @@ export default class LogsQueryClientProvider extends ContextClass implements IPr
     // it will try a number of authentication methods until one works.
     const credential = new DefaultAzureCredential({ managedIdentityClientId: managedIdentityClientId ?? undefined })
     this.logsQueryClient = new LogsQueryClient(credential)
-    
+
   }
 
   get () {

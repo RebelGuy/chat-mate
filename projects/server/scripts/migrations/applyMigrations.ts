@@ -10,7 +10,7 @@ import { execAsync } from '../../util/node'
 import ConsoleOutput from '../../util/ConsoleOutput'
 
 // "inspired" by https://github.com/redwoodjs/redwood/blob/54fe779a48b2dfb023262a528a88d8ea59701d50/packages/cli/src/commands/dataMigrate/up.js
-// run using 
+// run using
 //   yarn dotenv -e debug.env ts-node ./src/scripts/migrations/applyMigrations.ts
 
 throw new Error('Not yet supported')
@@ -63,12 +63,11 @@ const getMigrations = async () => {
     }).filter(m => m != null) as MigrationFile[]
 
   // gets all migration versions that have already run against the database
-  const ranSchemaMigrations = (await DB.$queryRaw
-    `SELECT migration_name FROM _prisma_migrations WHERE rolled_back_at IS NULL;` as any[])
+  const ranSchemaMigrations = (await DB.$queryRaw`SELECT migration_name FROM _prisma_migrations WHERE rolled_back_at IS NULL;` as any[])
     .map(m => m.migration_name as string)
   const ranDataMigrations = (await DB.dataMigration.findMany({
     orderBy: { migrationName: 'asc' },
-  })).map(m => m.migrationName);
+  })).map(m => m.migrationName)
   const ranMigrations = [...ranSchemaMigrations, ...ranDataMigrations]
 
   const unrunMigrations = files.filter(m => !ranMigrations.includes(m.name))

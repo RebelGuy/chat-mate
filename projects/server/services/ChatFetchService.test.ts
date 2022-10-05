@@ -110,7 +110,7 @@ describe(nameof(ChatService, 'initialise'), () => {
     }))
 
     await chatFetchService.initialise()
-    
+
     expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
     expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(0)
   })

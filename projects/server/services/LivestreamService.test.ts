@@ -92,7 +92,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     }))
 
     await livestreamService.initialise()
-    
+
     expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
     expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(0)
   })

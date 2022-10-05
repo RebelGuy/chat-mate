@@ -25,13 +25,12 @@ let youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
 beforeEach(() => {
   mockTimerHelpers = mock()
   mockTimerHelpers.createRepeatingTimer.mockReturnValue(timerId)
-  
+
   mockDateTimeHelpers = mock()
   mockDateTimeHelpers.ts.mockImplementation(() => new Date().getTime())
-  
+
   youtubeTimeoutRefreshService = new YoutubeTimeoutRefreshService(new Dependencies({
     timerHelpers: mockTimerHelpers,
-    logService: mock(),
     dateTimeHelpers: mockDateTimeHelpers
   }))
 
