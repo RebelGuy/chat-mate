@@ -31,15 +31,11 @@ export default class ViewershipStore extends ContextClass {
   private readonly livestreamStore: LivestreamStore
   private readonly logService: LogService
 
-  // caches last-seen users so we don't have to constantly re-query, which could lead to race conditions
-  private readonly lastSeenMap: Map<number, LastSeen | null>
-
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
     this.livestreamStore = deps.resolve('livestreamStore')
     this.logService = deps.resolve('logService')
-    this.lastSeenMap = new Map()
   }
 
   public async addLiveViewCount (youtubeCount: number, twitchCount: number): Promise<void> {
@@ -76,21 +72,18 @@ export default class ViewershipStore extends ContextClass {
     const lowerTime = maxTime(addTime(_time, 'minutes', -VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE), startTime)
     const upperTime = minTime(addTime(_time, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER), endTime)
 
-    let cachedLastSeen = this.lastSeenMap.get(userId)
-    if (cachedLastSeen === undefined) {
-      cachedLastSeen = await this.getLastSeen(userId)
-    }
-    if (cachedLastSeen && cachedLastSeen.time >= upperTime) {
+    const lastSeen = await this.getLastSeen(userId)
+    if (lastSeen && lastSeen.time >= upperTime) {
       return
     }
 
     // create or update
     let block: ViewingBlock & { livestream: Livestream }
-    if (cachedLastSeen && cachedLastSeen.time >= lowerTime) {
+    if (lastSeen && lastSeen.time >= lowerTime) {
       // there is overlap - combine
       block = await this.db.viewingBlock.update({
         data: { lastUpdate: upperTime },
-        where: { id: cachedLastSeen.viewingBlockId},
+        where: { id: lastSeen.viewingBlockId},
         include: { livestream: true }
       })
     } else {
@@ -104,20 +97,10 @@ export default class ViewershipStore extends ContextClass {
         include: { livestream: true }
       })
     }
-
-    this.lastSeenMap.set(userId, {
-      viewingBlockId: block.id,
-      livestream: block.livestream,
-      time: block.lastUpdate
-    })
   }
 
   /** Returns the time of the previous viewing block. */
   public async getLastSeen (userId: number): Promise<LastSeen | null> {
-    if (this.lastSeenMap.has(userId)) {
-      return this.lastSeenMap.get(userId)!
-    }
-
     const block = await this.db.viewingBlock.findFirst({
       where: { user: { id: userId }},
       orderBy: { lastUpdate: 'desc'},
@@ -135,7 +118,6 @@ export default class ViewershipStore extends ContextClass {
       result = null
     }
 
-    this.lastSeenMap.set(userId, result)
     return result
   }
 

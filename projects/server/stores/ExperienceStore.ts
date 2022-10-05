@@ -31,38 +31,28 @@ export default class ExperienceStore extends ContextClass {
   private readonly db: Db
   private readonly adminService: AdminService
 
-  // key is userId
-  // value is null if we know there is no data for a particular user
-  private readonly previousChatExperienceMap: Map<number, ChatExperience | null>
-
-  // the timestamp cache of the last experience transaction for any user, if known
-  private lastTransactionTime: number | null
-
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
     this.adminService = deps.resolve('adminService')
-    this.previousChatExperienceMap = new Map()
-    this.lastTransactionTime = null
   }
 
   // returns the previous chat experience, may not be for the current livestream
   public async getPreviousChatExperience (userId: number): Promise<ChatExperience | null> {
-    if (this.previousChatExperienceMap.has(userId)) {
-      return this.previousChatExperienceMap.get(userId)!
-    }
-
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
       where: { user: { id: userId }, experienceDataChatMessage: { isNot: null }},
       orderBy: { time: 'desc' },
       include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
     })
 
-    if (experienceTransaction != null) {
-      assertNotNull(experienceTransaction, 'experienceDataChatMessage', `experienceDataChatMessage of the chat experience transaction ${experienceTransaction.id} is null`)
-      return this.cacheChatExperience(userId, experienceTransaction)
+    if (experienceTransaction == null) {
+      return null
     } else {
-      return this.cacheChatExperience(userId, null)
+      return {
+        ...experienceTransaction,
+        // the above query guarantees that this is not null, but the type doesn't reflect that
+        experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
+      }
     }
   }
 
@@ -91,11 +81,14 @@ export default class ExperienceStore extends ContextClass {
       include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
     })
 
-    if (experienceTransaction != null) {
-      assertNotNull(experienceTransaction, 'experienceDataChatMessage', `experienceDataChatMessage of the chat experience transaction ${experienceTransaction.id} is null`)
-      return this.cacheChatExperience(userId, experienceTransaction)
+    if (experienceTransaction == null) {
+      return null
     } else {
-      return this.cacheChatExperience(userId, null)
+      return {
+        ...experienceTransaction,
+        // definitely not null because we just created it!
+        experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
+      }
     }
   }
 
@@ -110,8 +103,6 @@ export default class ExperienceStore extends ContextClass {
         message
       }}
     }})
-
-    this.updateLastTransactionTime(experienceTransaction.time.getTime())
   }
 
   /** Returns the experience for the user's snapshot, if it exists.
@@ -125,10 +116,6 @@ export default class ExperienceStore extends ContextClass {
 
   /** Returns the sum of all of the user's experience deltas between now and the given timestamp. */
   public async getTotalDeltaStartingAt (userId: number, timestamp: number): Promise<number> {
-    if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
-      return 0
-    }
-
     const result = await this.db.experienceTransaction.aggregate({
       where: {
         user: { id: userId },
@@ -172,45 +159,9 @@ export default class ExperienceStore extends ContextClass {
 
   /** Returns the transactions in ascending order. */
   public async getAllTransactionsStartingAt (timestamp: number): Promise<ExperienceTransaction[]> {
-    if (this.lastTransactionTime != null && timestamp > this.lastTransactionTime) {
-      return []
-    }
-
-    const transactions = await this.db.experienceTransaction.findMany({
+    return await this.db.experienceTransaction.findMany({
       where: { time: { gte: new Date(timestamp) }},
       orderBy: { time: 'asc' }
     })
-
-    // update cache
-    if (transactions.length > 0) {
-      const time = transactions.at(-1)!.time.getTime()
-      this.updateLastTransactionTime(time)
-    }
-
-    return transactions
-  }
-
-  private cacheChatExperience (userId: number, experienceTransaction: ChatExperienceTransaction | null) : ChatExperience | null {
-    let result: ChatExperience | null
-    if (experienceTransaction != null) {
-      result = {
-        ...experienceTransaction,
-        // no way to narrow this down using type guards... thanks typescript!
-        experienceDataChatMessage: experienceTransaction.experienceDataChatMessage!
-      }
-
-      this.updateLastTransactionTime(experienceTransaction.time.getTime())
-    } else {
-      result = null
-    }
-
-    this.previousChatExperienceMap.set(userId, result)
-    return result
-  }
-
-  private updateLastTransactionTime (timestamp: number) {
-    if (this.lastTransactionTime == null || timestamp > this.lastTransactionTime) {
-      this.lastTransactionTime = timestamp
-    }
   }
 }
