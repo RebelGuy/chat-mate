@@ -165,6 +165,7 @@ Key:
 - 🟢 LivestreamService
   - 🟢 initialise
   - 🟢 deactivateLivestream
+  - 🟢 getActiveLivestream
   - 🟢 getLivestreams
   - 🟢 setActiveLivestream
 - 🟢 LogQueryService

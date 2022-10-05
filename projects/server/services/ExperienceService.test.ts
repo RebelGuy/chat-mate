@@ -1,18 +1,18 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ExperienceHelpers, { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
-import ExperienceService, { Level, RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
+import ExperienceService, { RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { getGetterMock, cast, mockGetter, nameof } from '@rebel/server/_test/utils'
+import { getGetterMock, cast, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { asGte, asLt, asRange, sum } from '@rebel/server/util/math'
-import { ChatMessage, ExperienceSnapshot, ExperienceTransaction } from '@prisma/client'
+import { asGte, asLt, asRange } from '@rebel/server/util/math'
+import { ChatMessage, ExperienceTransaction } from '@prisma/client'
 import { addTime } from '@rebel/server/util/datetime'
 import { ChatItem, ChatItemWithRelations } from '@rebel/server/models/chat'
-import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { DeepPartial } from '@rebel/server/types'
@@ -37,7 +37,7 @@ beforeEach(() => {
   mockChannelService = mock<ChannelService>()
   mockPunishmentService = mock<PunishmentService>()
 
-  mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(data.livestream3)
+  mockLivestreamStore.getActiveLivestream.mockResolvedValue(data.livestream3)
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -61,7 +61,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       author: data.author1,
       messageParts: [],
     }
-    getGetterMock(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+    mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
 
     await experienceService.addExperienceForChat(chatItem)
 
@@ -78,7 +78,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       author: data.author1,
       messageParts: [],
     }
-    getGetterMock(mockLivestreamStore, 'activeLivestream').mockReturnValue(data.livestream1)
+    mockLivestreamStore.getActiveLivestream.mockResolvedValue(data.livestream1)
 
     await experienceService.addExperienceForChat(chatItem)
 

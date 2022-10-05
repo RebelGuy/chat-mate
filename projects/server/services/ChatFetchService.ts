@@ -80,7 +80,7 @@ export default class ChatFetchService extends ContextClass {
   }
 
   private updateMessages = async () => {
-    const livestream = this.livestreamStore.activeLivestream
+    const livestream = await this.livestreamStore.getActiveLivestream()
     if (livestream == null) {
       return MAX_INTERVAL
     }

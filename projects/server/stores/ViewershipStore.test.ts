@@ -14,6 +14,8 @@ const user1 = 1
 /** ext. ids channel2, twitchChannel4 */
 const user2 = 2
 
+const activeLivestream = data.livestream3
+
 export default () => {
   let mockLivestreamStore: MockProxy<LivestreamStore>
   let viewershipStore: ViewershipStore
@@ -24,7 +26,7 @@ export default () => {
 
   beforeEach(async () => {
     mockLivestreamStore = mock<LivestreamStore>()
-    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(data.livestream3)
+    mockLivestreamStore.getActiveLivestream.mockResolvedValue(activeLivestream)
 
     const dbProvider = await startTestDb()
     viewershipStore = new ViewershipStore(new Dependencies({
@@ -86,9 +88,7 @@ export default () => {
     test('trims viewing block to fit into livestream times', async () => {
       const start = addTime(data.time3, 'minutes', -1)
       const end = addTime(data.time3, 'minutes', 1)
-      const livestreamGetter = getGetterMock(mockLivestreamStore, 'activeLivestream')
-      livestreamGetter.mockClear()
-      livestreamGetter.mockReturnValue({ ...data.livestream3, start, end })
+      mockLivestreamStore.getActiveLivestream.mockResolvedValue({ ...data.livestream3, start, end })
 
       await viewershipStore.addViewershipForChatParticipation(user1, data.time3.getTime())
 
@@ -103,7 +103,7 @@ export default () => {
       const prevUpdate = addTime(currentTime, 'minutes', -2)
       const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
-        livestream: { connect: { id: mockLivestreamStore.activeLivestream!.id }},
+        livestream: { connect: { id: activeLivestream.id }},
         user: { connect: { id: user1 }},
         startTime,
         lastUpdate: prevUpdate
@@ -122,7 +122,7 @@ export default () => {
       const prevUpdate = addTime(currentTime, 'minutes', -30)
       const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
-        livestream: { connect: { id: mockLivestreamStore.activeLivestream!.id }},
+        livestream: { connect: { id: activeLivestream.id }},
         user: { connect: { id: user1 }},
         startTime,
         lastUpdate: prevUpdate
@@ -144,7 +144,7 @@ export default () => {
       const prevUpdate = addTime(currentTime, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER + 5)
       const startTime = addTime(prevUpdate, 'minutes', -15)
       await db.viewingBlock.create({ data: {
-        livestream: { connect: { id: mockLivestreamStore.activeLivestream!.id }},
+        livestream: { connect: { id: activeLivestream.id }},
         user: { connect: { id: user1 }},
         startTime,
         lastUpdate: prevUpdate
@@ -203,7 +203,7 @@ export default () => {
     })
 
     test('returns null if there is no active livestream', async () => {
-      mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+      mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
 
       const result = await viewershipStore.getLatestLiveCount()
 

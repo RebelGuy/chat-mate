@@ -150,7 +150,7 @@ export default () => {
     const dbProvider = await startTestDb()
 
     mockLivestreamStore = mock<LivestreamStore>()
-    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(livestream)
+    mockLivestreamStore.getActiveLivestream.mockResolvedValue(livestream)
 
     chatStore = new ChatStore(new Dependencies({
       dbProvider,
@@ -249,7 +249,7 @@ export default () => {
     })
 
     test('adds chat without connecting to livestream if no active livestream', async () => {
-      mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+      mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
       const chatItem = makeYtChatItem(text1)
 
       await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)

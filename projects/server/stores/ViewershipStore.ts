@@ -39,13 +39,14 @@ export default class ViewershipStore extends ContextClass {
   }
 
   public async addLiveViewCount (youtubeCount: number, twitchCount: number): Promise<void> {
-    if (this.livestreamStore.activeLivestream == null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null) {
       this.logService.logWarning(this, 'Tried adding live view counts but there is no active public livestream')
       return
     }
 
     await this.db.liveViewers.create({ data: {
-      livestream: { connect: { id: this.livestreamStore.activeLivestream.id }},
+      livestream: { connect: { id: activeLivestream.id }},
       youtubeViewCount: youtubeCount,
       twitchViewCount: twitchCount
     }})
@@ -56,16 +57,17 @@ export default class ViewershipStore extends ContextClass {
    * viewership of a specific *channel*.
    */
   public async addViewershipForChatParticipation (userId: number, timestamp: number): Promise<void> {
-    if (this.livestreamStore.activeLivestream == null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null) {
       return
     }
 
-    const startTime = this.livestreamStore.activeLivestream.start
+    const startTime = activeLivestream.start
     if (startTime == null) {
       // livestream hasn't started yet
       return
     }
-    const endTime = this.livestreamStore.activeLivestream.end ?? MAX_DATE
+    const endTime = activeLivestream.end ?? MAX_DATE
 
     // get the viewing block range
     const _time = new Date(timestamp)
@@ -90,7 +92,7 @@ export default class ViewershipStore extends ContextClass {
       block = await this.db.viewingBlock.create({
         data: {
           user: { connect: { id: userId }},
-          livestream: { connect: { id: this.livestreamStore.activeLivestream.id }},
+          livestream: { connect: { id: activeLivestream.id }},
           startTime: lowerTime,
           lastUpdate: upperTime
         },
@@ -122,12 +124,13 @@ export default class ViewershipStore extends ContextClass {
   }
 
   public async getLatestLiveCount (): Promise<{ time: Date, viewCount: number, twitchViewCount: number } | null> {
-    if (this.livestreamStore.activeLivestream == null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null) {
       return null
     }
 
     const result = await this.db.liveViewers.findFirst({
-      where: { livestreamId: this.livestreamStore.activeLivestream.id },
+      where: { livestreamId: activeLivestream.id },
       orderBy: { time: 'desc' }
     })
 

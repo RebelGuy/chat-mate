@@ -160,16 +160,16 @@ export default class ChatMateControllerReal implements IChatMateController {
       }
     }
 
-    if (this.livestreamStore.activeLivestream == null && liveId != null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null && liveId != null) {
       await this.livestreamService.setActiveLivestream(liveId)
-    } else if (this.livestreamStore.activeLivestream != null && liveId == null) {
+    } else if (activeLivestream != null && liveId == null) {
       await this.livestreamService.deactivateLivestream()
-    } else if (!(this.livestreamStore.activeLivestream == null && liveId == null || this.livestreamStore.activeLivestream!.liveId === liveId)) {
+    } else if (!(activeLivestream == null && liveId == null || activeLivestream!.liveId === liveId)) {
       return args.builder.failure(422, `Cannot set active livestream ${liveId} because another livestream is already active.`)
     }
 
-    const livestream = this.livestreamStore.activeLivestream
-    return args.builder.success({ livestreamLink: livestream == null ? null : getLivestreamLink(livestream.liveId) })
+    return args.builder.success({ livestreamLink: activeLivestream == null ? null : getLivestreamLink(activeLivestream.liveId) })
   }
 
   public getMasterchatAuthentication (args: In<GetMasterchatAuthenticationEndpoint>): Out<GetMasterchatAuthenticationEndpoint> {
@@ -179,12 +179,12 @@ export default class ChatMateControllerReal implements IChatMateController {
   }
 
   private async getLivestreamStatus (): Promise<PublicLivestreamStatus | null> {
-    const livestream = this.livestreamStore.activeLivestream
-    if (livestream == null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null) {
       return null
     }
 
-    const publicLivestream = livestreamToPublic(livestream)
+    const publicLivestream = livestreamToPublic(activeLivestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
     if (publicLivestream.status === 'live') {
       viewers = await this.viewershipStore.getLatestLiveCount()

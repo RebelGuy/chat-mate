@@ -79,7 +79,7 @@ export default class ExperienceService extends ContextClass {
    * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItem: ChatItem): Promise<void> {
     // ensure that an active public stream exists and is live
-    const livestream = this.livestreamStore.activeLivestream
+    const livestream = await this.livestreamStore.getActiveLivestream()
     if (livestream == null) {
       return
     }

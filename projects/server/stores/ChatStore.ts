@@ -33,10 +33,11 @@ export default class ChatStore extends ContextClass {
   /** Adds the chat item, quietly ignoring duplicates. */
   public async addChat (chatItem: ChatItem, userId: number, channelId: string) {
     let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
-    if (this.livestreamStore.activeLivestream == null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null) {
       livestreamPart = undefined
     } else {
-      livestreamPart = { connect: { id: this.livestreamStore.activeLivestream.id }}
+      livestreamPart = { connect: { id: activeLivestream.id }}
     }
 
     // there is a race condition where the client may request messages whose message parts haven't yet been
