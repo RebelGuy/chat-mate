@@ -65,7 +65,7 @@ export default () => {
       const donation2 = await createDonation({ time: data.time3 })
       const donation3 = await createDonation({ time: data.time2 })
 
-      const result = await donationStore.getDonationsSince(donation1.time)
+      const result = await donationStore.getDonationsSince(donation1.time.getTime())
 
       expect(result.length).toBe(2)
       expect(result).toEqual([donation3, donation2])

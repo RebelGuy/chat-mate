@@ -69,6 +69,7 @@ import DonationHelpers from '@rebel/server/helpers/DonationHelpers'
 import DonationController from '@rebel/server/controllers/DonationController'
 import LivestreamController from '@rebel/server/controllers/LivestreamController'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
+import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -167,6 +168,7 @@ const globalContext = ContextProvider.create()
   .withClass('donationStore', DonationStore)
   .withClass('donationFetchService', DonationFetchService)
   .withClass('donationService', DonationService)
+  .withClass('chatMateEventService', ChatMateEventService)
   .build()
 
 app.use((req, res, next) => {

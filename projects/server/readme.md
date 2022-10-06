@@ -145,6 +145,8 @@ Key:
   - 🟢 onNewChatItem
 - 🟢 ChatFetchService
   - 🟢 initialise
+- 🟢 ChatMateEventService
+  - 🟢 getEventsSince
 - 🟢 CustomEmojiEligibilityService
   - 🟢 getEligibleEmojis
 - 🟢 DonationFetchService
@@ -384,7 +386,7 @@ Query parameters:
 
 Returns data with the following properties:
 - `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp.
+- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp, sorted by time in ascending order.
 
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.

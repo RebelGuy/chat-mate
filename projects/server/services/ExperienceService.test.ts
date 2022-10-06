@@ -252,7 +252,7 @@ describe(nameof(ExperienceService, 'getLevels'), () => {
 describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
   test('returns empty array if there are no xp transactions', async () => {
     const time = data.time1.getTime()
-    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time).mockResolvedValue([])
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time + 1).mockResolvedValue([])
 
     const result = await experienceService.getLevelDiffs(time)
 
@@ -285,7 +285,7 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
         { userId: userId1, experience: user1BaseXp + 10 + 20 },
         { userId: userId2, experience: user2BaseXp + 150 + 160 + 1}
       ])
-    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time3.getTime()).mockResolvedValue(transactions)
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time3.getTime() + 1).mockResolvedValue(transactions)
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const result = await experienceService.getLevelDiffs(time3.getTime())
@@ -304,7 +304,7 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const transactions: ExperienceTransaction[] = [{ id: 1, userId: 1, time: time1, delta: -500 }]
 
     mockExperienceStore.getExperience.calledWith(expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, experience: -100 }])
-    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time2.getTime()).mockResolvedValue(transactions)
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(time2.getTime() + 1).mockResolvedValue(transactions)
 
     const result = await experienceService.getLevelDiffs(time2.getTime())
 
