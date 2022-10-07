@@ -7,7 +7,6 @@ import { ContextProvider, setContextProvider } from '@rebel/server/context/conte
 import ChatService from '@rebel/server/services/ChatService'
 import ServiceFactory from '@rebel/server/context/CustomServiceFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import MasterchatProvider from '@rebel/server/factories/MasterchatFactory'
 import path from 'node:path'
 import FileService from '@rebel/server/services/FileService'
 import LogService, { createLogContext } from '@rebel/server/services/LogService'
@@ -134,7 +133,6 @@ const globalContext = ContextProvider.create()
   .withClass('masterchatStatusService', StatusService)
   .withClass('twurpleStatusService', StatusService)
   .withClass('streamlabsStatusService', StatusService)
-  .withClass('masterchatProvider', MasterchatProvider)
   .withClass('masterchatProxyService', MasterchatProxyService)
   .withClass('twurpleAuthProvider', TwurpleAuthProvider)
   .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)

@@ -66,9 +66,25 @@ async function createWindow () {
 
       let channelId: string
       try {
-        channelId = await mainWindow!.webContents.executeJavaScript(
-          `document.body.innerHTML.substr(document.body.innerHTML.indexOf("/community?show_create_dialog=1") - 24, 24)`
-        )
+        const channelUrl = await mainWindow!.webContents.executeJavaScript(`
+          // open the top drawer
+          document.getElementById("avatar-btn").click()
+
+          // wait for the dom to update
+          new Promise(resolve => setTimeout(resolve, 500))
+            .then(() => {
+              // this element is now available
+              return document.getElementById("endpoint")?.href
+            })
+        `)
+        if (channelUrl == null) {
+          throw new Error('ChannelUrl was null')
+        }
+
+        channelId = channelUrl.split('/').at(-1)
+        if (channelId.length !== 24) {
+          throw new Error(`Invalid channelId: ${channelId} (from URL ${channelUrl})`)
+        }
         console.log(`Successfully retrieved channel ID ${channelId} from the Youtube page.`)
       } catch (ex: any) {
         console.error('Failed to get channel ID from the page. Aborting.', ex)
