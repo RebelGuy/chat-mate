@@ -20,7 +20,7 @@ export default class AuthStore extends ContextClass {
   }
 
   /** Loads the Twitch access token for the current client id. Throws if the token doesn't exist. To set the token, use the `TwitchAuth.js` script. */
-  public async loadAccessToken (): Promise<AccessToken> {
+  public async loadTwitchAccessToken (): Promise<AccessToken> {
     const auth = await this.dbProvider.get().twitchAuth.findUnique({
       where: {
         clientId: this.twitchClientId
@@ -37,7 +37,12 @@ export default class AuthStore extends ContextClass {
     }
   }
 
-  public async saveAccessToken (token: AccessToken) {
+  public async loadYoutubeAccessToken (channelId: string): Promise<string | null> {
+    const result = await this.dbProvider.get().youtubeAuth.findUnique({ where: { channelId }})
+    return result?.accessToken ?? null
+  }
+
+  public async saveTwitchAccessToken (token: AccessToken) {
     const tokenData = {
       accessToken: token.accessToken,
       refreshToken: token.refreshToken!,
@@ -50,6 +55,15 @@ export default class AuthStore extends ContextClass {
       create: { clientId: this.twitchClientId, ...tokenData },
       where: { clientId: this.twitchClientId },
       update: { ...tokenData }
+    })
+  }
+
+  public async saveYoutubeAccessToken (channelId: string, accessToken: string) {
+    const updateTime = new Date()
+    await this.dbProvider.get().youtubeAuth.upsert({
+      create: { channelId, accessToken, updateTime },
+      where: { channelId },
+      update: { accessToken, updateTime }
     })
   }
 }

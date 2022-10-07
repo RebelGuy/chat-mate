@@ -49,13 +49,13 @@ async function createWindow () {
    *
    * @see https://github.com/electron/electron/issues/25012
    */
-  mainWindow.on("ready-to-show", () => {
+  mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
     mainWindow!.webContents.openDevTools()
   })
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  mainWindow.webContents.on("did-finish-load", async (e: any) => {
+  mainWindow.webContents.on('did-finish-load', async (e: any) => {
     //
   })
 
@@ -94,7 +94,7 @@ async function createWindow () {
         expiresIn: 0,
         obtainmentTimestamp: 0
       }
-      await authStore.saveAccessToken(token)
+      await authStore.saveTwitchAccessToken(token)
 
       console.log('-------------------')
       console.log('Successfully saved Twitch credentials.')
@@ -108,11 +108,11 @@ async function createWindow () {
   await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${scope}`)
 }
 
-app.on("session-created", (session: any) => {
+app.on('session-created', (session: any) => {
   session.clearStorageData()
 })
 
-app.on("second-instance", () => {
+app.on('second-instance', () => {
   // Someone tried to run a second instance, we should focus our window.
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore()
@@ -120,8 +120,8 @@ app.on("second-instance", () => {
   }
 })
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
     app.quit()
   }
 })
@@ -129,4 +129,4 @@ app.on("window-all-closed", () => {
 app
   .whenReady()
   .then(createWindow)
-  .catch((e) => console.error("Failed create window:", e))
+  .catch((e) => console.error('Failed create window:', e))

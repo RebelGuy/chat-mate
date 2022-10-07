@@ -21,9 +21,6 @@ type EnvironmentVariables = {
 
   port: number
 
-  // authentication token passed into Masterchat
-  auth: string
-
   twitchClientId: string
   twitchClientSecret: string
   twitchChannelName: string
@@ -55,7 +52,6 @@ function getAllKeys () {
   // wrapped in a function to stop polluting the top-level scope
   const allEnvVariables: Record<keyof EnvironmentVariables, true> = {
     'applicationinsightsConnectionString': true,
-    'auth': true,
     'channelId': true,
     'databaseUrl': true,
     'enableDbLogging': true,

@@ -28,7 +28,7 @@ If building fails because the Prisma client could not be found, please run `yarn
 
 ## Authentication
 ### YouTube
-Run `yarn auth` and log in using the streaming account, or a moderator account. After the Electron app closes, note the authentication token in the console and use it as the `AUTH` environment variable.
+Run `yarn auth:youtube:<local|debug|release>` and log in using the streaming account, or a moderator account. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID.
 
 ### Twitch
 Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
@@ -55,8 +55,7 @@ Define `local.env`, `debug.env` and `release.env` files that set the following e
 
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
-- `AUTH`: The authentication credentials for the livestream user. Optional. Credentials can be obtained by running the electron app via `yarn auth`, logging into the Google account, and copying the encoded cookie token that is displayed in the console.
-- `CHANNEL_ID`: The channel ID of the livestream user.
+- `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
@@ -225,8 +224,10 @@ Key:
 
 **Stores**
 - 🟢 AuthStore
-  - 🟢 loadAccessToken
-  - 🟢 saveAccessToken
+  - 🟢 loadTwitchAccessToken
+  - 🟢 loadYoutubeAccessToken
+  - 🟢 saveTwitchAccessToken
+  - 🟢 saveYoutubeAccessToken
 - 🟢 ChannelStore
   - 🟢 createOrUpdate
   - 🟢 getCurrentUserIds

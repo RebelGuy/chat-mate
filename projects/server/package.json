@@ -3,7 +3,9 @@
   "version": "1.18.0",
   "main": "../../dist/server/app.js",
   "scripts": {
-    "auth": "cd ../masterchat/extra/credential-fetcher && npm i && npm run start",
+    "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
+    "auth:youtube:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   electron ../../dist/server/YoutubeAuth.js",
+    "auth:youtube:release": "cross-env NODE_ENV=release dotenv -e release.env electron ../../dist/server/YoutubeAuth.js",
     "auth:twitch:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/TwitchAuth.js",
     "auth:twitch:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   electron ../../dist/server/TwitchAuth.js",
     "auth:twitch:release": "cross-env NODE_ENV=release dotenv -e release.env electron ../../dist/server/TwitchAuth.js",

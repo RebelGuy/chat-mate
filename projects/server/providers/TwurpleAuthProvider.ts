@@ -55,7 +55,7 @@ export default class TwurpleAuthProvider extends ContextClass {
 
     let token: AccessToken
     try {
-      token = await this.authStore.loadAccessToken()
+      token = await this.authStore.loadTwitchAccessToken()
     } catch (e: any) {
       const scriptName = `yarn workspace server auth:twitch:${this.nodeEnv}`
       throw new Error(`Unable to authenticate Twurple.\n${e.message}\nPlease run the following script:\n\n    ${scriptName}`)
@@ -85,7 +85,7 @@ export default class TwurpleAuthProvider extends ContextClass {
 
   private async saveAccessToken (token: AccessToken) {
     try {
-      await this.authStore.saveAccessToken(token)
+      await this.authStore.saveTwitchAccessToken(token)
       this.logService.logDebug(this, 'Saved access token')
     } catch (e: any) {
       this.logService.logError(this, 'Failed to save access token', e.message)
