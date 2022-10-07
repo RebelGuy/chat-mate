@@ -69,6 +69,7 @@ import DonationController from '@rebel/server/controllers/DonationController'
 import LivestreamController from '@rebel/server/controllers/LivestreamController'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
+import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -178,6 +179,21 @@ app.use((req, res, next) => {
   } else {
     next()
   }
+})
+
+app.use((req, res, next) => {
+  // intercept the JSON body so we can customise the error code
+  // "inspired" by https://stackoverflow.com/a/57553226
+  const send = res.send.bind(res)
+  res.send = (body) => {
+    const response = body == null ? null : JSON.parse(body) as ApiResponse<any, any>
+    if (response?.success === false) {
+      res.status(response.error.errorCode ?? 500)
+    }
+    return send(body)
+  }
+
+  next()
 })
 
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))

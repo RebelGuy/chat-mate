@@ -33,6 +33,8 @@ export default class MasterchatFactory extends Factory<Masterchat> {
 
     if (this.accessToken == null) {
       this.logService.logWarning(this, 'Access token is not set in the db for channelId', this.channelId)
+    } else {
+      this.logService.logInfo(this, 'Successfully loaded access token for chanelId', this.channelId)
     }
   }
 
