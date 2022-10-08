@@ -1,4 +1,3 @@
-import LogSummary from '@rebel/studio/LogSummary'
 import { Page } from '@rebel/studio/types'
 
 type Props = {
