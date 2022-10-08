@@ -4,16 +4,16 @@ import { getLogTimestamps } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 
 export default function LogSummary() {
-  return <div style={{ height: '3em' }}>
+  return <div>
     <ApiRequest onDemand={false} repeatInterval={5000} onRequest={getLogTimestamps}>
-      {data => data && renderTimestamps(data!.timestamps)}
+      {data => renderTimestamps(data?.timestamps)}
     </ApiRequest>
   </div>
 }
 
-function renderTimestamps (timestamps: PublicLogTimestamps) {
-  const renderLast = (timestamps: number[]) => {
-    if (timestamps.length === 0) {
+function renderTimestamps (timestamps: PublicLogTimestamps | undefined) {
+  const renderLast = (timestamps: number[] | undefined) => {
+    if (timestamps == null || timestamps.length === 0) {
       return null
     } else {
       const last = timestamps.at(-1)!
@@ -22,7 +22,7 @@ function renderTimestamps (timestamps: PublicLogTimestamps) {
   }
 
   return <div style={{ display: 'block' }}>
-    <div>Errors: {timestamps.errors.length}{renderLast(timestamps.errors)}</div>
-    <div>Warnings: {timestamps.warnings.length}{renderLast(timestamps.warnings)}</div>
+    <div>Errors: {timestamps?.errors.length ?? 'unknown'}{renderLast(timestamps?.errors)}</div>
+    <div>Warnings: {timestamps?.warnings.length ?? 'unknown'}{renderLast(timestamps?.warnings)}</div>
   </div>
 }

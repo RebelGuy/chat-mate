@@ -367,6 +367,13 @@ Returns data with the following properties:
 ## ChatMate Endpoints
 Path: `/chatMate`.
 
+### `GET /ping`
+*Current schema: 1.*
+
+Pings the server.
+
+Returns data with no properties.
+
 ### `GET /status`
 *Current schema: 4.*
 

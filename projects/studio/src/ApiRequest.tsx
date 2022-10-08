@@ -139,7 +139,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
       errorNode = (
         <>
           <div style={{ color: 'red', padding: 12 }}>Error: {error}</div>
-          <button onClick={this.onRetry}>Try again</button>
+          {this.props.onDemand && <button onClick={this.onRetry}>Try again</button>}
         </>
       )
     }
