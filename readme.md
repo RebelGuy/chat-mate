@@ -47,7 +47,16 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
-## v1.8 - The Quality Update [30/9/2022]
+## v1.19 - The Pre-Auth Update [8/10/2022]
+- Server
+  - The YouTube access token is now persisted to the database instead of being applied via environment variables
+  - API errors now return the correct HTTP error code
+  - Code improvements and refactoring
+- Studio
+  - Added debug info section that periodically polls the server status, API status, and more
+  - Code improvements and refactoring
+
+## v1.18 - The Quality Update [30/9/2022]
 - Server
   - Custom emojis can now be assigned a rank requirement (rank whitelist), on top of the existing level requirement. If set, a user must have at least one of the whitelisted rank to be able to use the emoji
 - Studio
