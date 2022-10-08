@@ -44,7 +44,7 @@ export function getLiveId (linkOrId: string): string {
   if (id == null || id.length === 0) {
     throw new Error(`The provided link ${linkOrId} does not contain a video ID.`)
   } else if (id.length !== ID_LENGTH) {
-    throw new Error(`A video/livestream ID (${id}) was able to be found on the link ${linkOrId}, but it wasn malformed.`)
+    throw new Error(`A video/livestream ID (${id}) was able to be found on the link ${linkOrId}, but it was malformed.`)
   } else {
     return id
   }

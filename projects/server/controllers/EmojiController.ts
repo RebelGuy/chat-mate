@@ -66,6 +66,11 @@ export default class EmojiController extends ControllerBase {
       return builder.failure(400, 'Invalid request data.')
     }
 
+    const symbol = request.updatedEmoji.symbol ?? ''
+    if (symbol.length < 3 || symbol.length > 10) {
+      return builder.failure(400, 'Symbol must be between 3 and 10 characters.')
+    }
+
     try {
       const emoji = await this.customEmojiStore.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji))
       return builder.success({ updatedEmoji: customEmojiToPublicObject(emoji) })
