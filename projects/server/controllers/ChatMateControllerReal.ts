@@ -7,7 +7,7 @@ import StatusService from '@rebel/server/services/StatusService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
-import { zipOnStrictMany } from '@rebel/server/util/arrays'
+import { filterTypes, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import ChannelService from '@rebel/server/services/ChannelService'
@@ -20,6 +20,11 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import RankStore from '@rebel/server/stores/RankStore'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import { livestreamToPublic } from '@rebel/server/models/livestream'
+import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
+import { assertUnreachable } from '@rebel/server/util/typescript'
+import { PublicLevelUpData } from '@rebel/server/controllers/public/event/PublicLevelUpData'
+import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/event/PublicNewTwitchFollowerData'
+import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -34,6 +39,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   masterchatProxyService: MasterchatProxyService
   rankStore: RankStore
   donationStore: DonationStore
+  chatMateEventService: ChatMateEventService
 }>
 
 export default class ChatMateControllerReal implements IChatMateController {
@@ -49,6 +55,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly masterchatProxyService: MasterchatProxyService
   readonly rankStore: RankStore
   readonly donationStore: DonationStore
+  readonly chatMateEventService: ChatMateEventService
 
   constructor (deps: ChatMateControllerDeps) {
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -63,6 +70,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     this.masterchatProxyService = deps.resolve('masterchatProxyService')
     this.rankStore = deps.resolve('rankStore')
     this.donationStore = deps.resolve('donationStore')
+    this.chatMateEventService = deps.resolve('chatMateEventService')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -77,74 +85,62 @@ export default class ChatMateControllerReal implements IChatMateController {
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
 
-    const diffs = await this.experienceService.getLevelDiffs(since + 1)
+    const events = await this.chatMateEventService.getEventsSince(since)
 
-    const userChannels = await this.channelService.getActiveUserChannels(diffs.map(d => d.userId))
-    const levelInfo = await this.experienceService.getLevels(diffs.map(d => d.userId))
-    const ranks = await this.rankStore.getUserRanks(diffs.map(d => d.userId))
+    // pre-fetch user data for `levelUp` events
+    const userIds = filterTypes(events, 'levelUp').map(e => e.userId)
+    const userChannels = await this.channelService.getActiveUserChannels(userIds)
+    const levelInfo = await this.experienceService.getLevels(userIds)
+    const ranks = await this.rankStore.getUserRanks(userIds)
     const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
 
-    let events: PublicChatMateEvent[] = []
-    for (let i = 0; i < diffs.length; i++) {
-      const diff = diffs[i]
-      const user: PublicUser = userDataToPublicUser(userData[i])
+    let result: PublicChatMateEvent[] = []
+    for (const event of events) {
+      let levelUpData: PublicLevelUpData | null = null
+      let newTwitchFollowerData: PublicNewTwitchFollowerData | null = null
+      let donationData: PublicDonationData | null = null
 
-      events.push({
-        schema: 5,
-        type: 'levelUp',
-        timestamp: diff.timestamp,
-        levelUpData: {
+      if (event.type === 'levelUp') {
+        const user: PublicUser = userDataToPublicUser(userData.find(d => d.userId === event.userId)!)
+        levelUpData = {
           schema: 3,
-          newLevel: diff.endLevel.level,
-          oldLevel: diff.startLevel.level,
+          newLevel: event.newLevel,
+          oldLevel: event.oldLevel,
           user
-        },
-        newTwitchFollowerData: null,
-        donationData: null
-      })
-    }
-
-    const newFollowers = await this.followerStore.getFollowersSince(since)
-    for (let i = 0; i < newFollowers.length; i++) {
-      const follower = newFollowers[i]
-      events.push({
-        schema: 5,
-        type: 'newTwitchFollower',
-        timestamp: follower.date.getTime(),
-        levelUpData: null,
-        newTwitchFollowerData: {
-          schema: 1,
-          displayName: follower.displayName
-        },
-        donationData: null
-      })
-    }
-
-    const newDonations = await this.donationStore.getDonationsSince(new Date(since))
-    for (let i = 0; i < newDonations.length; i++) {
-      const donation = newDonations[i]
-      events.push({
-        schema: 5,
-        type: 'donation',
-        timestamp: donation.time.getTime(),
-        levelUpData: null,
-        newTwitchFollowerData: null,
-        donationData: {
-          schema: 1,
-          id: donation.id,
-          time: donation.time.getTime(),
-          amount: donation.amount,
-          formattedAmount: donation.formattedAmount,
-          currency: donation.currency as 'USD',
-          name: donation.name,
-          message: donation.message
         }
+      } else if (event.type === 'newTwitchFollower') {
+        newTwitchFollowerData = {
+          schema: 1,
+          displayName: event.displayName
+        }
+      } else if (event.type === 'donation') {
+        donationData = {
+          schema: 1,
+          id: event.donation.id,
+          time: event.donation.time.getTime(),
+          amount: event.donation.amount,
+          formattedAmount: event.donation.formattedAmount,
+          currency: event.donation.currency,
+          name: event.donation.name,
+          message: event.donation.message
+        }
+      } else {
+        assertUnreachable(event)
+      }
+
+      result.push({
+        schema: 5,
+        type: event.type,
+        timestamp: event.timestamp,
+        levelUpData,
+        newTwitchFollowerData,
+        donationData
       })
     }
 
     return builder.success({
-      reusableTimestamp: events.at(-1)?.timestamp ?? since,
-      events
+      reusableTimestamp: result.at(-1)?.timestamp ?? since,
+      events: result
     })
   }
 
@@ -160,16 +156,16 @@ export default class ChatMateControllerReal implements IChatMateController {
       }
     }
 
-    if (this.livestreamStore.activeLivestream == null && liveId != null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null && liveId != null) {
       await this.livestreamService.setActiveLivestream(liveId)
-    } else if (this.livestreamStore.activeLivestream != null && liveId == null) {
+    } else if (activeLivestream != null && liveId == null) {
       await this.livestreamService.deactivateLivestream()
-    } else if (!(this.livestreamStore.activeLivestream == null && liveId == null || this.livestreamStore.activeLivestream!.liveId === liveId)) {
+    } else if (!(activeLivestream == null && liveId == null || activeLivestream!.liveId === liveId)) {
       return args.builder.failure(422, `Cannot set active livestream ${liveId} because another livestream is already active.`)
     }
 
-    const livestream = this.livestreamStore.activeLivestream
-    return args.builder.success({ livestreamLink: livestream == null ? null : getLivestreamLink(livestream.liveId) })
+    return args.builder.success({ livestreamLink: activeLivestream == null ? null : getLivestreamLink(activeLivestream.liveId) })
   }
 
   public getMasterchatAuthentication (args: In<GetMasterchatAuthenticationEndpoint>): Out<GetMasterchatAuthenticationEndpoint> {
@@ -179,12 +175,12 @@ export default class ChatMateControllerReal implements IChatMateController {
   }
 
   private async getLivestreamStatus (): Promise<PublicLivestreamStatus | null> {
-    const livestream = this.livestreamStore.activeLivestream
-    if (livestream == null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null) {
       return null
     }
 
-    const publicLivestream = livestreamToPublic(livestream)
+    const publicLivestream = livestreamToPublic(activeLivestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
     if (publicLivestream.status === 'live') {
       viewers = await this.viewershipStore.getLatestLiveCount()

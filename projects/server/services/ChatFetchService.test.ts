@@ -8,7 +8,7 @@ import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { mockGetter, nameof } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -76,7 +76,7 @@ beforeEach(() => {
   mockTimerHelpers = mock<TimerHelpers>()
   mockChatService = mock<ChatService>()
 
-  mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(currentLivestream)
+  mockLivestreamStore.getActiveLivestream.mockResolvedValue(currentLivestream)
   mockChatStore.getChatSince.mockResolvedValue([])
 
   // automatically execute callback passed to TimerHelpers
@@ -136,7 +136,7 @@ describe(nameof(ChatService, 'initialise'), () => {
   })
 
   test('quietly handles no active livestream', async () => {
-    mockGetter(mockLivestreamStore, 'activeLivestream').mockReturnValue(null)
+    mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
 
     await chatFetchService.initialise()
 

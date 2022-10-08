@@ -1,11 +1,11 @@
 import { getStatus, setActiveLivestream } from '@rebel/studio/api'
+import ApiRequest from '@rebel/studio/ApiRequest'
+import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import * as React from 'react'
 
 type Props = { }
 
 type State = {
-  loading: boolean
-  error: string | null
   currentInput: string
 }
 
@@ -14,50 +14,38 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
     super(props)
 
     this.state = {
-      loading: false,
-      error: null,
       currentInput: ''
     }
-  }
-
-  loadStatus = async () => {
-    this.setState({ loading: true })
-    const response = await getStatus()
-    this.setState({
-      loading: false,
-      currentInput: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : this.state.currentInput,
-      error: response.success ? null : response.error.message
-    })
-  }
-
-  setLivestream = async (newLivestream: string | null) => {
-    this.setState({ loading: true })
-    const response = await setActiveLivestream(newLivestream)
-    this.setState({
-      loading: false,
-      currentInput: response.success ? newLivestream ?? '' : this.state.currentInput,
-      error: response.success ? null : response.error.message
-    })
   }
 
   onChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({ currentInput: e.target.value })
   }
 
-  onSubmit = () => {
+  setStatus = () => {
     const livestream = this.state.currentInput.trim()
-    this.setLivestream(livestream === '' ? null : livestream)
+    return setActiveLivestream(livestream === '' ? null : livestream)
   }
 
-  override componentDidMount () {
-    this.loadStatus()
+  getStatus = async () => {
+    const response = await getStatus()
+    if (response.success) {
+      this.setState({ currentInput: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : this.state.currentInput })
+    }
+    return response
   }
 
   override render() {
     return <div style={{ display: 'block' }}>
-      <input onChange={this.onChangeInput} disabled={this.state.loading} placeholder='No active livestream' value={this.state.currentInput} />
-      <button onClick={this.onSubmit} disabled={this.state.loading}>Set active livestream</button>
-      {this.state.error != null && <p style={{ color: 'red' }}>{this.state.error}</p>}
+      <ApiRequest onDemand token={1} onRequest={this.getStatus}>
+        <ApiRequestTrigger onRequest={this.setStatus}>
+          {(onSetStatus, status, loading, error) => <>
+            <input onChange={this.onChangeInput} disabled={loading != null} placeholder='No active livestream' value={this.state.currentInput} />
+            <button onClick={onSetStatus} disabled={loading != null}>Set active livestream</button>
+            {error}
+          </>}
+        </ApiRequestTrigger>
+      </ApiRequest>
     </div>
   }
 }

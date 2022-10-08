@@ -90,6 +90,7 @@ module.exports = (env) => {
     migrateSchema: './scripts/migrations/migrateSchema.ts',
     applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts',
     TwitchAuth: './scripts/TwitchAuth.ts',
+    YoutubeAuth: './scripts/YoutubeAuth.ts',
     RefreshSnapshots: './scripts/RefreshSnapshots.ts'
   } : {}
 

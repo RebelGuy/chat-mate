@@ -7,7 +7,6 @@ import { ContextProvider, setContextProvider } from '@rebel/server/context/conte
 import ChatService from '@rebel/server/services/ChatService'
 import ServiceFactory from '@rebel/server/context/CustomServiceFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import MasterchatProvider from '@rebel/server/factories/MasterchatFactory'
 import path from 'node:path'
 import FileService from '@rebel/server/services/FileService'
 import LogService, { createLogContext } from '@rebel/server/services/LogService'
@@ -69,6 +68,8 @@ import DonationHelpers from '@rebel/server/helpers/DonationHelpers'
 import DonationController from '@rebel/server/controllers/DonationController'
 import LivestreamController from '@rebel/server/controllers/LivestreamController'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
+import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
+import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -96,7 +97,6 @@ const streamlabsSocketToken = env('streamlabsSocketToken')
 const globalContext = ContextProvider.create()
   .withObject('app', app)
   .withProperty('port', port)
-  .withProperty('auth', env('auth'))
   .withProperty('channelId', env('channelId'))
   .withProperty('dataPath', dataPath)
   .withProperty('nodeEnv', env('nodeEnv'))
@@ -128,14 +128,13 @@ const globalContext = ContextProvider.create()
   .withClass('logsQueryClientProvider', LogsQueryClientProvider)
   .withClass('logQueryService', LogQueryService)
   .withClass('logService', LogService)
+  .withClass('dbProvider', DbProvider)
+  .withClass('authStore', AuthStore)
   .withClass('masterchatFactory', MasterchatFactory)
   .withClass('masterchatStatusService', StatusService)
   .withClass('twurpleStatusService', StatusService)
   .withClass('streamlabsStatusService', StatusService)
-  .withClass('dbProvider', DbProvider)
-  .withClass('masterchatProvider', MasterchatProvider)
   .withClass('masterchatProxyService', MasterchatProxyService)
-  .withClass('authStore', AuthStore)
   .withClass('twurpleAuthProvider', TwurpleAuthProvider)
   .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
   .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
@@ -167,6 +166,7 @@ const globalContext = ContextProvider.create()
   .withClass('donationStore', DonationStore)
   .withClass('donationFetchService', DonationFetchService)
   .withClass('donationService', DonationService)
+  .withClass('chatMateEventService', ChatMateEventService)
   .build()
 
 app.use((req, res, next) => {
@@ -179,6 +179,21 @@ app.use((req, res, next) => {
   } else {
     next()
   }
+})
+
+app.use((req, res, next) => {
+  // intercept the JSON body so we can customise the error code
+  // "inspired" by https://stackoverflow.com/a/57553226
+  const send = res.send.bind(res)
+  res.send = (body) => {
+    const response = body == null ? null : JSON.parse(body) as ApiResponse<any, any>
+    if (response?.success === false) {
+      res.status(response.error.errorCode ?? 500)
+    }
+    return send(body)
+  }
+
+  next()
 })
 
 app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))

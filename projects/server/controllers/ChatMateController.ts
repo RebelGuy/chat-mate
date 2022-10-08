@@ -8,6 +8,8 @@ import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/co
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 import { EmptyObject } from '@rebel/server/types'
 
+export type PingResponse = ApiResponse<1, EmptyObject>
+
 export type GetStatusResponse = ApiResponse<3, {
   livestreamStatus: Tagged<3, PublicLivestreamStatus> | null
   youtubeApiStatus: Tagged<1, PublicApiStatus>
@@ -48,6 +50,13 @@ export default class ChatMateController extends ControllerBase {
     super(deps, 'chatMate')
     const useFakeControllers = env('useFakeControllers')
     this.implementation = useFakeControllers ? new ChatMateControllerFake(deps) : new ChatMateControllerReal(deps)
+  }
+
+  @GET
+  @Path('ping')
+  public ping (): PingResponse {
+    const builder = this.registerResponseBuilder<PingResponse>('GET /ping', 1)
+    return builder.success({})
   }
 
   @GET

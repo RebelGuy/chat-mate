@@ -41,9 +41,9 @@ export default class DonationStore extends ContextClass {
   }
 
   /** Returns donations after the given time, ordered by time in ascending order. */
-  public async getDonationsSince (time: Date): Promise<Donation[]> {
+  public async getDonationsSince (time: number): Promise<Donation[]> {
     return await this.db.donation.findMany({
-      where: { time: { gt: time }},
+      where: { time: { gt: new Date(time) }},
       orderBy: { time: 'asc' }
     })
   }

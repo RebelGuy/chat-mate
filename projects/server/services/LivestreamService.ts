@@ -50,8 +50,9 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
-    if (this.livestreamStore.activeLivestream != null) {
-      this.masterchatProxyService.addMasterchat(this.livestreamStore.activeLivestream.liveId)
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream != null) {
+      this.masterchatProxyService.addMasterchat(activeLivestream.liveId)
     }
 
     const timerOptions: TimerOptions = {
@@ -64,11 +65,12 @@ export default class LivestreamService extends ContextClass {
 
   /** Sets the current livestream as inactive, also removing the associated masterchat instance. */
   public async deactivateLivestream () {
-    if (this.livestreamStore.activeLivestream == null) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    if (activeLivestream == null) {
       return
     }
 
-    const liveId = this.livestreamStore.activeLivestream.liveId
+    const liveId = activeLivestream.liveId
     await this.livestreamStore.deactivateLivestream()
     this.masterchatProxyService.removeMasterchat(liveId)
     this.logService.logInfo(this, `Livestream with id ${liveId} has been deactivated.`)
@@ -101,7 +103,7 @@ export default class LivestreamService extends ContextClass {
   }
 
   private async updateLivestreamMetadata () {
-    const activeLivestream = this.livestreamStore.activeLivestream
+    const activeLivestream = await this.livestreamStore.getActiveLivestream()
     if (activeLivestream == null) {
       return
     } else if (activeLivestream.end != null && new Date() > addTime(activeLivestream.end, 'minutes', 2)) {

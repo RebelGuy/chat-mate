@@ -79,7 +79,7 @@ export default class ExperienceService extends ContextClass {
    * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItem: ChatItem): Promise<void> {
     // ensure that an active public stream exists and is live
-    const livestream = this.livestreamStore.activeLivestream
+    const livestream = await this.livestreamStore.getActiveLivestream()
     if (livestream == null) {
       return
     }
@@ -152,10 +152,9 @@ export default class ExperienceService extends ContextClass {
     })
   }
 
-  /** Returns the level difference between now and the start time (inclusive) for
-   * each channel, where there is a difference of at least 1. */
-  public async getLevelDiffs (startTime: number): Promise<LevelDiff[]> {
-    const transactions = await this.experienceStore.getAllTransactionsStartingAt(startTime)
+  /** Returns the level difference since the given timestamp, where there is a level difference of at least 1. */
+  public async getLevelDiffs (since: number): Promise<LevelDiff[]> {
+    const transactions = await this.experienceStore.getAllTransactionsStartingAt(since + 1)
     if (transactions.length === 0) {
       return []
     }

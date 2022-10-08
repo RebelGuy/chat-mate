@@ -49,7 +49,7 @@ export default class DonationController extends ControllerBase {
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /', 1)
     try {
-      const donations = await this.donationStore.getDonationsSince(new Date(0))
+      const donations = await this.donationStore.getDonationsSince(0)
       return builder.success({
         donations: await this.getPublicDonations(donations)
       })

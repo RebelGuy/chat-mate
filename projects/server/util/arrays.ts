@@ -330,3 +330,8 @@ export function intersection<T> (first: T[], second: T[], comparator?: (a: T, b:
 
   return first.filter(x => second.find(y => comparator!(x, y)) != null)
 }
+
+/** A common operation is to filter an array of a union of types by a certain type (or multiple). The vanilla return type of that filter is the same union of types, which is undesirable. */
+export function filterTypes<T extends { type: string }, Types extends T['type'][]> (items: T[], ...types: Types): Extract<T, { type: Types[number] }>[] {
+  return items.filter(x => types.includes(x.type)) as any // the any-cast is exactly why I decided to write this function
+}

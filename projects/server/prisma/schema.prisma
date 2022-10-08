@@ -26,6 +26,15 @@ model TwitchAuth {
   @@map("twitch_auth")
 }
 
+/// Persists access tokens for Youtube authentication
+model YoutubeAuth {
+  channelId   String   @id
+  accessToken String   @db.VarChar(511)
+  updateTime  DateTime
+
+  @@map("youtube_auth")
+}
+
 // there is no notion of a "livestream" on twitch - all chat messages are sent to the channel directly.
 // since we never run a twitch livestream without also running a youtube livestream, we point the twitch
 // livestream to the youtube livestream.
