@@ -1,15 +1,10 @@
 import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
-import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
-import { userDataToPublicUser } from '@rebel/server/models/user'
-import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import RankStore from '@rebel/server/stores/RankStore'
-import { sortBy, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { sortBy } from '@rebel/server/util/arrays'
 
 export type ChatMateEvent = { timestamp: number } & ({
   type: 'levelUp'
@@ -22,6 +17,7 @@ export type ChatMateEvent = { timestamp: number } & ({
 } | {
   type: 'donation'
   donation: Donation
+  userId: number | null
 })
 
 type Deps = Dependencies<{
@@ -74,7 +70,8 @@ export default class ChatMateEventService extends ContextClass {
       events.push({
         type: 'donation',
         timestamp: donation.time.getTime(),
-        donation: donation
+        donation: donation,
+        userId: donation.userId
       })
     }
 

@@ -1,4 +1,5 @@
-import { PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 
 /** Represents an unlinked donation. */
 export type PublicDonationData = PublicObject<1, {
@@ -24,4 +25,7 @@ export type PublicDonationData = PublicObject<1, {
 
   /** The custom message attached to the donation, if any. */
   message: string | null
+
+  /** The internal user linked to the donation. Null if the donation has not been linked to any user. */
+  linkedUser: Tagged<3, PublicUser> | null
 }>

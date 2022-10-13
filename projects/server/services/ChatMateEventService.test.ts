@@ -1,13 +1,13 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ChatMateEventService, { ChatMateEvent } from '@rebel/server/services/ChatMateEventService'
-import ExperienceService, { Level, LevelDiff } from '@rebel/server/services/ExperienceService'
+import ExperienceService, { LevelDiff } from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
-import { asGte, asLt } from '@rebel/server/util/math'
-import { Donation, TwitchFollower } from '@prisma/client'
+import { asGte } from '@rebel/server/util/math'
+import { TwitchFollower } from '@prisma/client'
 import { filterTypes } from '@rebel/server/util/arrays'
 
 let mockDonationStore: MockProxy<DonationStore>

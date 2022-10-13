@@ -7,7 +7,7 @@ import StatusService from '@rebel/server/services/StatusService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
-import { filterTypes, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { filterTypes, nonNull, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import ChannelService from '@rebel/server/services/ChannelService'
@@ -88,7 +88,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     const events = await this.chatMateEventService.getEventsSince(since)
 
     // pre-fetch user data for `levelUp` events
-    const userIds = filterTypes(events, 'levelUp').map(e => e.userId)
+    const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))
     const userChannels = await this.channelService.getActiveUserChannels(userIds)
     const levelInfo = await this.experienceService.getLevels(userIds)
     const ranks = await this.rankStore.getUserRanks(userIds)
@@ -114,6 +114,7 @@ export default class ChatMateControllerReal implements IChatMateController {
           displayName: event.displayName
         }
       } else if (event.type === 'donation') {
+        const user: PublicUser | null = event.userId == null ? null : userDataToPublicUser(userData.find(d => d.userId === event.userId)!)
         donationData = {
           schema: 1,
           id: event.donation.id,
@@ -122,7 +123,8 @@ export default class ChatMateControllerReal implements IChatMateController {
           formattedAmount: event.donation.formattedAmount,
           currency: event.donation.currency,
           name: event.donation.name,
-          message: event.donation.message
+          message: event.donation.message,
+          linkedUser: user
         }
       } else {
         assertUnreachable(event)
