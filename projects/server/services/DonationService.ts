@@ -33,9 +33,9 @@ export default class DonationService extends ContextClass {
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, userId: number): Promise<Donation> {
+  public async linkUserToDonation (donationId: number, userId: number): Promise<void> {
     const time = this.dateTimeHelpers.now()
-    const updatedDonation = await this.donationStore.linkUserToDonation(donationId, userId, time)
+    await this.donationStore.linkUserToDonation(donationId, userId, time)
 
     const allDonations = await this.donationStore.getDonationsByUserId(userId)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
@@ -92,14 +92,12 @@ export default class DonationService extends ContextClass {
         await this.rankStore.updateRankExpiration(existingDonatorRank.id, monthFromNow)
       }
     }
-
-    return updatedDonation
   }
 
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the user is no longer eligible for.
   /* @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
-  public async unlinkUserFromDonation (donationId: number): Promise<Donation> {
-    const [updatedDonation, userId] = await this.donationStore.unlinkUserFromDonation(donationId)
+  public async unlinkUserFromDonation (donationId: number): Promise<void> {
+    const userId = await this.donationStore.unlinkUserFromDonation(donationId)
 
     const allDonations = await this.donationStore.getDonationsByUserId(userId)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
@@ -127,7 +125,5 @@ export default class DonationService extends ContextClass {
         await this.rankStore.removeUserRank({ rank: 'member', userId: userId, removedBy: null, message: removeMessage })
       }
     }
-
-    return updatedDonation
   }
 }

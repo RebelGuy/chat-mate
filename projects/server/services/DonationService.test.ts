@@ -45,7 +45,6 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
     // user is currently donator, and eligible for donator and supporter
     const ranks = cast<UserRankWithRelations[]>([{ id: 20, rank: { name: 'donator' } }])
     mockDateTimeHelpers.now.mockReturnValue(time)
-    mockDonationStore.linkUserToDonation.calledWith(donationId, userId, time).mockResolvedValue(linkedDonation)
     mockDonationStore.getDonationsByUserId.calledWith(userId).mockResolvedValue(allDonations)
     mockRankStore.getUserRanks.calledWith(expectArray<number>([userId])).mockResolvedValue([{ userId, ranks }])
     mockDonationHelpers.isEligibleForDonator
@@ -58,9 +57,9 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
       .calledWith(expectArray<DonationAmount>([[data.time1, 1], [data.time2, 2], [data.time3, 3]]), any())
       .mockReturnValue(false)
 
-    const result = await donationService.linkUserToDonation(donationId, userId)
+    await donationService.linkUserToDonation(donationId, userId)
 
-    expect(result).toBe(linkedDonation)
+    expect(mockDonationStore.linkUserToDonation).toBeCalledWith(donationId, userId, time)
 
     // only two rank changes should have been made:
     const providedUpdateArgs = single(mockRankStore.updateRankExpiration.mock.calls)
@@ -87,7 +86,7 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
       { id: 20, rank: { name: 'donator' } },
       { id: 21, rank: { name: 'supporter' } }
     ])
-    mockDonationStore.unlinkUserFromDonation.calledWith(donationId).mockResolvedValue([unlinkedDonation, userId])
+    mockDonationStore.unlinkUserFromDonation.calledWith(donationId).mockResolvedValue(userId)
     mockDonationStore.getDonationsByUserId.calledWith(userId).mockResolvedValue(allDonations)
     mockRankStore.getUserRanks.calledWith(expectArray<number>([userId])).mockResolvedValue([{ userId, ranks }])
     mockDonationHelpers.isEligibleForDonator
@@ -100,9 +99,7 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
       .calledWith(expectArray<DonationAmount>([[data.time1, 1], [data.time2, 2], [data.time3, 3]]), any())
       .mockReturnValue(false)
 
-    const result = await donationService.unlinkUserFromDonation(donationId)
-
-    expect(result).toBe(unlinkedDonation)
+    await donationService.unlinkUserFromDonation(donationId)
 
     // only one rank change should have been made:
     const providedRemoveArgs = single2(mockRankStore.removeUserRank.mock.calls)

@@ -7,7 +7,7 @@ import { userDataToPublicUser } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
 import DonationService from '@rebel/server/services/DonationService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { nonNull, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { DELETE, GET, Path, POST, QueryParam } from 'typescript-rest'
@@ -71,9 +71,9 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const updatedDonation = await this.donationService.linkUserToDonation(donationId, userId)
+      await this.donationService.linkUserToDonation(donationId, userId)
       return builder.success({
-        updatedDonation: await this.getPublicDonation(updatedDonation)
+        updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
       if (e instanceof DonationUserLinkAlreadyExistsError) {
@@ -95,9 +95,9 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const updatedDonation = await this.donationService.unlinkUserFromDonation(donationId)
+      await this.donationService.unlinkUserFromDonation(donationId)
       return builder.success({
-        updatedDonation: await this.getPublicDonation(updatedDonation)
+        updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
       if (e instanceof DonationUserLinkNotFoundError) {
@@ -107,12 +107,13 @@ export default class DonationController extends ControllerBase {
     }
   }
 
-  private async getPublicDonation (donation: Donation): Promise<PublicDonation> {
+  private async getPublicDonation (donationId: number): Promise<PublicDonation> {
+    const donation = await this.donationStore.getDonation(donationId)
     return single(await this.getPublicDonations([donation]))
   }
 
-  private async getPublicDonations (donations: Donation[]): Promise<PublicDonation[]> {
-    const userIds = nonNull(donations.map(d => d.linkedUserId))
+  private async getPublicDonations (donations: DonationWithUser[]): Promise<PublicDonation[]> {
+    const userIds = nonNull(donations.map(d => d.userId))
     let userData: PublicUser[]
     if (userIds.length === 0) {
       userData = []
@@ -123,6 +124,6 @@ export default class DonationController extends ControllerBase {
       userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
     }
 
-    return donations.map(d => donationToPublicObject(d, userData.find(u => u.id === d.linkedUserId) ?? null))
+    return donations.map(d => donationToPublicObject(d, userData.find(u => u.id === d.userId) ?? null))
   }
 }

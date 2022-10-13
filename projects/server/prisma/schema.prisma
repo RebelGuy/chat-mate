@@ -96,7 +96,7 @@ model ChatUser {
   userRanks                  UserRank[]              @relation("user_rank_userId")
   administeredUserRanks      UserRank[]              @relation("user_rank_assignedByUserId")
   revokedUserRanks           UserRank[]              @relation("user_rank_revokedByUserId")
-  donations                  Donation[]
+  streamlabsUser             StreamlabsUser[]
 
   @@map("chat_user")
 }
@@ -552,20 +552,33 @@ enum PunishmentType {
 model Donation {
   id Int @id @default(autoincrement())
 
-  streamlabsId    Int // unique
-  time            DateTime
-  currency        String
-  amount          Float
-  formattedAmount String
-  name            String   @db.VarChar(256)
-  message         String?  @db.VarChar(256)
-
-  linkedAt DateTime?
-
-  linkedUserId Int?
-  linkedUser   ChatUser? @relation(fields: [linkedUserId], references: [id], map: "donation_linkedUserId_fkey")
+  streamlabsId     Int // unique
+  streamlabsUserId Int?
+  time             DateTime
+  currency         String
+  amount           Float
+  formattedAmount  String
+  name             String   @db.VarChar(256)
+  message          String?  @db.VarChar(256)
 
   @@unique([streamlabsId], map: "donation_streamlabsId_key")
-  @@index([linkedUserId], map: "donation_linkedUserId_fkey")
   @@map("donation")
+}
+
+/// Mapping of Streamlabs users to ChatMate users
+model StreamlabsUser {
+  id Int @id @default(autoincrement())
+
+  /// Either a number for an actual streamlabs user, or `x${donationId}` for a synthetic user 
+  streamlabsUserId String // unique
+
+  linkedAt DateTime
+
+  linkedUserId Int
+  linkedUser   ChatUser @relation(fields: [linkedUserId], references: [id], map: "streamlabs_user_linkedUserId_fkey")
+
+  @@unique([streamlabsUserId], map: "streamlabs_user_streamlabsUserId_key")
+  // one-to-one mapping
+  @@unique([streamlabsUserId, linkedUserId], map: "streamlabs_user_streamlabsUserId_linkedUserId_key")
+  @@map("streamlabs_user")
 }

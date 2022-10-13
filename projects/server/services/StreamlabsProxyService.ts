@@ -45,6 +45,7 @@ export type CurrencyCode = keyof typeof CURRENCIES
 
 export type StreamlabsDonation = {
   donationId: number
+  streamlabsUserId: number | null
   createdAt: number
   currency: CurrencyCode
   amount: number
@@ -92,18 +93,20 @@ type WebsocketMessage = {
   message: [{
     id: number
     name: string
-    amount: string
-    formatted_amount: string // e.g. "A$1.00"
+    amount: string // decimal in the destination currency with at least 2 decimal places
+    formatted_amount: string // e.g. "A$1.00". Streamlabs converts it to the currency set on the dashboard
     formattedAmount: string
     message: string | null
-    currency: CurrencyCode
-    emotes: ''
+    currency: CurrencyCode // same as whatever is configured in Streamlabs
+    emotes: string | null
     iconClassName: string // e.g. "fab paypal"
     to: { name: string }
-    from: string
-    from_user_id: null | any // todo: string or number
+    from: string // same as `name`
+    from_user_id: null | number // set if the user is logged into streamlabs
+    donation_currency: CurrencyCode // the original currency used to make the donation
     source: string // e.g. paypal
     _id: string
+    priority: number // always 10, no idea what it means
   }]
 } | { type: '' })
 
@@ -163,6 +166,7 @@ export default class StreamlabsProxyService extends ApiService {
     const donations = await this.makeRequest<GetDonationsResponse>('GET', '/donations', new URLSearchParams(params))
 
     return donations.data.map(d => ({
+      streamlabsUserId: null,
       amount: Number.parseFloat(d.amount),
       formattedAmount: d.amount,
       createdAt: Number.parseInt(d.created_at),
@@ -194,11 +198,12 @@ export default class StreamlabsProxyService extends ApiService {
 
     const message = single(data.message)
     const donation: StreamlabsDonation = {
+      donationId: message.id,
+      streamlabsUserId: message.from_user_id ?? null,
       amount: Number.parseFloat(message.amount),
       formattedAmount: message.formattedAmount,
       createdAt: new Date().getTime(),
       currency: message.currency,
-      donationId: message.id,
       message: message.message,
       name: message.from
     }

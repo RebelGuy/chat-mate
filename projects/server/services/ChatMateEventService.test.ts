@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ChatMateEventService, { ChatMateEvent } from '@rebel/server/services/ChatMateEventService'
 import ExperienceService, { Level, LevelDiff } from '@rebel/server/services/ExperienceService'
-import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
@@ -34,8 +34,8 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
     const levelDiff2 = cast<LevelDiff>({ timestamp: data.time3.getTime(), userId: 2, startLevel: { level: asGte(2, 0) }, endLevel: { level: asGte(3, 0) } })
     const follower1 = cast<TwitchFollower>({ date: data.time2, displayName: 'test1' })
     const follower2 = cast<TwitchFollower>({ date: data.time3, displayName: 'test2' })
-    const donation1 = cast<Donation>({ time: data.time2 })
-    const donation2 = cast<Donation>({ time: data.time3 })
+    const donation1 = cast<DonationWithUser>({ time: data.time2 })
+    const donation2 = cast<DonationWithUser>({ time: data.time3 })
 
     mockExperienceService.getLevelDiffs.calledWith(since).mockResolvedValue([levelDiff1, levelDiff2])
     mockFollowerStore.getFollowersSince.calledWith(since).mockResolvedValue([follower1, follower2])
