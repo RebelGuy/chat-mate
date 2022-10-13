@@ -112,8 +112,8 @@ export default () => {
 
       expect(result.length).toBe(2)
       expect(result).toEqual([
-        { ...donation3, userId: null },
-        { ...donation2, userId: null }
+        { ...donation3, userId: null, linkedAt: null },
+        { ...donation2, userId: null, linkedAt: null }
       ])
     })
   })

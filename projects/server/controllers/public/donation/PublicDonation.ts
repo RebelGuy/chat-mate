@@ -28,4 +28,7 @@ export type PublicDonation = PublicObject<1, {
 
   /** The internal user linked to the donation. Null if the donation has not been linked to any user. */
   linkedUser: Tagged<3, PublicUser> | null
+
+  /** The timestamp at which the currently linked user was linked. This is the exact time at which any rank changes would have occurred. Null if no user is currently linked. */
+  linkedAt: number | null
 }>

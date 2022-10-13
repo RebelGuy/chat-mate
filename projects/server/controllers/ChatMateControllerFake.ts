@@ -124,7 +124,8 @@ export default class ChatMateControllerFake implements IChatMateController {
             id: 1,
             message: randomString(128),
             name: randomString(64),
-            time: new Date().getTime()
+            time: new Date().getTime(),
+            linkedUser: null
           }
         })
       }
