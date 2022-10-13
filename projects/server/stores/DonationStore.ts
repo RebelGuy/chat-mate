@@ -7,6 +7,7 @@ import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 
 export type DonationWithUser = Donation & {
+  linkIdentifier: string
   linkedAt: Date | null
   userId: number | null
 }
@@ -73,6 +74,7 @@ export default class DonationStore extends ContextClass {
 
     return {
       ...donation,
+      linkIdentifier: streamlabsUserId,
       userId: streamlabsUser?.linkedUserId ?? null,
       linkedAt: streamlabsUser?.linkedAt ?? null
     }
@@ -95,6 +97,7 @@ export default class DonationStore extends ContextClass {
       const streamlabsUser = streamlabsUsers.find(u => u.streamlabsUserId === streamlabsUserId)
       return {
         ...donation,
+        linkIdentifier: streamlabsUserId,
         userId: streamlabsUser?.linkedUserId ?? null,
         linkedAt: streamlabsUser?.linkedAt ?? null
       }

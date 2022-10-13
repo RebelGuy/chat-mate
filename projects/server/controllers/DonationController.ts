@@ -124,6 +124,6 @@ export default class DonationController extends ControllerBase {
       userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
     }
 
-    return donations.map(d => donationToPublicObject(d, d.linkedAt, userData.find(u => u.id === d.userId) ?? null))
+    return donations.map(d => donationToPublicObject(d, d.linkIdentifier, d.linkedAt, userData.find(u => u.id === d.userId) ?? null))
   }
 }
