@@ -15,16 +15,16 @@ ALTER TABLE `donation` DROP COLUMN `linkedAt`,
     ADD COLUMN `streamlabsUserId` INTEGER NULL;
 
 -- CreateTable
-CREATE TABLE `streamlabs_user` (
+CREATE TABLE `donation_link` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `streamlabsUserId` VARCHAR(191) NOT NULL,
+    `linkIdentifier` VARCHAR(191) NOT NULL,
     `linkedAt` DATETIME(3) NOT NULL,
     `linkedUserId` INTEGER NOT NULL,
 
-    UNIQUE INDEX `streamlabs_user_streamlabsUserId_key`(`streamlabsUserId`),
-    UNIQUE INDEX `streamlabs_user_streamlabsUserId_linkedUserId_key`(`streamlabsUserId`, `linkedUserId`),
+    UNIQUE INDEX `donation_link_linkIdentifier_key`(`linkIdentifier`),
+    UNIQUE INDEX `donation_link_linkIdentifier_linkedUserId_key`(`linkIdentifier`, `linkedUserId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `streamlabs_user` ADD CONSTRAINT `streamlabs_user_linkedUserId_fkey` FOREIGN KEY (`linkedUserId`) REFERENCES `chat_user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `donation_link` ADD CONSTRAINT `donation_link_linkedUserId_fkey` FOREIGN KEY (`linkedUserId`) REFERENCES `chat_user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

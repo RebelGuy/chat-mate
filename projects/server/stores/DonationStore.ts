@@ -44,16 +44,16 @@ export default class DonationStore extends ContextClass {
 
   /** Returns donations that have been linked to the user, orderd by time in ascending order. */
   public async getDonationsByUserId (userId: number): Promise<Donation[]> {
-    const streamlabsUsers = await this.db.streamlabsUser.findMany({ where: { linkedUserId: userId }})
-    const compoundIds = streamlabsUsers.map(u => u.streamlabsUserId)
-    const internalIds = compoundIds.filter(id => id.startsWith(INTERNAL_USER_PREFIX)).map(id => Number(id.substring(INTERNAL_USER_PREFIX.length)))
-    const externalIds = compoundIds.filter(id => id.startsWith(EXTERNAL_USER_PREFIX)).map(id => Number(id.substring(EXTERNAL_USER_PREFIX.length)))
+    const donationLink = await this.db.donationLink.findMany({ where: { linkedUserId: userId }})
+    const linkIdentifiers = donationLink.map(u => u.linkIdentifier)
+    const donationIds = linkIdentifiers.filter(id => id.startsWith(INTERNAL_USER_PREFIX)).map(id => Number(id.substring(INTERNAL_USER_PREFIX.length)))
+    const streamlabsUserIds = linkIdentifiers.filter(id => id.startsWith(EXTERNAL_USER_PREFIX)).map(id => Number(id.substring(EXTERNAL_USER_PREFIX.length)))
 
     return await this.db.donation.findMany({
       where: {
         OR: [
-          { id: { in: internalIds } },
-          { streamlabsUserId: { in: externalIds }}
+          { id: { in: donationIds } },
+          { streamlabsUserId: { in: streamlabsUserIds }}
         ]
       },
       orderBy: { time: 'asc' }
@@ -66,17 +66,17 @@ export default class DonationStore extends ContextClass {
       rejectOnNotFound: true
     })
 
-    const streamlabsUserId = await this.getStreamlabsUserId(donationId)
-    const streamlabsUser = await this.db.streamlabsUser.findUnique({
-      where: { streamlabsUserId: streamlabsUserId },
+    const linkIdentifier = await this.getLinkIdentifier(donationId)
+    const donationLink = await this.db.donationLink.findUnique({
+      where: { linkIdentifier: linkIdentifier },
       rejectOnNotFound: false
     })
 
     return {
       ...donation,
-      linkIdentifier: streamlabsUserId,
-      userId: streamlabsUser?.linkedUserId ?? null,
-      linkedAt: streamlabsUser?.linkedAt ?? null
+      linkIdentifier: linkIdentifier,
+      userId: donationLink?.linkedUserId ?? null,
+      linkedAt: donationLink?.linkedAt ?? null
     }
   }
 
@@ -87,19 +87,19 @@ export default class DonationStore extends ContextClass {
       orderBy: { time: 'asc' }
     })
 
-    const streamlabsUserIds = await this.getStreamlabsUserIds(donations.map(d => d.id))
-    const streamlabsUsers = await this.db.streamlabsUser.findMany({
-      where: { streamlabsUserId: { in: streamlabsUserIds.map(ids => ids[1]) }}
+    const linkIdentifiers = await this.getLinkIdentifiers(donations.map(d => d.id))
+    const donationLinks = await this.db.donationLink.findMany({
+      where: { linkIdentifier: { in: linkIdentifiers.map(ids => ids[1]) }}
     })
 
     return donations.map(donation => {
-      const streamlabsUserId = streamlabsUserIds.find(s => s[0] === donation.id)![1]
-      const streamlabsUser = streamlabsUsers.find(u => u.streamlabsUserId === streamlabsUserId)
+      const linkIdentifier = linkIdentifiers.find(s => s[0] === donation.id)![1]
+      const donationLink = donationLinks.find(u => u.linkIdentifier === linkIdentifier)
       return {
         ...donation,
-        linkIdentifier: streamlabsUserId,
-        userId: streamlabsUser?.linkedUserId ?? null,
-        linkedAt: streamlabsUser?.linkedAt ?? null
+        linkIdentifier: linkIdentifier,
+        userId: donationLink?.linkedUserId ?? null,
+        linkedAt: donationLink?.linkedAt ?? null
       }
     })
   }
@@ -125,15 +125,15 @@ export default class DonationStore extends ContextClass {
   /** Links the user to the donation.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, userId: number, linkedAt: Date): Promise<void> {
-    const streamlabsUserId = await this.getStreamlabsUserId(donationId)
+    const linkIdentifier = await this.getLinkIdentifier(donationId)
 
-    const existingLink = await this.db.streamlabsUser.findFirst({ where: { streamlabsUserId }})
+    const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
     if (existingLink != null) {
       throw new DonationUserLinkAlreadyExistsError()
     }
 
-    await this.db.streamlabsUser.create({ data: {
-      streamlabsUserId: streamlabsUserId,
+    await this.db.donationLink.create({ data: {
+      linkIdentifier: linkIdentifier,
       linkedUserId: userId,
       linkedAt: linkedAt
     }})
@@ -142,25 +142,25 @@ export default class DonationStore extends ContextClass {
   /** Returns the userId that was unlinked.
    * @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
   public async unlinkUserFromDonation (donationId: number): Promise<number> {
-    const streamlabsUserId = await this.getStreamlabsUserId(donationId)
+    const linkIdentifier = await this.getLinkIdentifier(donationId)
 
-    const existingLink = await this.db.streamlabsUser.findFirst({ where: { streamlabsUserId }})
+    const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
     if (existingLink == null) {
       throw new DonationUserLinkNotFoundError()
     }
 
-    await this.db.streamlabsUser.delete({
+    await this.db.donationLink.delete({
       where: { id: existingLink.id }
     })
     return existingLink.linkedUserId
   }
 
-  private async getStreamlabsUserId (donationId: number): Promise<string> {
-    return single(await this.getStreamlabsUserIds([donationId]))[1]
+  private async getLinkIdentifier (donationId: number): Promise<string> {
+    return single(await this.getLinkIdentifiers([donationId]))[1]
   }
 
-  /** Returns the donationId-streamlabsUserId pairs. */
-  private async getStreamlabsUserIds (donationIds: number[]): Promise<[number, string][]> {
+  /** Returns the donationId-linkIdentifier pairs. */
+  private async getLinkIdentifiers (donationIds: number[]): Promise<[number, string][]> {
     const donations = await this.db.donation.findMany({
       where: { id: { in: donationIds }}
     })

@@ -146,12 +146,12 @@ export default () => {
       await donationStore.linkUserToDonation(donation1.id, user.id, time)
       await donationStore.linkUserToDonation(donation2.id, user.id, time)
 
-      const streamlabsUsers = await db.streamlabsUser.findMany({})
-      expect(streamlabsUsers.length).toBe(2)
-      expect(streamlabsUsers[0].linkedUserId).toBe(user.id)
-      expect(streamlabsUsers[0].streamlabsUserId).toBe(`internal-${donation1.id}`)
-      expect(streamlabsUsers[1].linkedUserId).toBe(user.id)
-      expect(streamlabsUsers[1].streamlabsUserId).toBe(`internal-${donation2.id}`)
+      const donationLinks = await db.donationLink.findMany({})
+      expect(donationLinks.length).toBe(2)
+      expect(donationLinks[0].linkedUserId).toBe(user.id)
+      expect(donationLinks[0].linkIdentifier).toBe(`internal-${donation1.id}`)
+      expect(donationLinks[1].linkedUserId).toBe(user.id)
+      expect(donationLinks[1].linkIdentifier).toBe(`internal-${donation2.id}`)
     })
 
     test('Links specified user to the donations (via streamlabs user)', async () => {
@@ -172,9 +172,9 @@ export default () => {
         }
       }
 
-      const streamlabsUser = single(await db.streamlabsUser.findMany({}))
-      expect(streamlabsUser.linkedUserId).toBe(user.id)
-      expect(streamlabsUser.streamlabsUserId).toBe(`external-${streamlabsUserId}`)
+      const donationLink = single(await db.donationLink.findMany({}))
+      expect(donationLink.linkedUserId).toBe(user.id)
+      expect(donationLink.linkIdentifier).toBe(`external-${streamlabsUserId}`)
       expect(secondHasFailed).toBe(true)
     })
 
@@ -194,14 +194,14 @@ export default () => {
       const donation1 = await createDonation({}, { userId: user.id, type: 'internal' })
       const donation2 = await createDonation({}, { userId: user.id, type: 'internal' })
       const donation3 = await createDonation({}, { userId: user.id, type: 'internal' })
-      await expectRowCount(db.streamlabsUser).toBe(3)
+      await expectRowCount(db.donationLink).toBe(3)
 
       const userId = await donationStore.unlinkUserFromDonation(donation1.id)
 
       expect(userId).toBe(user.id)
 
       // should not have affected the user's links to other donations
-      await expectRowCount(db.streamlabsUser).toBe(2)
+      await expectRowCount(db.donationLink).toBe(2)
     })
 
     test('Throws if no user is linked to the donation', async () => {
@@ -265,13 +265,13 @@ export default () => {
 
     if (linkedUser != null) {
       try {
-        await db.streamlabsUser.create({ data: {
+        await db.donationLink.create({ data: {
           linkedUserId: linkedUser.userId,
-          streamlabsUserId: linkedUser.type === 'streamlabs' ? `external-${linkedUser.streamlabsUser}` : `internal-${donation.id}`,
+          linkIdentifier: linkedUser.type === 'streamlabs' ? `external-${linkedUser.streamlabsUser}` : `internal-${donation.id}`,
           linkedAt: new Date()
         }})
       } catch (e: any) {
-        // errors are duplicate streamlabsUserIds
+        // errors are duplicate linkIdentifiers
       }
     }
 
