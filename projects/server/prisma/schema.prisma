@@ -245,14 +245,14 @@ model ChatCustomEmoji {
   emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id], map: "chat_custom_emoji_emojiId_fkey")
 
-  customEmojiId Int
-  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "chat_custom_emoji_customEmojiId_fkey")
+  customEmojiVersionId Int
+  customEmojiVersion   CustomEmojiVersion @relation(fields: [customEmojiVersionId], references: [id], map: "chat_custom_emoji_customEmojiVersionId_fkey")
 
   ChatMessagePart ChatMessagePart[]
 
   @@unique([textId], map: "chat_custom_emoji_textId_key")
   @@index([emojiId], map: "chat_custom_emoji_emojiId_fkey")
-  @@index([customEmojiId], map: "chat_custom_emoji_customEmojiId_fkey")
+  @@index([customEmojiVersionId], map: "chat_custom_emoji_customEmojiVersionId_fkey")
   @@map("chat_custom_emoji")
 }
 
@@ -414,19 +414,37 @@ model ViewingBlock {
 model CustomEmoji {
   id Int @id @default(autoincrement())
 
-  symbol String @db.VarChar(10)
-  name   String @db.VarChar(63)
+  symbol String @db.VarChar(10) // unique
+
+  customEmojiVersions      CustomEmojiVersion[]
+  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
+
+  @@unique([symbol], map: "custom_emoji_symbol_key")
+  @@map("custom_emoji")
+}
+
+// this table has a BEFORE INSERT trigger `TRG_CHECK_EXISTING_ACTIVE_VERSION`
+model CustomEmojiVersion {
+  id Int @id @default(autoincrement())
+
+  isActive   Boolean
+  modifiedAt DateTime @default(now())
+  version    Int
+
+  name String @db.VarChar(63)
 
   // max 64KB of storage
   image Bytes @db.Blob
 
   levelRequirement Int @db.UnsignedSmallInt
 
-  chatCustomEmoji          ChatCustomEmoji[]
-  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
+  customEmojiId Int
+  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_customEmojiId_fkey")
 
-  @@unique([symbol], map: "custom_emoji_symbol_key")
-  @@map("custom_emoji")
+  chatCustomEmojis ChatCustomEmoji[]
+
+  @@unique([customEmojiId, version], map: "custom_emoji_version_customEmojiId_version_key")
+  @@map("custom_emoji_version")
 }
 
 model CustomEmojiRankWhitelist {
