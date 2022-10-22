@@ -72,7 +72,7 @@ export default class ExperienceHelpers extends ContextClass {
         } else if (p.emoji == null && p.text != null && p.customEmoji == null && p.cheer == null) {
           return p.text.text
         } else if (p.emoji == null && p.text == null && p.customEmoji != null && p.cheer == null) {
-          return p.customEmoji.customEmoji.symbol
+          return p.customEmoji.customEmojiVersion.customEmoji.symbol
         } else {
           throw new Error('ChatMessagePart must have either an emoji, custom emoji, or text attached to it')
         }

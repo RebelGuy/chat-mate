@@ -7,13 +7,15 @@ import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore
 import { cast, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { asGte, asLte } from '@rebel/server/util/math'
-import { Rank } from '@prisma/client'
+import { CustomEmoji, CustomEmojiVersion, Rank } from '@prisma/client'
 import { expectArray } from '@rebel/server/_test/utils'
 
+type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>
+
 const userId = 1
-const customEmoji1: Entity.CustomEmoji = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 10, image: Buffer.from('') }
-const customEmoji2: Entity.CustomEmoji = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 20, image: Buffer.from('') }
-const customEmoji3: Entity.CustomEmoji = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 30, image: Buffer.from('') }
+const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 10, image: Buffer.from('') }
+const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 20, image: Buffer.from('') }
+const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 30, image: Buffer.from('') }
 
 const rank1 = cast<Rank>({ id: 1 })
 const rank2 = cast<Rank>({ id: 2 })
@@ -93,9 +95,12 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
 })
 
 /** Setup all emojis and their rank whitelist */
-function setupCustomEmojis (...whitelist: [Entity.CustomEmoji, Rank[]][]) {
+function setupCustomEmojis (...whitelist: [EmojiData, Rank[]][]) {
   mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue(whitelist.map(w => ({
     ...w[0],
+    isActive: true,
+    modifiedAt: new Date(),
+    version: 0,
     whitelistedRanks: w[1].map(r => r.id)
   })))
 

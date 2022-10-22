@@ -116,7 +116,7 @@ export default class ChatStore extends ContextClass {
       customEmoji: part.type === 'customEmoji' ? { create: {
         text: part.text == null ? undefined : { create: this.createText(part.text) },
         emoji: part.emoji == null ? undefined : { connectOrCreate: this.connectOrCreateEmoji(part.emoji) },
-        customEmoji: { connect: { id: part.customEmojiId } }}
+        customEmojiVersion: { connect: { id: part.customEmojiVersionId } }}
       } : part.type === 'text' || part.type === 'emoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
       cheer: part.type === 'cheer' ? { create: this.createCheer(part) } : part.type === 'text' || part.type === 'emoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
     })
@@ -171,7 +171,7 @@ const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>(
       emoji: true,
       text: true,
       customEmoji: { include: {
-        customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } },
+        customEmojiVersion: { include: { customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } } } }, // fuck me
         text: true,
         emoji: true
       }},

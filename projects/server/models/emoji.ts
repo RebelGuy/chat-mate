@@ -1,6 +1,5 @@
-import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
-import { Entity, New } from '@rebel/server/models/entities'
-import { CustomEmojiCreateData, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
+import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
+import { CustomEmojiCreateData, CustomEmojiUpdateData, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 
 export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist): PublicCustomEmoji {
   return {
@@ -8,6 +7,8 @@ export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist):
     id: emoji.id,
     name: emoji.name,
     symbol: emoji.symbol,
+    version: emoji.version,
+    isActive: emoji.isActive,
     imageData: emoji.image.toString('base64'),
     levelRequirement: emoji.levelRequirement,
     whitelistedRanks: emoji.whitelistedRanks
@@ -24,11 +25,10 @@ export function publicObjectNewToNewCustomEmoji (emoji: PublicCustomEmojiNew): C
   }
 }
 
-export function publicObjectToCustomEmoji (emoji: PublicCustomEmoji): CustomEmojiWithRankWhitelist {
+export function publicObjectToCustomEmojiUpdateData (emoji: PublicCustomEmojiUpdate): CustomEmojiUpdateData {
   return {
     id: emoji.id,
     name: emoji.name,
-    symbol: emoji.symbol,
     image: Buffer.from(emoji.imageData, 'base64'),
     levelRequirement: emoji.levelRequirement,
     whitelistedRanks: emoji.whitelistedRanks

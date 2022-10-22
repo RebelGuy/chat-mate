@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
+import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
 
 type SearchResult = {
   searchTerm: string,
@@ -34,7 +35,7 @@ export default class EmojiService extends ContextClass {
     // into a troll emoji of type text... so I guess if the troll emoji is available, we add a special rule here
     const troll = eligibleEmojis.find(em => em.symbol.toLowerCase() === 'troll')
     if (troll != null) {
-      const secondaryTrollEmoji: CustomEmoji = { ...troll, symbol: '🧌' }
+      const secondaryTrollEmoji: CurrentCustomEmoji = { ...troll, symbol: '🧌' }
       eligibleEmojis = [...eligibleEmojis, secondaryTrollEmoji]
     }
 
@@ -52,6 +53,7 @@ export default class EmojiService extends ContextClass {
         return [{
           type: 'customEmoji',
           customEmojiId: eligibleEmojis[matchedIndex]!.id,
+          customEmojiVersionId: eligibleEmojis[matchedIndex]!.latestVersion,
           text: null,
           emoji: part
         }]
@@ -78,6 +80,7 @@ export default class EmojiService extends ContextClass {
       result.push({
         type: 'customEmoji',
         customEmojiId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.id,
+        customEmojiVersionId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.latestVersion,
         text: removed,
         emoji: null
       })
