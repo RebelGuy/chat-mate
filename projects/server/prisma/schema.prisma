@@ -288,6 +288,7 @@ model ChatMessagePart {
 
 model ChatMessage {
   id         Int      @id @default(autoincrement())
+  /// Either the Youtube Id, Twitch Id, or (for donations) Streamlabs Id
   externalId String   @db.VarChar(255) // unique
   time       DateTime
 
@@ -295,10 +296,14 @@ model ChatMessage {
   /// Internally in Youtube, this is called the `contextMenuEndpointParams`.
   contextToken String? @db.VarChar(511)
 
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "chat_message_userId_fkey")
+  // the user that sent the message, if known.
+  // this is always set for livestream messages, that is, if either the `youtubeChannelId` or `twitchChannelId` is set.
+  userId Int?
+  user   ChatUser? @relation(fields: [userId], references: [id], map: "chat_message_userId_fkey")
 
-  // youtube and twitch ids are used to ensure we know what actual platform account authored the message
+  // youtube and twitch ids are used to ensure we know what actual platform account authored the message.
+  // it is possible that they are both null - in that case, this is not a regular livestream message
+  // (probably it is a donation message)
   youtubeChannelId Int?
   youtubeChannel   YoutubeChannel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
 
@@ -311,6 +316,7 @@ model ChatMessage {
 
   chatMessageParts          ChatMessagePart[]
   experienceDataChatMessage ExperienceDataChatMessage?
+  donation                  Donation?
 
   @@unique([externalId], map: "chat_message_externalId_key")
   @@index([userId], map: "chat_message_userId_fkey")
@@ -577,9 +583,12 @@ model Donation {
   amount           Float
   formattedAmount  String
   name             String   @db.VarChar(256)
-  message          String?  @db.VarChar(256)
+
+  chatMessageId Int?
+  chatMessage   ChatMessage? @relation(fields: [chatMessageId], references: [id], map: "donation_chatMessage_fkey")
 
   @@unique([streamlabsId], map: "donation_streamlabsId_key")
+  @@unique([chatMessageId], map: "donation_chatMessage_fkey")
   @@map("donation")
 }
 
