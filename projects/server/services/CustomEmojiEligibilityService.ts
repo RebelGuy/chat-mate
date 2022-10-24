@@ -41,6 +41,12 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     ).map(e => ({ id: e.id, symbol: e.symbol, latestVersion: e.version }))
   }
 
+  public async getEligibleDonationEmojis (): Promise<CurrentCustomEmoji[]> {
+    const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
+    // todo: add flag
+    return allEmojis.filter(e => true).map(e => ({ id: e.id, symbol: e.symbol, latestVersion: e.version }))
+  }
+
   private levelEligibilityCheck (emoji: CustomEmojiWithRankWhitelist, userLevel: UserLevel) {
     return userLevel.level.level >= emoji.levelRequirement
   }

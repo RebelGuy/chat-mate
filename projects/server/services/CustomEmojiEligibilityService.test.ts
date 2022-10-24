@@ -94,6 +94,12 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
   })
 })
 
+describe(nameof(CustomEmojiEligibilityService, 'getEligibleDonationEmojis'), () => {
+  test('Returns only emojis that are eligible to be used in donations', async () => {
+    throw new Error('todo')
+  })
+})
+
 /** Setup all emojis and their rank whitelist */
 function setupCustomEmojis (...whitelist: [EmojiData, Rank[]][]) {
   mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue(whitelist.map(w => ({

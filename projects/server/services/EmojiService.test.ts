@@ -219,6 +219,16 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
   })
 })
 
+describe(nameof(EmojiService, 'applyCustomEmojisToDonation'), () => {
+  test(`Forwards the text if it doesn't contain emojis`, async () => {
+    throw new Error('todo')
+  })
+
+  test('Applies only custom emojis with the donation flag enabled', async () => {
+    throw new Error('todo: add donation flag')
+  })
+})
+
 
 function expectedCustomEmojiPart (customEmoji: EmojiData, expectedVersion: number, originalText: PartialTextChatMessage, symbolGetter?: (emoji: EmojiData) => string): PartialCustomEmojiChatMessage {
   return {

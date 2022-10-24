@@ -1,4 +1,5 @@
 import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 
 /** Represents an unlinked donation. */
@@ -24,7 +25,7 @@ export type PublicDonation = PublicObject<1, {
   name: string
 
   /** The custom message attached to the donation, if any. */
-  message: string | null
+  messageParts: Tagged<3, PublicMessagePart>[]
 
   /** Donations with the same link identifier will always either be unlinked together, or linked together to the same user. */
   linkIdentifier: string

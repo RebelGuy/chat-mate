@@ -3,7 +3,10 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
-import DonationStore from '@rebel/server/stores/DonationStore'
+import { PartialChatMessage } from '@rebel/server/models/chat'
+import EmojiService from '@rebel/server/services/EmojiService'
+import { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
+import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
 import { addTime } from '@rebel/server/util/datetime'
@@ -14,6 +17,7 @@ type Deps = Dependencies<{
   rankStore: RankStore
   donationHelpers: DonationHelpers
   dateTimeHelpers: DateTimeHelpers
+  emojiService: EmojiService
 }>
 
 export default class DonationService extends ContextClass {
@@ -21,6 +25,7 @@ export default class DonationService extends ContextClass {
   private readonly rankStore: RankStore
   private readonly donationHelpers: DonationHelpers
   private readonly dateTimeHelpers: DateTimeHelpers
+  private readonly emojiService: EmojiService
 
   constructor (deps: Deps) {
     super()
@@ -29,6 +34,26 @@ export default class DonationService extends ContextClass {
     this.rankStore = deps.resolve('rankStore')
     this.donationHelpers = deps.resolve('donationHelpers')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+    this.emojiService = deps.resolve('emojiService')
+  }
+
+  public async addDonation (donation: StreamlabsDonation) {
+    let messageParts: PartialChatMessage[] = []
+    if (donation.message != null) {
+      messageParts = await this.emojiService.applyCustomEmojisToDonation(donation.message)
+    }
+
+    const data: DonationCreateArgs = {
+      amount: donation.amount,
+      currency: donation.currency,
+      formattedAmount: donation.formattedAmount,
+      name: donation.name,
+      streamlabsId: donation.donationId,
+      streamlabsUserId: donation.streamlabsUserId,
+      time: new Date(donation.createdAt),
+      messageParts: messageParts
+    }
+    await this.donationStore.addDonation(data)
   }
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.

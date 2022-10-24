@@ -66,7 +66,7 @@ export default class ChatStore extends ContextClass {
           // message part already exists
           continue
         }
-        createParts.push(db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) }))
+        createParts.push(db.chatMessagePart.create({ data: createChatMessagePart(part, i, chatMessage.id) }))
       }
 
       await Promise.all(createParts)
@@ -106,54 +106,8 @@ export default class ChatStore extends ContextClass {
       take: limit
     })
   }
-
-  private createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {
-    return Prisma.validator<Prisma.ChatMessagePartCreateInput>()({
-      order: index,
-      chatMessage: { connect: { id: chatMessageId }},
-      text: part.type === 'text' ? { create: this.createText(part) } : part.type === 'emoji' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-      emoji: part.type === 'emoji' ? { connectOrCreate: this.connectOrCreateEmoji(part) } : part.type === 'text' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-      customEmoji: part.type === 'customEmoji' ? { create: {
-        text: part.text == null ? undefined : { create: this.createText(part.text) },
-        emoji: part.emoji == null ? undefined : { connectOrCreate: this.connectOrCreateEmoji(part.emoji) },
-        customEmojiVersion: { connect: { id: part.customEmojiVersionId } }}
-      } : part.type === 'text' || part.type === 'emoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-      cheer: part.type === 'cheer' ? { create: this.createCheer(part) } : part.type === 'text' || part.type === 'emoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
-    })
-  }
-
-  private connectOrCreateEmoji (part: PartialEmojiChatMessage) {
-    return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
-      create: {
-        externalId: part.emojiId,
-        imageUrl: part.image.url,
-        imageHeight: part.image.height ?? null,
-        imageWidth: part.image.width ?? null,
-        label: part.label,
-        name: part.name,
-        isCustomEmoji: false
-      },
-      where: { externalId: part.emojiId }
-    })
-  }
-
-  private createText (part: PartialTextChatMessage) {
-    return Prisma.validator<Prisma.ChatTextCreateInput>()({
-      isBold: part.isBold,
-      isItalics: part.isItalics,
-      text: part.text
-    })
-  }
-
-  private createCheer (part: PartialCheerChatMessage) {
-    return Prisma.validator<Prisma.ChatCheerCreateInput>()({
-      amount: part.amount,
-      colour: part.colour,
-      imageUrl: part.imageUrl,
-      name: part.name
-    })
-  }
 }
+
 
 const includeChannelInfo = {
   include: Prisma.validator<Prisma.YoutubeChannelInclude | Prisma.TwitchChannelInclude>()({
@@ -164,7 +118,7 @@ const includeChannelInfo = {
   })
 }
 
-const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>()({
+export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>()({
   chatMessageParts: {
     orderBy: { order: 'asc' },
     include: {
@@ -181,3 +135,50 @@ const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>(
   youtubeChannel: includeChannelInfo,
   twitchChannel: includeChannelInfo
 })
+
+export function createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {
+  return Prisma.validator<Prisma.ChatMessagePartCreateInput>()({
+    order: index,
+    chatMessage: { connect: { id: chatMessageId }},
+    text: part.type === 'text' ? { create: createText(part) } : part.type === 'emoji' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    emoji: part.type === 'emoji' ? { connectOrCreate: connectOrCreateEmoji(part) } : part.type === 'text' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    customEmoji: part.type === 'customEmoji' ? { create: {
+      text: part.text == null ? undefined : { create: createText(part.text) },
+      emoji: part.emoji == null ? undefined : { connectOrCreate: connectOrCreateEmoji(part.emoji) },
+      customEmojiVersion: { connect: { id: part.customEmojiVersionId } }}
+    } : part.type === 'text' || part.type === 'emoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    cheer: part.type === 'cheer' ? { create: createCheer(part) } : part.type === 'text' || part.type === 'emoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
+  })
+}
+
+function connectOrCreateEmoji (part: PartialEmojiChatMessage) {
+  return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
+    create: {
+      externalId: part.emojiId,
+      imageUrl: part.image.url,
+      imageHeight: part.image.height ?? null,
+      imageWidth: part.image.width ?? null,
+      label: part.label,
+      name: part.name,
+      isCustomEmoji: false
+    },
+    where: { externalId: part.emojiId }
+  })
+}
+
+function createText (part: PartialTextChatMessage) {
+  return Prisma.validator<Prisma.ChatTextCreateInput>()({
+    isBold: part.isBold,
+    isItalics: part.isItalics,
+    text: part.text
+  })
+}
+
+function createCheer (part: PartialCheerChatMessage) {
+  return Prisma.validator<Prisma.ChatCheerCreateInput>()({
+    amount: part.amount,
+    colour: part.colour,
+    imageUrl: part.imageUrl,
+    name: part.name
+  })
+}

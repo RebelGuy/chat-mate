@@ -122,7 +122,19 @@ export default class ChatMateControllerFake implements IChatMateController {
             formattedAmount: `$${amount.toFixed(2)}`,
             currency: 'USD',
             id: 1,
-            message: randomString(128),
+            messageParts: [{
+              schema: 3,
+              type: 'text',
+              textData: {
+                schema: 1,
+                text: randomString(128),
+                isBold: false,
+                isItalics: false
+              },
+              cheerData: null,
+              customEmojiData: null,
+              emojiData: null
+            }],
             name: randomString(64),
             time: new Date().getTime(),
             linkedUser: null

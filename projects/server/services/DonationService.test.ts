@@ -9,11 +9,13 @@ import { any, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { single, single2 } from '@rebel/server/util/arrays'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import EmojiService from '@rebel/server/services/EmojiService'
 
 let mockDonationStore: MockProxy<DonationStore>
 let mockDonationHelpers: MockProxy<DonationHelpers>
 let mockRankStore: MockProxy<RankStore>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
+let mockEmojiService: MockProxy<EmojiService>
 let donationService: DonationService
 
 beforeEach(() => {
@@ -21,13 +23,25 @@ beforeEach(() => {
   mockDonationHelpers = mock()
   mockRankStore = mock()
   mockDateTimeHelpers = mock()
+  mockEmojiService = mock()
 
   donationService = new DonationService(new Dependencies({
     donationStore: mockDonationStore,
     donationHelpers: mockDonationHelpers,
     rankStore: mockRankStore,
-    dateTimeHelpers: mockDateTimeHelpers
+    dateTimeHelpers: mockDateTimeHelpers,
+    emojiService: mockEmojiService
   }))
+})
+
+describe(nameof(DonationService, 'addDonation'), () => {
+  test('Adds donation without message', async () => {
+    throw new Error('todo')
+  })
+
+  test('Adds donation with message and custom emojis', async () => {
+    throw new Error('todo')
+  })
 })
 
 describe(nameof(DonationService, 'linkUserToDonation'), () => {

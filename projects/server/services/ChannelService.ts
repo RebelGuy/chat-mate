@@ -37,6 +37,10 @@ export default class ChannelService extends ContextClass {
     const chatMessages = await this.chatStore.getLastChatOfUsers(userIds)
 
     return chatMessages.map(chat => {
+      if (chat.userId == null) {
+        throw new Error('UserId of Youtube/Twitch chat messages was expected to be set')
+      }
+
       if (chat.youtubeChannel != null) {
         return {
           userId: chat.userId,

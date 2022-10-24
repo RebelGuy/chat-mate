@@ -245,6 +245,10 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     assertUnreachableCompile(PLATFORM_TYPES)
   }
 
+  if (chat.userId == null) {
+    throw new Error('ChatItem is expected to have a userId attached')
+  }
+
   let userChannel: UserChannel
   if (chat.youtubeChannel != null) {
     userChannel = {
@@ -294,7 +298,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   return newItem
 }
 
-function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageParts']>): PublicMessagePart {
+export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageParts']>): PublicMessagePart {
   if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer') {
     assertUnreachableCompile(PARTIAL_MESSAGE_TYPES)
   }

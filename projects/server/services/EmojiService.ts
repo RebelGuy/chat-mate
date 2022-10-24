@@ -24,12 +24,21 @@ export default class EmojiService extends ContextClass {
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
   public async applyCustomEmojis (part: PartialChatMessage, userId: number): Promise<PartialChatMessage[]> {
+    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId)
+    return this.applyEligibleEmojis(part, eligibleEmojis)
+  }
+
+  public async applyCustomEmojisToDonation (text: string): Promise<PartialChatMessage[]> {
+    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleDonationEmojis()
+    const part: PartialTextChatMessage = { type: 'text', text: text, isBold: false, isItalics: false }
+    return this.applyEligibleEmojis(part, eligibleEmojis)
+  }
+
+  private applyEligibleEmojis (part: PartialChatMessage, eligibleEmojis: CurrentCustomEmoji[]): PartialChatMessage[] {
     if (part.type === 'customEmoji') {
       // this should never happen
       throw new Error('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
     }
-
-    let eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId)
 
     // ok I don't know what the proper way to do this is, but typing `:troll:` in YT will convert the message
     // into a troll emoji of type text... so I guess if the troll emoji is available, we add a special rule here

@@ -2,7 +2,7 @@ import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationWithMessage } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { sortBy } from '@rebel/server/util/arrays'
 
@@ -16,7 +16,7 @@ export type ChatMateEvent = { timestamp: number } & ({
   displayName: string
 } | {
   type: 'donation'
-  donation: Donation
+  donation: DonationWithMessage
   userId: number | null
 })
 
