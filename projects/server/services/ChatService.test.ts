@@ -32,7 +32,7 @@ const emojiPart: PartialEmojiChatMessage = {
 const customEmojiPart: PartialCustomEmojiChatMessage = {
   type: 'customEmoji',
   customEmojiId: 1,
-  customEmojiVersionId: 1,
+  customEmojiVersion: 1,
   text: textPart,
   emoji: null
 }

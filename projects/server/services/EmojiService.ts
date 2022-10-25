@@ -62,7 +62,7 @@ export default class EmojiService extends ContextClass {
         return [{
           type: 'customEmoji',
           customEmojiId: eligibleEmojis[matchedIndex]!.id,
-          customEmojiVersionId: eligibleEmojis[matchedIndex]!.latestVersion,
+          customEmojiVersion: eligibleEmojis[matchedIndex]!.latestVersion,
           text: null,
           emoji: part
         }]
@@ -89,7 +89,7 @@ export default class EmojiService extends ContextClass {
       result.push({
         type: 'customEmoji',
         customEmojiId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.id,
-        customEmojiVersionId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.latestVersion,
+        customEmojiVersion: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.latestVersion,
         text: removed,
         emoji: null
       })

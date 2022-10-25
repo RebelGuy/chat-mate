@@ -303,7 +303,7 @@ model ChatMessage {
 
   // youtube and twitch ids are used to ensure we know what actual platform account authored the message.
   // it is possible that they are both null - in that case, this is not a regular livestream message
-  // (probably it is a donation message)
+  // (probably it is a donation message - see below)
   youtubeChannelId Int?
   youtubeChannel   YoutubeChannel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
 
@@ -314,11 +314,15 @@ model ChatMessage {
   livestreamId Int?
   livestream   Livestream? @relation(fields: [livestreamId], references: [id], map: "chat_message_livestreamId_fkey")
 
+  // the donation that this message belongs to, if any
+  donationId Int? // unique
+  donation   Donation? @relation(fields: [donationId], references: [id], map: "chat_message_donationId_fkey")
+
   chatMessageParts          ChatMessagePart[]
   experienceDataChatMessage ExperienceDataChatMessage?
-  donation                  Donation?
 
   @@unique([externalId], map: "chat_message_externalId_key")
+  @@unique([donationId], map: "chat_message_donationId_fkey")
   @@index([userId], map: "chat_message_userId_fkey")
   @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")
@@ -584,11 +588,9 @@ model Donation {
   formattedAmount  String
   name             String   @db.VarChar(256)
 
-  chatMessageId Int?
-  chatMessage   ChatMessage? @relation(fields: [chatMessageId], references: [id], map: "donation_chatMessage_fkey")
+  chatMessage ChatMessage?
 
   @@unique([streamlabsId], map: "donation_streamlabsId_key")
-  @@unique([chatMessageId], map: "donation_chatMessage_fkey")
   @@map("donation")
 }
 

@@ -284,7 +284,7 @@ export default () => {
     test('attaches custom emoji rank whitelist', async () => {
       const customEmojiMessage: PartialCustomEmojiChatMessage = {
         customEmojiId: 1,
-        customEmojiVersionId: 1,
+        customEmojiVersion: 0,
         type: 'customEmoji',
         text: text1,
         emoji: null

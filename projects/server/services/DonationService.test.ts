@@ -2,7 +2,7 @@ import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationHelpers'
 import DonationService from '@rebel/server/services/DonationService'
-import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { any, mock, MockProxy } from 'jest-mock-extended'
@@ -10,6 +10,8 @@ import * as data from '@rebel/server/_test/testData'
 import { single, single2 } from '@rebel/server/util/arrays'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import EmojiService from '@rebel/server/services/EmojiService'
+import { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
+import { PartialChatMessage } from '@rebel/server/models/chat'
 
 let mockDonationStore: MockProxy<DonationStore>
 let mockDonationHelpers: MockProxy<DonationHelpers>
@@ -36,11 +38,44 @@ beforeEach(() => {
 
 describe(nameof(DonationService, 'addDonation'), () => {
   test('Adds donation without message', async () => {
-    throw new Error('todo')
+    const donation: StreamlabsDonation = {
+      amount: 1,
+      createdAt: data.time1.getTime(),
+      currency: 'USD',
+      donationId: 100,
+      formattedAmount: '1 USD',
+      message: null,
+      name: 'Test name',
+      streamlabsUserId: null
+    }
+
+    await donationService.addDonation(donation)
+
+    expect(mockEmojiService.applyCustomEmojisToDonation.mock.calls.length).toBe(0)
+
+    const addedData = single(single(mockDonationStore.addDonation.mock.calls))
+    expect(addedData.messageParts.length).toBe(0)
   })
 
   test('Adds donation with message and custom emojis', async () => {
-    throw new Error('todo')
+    const message = 'testMessage'
+    const donation: StreamlabsDonation = {
+      amount: 1,
+      createdAt: data.time1.getTime(),
+      currency: 'USD',
+      donationId: 100,
+      formattedAmount: '1 USD',
+      message: message,
+      name: 'Test name',
+      streamlabsUserId: null
+    }
+    const parts = cast<PartialChatMessage[]>([{ type: 'text' }, { type: 'customEmoji' }])
+    mockEmojiService.applyCustomEmojisToDonation.calledWith(message).mockResolvedValue(parts)
+
+    await donationService.addDonation(donation)
+
+    const addedData = single(single(mockDonationStore.addDonation.mock.calls))
+    expect(addedData.messageParts).toBe(parts)
   })
 })
 

@@ -145,7 +145,7 @@ export function createChatMessagePart (part: PartialChatMessage, index: number, 
     customEmoji: part.type === 'customEmoji' ? { create: {
       text: part.text == null ? undefined : { create: createText(part.text) },
       emoji: part.emoji == null ? undefined : { connectOrCreate: connectOrCreateEmoji(part.emoji) },
-      customEmojiVersion: { connect: { id: part.customEmojiVersionId } }}
+      customEmojiVersion: { connect: { customEmojiId_version: { customEmojiId: part.customEmojiId, version: part.customEmojiVersion } } }}
     } : part.type === 'text' || part.type === 'emoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
     cheer: part.type === 'cheer' ? { create: createCheer(part) } : part.type === 'text' || part.type === 'emoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
   })

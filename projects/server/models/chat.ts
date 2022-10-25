@@ -80,7 +80,7 @@ export type PartialCustomEmojiChatMessage = {
   text: PartialTextChatMessage | null
   emoji: PartialEmojiChatMessage | null
   customEmojiId: number
-  customEmojiVersionId: number
+  customEmojiVersion: number
 }
 
 export type PartialCheerChatMessage = {

@@ -2,7 +2,7 @@ import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
-import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationCreateArgs, DonationWithUser } from '@rebel/server/stores/DonationStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectArray, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
@@ -32,7 +32,7 @@ export default () => {
       const part2: PartialCustomEmojiChatMessage = {
         type: 'customEmoji',
         customEmojiId: 1,
-        customEmojiVersionId: 0,
+        customEmojiVersion: 0,
         emoji: null,
         text: { type: 'text', text: 'Part2', isBold: false, isItalics: false }
       }
@@ -47,6 +47,16 @@ export default () => {
         streamlabsUserId: null,
         messageParts: [part1, part2, part3]
       }
+      await db.customEmoji.create({ data: {
+        symbol: 'test',
+        customEmojiVersions: { create: {
+          image: Buffer.from(''),
+          isActive: true,
+          levelRequirement: 1,
+          name: 'name',
+          version: 0
+        }}
+      }})
 
       await donationStore.addDonation(donationData)
 
@@ -106,6 +116,37 @@ export default () => {
       expect(result.userId).toBe(user2.id)
     })
 
+    test('Gets donation with message', async () => {
+      const donation = await createDonation({})
+      await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
+      await db.chatCustomEmoji.create({ data: {
+        text: { create: { isBold: false, isItalics: false, text: 'sample custom emoji' }},
+        customEmojiVersion: { create: {
+          image: Buffer.from(''),
+          isActive: true,
+          levelRequirement: 1,
+          name: 'name',
+          version: 0,
+          customEmoji: { create: { symbol: 'symbol' }}
+        }}
+      }})
+      await db.chatMessage.create({ data: {
+        externalId: '1',
+        time: new Date(),
+        donationId: donation.id,
+        chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }, { order: 1, customEmojiId: 1 }]}}
+      }})
+
+      const result = await donationStore.getDonation(donation.id)
+
+      expect(result.id).toBe(donation.id)
+      expect(result.userId).toBe(null)
+      expect(result.streamlabsUserId).toBe(null)
+      expect(result.messageParts.length).toBe(2)
+      expect(result.messageParts[0].text!.text).toBe('sample text')
+      expect(result.messageParts[1].customEmoji!.customEmojiVersion.customEmoji.symbol).toBe('symbol')
+    })
+
     test(`Throws if donation doesn't exist`, async () => {
       await expect(() => donationStore.getDonation(5)).rejects.toThrow()
     })
@@ -139,10 +180,10 @@ export default () => {
       const result = await donationStore.getDonationsSince(donation1.time.getTime())
 
       expect(result.length).toBe(2)
-      expect(result).toEqual([
-        { ...donation3, linkIdentifier: 'internal-3', userId: null, linkedAt: null },
-        { ...donation2, linkIdentifier: 'internal-2', userId: null, linkedAt: null }
-      ])
+      expect(result).toEqual(expectArray<DonationWithUser>([
+        { ...donation3, linkIdentifier: 'internal-3', userId: null, linkedAt: null, messageParts: [] },
+        { ...donation2, linkIdentifier: 'internal-2', userId: null, linkedAt: null, messageParts: [] }
+      ]))
     })
   })
 
@@ -265,7 +306,7 @@ export default () => {
       const user1 = await db.chatUser.create({ data: {} })
       const user2 = await db.chatUser.create({ data: {} })
       await donationStore.addDonation(initialDonation)
-      await donationStore.linkUserToDonation(0, user2.id, new Date())
+      await donationStore.linkUserToDonation(1, user2.id, new Date())
 
       await donationStore.addDonation(secondDonation)
       await donationStore.addDonation(otherDonation) // other streamlabs user

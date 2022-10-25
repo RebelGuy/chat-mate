@@ -49,28 +49,27 @@ export default class DonationStore extends ContextClass {
 
   public async addDonation (data: DonationCreateArgs): Promise<void> {
     await this.db.$transaction(async db => {
-      let chatMessage: ChatMessage | undefined = undefined
-      if (data.messageParts.length > 0) {
-        chatMessage = await this.db.chatMessage.create({ data: {
-          externalId: `${data.streamlabsId}`,
-          time: data.time
-        }})
-
-        await Promise.all(data.messageParts.map((part, i) =>
-          db.chatMessagePart.create({ data: createChatMessagePart(part, i, chatMessage!.id) })
-        ))
-      }
-
-      await this.db.donation.create({ data: {
+      const donation = await this.db.donation.create({ data: {
         streamlabsId: data.streamlabsId,
         streamlabsUserId: data.streamlabsUserId ?? null,
         amount: data.amount,
         formattedAmount: data.formattedAmount,
         currency: data.currency,
         name: data.name,
-        time: data.time,
-        chatMessageId: chatMessage?.id ?? null
+        time: data.time
       }})
+
+      if (data.messageParts.length > 0) {
+        const chatMessage = await this.db.chatMessage.create({ data: {
+          externalId: `${data.streamlabsId}`,
+          time: data.time,
+          donationId: donation.id
+        }})
+
+        await Promise.all(data.messageParts.map((part, i) =>
+          db.chatMessagePart.create({ data: createChatMessagePart(part, i, chatMessage.id) })
+        ))
+      }
     })
   }
 

@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/server/context/context'
 import EmojiService from '@rebel/server/services/EmojiService'
-import { nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Entity } from '@rebel/server/models/entities'
@@ -91,7 +91,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
     expect(single(result)).toEqual<PartialCustomEmojiChatMessage>({
       type: 'customEmoji',
       customEmojiId: customEmoji1.id,
-      customEmojiVersionId: customEmoji1Version,
+      customEmojiVersion: customEmoji1Version,
       emoji: expect.objectContaining(emojiPart),
       text: null
     })
@@ -221,11 +221,29 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 
 describe(nameof(EmojiService, 'applyCustomEmojisToDonation'), () => {
   test(`Forwards the text if it doesn't contain emojis`, async () => {
-    throw new Error('todo')
+    mockCustomEmojiServiceEligibilityService.getEligibleDonationEmojis.mockResolvedValue([])
+    const text = `:${customEmoji1.symbol}:`
+
+    const result = await emojiService.applyCustomEmojisToDonation(text)
+
+    expect(single(result)).toEqual(expectObject<PartialTextChatMessage>({ text }))
   })
 
   test('Applies only custom emojis with the donation flag enabled', async () => {
-    throw new Error('todo: add donation flag')
+    mockCustomEmojiServiceEligibilityService.getEligibleDonationEmojis.mockResolvedValue([
+      { id: customEmoji1.id, symbol: customEmoji1.symbol, latestVersion: customEmoji1Version },
+      { id: customEmoji2.id, symbol: customEmoji2.symbol, latestVersion: customEmoji2Version }
+    ])
+    const text = `abc :${customEmoji1.symbol}:def:${customEmoji2.symbol}: ghi`
+
+    const result = await emojiService.applyCustomEmojisToDonation(text)
+
+    expect(result.length).toBe(5)
+    expect(result[0]).toEqual(expectObject<PartialTextChatMessage>({ text: 'abc ' }))
+    expect(result[1]).toEqual(expectObject<PartialCustomEmojiChatMessage>({ customEmojiId: customEmoji1.id }))
+    expect(result[2]).toEqual(expectObject<PartialTextChatMessage>({ text: 'def' }))
+    expect(result[3]).toEqual(expectObject<PartialCustomEmojiChatMessage>({ customEmojiId: customEmoji2.id }))
+    expect(result[4]).toEqual(expectObject<PartialTextChatMessage>({ text: ' ghi' }))
   })
 })
 
@@ -234,7 +252,7 @@ function expectedCustomEmojiPart (customEmoji: EmojiData, expectedVersion: numbe
   return {
     type: 'customEmoji',
     customEmojiId: customEmoji.id,
-    customEmojiVersionId: expectedVersion,
+    customEmojiVersion: expectedVersion,
     text: expect.objectContaining<PartialTextChatMessage>({
       type: 'text',
       text: symbolGetter ? symbolGetter(customEmoji) : `:${customEmoji.symbol}:`,
