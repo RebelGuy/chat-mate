@@ -74,11 +74,12 @@ export default class CustomEmojiStore extends ContextClass {
       image: emoji.image,
       isActive: emoji.isActive,
       levelRequirement: emoji.levelRequirement,
+      canUseInDonationMessage: emoji.canUseInDonationMessage,
       modifiedAt: emoji.modifiedAt,
       name: emoji.name,
       version: emoji.version,
       whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === emoji.id).map(w => w.rankId)
-    } as CustomEmojiWithRankWhitelist))
+    }))
   }
 
   /** Returns the created CustomEmoji. */
