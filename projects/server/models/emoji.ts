@@ -11,6 +11,7 @@ export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist):
     isActive: emoji.isActive,
     imageData: emoji.image.toString('base64'),
     levelRequirement: emoji.levelRequirement,
+    canUseInDonationMessage: emoji.canUseInDonationMessage,
     whitelistedRanks: emoji.whitelistedRanks
   }
 }
@@ -21,6 +22,7 @@ export function publicObjectNewToNewCustomEmoji (emoji: PublicCustomEmojiNew): C
     symbol: emoji.symbol,
     image: Buffer.from(emoji.imageData, 'base64'),
     levelRequirement: emoji.levelRequirement,
+    canUseInDonationMessage: emoji.canUseInDonationMessage,
     whitelistedRanks: emoji.whitelistedRanks
   }
 }
@@ -31,6 +33,7 @@ export function publicObjectToCustomEmojiUpdateData (emoji: PublicCustomEmojiUpd
     name: emoji.name,
     image: Buffer.from(emoji.imageData, 'base64'),
     levelRequirement: emoji.levelRequirement,
+    canUseInDonationMessage: emoji.canUseInDonationMessage,
     whitelistedRanks: emoji.whitelistedRanks
   }
 }

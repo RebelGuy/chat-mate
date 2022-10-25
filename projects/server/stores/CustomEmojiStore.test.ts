@@ -92,6 +92,7 @@ export default () => {
         image: Buffer.from('emoji'),
         isActive: false,
         levelRequirement: 1,
+        canUseInDonationMessage: true,
         name: 'Emoji',
         version: 0
       }})
@@ -137,6 +138,7 @@ export default () => {
         name: 'Test',
         image: Buffer.from(''),
         levelRequirement: 1,
+        canUseInDonationMessage: true,
         whitelistedRanks: [rank2, rank3]
       }
 
@@ -184,6 +186,7 @@ export default () => {
         image: Buffer.from(''),
         name: 'Test,',
         levelRequirement: 1,
+        canUseInDonationMessage: true,
         version: 1
       }})).rejects.toThrow()
     })
@@ -196,6 +199,7 @@ export default () => {
       image: Buffer.from('emoji' + id),
       isActive: true,
       levelRequirement: id,
+      canUseInDonationMessage: true,
       name: 'Emoji ' + id,
       version: 0
     }))})
@@ -207,6 +211,7 @@ function getEmojiCreateData (id: number): Omit<CustomEmojiCreateData, 'whitelist
     name: 'Emoji ' + id,
     symbol: 'emoji' + id,
     image: Buffer.from('emoji' + id),
-    levelRequirement: id
+    levelRequirement: id,
+    canUseInDonationMessage: true
   }
 }

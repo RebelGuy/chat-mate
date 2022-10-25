@@ -24,6 +24,9 @@ export type PublicCustomEmoji = PublicObject<1, {
   /** The minimum level a user must be to unlock this emoji. */
   levelRequirement: number
 
+  /** Whether this emoji can be referenced within a donation message - all other contraints will be ignored. */
+  canUseInDonationMessage: boolean
+
   /** The list of ranks that are allowed to use the custom emoji. If empty, all ranks have access. */
   whitelistedRanks: number[]
 }>

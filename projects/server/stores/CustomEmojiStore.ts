@@ -13,6 +13,7 @@ export type CustomEmojiWithRankWhitelist = {
   name: string
   image: Buffer
   levelRequirement: number
+  canUseInDonationMessage: boolean
   whitelistedRanks: number[]
 }
 
@@ -30,6 +31,7 @@ export type CustomEmojiCreateData = {
   name: string
   image: Buffer
   levelRequirement: number
+  canUseInDonationMessage: boolean
   whitelistedRanks: number[]
 }
 
@@ -39,6 +41,7 @@ export type CustomEmojiUpdateData = {
   name: string
   image: Buffer
   levelRequirement: number
+  canUseInDonationMessage: boolean
   whitelistedRanks: number[]
 }
 
@@ -88,6 +91,7 @@ export default class CustomEmojiStore extends ContextClass {
         name: data.name,
         image: data.image,
         levelRequirement: data.levelRequirement,
+        canUseInDonationMessage: data.canUseInDonationMessage,
         isActive: true,
         version: 0,
         customEmojiId: newEmoji.id
@@ -109,6 +113,7 @@ export default class CustomEmojiStore extends ContextClass {
         image: newEmojiVersion.image,
         modifiedAt: newEmojiVersion.modifiedAt,
         levelRequirement: newEmojiVersion.levelRequirement,
+        canUseInDonationMessage: newEmojiVersion.canUseInDonationMessage,
         whitelistedRanks: data.whitelistedRanks
       }
     })
@@ -168,6 +173,7 @@ export default class CustomEmojiStore extends ContextClass {
           name: data.name,
           image: data.image,
           levelRequirement: data.levelRequirement,
+          canUseInDonationMessage: data.canUseInDonationMessage,
           isActive: true,
           version: previousVersion.version + 1
         },
@@ -194,6 +200,7 @@ export default class CustomEmojiStore extends ContextClass {
         image: updatedEmojiVersion.image,
         modifiedAt: updatedEmojiVersion.modifiedAt,
         levelRequirement: updatedEmojiVersion.levelRequirement,
+        canUseInDonationMessage: updatedEmojiVersion.canUseInDonationMessage,
         whitelistedRanks: data.whitelistedRanks
       }
     })

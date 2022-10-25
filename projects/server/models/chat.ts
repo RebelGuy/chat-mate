@@ -358,6 +358,7 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
         name: part.customEmoji.customEmojiVersion.name,
         symbol: part.customEmoji.customEmojiVersion.customEmoji.symbol,
         levelRequirement: part.customEmoji.customEmojiVersion.levelRequirement,
+        canUseInDonationMessage: part.customEmoji.customEmojiVersion.canUseInDonationMessage,
         imageData: part.customEmoji.customEmojiVersion.image.toString('base64'),
         isActive: part.customEmoji.customEmojiVersion.isActive,
         version: part.customEmoji.customEmojiVersion.version,

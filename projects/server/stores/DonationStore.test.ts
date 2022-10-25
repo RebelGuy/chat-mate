@@ -53,6 +53,7 @@ export default () => {
           image: Buffer.from(''),
           isActive: true,
           levelRequirement: 1,
+          canUseInDonationMessage: true,
           name: 'name',
           version: 0
         }}
@@ -125,6 +126,7 @@ export default () => {
           image: Buffer.from(''),
           isActive: true,
           levelRequirement: 1,
+          canUseInDonationMessage: true,
           name: 'name',
           version: 0,
           customEmoji: { create: { symbol: 'symbol' }}

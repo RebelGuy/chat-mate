@@ -309,6 +309,7 @@ export default () => {
         name: 'Test Emoji',
         isActive: true,
         version: 0,
+        canUseInDonationMessage: true,
         customEmoji: { create: { symbol: 'test' }}
       }})
       await db.customEmojiRankWhitelist.createMany({ data: [

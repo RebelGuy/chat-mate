@@ -48,3 +48,12 @@ Prisma automatically takes care of indexing columns that are foreign keys, as we
 
 Following these conventions at all times will make it easier to refactor later on, especially renaming things.
 
+### Validation error
+
+If, after a migration, the following error is encountered:
+
+```
+Failed to validate the query: `Field does not exist on enclosing type.`
+```
+
+then simply run `yarn workspace server generate` and the problem should go away.

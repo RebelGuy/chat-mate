@@ -10,12 +10,12 @@ import { asGte, asLte } from '@rebel/server/util/math'
 import { CustomEmoji, CustomEmojiVersion, Rank } from '@prisma/client'
 import { expectArray } from '@rebel/server/_test/utils'
 
-type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>
+type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name' | 'canUseInDonationMessage'>
 
 const userId = 1
-const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 10, image: Buffer.from('') }
-const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 20, image: Buffer.from('') }
-const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 30, image: Buffer.from('') }
+const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 10, image: Buffer.from(''), canUseInDonationMessage: true }
+const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 20, image: Buffer.from(''), canUseInDonationMessage: false }
+const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 30, image: Buffer.from(''), canUseInDonationMessage: true }
 
 const rank1 = cast<Rank>({ id: 1 })
 const rank2 = cast<Rank>({ id: 2 })
@@ -96,7 +96,13 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
 
 describe(nameof(CustomEmojiEligibilityService, 'getEligibleDonationEmojis'), () => {
   test('Returns only emojis that are eligible to be used in donations', async () => {
-    throw new Error('todo')
+    setupCustomEmojis([customEmoji1, []], [customEmoji2, []], [customEmoji3, []])
+
+    const result = await customEmojiEligibilityService.getEligibleDonationEmojis()
+
+    expect(result.length).toBe(2)
+    expect(result[0].id).toBe(customEmoji1.id)
+    expect(result[1].id).toBe(customEmoji3.id)
   })
 })
 

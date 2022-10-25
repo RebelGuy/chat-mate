@@ -446,7 +446,8 @@ model CustomEmojiVersion {
   // max 64KB of storage
   image Bytes @db.Blob
 
-  levelRequirement Int @db.UnsignedSmallInt
+  levelRequirement        Int     @db.UnsignedSmallInt
+  canUseInDonationMessage Boolean
 
   customEmojiId Int
   customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_customEmojiId_fkey")
