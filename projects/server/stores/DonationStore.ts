@@ -49,7 +49,7 @@ export default class DonationStore extends ContextClass {
 
   public async addDonation (data: DonationCreateArgs): Promise<void> {
     await this.db.$transaction(async db => {
-      const donation = await this.db.donation.create({ data: {
+      const donation = await db.donation.create({ data: {
         streamlabsId: data.streamlabsId,
         streamlabsUserId: data.streamlabsUserId ?? null,
         amount: data.amount,
@@ -60,7 +60,7 @@ export default class DonationStore extends ContextClass {
       }})
 
       if (data.messageParts.length > 0) {
-        const chatMessage = await this.db.chatMessage.create({ data: {
+        const chatMessage = await db.chatMessage.create({ data: {
           externalId: `${data.streamlabsId}`,
           time: data.time,
           donationId: donation.id

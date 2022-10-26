@@ -100,7 +100,7 @@ export default class ChatStore extends ContextClass {
   /** Returns ordered chat items that may or may not be from the current livestream. */
   public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
     return await this.db.chatMessage.findMany({
-      where: { time: { gt: new Date(since) } },
+      where: { time: { gt: new Date(since) }, donationId: null },
       orderBy: { time: 'asc' },
       include: chatMessageIncludeRelations,
       take: limit

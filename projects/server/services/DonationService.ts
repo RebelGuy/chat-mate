@@ -39,7 +39,7 @@ export default class DonationService extends ContextClass {
 
   public async addDonation (donation: StreamlabsDonation) {
     let messageParts: PartialChatMessage[] = []
-    if (donation.message != null) {
+    if (donation.message != null && donation.message.trim().length > 0) {
       messageParts = await this.emojiService.applyCustomEmojisToDonation(donation.message)
     }
 

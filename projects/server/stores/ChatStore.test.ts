@@ -325,6 +325,28 @@ export default () => {
       expect(emojiResult.customEmojiVersion.customEmojiId).toBe(1)
       expect(emojiResult.customEmojiVersion.customEmoji.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
     })
+
+    test('ignores donation messages', async () => {
+      const donation = await db.donation.create({ data: {
+        amount: 1,
+        currency: 'USD',
+        formattedAmount: '$1.00',
+        name: 'Test user',
+        streamlabsId: 1,
+        time: data.time1
+      }})
+      await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
+      await db.chatMessage.create({ data: {
+        externalId: '1',
+        time: new Date(),
+        donationId: donation.id,
+        chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }]}}
+      }})
+
+      const result = await chatStore.getChatSince(0)
+
+      expect(result.length).toBe(0)
+    })
   })
 
   describe(nameof(ChatStore, 'getLastChatByYoutubeChannel'), () => {
