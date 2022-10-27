@@ -46,8 +46,13 @@ export default class EmojiController extends ControllerBase {
     }
 
     const symbol = request.newEmoji.symbol ?? ''
-    if (symbol.length < 3 || symbol.length > 10) {
-      return builder.failure(400, 'Symbol must be between 3 and 10 characters.')
+    if (symbol.length < 1 || symbol.length > 32) {
+      return builder.failure(400, 'Symbol must be between 1 and 32 characters.')
+    }
+
+    const imageData = request.newEmoji.imageData ?? ''
+    if (imageData.length === 0) {
+      return builder.failure(400, 'Image data must be defined')
     }
 
     try {
@@ -64,6 +69,11 @@ export default class EmojiController extends ControllerBase {
     const builder = this.registerResponseBuilder<UpdateCustomEmojiResponse>('PATCH /custom', 1)
     if (request == null || request.schema !== builder.schema) {
       return builder.failure(400, 'Invalid request data.')
+    }
+
+    const imageData = request.updatedEmoji.imageData ?? ''
+    if (imageData.length === 0) {
+      return builder.failure(400, 'Image data must be defined')
     }
 
     try {

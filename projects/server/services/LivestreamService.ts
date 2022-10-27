@@ -114,14 +114,15 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
+    const youtubeMetadata = await this.fetchYoutubeMetadata(activeLivestream.liveId)
+    const twitchMetadata = await this.fetchTwitchMetadata()
+
     // deliberately require that youtube metadata is always called successfully, as it
     // is used as the source of truth for the stream status
-    const youtubeMetadata = await this.fetchYoutubeMetadata(activeLivestream.liveId)
     if (youtubeMetadata == null) {
       return
     }
 
-    const twitchMetadata = await this.fetchTwitchMetadata()
 
     try {
       const updatedTimes = this.getUpdatedLivestreamTimes(activeLivestream, youtubeMetadata)

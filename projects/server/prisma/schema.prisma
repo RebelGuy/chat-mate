@@ -424,7 +424,7 @@ model ViewingBlock {
 model CustomEmoji {
   id Int @id @default(autoincrement())
 
-  symbol String @db.VarChar(10) // unique
+  symbol String @db.VarChar(32) // unique
 
   customEmojiVersions      CustomEmojiVersion[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
