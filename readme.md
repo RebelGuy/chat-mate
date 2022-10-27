@@ -47,6 +47,13 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.20 - The Donation Update v2 [28/10/2022]
+- Server
+  - Custom emojis now have a new flag that allows them to be used within donation messages (enabled by default)
+  - ChatMate now tracks the versions of custom emojis, and any usages in chat/donation messages immutably point to the latest version of an emoji
+- Studio
+  - Added checkbox to indicate whether a custom emoji can be u sed in donation messages
+
 ## v1.19 - The Pre-Auth Update [8/10/2022]
 - Server
   - The YouTube access token is now persisted to the database instead of being applied via environment variables

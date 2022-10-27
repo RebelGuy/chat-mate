@@ -149,11 +149,11 @@ export default class CustomEmojiStore extends ContextClass {
   public async updateCustomEmoji (data: CustomEmojiUpdateData): Promise<CustomEmojiWithRankWhitelist> {
     // there is a BEFORE INSERT trigger in the `custom_emoji_version` table that ensures there is only ever
     // one active version for a given custom emoji. this avoids any potential race conditions when multiple
-    // requests are made are the same time
+    // requests are made at the same time
 
     return await this.db.$transaction(async db => {
       // use updateMany because prisma doesn't know that the search query would only ever result in a single match.
-      // unfortnately, this means that we don't get back the updated record, so we have to get that ourselves
+      // unfortunately, this means that we don't get back the updated record, so we have to get that ourselves
       const updateResult = await db.customEmojiVersion.updateMany({
         where: { customEmojiId: data.id, isActive: true },
         data: { isActive: false }

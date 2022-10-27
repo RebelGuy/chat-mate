@@ -108,7 +108,6 @@ export default class ChatStore extends ContextClass {
   }
 }
 
-
 const includeChannelInfo = {
   include: Prisma.validator<Prisma.YoutubeChannelInclude | Prisma.TwitchChannelInclude>()({
     infoHistory: {

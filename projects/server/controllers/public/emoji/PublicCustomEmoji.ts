@@ -3,13 +3,13 @@ import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 export type PublicCustomEmoji = PublicObject<1, {
   schema: 1
 
-  /** The internal emoji id. This changes for every version of the emoji. */
+  /** The internal emoji id. An emoji is uniquely identified by an id-version pair. */
   id: number
 
   /** The current emoji version. */
   version: number
 
-  /** Whether the emoji is currentl active and accessible to users. */
+  /** Whether the emoji is currently active and accessible to users. */
   isActive: boolean
 
   /** The human readable name of the emoji. */
