@@ -245,14 +245,14 @@ model ChatCustomEmoji {
   emojiId Int?
   emoji   ChatEmoji? @relation(fields: [emojiId], references: [id], map: "chat_custom_emoji_emojiId_fkey")
 
-  customEmojiId Int
-  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "chat_custom_emoji_customEmojiId_fkey")
+  customEmojiVersionId Int
+  customEmojiVersion   CustomEmojiVersion @relation(fields: [customEmojiVersionId], references: [id], map: "chat_custom_emoji_customEmojiVersionId_fkey")
 
   ChatMessagePart ChatMessagePart[]
 
   @@unique([textId], map: "chat_custom_emoji_textId_key")
   @@index([emojiId], map: "chat_custom_emoji_emojiId_fkey")
-  @@index([customEmojiId], map: "chat_custom_emoji_customEmojiId_fkey")
+  @@index([customEmojiVersionId], map: "chat_custom_emoji_customEmojiVersionId_fkey")
   @@map("chat_custom_emoji")
 }
 
@@ -288,6 +288,7 @@ model ChatMessagePart {
 
 model ChatMessage {
   id         Int      @id @default(autoincrement())
+  /// Either the Youtube Id, Twitch Id, or (for donations) Streamlabs Id
   externalId String   @db.VarChar(255) // unique
   time       DateTime
 
@@ -295,10 +296,14 @@ model ChatMessage {
   /// Internally in Youtube, this is called the `contextMenuEndpointParams`.
   contextToken String? @db.VarChar(511)
 
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "chat_message_userId_fkey")
+  // the user that sent the message, if known.
+  // this is always set for livestream messages, that is, if either the `youtubeChannelId` or `twitchChannelId` is set.
+  userId Int?
+  user   ChatUser? @relation(fields: [userId], references: [id], map: "chat_message_userId_fkey")
 
-  // youtube and twitch ids are used to ensure we know what actual platform account authored the message
+  // youtube and twitch ids are used to ensure we know what actual platform account authored the message.
+  // it is possible that they are both null - in that case, this is not a regular livestream message
+  // (probably it is a donation message - see below)
   youtubeChannelId Int?
   youtubeChannel   YoutubeChannel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
 
@@ -309,10 +314,15 @@ model ChatMessage {
   livestreamId Int?
   livestream   Livestream? @relation(fields: [livestreamId], references: [id], map: "chat_message_livestreamId_fkey")
 
+  // the donation that this message belongs to, if any
+  donationId Int? // unique
+  donation   Donation? @relation(fields: [donationId], references: [id], map: "chat_message_donationId_fkey")
+
   chatMessageParts          ChatMessagePart[]
   experienceDataChatMessage ExperienceDataChatMessage?
 
   @@unique([externalId], map: "chat_message_externalId_key")
+  @@unique([donationId], map: "chat_message_donationId_fkey")
   @@index([userId], map: "chat_message_userId_fkey")
   @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")
@@ -414,19 +424,38 @@ model ViewingBlock {
 model CustomEmoji {
   id Int @id @default(autoincrement())
 
-  symbol String @db.VarChar(10)
-  name   String @db.VarChar(63)
+  symbol String @db.VarChar(32) // unique
 
-  // max 64KB of storage
-  image Bytes @db.Blob
-
-  levelRequirement Int @db.UnsignedSmallInt
-
-  chatCustomEmoji          ChatCustomEmoji[]
+  customEmojiVersions      CustomEmojiVersion[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
 
   @@unique([symbol], map: "custom_emoji_symbol_key")
   @@map("custom_emoji")
+}
+
+// this table has a BEFORE INSERT trigger `TRG_CHECK_EXISTING_ACTIVE_VERSION`
+model CustomEmojiVersion {
+  id Int @id @default(autoincrement())
+
+  isActive   Boolean
+  modifiedAt DateTime @default(now())
+  version    Int
+
+  name String @db.VarChar(63)
+
+  // max 64KB of storage
+  image Bytes @db.Blob
+
+  levelRequirement        Int     @db.UnsignedSmallInt
+  canUseInDonationMessage Boolean
+
+  customEmojiId Int
+  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_customEmojiId_fkey")
+
+  chatCustomEmojis ChatCustomEmoji[]
+
+  @@unique([customEmojiId, version], map: "custom_emoji_version_customEmojiId_version_key")
+  @@map("custom_emoji_version")
 }
 
 model CustomEmojiRankWhitelist {
@@ -559,7 +588,8 @@ model Donation {
   amount           Float
   formattedAmount  String
   name             String   @db.VarChar(256)
-  message          String?  @db.VarChar(256)
+
+  chatMessage ChatMessage?
 
   @@unique([streamlabsId], map: "donation_streamlabsId_key")
   @@map("donation")

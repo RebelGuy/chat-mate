@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import ExperienceService, { UserLevel } from '@rebel/server/services/ExperienceService'
-import CustomEmojiStore, { CustomEmojiWhitelistedRanks } from '@rebel/server/stores/CustomEmojiStore'
+import CustomEmojiStore, { CurrentCustomEmoji, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import RankStore, { UserRanks } from '@rebel/server/stores/RankStore'
 import { single, intersection } from '@rebel/server/util/arrays'
 
@@ -25,7 +25,7 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     this.customEmojiStore = deps.resolve('customEmojiStore')
   }
 
-  public async getEligibleEmojis (userId: number): Promise<CustomEmoji[]> {
+  public async getEligibleEmojis (userId: number): Promise<CurrentCustomEmoji[]> {
     const levelPromise = this.experienceService.getLevels([userId])
     const userRanksPromise = this.rankStore.getUserRanks([userId])
     const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
@@ -38,10 +38,16 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     return allEmojis.filter(e =>
       this.levelEligibilityCheck(e, level) &&
       this.rankEligibilityCheck(userRanks, whitelistedRanks.find(wr => wr.emojiId === e.id)!)
-    )
+    ).map(e => ({ id: e.id, symbol: e.symbol, latestVersion: e.version }))
   }
 
-  private levelEligibilityCheck (emoji: Entity.CustomEmoji, userLevel: UserLevel) {
+  public async getEligibleDonationEmojis (): Promise<CurrentCustomEmoji[]> {
+    const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
+    return allEmojis.filter(e => e.canUseInDonationMessage)
+      .map(e => ({ id: e.id, symbol: e.symbol, latestVersion: e.version }))
+  }
+
+  private levelEligibilityCheck (emoji: CustomEmojiWithRankWhitelist, userLevel: UserLevel) {
     return userLevel.level.level >= emoji.levelRequirement
   }
 

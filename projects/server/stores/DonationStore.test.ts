@@ -2,7 +2,7 @@ import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
-import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationCreateArgs, DonationWithUser } from '@rebel/server/stores/DonationStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectArray, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
@@ -10,6 +10,7 @@ import { randomInt } from 'crypto'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 import { addTime } from '@rebel/server/util/datetime'
 import { single } from '@rebel/server/util/arrays'
+import { PartialCustomEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 
 export default () => {
   let db: Db
@@ -26,20 +27,58 @@ export default () => {
   afterEach(stopTestDb)
 
   describe(nameof(DonationStore, 'addDonation'), () => {
-    test('Adds the donation to the database and returns the added item', async () => {
-      const donationData: New<Donation> = {
+    test('Adds the donation with a message to the database', async () => {
+      const part1: PartialTextChatMessage = { type: 'text', text: 'Part1', isBold: false, isItalics: false }
+      const part2: PartialCustomEmojiChatMessage = {
+        type: 'customEmoji',
+        customEmojiId: 1,
+        customEmojiVersion: 0,
+        emoji: null,
+        text: { type: 'text', text: 'Part2', isBold: false, isItalics: false }
+      }
+      const part3: PartialTextChatMessage = { type: 'text', text: 'Part3', isBold: false, isItalics: false }
+      const donationData: DonationCreateArgs = {
         amount: 1.45,
         formattedAmount: '$1.45',
         currency: 'USD',
         name: 'Test name',
         streamlabsId: 123,
         time: data.time1,
-        message: 'This is a test message'
+        streamlabsUserId: null,
+        messageParts: [part1, part2, part3]
+      }
+      await db.customEmoji.create({ data: {
+        symbol: 'test',
+        customEmojiVersions: { create: {
+          image: Buffer.from(''),
+          isActive: true,
+          levelRequirement: 1,
+          canUseInDonationMessage: true,
+          name: 'name',
+          version: 0
+        }}
+      }})
+
+      await donationStore.addDonation(donationData)
+
+      await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCustomEmoji, db.donation).toEqual([1, 3, 3, 1, 1])
+    })
+
+    test('Adds the donation without a message to the database', async () => {
+      const donationData: DonationCreateArgs = {
+        amount: 1.45,
+        formattedAmount: '$1.45',
+        currency: 'USD',
+        name: 'Test name',
+        streamlabsId: 123,
+        time: data.time1,
+        streamlabsUserId: null,
+        messageParts: []
       }
 
-      const result = await donationStore.addDonation(donationData)
+      await donationStore.addDonation(donationData)
 
-      expect(result).toEqual(expect.objectContaining(donationData))
+      await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCustomEmoji, db.donation).toEqual([0, 0, 0, 0, 1])
     })
   })
 
@@ -78,6 +117,38 @@ export default () => {
       expect(result.userId).toBe(user2.id)
     })
 
+    test('Gets donation with message', async () => {
+      const donation = await createDonation({})
+      await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
+      await db.chatCustomEmoji.create({ data: {
+        text: { create: { isBold: false, isItalics: false, text: 'sample custom emoji' }},
+        customEmojiVersion: { create: {
+          image: Buffer.from(''),
+          isActive: true,
+          levelRequirement: 1,
+          canUseInDonationMessage: true,
+          name: 'name',
+          version: 0,
+          customEmoji: { create: { symbol: 'symbol' }}
+        }}
+      }})
+      await db.chatMessage.create({ data: {
+        externalId: '1',
+        time: new Date(),
+        donationId: donation.id,
+        chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }, { order: 1, customEmojiId: 1 }]}}
+      }})
+
+      const result = await donationStore.getDonation(donation.id)
+
+      expect(result.id).toBe(donation.id)
+      expect(result.userId).toBe(null)
+      expect(result.streamlabsUserId).toBe(null)
+      expect(result.messageParts.length).toBe(2)
+      expect(result.messageParts[0].text!.text).toBe('sample text')
+      expect(result.messageParts[1].customEmoji!.customEmojiVersion.customEmoji.symbol).toBe('symbol')
+    })
+
     test(`Throws if donation doesn't exist`, async () => {
       await expect(() => donationStore.getDonation(5)).rejects.toThrow()
     })
@@ -111,10 +182,10 @@ export default () => {
       const result = await donationStore.getDonationsSince(donation1.time.getTime())
 
       expect(result.length).toBe(2)
-      expect(result).toEqual([
-        { ...donation3, linkIdentifier: 'internal-3', userId: null, linkedAt: null },
-        { ...donation2, linkIdentifier: 'internal-2', userId: null, linkedAt: null }
-      ])
+      expect(result).toEqual(expectArray<DonationWithUser>([
+        { ...donation3, linkIdentifier: 'internal-3', userId: null, linkedAt: null, messageParts: [] },
+        { ...donation2, linkIdentifier: 'internal-2', userId: null, linkedAt: null, messageParts: [] }
+      ]))
     })
   })
 
@@ -214,14 +285,15 @@ export default () => {
   describe('DonationStore integration tests', () => {
     test('New donations with a streamlabsUserId that has already been linked in previously automatically inherit the link', async () => {
       const streamlabsUserId = 5
-      const initialDonation: New<Donation> = {
+      const initialDonation: DonationCreateArgs = {
         amount: 123,
         currency: 'AUD',
         formattedAmount: '123',
         name: 'Test user',
         streamlabsId: 1,
         time: new Date(),
-        streamlabsUserId: streamlabsUserId
+        streamlabsUserId: streamlabsUserId,
+        messageParts: []
       }
       const secondDonation = {
         ...initialDonation,
@@ -235,12 +307,12 @@ export default () => {
 
       const user1 = await db.chatUser.create({ data: {} })
       const user2 = await db.chatUser.create({ data: {} })
-      const donation1 = await donationStore.addDonation(initialDonation)
-      await donationStore.linkUserToDonation(donation1.id, user2.id, new Date())
+      await donationStore.addDonation(initialDonation)
+      await donationStore.linkUserToDonation(1, user2.id, new Date())
 
-      const donation2 = await donationStore.addDonation(secondDonation)
+      await donationStore.addDonation(secondDonation)
       await donationStore.addDonation(otherDonation) // other streamlabs user
-      const result = await donationStore.getDonation(donation2.id)
+      const result = await donationStore.getDonation(1)
 
       expect(result.userId).toBe(user2.id)
 
@@ -249,7 +321,8 @@ export default () => {
     })
   })
 
-  async function createDonation (donationData: Partial<New<Donation>>, linkedUser?: { userId: number, type: 'streamlabs', streamlabsUser: number } | { userId: number, type: 'internal' }) {
+  /** Does not support message parts (I'm not re-implementing all that for a test) */
+  async function createDonation (donationData: Partial<DonationCreateArgs>, linkedUser?: { userId: number, type: 'streamlabs', streamlabsUser: number } | { userId: number, type: 'internal' }) {
     const donation = await db.donation.create({
       data: {
         amount: donationData.amount ?? 1,
@@ -258,8 +331,7 @@ export default () => {
         name: donationData.name ?? 'Test name',
         streamlabsId: donationData.streamlabsId ?? randomInt(0, 100000000),
         streamlabsUserId: linkedUser?.type === 'streamlabs' ? linkedUser.streamlabsUser : donationData.streamlabsUserId,
-        time: donationData.time ?? new Date(),
-        message: donationData.message ?? null
+        time: donationData.time ?? new Date()
       }
     })
 

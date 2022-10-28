@@ -1,15 +1,33 @@
-import { Donation } from '@prisma/client'
+import { ChatCustomEmoji, ChatMessage, ChatMessagePart, ChatText, CustomEmojiVersion, Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import { New } from '@rebel/server/models/entities'
+import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import ChatStore, { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/server/stores/ChatStore'
+import { Singular } from '@rebel/server/types'
 import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
+import { assertUnreachable } from '@rebel/server/util/typescript'
 
-export type DonationWithUser = Donation & {
+export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
+  messageParts: ChatItemWithRelations['chatMessageParts']
+}
+
+export type DonationWithUser = DonationWithMessage & {
   linkIdentifier: string
   linkedAt: Date | null
   userId: number | null
+}
+
+export type DonationCreateArgs = {
+  streamlabsId: number
+  streamlabsUserId: number | null
+  time: Date
+  currency: string
+  amount: number
+  formattedAmount: string
+  name: string
+  messageParts: PartialChatMessage[]
 }
 
 const INTERNAL_USER_PREFIX = 'internal-'
@@ -29,17 +47,30 @@ export default class DonationStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async addDonation (donation: New<Donation>): Promise<Donation> {
-    return await this.db.donation.create({ data: {
-      streamlabsId: donation.streamlabsId,
-      streamlabsUserId: donation.streamlabsUserId ?? null,
-      amount: donation.amount,
-      formattedAmount: donation.formattedAmount,
-      currency: donation.currency,
-      name: donation.name,
-      time: donation.time,
-      message: donation.message ?? null
-    }})
+  public async addDonation (data: DonationCreateArgs): Promise<void> {
+    await this.db.$transaction(async db => {
+      const donation = await db.donation.create({ data: {
+        streamlabsId: data.streamlabsId,
+        streamlabsUserId: data.streamlabsUserId ?? null,
+        amount: data.amount,
+        formattedAmount: data.formattedAmount,
+        currency: data.currency,
+        name: data.name,
+        time: data.time
+      }})
+
+      if (data.messageParts.length > 0) {
+        const chatMessage = await db.chatMessage.create({ data: {
+          externalId: `${data.streamlabsId}`,
+          time: data.time,
+          donationId: donation.id
+        }})
+
+        await Promise.all(data.messageParts.map((part, i) =>
+          db.chatMessagePart.create({ data: createChatMessagePart(part, i, chatMessage.id) })
+        ))
+      }
+    })
   }
 
   /** Returns donations that have been linked to the user, orderd by time in ascending order. */
@@ -63,7 +94,11 @@ export default class DonationStore extends ContextClass {
   public async getDonation (donationId: number): Promise<DonationWithUser> {
     const donation = await this.db.donation.findUnique({
       where: { id: donationId },
-      rejectOnNotFound: true
+      rejectOnNotFound: true,
+      include: { chatMessage: {
+        // hehe
+        include: { chatMessageParts: chatMessageIncludeRelations.chatMessageParts }
+      }}
     })
 
     const linkIdentifier = await this.getLinkIdentifier(donationId)
@@ -73,7 +108,15 @@ export default class DonationStore extends ContextClass {
     })
 
     return {
-      ...donation,
+      id: donation.id,
+      amount: donation.amount,
+      currency: donation.currency,
+      formattedAmount: donation.formattedAmount,
+      name: donation.name,
+      streamlabsId: donation.streamlabsId,
+      time: donation.time,
+      streamlabsUserId: donation.streamlabsUserId,
+      messageParts: donation.chatMessage?.chatMessageParts ?? [],
       linkIdentifier: linkIdentifier,
       userId: donationLink?.linkedUserId ?? null,
       linkedAt: donationLink?.linkedAt ?? null
@@ -84,7 +127,10 @@ export default class DonationStore extends ContextClass {
   public async getDonationsSince (time: number): Promise<DonationWithUser[]> {
     const donations = await this.db.donation.findMany({
       where: { time: { gt: new Date(time) }},
-      orderBy: { time: 'asc' }
+      orderBy: { time: 'asc' },
+      include: { chatMessage: {
+        include: { chatMessageParts: chatMessageIncludeRelations.chatMessageParts }
+      }}
     })
 
     const linkIdentifiers = await this.getLinkIdentifiers(donations.map(d => d.id))
@@ -96,7 +142,15 @@ export default class DonationStore extends ContextClass {
       const linkIdentifier = linkIdentifiers.find(s => s[0] === donation.id)![1]
       const donationLink = donationLinks.find(u => u.linkIdentifier === linkIdentifier)
       return {
-        ...donation,
+        id: donation.id,
+        amount: donation.amount,
+        currency: donation.currency,
+        formattedAmount: donation.formattedAmount,
+        name: donation.name,
+        streamlabsId: donation.streamlabsId,
+        time: donation.time,
+        streamlabsUserId: donation.streamlabsUserId,
+        messageParts: donation.chatMessage?.chatMessageParts ?? [],
         linkIdentifier: linkIdentifier,
         userId: donationLink?.linkedUserId ?? null,
         linkedAt: donationLink?.linkedAt ?? null

@@ -25,6 +25,7 @@ import { assertUnreachable } from '@rebel/server/util/typescript'
 import { PublicLevelUpData } from '@rebel/server/controllers/public/event/PublicLevelUpData'
 import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/event/PublicNewTwitchFollowerData'
 import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
+import { toPublicMessagePart } from '@rebel/server/models/chat'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -123,7 +124,7 @@ export default class ChatMateControllerReal implements IChatMateController {
           formattedAmount: event.donation.formattedAmount,
           currency: event.donation.currency,
           name: event.donation.name,
-          message: event.donation.message,
+          messageParts: event.donation.messageParts.map(toPublicMessagePart),
           linkedUser: user
         }
       } else {

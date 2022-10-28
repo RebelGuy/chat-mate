@@ -284,6 +284,7 @@ export default () => {
     test('attaches custom emoji rank whitelist', async () => {
       const customEmojiMessage: PartialCustomEmojiChatMessage = {
         customEmojiId: 1,
+        customEmojiVersion: 0,
         type: 'customEmoji',
         text: text1,
         emoji: null
@@ -302,7 +303,15 @@ export default () => {
         { name: 'supporter', group: 'cosmetic', displayNameAdjective: 'rank2', displayNameNoun: 'rank2' },
         { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
       ]})
-      await db.customEmoji.create({ data: { symbol: 'test', image: Buffer.from(''), levelRequirement: 1, name: 'Test Emoji' }})
+      await db.customEmojiVersion.create({ data: {
+        image: Buffer.from(''),
+        levelRequirement: 1,
+        name: 'Test Emoji',
+        isActive: true,
+        version: 0,
+        canUseInDonationMessage: true,
+        customEmoji: { create: { symbol: 'test' }}
+      }})
       await db.customEmojiRankWhitelist.createMany({ data: [
         { customEmojiId: 1, rankId: 1 },
         { customEmojiId: 1, rankId: 2 }
@@ -313,8 +322,30 @@ export default () => {
 
       const emojiResult = single(single(result).chatMessageParts).customEmoji!
       expect(emojiResult.text!.id).toBe(1)
-      expect(emojiResult.customEmoji.id).toBe(1)
-      expect(emojiResult.customEmoji.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
+      expect(emojiResult.customEmojiVersion.customEmojiId).toBe(1)
+      expect(emojiResult.customEmojiVersion.customEmoji.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
+    })
+
+    test('ignores donation messages', async () => {
+      const donation = await db.donation.create({ data: {
+        amount: 1,
+        currency: 'USD',
+        formattedAmount: '$1.00',
+        name: 'Test user',
+        streamlabsId: 1,
+        time: data.time1
+      }})
+      await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
+      await db.chatMessage.create({ data: {
+        externalId: '1',
+        time: new Date(),
+        donationId: donation.id,
+        chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }]}}
+      }})
+
+      const result = await chatStore.getChatSince(0)
+
+      expect(result.length).toBe(0)
     })
   })
 

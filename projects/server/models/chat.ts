@@ -1,4 +1,4 @@
-import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel } from '@prisma/client'
+import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel, CustomEmojiVersion } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { PublicMessageCheer } from '@rebel/server/controllers/public/chat/PublicMessageCheer'
@@ -80,6 +80,7 @@ export type PartialCustomEmojiChatMessage = {
   text: PartialTextChatMessage | null
   emoji: PartialEmojiChatMessage | null
   customEmojiId: number
+  customEmojiVersion: number
 }
 
 export type PartialCheerChatMessage = {
@@ -193,7 +194,10 @@ export type ChatItemWithRelations = (ChatMessage & {
       customEmoji: (ChatCustomEmoji & {
         text: ChatText | null,
         emoji: ChatEmoji | null,
-        customEmoji: CustomEmoji & { customEmojiRankWhitelist: { rankId: number }[]}
+        customEmojiVersion: CustomEmojiVersion & { customEmoji: {
+          symbol: string,
+          customEmojiRankWhitelist: { rankId: number }[]
+        }}
       }) | null
       cheer: ChatCheer | null
   })[]
@@ -239,6 +243,10 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
 
   if (PLATFORM_TYPES !== 'youtube' && PLATFORM_TYPES !== 'twitch') {
     assertUnreachableCompile(PLATFORM_TYPES)
+  }
+
+  if (chat.userId == null) {
+    throw new Error('ChatItem is expected to have a userId attached')
   }
 
   let userChannel: UserChannel
@@ -290,7 +298,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   return newItem
 }
 
-function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageParts']>): PublicMessagePart {
+export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageParts']>): PublicMessagePart {
   if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer') {
     assertUnreachableCompile(PARTIAL_MESSAGE_TYPES)
   }
@@ -343,14 +351,18 @@ function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageP
           height: part.customEmoji.emoji.imageHeight
         }
       },
+      // this is absolute trash
       customEmoji: {
         schema: 1,
         id: part.customEmoji.id,
-        name: part.customEmoji.customEmoji.name,
-        symbol: part.customEmoji.customEmoji.symbol,
-        levelRequirement: part.customEmoji.customEmoji.levelRequirement,
-        imageData: part.customEmoji.customEmoji.image.toString('base64'),
-        whitelistedRanks: part.customEmoji.customEmoji.customEmojiRankWhitelist.map(w => w.rankId)
+        name: part.customEmoji.customEmojiVersion.name,
+        symbol: part.customEmoji.customEmojiVersion.customEmoji.symbol,
+        levelRequirement: part.customEmoji.customEmojiVersion.levelRequirement,
+        canUseInDonationMessage: part.customEmoji.customEmojiVersion.canUseInDonationMessage,
+        imageData: part.customEmoji.customEmojiVersion.image.toString('base64'),
+        isActive: part.customEmoji.customEmojiVersion.isActive,
+        version: part.customEmoji.customEmojiVersion.version,
+        whitelistedRanks: part.customEmoji.customEmojiVersion.customEmoji.customEmojiRankWhitelist.map(w => w.rankId)
       }
     }
   } else if (part.emoji == null && part.text == null && part.customEmoji == null && part.cheer != null) {

@@ -2,7 +2,7 @@ import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse,
 import { GetMasterchatAuthenticationResponse, GetStatusResponse, PingResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
 import { GetTimestampsResponse } from '@rebel/server/controllers/LogController'
 import { GetAccessibleRanksResponse } from '@rebel/server/controllers/RankController'
-import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
+import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/global'
 
 const baseUrl = SERVER_URL + '/api'
@@ -13,7 +13,7 @@ export async function getAllCustomEmojis (): Promise<GetCustomEmojisResponse> {
   return JSON.parse(body)
 }
 
-export async function updateCustomEmoji (updatedEmoji: PublicCustomEmoji): Promise<UpdateCustomEmojiResponse> {
+export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest['updatedEmoji']): Promise<UpdateCustomEmojiResponse> {
   const request: UpdateCustomEmojiRequest = {
     schema: 1,
     updatedEmoji

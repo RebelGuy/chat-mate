@@ -4,8 +4,21 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { group } from '@rebel/server/util/arrays'
 
-export type CustomEmojiWithRankWhitelist = CustomEmoji & {
+export type CustomEmojiWithRankWhitelist = {
+  id: number
+  isActive: boolean
+  modifiedAt: Date
+  version: number
+  symbol: string
+  name: string
+  image: Buffer
+  levelRequirement: number
+  canUseInDonationMessage: boolean
   whitelistedRanks: number[]
+}
+
+export type CurrentCustomEmoji = CustomEmoji & {
+  latestVersion: number
 }
 
 export type CustomEmojiWhitelistedRanks = {
@@ -18,11 +31,18 @@ export type CustomEmojiCreateData = {
   name: string
   image: Buffer
   levelRequirement: number
+  canUseInDonationMessage: boolean
   whitelistedRanks: number[]
 }
 
-export type CustomEmojiUpdateData = CustomEmojiCreateData & {
+/** Note: Updating the symbol is not permitted, as it defines the emoji. */
+export type CustomEmojiUpdateData = {
   id: number
+  name: string
+  image: Buffer
+  levelRequirement: number
+  canUseInDonationMessage: boolean
+  whitelistedRanks: number[]
 }
 
 type Deps = Dependencies<{
@@ -37,13 +57,27 @@ export default class CustomEmojiStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
+  /** Returns the latest versions of active emojis. */
   public async getAllCustomEmojis (): Promise<CustomEmojiWithRankWhitelist[]> {
     const emojiWhitelistsPromise = this.db.customEmojiRankWhitelist.findMany()
-    const emojis = await this.db.customEmoji.findMany()
+
+    // note: there is a trigger in the `custom_emoji_version` table that gurantees that there is no more than one active version for each emoji
+    const emojis = await this.db.customEmojiVersion.findMany({
+      where: { isActive: true },
+      include: { customEmoji: true }
+    })
     const emojiWhitelists = await emojiWhitelistsPromise
 
     return emojis.map(emoji => ({
-      ...emoji,
+      id: emoji.customEmoji.id,
+      symbol: emoji.customEmoji.symbol,
+      image: emoji.image,
+      isActive: emoji.isActive,
+      levelRequirement: emoji.levelRequirement,
+      canUseInDonationMessage: emoji.canUseInDonationMessage,
+      modifiedAt: emoji.modifiedAt,
+      name: emoji.name,
+      version: emoji.version,
       whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === emoji.id).map(w => w.rankId)
     }))
   }
@@ -51,14 +85,19 @@ export default class CustomEmojiStore extends ContextClass {
   /** Returns the created CustomEmoji. */
   public async addCustomEmoji (data: CustomEmojiCreateData): Promise<CustomEmojiWithRankWhitelist> {
     return await this.db.$transaction(async db => {
-      const newEmoji = await db.customEmoji.create({ data: {
-        name: data.name,
-        symbol: data.symbol,
-        image: data.image,
-        levelRequirement: data.levelRequirement
-      }})
+      const newEmoji = await db.customEmoji.create({ data: { symbol: data.symbol }})
 
       // we can only do this after the emoji has been created so we have its id
+      const newEmojiVersion = await db.customEmojiVersion.create({ data: {
+        name: data.name,
+        image: data.image,
+        levelRequirement: data.levelRequirement,
+        canUseInDonationMessage: data.canUseInDonationMessage,
+        isActive: true,
+        version: 0,
+        customEmojiId: newEmoji.id
+      }})
+
       await db.customEmojiRankWhitelist.createMany({
         data: data.whitelistedRanks.map(r => ({
           customEmojiId: newEmoji.id,
@@ -67,7 +106,15 @@ export default class CustomEmojiStore extends ContextClass {
       })
 
       return {
-        ...newEmoji,
+        id: newEmoji.id,
+        symbol: newEmoji.symbol,
+        isActive: newEmojiVersion.isActive,
+        version: newEmojiVersion.version,
+        name: newEmojiVersion.name,
+        image: newEmojiVersion.image,
+        modifiedAt: newEmojiVersion.modifiedAt,
+        levelRequirement: newEmojiVersion.levelRequirement,
+        canUseInDonationMessage: newEmojiVersion.canUseInDonationMessage,
         whitelistedRanks: data.whitelistedRanks
       }
     })
@@ -100,15 +147,38 @@ export default class CustomEmojiStore extends ContextClass {
 
   /** Returns the updated CustomEmoji. */
   public async updateCustomEmoji (data: CustomEmojiUpdateData): Promise<CustomEmojiWithRankWhitelist> {
+    // there is a BEFORE INSERT trigger in the `custom_emoji_version` table that ensures there is only ever
+    // one active version for a given custom emoji. this avoids any potential race conditions when multiple
+    // requests are made at the same time
+
     return await this.db.$transaction(async db => {
-      const updatedEmoji = await db.customEmoji.update({
-        where: { id: data.id },
+      // use updateMany because prisma doesn't know that the search query would only ever result in a single match.
+      // unfortunately, this means that we don't get back the updated record, so we have to get that ourselves
+      const updateResult = await db.customEmojiVersion.updateMany({
+        where: { customEmojiId: data.id, isActive: true },
+        data: { isActive: false }
+      })
+
+      if (updateResult.count == 0) {
+        throw new Error(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
+      }
+
+      const previousVersion = (await db.customEmojiVersion.findFirst({
+        where: { customEmojiId: data.id },
+        orderBy: { version: 'desc' }
+      }))!
+
+      const updatedEmojiVersion = await db.customEmojiVersion.create({
         data: {
+          customEmojiId: data.id,
           name: data.name,
-          symbol: data.symbol,
           image: data.image,
-          levelRequirement: data.levelRequirement
-        }
+          levelRequirement: data.levelRequirement,
+          canUseInDonationMessage: data.canUseInDonationMessage,
+          isActive: true,
+          version: previousVersion.version + 1
+        },
+        include: { customEmoji: true }
       })
 
       await db.customEmojiRankWhitelist.deleteMany({
@@ -123,7 +193,15 @@ export default class CustomEmojiStore extends ContextClass {
       })
 
       return {
-        ...updatedEmoji,
+        id: updatedEmojiVersion.customEmoji.id,
+        symbol: updatedEmojiVersion.customEmoji.symbol,
+        isActive: updatedEmojiVersion.isActive,
+        version: updatedEmojiVersion.version,
+        name: updatedEmojiVersion.name,
+        image: updatedEmojiVersion.image,
+        modifiedAt: updatedEmojiVersion.modifiedAt,
+        levelRequirement: updatedEmojiVersion.levelRequirement,
+        canUseInDonationMessage: updatedEmojiVersion.canUseInDonationMessage,
         whitelistedRanks: data.whitelistedRanks
       }
     })

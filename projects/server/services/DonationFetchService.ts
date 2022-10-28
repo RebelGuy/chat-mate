@@ -1,23 +1,24 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import DonationService from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import { eps } from '@rebel/server/util/math'
 
 type Deps = Dependencies<{
   streamlabsProxyService: StreamlabsProxyService
-  donationStore: DonationStore
+  donationService: DonationService
 }>
 
 export default class DonationFetchService extends ContextClass {
   private readonly streamlabsProxyService: StreamlabsProxyService
-  private readonly donationStore: DonationStore
+  private readonly donationService: DonationService
 
   constructor (deps: Deps) {
     super()
 
     this.streamlabsProxyService = deps.resolve('streamlabsProxyService')
-    this.donationStore = deps.resolve('donationStore')
+    this.donationService = deps.resolve('donationService')
   }
 
   override async initialise () {
@@ -32,15 +33,6 @@ export default class DonationFetchService extends ContextClass {
   }
 
   private onDonation = async (donation: StreamlabsDonation) => {
-    await this.donationStore.addDonation({
-      streamlabsId: donation.donationId,
-      streamlabsUserId: donation.streamlabsUserId,
-      amount: donation.amount,
-      formattedAmount: donation.formattedAmount,
-      currency: donation.currency,
-      name: donation.name,
-      time: new Date(donation.createdAt),
-      message: donation.message
-    })
+    await this.donationService.addDonation(donation)
   }
 }

@@ -1,6 +1,6 @@
 import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest, Tagged } from '@rebel/server/controllers/ControllerBase'
-import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
-import { customEmojiToPublicObject, publicObjectToCustomEmoji as publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji as publicObjectNewToCustomEmojiCreateData } from '@rebel/server/models/emoji'
+import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
+import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import { Path, GET, POST, PATCH } from 'typescript-rest'
 
@@ -9,7 +9,7 @@ export type GetCustomEmojisResponse = ApiResponse<1, { emojis: Tagged<1, PublicC
 export type AddCustomEmojiRequest = ApiRequest<1, { schema: 1, newEmoji: Tagged<1, PublicCustomEmojiNew> }>
 export type AddCustomEmojiResponse = ApiResponse<1, { newEmoji: Tagged<1, PublicCustomEmoji> }>
 
-export type UpdateCustomEmojiRequest = ApiRequest<1, { schema: 1, updatedEmoji: Tagged<1, PublicCustomEmoji> }>
+export type UpdateCustomEmojiRequest = ApiRequest<1, { schema: 1, updatedEmoji: Tagged<1, PublicCustomEmojiUpdate> }>
 export type UpdateCustomEmojiResponse = ApiResponse<1, { updatedEmoji: Tagged<1, PublicCustomEmoji> }>
 
 type Deps = ControllerDependencies<{
@@ -46,12 +46,17 @@ export default class EmojiController extends ControllerBase {
     }
 
     const symbol = request.newEmoji.symbol ?? ''
-    if (symbol.length < 3 || symbol.length > 10) {
-      return builder.failure(400, 'Symbol must be between 3 and 10 characters.')
+    if (symbol.length < 1 || symbol.length > 32) {
+      return builder.failure(400, 'Symbol must be between 1 and 32 characters.')
+    }
+
+    const imageData = request.newEmoji.imageData ?? ''
+    if (imageData.length === 0) {
+      return builder.failure(400, 'Image data must be defined')
     }
 
     try {
-      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToCustomEmojiCreateData(request.newEmoji))
+      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji))
       return builder.success({ newEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)
@@ -66,9 +71,9 @@ export default class EmojiController extends ControllerBase {
       return builder.failure(400, 'Invalid request data.')
     }
 
-    const symbol = request.updatedEmoji.symbol ?? ''
-    if (symbol.length < 3 || symbol.length > 10) {
-      return builder.failure(400, 'Symbol must be between 3 and 10 characters.')
+    const imageData = request.updatedEmoji.imageData ?? ''
+    if (imageData.length === 0) {
+      return builder.failure(400, 'Image data must be defined')
     }
 
     try {

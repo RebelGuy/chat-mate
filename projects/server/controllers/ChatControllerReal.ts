@@ -32,8 +32,12 @@ export default class ChatControllerReal implements IChatController {
     since = since ?? 0
     const items = await this.chatStore.getChatSince(since, limit)
     const userIds = unique(items.map(c => c.userId))
-    const levels = await this.experienceService.getLevels(userIds)
-    const ranks = await this.rankStore.getUserRanks(userIds)
+    if (userIds.find(id => id == null) != null) {
+      throw new Error('Chat items must have a userId set')
+    }
+
+    const levels = await this.experienceService.getLevels(userIds as number[])
+    const ranks = await this.rankStore.getUserRanks(userIds as number[])
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {

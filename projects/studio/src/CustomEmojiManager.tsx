@@ -7,15 +7,18 @@ import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import ReactDOM from 'react-dom'
+import { sortBy } from '@rebel/server/util/arrays'
 
 // this code is yuckyu and needs cleaning up, but it works!
+
+type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
 
 type Props = {}
 
 type State = {
   emojis: PublicCustomEmoji[]
   accessibleRanks: PublicRank[]
-  editingEmoji: PublicCustomEmoji | null
+  editingEmoji: EmojiData | null
   newEmoji: PublicCustomEmojiNew
 }
 
@@ -35,6 +38,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
         name: '',
         symbol: '',
         levelRequirement: 0,
+        canUseInDonationMessage: true,
         imageData: '',
         whitelistedRanks: []
       }
@@ -63,7 +67,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     return result
   }
 
-  onChange = (updatedData: PublicCustomEmoji) => {
+  onChange = (updatedData: EmojiData) => {
     if (this.state.editingEmoji?.id === updatedData.id) {
       this.setState({ editingEmoji: updatedData })
     } else {
@@ -80,6 +84,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
           name: '',
           symbol: '',
           levelRequirement: 0,
+          canUseInDonationMessage: true,
           imageData: '',
           whitelistedRanks: []
         },
@@ -103,7 +108,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     const emojis = await getAllCustomEmojis()
     if (emojis.success) {
       this.setState({
-        emojis: emojis.data.emojis,
+        emojis: sortBy(emojis.data.emojis, e => e.id),
       })
     }
     return emojis
@@ -122,7 +127,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                   <td>Name</td>
                   <td>Symbol</td>
                   <td>Level Req.</td>
-                  <td>Rank Whitelist</td>
+                  <td><span title="Emoji can be used in donation messages">$</span></td>
+                  <td><span title="If there is no selection, all ranks will be able to use the emoji">Rank Whitelist</span></td>
                   <td>Image</td>
                   <td>Action</td>
                 </tr>
@@ -138,12 +144,27 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                         {isEditing && <button onClick={onDoUpdate}>Submit</button>}
                         {isEditing && <button onClick={this.onCancelEdit}>Cancel</button>}
                       </>
-                      return <CustomEmojiRow key={emoji.symbol} data={isEditing ? this.state.editingEmoji! : emoji} actionCell={actionCell} accessibleRanks={this.state.accessibleRanks} onChange={isEditing ? this.onChange : null} />
+                      return (
+                        <CustomEmojiRow
+                          key={emoji.symbol}
+                          data={isEditing ? this.state.editingEmoji! : emoji}
+                          actionCell={actionCell}
+                          accessibleRanks={this.state.accessibleRanks}
+                          isNew={false}
+                          onChange={isEditing ? this.onChange : null}
+                        />
+                      )
                     })}
 
                     <ApiRequestTrigger onRequest={this.onAdd}>
                       {(onDoAdd, response, loadingNodeForAdd, errorNodeForAdd) => <>
-                        <CustomEmojiRow data={{ id: -1, ...this.state.newEmoji }} actionCell={<button onClick={onDoAdd}>Add</button>} accessibleRanks={this.state.accessibleRanks} onChange={this.onChange} />
+                        <CustomEmojiRow
+                          data={{ id: -1, ...this.state.newEmoji }}
+                          actionCell={<button onClick={onDoAdd}>Add</button>}
+                          accessibleRanks={this.state.accessibleRanks}
+                          isNew={true}
+                          onChange={this.onChange}
+                        />
                         {ReactDOM.createPortal(loadingNodeForAdd, this.loadingRef.current!)}
                         {ReactDOM.createPortal(errorNodeForAdd, this.errorRef.current!)}
                       </>}
@@ -161,10 +182,11 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
   }
 }
 
-function CustomEmojiRow (props: { data: PublicCustomEmoji, actionCell: React.ReactNode, accessibleRanks: PublicRank[], onChange: ((updatedData: PublicCustomEmoji) => void) | null }) {
+function CustomEmojiRow (props: { data: EmojiData, actionCell: React.ReactNode, accessibleRanks: PublicRank[], isNew: boolean, onChange: ((updatedData: EmojiData) => void) | null }) {
   const onChangeName = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, name: e.currentTarget.value })
   const onChangeSymbol = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, symbol: e.currentTarget.value })
   const onChangeLevelReq = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, levelRequirement: Number(e.currentTarget.value) })
+  const onChangeCanUseInDonationMessage = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, canUseInDonationMessage: e.currentTarget.checked })
   const onChangeImageData = (imageData: string | null) => props.onChange!({ ...props.data, imageData: imageData ?? '' })
   const onChangeWhitelistedRanks = (newRanks: number[]) => props.onChange!({ ...props.data, whitelistedRanks: newRanks })
   
@@ -172,8 +194,9 @@ function CustomEmojiRow (props: { data: PublicCustomEmoji, actionCell: React.Rea
   return (
     <tr>
     <td><input type="text" disabled={disabled} value={props.data.name} onChange={onChangeName} /></td>
-    <td><input type="text" disabled={disabled} value={props.data.symbol} onChange={onChangeSymbol} /></td>
+    <td><input type="text" disabled={!props.isNew} value={props.data.symbol} onChange={onChangeSymbol} /></td>
     <td><input type="number" disabled={disabled} value={props.data.levelRequirement} onChange={onChangeLevelReq} /></td>
+    <td><input type="checkbox" disabled={disabled} checked={props.data.canUseInDonationMessage} onChange={onChangeCanUseInDonationMessage} /></td>
     <td><RanksSelector disabled={disabled} ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} onChange={onChangeWhitelistedRanks} /></td>
     <td><RenderedImage disabled={disabled} imageData={props.data.imageData} onSetImage={onChangeImageData} /></td>
     <td>{props.actionCell}</td>

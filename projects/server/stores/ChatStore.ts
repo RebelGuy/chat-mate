@@ -66,7 +66,7 @@ export default class ChatStore extends ContextClass {
           // message part already exists
           continue
         }
-        createParts.push(db.chatMessagePart.create({ data: this.createChatMessagePart(part, i, chatMessage.id) }))
+        createParts.push(db.chatMessagePart.create({ data: createChatMessagePart(part, i, chatMessage.id) }))
       }
 
       await Promise.all(createParts)
@@ -100,57 +100,10 @@ export default class ChatStore extends ContextClass {
   /** Returns ordered chat items that may or may not be from the current livestream. */
   public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
     return await this.db.chatMessage.findMany({
-      where: { time: { gt: new Date(since) } },
+      where: { time: { gt: new Date(since) }, donationId: null },
       orderBy: { time: 'asc' },
       include: chatMessageIncludeRelations,
       take: limit
-    })
-  }
-
-  private createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {
-    return Prisma.validator<Prisma.ChatMessagePartCreateInput>()({
-      order: index,
-      chatMessage: { connect: { id: chatMessageId }},
-      text: part.type === 'text' ? { create: this.createText(part) } : part.type === 'emoji' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-      emoji: part.type === 'emoji' ? { connectOrCreate: this.connectOrCreateEmoji(part) } : part.type === 'text' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-      customEmoji: part.type === 'customEmoji' ? { create: {
-        text: part.text == null ? undefined : { create: this.createText(part.text) },
-        emoji: part.emoji == null ? undefined : { connectOrCreate: this.connectOrCreateEmoji(part.emoji) },
-        customEmoji: { connect: { id: part.customEmojiId } }}
-      } : part.type === 'text' || part.type === 'emoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-      cheer: part.type === 'cheer' ? { create: this.createCheer(part) } : part.type === 'text' || part.type === 'emoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
-    })
-  }
-
-  private connectOrCreateEmoji (part: PartialEmojiChatMessage) {
-    return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
-      create: {
-        externalId: part.emojiId,
-        imageUrl: part.image.url,
-        imageHeight: part.image.height ?? null,
-        imageWidth: part.image.width ?? null,
-        label: part.label,
-        name: part.name,
-        isCustomEmoji: false
-      },
-      where: { externalId: part.emojiId }
-    })
-  }
-
-  private createText (part: PartialTextChatMessage) {
-    return Prisma.validator<Prisma.ChatTextCreateInput>()({
-      isBold: part.isBold,
-      isItalics: part.isItalics,
-      text: part.text
-    })
-  }
-
-  private createCheer (part: PartialCheerChatMessage) {
-    return Prisma.validator<Prisma.ChatCheerCreateInput>()({
-      amount: part.amount,
-      colour: part.colour,
-      imageUrl: part.imageUrl,
-      name: part.name
     })
   }
 }
@@ -164,14 +117,14 @@ const includeChannelInfo = {
   })
 }
 
-const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>()({
+export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>()({
   chatMessageParts: {
     orderBy: { order: 'asc' },
     include: {
       emoji: true,
       text: true,
       customEmoji: { include: {
-        customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } },
+        customEmojiVersion: { include: { customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } } } }, // fuck me
         text: true,
         emoji: true
       }},
@@ -181,3 +134,50 @@ const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>(
   youtubeChannel: includeChannelInfo,
   twitchChannel: includeChannelInfo
 })
+
+export function createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {
+  return Prisma.validator<Prisma.ChatMessagePartCreateInput>()({
+    order: index,
+    chatMessage: { connect: { id: chatMessageId }},
+    text: part.type === 'text' ? { create: createText(part) } : part.type === 'emoji' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    emoji: part.type === 'emoji' ? { connectOrCreate: connectOrCreateEmoji(part) } : part.type === 'text' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    customEmoji: part.type === 'customEmoji' ? { create: {
+      text: part.text == null ? undefined : { create: createText(part.text) },
+      emoji: part.emoji == null ? undefined : { connectOrCreate: connectOrCreateEmoji(part.emoji) },
+      customEmojiVersion: { connect: { customEmojiId_version: { customEmojiId: part.customEmojiId, version: part.customEmojiVersion } } }}
+    } : part.type === 'text' || part.type === 'emoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    cheer: part.type === 'cheer' ? { create: createCheer(part) } : part.type === 'text' || part.type === 'emoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
+  })
+}
+
+function connectOrCreateEmoji (part: PartialEmojiChatMessage) {
+  return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
+    create: {
+      externalId: part.emojiId,
+      imageUrl: part.image.url,
+      imageHeight: part.image.height ?? null,
+      imageWidth: part.image.width ?? null,
+      label: part.label,
+      name: part.name,
+      isCustomEmoji: false
+    },
+    where: { externalId: part.emojiId }
+  })
+}
+
+function createText (part: PartialTextChatMessage) {
+  return Prisma.validator<Prisma.ChatTextCreateInput>()({
+    isBold: part.isBold,
+    isItalics: part.isItalics,
+    text: part.text
+  })
+}
+
+function createCheer (part: PartialCheerChatMessage) {
+  return Prisma.validator<Prisma.ChatCheerCreateInput>()({
+    amount: part.amount,
+    colour: part.colour,
+    imageUrl: part.imageUrl,
+    name: part.name
+  })
+}

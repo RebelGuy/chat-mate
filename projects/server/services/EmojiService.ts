@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
+import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
 
 type SearchResult = {
   searchTerm: string,
@@ -23,18 +24,27 @@ export default class EmojiService extends ContextClass {
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
   public async applyCustomEmojis (part: PartialChatMessage, userId: number): Promise<PartialChatMessage[]> {
+    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId)
+    return this.applyEligibleEmojis(part, eligibleEmojis)
+  }
+
+  public async applyCustomEmojisToDonation (text: string): Promise<PartialChatMessage[]> {
+    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleDonationEmojis()
+    const part: PartialTextChatMessage = { type: 'text', text: text, isBold: false, isItalics: false }
+    return this.applyEligibleEmojis(part, eligibleEmojis)
+  }
+
+  private applyEligibleEmojis (part: PartialChatMessage, eligibleEmojis: CurrentCustomEmoji[]): PartialChatMessage[] {
     if (part.type === 'customEmoji') {
       // this should never happen
       throw new Error('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
     }
 
-    let eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId)
-
     // ok I don't know what the proper way to do this is, but typing `:troll:` in YT will convert the message
     // into a troll emoji of type text... so I guess if the troll emoji is available, we add a special rule here
     const troll = eligibleEmojis.find(em => em.symbol.toLowerCase() === 'troll')
     if (troll != null) {
-      const secondaryTrollEmoji: CustomEmoji = { ...troll, symbol: '🧌' }
+      const secondaryTrollEmoji: CurrentCustomEmoji = { ...troll, symbol: '🧌' }
       eligibleEmojis = [...eligibleEmojis, secondaryTrollEmoji]
     }
 
@@ -52,6 +62,7 @@ export default class EmojiService extends ContextClass {
         return [{
           type: 'customEmoji',
           customEmojiId: eligibleEmojis[matchedIndex]!.id,
+          customEmojiVersion: eligibleEmojis[matchedIndex]!.latestVersion,
           text: null,
           emoji: part
         }]
@@ -78,6 +89,7 @@ export default class EmojiService extends ContextClass {
       result.push({
         type: 'customEmoji',
         customEmojiId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.id,
+        customEmojiVersion: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.latestVersion,
         text: removed,
         emoji: null
       })

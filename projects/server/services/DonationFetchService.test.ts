@@ -1,5 +1,6 @@
 import { Dependencies } from '@rebel/server/context/context'
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
+import DonationService from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import { single } from '@rebel/server/util/arrays'
@@ -7,16 +8,16 @@ import { cast, expectArray, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
-let mockDonationStore: MockProxy<DonationStore>
+let mockDonationService: MockProxy<DonationService>
 let donationFetchService: DonationFetchService
 
 beforeEach(() => {
   mockStreamlabsProxyService = mock()
-  mockDonationStore = mock()
+  mockDonationService = mock()
 
   donationFetchService = new DonationFetchService(new Dependencies({
     streamlabsProxyService: mockStreamlabsProxyService,
-    donationStore: mockDonationStore
+    donationService: mockDonationService
   }))
 })
 
@@ -32,17 +33,17 @@ describe(nameof(DonationFetchService, 'initialise'), () => {
 
     await donationFetchService.initialise()
 
-    const initialAddedDonations = mockDonationStore.addDonation.mock.calls.map(args => single(args).streamlabsId)
+    const initialAddedDonations = mockDonationService.addDonation.mock.calls.map(args => single(args).donationId)
     expect(initialAddedDonations).toEqual(expectArray(initialDonations.map(d => d.donationId)))
 
     // part 2: subscription
-    mockDonationStore.addDonation.mockClear()
+    mockDonationService.addDonation.mockClear()
     const additionalDonation = cast<StreamlabsDonation>({ donationId: 4 })
     const callback = single(single(mockStreamlabsProxyService.listen.mock.calls))
 
     await callback(additionalDonation)
 
-    const additionalAddedDonation = single(single(mockDonationStore.addDonation.mock.calls)).streamlabsId
+    const additionalAddedDonation = single(single(mockDonationService.addDonation.mock.calls)).donationId
     expect(additionalAddedDonation).toEqual(additionalDonation.donationId)
   })
 })
