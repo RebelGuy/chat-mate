@@ -97,8 +97,39 @@ model ChatUser {
   administeredUserRanks      UserRank[]              @relation("user_rank_assignedByUserId")
   revokedUserRanks           UserRank[]              @relation("user_rank_revokedByUserId")
   donationLinks              DonationLink[]
+  registeredUser             RegisteredUser?
 
   @@map("chat_user")
+}
+
+model RegisteredUser {
+  id Int @id @default(autoincrement())
+
+  username       String   @db.VarChar(32) // unique
+  registeredAt   DateTime @default(now())
+  hashedPassword String   @db.VarChar(64)
+
+  chatUserId Int? // unique
+  chatUser   ChatUser? @relation(fields: [chatUserId], references: [id], map: "registered_user_chatUser_fkey")
+
+  loginTokens LoginToken[]
+
+  @@unique([chatUserId], map: "registered_user_chatUser_fkey")
+  @@unique([username], map: "registered_user_username_key")
+  @@map("registered_user")
+}
+
+model LoginToken {
+  id Int @id @default(autoincrement())
+
+  token String @db.VarChar(8) // unique
+
+  registeredUserId Int
+  registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "login_token_registeredUserId_fkey")
+
+  @@unique([token], map: "login_token_token_key")
+  @@index([registeredUserId], map: "login_token_registeredUserId_fkey")
+  @@map("login_token")
 }
 
 model YoutubeChannelInfo {

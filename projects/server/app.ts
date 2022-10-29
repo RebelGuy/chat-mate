@@ -70,6 +70,9 @@ import LivestreamController from '@rebel/server/controllers/LivestreamController
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
 import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
+import AccountController from '@rebel/server/controllers/AccountController'
+import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import AccountStore from '@rebel/server/stores/AccountStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -120,6 +123,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
   .withHelpers('rankHelpers', RankHelpers)
   .withHelpers('donationHelpers', DonationHelpers)
+  .withHelpers('accountHelpers', AccountHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withClass('eventDispatchService', EventDispatchService)
@@ -167,6 +171,7 @@ const globalContext = ContextProvider.create()
   .withClass('donationService', DonationService)
   .withClass('donationFetchService', DonationFetchService)
   .withClass('chatMateEventService', ChatMateEventService)
+  .withClass('accountStore', AccountStore)
   .build()
 
 app.use((req, res, next) => {
@@ -231,6 +236,7 @@ app.use(async (req, res, next) => {
     .withClass('rankController', RankController)
     .withClass('donationController', DonationController)
     .withClass('livestreamController', LivestreamController)
+    .withClass('accountController', AccountController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -258,7 +264,8 @@ Server.buildServices(app,
   LogController,
   RankController,
   DonationController,
-  LivestreamController
+  LivestreamController,
+  AccountController
 )
 
 process.on('unhandledRejection', (error) => {

@@ -29,7 +29,7 @@ export function randomInt (from: number, to: number) {
 }
 
 export function randomString (length: number) {
-  const options = 'abcdefghijklmnopqrstuvwxyz'
+  const options = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
   let result = ''
   for (let i = 0; i < length; i++) {
     result += options.at(randomInt(0, options.length))

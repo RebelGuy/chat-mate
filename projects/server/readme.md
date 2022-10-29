@@ -142,6 +142,40 @@ All non-primitive properties of `data` are of type `PublicObject`, which are reu
 
 Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
 
+## Account Endpoints
+Path: `/account`.
+
+### `POST /register`
+*Current schema: 1.*
+
+Registers a new user.
+
+Request data (body):
+- `username` (`string`): *Required.* The username for which to register a new account.
+- `password` (`string`): *Required.* The password that will be used to log the user in.
+
+Returns data with the following properties:
+- `loginToken` (`string`): A token used to authenticate the user when making another API request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /login`
+*Current schema: 1.*
+
+Logs the user into their account.
+
+Request data (body):
+- `username` (`string`): *Required.* The username of the account to log into.
+- `password` (`string`): *Required.* The password of the account to log into.
+
+Returns data with the following properties:
+- `loginToken` (`string`): A token used to authenticate the user when making another API request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `401`: When the credentials are incorrect.
+
 ## Chat Endpoints
 Path: `/chat`.
 

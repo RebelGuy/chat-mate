@@ -44,6 +44,12 @@ export class DonationUserLinkNotFoundError extends CustomError {
   }
 }
 
+export class InvalidUsernameError extends CustomError {
+  constructor (msg: string) {
+    super(InvalidUsernameError.prototype, `Invalid username: ${msg}`)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {
