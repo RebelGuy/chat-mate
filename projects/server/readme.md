@@ -176,6 +176,13 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `401`: When the credentials are incorrect.
 
+### `POST /logout`
+*Current schema: 1.*
+
+Logs the user out of their account by invalidating all login tokens. To authenticate, the user must call `/login` again.
+
+Returns an empty response body.
+
 ## Chat Endpoints
 Path: `/chat`.
 

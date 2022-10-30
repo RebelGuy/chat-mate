@@ -40,7 +40,6 @@ export default () => {
     test('Returns true if user exists and password matches', async () => {
       const username = 'username'
       const password = 'test'
-      console.log(hashString(password).length)
       await db.registeredUser.create({ data: { username: username, hashedPassword: hashString(password) }})
 
       const result = await accountStore.checkPassword(username, password)
@@ -61,6 +60,24 @@ export default () => {
       const result = await accountStore.checkPassword('test', 'test')
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe(nameof(AccountStore, 'clearLoginTokens'), () => {
+    test(`Clears all of the user's login tokens`, async () => {
+      await db.registeredUser.createMany({ data: [
+        { username: 'user1', hashedPassword: 'pass1' },
+        { username: 'user2', hashedPassword: 'pass2' }
+      ]})
+      await db.loginToken.createMany({ data: [
+        { registeredUserId: 1, token: 'a' },
+        { registeredUserId: 1, token: 'b' },
+        { registeredUserId: 2, token: 'c' }
+      ]})
+
+      await accountStore.clearLoginTokens(1)
+
+      await expectRowCount(db.loginToken).toBe(1)
     })
   })
 

@@ -1,6 +1,7 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import { EmptyObject } from '@rebel/server/types'
 import { InvalidUsernameError } from '@rebel/server/util/error'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { Path, POST } from 'typescript-rest'
@@ -15,6 +16,8 @@ type RegisterResponse = ApiResponse<1, { loginToken: string }>
 
 type LoginRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
 type LoginResponse = ApiResponse<1, { loginToken: string }>
+
+type LogoutResponse = ApiResponse<1, EmptyObject>
 
 @Path(buildPath('account'))
 export default class AccountController extends ControllerBase {
@@ -71,6 +74,20 @@ export default class AccountController extends ControllerBase {
       if (e instanceof InvalidUsernameError) {
         return builder.failure(401, new Error('Invalid login details'))
       }
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('logout') // todo: require authentication header
+  public async logout (): Promise<LogoutResponse> {
+    const builder = this.registerResponseBuilder<LogoutResponse>('POST /logout', 1)
+
+    try {
+      const registeredUserId = 1 // todo
+      await this.accountStore.clearLoginTokens(registeredUserId)
+      return builder.success({})
+    } catch (e: any) {
       return builder.failure(e)
     }
   }

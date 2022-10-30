@@ -41,6 +41,12 @@ export default class AccountStore extends ContextClass {
     return match?.hashedPassword === hashedPassword
   }
 
+  public async clearLoginTokens (registeredUserId: number) {
+    await this.db.loginToken.deleteMany({
+      where: { registeredUserId }
+    })
+  }
+
   public async createLoginToken (username: string): Promise<string> {
     const token = randomString(8)
     await this.db.loginToken.create({ data: {
