@@ -110,11 +110,12 @@ model RegisteredUser {
   hashedPassword String   @db.VarChar(64)
 
   chatUserId Int? // unique
-  chatUser   ChatUser? @relation(fields: [chatUserId], references: [id], map: "registered_user_chatUser_fkey")
+  chatUser   ChatUser? @relation(fields: [chatUserId], references: [id], map: "registered_user_chatUserId_fkey")
 
   loginTokens LoginToken[]
+  streamer    Streamer?
 
-  @@unique([chatUserId], map: "registered_user_chatUser_fkey")
+  @@unique([chatUserId], map: "registered_user_chatUserId_fkey")
   @@unique([username], map: "registered_user_username_key")
   @@map("registered_user")
 }
@@ -130,6 +131,16 @@ model LoginToken {
   @@unique([token], map: "login_token_token_key")
   @@index([registeredUserId], map: "login_token_registeredUserId_fkey")
   @@map("login_token")
+}
+
+model Streamer {
+  id Int @id @default(autoincrement())
+
+  registeredUserId Int // unique
+  registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
+
+  @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
+  @@map("streamer")
 }
 
 model YoutubeChannelInfo {
