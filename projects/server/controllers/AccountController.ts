@@ -2,7 +2,7 @@ import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependenc
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { EmptyObject } from '@rebel/server/types'
-import { InvalidUsernameError } from '@rebel/server/util/error'
+import { InvalidUsernameError, UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { Path, POST } from 'typescript-rest'
 
@@ -11,13 +11,16 @@ type Deps = ControllerDependencies<{
   accountHelpers: AccountHelpers
 }>
 
-type RegisterRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
-type RegisterResponse = ApiResponse<1, { loginToken: string }>
+export type RegisterRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
+export type RegisterResponse = ApiResponse<1, { loginToken: string }>
 
-type LoginRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
-type LoginResponse = ApiResponse<1, { loginToken: string }>
+export type LoginRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
+export type LoginResponse = ApiResponse<1, { loginToken: string }>
 
-type LogoutResponse = ApiResponse<1, EmptyObject>
+export type LogoutResponse = ApiResponse<1, EmptyObject>
+
+export type AuthenticateRequest = ApiRequest<1, { schema: 1, loginToken: string }>
+export type AuthenticateResponse = ApiResponse<1, { username: string }>
 
 @Path(buildPath('account'))
 export default class AccountController extends ControllerBase {
@@ -47,6 +50,8 @@ export default class AccountController extends ControllerBase {
     } catch (e: any) {
       if (e instanceof InvalidUsernameError) {
         return builder.failure(400, e)
+      } else if (e instanceof UsernameAlreadyExistsError) {
+        return builder.failure(400, new UsernameAlreadyExistsError(request.username))
       }
       return builder.failure(e)
     }
@@ -87,6 +92,24 @@ export default class AccountController extends ControllerBase {
       const registeredUserId = 1 // todo
       await this.accountStore.clearLoginTokens(registeredUserId)
       return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('authenticate') // todo: use auth header instead of post body
+  public async authenticate (request: AuthenticateRequest): Promise<AuthenticateResponse> {
+    const builder = this.registerResponseBuilder<AuthenticateResponse>('POST /authenticate', 1)
+
+    try {
+      const user = await this.accountStore.getRegisteredUserFromToken(request.loginToken)
+
+      if (user == null) {
+        return builder.failure(401, 'Invalid login token')
+      } else {
+        return builder.success({ username: user.username })
+      }
     } catch (e: any) {
       return builder.failure(e)
     }

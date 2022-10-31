@@ -1,7 +1,9 @@
-import { RegisteredUser } from '@prisma/client'
+import { Prisma, RegisteredUser } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { randomString } from '@rebel/server/util/random'
 import { hashString } from '@rebel/server/util/strings'
 
@@ -23,12 +25,21 @@ export default class AccountStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
+  /** @throws {@link UsernameAlreadyExistsError}: When a registered user with the same username already exists. */
   public async addRegisteredUser (registeredUser: RegisteredUserCreateArgs) {
     const hashedPassword = hashString(registeredUser.password)
-    await this.db.registeredUser.create({ data: {
-      username: registeredUser.username,
-      hashedPassword: hashedPassword
-    }})
+
+    try {
+      await this.db.registeredUser.create({ data: {
+        username: registeredUser.username,
+        hashedPassword: hashedPassword
+      }})
+    } catch (e: any) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new UsernameAlreadyExistsError(registeredUser.username)
+      }
+      throw e
+    }
   }
 
   public async checkPassword (username: string, password: string): Promise<boolean> {

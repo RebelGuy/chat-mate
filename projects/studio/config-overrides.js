@@ -7,5 +7,20 @@ const { aliasDangerous, aliasJest, configPaths } = require('react-app-rewire-ali
 
 const aliasMap = configPaths('./tsconfig.paths.json')
 
-module.exports = aliasDangerous(aliasMap) // dangerous because we are importing from outside the /src folder
+module.exports = (...args) => {
+  const config = aliasDangerous(aliasMap)(...args) // dangerous because we are importing from outside the /src folder
+
+  // some packages are node-specific, so we need to polyfill them to work in browsers: https://stackoverflow.com/a/70485253
+  return {
+    ...config,
+    resolve: {
+      ...config.resolve,
+      fallback: {
+        ...config.fallback,
+        'crypto': require.resolve('crypto-browserify'),
+        'stream': require.resolve('stream-browserify')        
+      }
+    }
+  }
+}
 module.exports.jest = aliasJest(aliasMap)

@@ -4,13 +4,12 @@ import { GetTimestampsResponse } from '@rebel/server/controllers/LogController'
 import { GetAccessibleRanksResponse } from '@rebel/server/controllers/RankController'
 import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/global'
+import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 
 const baseUrl = SERVER_URL + '/api'
 
 export async function getAllCustomEmojis (): Promise<GetCustomEmojisResponse> {
-  const response = await fetch(baseUrl + '/emoji/custom')
-  const body = await response.text()
-  return JSON.parse(body)
+  return await get('/emoji/custom')
 }
 
 export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest['updatedEmoji']): Promise<UpdateCustomEmojiResponse> {
@@ -19,16 +18,7 @@ export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest[
     updatedEmoji
   }
 
-  const response = await fetch(baseUrl + '/emoji/custom', {
-    method: 'PATCH',
-    body: JSON.stringify(request),
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
-  })
-  const body = await response.text()
-  return JSON.parse(body)
+  return await post('/emoji/custom', request)
 }
 
 export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew): Promise<AddCustomEmojiResponse> {
@@ -37,15 +27,7 @@ export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew): Promise<A
     newEmoji
   }
 
-  const response = await fetch(baseUrl + '/emoji/custom', {
-    method: 'POST',
-    body: JSON.stringify(request),
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
-  const body = await response.text()
-  return JSON.parse(body)
+  return await post('/emoji/custom', request)
 }
 
 export async function setActiveLivestream (newLivestream: string | null): Promise<SetActiveLivestreamResponse> {
@@ -54,43 +36,61 @@ export async function setActiveLivestream (newLivestream: string | null): Promis
     livestream: newLivestream
   }
 
-  const response = await fetch(baseUrl + '/chatMate/livestream', {
-    method: 'PATCH',
-    body: JSON.stringify(request),
+  return await post('/chatMate/livestream', request)
+}
+
+export async function ping (): Promise<PingResponse> {
+  return await get('/chatMate/ping')
+}
+
+export async function getMasterchatAuthentication (): Promise<GetMasterchatAuthenticationResponse> {
+  return await get('/chatMate/masterchat/authentication')
+}
+
+export async function getStatus (): Promise<GetStatusResponse> {
+  return await get('/chatMate/status')
+}
+
+export async function getLogTimestamps (): Promise<GetTimestampsResponse> {
+  return await get('/log/timestamps')
+}
+
+export async function getAccessibleRanks (): Promise<GetAccessibleRanksResponse> {
+  return await get('/rank/accessible')
+}
+
+export async function registerAccount (username: string, password: string): Promise<RegisterResponse> {
+  const request: RegisterRequest = { schema: 1, username, password }
+  return await post('/account/register', request)
+}
+
+export async function login (username: string, password: string): Promise<LoginResponse> {
+  const request: LoginRequest = { schema: 1, username, password }
+  return await post('/account/login', request)
+}
+
+export async function logout (): Promise<LogoutResponse> {
+  return await post('/account/logout', {})
+}
+
+export async function authenticate (loginToken: string): Promise<AuthenticateResponse> {
+  return await post('/account/authenticate', { loginToken })
+}
+
+async function get (path: string): Promise<any> {
+  const response = await fetch(baseUrl + path, { method: 'GET' })
+  const body = await response.text()
+  return JSON.parse(body)
+}
+
+async function post (path: string, requestData: any): Promise<any> {
+  const response = await fetch(baseUrl + path, {
+    method: 'POST',
+    body: JSON.stringify(requestData),
     headers: {
       'Content-Type': 'application/json'
     }
   })
-  const body = await response.text()
-  return JSON.parse(body)
-}
-
-export async function ping (): Promise<PingResponse> {
-  const response = await fetch(baseUrl + '/chatMate/ping', { method: 'GET' })
-  const body = await response.text()
-  return JSON.parse(body)
-}
-
-export async function getMasterchatAuthentication (): Promise<GetMasterchatAuthenticationResponse> {
-  const response = await fetch(baseUrl + '/chatMate/masterchat/authentication', { method: 'GET' })
-  const body = await response.text()
-  return JSON.parse(body)
-}
-
-export async function getStatus (): Promise<GetStatusResponse> {
-  const response = await fetch(baseUrl + '/chatMate/status', { method: 'GET' })
-  const body = await response.text()
-  return JSON.parse(body)
-}
-
-export async function getLogTimestamps (): Promise<GetTimestampsResponse> {
-  const response = await fetch(baseUrl + '/log/timestamps', { method: 'GET' })
-  const body = await response.text()
-  return JSON.parse(body)
-}
-
-export async function getAccessibleRanks (): Promise<GetAccessibleRanksResponse> {
-  const response = await fetch(baseUrl + '/rank/accessible', { method: 'GET' })
   const body = await response.text()
   return JSON.parse(body)
 }

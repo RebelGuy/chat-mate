@@ -183,6 +183,20 @@ Logs the user out of their account by invalidating all login tokens. To authenti
 
 Returns an empty response body.
 
+### `POST /authenticate`
+*Current schema: 1.*
+
+Authenticates the provided login token. If successful, the login token can be used to authenticate other API requests.
+
+Request data (body):
+- `loginToken` (`string`): *Required.* The login token to authenticate.
+
+Returns data with the following properties:
+- `username` (`string`): The username associated with the login token.
+
+Can return the following errors:
+- `401`: When the login token is invalid.
+
 ## Chat Endpoints
 Path: `/chat`.
 

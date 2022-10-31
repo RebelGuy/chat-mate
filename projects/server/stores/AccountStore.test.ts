@@ -1,6 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import { UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { hashString } from '@rebel/server/util/strings'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { nameof } from '@rebel/server/_test/utils'
@@ -32,7 +33,7 @@ export default () => {
       const username = 'username'
       await db.registeredUser.create({ data: { username: username, hashedPassword: 'test' }})
 
-      await expect(() => accountStore.addRegisteredUser({ username: username, password: 'test' })).rejects.toThrow()
+      await expect(() => accountStore.addRegisteredUser({ username: username, password: 'test' })).rejects.toThrowError(UsernameAlreadyExistsError)
     })
   })
 

@@ -50,6 +50,12 @@ export class InvalidUsernameError extends CustomError {
   }
 }
 
+export class UsernameAlreadyExistsError extends CustomError {
+  constructor (username: string){
+    super(UsernameAlreadyExistsError.prototype, `The username '${username}' already exists.`)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

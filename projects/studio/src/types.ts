@@ -1,1 +1,1 @@
-export type Page = 'home' | 'customEmoji' | 'chatMate'
+export type Page = 'home' | 'customEmoji' | 'chatMate' | 'registration' | 'login'
