@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { userRankToPublicObject, rankToPublicObject } from '@rebel/server/models/rank'
@@ -63,7 +63,7 @@ type RemoveModRankResponse = ApiResponse<1, {
   channelModChanges: Tagged<1, PublicChannelRankChange>[]
 }>
 
-type Deps = Dependencies<{
+type Deps = ControllerDependencies<{
   logService: LogService
   channelStore: ChannelStore
   modService: ModService

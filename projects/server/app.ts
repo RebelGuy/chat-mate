@@ -1,5 +1,5 @@
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
-import express from 'express'
+import express, { Request, Response } from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'
 import env from './globals'
@@ -73,6 +73,7 @@ import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 import AccountController from '@rebel/server/controllers/AccountController'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import ApiService from '@rebel/server/controllers/ApiService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -190,12 +191,41 @@ app.use((req, res, next) => {
   // intercept the JSON body so we can customise the error code
   // "inspired" by https://stackoverflow.com/a/57553226
   const send = res.send.bind(res)
+
   res.send = (body) => {
-    const response = body == null ? null : JSON.parse(body) as ApiResponse<any, any>
-    if (response?.success === false) {
-      res.status(response.error.errorCode ?? 500)
+    let isSimpleMessage = false
+    let responseBody: ApiResponse<any, any> | null
+    if (body == null) {
+      responseBody = null
+    } else {
+      try {
+        responseBody = JSON.parse(body)
+      } catch (e: any) {
+        // the response body was just a message (string), so we must construct the error object explicitly
+        if (res.statusCode === 200) {
+          throw new Error('It is expected that only errors are ever sent with a simple message.')
+        }
+
+        isSimpleMessage = true
+        responseBody = {
+          schema: 1,
+          timestamp: new Date().getTime(),
+          success: false,
+          error: {
+            errorCode: res.statusCode as any,
+            errorType: res.statusMessage,
+            message: body
+          }
+        }
+        res.set('Content-Type', 'application/json')
+      }
     }
-    return send(body)
+
+    if (responseBody?.success === false) {
+      res.status(responseBody.error.errorCode ?? 500)
+    }
+
+    return send(JSON.stringify(responseBody))
   }
 
   next()
@@ -226,6 +256,9 @@ const logContext = createLogContext(globalContext.getClassInstance('logService')
 
 app.use(async (req, res, next) => {
   const context = globalContext.asParent()
+    .withObject('request', req) // these are required because, within the ApiService, we don't have access to @Context yet at the time that preprocessors fire
+    .withObject('response', res)
+    .withClass('apiService', ApiService)
     .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
     .withClass('emojiController', EmojiController)

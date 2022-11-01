@@ -142,6 +142,8 @@ All non-primitive properties of `data` are of type `PublicObject`, which are reu
 
 Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
 
+Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-login-token` header.
+
 ## Account Endpoints
 Path: `/account`.
 
@@ -186,10 +188,7 @@ Returns an empty response body.
 ### `POST /authenticate`
 *Current schema: 1.*
 
-Authenticates the provided login token. If successful, the login token can be used to authenticate other API requests.
-
-Request data (body):
-- `loginToken` (`string`): *Required.* The login token to authenticate.
+Authenticates the login token contained in the header. If successful, the login token can be used to authenticate other API requests.
 
 Returns data with the following properties:
 - `username` (`string`): The username associated with the login token.

@@ -1,6 +1,9 @@
+import { RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import ApiService from '@rebel/server/controllers/ApiService'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
+import { Context, ServiceContext } from 'typescript-rest'
 
 export const BASE_PATH = '/api'
 
@@ -88,9 +91,11 @@ export type ErrorType = Error | string
 
 export type ControllerDependencies<T> = Dependencies<T & {
   logService: LogService
+  apiService: ApiService
 }>
 
 type Deps = Dependencies<{
+  apiService: ApiService
   logService: LogService
 }>
 
@@ -98,12 +103,19 @@ export abstract class ControllerBase extends ContextClass {
   readonly name: string
   protected readonly logService: LogService
   protected readonly logContext: LogContext
+  private readonly apiService: ApiService
 
   constructor (deps: Deps, controllerName: string) {
     super()
     this.name = controllerName
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
+    this.apiService = deps.resolve('apiService')
+  }
+
+  // the `ControllerBase` acts as a proxy so we don't have to do `super.apiService.getCurrentUser` but just `super.getCurrentUser`
+  protected getCurrentUser (): RegisteredUser | null {
+    return this.apiService.getCurrentUser()
   }
 
   protected registerResponseBuilder<

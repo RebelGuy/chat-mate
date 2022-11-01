@@ -1,10 +1,11 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { EmptyObject } from '@rebel/server/types'
 import { InvalidUsernameError, UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
-import { Path, POST } from 'typescript-rest'
+import { Path, POST, PreProcessor } from 'typescript-rest'
 
 type Deps = ControllerDependencies<{
   accountStore: AccountStore
@@ -19,7 +20,6 @@ export type LoginResponse = ApiResponse<1, { loginToken: string }>
 
 export type LogoutResponse = ApiResponse<1, EmptyObject>
 
-export type AuthenticateRequest = ApiRequest<1, { schema: 1, loginToken: string }>
 export type AuthenticateResponse = ApiResponse<1, { username: string }>
 
 @Path(buildPath('account'))
@@ -84,13 +84,14 @@ export default class AccountController extends ControllerBase {
   }
 
   @POST
-  @Path('logout') // todo: require authentication header
+  @Path('logout')
+  @PreProcessor(requireAuth)
   public async logout (): Promise<LogoutResponse> {
     const builder = this.registerResponseBuilder<LogoutResponse>('POST /logout', 1)
 
     try {
-      const registeredUserId = 1 // todo
-      await this.accountStore.clearLoginTokens(registeredUserId)
+      const user = super.getCurrentUser()!
+      await this.accountStore.clearLoginTokens(user.id)
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
@@ -98,18 +99,14 @@ export default class AccountController extends ControllerBase {
   }
 
   @POST
-  @Path('authenticate') // todo: use auth header instead of post body
-  public async authenticate (request: AuthenticateRequest): Promise<AuthenticateResponse> {
+  @Path('authenticate')
+  @PreProcessor(requireAuth)
+  public authenticate (): AuthenticateResponse {
     const builder = this.registerResponseBuilder<AuthenticateResponse>('POST /authenticate', 1)
 
     try {
-      const user = await this.accountStore.getRegisteredUserFromToken(request.loginToken)
-
-      if (user == null) {
-        return builder.failure(401, 'Invalid login token')
-      } else {
-        return builder.success({ username: user.username })
-      }
+      const user = super.getCurrentUser()!
+      return builder.success({ username: user.username })
     } catch (e: any) {
       return builder.failure(e)
     }

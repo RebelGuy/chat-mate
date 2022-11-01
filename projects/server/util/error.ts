@@ -56,6 +56,15 @@ export class UsernameAlreadyExistsError extends CustomError {
   }
 }
 
+export class PreProcessorError extends CustomError {
+  public readonly statusCode: number
+
+  constructor (statusCode: number, message: string) {
+    super(PreProcessorError.prototype, message)
+    this.statusCode = statusCode
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {
