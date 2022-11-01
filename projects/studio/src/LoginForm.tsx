@@ -23,7 +23,7 @@ export default function LoginForm (props: Props) {
   }
 
   return (
-    <ApiRequestTrigger onRequest={() => onLogin(username, password, onSuccess)}>
+    <ApiRequestTrigger isAnonymous onRequest={() => onLogin(username, password, onSuccess)}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
         <>
           {/* return false to prevent the page from refreshing */}

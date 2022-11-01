@@ -142,7 +142,7 @@ All non-primitive properties of `data` are of type `PublicObject`, which are reu
 
 Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
 
-Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-login-token` header.
+Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-Login-Token` header.
 
 ## Account Endpoints
 Path: `/account`.

@@ -22,13 +22,13 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
     this.setState({ currentInput: e.target.value })
   }
 
-  setStatus = () => {
+  setStatus = (loginToken: string) => {
     const livestream = this.state.currentInput.trim()
-    return setActiveLivestream(livestream === '' ? null : livestream)
+    return setActiveLivestream(livestream === '' ? null : livestream, loginToken)
   }
 
-  getStatus = async () => {
-    const response = await getStatus()
+  getStatus = async (loginToken: string) => {
+    const response = await getStatus(loginToken)
     if (response.success) {
       this.setState({ currentInput: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : this.state.currentInput })
     }

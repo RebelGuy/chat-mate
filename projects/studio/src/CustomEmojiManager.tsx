@@ -55,8 +55,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     this.setState({ editingEmoji: null })
   }
 
-  onUpdate = async () => {
-    const result = await updateCustomEmoji(this.state.editingEmoji!)
+  onUpdate = async (loginToken: string) => {
+    const result = await updateCustomEmoji(this.state.editingEmoji!, loginToken)
     if (result.success) {
       const updatedEmoji = result.data.updatedEmoji
       this.setState({
@@ -75,8 +75,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     }
   }
 
-  onAdd = async () => {
-    const result = await addCustomEmoji(this.state.newEmoji)
+  onAdd = async (loginToken: string) => {
+    const result = await addCustomEmoji(this.state.newEmoji, loginToken)
     if (result.success) {
       this.setState({
         newEmoji: {
@@ -94,8 +94,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     return result
   }
 
-  getAccessibleRanks = async () => {
-    const accessibleRanks = await getAccessibleRanks()
+  getAccessibleRanks = async (loginToken: string) => {
+    const accessibleRanks = await getAccessibleRanks(loginToken)
     if (accessibleRanks.success) {
       this.setState({
         accessibleRanks: accessibleRanks.data.accessibleRanks
@@ -104,8 +104,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     return accessibleRanks
   }
 
-  getEmojis = async () => {
-    const emojis = await getAllCustomEmojis()
+  getEmojis = async (loginToken: string) => {
+    const emojis = await getAllCustomEmojis(loginToken)
     if (emojis.success) {
       this.setState({
         emojis: sortBy(emojis.data.emojis, e => e.id),

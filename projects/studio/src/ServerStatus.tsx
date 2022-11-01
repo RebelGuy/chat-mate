@@ -13,7 +13,7 @@ export default function ServerStatus () {
 
   return (
     <>
-      <ApiRequest onDemand={false} repeatInterval={5000} onRequest={sendPing}>
+      <ApiRequest onDemand={false} repeatInterval={5000} isAnonymous onRequest={sendPing}>
         {(data, loadingNode, errorNode) => <div style={{ color: data ? 'green' : errorNode ? 'red' : undefined }}>
           {data && `Server available (${pingEnd - pingStart}ms)`}
           {loadingNode && 'Checking availability'}

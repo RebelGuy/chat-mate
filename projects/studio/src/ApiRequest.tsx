@@ -1,11 +1,17 @@
 import { ApiResponse, ResponseData } from '@rebel/server/controllers/ControllerBase'
+import { LoginContext } from '@rebel/studio/LoginProvider'
 import * as React from 'react'
 
 type Props<TData extends ResponseData<TData>> = {
-  onRequest: () => Promise<ApiResponse<any, TData>>
   // if providing a function, the children will always be rendered, otherwise they will only be rendered upon a successful response
   children: ((response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => React.ReactNode) | React.ReactNode
 } & ({
+  isAnonymous: true
+  onRequest: () => Promise<ApiResponse<any, TData>>
+} | {
+  isAnonymous?: false
+  onRequest: (loginToken: string) => Promise<ApiResponse<any, TData>>
+}) & ({
   onDemand: true
   token: string | number | null // when changing this token, a new request will automatically be made. if null, will not make a request
 } | {
@@ -22,6 +28,9 @@ type State<TData extends ResponseData<TData>> = {
 // finally some code I am not appalled by
 // edit: after refactoring this a bit, I take it back
 export default class ApiRequest<TData extends ResponseData<TData>> extends React.PureComponent<Props<TData>, State<TData>> {
+  static override contextType = LoginContext
+  override context!: React.ContextType<typeof LoginContext>
+
   private mounted = false
   private currentToken: string | number | null = null
   private timer: number | null = null
@@ -48,10 +57,23 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     })
 
     this.currentToken = token
-    this.props.onRequest()
-      .then(res => this.onResponse(res, token))
-      .catch(e => this.onError(e, token))
-      .then(() => this.onDone())
+
+    // chunky because typescript is dumb
+    if (this.props.isAnonymous) {
+      this.props.onRequest()
+        .then(res => this.onResponse(res, token))
+        .catch(e => this.onError(e, token))
+        .then(() => this.onDone())
+    } else {
+      if (this.context.loginToken == null) {
+        this.onError('You must be logged in to do that', token)
+      } else {
+        this.props.onRequest(this.context.loginToken)
+          .then(res => this.onResponse(res, token))
+          .catch(e => this.onError(e, token))
+          .then(() => this.onDone())
+      }
+    }
   }
 
   private onResponse (data: ApiResponse<any, TData>, token: string | number | null) {
@@ -118,6 +140,10 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
   }
 
   override render () {
+    if (this.props.isAnonymous !== true && this.context.loginToken == null) {
+      return <div style={{ color: 'red', padding: 12 }}>You must be logged in to do that.</div>
+    }
+
     let loadingNode: React.ReactNode = null
     let errorNode: React.ReactNode = null
 

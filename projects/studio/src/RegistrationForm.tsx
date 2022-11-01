@@ -23,7 +23,7 @@ export default function RegistrationForm (props: Props) {
   }
 
   return (
-    <ApiRequestTrigger onRequest={() => onRegisterAccount(username, password, onSuccess)}>
+    <ApiRequestTrigger isAnonymous onRequest={() => onRegisterAccount(username, password, onSuccess)}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
         <form onSubmit={() => { onMakeRequest(); return false }}>
           <input type="text" placeholder="Username" value={username} onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null} />

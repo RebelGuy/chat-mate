@@ -22,8 +22,8 @@ export default function Home (props: Props) {
         <LogoutButton />
       </>}
       {!isLoggedIn && <button onClick={() => props.onSelectPage('login')} style={{ display: 'block', margin: 'auto' }}>Login</button>}
-      <button onClick={() => props.onSelectPage('customEmoji')} style={{ display: 'block', margin: 'auto' }}>Custom Emoji Manager</button>
-      <button onClick={() => props.onSelectPage('chatMate')} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
+      <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('customEmoji')} style={{ display: 'block', margin: 'auto' }}>Custom Emoji Manager</button>
+      <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('chatMate')} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
     </div>
   )
 }
@@ -35,7 +35,7 @@ function LogoutButton (props: LogoutButtonProps) {
   const loginContext = useContext(LoginContext)
 
   return (
-    <ApiRequestTrigger onRequest={() => doLogout(() => loginContext.logout())}>
+    <ApiRequestTrigger onRequest={(loginToken: string) => doLogout(loginToken, () => loginContext.logout())}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
         <>
           <button disabled={loadingNode != null} onClick={onMakeRequest} style={{ display: 'block', margin: 'auto' }}>Logout</button>
@@ -46,8 +46,8 @@ function LogoutButton (props: LogoutButtonProps) {
   )
 }
 
-async function doLogout (onLogout: () => void): Promise<LogoutResponse> { 
-  const result = await logout()
+async function doLogout (loginToken: string, onLogout: () => void): Promise<LogoutResponse> { 
+  const result = await logout(loginToken)
 
   if (result.success) {
     onLogout()
