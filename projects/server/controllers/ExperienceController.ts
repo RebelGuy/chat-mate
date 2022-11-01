@@ -1,4 +1,5 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
@@ -9,7 +10,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single, zipOnStrict } from '@rebel/server/util/arrays'
-import { GET, Path, POST, QueryParam } from 'typescript-rest'
+import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<4, {
   rankedUsers: Tagged<3, PublicRankedUser>[]
@@ -39,6 +40,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('experience'))
+@PreProcessor(requireAuth)
 export default class ExperienceController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService

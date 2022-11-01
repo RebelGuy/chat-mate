@@ -8,13 +8,14 @@ import ModService from '@rebel/server/services/rank/ModService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { single, sortBy } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { DELETE, GET, Path, POST, QueryParam } from 'typescript-rest'
+import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { isOneOf } from '@rebel/server/util/validation'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/server/util/datetime'
+import { requireAuth } from '@rebel/server/controllers/preProcessors'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
@@ -72,6 +73,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('rank'))
+@PreProcessor(requireAuth)
 export default class RankController extends ControllerBase {
   private readonly modService: ModService
   private readonly channelStore: ChannelStore

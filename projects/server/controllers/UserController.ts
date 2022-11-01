@@ -1,4 +1,5 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import { PublicUserNames } from '@rebel/server/controllers/public/user/PublicUserNames'
 import { userDataToPublicUserNames } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
@@ -7,7 +8,7 @@ import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { zipOnStrictMany } from '@rebel/server/util/arrays'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
-import { Path, POST } from 'typescript-rest'
+import { Path, POST, PreProcessor } from 'typescript-rest'
 
 type SearchUserRequest = ApiRequest<4, {
   schema: 4,
@@ -26,6 +27,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('user'))
+@PreProcessor(requireAuth)
 export default class UserController extends ControllerBase {
   readonly channelService: ChannelService
   readonly channelStore: ChannelStore

@@ -147,7 +147,7 @@ Authentication is required for most endpoints. To authenticate a request, provid
 ## Account Endpoints
 Path: `/account`.
 
-### `POST /register`
+### `POST /register` [anonymous]
 *Current schema: 1.*
 
 Registers a new user.
@@ -162,7 +162,7 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
-### `POST /login`
+### `POST /login` [anonymous]
 *Current schema: 1.*
 
 Logs the user into their account.
@@ -215,7 +215,7 @@ Returns data with the following properties:
 ## ChatMate Endpoints
 Path: `/chatMate`.
 
-### `GET /ping`
+### `GET /ping` [anonymous]
 *Current schema: 1.*
 
 Pings the server.

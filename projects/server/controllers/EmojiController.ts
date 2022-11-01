@@ -1,8 +1,9 @@
 import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
-import { Path, GET, POST, PATCH } from 'typescript-rest'
+import { Path, GET, POST, PATCH, PreProcessor } from 'typescript-rest'
 
 export type GetCustomEmojisResponse = ApiResponse<1, { emojis: Tagged<1, PublicCustomEmoji>[] }>
 
@@ -17,6 +18,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('emoji'))
+@PreProcessor(requireAuth)
 export default class EmojiController extends ControllerBase {
   private readonly customEmojiStore: CustomEmojiStore
 

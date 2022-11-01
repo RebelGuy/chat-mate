@@ -32,7 +32,7 @@ export default class ApiService extends ContextClass {
   /** If this method runs to completion, `getCurrentUser` will return a non-null object.
    * @throws {@link PreProcessorError}: When the user could not be authenticated. */
   public async authenticateCurrentUser (): Promise<void> {
-    const loginToken = this.request.headers['X-login-token']
+    const loginToken = this.request.headers[LOGIN_TOKEN_HEADER.toLowerCase()]
     if (loginToken == null) {
       throw new PreProcessorError(401, `The ${LOGIN_TOKEN_HEADER} header is required for authentication.`)
     } else if (Array.isArray(loginToken)) {

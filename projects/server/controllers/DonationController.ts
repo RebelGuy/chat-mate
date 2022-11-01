@@ -10,9 +10,10 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { nonNull, zipOnStrictMany } from '@rebel/server/util/arrays'
-import { DELETE, GET, Path, POST, QueryParam } from 'typescript-rest'
+import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
+import { requireAuth } from '@rebel/server/controllers/preProcessors'
 
 type GetDonationsResponse = ApiResponse<1, { donations: Tagged<1, PublicDonation>[] }>
 
@@ -29,6 +30,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('donation'))
+@PreProcessor(requireAuth)
 export default class DonationController extends ControllerBase {
   private readonly donationService: DonationService
   private readonly donationStore: DonationStore

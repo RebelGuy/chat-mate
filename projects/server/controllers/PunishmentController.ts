@@ -1,7 +1,7 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import { sortBy } from '@rebel/server/util/arrays'
-import { Path, GET, QueryParam, POST, PathParam } from 'typescript-rest'
+import { Path, GET, QueryParam, POST, PathParam, PreProcessor } from 'typescript-rest'
 import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -11,6 +11,7 @@ import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import { requireAuth } from '@rebel/server/controllers/preProcessors'
 
 export type GetSinglePunishment = ApiResponse<2, { punishment: Tagged<1, PublicUserRank> }>
 
@@ -57,6 +58,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('punishment'))
+@PreProcessor(requireAuth)
 export default class PunishmentController extends ControllerBase {
   private readonly rankStore: RankStore
   private readonly punishmentService: PunishmentService
