@@ -85,17 +85,20 @@ export default class AccountController extends ControllerBase {
 
   @POST
   @Path('logout')
-  @PreProcessor(requireAuth)
   public async logout (): Promise<LogoutResponse> {
     const builder = this.registerResponseBuilder<LogoutResponse>('POST /logout', 1)
 
     try {
+      await this.apiService.authenticateCurrentUser()
       const user = super.getCurrentUser()!
       await this.accountStore.clearLoginTokens(user.id)
-      return builder.success({})
     } catch (e: any) {
-      return builder.failure(e)
+      // ignore
     }
+
+    // always allow the user to log out, regardless of whether we are able to authenticate them or not.
+    // this is really just a nicety for easier client-side handling
+    return builder.success({})
   }
 
   @POST

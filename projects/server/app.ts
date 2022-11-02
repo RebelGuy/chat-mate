@@ -1,5 +1,5 @@
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
-import express, { Request, Response } from 'express'
+import express, { NextFunction, Request, Response } from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'
 import env from './globals'
@@ -213,7 +213,7 @@ app.use((req, res, next) => {
           success: false,
           error: {
             errorCode: res.statusCode as any,
-            errorType: res.statusMessage,
+            errorType: res.statusMessage ?? 'Something went wrong',
             message: body
           }
         }
@@ -300,6 +300,14 @@ Server.buildServices(app,
   LivestreamController,
   AccountController
 )
+
+// error handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  // do nothing
+
+  // don't call `next` - the next middleware would be the default express error handler,
+  // which just logs the error to the console
+})
 
 process.on('unhandledRejection', (error) => {
   if (error instanceof TimeoutError) {

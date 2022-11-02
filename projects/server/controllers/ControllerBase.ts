@@ -103,7 +103,7 @@ export abstract class ControllerBase extends ContextClass {
   readonly name: string
   protected readonly logService: LogService
   protected readonly logContext: LogContext
-  private readonly apiService: ApiService
+  protected readonly apiService: ApiService
 
   constructor (deps: Deps, controllerName: string) {
     super()
