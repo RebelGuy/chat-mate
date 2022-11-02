@@ -7,7 +7,7 @@ import env from '@rebel/server/globals'
 import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 import { EmptyObject } from '@rebel/server/types'
-import { requireAuth } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 export type PingResponse = ApiResponse<1, EmptyObject>
 
@@ -62,7 +62,7 @@ export default class ChatMateController extends ControllerBase {
 
   @GET
   @Path('status')
-  @PreProcessor(requireAuth)
+  @PreProcessor(requireStreamer)
   public async getStatus (): Promise<GetStatusResponse> {
     const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status', 3)
     try {
@@ -74,7 +74,7 @@ export default class ChatMateController extends ControllerBase {
 
   @GET
   @Path('events')
-  @PreProcessor(requireAuth)
+  @PreProcessor(requireStreamer)
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
@@ -92,7 +92,7 @@ export default class ChatMateController extends ControllerBase {
 
   @PATCH
   @Path('livestream')
-  @PreProcessor(requireAuth)
+  @PreProcessor(requireStreamer)
   public async setActiveLivestream (request: SetActiveLivestreamRequest): Promise<SetActiveLivestreamResponse> {
     const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream', 2)
     if (request == null || request.livestream === undefined) {

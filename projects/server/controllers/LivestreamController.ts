@@ -1,5 +1,5 @@
 import { ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicLivestream } from '@rebel/server/controllers/public/livestream/PublicLivestream'
 import { livestreamToPublic } from '@rebel/server/models/livestream'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -14,7 +14,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('livestream'))
-@PreProcessor(requireAuth)
+@PreProcessor(requireStreamer)
 export default class LivestreamController extends ControllerBase {
   private readonly livestreamStore: LivestreamStore
 

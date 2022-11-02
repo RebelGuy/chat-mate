@@ -1,5 +1,5 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
@@ -40,7 +40,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('experience'))
-@PreProcessor(requireAuth)
+@PreProcessor(requireStreamer)
 export default class ExperienceController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService

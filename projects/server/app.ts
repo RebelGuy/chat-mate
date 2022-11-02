@@ -74,6 +74,7 @@ import AccountController from '@rebel/server/controllers/AccountController'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ApiService from '@rebel/server/controllers/ApiService'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -173,6 +174,7 @@ const globalContext = ContextProvider.create()
   .withClass('donationFetchService', DonationFetchService)
   .withClass('chatMateEventService', ChatMateEventService)
   .withClass('accountStore', AccountStore)
+  .withClass('streamerStore', StreamerStore)
   .build()
 
 app.use((req, res, next) => {

@@ -4,6 +4,7 @@ import { PreProcessorError } from '@rebel/server/util/error'
 import { toCamelCase } from '@rebel/server/util/text'
 import { Request, Response } from 'express'
 
+/** User must have a valid login token attached to the request. The `registeredUser` context variable will be available during the request. */
 export async function requireAuth (req: Request, res?: Response) {
   const context = getContextProvider(req)
   const apiService = context.getClassInstance(toCamelCase(ApiService.name)) as ApiService
@@ -15,6 +16,30 @@ export async function requireAuth (req: Request, res?: Response) {
   // todo: streamline this so it's reusable (i.e. create a common PreProcessor wrapper function)
   try {
     await apiService.authenticateCurrentUser()
+  } catch (e: any) {
+    if (res == null) {
+      throw new Error('Unable to send response because the response object was undefined.')
+    }
+
+    if (e instanceof PreProcessorError) {
+      res.status(e.statusCode).send(e.message)
+    } else {
+      res.status(500).send('Internal server error.')
+    }
+
+    throw e
+  }
+}
+
+/** User must be logged in, and specify the streamer (of which they are a viewer). Both the `registeredUser` and `streamerId` context variables will be available during the request. */
+export async function requireStreamer (req: Request, res?: Response) {
+  await requireAuth(req)
+
+  const context = getContextProvider(req)
+  const apiService = context.getClassInstance(toCamelCase(ApiService.name)) as ApiService
+
+  try {
+    await apiService.extractStreamerId()
   } catch (e: any) {
     if (res == null) {
       throw new Error('Unable to send response because the response object was undefined.')

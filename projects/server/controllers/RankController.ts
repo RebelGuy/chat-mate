@@ -15,7 +15,7 @@ import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/server/util/datetime'
-import { requireAuth } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
@@ -73,7 +73,7 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('rank'))
-@PreProcessor(requireAuth)
+@PreProcessor(requireStreamer)
 export default class RankController extends ControllerBase {
   private readonly modService: ModService
   private readonly channelStore: ChannelStore
