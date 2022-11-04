@@ -27,7 +27,8 @@ export default class AccountStore extends ContextClass {
 
   /** @throws {@link UsernameAlreadyExistsError}: When a registered user with the same username already exists. */
   public async addRegisteredUser (registeredUser: RegisteredUserCreateArgs) {
-    const hashedPassword = hashString(registeredUser.password)
+    // this generates a unique hash even if multiple users use the same password
+    const hashedPassword = hashString(registeredUser.username + registeredUser.password)
 
     try {
       await this.db.registeredUser.create({ data: {
@@ -43,7 +44,7 @@ export default class AccountStore extends ContextClass {
   }
 
   public async checkPassword (username: string, password: string): Promise<boolean> {
-    const hashedPassword = hashString(password)
+    const hashedPassword = hashString(username + password)
     const match = await this.db.registeredUser.findUnique({
       where: { username: username },
       rejectOnNotFound: false

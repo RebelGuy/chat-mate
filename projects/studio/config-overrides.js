@@ -4,6 +4,7 @@
 // current known limitation: sourcemaps don't seem to work for modules outside of the /src folder
 
 const { aliasDangerous, aliasJest, configPaths } = require('react-app-rewire-alias/lib/aliasDangerous')
+const webpack = require('webpack')
 
 const aliasMap = configPaths('./tsconfig.paths.json')
 
@@ -18,9 +19,29 @@ module.exports = (...args) => {
       fallback: {
         ...config.fallback,
         'crypto': require.resolve('crypto-browserify'),
-        'stream': require.resolve('stream-browserify')        
+        'stream': require.resolve('stream-browserify')
       }
-    }
+    },
+    plugins: [...(config.plugins ?? []),
+      // it can't resolve `node:url` (and similar), so we have to manually set those
+      // https://stackoverflow.com/questions/71041521/unhandledschemeerror-what-is-this-nodebuffer-error-and-how-do-i-solve-it
+      new webpack.NormalModuleReplacementPlugin(/node:/, (resource) => {
+        const mod = resource.request.replace(/^node:/, "")
+        switch (mod) {
+          case 'buffer':
+            resource.request = 'buffer'
+            break
+          case 'stream':
+            resource.request = 'stream-browserify'
+            break
+          case 'url':
+            resource.request = 'url-polyfill'
+            break
+          default:
+            throw new Error(`Not found ${mod}`)
+        }
+      })
+    ]
   }
 }
 module.exports.jest = aliasJest(aliasMap)

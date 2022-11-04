@@ -1,7 +1,23 @@
-import { Streamer } from '@prisma/client'
+import { RegisteredUser, Streamer, StreamerApplication } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { StreamerApplicationAlreadyClosedError } from '@rebel/server/util/error'
+
+export type StreamerApplicationWithUser = StreamerApplication & {
+  registeredUser: RegisteredUser
+}
+
+export type CreateApplicationArgs = {
+  registeredUserId: number
+  message: string
+}
+
+export type CloseApplicationArgs = {
+  id: number
+  approved: boolean | null
+  message: string | null
+}
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -14,6 +30,44 @@ export default class StreamerStore extends ContextClass {
     super()
 
     this.db = deps.resolve('dbProvider').get()
+  }
+
+  public async addStreamerApplication (data: CreateApplicationArgs): Promise<StreamerApplicationWithUser> {
+    return await this.db.streamerApplication.create({
+      data: {
+        registeredUserId: data.registeredUserId,
+        message: data.message
+      },
+      include: { registeredUser: true }
+    })
+  }
+
+  /** @throws {@link StreamerApplicationAlreadyClosedError}: When attempting to close an application that has already been closed. */
+  public async closeStreamerApplication (data: CloseApplicationArgs): Promise<StreamerApplicationWithUser> {
+    const application = await this.db.streamerApplication.findUnique({
+      where: { id: data.id },
+      rejectOnNotFound: true
+    })
+
+    if (application.timeClosed != null) {
+      throw new StreamerApplicationAlreadyClosedError()
+    }
+
+    return await this.db.streamerApplication.update({
+      where: { id: data.id },
+      data: {
+        closeMessage: data.message,
+        timeClosed: new Date(),
+        isApproved: data.approved
+      },
+      include: { registeredUser: true }
+    })
+  }
+
+  public async getStreamerApplications (): Promise<StreamerApplicationWithUser[]> {
+    return await this.db.streamerApplication.findMany({
+      include: { registeredUser: true }
+    })
   }
 
   public async getStreamerByName (username: string): Promise<Streamer | null> {

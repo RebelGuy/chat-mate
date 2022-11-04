@@ -650,6 +650,70 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 
+## Streamer Endpoints
+Path: `/streamer`.
+
+### `GET /application`
+Gets all streamer applications of the user. If the user is an admin, returns all applications of all users.
+
+Returns data with the following properties:
+- `streamerApplications` (`PublicStreamerApplication[]`): The array of streamer applications with any status.
+
+### `POST /application`
+Creates a new streamer application for the user.
+
+Request data (body):
+- `message` (`string`): *Required.* The user-defined message to include in the application.
+
+Returns data with the following properties:
+- `newApplication` (`PublicStreamerApplication`): The streamer application that was created.
+
+### `POST /application/:streamerApplicationId/approve`
+Approves a pending streamer application.
+
+Path parameters:
+- `streamerApplicationId` (`number`): *Required.* The ID of the streamer application to approve.
+
+Request data (body):
+- `message` (`string`): *Required.* The admin-defined approval message.
+
+Returns data with the following properties:
+- `updatedApplication` (`PublicStreamerApplication`): The updated streamer application.
+
+Can return the following errors:
+- `400`: When the streamer application status was not `pending`, that is, it was already closed.
+
+### `POST /application/:streamerApplicationId/reject`
+Rejects a pending streamer application.
+
+Path parameters:
+- `streamerApplicationId` (`number`): *Required.* The ID of the streamer application to reject.
+
+Request data (body):
+- `message` (`string`): *Required.* The admin-defined rejection message.
+
+Returns data with the following properties:
+- `updatedApplication` (`PublicStreamerApplication`): The updated streamer application.
+
+Can return the following errors:
+- `400`: When the streamer application status was not `pending`, that is, it was already closed.
+
+### `POST /application/:streamerApplicationId/withdraw`
+Withdraws a pending streamer application.
+
+Path parameters:
+- `streamerApplicationId` (`number`): *Required.* The ID of the streamer application to withdraw.
+
+Request data (body):
+- `message` (`string`): *Required.* The user-defined withdrawal message.
+
+Returns data with the following properties:
+- `updatedApplication` (`PublicStreamerApplication`): The updated streamer application.
+
+Can return the following errors:
+- `400`: When the streamer application status was not `pending`, that is, it was already closed.
+
+
 ## User Endpoints
 Path: `/user`.
 

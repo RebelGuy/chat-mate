@@ -1,3 +1,4 @@
+import ApplyForStreamer from '@rebel/studio/ApplyForStreamer'
 import ChatMateManager from '@rebel/studio/ChatMateManager'
 import CustomEmojiManager from '@rebel/studio/CustomEmojiManager'
 import DebugInfo from '@rebel/studio/DebugInfo'
@@ -49,6 +50,7 @@ export default class App extends React.PureComponent<Props, State> {
           {this.state.currentPage === 'login' && <LoginForm onBack={this.onSelectHomePage} onRegister={this.onSelectRegistrationPage} />}
           {this.state.currentPage === 'chatMate' && <ChatMateManager />}
           {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
+          {this.state.currentPage === 'applyForStreamer' && <ApplyForStreamer />}
         </LoginProvider>
       </div>
     )

@@ -28,6 +28,7 @@
     "react-scripts": "5.0.0",
     "stream-browserify": "^3.0.0",
     "typescript": "^4.7.4",
+    "url-polyfill": "^1.1.12",
     "web-vitals": "^2.1.0"
   },
   "eslintConfig": {

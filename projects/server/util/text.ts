@@ -111,6 +111,6 @@ export function toCamelCase (word: string): string {
     .join('')
 }
 
-function capitaliseWord (word: string): string {
+export function capitaliseWord (word: string): string {
   return word.substring(0, 1).toUpperCase() + word.substring(1)
 }

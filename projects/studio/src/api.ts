@@ -2,6 +2,7 @@ import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse,
 import { GetMasterchatAuthenticationResponse, GetStatusResponse, PingResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
 import { GetTimestampsResponse } from '@rebel/server/controllers/LogController'
 import { GetAccessibleRanksResponse } from '@rebel/server/controllers/RankController'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, RejectApplicationRequest, RejectApplicationResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
 import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
@@ -77,6 +78,30 @@ export async function logout (loginToken: string): Promise<LogoutResponse> {
 
 export async function authenticate (loginToken: string): Promise<AuthenticateResponse> {
   return await post('/account/authenticate', {}, loginToken)
+}
+
+export async function getStreamerApplications (loginToken: string): Promise<GetApplicationsResponse> {
+  return await get('/streamer/application', loginToken)
+}
+
+export async function createStreamerApplication (loginToken: string, message: string): Promise<CreateApplicationResponse> {
+  const request: CreateApplicationRequest = { schema: 1, message }
+  return await post('/streamer/application', request, loginToken)
+}
+
+export async function approveStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<ApproveApplicationResponse> {
+  const request: ApproveApplicationRequest = { schema: 1, message }
+  return await post(`/streamer/application/${applicationId}/approve`, request, loginToken)
+}
+
+export async function rejectStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<RejectApplicationResponse> {
+  const request: RejectApplicationRequest = { schema: 1, message }
+  return await post(`/streamer/application/${applicationId}/reject`, request, loginToken)
+}
+
+export async function withdrawStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<WithdrawApplicationResponse> {
+  const request: WithdrawApplicationRequest = { schema: 1, message }
+  return await post(`/streamer/application/${applicationId}/withdraw`, request, loginToken)
 }
 
 async function get (path: string, loginToken?: string): Promise<any> {

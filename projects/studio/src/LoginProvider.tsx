@@ -64,6 +64,7 @@ export default function LoginProvider (props: Props) {
       value={{
         loginToken,
         username,
+        isAdmin: username == null ? null : username === 'admin',
         setLogin: onSetLogin,
         logout: onClearAuthInfo
       }}
@@ -76,6 +77,7 @@ export default function LoginProvider (props: Props) {
 type LoginContextType = {
   loginToken: string | null
   username: string | null
+  isAdmin: boolean | null
   setLogin: (username: string, token: string) => void
   logout: () => void
 }

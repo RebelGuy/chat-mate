@@ -51,8 +51,14 @@ export class InvalidUsernameError extends CustomError {
 }
 
 export class UsernameAlreadyExistsError extends CustomError {
-  constructor (username: string){
+  constructor (username: string) {
     super(UsernameAlreadyExistsError.prototype, `The username '${username}' already exists.`)
+  }
+}
+
+export class StreamerApplicationAlreadyClosedError extends CustomError {
+  constructor () {
+    super(StreamerApplicationAlreadyClosedError.prototype, `The streamer application is already closed.`)
   }
 }
 

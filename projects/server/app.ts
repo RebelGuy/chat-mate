@@ -75,6 +75,7 @@ import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ApiService from '@rebel/server/controllers/ApiService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import StreamerController from '@rebel/server/controllers/StreamerController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -272,6 +273,7 @@ app.use(async (req, res, next) => {
     .withClass('donationController', DonationController)
     .withClass('livestreamController', LivestreamController)
     .withClass('accountController', AccountController)
+    .withClass('streamerController', StreamerController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -300,7 +302,8 @@ Server.buildServices(app,
   RankController,
   DonationController,
   LivestreamController,
-  AccountController
+  AccountController,
+  StreamerController
 )
 
 // error handler
