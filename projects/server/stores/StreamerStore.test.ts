@@ -2,7 +2,7 @@ import { StreamerApplication } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs, StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
-import { StreamerApplicationAlreadyClosedError } from '@rebel/server/util/error'
+import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/server/util/error'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectObject, nameof } from '@rebel/server/_test/utils'
 
@@ -26,6 +26,22 @@ export default () => {
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
+
+  describe(nameof(StreamerStore, 'addStreamer'), () => {
+    test('Adds the streamer', async () => {
+      await db.streamer.create({ data: { registeredUserId: 1 }})
+
+      await streamerStore.addStreamer(2)
+
+      await expectRowCount(db.streamer).toBe(2)
+    })
+
+    test('Throws error if the user is already a streamer', async () => {
+      await db.streamer.create({ data: { registeredUserId: 1 }})
+
+      await expect(() => streamerStore.addStreamer(1)).rejects.toThrowError(UserAlreadyStreamerError)
+    })
+  })
 
   describe(nameof(StreamerStore, 'addStreamerApplication'), () => {
     test('Adds the new streamer application', async () => {
@@ -110,6 +126,24 @@ export default () => {
       await db.streamer.create({ data: { registeredUserId: 2 }})
 
       const result = await streamerStore.getStreamerByName(username1)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe(nameof(StreamerStore, 'getStreamerByRegisteredUserId'), () => {
+    test('Returns streamer with the given id', async () => {
+      await db.streamer.create({ data: { registeredUserId: 2 }})
+
+      const result = await streamerStore.getStreamerByRegisteredUserId(2)
+
+      expect(result!.id).toBe(1)
+    })
+
+    test('Returns null if no streamer exists with the given id', async () => {
+      await db.streamer.create({ data: { registeredUserId: 2 }})
+
+      const result = await streamerStore.getStreamerByRegisteredUserId(1)
 
       expect(result).toBeNull()
     })

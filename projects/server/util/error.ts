@@ -62,6 +62,12 @@ export class StreamerApplicationAlreadyClosedError extends CustomError {
   }
 }
 
+export class UserAlreadyStreamerError extends CustomError {
+  constructor () {
+    super(UserAlreadyStreamerError.prototype, `The user is already a streamer.`)
+  }
+}
+
 export class PreProcessorError extends CustomError {
   public readonly statusCode: number
 

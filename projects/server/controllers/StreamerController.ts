@@ -2,15 +2,11 @@ import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependenc
 import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
+import StreamerService from '@rebel/server/services/StreamerService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
-import { StreamerApplicationAlreadyClosedError } from '@rebel/server/util/error'
+import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/server/util/error'
 import { GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
-
-type Deps = ControllerDependencies<{
-  accountStore: AccountStore
-  streamerStore: StreamerStore
-}>
 
 export type CreateApplicationRequest = ApiRequest<1, { schema: 1, message: string }>
 export type CreateApplicationResponse = ApiResponse<1, { newApplication: PublicStreamerApplication }>
@@ -26,16 +22,21 @@ export type RejectApplicationResponse = ApiResponse<1, { updatedApplication: Pub
 export type WithdrawApplicationRequest = ApiRequest<1, { schema: 1, message: string }>
 export type WithdrawApplicationResponse = ApiResponse<1, { updatedApplication: PublicStreamerApplication }>
 
+type Deps = ControllerDependencies<{
+  streamerStore: StreamerStore
+  streamerService: StreamerService
+}>
+
 @Path(buildPath('streamer'))
 @PreProcessor(requireAuth)
 export default class StreamerController extends ControllerBase {
-  private readonly accountStore: AccountStore
   private readonly streamerStore: StreamerStore
+  private readonly streamerService: StreamerService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
-    this.accountStore = deps.resolve('accountStore')
     this.streamerStore = deps.resolve('streamerStore')
+    this.streamerService = deps.resolve('streamerService')
   }
 
   @GET
@@ -59,14 +60,14 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<CreateApplicationResponse>('POST /application', 1)
 
     try {
-      const data: CreateApplicationArgs = {
-        registeredUserId: super.getCurrentUser()!.id,
-        message: request.message
-      }
-      const application = await this.streamerStore.addStreamerApplication(data)
+      const registeredUserId = super.getCurrentUser()!.id
+      const application = await this.streamerService.createStreamerApplication(registeredUserId, request.message)
       return builder.success({ newApplication: streamerApplicationToPublicObject(application) })
 
     } catch (e: any) {
+      if (e instanceof UserAlreadyStreamerError) {
+        return builder.failure(400, e)
+      }
       return builder.failure(e)
     }
   }
@@ -80,16 +81,11 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve', 1)
 
     try {
-      const data: CloseApplicationArgs = {
-        id: streamerApplicationId,
-        approved: true,
-        message: request.message
-      }
-      const application = await this.streamerStore.closeStreamerApplication(data)
+      const application = await this.streamerService.approveStreamerApplication(streamerApplicationId, request.message)
       return builder.success({ updatedApplication: streamerApplicationToPublicObject(application) })
 
     } catch (e: any) {
-      if (e instanceof StreamerApplicationAlreadyClosedError) {
+      if (e instanceof StreamerApplicationAlreadyClosedError || e instanceof UserAlreadyStreamerError) {
         return builder.failure(400, e)
       }
       return builder.failure(e)
