@@ -13,6 +13,7 @@ import { expectArray } from '@rebel/server/_test/utils'
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name' | 'canUseInDonationMessage'>
 
 const userId = 1
+const streamerId = 2
 const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 10, image: Buffer.from(''), canUseInDonationMessage: true }
 const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 20, image: Buffer.from(''), canUseInDonationMessage: false }
 const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 30, image: Buffer.from(''), canUseInDonationMessage: true }
@@ -44,7 +45,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
     setupLevel(0)
     setupUserRanks() // no ranks
 
-    const result = await customEmojiEligibilityService.getEligibleEmojis(userId)
+    const result = await customEmojiEligibilityService.getEligibleEmojis(userId, streamerId)
 
     expect(result.length).toBe(0)
   })
@@ -54,7 +55,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
     setupLevel(25)
     setupUserRanks() // no ranks
 
-    const result = await customEmojiEligibilityService.getEligibleEmojis(userId)
+    const result = await customEmojiEligibilityService.getEligibleEmojis(userId, streamerId)
 
     expect(result.length).toBe(2)
     expect(result[0].id).toBe(customEmoji1.id)
@@ -66,7 +67,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
     setupLevel(100)
     setupUserRanks(rank1)
 
-    const result = await customEmojiEligibilityService.getEligibleEmojis(userId)
+    const result = await customEmojiEligibilityService.getEligibleEmojis(userId, streamerId)
 
     expect(result.length).toBe(0)
   })
@@ -76,7 +77,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
     setupLevel(100)
     setupUserRanks(rank1, rank2)
 
-    const result = await customEmojiEligibilityService.getEligibleEmojis(userId)
+    const result = await customEmojiEligibilityService.getEligibleEmojis(userId, streamerId)
 
     expect(result.length).toBe(2)
     expect(result[0].id).toBe(customEmoji1.id)
@@ -88,7 +89,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleEmojis'), () => {
     setupLevel(1)
     setupUserRanks(rank1)
 
-    const result = await customEmojiEligibilityService.getEligibleEmojis(userId)
+    const result = await customEmojiEligibilityService.getEligibleEmojis(userId, streamerId)
 
     expect(result.length).toBe(0)
   })
@@ -135,7 +136,7 @@ function setupLevel (level: number) {
 
 function setupUserRanks (...ranks: Rank[]) {
   mockRankStore.getUserRanks
-    .calledWith(expectArray<number>([userId]))
+    .calledWith(expectArray<number>([userId]), streamerId)
     .mockResolvedValue([{
       userId,
       ranks: ranks.map(r => cast<UserRankWithRelations>({ rank: r }))

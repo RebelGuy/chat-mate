@@ -73,7 +73,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      await this.donationService.linkUserToDonation(donationId, userId)
+      await this.donationService.linkUserToDonation(donationId, userId, this.getStreamerId()!)
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -97,7 +97,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      await this.donationService.unlinkUserFromDonation(donationId)
+      await this.donationService.unlinkUserFromDonation(donationId, this.getStreamerId()!)
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -122,7 +122,7 @@ export default class DonationController extends ControllerBase {
     } else {
       const userChannels = await this.channelService.getActiveUserChannels(userIds)
       const levels = await this.experienceService.getLevels(userIds)
-      const ranks = await this.rankStore.getUserRanks(userIds)
+      const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId())
       userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
     }
 

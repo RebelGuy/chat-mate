@@ -76,4 +76,10 @@ export default class AccountStore extends ContextClass {
     })
     return result?.registeredUser ?? null
   }
+
+  public async getRegisteredUserFromChatUser (chatUserId: number): Promise<RegisteredUser | null> {
+    return await this.db.registeredUser.findFirst({
+      where: { chatUserId }
+    })
+  }
 }

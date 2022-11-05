@@ -61,7 +61,7 @@ export default class ExperienceController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 4)
     try {
       const leaderboard = await this.experienceService.getLeaderboard()
-      const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId))
+      const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId), this.getStreamerId())
       const publicLeaderboard = zipOnStrict(leaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
@@ -100,7 +100,7 @@ export default class ExperienceController extends ControllerBase {
       }
       const upperRank = lowerRank + rankPadding * 2
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
-      const activeRanks = await this.rankStore.getUserRanks(prunedLeaderboard.map(entry => entry.userId))
+      const activeRanks = await this.rankStore.getUserRanks(prunedLeaderboard.map(entry => entry.userId), this.getStreamerId())
       const publicLeaderboard = zipOnStrict(prunedLeaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
 
       return builder.success({
@@ -127,8 +127,8 @@ export default class ExperienceController extends ControllerBase {
         return builder.failure(404, `Could not find an active channel for user ${request.userId}.`)
       }
 
-      const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
-      const activeRanks = single(await this.rankStore.getUserRanks([request.userId]))
+      const level = await this.experienceService.modifyExperience(request.userId, this.getStreamerId()!, request.deltaLevels, request.message)
+      const activeRanks = single(await this.rankStore.getUserRanks([request.userId], this.getStreamerId()))
       const publicUser = userDataToPublicUser({ ...userChannel, ...level, ...activeRanks })
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {

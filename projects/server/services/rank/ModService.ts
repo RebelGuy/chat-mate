@@ -42,8 +42,8 @@ export default class ModService extends ContextClass {
   // should we also handle discrepancies between the data, e.g. when the external rank differs from the expected rank?
 
   /** Add or remove the mod user-rank and notify the external platforms. Doesn't throw. */
-  public async setModRank (userId: number, isMod: boolean, message: string | null): Promise<SetActionRankResult> {
-    const internalRankResult = await this.setInternalModRank(userId, isMod, message)
+  public async setModRank (userId: number, streamerId: number, isMod: boolean, message: string | null): Promise<SetActionRankResult> {
+    const internalRankResult = await this.setInternalModRank(userId, streamerId, isMod, message)
 
     // we have no way of knowing the _current_ external state (only from the previous message sent from that channel), so, to be safe, apply the rank
     // update to ALL of the user's channels and report back any errors that could arise from duplication.
@@ -58,11 +58,12 @@ export default class ModService extends ContextClass {
     }
   }
 
-  private async setInternalModRank (userId: number, isMod: boolean, message: string | null): Promise<InternalRankResult> {
+  private async setInternalModRank (userId: number, streamerId: number, isMod: boolean, message: string | null): Promise<InternalRankResult> {
     try {
       if (isMod) {
         const args: AddUserRankArgs = {
           userId: userId,
+          streamerId: streamerId,
           rank: 'mod',
           expirationTime: null,
           message: message,
@@ -75,6 +76,7 @@ export default class ModService extends ContextClass {
       } else {
         const args: RemoveUserRankArgs = {
           userId: userId,
+          streamerId: streamerId,
           rank: 'mod',
           message: message,
           removedBy: null // todo: CHAT-385 use logged-in user details

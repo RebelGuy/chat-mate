@@ -25,9 +25,9 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     this.customEmojiStore = deps.resolve('customEmojiStore')
   }
 
-  public async getEligibleEmojis (userId: number): Promise<CurrentCustomEmoji[]> {
+  public async getEligibleEmojis (userId: number, streamerId: number): Promise<CurrentCustomEmoji[]> {
     const levelPromise = this.experienceService.getLevels([userId])
-    const userRanksPromise = this.rankStore.getUserRanks([userId])
+    const userRanksPromise = this.rankStore.getUserRanks([userId], streamerId)
     const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
     const allEmojiIds = allEmojis.map(e => e.id)
     const whitelistedRanksPromise = this.customEmojiStore.getCustomEmojiWhitelistedRanks(allEmojiIds)

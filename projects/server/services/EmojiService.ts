@@ -23,8 +23,8 @@ export default class EmojiService extends ContextClass {
   }
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
-  public async applyCustomEmojis (part: PartialChatMessage, userId: number): Promise<PartialChatMessage[]> {
-    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId)
+  public async applyCustomEmojis (part: PartialChatMessage, userId: number, streamerId: number): Promise<PartialChatMessage[]> {
+    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId, streamerId)
     return this.applyEligibleEmojis(part, eligibleEmojis)
   }
 

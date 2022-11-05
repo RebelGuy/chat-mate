@@ -46,9 +46,9 @@ export default () => {
     })
   })
 
-  describe(nameof(FollowerStore, 'saveNewFollower'), () => {
+  describe.only(nameof(FollowerStore, 'saveNewFollower'), () => {
     test('saves new follower to the db', async () => {
-      const minDate = new Date().getTime()
+      const minDate = new Date().getTime() - 1
 
       await followerStore.saveNewFollower('12345', 'testuser', 'TestUser')
 

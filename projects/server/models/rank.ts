@@ -9,6 +9,7 @@ export function userRankToPublicObject (userRank: UserRankWithRelations): Public
     schema: 1,
     rank: rankToPublicObject(userRank.rank),
     id: userRank.id,
+    streamer: userRank.streamerName,
     issuedAt: userRank.issuedAt.getTime(),
     expirationTime: userRank.expirationTime?.getTime() ?? null,
     message: userRank.message,

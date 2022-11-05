@@ -78,6 +78,10 @@ export default class StreamerStore extends ContextClass {
     })
   }
 
+  public async getStreamers (): Promise<Streamer[]> {
+    return await this.db.streamer.findMany({})
+  }
+
   public async getStreamerApplications (): Promise<StreamerApplicationWithUser[]> {
     return await this.db.streamerApplication.findMany({
       include: { registeredUser: true }

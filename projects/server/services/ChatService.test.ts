@@ -109,13 +109,14 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const chatItemWithCustomEmoji = {
       ...chatItem1,
       messageParts: [textPart, customEmojiPart, emojiPart]
-    }; // required semicolon for some reason lol
+    }
+    const streamerId = 2; // required semicolon for some reason lol
 
     (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
-    mockEmojiService.applyCustomEmojis.calledWith(textPart, youtubeChannel1.userId).mockResolvedValue([textPart, customEmojiPart])
-    mockEmojiService.applyCustomEmojis.calledWith(emojiPart, youtubeChannel1.userId).mockResolvedValue([emojiPart])
+    mockEmojiService.applyCustomEmojis.calledWith(textPart, youtubeChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
+    mockEmojiService.applyCustomEmojis.calledWith(emojiPart, youtubeChannel1.userId, streamerId).mockResolvedValue([emojiPart])
 
-    const addedChat = await chatService.onNewChatItem(chatItem1)
+    const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
 
     expect(addedChat).toBe(true)
 
@@ -137,11 +138,12 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
       ...chatItem2,
       messageParts: [textPart, customEmojiPart, emojiPart]
     }
+    const streamerId = 2
     mockChannelStore.createOrUpdate.calledWith('twitch', data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
-    mockEmojiService.applyCustomEmojis.calledWith(textPart, twitchChannel1.userId).mockResolvedValue([textPart, customEmojiPart])
-    mockEmojiService.applyCustomEmojis.calledWith(emojiPart, twitchChannel1.userId).mockResolvedValue([emojiPart])
+    mockEmojiService.applyCustomEmojis.calledWith(textPart, twitchChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
+    mockEmojiService.applyCustomEmojis.calledWith(emojiPart, twitchChannel1.userId, streamerId).mockResolvedValue([emojiPart])
 
-    const addedChat = await chatService.onNewChatItem(chatItem2)
+    const addedChat = await chatService.onNewChatItem(chatItem2, streamerId)
 
     expect(addedChat).toBe(true)
 
@@ -159,11 +161,12 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
   })
 
   test('returns false if unable to add chat item, and does not attempt to call services', async () => {
+    const streamerId = 2;
     (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
     mockChatStore.addChat.mockRejectedValue(new Error('Test'))
 
-    const addedChat = await chatService.onNewChatItem(chatItem1)
+    const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
 
     expect(addedChat).toBe(false)
 

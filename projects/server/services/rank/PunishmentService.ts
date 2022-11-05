@@ -11,6 +11,7 @@ import { addTime } from '@rebel/server/util/datetime'
 import { assert, assertUnreachable } from '@rebel/server/util/typescript'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 
 // It is not an issue on Twitch, but on Youtube we come across the interesting problem of being unable to check
 // the current list of on-platform punishments. This means that, when a punishment occurrs, the platform data
@@ -33,6 +34,7 @@ type Deps = Dependencies<{
   rankStore: RankStore
   chatStore: ChatStore
   youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
+  streamerStore: StreamerStore
 }>
 
 export default class PunishmentService extends ContextClass {
@@ -45,6 +47,7 @@ export default class PunishmentService extends ContextClass {
   private readonly channelStore: ChannelStore
   private readonly chatStore: ChatStore
   private readonly youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
+  private readonly streamerStore: StreamerStore
 
   constructor (deps: Deps) {
     super()
@@ -56,10 +59,13 @@ export default class PunishmentService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.chatStore = deps.resolve('chatStore')
     this.youtubeTimeoutRefreshService = deps.resolve('youtubeTimeoutRefreshService')
+    this.streamerStore = deps.resolve('streamerStore')
   }
 
   public override async initialise () {
-    const currentPunishments = await this.getCurrentPunishments()
+    const streamers = await this.streamerStore.getStreamers()
+    // todo: this is not scalable
+    const currentPunishments = await Promise.all(streamers.map(s => this.getCurrentPunishments(s.id))).then(result => result.flatMap(x => x))
     const timeouts = currentPunishments.filter(p => p.rank.name === 'timeout')
 
     // this never throws an error even if any of the promises reject
@@ -71,20 +77,21 @@ export default class PunishmentService extends ContextClass {
     )))
   }
 
-  public async getCurrentPunishments (): Promise<UserRankWithRelations[]> {
-    return await this.rankStore.getUserRanksForGroup('punishment')
+  public async getCurrentPunishments (streamerId: number): Promise<UserRankWithRelations[]> {
+    return await this.rankStore.getUserRanksForGroup('punishment', streamerId)
   }
 
-  public async getPunishmentHistory (userId: number): Promise<UserRankWithRelations[]> {
-    const history = await this.rankStore.getUserRankHistory(userId)
+  public async getPunishmentHistory (userId: number, streamerId: number): Promise<UserRankWithRelations[]> {
+    const history = await this.rankStore.getUserRankHistory(userId, streamerId)
     return groupFilter(history, 'punishment')
   }
 
-  public async banUser (userId: number, message: string | null): Promise<SetActionRankResult> {
+  public async banUser (userId: number, streamerId: number, message: string | null): Promise<SetActionRankResult> {
     const args: AddUserRankArgs = {
       rank: 'ban',
       message: message,
       userId: userId,
+      streamerId: streamerId,
       expirationTime: null,
       assignee: null // todo: CHAT-385 use logged-in user details
     }
@@ -97,33 +104,35 @@ export default class PunishmentService extends ContextClass {
     return { rankResult, youtubeResults, twitchResults }
   }
 
-  public async isUserPunished (userId: number): Promise<boolean> {
-    const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
+  public async isUserPunished (userId: number, streamerId: number): Promise<boolean> {
+    const currentPunishments = await this.getCurrentPunishmentsForUser(userId, streamerId)
     return currentPunishments.ranks.length > 0
   }
 
   /** Mutes are used only in ChatMate and not relayed to Youtube or Twitch.
    * @throws {@link UserRankAlreadyExistsError}: When a user-rank of that type is already active. */
-  public async muteUser (userId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
+  public async muteUser (userId: number, streamerId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'mute',
       expirationTime: durationSeconds == null ? null : addTime(now, 'seconds', durationSeconds),
       message: message,
       userId: userId,
+      streamerId: streamerId,
       assignee: null // todo: CHAT-385 use logged-in user details
     }
     return await this.rankStore.addUserRank(args)
   }
 
   /** Applies an actual timeout that is relayed to Youtube or Twitch. */
-  public async timeoutUser (userId: number, message: string | null, durationSeconds: number): Promise<SetActionRankResult> {
+  public async timeoutUser (userId: number, streamerId: number, message: string | null, durationSeconds: number): Promise<SetActionRankResult> {
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'timeout',
       expirationTime: addTime(now, 'seconds', durationSeconds),
       message: message,
       userId: userId,
+      streamerId: streamerId,
       assignee: null // todo: CHAT-385 use logged-in user details
     }
     const rankResult = await this.addInternalRank(args)
@@ -141,10 +150,11 @@ export default class PunishmentService extends ContextClass {
   }
 
   /** Returns the updated punishment, if there was one. */
-  public async unbanUser (userId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
+  public async unbanUser (userId: number, streamerId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'ban',
       userId: userId,
+      streamerId: streamerId,
       message: unbanMessage,
       removedBy: null // todo: CHAT-385 use logged-in user details
     }
@@ -157,20 +167,22 @@ export default class PunishmentService extends ContextClass {
     return { rankResult, youtubeResults, twitchResults }
   }
 
-  public async unmuteUser (userId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
+  public async unmuteUser (userId: number, streamerId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
     const args: RemoveUserRankArgs = {
       rank: 'mute',
       userId: userId,
+      streamerId: streamerId,
       message: revokeMessage,
       removedBy: null // todo: CHAT-385 use logged-in user details
     }
     return await this.rankStore.removeUserRank(args)
   }
 
-  public async untimeoutUser (userId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
+  public async untimeoutUser (userId: number, streamerId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'timeout',
       userId: userId,
+      streamerId: streamerId,
       message: revokeMessage,
       removedBy: null // todo: CHAT-385 use logged-in user details
     }
@@ -193,8 +205,8 @@ export default class PunishmentService extends ContextClass {
     await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'refreshTimeout')))
   }
 
-  private async getCurrentPunishmentsForUser (userId: number) {
-    const allRanks = await this.rankStore.getUserRanks([userId])
+  private async getCurrentPunishmentsForUser (userId: number, streamerId: number) {
+    const allRanks = await this.rankStore.getUserRanks([userId], streamerId)
     return groupFilter(allRanks, 'punishment')[0]
   }
 

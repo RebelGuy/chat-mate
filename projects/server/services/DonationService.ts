@@ -58,13 +58,13 @@ export default class DonationService extends ContextClass {
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, userId: number): Promise<void> {
+  public async linkUserToDonation (donationId: number, userId: number, streamerId: number): Promise<void> {
     const time = this.dateTimeHelpers.now()
     await this.donationStore.linkUserToDonation(donationId, userId, time)
 
     const allDonations = await this.donationStore.getDonationsByUserId(userId)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
-    const currentRanks = single(await this.rankStore.getUserRanks([userId])).ranks
+    const currentRanks = single(await this.rankStore.getUserRanks([userId], streamerId)).ranks
 
     const now = new Date()
     const longTermExpiration = addTime(now, 'days', DONATION_EPOCH_DAYS)
@@ -76,6 +76,7 @@ export default class DonationService extends ContextClass {
         await this.rankStore.addUserRank({
           rank: 'donator',
           userId: userId,
+          streamerId: streamerId,
           expirationTime: longTermExpiration,
           assignee: null,
           message: null,
@@ -92,6 +93,7 @@ export default class DonationService extends ContextClass {
         await this.rankStore.addUserRank({
           rank: 'supporter',
           userId: userId,
+          streamerId: streamerId,
           expirationTime: longTermExpiration,
           assignee: null,
           message: null,
@@ -108,6 +110,7 @@ export default class DonationService extends ContextClass {
         await this.rankStore.addUserRank({
           rank: 'member',
           userId: userId,
+          streamerId: streamerId,
           expirationTime: monthFromNow,
           assignee: null,
           message: null,
@@ -121,33 +124,33 @@ export default class DonationService extends ContextClass {
 
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the user is no longer eligible for.
   /* @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
-  public async unlinkUserFromDonation (donationId: number): Promise<void> {
+  public async unlinkUserFromDonation (donationId: number, streamerId: number): Promise<void> {
     const userId = await this.donationStore.unlinkUserFromDonation(donationId)
 
     const allDonations = await this.donationStore.getDonationsByUserId(userId)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
-    const currentRanks = single(await this.rankStore.getUserRanks([userId])).ranks
+    const currentRanks = single(await this.rankStore.getUserRanks([userId], streamerId)).ranks
     const now = new Date()
     const removeMessage = `Automatically removed rank because the user was unlinked from donation ${donationId} and no longer meets the requirements for this rank.`
 
     if (!this.donationHelpers.isEligibleForDonator(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'donator')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'donator', userId: userId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'donator', userId: userId, streamerId, removedBy: null, message: removeMessage })
       }
     }
 
     if (!this.donationHelpers.isEligibleForSupporter(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'supporter')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'supporter', userId: userId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'supporter', userId: userId, streamerId, removedBy: null, message: removeMessage })
       }
     }
 
     if (!this.donationHelpers.isEligibleForMember(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'member')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'member', userId: userId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'member', userId: userId, streamerId, removedBy: null, message: removeMessage })
       }
     }
   }

@@ -17,8 +17,8 @@ export default class AdminService extends ContextClass {
   }
 
   /** Returns all current system admin users. */
-  public async getAdminUsers (): Promise<ChatUser[]> {
-    const allRanks = await this.rankStore.getUserRanksForGroup('administration')
+  public async getAdminUsers (streamerId: number): Promise<ChatUser[]> {
+    const allRanks = await this.rankStore.getUserRanksForGroup('administration', streamerId)
     return allRanks.filter(r => r.rank.name === 'admin').map(r => ({ id: r.userId }))
   }
 }

@@ -94,9 +94,10 @@ export default () => {
     test('correctly adds experience', async () => {
       const admin1 = 3
       const admin2 = 4
-      mockAdminService.getAdminUsers.mockResolvedValue([{ id: admin1 }, { id: admin2 }])
+      const streamerId = 2
+      mockAdminService.getAdminUsers.calledWith(streamerId).mockResolvedValue([{ id: admin1 }, { id: admin2 }])
 
-      await experienceStore.addManualExperience(1, -200, 'This is a test')
+      await experienceStore.addManualExperience(1, streamerId, -200, 'This is a test')
 
       const added = (await db.experienceTransaction.findFirst({ include: {
         experienceDataAdmin: true,

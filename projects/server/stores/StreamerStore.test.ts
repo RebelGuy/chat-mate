@@ -100,6 +100,16 @@ export default () => {
     })
   })
 
+  describe(nameof(StreamerStore, 'getStreamers'), () => {
+    test('Returns all streamers', async () => {
+      await db.streamer.createMany({ data: [{ registeredUserId: 1 }, { registeredUserId: 2 }]})
+
+      const result = await streamerStore.getStreamers()
+
+      expect(result.length).toBe(2)
+    })
+  })
+
   describe(nameof(StreamerStore, 'getStreamerApplications'), () => {
     test('Gets all streamer applications', async () => {
       await db.streamerApplication.createMany({ data: [

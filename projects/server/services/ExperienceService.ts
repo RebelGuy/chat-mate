@@ -77,7 +77,7 @@ export default class ExperienceService extends ContextClass {
 
   /** Adds experience only for chat messages sent during the livestream for unpunished users.
    * Duplicate experience for the same chat message is checked on a database level. */
-  public async addExperienceForChat (chatItem: ChatItem): Promise<void> {
+  public async addExperienceForChat (chatItem: ChatItem, streamerId: number): Promise<void> {
     // ensure that an active public stream exists and is live
     const livestream = await this.livestreamStore.getActiveLivestream()
     if (livestream == null) {
@@ -92,7 +92,7 @@ export default class ExperienceService extends ContextClass {
 
     const externalId = getExternalId(chatItem)
     const userId = await this.channelStore.getUserId(externalId)
-    const isPunished = await this.punishmentService.isUserPunished(userId)
+    const isPunished = await this.punishmentService.isUserPunished(userId, streamerId)
     if (isPunished) {
       return
     }
@@ -213,7 +213,7 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
-  public async modifyExperience (userId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
+  public async modifyExperience (userId: number, streamerId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
     const currentExperiences = await this.experienceStore.getExperience([userId])
 
     // current experience may be negative - this is intentional
@@ -231,7 +231,7 @@ export default class ExperienceService extends ContextClass {
     }
     const requiredExperience = Math.round(this.experienceHelpers.calculateExperience(newLevelData))
     const experienceDelta = requiredExperience - currentExperience
-    await this.experienceStore.addManualExperience(userId, experienceDelta, message)
+    await this.experienceStore.addManualExperience(userId, streamerId, experienceDelta, message)
 
     const updatedLevel = await this.getLevels([userId])
     return single(updatedLevel)

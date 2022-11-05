@@ -1,11 +1,11 @@
-import { Prisma, Rank, RankGroup, RankName, UserRank } from '@prisma/client'
-import { PrismaClientInitializationError, PrismaClientKnownRequestError, PrismaClientUnknownRequestError, PrismaClientValidationError } from '@prisma/client/runtime'
+import { Prisma, Rank, RankGroup, RankName, RegisteredUser, Streamer, UserRank } from '@prisma/client'
+import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { group, subGroupedSingle, unique } from '@rebel/server/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import { group, unique } from '@rebel/server/util/arrays'
+import { UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/server/util/error'
 
 export type UserRanks = {
   userId: number
@@ -14,12 +14,16 @@ export type UserRanks = {
 
 export type UserRankWithRelations = Omit<UserRank, 'rankId'> & {
   rank: Rank
+  streamerName: string | null
 }
 
 export type AddUserRankArgs = {
   rank: RankName
   userId: number
   message: string | null
+
+  // refer to the `GlobalRanks` constant to find out which ranks can have `streamerId = null`
+  streamerId: number | null
 
   // null if assigned by system
   assignee: number | null
@@ -34,10 +38,25 @@ export type AddUserRankArgs = {
 export type RemoveUserRankArgs = {
   rank: RankName
   userId: number
+  streamerId: number | null
   message: string | null
 
   // null if removed by system
   removedBy: number | null
+}
+
+/** These ranks may not be associated with a specific streamer. */
+const GlobalRanks: Record<RankName, boolean> = {
+  admin: true,
+  famous: true,
+  ban: false,
+  timeout: false,
+  mute: false,
+  mod: false,
+  owner: false,
+  donator: false,
+  member: false,
+  supporter: false
 }
 
 type Deps = Dependencies<{
@@ -57,23 +76,31 @@ export default class RankStore extends ContextClass {
 
   /** Adds the rank to the user.
    * @throws {@link UserRankAlreadyExistsError}: When a user-rank of that type is already active.
+   * @throws {@link UserRankRequiresStreamerError}: When the user-rank is only valid in a streamer context, but no streamer name was provided.
    */
   public async addUserRank (args: AddUserRankArgs): Promise<UserRankWithRelations> {
     // note: there is a BEFORE INSERT trigger in the `user_rank` table that ensures the user-rank doesn't already exist.
     // this avoids any potential race conditions that may arise if we were to check this server-side.
 
+    if (GlobalRanks[args.rank] === false && args.streamerId == null) {
+      throw new UserRankRequiresStreamerError()
+    }
+
     try {
-      return await this.db.userRank.create({
+      const result = await this.db.userRank.create({
         data: {
           user: { connect: { id: args.userId }},
           rank: { connect: { name: args.rank }},
+          streamer: args.streamerId == null ? undefined : { connect: { id: args.streamerId } },
           issuedAt: args.time ?? this.dateTimeHelpers.now(),
           assignedByUser: args.assignee == null ? undefined : { connect: { id: args.assignee }},
           message: args.message,
           expirationTime: args.expirationTime
         },
-        include: { rank: true }
+        include: includeUserRankRelations
       })
+      return rawDataToUserRankWithRelations(result)
+
     } catch (e: any) {
       // annoyingly we don't have access to the inner server object, as it is only included in serialised form in the message directly
       if (e instanceof PrismaClientUnknownRequestError && e.message.includes('DUPLICATE_RANK')) {
@@ -94,54 +121,64 @@ export default class RankStore extends ContextClass {
   public async getUserRankById (userRankId: number): Promise<UserRankWithRelations> {
     const result = await this.db.userRank.findUnique({
       where: { id: userRankId },
-      include: { rank: true }
+      include: includeUserRankRelations
     })
 
     if (result == null) {
       throw new UserRankNotFoundError(`Could not find a user-rank with ID ${userRankId}.`)
     } else {
-      return result
+      return rawDataToUserRankWithRelations(result)
     }
   }
 
-  /** Gets the active ranks for each of the provided users. */
-  public async getUserRanks (userIds: number[]): Promise<UserRanks[]> {
+  /** Gets the active ranks for each of the provided users in the context of the streamer id. Note that global ranks are always returned, where applicable. */
+  public async getUserRanks (userIds: number[], streamerId: number | null): Promise<UserRanks[]> {
     const result = await this.db.userRank.findMany({
       where: {
-        ...activeUserRankFilter,
+        ...activeUserRankFilter(streamerId),
         userId: { in: userIds },
       },
-      include: { rank: true }
+      include: includeUserRankRelations
     })
 
-    const groups = group(result, r => r.userId)
+    const groups = group(result.map(rawDataToUserRankWithRelations), r => r.userId)
     return unique(userIds).map(userId => ({
       userId: userId,
       ranks: groups.find(g => g.group === userId)?.items ?? []
     }))
   }
 
-  /** Gets the active user-ranks that are part of the given group. */
-  public async getUserRanksForGroup (rankGroup: RankGroup): Promise<UserRankWithRelations[]> {
-    return await this.db.userRank.findMany({
+  /** Gets the active user-ranks that are part of the given group in the context of the streamer id. Note that global ranks are always returned, where applicable. */
+  public async getUserRanksForGroup (rankGroup: RankGroup, streamerId: number | null): Promise<UserRankWithRelations[]> {
+    const result = await this.db.userRank.findMany({
       where: {
-        ...activeUserRankFilter,
+        ...activeUserRankFilter(streamerId),
         rank: { group: rankGroup }
       },
-      include: { rank: true }
+      include: includeUserRankRelations
     })
+
+    return result.map(rawDataToUserRankWithRelations)
   }
 
-  /** Returns the user's rank history, sorted in descending order. */
-  public async getUserRankHistory (userId: number): Promise<UserRankWithRelations[]> {
-    return await this.db.userRank.findMany({
-      where: { userId: userId },
-      include: { rank: true },
+  /** Returns the user's rank history in the context of the streamer id, sorted in descending order. Note that global ranks are always returned, where applicable. */
+  public async getUserRankHistory (userId: number, streamerId: number | null): Promise<UserRankWithRelations[]> {
+    const result = await this.db.userRank.findMany({
+      where: {
+        userId: userId,
+        OR: [
+          { streamerId: null },
+          { streamerId: streamerId }
+        ]
+      },
+      include: includeUserRankRelations,
       orderBy: { issuedAt: 'desc' }
     })
+
+    return result.map(rawDataToUserRankWithRelations)
   }
 
-  /** Removes the rank from the user.
+  /** Removes the rank from the user in the context of the streamer.
    * @throws {@link UserRankNotFoundError}: When no user-rank of that type is currently active.
   */
   public async removeUserRank (args: RemoveUserRankArgs): Promise<UserRankWithRelations> {
@@ -149,7 +186,8 @@ export default class RankStore extends ContextClass {
     try {
       existing = await this.db.userRank.findFirst({
         where: {
-          ...activeUserRankFilter,
+          ...activeUserRankFilter(args.streamerId),
+          streamerId: args.streamerId, // override filter - the streamerId must match exactly
           userId: args.userId,
           rank: { name: args.rank },
         },
@@ -158,21 +196,23 @@ export default class RankStore extends ContextClass {
       })
     } catch (e: any) {
       if (e.name === 'NotFoundError') {
-        throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for user ${args.userId}.`)
+        throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for user ${args.userId} in the context of streamer ${args.streamerId}.`)
       }
 
       throw e
     }
 
-    return await this.db.userRank.update({
+    const result = await this.db.userRank.update({
       where: { id: existing.id },
       data: {
         revokedTime: this.dateTimeHelpers.now(),
         revokeMessage: args.message,
         revokedByUserId: args.removedBy
       },
-      include: { rank: true }
+      include: includeUserRankRelations
     })
+
+    return rawDataToUserRankWithRelations(result)
   }
 
   /** Sets the expiration time for the given user-rank.
@@ -195,7 +235,7 @@ export default class RankStore extends ContextClass {
   }
 }
 
-const activeUserRankFilter = Prisma.validator<Prisma.UserRankWhereInput>()({
+const activeUserRankFilter = (streamerId: number | null) => Prisma.validator<Prisma.UserRankWhereInput>()({
   AND: [
     // the rank is not revoked
     { revokedTime: null },
@@ -207,9 +247,42 @@ const activeUserRankFilter = Prisma.validator<Prisma.UserRankWhereInput>()({
         { NOT: { expirationTime: null }},
         { expirationTime: { gt: new Date() }}
       ]}
+    ]},
+
+    // include global ranks and ranks for the given streamer context
+    { OR: [
+      { streamerId: null },
+      { streamerId: streamerId }
     ]}
   ]
 })
+
+const includeUserRankRelations = Prisma.validator<Prisma.UserRankInclude>()({
+  rank: true,
+  streamer: { include: { registeredUser: true }}
+})
+
+type RawResult = UserRank & {
+  rank: Rank
+  streamer: (Streamer & { registeredUser: RegisteredUser }) | null
+}
+
+function rawDataToUserRankWithRelations (data: RawResult): UserRankWithRelations {
+  return {
+    id: data.id,
+    assignedByUserId: data.assignedByUserId,
+    expirationTime: data.expirationTime,
+    issuedAt: data.issuedAt,
+    message: data.message,
+    rank: data.rank,
+    revokedByUserId: data.revokedByUserId,
+    revokedTime: data.revokedTime,
+    revokeMessage: data.revokeMessage,
+    userId: data.userId,
+    streamerId: data.streamerId,
+    streamerName: data.streamer?.registeredUser.username ?? null
+  }
+}
 
 export function groupFilter (userRanks: UserRanks[], rankGroup: RankGroup): UserRanks[]
 export function groupFilter (userRanks: UserRankWithRelations[], rankGroup: RankGroup): UserRankWithRelations[]

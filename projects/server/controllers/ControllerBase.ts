@@ -118,6 +118,10 @@ export abstract class ControllerBase extends ContextClass {
     return this.apiService.getCurrentUser()
   }
 
+  protected getStreamerId (): number | null {
+    return this.apiService.getStreamerId()
+  }
+
   protected registerResponseBuilder<
     R extends ApiResponse<Schema, T>,
     Schema extends number = R['schema'],

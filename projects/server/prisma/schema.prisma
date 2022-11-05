@@ -140,6 +140,8 @@ model Streamer {
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
+  userRanks UserRank[]
+
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
 }
@@ -593,6 +595,10 @@ model UserRank {
   userId Int
   user   ChatUser @relation("user_rank_userId", fields: [userId], references: [id], map: "user_rank_userId_fkey")
 
+  /// the streamer context to which this user rank belongs to. if null, the rank applies globally.
+  streamerId Int?
+  streamer   Streamer? @relation(fields: [streamerId], references: [id], map: "user_rank_streamerId_fkey")
+
   /// if null, was assigned by the system
   assignedByUserId Int?
   assignedByUser   ChatUser? @relation("user_rank_assignedByUserId", fields: [assignedByUserId], references: [id], map: "user_rank_assignedByUserId_fkey")
@@ -603,6 +609,7 @@ model UserRank {
 
   @@index([rankId], map: "user_rank_rankId_fkey")
   @@index([userId], map: "user_rank_userId_fkey")
+  @@index([streamerId], map: "user_rank_streamerId_fkey")
   @@index([expirationTime], map: "user_rank_expirationTime_key")
   @@index([revokedTime], map: "user_rank_revokedTime_key")
   @@map("user_rank")

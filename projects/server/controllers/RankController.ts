@@ -102,9 +102,9 @@ export default class RankController extends ControllerBase {
       let ranks: UserRankWithRelations[]
 
       if (includeInactive === true) {
-        ranks = await this.rankStore.getUserRankHistory(userId)
+        ranks = await this.rankStore.getUserRankHistory(userId, this.getStreamerId()!)
       } else {
-        ranks = single(await this.rankStore.getUserRanks([userId])).ranks
+        ranks = single(await this.rankStore.getUserRanks([userId], this.getStreamerId()!)).ranks
       }
 
       ranks = sortBy(ranks, p => p.issuedAt.getTime(), 'desc')
@@ -139,6 +139,7 @@ export default class RankController extends ControllerBase {
       const args: AddUserRankArgs = {
         rank: request.rank,
         userId: request.userId,
+        streamerId: this.getStreamerId()!,
         message: request.message,
         expirationTime: request.durationSeconds ? addTime(new Date(), 'seconds', request.durationSeconds) : null,
         assignee: null // todo: CHAT-385 use logged-in user details
@@ -166,6 +167,7 @@ export default class RankController extends ControllerBase {
       const args: RemoveUserRankArgs = {
         rank: request.rank,
         userId: request.userId,
+        streamerId: this.getStreamerId()!,
         message: request.message,
         removedBy: null // todo: CHAT-385 use logged-in user details
       }
@@ -190,7 +192,7 @@ export default class RankController extends ControllerBase {
     }
 
     try {
-      const result = await this.modService.setModRank(request.userId, true, request.message)
+      const result = await this.modService.setModRank(request.userId, this.getStreamerId()!, true, request.message)
       return builder.success({
         newRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
         newRankError: result.rankResult.error,
@@ -210,7 +212,7 @@ export default class RankController extends ControllerBase {
     }
 
     try {
-      const result = await this.modService.setModRank(request.userId, false, request.message)
+      const result = await this.modService.setModRank(request.userId, this.getStreamerId()!, false, request.message)
       return builder.success({
         removedRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
         removedRankError: result.rankResult.error,

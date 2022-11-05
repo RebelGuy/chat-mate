@@ -41,7 +41,7 @@ export default () => {
     test('Returns true if user exists and password matches', async () => {
       const username = 'username'
       const password = 'test'
-      await db.registeredUser.create({ data: { username: username, hashedPassword: hashString(password) }})
+      await db.registeredUser.create({ data: { username: username, hashedPassword: hashString(username + password) }})
 
       const result = await accountStore.checkPassword(username, password)
 
@@ -95,6 +95,26 @@ export default () => {
 
     test('Throws if the user does not exist', async () => {
       await expect(() => accountStore.createLoginToken('test')).rejects.toThrow()
+    })
+  })
+
+  describe(nameof(AccountStore, 'getRegisteredUserFromChatUser'), () => {
+    test('Returns registered user for the given chat user id', async () => {
+      const registeredUser = await db.registeredUser.create({ data: {
+        username: 'test',
+        hashedPassword: 'test',
+        chatUser: { create: {} }
+      }})
+
+      const result = await accountStore.getRegisteredUserFromChatUser(registeredUser.chatUserId!)
+
+      expect(result).toEqual(registeredUser)
+    })
+
+    test('Returns null if the given chat user is not associated with a registered user', async () => {
+      const result = await accountStore.getRegisteredUserFromChatUser(1)
+
+      expect(result).toBeNull()
     })
   })
 

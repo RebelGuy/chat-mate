@@ -5,7 +5,9 @@ import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClient
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import LogService from '@rebel/server/services/LogService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
+import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 
@@ -17,6 +19,8 @@ type Deps = Dependencies<{
   twitchChannelName: string
   channelStore: ChannelStore
   eventDispatchService: EventDispatchService
+  accountStore: AccountStore
+  streamerStore: StreamerStore
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -29,6 +33,8 @@ export default class TwurpleService extends ContextClass {
   private readonly twitchChannelName: string
   private readonly channelStore: ChannelStore
   private readonly eventDispatchService: EventDispatchService
+  private readonly accountStore: AccountStore
+  private readonly streamerStore: StreamerStore
   private chatClient!: ChatClient
 
   constructor (deps: Deps) {
@@ -40,6 +46,8 @@ export default class TwurpleService extends ContextClass {
     this.twitchChannelName = deps.resolve('twitchChannelName')
     this.channelStore = deps.resolve('channelStore')
     this.eventDispatchService = deps.resolve('eventDispatchService')
+    this.accountStore = deps.resolve('accountStore')
+    this.streamerStore = deps.resolve('streamerStore')
   }
 
   public override initialise () {
@@ -48,7 +56,7 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
+    this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg) as any as void) // it doesn't like async message handlers, but not much we can do about that
 
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onMessageFailed((chanel, reason) => this.logService.logError(this, 'chatClient.onMessageFailed', reason))
@@ -95,9 +103,20 @@ export default class TwurpleService extends ContextClass {
     await this.twurpleApiProxyService.timeout(this.twitchChannelName, twitchUserName, 1, reason ?? undefined)
   }
 
-  private onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
+  private async onMessage (channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
     const evaluated = evalTwitchPrivateMessage(msg)
+    const chatUserId = await this.channelStore.getUserId(channel)
+    const registeredUser = await this.accountStore.getRegisteredUserFromChatUser(chatUserId)
+    if (registeredUser == null) {
+      throw new Error(`Cannot add Twitch chat message from channel ${channel} because the chat user ${chatUserId} is not associated with a registered user`)
+    }
+
+    const streamer = await this.streamerStore.getStreamerByRegisteredUserId(registeredUser.id)
+    if (streamer == null) {
+      throw new Error(`Cannot add Twitch chat message from channel ${channel} because the registered user ${registeredUser.id} is not a streamer`)
+    }
+
     this.logService.logInfo(this, 'Adding 1 new chat item')
-    this.eventDispatchService.addData('chatItem', evaluated)
+    this.eventDispatchService.addData('chatItem', { ...evaluated, streamerId: streamer.id })
   }
 }

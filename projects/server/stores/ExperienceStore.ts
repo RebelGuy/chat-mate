@@ -92,8 +92,8 @@ export default class ExperienceStore extends ContextClass {
     }
   }
 
-  public async addManualExperience (userId: number, xp: number, message: string | null) {
-    const adminUser = first(await this.adminService.getAdminUsers())
+  public async addManualExperience (userId: number, streamerId: number, xp: number, message: string | null) {
+    const adminUser = first(await this.adminService.getAdminUsers(streamerId))
     const experienceTransaction = await this.db.experienceTransaction.create({ data: {
       time: new Date(),
       user: { connect: { id: userId }},

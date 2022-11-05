@@ -49,11 +49,11 @@ export default class ChatService extends ContextClass {
   }
 
   public override initialise () {
-    this.eventDispatchService.onData('chatItem', data => this.onNewChatItem(data))
+    this.eventDispatchService.onData('chatItem', data => this.onNewChatItem(data, data.streamerId))
   }
 
   /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
-  public async onNewChatItem (item: ChatItem): Promise<boolean> {
+  public async onNewChatItem (item: ChatItem, streamerId: number): Promise<boolean> {
     let addedChat: boolean = false
     let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
     let externalId: string
@@ -93,7 +93,7 @@ export default class ChatService extends ContextClass {
       }
 
       // inject custom emojis
-      const splitParts = await Promise.all(item.messageParts.map(part => this.emojiService.applyCustomEmojis(part, channel.userId)))
+      const splitParts = await Promise.all(item.messageParts.map(part => this.emojiService.applyCustomEmojis(part, channel.userId, streamerId)))
       item.messageParts = splitParts.flatMap(p => p)
 
       // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
@@ -110,7 +110,7 @@ export default class ChatService extends ContextClass {
     if (addedChat) {
       try {
         await this.viewershipStore.addViewershipForChatParticipation(channel!.userId, item.timestamp)
-        await this.experienceService.addExperienceForChat(item)
+        await this.experienceService.addExperienceForChat(item, streamerId)
       } catch (e: any) {
         this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to complete side effects.`, e)
       }

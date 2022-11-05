@@ -5,7 +5,7 @@ import { ChatItem } from '@rebel/server/models/chat'
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
 
-type DataType = { chatItem: ChatItem }
+type DataType = { chatItem: ChatItem & { streamerId: number } }
 
 export type DataPair<T extends keyof DataType> = [T, DataType[T]]
 

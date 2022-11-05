@@ -1,5 +1,5 @@
 import { LiveStatus } from '@rebel/masterchat'
-import { ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
+import { ControllerBase, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -43,7 +43,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   chatMateEventService: ChatMateEventService
 }>
 
-export default class ChatMateControllerReal implements IChatMateController {
+export default class ChatMateControllerReal extends ControllerBase implements IChatMateController {
   readonly livestreamStore: LivestreamStore
   readonly viewershipStore: ViewershipStore
   readonly masterchatStatusService: StatusService
@@ -59,6 +59,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly chatMateEventService: ChatMateEventService
 
   constructor (deps: ChatMateControllerDeps) {
+    super(deps, '/chatMate')
     this.livestreamStore = deps.resolve('livestreamStore')
     this.viewershipStore = deps.resolve('viewershipStore')
     this.masterchatStatusService = deps.resolve('masterchatStatusService')
@@ -92,7 +93,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))
     const userChannels = await this.channelService.getActiveUserChannels(userIds)
     const levelInfo = await this.experienceService.getLevels(userIds)
-    const ranks = await this.rankStore.getUserRanks(userIds)
+    const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId())
     const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
 
     let result: PublicChatMateEvent[] = []

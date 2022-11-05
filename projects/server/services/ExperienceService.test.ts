@@ -61,9 +61,10 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       author: data.author1,
       messageParts: [],
     }
+    const streamerId = 2
     mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
 
-    await experienceService.addExperienceForChat(chatItem)
+    await experienceService.addExperienceForChat(chatItem, streamerId)
 
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
 
@@ -78,9 +79,10 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       author: data.author1,
       messageParts: [],
     }
+    const streamerId = 2
     mockLivestreamStore.getActiveLivestream.mockResolvedValue(data.livestream1)
 
-    await experienceService.addExperienceForChat(chatItem)
+    await experienceService.addExperienceForChat(chatItem, streamerId)
 
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
@@ -91,16 +93,18 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       author: data.author1
     } as ChatItem
     const userId = 5
+    const streamerId = 2
     mockChannelStore.getUserId.calledWith(data.author1.channelId).mockResolvedValue(userId)
-    mockPunishmentService.isUserPunished.calledWith(userId).mockResolvedValue(true)
+    mockPunishmentService.isUserPunished.calledWith(userId, streamerId).mockResolvedValue(true)
 
-    await experienceService.addExperienceForChat(chatItem)
+    await experienceService.addExperienceForChat(chatItem, streamerId)
 
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
 
   test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, does not notify ViewershipStore', async () => {
     const userId = 1
+    const streamerId = 2
     const chatItem: ChatItem = {
       id: 'chat1',
       platform: 'youtube',
@@ -140,7 +144,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     const chatItems: Partial<ChatItemWithRelations>[] = [{ userId }]
 
     mockChannelStore.getUserId.calledWith(chatItem.author.channelId).mockResolvedValue(userId)
-    mockPunishmentService.isUserPunished.calledWith(userId).mockResolvedValue(false)
+    mockPunishmentService.isUserPunished.calledWith(userId, streamerId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(userId).mockResolvedValue(prevData)
     mockViewershipStore.getLivestreamViewership.calledWith(userId).mockResolvedValue([
       { ...data.livestream1, userId: userId, viewed: true },
@@ -166,7 +170,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockChatStore.getChatSince.calledWith(anyNumber()).mockResolvedValue(chatItems as ChatItemWithRelations[])
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatItem.timestamp, expect.arrayContaining([chatItems[0]])).mockReturnValue(asRange(experienceData.repetitionPenalty!, -2, 0))
 
-    await experienceService.addExperienceForChat(chatItem)
+    await experienceService.addExperienceForChat(chatItem, streamerId)
 
     const expectedStoreData: [userId: number, timestamp: number, xp: number, data: ChatExperienceData] = [
       userId, chatItem.timestamp, expectedExperienceToAdd, experienceData
@@ -317,6 +321,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     const time1 = new Date()
     const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
     const userId = 1
+    const streamerId = 2
     mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId]))
       .mockResolvedValueOnce([{ userId: userId, experience: 150 }])
       .mockResolvedValueOnce([{ userId: userId, experience: 650 }])
@@ -324,16 +329,17 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 5 as any, levelProgress: 5.1 - 5 as any })).mockReturnValue(asGte(650.1, 0))
 
-    const result = await experienceService.modifyExperience(userId, 3.6, 'Test')
+    const result = await experienceService.modifyExperience(userId, streamerId, 3.6, 'Test')
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
-    expect(call).toEqual<typeof call>([userId, 500, 'Test'])
+    expect(call).toEqual<typeof call>([userId, streamerId, 500, 'Test'])
     expect(result).toEqual<UserLevel>({ userId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
   })
 
   test('level does not fall below 0', async () => {
     const time1 = new Date()
     const userId = 1
+    const streamerId = 2
     mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId]))
       .mockResolvedValueOnce([{ userId: userId, experience: 100 }])
       .mockResolvedValueOnce([{ userId: userId, experience: 0 }])
@@ -341,10 +347,10 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     mockExperienceHelpers.calculateLevel.calledWith(asGte(0, 0)).mockReturnValue({ level: 0, levelProgress: 0 as any })
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 0, levelProgress: 0 })).mockReturnValue(0)
 
-    const result = await experienceService.modifyExperience(userId, -2, 'Test')
+    const result = await experienceService.modifyExperience(userId, streamerId, -2, 'Test')
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
-    expect(call).toEqual<typeof call>([userId, -100, 'Test'])
+    expect(call).toEqual<typeof call>([userId, streamerId, -100, 'Test'])
     expect(result).toEqual<UserLevel>({ userId, level: { level: 0, levelProgress: 0 as any, totalExperience: 0 }})
 
   })

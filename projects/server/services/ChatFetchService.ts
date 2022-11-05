@@ -80,7 +80,9 @@ export default class ChatFetchService extends ContextClass {
   }
 
   private updateMessages = async () => {
+    // todo: CHAT-479 attach streamerId to livestream
     const livestream = await this.livestreamStore.getActiveLivestream()
+    const streamerId = 1
     if (livestream == null) {
       return MAX_INTERVAL
     }
@@ -101,7 +103,7 @@ export default class ChatFetchService extends ContextClass {
 
         let anyFailed = false
         for (const item of chatItems) {
-          const success = await this.chatService.onNewChatItem(item)
+          const success = await this.chatService.onNewChatItem(item, streamerId)
           if (success) {
             hasNewChat = true
           } else {

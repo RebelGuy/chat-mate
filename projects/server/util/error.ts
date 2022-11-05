@@ -26,6 +26,12 @@ export class UserRankAlreadyExistsError extends CustomError {
   }
 }
 
+export class UserRankRequiresStreamerError extends CustomError {
+  constructor (message?: string){
+    super(UserRankRequiresStreamerError.prototype, message ?? 'The user-rank can only be applied in a streamer context.')
+  }
+}
+
 export class ApiResponseError extends CustomError {
   constructor (status: number, errorType?: string, errorDescription?: string) {
     super(ApiResponseError.prototype, `Request failed with code ${status}: ${errorType ?? 'Unknown error'}. ${errorDescription ?? 'No further details available'}`)
