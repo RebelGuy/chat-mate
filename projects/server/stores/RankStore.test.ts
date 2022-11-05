@@ -9,7 +9,7 @@ import { addTime } from '@rebel/server/util/datetime'
 import { Rank, RankName, UserRank } from '@prisma/client'
 import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { single, sortBy, unique } from '@rebel/server/util/arrays'
-import { UserRankNotFoundError, UserRankAlreadyExistsError } from '@rebel/server/util/error'
+import { UserRankNotFoundError, UserRankAlreadyExistsError, UserRankRequiresStreamerError } from '@rebel/server/util/error'
 
 
 export default () => {
@@ -277,7 +277,7 @@ export default () => {
       }
       mockDateTimeHelpers.now.mockReturnValue(time2)
 
-      await expect(async () => await rankStore.addUserRank(args)).rejects.toThrow()
+      await expect(async () => await rankStore.addUserRank(args)).rejects.toThrowError(UserRankRequiresStreamerError)
     })
   })
 
@@ -384,7 +384,7 @@ export default () => {
           { userId: user1, streamerId: streamer2, issuedAt: time1, rankId: famousRank.id }, // wrong streamer
           { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: famousRank.id },
           { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: ownerRank.id },
-          { userId: user1, streamerId: null,      issuedAt: time1, rankId: mutedRank.id },
+          { userId: user1, streamerId: null,      issuedAt: time1, rankId: mutedRank.id }, // global rank should be returned
           { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: modRank.id, revokedTime: time2 },
           { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: mutedRank.id, expirationTime: time2 },
           { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: bannedRank.id, revokedTime: time4 },

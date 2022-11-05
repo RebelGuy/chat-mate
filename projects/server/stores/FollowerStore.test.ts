@@ -46,7 +46,7 @@ export default () => {
     })
   })
 
-  describe.only(nameof(FollowerStore, 'saveNewFollower'), () => {
+  describe(nameof(FollowerStore, 'saveNewFollower'), () => {
     test('saves new follower to the db', async () => {
       const minDate = new Date().getTime() - 1
 
