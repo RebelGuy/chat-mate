@@ -28,7 +28,7 @@ export default class LivestreamController extends ControllerBase {
   public async getLivestreams (): Promise<GetLivestreamsResponse> {
     const builder = this.registerResponseBuilder<GetLivestreamsResponse>('GET /', 1)
     try {
-      const livestreams = await this.livestreamStore.getLivestreams()
+      const livestreams = await this.livestreamStore.getLivestreams(this.getStreamerId()!)
       return builder.success({
         livestreams: livestreams.map(livestreamToPublic)
       })

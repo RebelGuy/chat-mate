@@ -50,38 +50,36 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
-    if (activeLivestream != null) {
-      this.masterchatProxyService.addMasterchat(activeLivestream.liveId)
-    }
+    const activeLivestreams = await this.livestreamStore.getActiveLivestreams()
+    activeLivestreams.forEach(l => this.masterchatProxyService.addMasterchat(l.liveId))
 
     const timerOptions: TimerOptions = {
       behaviour: 'start',
-      callback: () => this.updateLivestreamMetadata(),
+      callback: () => this.updateAllMetadata(),
       interval: METADATA_SYNC_INTERVAL_MS
     }
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  /** Sets the current livestream as inactive, also removing the associated masterchat instance. */
-  public async deactivateLivestream () {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+  /** Sets the streamer's current livestream as inactive, also removing the associated masterchat instance. */
+  public async deactivateLivestream (streamerId: number) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
       return
     }
 
     const liveId = activeLivestream.liveId
-    await this.livestreamStore.deactivateLivestream()
+    await this.livestreamStore.deactivateLivestream(streamerId)
     this.masterchatProxyService.removeMasterchat(liveId)
-    this.logService.logInfo(this, `Livestream with id ${liveId} has been deactivated.`)
+    this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been deactivated.`)
   }
 
-  /** Sets the given livestream as active, and creates a masterchat instance.
+  /** Sets the given livestream as active for the streamer, and creates a masterchat instance.
    * Please ensure you deactivate the previous livestream first, if applicable. */
-  public async setActiveLivestream (liveId: string) {
-    await this.livestreamStore.setActiveLivestream(liveId, 'publicLivestream')
+  public async setActiveLivestream (streamerId: number, liveId: string) {
+    await this.livestreamStore.setActiveLivestream(streamerId, liveId, 'publicLivestream')
     this.masterchatProxyService.addMasterchat(liveId)
-    this.logService.logInfo(this, `Livestream with id ${liveId} has been activated.`)
+    this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
   }
 
   private async fetchYoutubeMetadata (liveId: string): Promise<Metadata | null> {
@@ -102,19 +100,21 @@ export default class LivestreamService extends ContextClass {
     }
   }
 
-  private async updateLivestreamMetadata () {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
-    if (activeLivestream == null) {
-      return
-    } else if (activeLivestream.end != null && new Date() > addTime(activeLivestream.end, 'minutes', 2)) {
+  private async updateAllMetadata () {
+    const activeLivestreams = await this.livestreamStore.getActiveLivestreams()
+    await Promise.all(activeLivestreams.map(l => this.updateLivestreamMetadata(l)))
+  }
+
+  private async updateLivestreamMetadata (livestream: Livestream) {
+    if (livestream.end != null && new Date() > addTime(livestream.end, 'minutes', 2)) {
       // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
       // (after some delay), so there is no need to keep it around.
-      this.logService.logInfo(this, 'Automatically deactivating current livestream because it has ended.')
-      await this.deactivateLivestream()
+      this.logService.logInfo(this, `Automatically deactivating current livestream with id ${livestream.liveId} for streamer ${livestream.streamerId} because it has ended.`)
+      await this.deactivateLivestream(livestream.streamerId)
       return
     }
 
-    const youtubeMetadata = await this.fetchYoutubeMetadata(activeLivestream.liveId)
+    const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.liveId)
     const twitchMetadata = await this.fetchTwitchMetadata()
 
     // deliberately require that youtube metadata is always called successfully, as it
@@ -123,19 +123,18 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
-
     try {
-      const updatedTimes = this.getUpdatedLivestreamTimes(activeLivestream, youtubeMetadata)
+      const updatedTimes = this.getUpdatedLivestreamTimes(livestream, youtubeMetadata)
 
       if (updatedTimes) {
-        await this.livestreamStore.setTimes(activeLivestream.liveId, updatedTimes)
+        await this.livestreamStore.setTimes(livestream.liveId, updatedTimes)
       }
 
       if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {
-        await this.viewershipStore.addLiveViewCount(youtubeMetadata.viewerCount, twitchMetadata?.viewerCount ?? 0)
+        await this.viewershipStore.addLiveViewCount(livestream.id, youtubeMetadata.viewerCount, twitchMetadata?.viewerCount ?? 0)
       }
     } catch (e: any) {
-      this.logService.logError(this, 'Encountered error while syncing metadata.', e)
+      this.logService.logError(this, `Encountered error while syncing metadata for livestream ${livestream.liveId}.`, e)
     }
   }
 

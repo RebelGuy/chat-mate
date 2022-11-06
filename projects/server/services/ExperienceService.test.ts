@@ -62,12 +62,11 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       messageParts: [],
     }
     const streamerId = 2
-    mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
+    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(null)
 
     await experienceService.addExperienceForChat(chatItem, streamerId)
 
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
-
   })
 
   test('does not add experience if livestream not live', async () => {
@@ -80,7 +79,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       messageParts: [],
     }
     const streamerId = 2
-    mockLivestreamStore.getActiveLivestream.mockResolvedValue(data.livestream1)
+    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(data.livestream1)
 
     await experienceService.addExperienceForChat(chatItem, streamerId)
 
@@ -88,10 +87,10 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
   })
 
   test('does not add experience if user is punished', async () => {
-    const chatItem = {
+    const chatItem = cast<ChatItem>({
       platform: 'youtube',
       author: data.author1
-    } as ChatItem
+    })
     const userId = 5
     const streamerId = 2
     mockChannelStore.getUserId.calledWith(data.author1.channelId).mockResolvedValue(userId)
@@ -146,14 +145,14 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockChannelStore.getUserId.calledWith(chatItem.author.channelId).mockResolvedValue(userId)
     mockPunishmentService.isUserPunished.calledWith(userId, streamerId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(userId).mockResolvedValue(prevData)
-    mockViewershipStore.getLivestreamViewership.calledWith(userId).mockResolvedValue([
+    mockViewershipStore.getLivestreamViewership.calledWith(streamerId, userId).mockResolvedValue([
       { ...data.livestream1, userId: userId, viewed: true },
       { ...data.livestream2, userId: userId, viewed: false },
       { ...data.livestream2, userId: userId, viewed: false },
       { ...data.livestream2, userId: userId, viewed: true },
       { ...data.livestream3, userId: userId, viewed: true }
     ]) // -> walking viewership score: 2
-    mockViewershipStore.getLivestreamParticipation.calledWith(userId).mockResolvedValue([
+    mockViewershipStore.getLivestreamParticipation.calledWith(streamerId, userId).mockResolvedValue([
       { ...data.livestream1, userId: userId, participated: true },
       { ...data.livestream2, userId: userId, participated: true },
       { ...data.livestream2, userId: userId, participated: false },

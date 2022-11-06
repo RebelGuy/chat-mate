@@ -79,7 +79,7 @@ export default class ExperienceService extends ContextClass {
    * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItem: ChatItem, streamerId: number): Promise<void> {
     // ensure that an active public stream exists and is live
-    const livestream = await this.livestreamStore.getActiveLivestream()
+    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (livestream == null) {
       return
     }
@@ -97,8 +97,8 @@ export default class ExperienceService extends ContextClass {
       return
     }
 
-    const viewershipStreakMultiplier = await this.getViewershipMultiplier(userId)
-    const participationStreakMultiplier = await this.getParticipationMultiplier(userId)
+    const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, userId)
+    const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, userId)
     const spamMultiplier = await this.getSpamMultiplier(livestream.id, chatItem, userId)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
     const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), userId)
@@ -237,8 +237,8 @@ export default class ExperienceService extends ContextClass {
     return single(updatedLevel)
   }
 
-  private async getViewershipMultiplier (userId: number): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamViewership(userId)
+  private async getViewershipMultiplier (streamerId: number, userId: number): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamViewership(streamerId, userId)
 
     const viewershipScore = calculateWalkingScore(
       streams,
@@ -252,8 +252,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateViewershipMultiplier(viewershipScore)
   }
 
-  private async getParticipationMultiplier (userId: number): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamParticipation(userId)
+  private async getParticipationMultiplier (streamerId: number, userId: number): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamParticipation(streamerId, userId)
 
     const participationScore = calculateWalkingScore(
       streams,

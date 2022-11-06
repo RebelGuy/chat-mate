@@ -17,9 +17,9 @@ export default class LivestreamStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  /** Sets the current active livestream to inactive such that `LivestreamStore.activeLivestream` returns null. */
-  public async deactivateLivestream (): Promise<void> {
-    const activeLivestream = await this.getActiveLivestream()
+  /** Sets the streamer's current active livestream to inactive such that `LivestreamStore.activeLivestream` returns null for that streamer. */
+  public async deactivateLivestream (streamerId: number): Promise<void> {
+    const activeLivestream = await this.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
       return
     }
@@ -30,14 +30,26 @@ export default class LivestreamStore extends ContextClass {
     })
   }
 
-  /** Gets the public livestream that is currently active. */
-  public async getActiveLivestream (): Promise<Livestream | null> {
-    return await this.db.livestream.findFirst({ where: { isActive: true, type: 'publicLivestream' }})
+  /** Gets the streamer's public livestream that is currently active. */
+  public async getActiveLivestream (streamerId: number): Promise<Livestream | null> {
+    return await this.db.livestream.findFirst({ where: {
+      streamerId: streamerId,
+      isActive: true,
+      type: 'publicLivestream'
+    }})
   }
 
-  /** Gets the list of all livestreams, sorted by time in ascending order (with no-yet-started livestreams placed at the end). */
-  public async getLivestreams (): Promise<Livestream[]> {
+  public async getActiveLivestreams (): Promise<Livestream[]> {
+    return await this.db.livestream.findMany({ where: {
+      isActive: true,
+      type: 'publicLivestream'
+    }})
+  }
+
+  /** Gets the list of all of the streamer's livestreams, sorted by time in ascending order (with no-yet-started livestreams placed at the end). */
+  public async getLivestreams (streamerId: number): Promise<Livestream[]> {
     const orderedLivestreams = await this.db.livestream.findMany({
+      where: { streamerId },
       orderBy: { start: 'asc' }
     })
 
@@ -48,20 +60,20 @@ export default class LivestreamStore extends ContextClass {
   }
 
   // todo: in the future, we can pass more options into this function, e.g. if a livestream is considered unlisted
-  /** Sets the given livestream as active, such that `LivestreamStore.activeLivestream` returns this stream.
+  /** Sets the streamer's given livestream as active, such that `LivestreamStore.activeLivestream` returns this stream.
    * Please ensure you deactivate the previous livestream first, if applicable. */
-  public async setActiveLivestream (liveId: string, type: LivestreamType): Promise<Livestream> {
-    const activeLivestream = await this.getActiveLivestream()
+  public async setActiveLivestream (streamerId: number, liveId: string, type: LivestreamType): Promise<Livestream> {
+    const activeLivestream = await this.getActiveLivestream(streamerId)
     if (activeLivestream != null) {
       if (activeLivestream.liveId === liveId) {
         return activeLivestream
       } else {
-        throw new Error('Cannot set an active livestream while another livestream is already active. Please ensure you deactivate the existing livestream first.')
+        throw new Error(`Cannot set an active livestream for streamer ${streamerId} while another livestream is already active. Please ensure you deactivate the existing livestream first.`)
       }
     }
 
     return await this.db.livestream.upsert({
-      create: { liveId, createdAt: new Date(), isActive: true, type },
+      create: { liveId, streamerId, createdAt: new Date(), isActive: true, type },
       update: { isActive: true },
       where: { liveId }
     })

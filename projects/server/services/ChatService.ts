@@ -10,6 +10,7 @@ import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChanne
 import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 
 type ChatEvents = {
   newChatItem: {
@@ -25,6 +26,7 @@ type Deps = Dependencies<{
   channelStore: ChannelStore,
   emojiService: EmojiService,
   eventDispatchService: EventDispatchService
+  livestreamStore: LivestreamStore
 }>
 
 export default class ChatService extends ContextClass {
@@ -36,6 +38,7 @@ export default class ChatService extends ContextClass {
   private readonly channelStore: ChannelStore
   private readonly emojiService: EmojiService
   private readonly eventDispatchService: EventDispatchService
+  private readonly livestreamStore: LivestreamStore
 
   constructor (deps: Deps) {
     super()
@@ -46,6 +49,7 @@ export default class ChatService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.emojiService = deps.resolve('emojiService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
+    this.livestreamStore = deps.resolve('livestreamStore')
   }
 
   public override initialise () {
@@ -101,7 +105,7 @@ export default class ChatService extends ContextClass {
       // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
       // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
       // visual inconsitency. so for now just acknowledge this and leave it.
-      await this.chatStore.addChat(item, channel.userId, externalId)
+      await this.chatStore.addChat(item, streamerId, channel.userId, externalId)
       addedChat = true
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)
@@ -109,7 +113,11 @@ export default class ChatService extends ContextClass {
 
     if (addedChat) {
       try {
-        await this.viewershipStore.addViewershipForChatParticipation(channel!.userId, item.timestamp)
+        const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+        if (livestream == null) {
+          throw new Error(`No livestream is active for streamer ${streamerId}`)
+        }
+        await this.viewershipStore.addViewershipForChatParticipation(livestream, channel!.userId, item.timestamp)
         await this.experienceService.addExperienceForChat(item, streamerId)
       } catch (e: any) {
         this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to complete side effects.`, e)

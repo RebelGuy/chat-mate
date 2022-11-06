@@ -52,11 +52,15 @@ model Livestream {
   // for fetching the youtube chat of this livestream
   continuationToken String? @db.VarChar(1023)
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "livestream_streamerId_fkey")
+
   liveViewers   LiveViewers[]
   chatMessages  ChatMessage[]
   viewingBlocks ViewingBlock[]
 
   @@unique([liveId], map: "livestream_liveId_key")
+  @@index([streamerId], map: "livestream_streamerId_fkey")
   @@map("livestream")
 }
 
@@ -140,7 +144,8 @@ model Streamer {
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
-  userRanks UserRank[]
+  userRanks   UserRank[]
+  livestreams Livestream[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")

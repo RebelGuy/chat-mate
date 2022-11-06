@@ -13,6 +13,7 @@ import * as data from '@rebel/server/_test/testData'
 const livestream: Livestream = {
   id: 1,
   liveId: 'liveId',
+  streamerId: 1,
   continuationToken: 'token',
   createdAt: new Date(),
   start: new Date(),
@@ -150,7 +151,7 @@ export default () => {
     const dbProvider = await startTestDb()
 
     mockLivestreamStore = mock<LivestreamStore>()
-    mockLivestreamStore.getActiveLivestream.mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveLivestream.calledWith(livestream.streamerId).mockResolvedValue(livestream)
 
     chatStore = new ChatStore(new Dependencies({
       dbProvider,
@@ -174,6 +175,7 @@ export default () => {
       youtubeId: ytAuthor2.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor2)}
     }})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
     await db.livestream.create({ data: livestream })
     await db.chatEmoji.create({ data: {
       isCustomEmoji: false,
@@ -190,7 +192,7 @@ export default () => {
     test('adds youtube chat item with ordered text message parts', async () => {
       const chatItem = makeYtChatItem(text1, text2, text3)
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))?.text?.text
@@ -209,7 +211,7 @@ export default () => {
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
       const chatItem = makeYtChatItem(emoji1Saved, emoji2New)
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatEmoji).toEqual([1, 2, 2])
     })
@@ -217,7 +219,7 @@ export default () => {
     test('adds twitch chat item with text and cheer parts', async () => {
       const chatItem = makeTwitchChatItem(text1, cheer1)
 
-      await chatStore.addChat(chatItem, twitchUserId, extTwitchChannel)
+      await chatStore.addChat(chatItem, livestream.streamerId, twitchUserId, extTwitchChannel)
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))!.text!.text
@@ -243,7 +245,7 @@ export default () => {
         livestream: { connect: { id: 1 }}
       }})
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage).toBe(1)
     })
@@ -252,7 +254,7 @@ export default () => {
       mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
       const chatItem = makeYtChatItem(text1)
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       const savedChatMessage = await db.chatMessage.findFirst()
       expect(savedChatMessage!.livestreamId).toBeNull()
@@ -272,9 +274,9 @@ export default () => {
       const chatItem3: ChatItem = { author: ytAuthor1, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
 
       // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
-      await chatStore.addChat(chatItem1, youtube1UserId, extYoutubeChannel1)
-      await chatStore.addChat(chatItem2, youtube1UserId, extYoutubeChannel1)
-      await chatStore.addChat(chatItem3, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem2, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem3, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       const result = await chatStore.getChatSince(chatItem1.timestamp)
 
@@ -316,7 +318,7 @@ export default () => {
         { customEmojiId: 1, rankId: 1 },
         { customEmojiId: 1, rankId: 2 }
       ]})
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       const result = await chatStore.getChatSince(0)
 

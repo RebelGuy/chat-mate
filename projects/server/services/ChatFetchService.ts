@@ -3,7 +3,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from '@rebel/server/models/chat'
 import { isList, List } from 'immutable'
-import { clamp, clampNormFn, sum } from '@rebel/server/util/math'
+import { avg, clamp, clampNormFn, min, sum } from '@rebel/server/util/math'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
@@ -79,14 +79,18 @@ export default class ChatFetchService extends ContextClass {
     }
   }
 
-  private updateMessages = async () => {
-    // todo: CHAT-479 attach streamerId to livestream
-    const livestream = await this.livestreamStore.getActiveLivestream()
-    const streamerId = 1
-    if (livestream == null) {
+  private updateMessages = async (): Promise<number> => {
+    const livestreams = await this.livestreamStore.getActiveLivestreams()
+
+    if (livestreams.length === 0) {
       return MAX_INTERVAL
     }
 
+    const intervals = await Promise.all(livestreams.map(l => this.updateLivestreamMessages(l)))
+    return min(intervals)[0]!
+  }
+
+  private updateLivestreamMessages = async (livestream: Livestream): Promise<number> => {
     const response = await this.fetchLatest(livestream)
 
     let hasNewChat: boolean = false
@@ -103,7 +107,7 @@ export default class ChatFetchService extends ContextClass {
 
         let anyFailed = false
         for (const item of chatItems) {
-          const success = await this.chatService.onNewChatItem(item, streamerId)
+          const success = await this.chatService.onNewChatItem(item, livestream.streamerId)
           if (success) {
             hasNewChat = true
           } else {
