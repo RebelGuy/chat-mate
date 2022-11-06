@@ -37,8 +37,6 @@ beforeEach(() => {
   mockChannelService = mock<ChannelService>()
   mockPunishmentService = mock<PunishmentService>()
 
-  mockLivestreamStore.getActiveLivestream.mockResolvedValue(data.livestream3)
-
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
     experienceStore: mockExperienceStore,
@@ -142,6 +140,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     // cheating a little here since we don't want to write out all properties
     const chatItems: Partial<ChatItemWithRelations>[] = [{ userId }]
 
+    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(data.livestream3)
     mockChannelStore.getUserId.calledWith(chatItem.author.channelId).mockResolvedValue(userId)
     mockPunishmentService.isUserPunished.calledWith(userId, streamerId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(userId).mockResolvedValue(prevData)

@@ -8,7 +8,7 @@ import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -48,16 +48,19 @@ const chatAction1: AddChatItemAction = cast<AddChatItemAction>({
   type: 'addChatItemAction',
   id: 'chat1',
   timestamp: data.time1,
+  message: cast<YTRun[]>([{}, {}])
 })
 const chatAction2: AddChatItemAction = cast<AddChatItemAction>({
   type: 'addChatItemAction',
   id: 'chat2',
   timestamp: data.time2,
+  message: cast<YTRun[]>([{}, {}])
 })
 const chatAction3: AddChatItemAction = cast<AddChatItemAction>({
   type: 'addChatItemAction',
   id: 'chat3',
   timestamp: data.time3,
+  message: cast<YTRun[]>([{}, {}])
 })
 
 let mockChatStore: MockProxy<ChatStore>
@@ -127,8 +130,10 @@ describe(nameof(ChatService, 'initialise'), () => {
 
     const calls = mockMasterchatProxyService.fetch.mock.calls
     expect(calls.length).toBe(2)
-    expect(calls[0]).toEqual([currentLivestreams[0].liveId, token2])
-    expect(calls[1]).toEqual([currentLivestreams[1].liveId, token4])
+    expect(calls).toEqual(expectArray<[liveId: string, continuationToken: string | null]>([
+      [currentLivestreams[0].liveId, token1],
+      [currentLivestreams[1].liveId, token3]
+    ]))
   })
 
   test('quietly handles fetching error and reset continuation token', async () => {
@@ -139,8 +144,10 @@ describe(nameof(ChatService, 'initialise'), () => {
 
     const calls = mockLivestreamStore.setContinuationToken.mock.calls
     expect(calls.length).toBe(2)
-    expect(calls[0]).toEqual([currentLivestreams[0].liveId, null])
-    expect(calls[1]).toEqual([currentLivestreams[1].liveId, token4])
+    expect(calls).toEqual(expectArray<[liveId: string, continuationToken: string | null]>([
+      [currentLivestreams[0].liveId, null],
+      [currentLivestreams[1].liveId, token4]
+    ]))
   })
 
   test('quietly handles no active livestream', async () => {
@@ -161,21 +168,26 @@ describe(nameof(ChatService, 'initialise'), () => {
 
     const chatServiceCalls = mockChatService.onNewChatItem.mock.calls
     expect(chatServiceCalls.length).toBe(3)
-    expect(chatServiceCalls[0]).toEqual([expectObject<ChatItem>({ id: chatAction1.id }), streamer1])
-    expect(chatServiceCalls[1]).toEqual([expectObject<ChatItem>({ id: chatAction2.id }), streamer1])
-    expect(chatServiceCalls[2]).toEqual([expectObject<ChatItem>({ id: chatAction3.id }), streamer2])
+    // we can't be sure of the order, due to the async nature of the implementation
+    expect(chatServiceCalls).toEqual(expectArray<[item: ChatItem, streamerId: number]>([
+      [expectObject<ChatItem>({ id: chatAction1.id }), streamer1],
+      [expectObject<ChatItem>({ id: chatAction2.id }), streamer1],
+      [expectObject<ChatItem>({ id: chatAction3.id }), streamer2]
+    ]))
 
     const livestreamStoreCalls = mockLivestreamStore.setContinuationToken.mock.calls
     expect(livestreamStoreCalls.length).toBe(2)
-    expect(livestreamStoreCalls[0]).toEqual([currentLivestreams[0].liveId, token2])
-    expect(livestreamStoreCalls[1]).toEqual([currentLivestreams[1].liveId, token4])
+    expect(livestreamStoreCalls).toEqual(expectArray<[liveId: string, continuationToken: string | null]>([
+      [currentLivestreams[0].liveId, token2],
+      [currentLivestreams[1].liveId, token4]
+    ]))
   })
 
   test('does not update continuation token if chat service reports error', async () => {
     mockMasterchatProxyService.fetch.calledWith(currentLivestreams[0].liveId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction1]))
     mockMasterchatProxyService.fetch.calledWith(currentLivestreams[1].liveId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
     mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction1.id }), streamer1).mockResolvedValue(false)
-    mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction3.id }), streamer1).mockResolvedValue(true)
+    mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction3.id }), streamer2).mockResolvedValue(true)
 
     await chatFetchService.initialise()
 

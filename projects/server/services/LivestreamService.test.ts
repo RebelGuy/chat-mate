@@ -14,6 +14,7 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { TwitchMetadata } from '@rebel/server/interfaces'
 import { addTime } from '@rebel/server/util/datetime'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -54,6 +55,7 @@ let mockTwurpleApiProxyService: MockProxy<TwurpleApiProxyService>
 let mockLogService: MockProxy<LogService>
 let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockViewershipStore: MockProxy<ViewershipStore>
+let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let livestreamService: LivestreamService
 
 beforeEach(() => {
@@ -63,6 +65,7 @@ beforeEach(() => {
   mockLogService = mock()
   mockTimerHelpers = mock()
   mockViewershipStore = mock()
+  mockDateTimeHelpers = mock()
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -71,6 +74,8 @@ beforeEach(() => {
     return 0
   })
 
+  mockDateTimeHelpers.now.calledWith().mockReturnValue(new Date())
+
   livestreamService = new LivestreamService(new Dependencies({
     livestreamStore: mockLivestreamStore,
     logService: mockLogService,
@@ -78,7 +83,8 @@ beforeEach(() => {
     twurpleApiProxyService: mockTwurpleApiProxyService,
     timerHelpers: mockTimerHelpers,
     viewershipStore: mockViewershipStore,
-    disableExternalApis: false
+    disableExternalApis: false,
+    dateTimeHelpers: mockDateTimeHelpers
   }))
 })
 
@@ -91,7 +97,8 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       twurpleApiProxyService: mockTwurpleApiProxyService,
       timerHelpers: mockTimerHelpers,
       viewershipStore: mockViewershipStore,
-      disableExternalApis: true
+      disableExternalApis: true,
+      dateTimeHelpers: mockDateTimeHelpers
     }))
 
     await livestreamService.initialise()
@@ -137,7 +144,9 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   test('deactivates livestream if finished', async () => {
     const startDate = addTime(new Date(), 'minutes', -10)
     const endDate = addTime(new Date(), 'minutes', -5)
-    mockLivestreamStore.getActiveLivestreams.mockResolvedValue([makeStream(startDate, endDate)])
+    const livestream = makeStream(startDate, endDate)
+    mockLivestreamStore.getActiveLivestreams.mockResolvedValue([livestream])
+    mockLivestreamStore.getActiveLivestream.calledWith(streamer1).mockResolvedValue(livestream)
 
     await livestreamService.initialise()
 
@@ -187,7 +196,8 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const [receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    expect(receivedLivestreamId).toBe(data.livestream1.id)
     expect(receivedYoutubeCount).toBe(metadata.viewerCount)
     expect(receivedTwitchCount).toBe(5)
   })
@@ -200,7 +210,8 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const [receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    expect(receivedLivestreamId).toBe(data.livestream1.id)
     expect(receivedYoutubeCount).toBe(metadata.viewerCount)
     expect(receivedTwitchCount).toBe(0)
   })
@@ -213,17 +224,21 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const [receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    expect(receivedLivestreamId).toBe(data.livestream1.id)
     expect(receivedYoutubeCount).toBe(metadata.viewerCount)
     expect(receivedTwitchCount).toBe(0)
   })
 
-  test('ignores youtube error', async () => {
-    mockMasterchatProxyService.fetchMetadata.mockRejectedValue(new Error('Test error'))
-    mockTwurpleApiProxyService.fetchMetadata.mockRejectedValue(new Error('Test error'))
+  test('ignores API errors', async () => {
+    mockLivestreamStore.getActiveLivestreams.mockResolvedValue([data.livestream1])
+    mockDateTimeHelpers.now.mockReset().calledWith().mockReturnValue(data.livestream1.end!)
+    mockMasterchatProxyService.fetchMetadata.calledWith(data.livestream1.liveId).mockRejectedValue(new Error('Test error'))
+    mockTwurpleApiProxyService.fetchMetadata.calledWith().mockRejectedValue(new Error('Test error'))
 
     await livestreamService.initialise()
 
+    expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(1)
     expect(mockViewershipStore.addLiveViewCount.mock.calls.length).toBe(0)
   })
 })

@@ -2,6 +2,7 @@ import { Livestream } from '@prisma/client'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat, ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
@@ -21,6 +22,7 @@ type Deps = Dependencies<{
   timerHelpers: TimerHelpers
   viewershipStore: ViewershipStore
   disableExternalApis: boolean
+  dateTimeHelpers: DateTimeHelpers
 }>
 
 export default class LivestreamService extends ContextClass {
@@ -33,6 +35,7 @@ export default class LivestreamService extends ContextClass {
   private readonly timerHelpers: TimerHelpers
   private readonly viewershipStore: ViewershipStore
   private readonly disableExternalApis: boolean
+  private readonly dateTimeHelpers: DateTimeHelpers
 
   constructor (deps: Deps) {
     super()
@@ -43,6 +46,7 @@ export default class LivestreamService extends ContextClass {
     this.timerHelpers = deps.resolve('timerHelpers')
     this.viewershipStore = deps.resolve('viewershipStore')
     this.disableExternalApis = deps.resolve('disableExternalApis')
+    this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
   }
 
   public override async initialise (): Promise<void> {
@@ -106,7 +110,7 @@ export default class LivestreamService extends ContextClass {
   }
 
   private async updateLivestreamMetadata (livestream: Livestream) {
-    if (livestream.end != null && new Date() > addTime(livestream.end, 'minutes', 2)) {
+    if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'minutes', 2)) {
       // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
       // (after some delay), so there is no need to keep it around.
       this.logService.logInfo(this, `Automatically deactivating current livestream with id ${livestream.liveId} for streamer ${livestream.streamerId} because it has ended.`)
