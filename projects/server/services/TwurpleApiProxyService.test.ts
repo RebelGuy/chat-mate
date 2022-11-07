@@ -11,7 +11,6 @@ import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'
 import { ChatClient } from '@twurple/chat/lib'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 
-const twitchChannelName = 'test_channel'
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
 let twurpleApiProxyService: TwurpleApiProxyService
@@ -19,9 +18,9 @@ let mockApiClient: DeepMockProxy<ApiClient>
 let mockChatClient: MockProxy<ChatClient>
 
 beforeEach(() => {
+  jest.useFakeTimers()
   mockLogService = mock()
   mockStatusService = mock()
-  mockApiClient = mock()
   mockApiClient = mock({ streams: mock() }) as any // the compiler wants us to mock every property individually?
   const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => mockApiClient })
   mockChatClient = mock()
@@ -29,7 +28,6 @@ beforeEach(() => {
 
   twurpleApiProxyService = new TwurpleApiProxyService(new Dependencies({
     logService: mockLogService,
-    twitchChannelName: twitchChannelName,
     twurpleApiClientProvider: mockTwurpleApiClientProvider,
     twurpleChatClientProvider: mockTwurpleChatClientProvider,
     twurpleStatusService: mockStatusService,
@@ -40,22 +38,24 @@ beforeEach(() => {
 // this test mirrors the MasterchatProxyService tests implementation
 describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
   test('successful request', async () => {
+    const streamerChannelName = 'streamerChannelName'
     const mockedResponse: HelixStream = new HelixStream({ viewer_count: 10 } as any, mockApiClient)
-    mockApiClient.streams.getStreamByUserName.calledWith(twitchChannelName).mockResolvedValue(mockedResponse)
+    mockApiClient.streams.getStreamByUserName.calledWith(streamerChannelName).mockResolvedValue(mockedResponse)
 
-    const metadata = await twurpleApiProxyService.fetchMetadata()
+    const metadata = await twurpleApiProxyService.fetchMetadata(streamerChannelName)
 
     expect(metadata!.viewerCount).toBe(10)
     verifyServicesUsed(false)
   })
 
   test('failed request', async () => {
+    const streamerChannelName = 'streamerChannelName'
     const expectedResponse = new Error()
-    mockApiClient.streams.getStreamByUserName.calledWith(twitchChannelName).mockRejectedValue(expectedResponse)
+    mockApiClient.streams.getStreamByUserName.calledWith(streamerChannelName).mockRejectedValue(expectedResponse)
 
     let actualResponse
     try {
-      await twurpleApiProxyService.fetchMetadata()
+      await twurpleApiProxyService.fetchMetadata(streamerChannelName)
     } catch (e: any) {
       actualResponse = e
     }

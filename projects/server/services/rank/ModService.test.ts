@@ -76,8 +76,8 @@ describe(nameof(ModService, 'setModRank'), () => {
     const suppliedContextTokens = mockMasterchatProxyService.mod.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
 
-    const suppliedTwitchChannelIds = mockTwurpleService.modChannel.mock.calls.map(c => c[0])
-    expect(suppliedTwitchChannelIds).toEqual([1, 2])
+    const twitchCalls = mockTwurpleService.modChannel.mock.calls
+    expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
   })
 
   test('Adding the mod rank when the user is already modded is gracefully handled', async () => {
@@ -121,8 +121,8 @@ describe(nameof(ModService, 'setModRank'), () => {
     const suppliedContextTokens = mockMasterchatProxyService.unmod.mock.calls.map(c => single(c))
     expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
 
-    const suppliedTwitchChannelIds = mockTwurpleService.unmodChannel.mock.calls.map(c => c[0])
-    expect(suppliedTwitchChannelIds).toEqual([1, 2])
+    const twitchCalls = mockTwurpleService.unmodChannel.mock.calls
+    expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
   })
 
   test('Removing the mod rank when the user is not modded is gracefully handled', async () => {

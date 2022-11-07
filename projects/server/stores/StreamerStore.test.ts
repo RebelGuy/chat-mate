@@ -31,9 +31,10 @@ export default () => {
     test('Adds the streamer', async () => {
       await db.streamer.create({ data: { registeredUserId: 1 }})
 
-      await streamerStore.addStreamer(2)
+      const result = await streamerStore.addStreamer(2)
 
       await expectRowCount(db.streamer).toBe(2)
+      expect(result.id).toBe(2)
     })
 
     test('Throws error if the user is already a streamer', async () => {
@@ -120,6 +121,24 @@ export default () => {
       const result = await streamerStore.getStreamerApplications()
 
       expect(result.length).toBe(2)
+    })
+  })
+
+  describe(nameof(StreamerStore, 'getStreamerById'), () => {
+    test('Returns streamer with the given id', async () => {
+      const streamer = await db.streamer.create({ data: { registeredUserId: 2 }})
+
+      const result = await streamerStore.getStreamerById(streamer.id)
+
+      expect(result!.id).toBe(streamer.id)
+    })
+
+    test('Returns null if no streamer exists with the given id', async () => {
+      await db.streamer.create({ data: { registeredUserId: 2 }})
+
+      const result = await streamerStore.getStreamerById(5)
+
+      expect(result).toBeNull()
     })
   })
 

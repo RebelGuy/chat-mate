@@ -99,7 +99,7 @@ export default class PunishmentService extends ContextClass {
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'ban')))
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'ban')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'ban')))
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -139,7 +139,7 @@ export default class PunishmentService extends ContextClass {
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'timeout')))
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'timeout', durationSeconds)))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
 
     if (rankResult.rank != null) {
       const rank = rankResult.rank
@@ -162,7 +162,7 @@ export default class PunishmentService extends ContextClass {
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
     const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'unban')))
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, unbanMessage, 'unban')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, unbanMessage, 'unban')))
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -193,7 +193,7 @@ export default class PunishmentService extends ContextClass {
     }
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, revokeMessage, 'untimeout')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, revokeMessage, 'untimeout')))
     const youtubeResults: YoutubeRankResult[] = ownedChannels.youtubeChannels.map(c => ({ youtubeChannelId: c, error: 'YouTube timeouts expire automatically 5 minutes after they were last applied.'}))
 
     return { rankResult, youtubeResults, twitchResults }
@@ -276,26 +276,26 @@ export default class PunishmentService extends ContextClass {
     return { error, youtubeChannelId }
   }
 
-  private async tryApplyTwitchPunishment (twitchChannelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<TwitchRankResult> {
+  private async tryApplyTwitchPunishment (streamerId: number, twitchChannelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<TwitchRankResult> {
     let error: string | null = null
     try {
       // if the punishment is already applied, twitch will just send a Notice message which we can ignore
       if (type === 'ban') {
-        await this.twurpleService.banChannel(twitchChannelId, reason)
+        await this.twurpleService.banChannel(streamerId, twitchChannelId, reason)
       } else if (type === 'unban') {
-        await this.twurpleService.unbanChannel(twitchChannelId)
+        await this.twurpleService.unbanChannel(streamerId, twitchChannelId)
       } else if (type === 'timeout') {
         assert(durationSeconds != null, 'Timeout duration must be defined')
-        await this.twurpleService.timeout(twitchChannelId, reason, durationSeconds)
+        await this.twurpleService.timeout(streamerId, twitchChannelId, reason, durationSeconds)
       } else if (type === 'untimeout') {
-        await this.twurpleService.untimeout(twitchChannelId, reason)
+        await this.twurpleService.untimeout(streamerId, twitchChannelId, reason)
       } else {
         assertUnreachable(type)
       }
 
-      this.logService.logInfo(this, `Request to ${type} twitch channel ${twitchChannelId} succeeded.`)
+      this.logService.logInfo(this, `Request to ${type} twitch channel ${twitchChannelId} for streamer ${streamerId} succeeded.`)
     } catch (e: any) {
-      this.logService.logError(this, `Request to ${type} twitch channel ${twitchChannelId} failed:`, e.message)
+      this.logService.logError(this, `Request to ${type} twitch channel ${twitchChannelId} for streamer ${streamerId} failed:`, e.message)
       error = e.message
     }
 

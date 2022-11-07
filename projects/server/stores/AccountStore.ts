@@ -68,6 +68,12 @@ export default class AccountStore extends ContextClass {
     return token
   }
 
+  public async getRegisteredUserFromId (registeredUserId: number): Promise<RegisteredUser | null> {
+    return await this.db.registeredUser.findFirst({
+      where: { id: registeredUserId }
+    })
+  }
+
   public async getRegisteredUserFromToken (token: string): Promise<RegisteredUser | null> {
     const result = await this.db.loginToken.findUnique({
       where: { token: token },

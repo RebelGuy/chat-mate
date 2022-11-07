@@ -98,6 +98,24 @@ export default () => {
     })
   })
 
+  describe(nameof(AccountStore, 'getRegisteredUserFromId'), () => {
+    test('Returns registered user for the given id', async () => {
+      const registeredUser = await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
+
+      const result = await accountStore.getRegisteredUserFromId(registeredUser.id)
+
+      expect(result).toEqual(registeredUser)
+    })
+
+    test('Returns null if no registered user exists with the given id', async () => {
+      const registeredUser = await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
+
+      const result = await accountStore.getRegisteredUserFromId(5)
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(AccountStore, 'getRegisteredUserFromChatUser'), () => {
     test('Returns registered user for the given chat user id', async () => {
       const registeredUser = await db.registeredUser.create({ data: {

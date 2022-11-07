@@ -7,6 +7,7 @@ import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat, ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
@@ -23,6 +24,7 @@ type Deps = Dependencies<{
   viewershipStore: ViewershipStore
   disableExternalApis: boolean
   dateTimeHelpers: DateTimeHelpers
+  streamerChannelService: StreamerChannelService
 }>
 
 export default class LivestreamService extends ContextClass {
@@ -36,6 +38,7 @@ export default class LivestreamService extends ContextClass {
   private readonly viewershipStore: ViewershipStore
   private readonly disableExternalApis: boolean
   private readonly dateTimeHelpers: DateTimeHelpers
+  private readonly streamerChannelService: StreamerChannelService
 
   constructor (deps: Deps) {
     super()
@@ -47,6 +50,7 @@ export default class LivestreamService extends ContextClass {
     this.viewershipStore = deps.resolve('viewershipStore')
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+    this.streamerChannelService = deps.resolve('streamerChannelService')
   }
 
   public override async initialise (): Promise<void> {
@@ -95,9 +99,14 @@ export default class LivestreamService extends ContextClass {
     }
   }
 
-  private async fetchTwitchMetadata (): Promise<TwitchMetadata | null> {
+  private async fetchTwitchMetadata (streamerId: number): Promise<TwitchMetadata | null> {
     try {
-      return await this.twurpleApiProxyService.fetchMetadata()
+      const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
+      if (channelName == null) {
+        throw new Error(`Twitch channel name could not be found for streamer ${streamerId}`)
+      }
+
+      return await this.twurpleApiProxyService.fetchMetadata(channelName)
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching twitch metadata.', e.message)
       return null
@@ -119,7 +128,7 @@ export default class LivestreamService extends ContextClass {
     }
 
     const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.liveId)
-    const twitchMetadata = await this.fetchTwitchMetadata()
+    const twitchMetadata = await this.fetchTwitchMetadata(livestream.streamerId)
 
     // deliberately require that youtube metadata is always called successfully, as it
     // is used as the source of truth for the stream status

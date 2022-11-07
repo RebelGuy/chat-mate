@@ -23,7 +23,6 @@ type EnvironmentVariables = {
 
   twitchClientId: string
   twitchClientSecret: string
-  twitchChannelName: string
 
   streamlabsAccessToken: string
   streamlabsSocketToken: string
@@ -61,7 +60,6 @@ function getAllKeys () {
     'websiteHostname': true,
     'nodeEnv': true,
     'port': true,
-    'twitchChannelName': true,
     'twitchClientId': true,
     'twitchClientSecret': true,
     'useFakeControllers': true,

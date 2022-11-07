@@ -58,7 +58,6 @@ The following environment variables must be set in the `.env` file:
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
-- `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
 - `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `STREAMLABS_SOCKET_TOKEN`: The WebSocket token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql

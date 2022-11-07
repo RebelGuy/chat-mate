@@ -9,7 +9,6 @@ import { assertUnreachable } from '@rebel/server/util/typescript'
 type Deps = Dependencies<{
   twurpleAuthProvider: TwurpleAuthProvider
   logService: LogService
-  twitchChannelName: string
   disableExternalApis: boolean
 }>
 
@@ -19,7 +18,6 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
   private readonly twurkpleAuthProvider: TwurpleAuthProvider
   private readonly logService: LogService
   private readonly logContext: LogContext
-  private readonly twitchChannelName: string
   private readonly disableExternalApis: boolean
   private chatClient!: ChatClient
 
@@ -28,7 +26,6 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     this.twurkpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
-    this.twitchChannelName = deps.resolve('twitchChannelName')
     this.disableExternalApis = deps.resolve('disableExternalApis')
   }
 
@@ -39,8 +36,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
 
     this.chatClient = new ChatClient({
       authProvider: this.twurkpleAuthProvider.get(),
-      channels: [this.twitchChannelName],
-      isAlwaysMod: true,
+      isAlwaysMod: false, // can't guarantee that streamers will mod the client, so err on the safe side
       readOnly: false,
 
       // inject custom logging

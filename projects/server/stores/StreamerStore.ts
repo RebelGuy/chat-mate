@@ -34,9 +34,9 @@ export default class StreamerStore extends ContextClass {
   }
 
   /** @throws {@link UserAlreadyStreamerError}: When the registered user is already a streamer. */
-  public async addStreamer (registeredUserId: number) {
+  public async addStreamer (registeredUserId: number): Promise<Streamer> {
     try {
-      await this.db.streamer.create({ data: { registeredUserId }})
+      return await this.db.streamer.create({ data: { registeredUserId }})
     } catch (e: any) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
         throw new UserAlreadyStreamerError()
@@ -85,6 +85,12 @@ export default class StreamerStore extends ContextClass {
   public async getStreamerApplications (): Promise<StreamerApplicationWithUser[]> {
     return await this.db.streamerApplication.findMany({
       include: { registeredUser: true }
+    })
+  }
+
+  public async getStreamerById (streamerId: number): Promise<Streamer | null> {
+    return await this.db.streamer.findFirst({
+      where: { id: streamerId }
     })
   }
 
