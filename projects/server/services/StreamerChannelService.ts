@@ -5,6 +5,7 @@ import LogService from '@rebel/server/services/LogService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import { singleOrNull } from '@rebel/server/util/arrays'
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore
@@ -48,7 +49,7 @@ export default class StreamerChannelService extends ContextClass {
   }
 
   private async getTwitchChannelNameFromStreamer (streamer: Streamer): Promise<string | null> {
-    const registeredUser = await this.accountStore.getRegisteredUserFromId(streamer.registeredUserId)
+    const registeredUser = singleOrNull(await this.accountStore.getRegisteredUsersFromIds([streamer.registeredUserId]))
     if (registeredUser == null) {
       this.logService.logWarning(this, `Invalid registered user id ${streamer.registeredUserId} for streamer ${streamer.id}`)
       return null

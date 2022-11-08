@@ -68,9 +68,9 @@ export default class AccountStore extends ContextClass {
     return token
   }
 
-  public async getRegisteredUserFromId (registeredUserId: number): Promise<RegisteredUser | null> {
-    return await this.db.registeredUser.findFirst({
-      where: { id: registeredUserId }
+  public async getRegisteredUsersFromIds (registeredUserIds: number[]): Promise<RegisteredUser[]> {
+    return await this.db.registeredUser.findMany({
+      where: { id: { in: registeredUserIds } }
     })
   }
 

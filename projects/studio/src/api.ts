@@ -2,44 +2,45 @@ import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse,
 import { GetMasterchatAuthenticationResponse, GetStatusResponse, PingResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
 import { GetTimestampsResponse } from '@rebel/server/controllers/LogController'
 import { GetAccessibleRanksResponse } from '@rebel/server/controllers/RankController'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, RejectApplicationRequest, RejectApplicationResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetStreamersResponse, RejectApplicationRequest, RejectApplicationResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
 import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
+const STREAMER_HEADER = 'X-Streamer'
 
 const baseUrl = SERVER_URL + '/api'
 
-export async function getAllCustomEmojis (loginToken: string): Promise<GetCustomEmojisResponse> {
-  return await get('/emoji/custom', loginToken)
+export async function getAllCustomEmojis (loginToken: string, streamer: string): Promise<GetCustomEmojisResponse> {
+  return await get('/emoji/custom', loginToken, streamer)
 }
 
-export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest['updatedEmoji'], loginToken: string): Promise<UpdateCustomEmojiResponse> {
+export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest['updatedEmoji'], loginToken: string, streamer: string): Promise<UpdateCustomEmojiResponse> {
   const request: UpdateCustomEmojiRequest = {
     schema: 1,
     updatedEmoji
   }
 
-  return await post('/emoji/custom', request, loginToken)
+  return await post('/emoji/custom', request, loginToken, streamer)
 }
 
-export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew, loginToken: string): Promise<AddCustomEmojiResponse> {
+export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew, loginToken: string, streamer: string): Promise<AddCustomEmojiResponse> {
   const request: AddCustomEmojiRequest = {
     schema: 1,
     newEmoji
   }
 
-  return await post('/emoji/custom', request, loginToken)
+  return await post('/emoji/custom', request, loginToken, streamer)
 }
 
-export async function setActiveLivestream (newLivestream: string | null, loginToken: string): Promise<SetActiveLivestreamResponse> {
+export async function setActiveLivestream (newLivestream: string | null, loginToken: string, streamer: string): Promise<SetActiveLivestreamResponse> {
   const request: SetActiveLivestreamRequest = {
     schema: 2,
     livestream: newLivestream
   }
 
-  return await patch('/chatMate/livestream', request, loginToken)
+  return await patch('/chatMate/livestream', request, loginToken, streamer)
 }
 
 export async function ping (): Promise<PingResponse> {
@@ -50,16 +51,16 @@ export async function getMasterchatAuthentication (loginToken: string): Promise<
   return await get('/chatMate/masterchat/authentication', loginToken)
 }
 
-export async function getStatus (loginToken: string): Promise<GetStatusResponse> {
-  return await get('/chatMate/status', loginToken)
+export async function getStatus (loginToken: string, streamer: string): Promise<GetStatusResponse> {
+  return await get('/chatMate/status', loginToken, streamer)
 }
 
 export async function getLogTimestamps (loginToken: string): Promise<GetTimestampsResponse> {
   return await get('/log/timestamps', loginToken)
 }
 
-export async function getAccessibleRanks (loginToken: string): Promise<GetAccessibleRanksResponse> {
-  return await get('/rank/accessible', loginToken)
+export async function getAccessibleRanks (loginToken: string, streamer: string): Promise<GetAccessibleRanksResponse> {
+  return await get('/rank/accessible', loginToken, streamer)
 }
 
 export async function registerAccount (username: string, password: string): Promise<RegisterResponse> {
@@ -78,6 +79,10 @@ export async function logout (loginToken: string): Promise<LogoutResponse> {
 
 export async function authenticate (loginToken: string): Promise<AuthenticateResponse> {
   return await post('/account/authenticate', {}, loginToken)
+}
+
+export async function getStreamers (loginToken: string): Promise<GetStreamersResponse> {
+  return await get('/streamer', loginToken)
 }
 
 export async function getStreamerApplications (loginToken: string): Promise<GetApplicationsResponse> {
@@ -104,24 +109,27 @@ export async function withdrawStreamerApplication (loginToken: string, applicati
   return await post(`/streamer/application/${applicationId}/withdraw`, request, loginToken)
 }
 
-async function get (path: string, loginToken?: string): Promise<any> {
-  return await request('GET', path, undefined, loginToken)
+async function get (path: string, loginToken?: string, streamer?: string): Promise<any> {
+  return await request('GET', path, undefined, loginToken, streamer)
 }
 
-async function post (path: string, requestData: any, loginToken?: string): Promise<any> {
-  return await request('POST', path, requestData, loginToken)
+async function post (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+  return await request('POST', path, requestData, loginToken, streamer)
 }
 
-async function patch (path: string, requestData: any, loginToken?: string): Promise<any> {
-  return await request('PATCH', path, requestData, loginToken)
+async function patch (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+  return await request('PATCH', path, requestData, loginToken, streamer)
 }
 
-async function request (method: string, path: string, requestData: any | undefined, loginToken: string | undefined) {
+async function request (method: string, path: string, requestData: any | undefined, loginToken: string | undefined, streamer: string | undefined) {
   let headers: HeadersInit = {
     'Content-Type': 'application/json'
   }
   if (loginToken != null) {
     headers[LOGIN_TOKEN_HEADER] = loginToken
+  }
+  if (streamer != null) {
+    headers[STREAMER_HEADER] = streamer
   }
 
   const response = await fetch(baseUrl + path, {

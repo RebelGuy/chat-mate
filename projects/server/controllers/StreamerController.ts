@@ -8,6 +8,8 @@ import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@reb
 import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/server/util/error'
 import { GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
 
+export type GetStreamersResponse = ApiResponse<1, { streamers: string[] }>
+
 export type CreateApplicationRequest = ApiRequest<1, { schema: 1, message: string }>
 export type CreateApplicationResponse = ApiResponse<1, { newApplication: PublicStreamerApplication }>
 
@@ -25,6 +27,7 @@ export type WithdrawApplicationResponse = ApiResponse<1, { updatedApplication: P
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
   streamerService: StreamerService
+  accountStore: AccountStore
 }>
 
 @Path(buildPath('streamer'))
@@ -32,11 +35,26 @@ type Deps = ControllerDependencies<{
 export default class StreamerController extends ControllerBase {
   private readonly streamerStore: StreamerStore
   private readonly streamerService: StreamerService
+  private readonly accountStore: AccountStore
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
     this.streamerStore = deps.resolve('streamerStore')
     this.streamerService = deps.resolve('streamerService')
+    this.accountStore = deps.resolve('accountStore')
+  }
+
+  @GET
+  public async getStreamers (): Promise<GetStreamersResponse> {
+    const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /', 1)
+
+    try {
+      const streamers = await this.streamerStore.getStreamers()
+      const users = await this.accountStore.getRegisteredUsersFromIds(streamers.map(s => s.registeredUserId))
+      return builder.success({ streamers: users.map(user => user.username) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
   }
 
   @GET

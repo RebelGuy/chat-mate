@@ -652,6 +652,12 @@ Can return the following errors:
 ## Streamer Endpoints
 Path: `/streamer`.
 
+### `GET`
+Gets all streamer usernames in ChatMate.
+
+Returns data with the following properties:
+- `streamers` (`string[]`): The array of streamer usernames.
+
 ### `GET /application`
 Gets all streamer applications of the user. If the user is an admin, returns all applications of all users.
 

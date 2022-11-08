@@ -98,21 +98,14 @@ export default () => {
     })
   })
 
-  describe(nameof(AccountStore, 'getRegisteredUserFromId'), () => {
-    test('Returns registered user for the given id', async () => {
-      const registeredUser = await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
+  describe(nameof(AccountStore, 'getRegisteredUsersFromIds'), () => {
+    test('Returns known registered users for the given ids', async () => {
+      const registeredUser1 = await db.registeredUser.create({ data: { username: 'test1', hashedPassword: 'test1' }})
+      const registeredUser2 = await db.registeredUser.create({ data: { username: 'test2', hashedPassword: 'test2' }})
 
-      const result = await accountStore.getRegisteredUserFromId(registeredUser.id)
+      const result = await accountStore.getRegisteredUsersFromIds([registeredUser1.id, 5, registeredUser2.id])
 
-      expect(result).toEqual(registeredUser)
-    })
-
-    test('Returns null if no registered user exists with the given id', async () => {
-      const registeredUser = await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
-
-      const result = await accountStore.getRegisteredUserFromId(5)
-
-      expect(result).toBeNull()
+      expect(result).toEqual([registeredUser1, registeredUser2])
     })
   })
 

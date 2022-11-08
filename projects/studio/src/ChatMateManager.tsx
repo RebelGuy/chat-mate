@@ -22,13 +22,13 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
     this.setState({ currentInput: e.target.value })
   }
 
-  setStatus = (loginToken: string) => {
+  setStatus = (loginToken: string, streamer: string) => {
     const livestream = this.state.currentInput.trim()
-    return setActiveLivestream(livestream === '' ? null : livestream, loginToken)
+    return setActiveLivestream(livestream === '' ? null : livestream, loginToken, streamer)
   }
 
-  getStatus = async (loginToken: string) => {
-    const response = await getStatus(loginToken)
+  getStatus = async (loginToken: string, streamer: string) => {
+    const response = await getStatus(loginToken, streamer)
     if (response.success) {
       this.setState({ currentInput: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : this.state.currentInput })
     }
@@ -37,8 +37,8 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
 
   override render() {
     return <div style={{ display: 'block' }}>
-      <ApiRequest onDemand token={1} onRequest={this.getStatus}>
-        <ApiRequestTrigger onRequest={this.setStatus}>
+      <ApiRequest onDemand token={1} requiresStreamer onRequest={this.getStatus}>
+        <ApiRequestTrigger requiresStreamer onRequest={this.setStatus}>
           {(onSetStatus, status, loading, error) => <>
             <input onChange={this.onChangeInput} disabled={loading != null} placeholder='No active livestream' value={this.state.currentInput} />
             <button onClick={onSetStatus} disabled={loading != null}>Set active livestream</button>

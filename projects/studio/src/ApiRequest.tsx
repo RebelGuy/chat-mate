@@ -7,10 +7,16 @@ type Props<TData extends ResponseData<TData>> = {
   children: ((response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => React.ReactNode) | React.ReactNode
 } & ({
   isAnonymous: true
+  requiresStreamer?: false
   onRequest: () => Promise<ApiResponse<any, TData>>
 } | {
   isAnonymous?: false
+  requiresStreamer?: false
   onRequest: (loginToken: string) => Promise<ApiResponse<any, TData>>
+} | {
+  isAnonymous?: false
+  requiresStreamer: true
+  onRequest: (loginToken: string, streamer: string) => Promise<ApiResponse<any, TData>>
 }) & ({
   onDemand: true
   token: string | number | null // when changing this token, a new request will automatically be made. if null, will not make a request
@@ -62,15 +68,28 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     if (this.props.isAnonymous) {
       this.props.onRequest()
         .then(res => this.onResponse(res, token))
-        .catch(e => this.onError(e, token))
+        .catch(e => this.onError(e.message, token))
         .then(() => this.onDone())
     } else {
       if (this.context.loginToken == null) {
         this.onError('You must be logged in to do that', token)
+        return
+      }
+
+      if (this.props.requiresStreamer) {
+        if (this.context.streamer == null) {
+          this.onError('You must select a streamer context', token)
+          return
+        }
+
+        this.props.onRequest(this.context.loginToken, this.context.streamer)
+          .then(res => this.onResponse(res, token))
+          .catch(e => this.onError(e.message, token))
+          .then(() => this.onDone())
       } else {
         this.props.onRequest(this.context.loginToken)
           .then(res => this.onResponse(res, token))
-          .catch(e => this.onError(e, token))
+          .catch(e => this.onError(e.message, token))
           .then(() => this.onDone())
       }
     }
@@ -88,7 +107,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     })
   }
 
-  private onError (e: any, token: string | number | null) {
+  private onError (msg: string, token: string | number | null) {
     if (!this.mounted || this.currentToken !== token) {
       return
     }
@@ -96,7 +115,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     this.setState({
       isLoading: false,
       response: null,
-      error: e.message
+      error: msg
     })
   }
 
