@@ -37,7 +37,7 @@ export default () => {
     db = dbProvider.get()
 
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
     await db.livestream.createMany({ data: [
       { liveId: 'id1', streamerId: streamer1, continuationToken: null, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' },
       { liveId: 'id2', streamerId: streamer1, continuationToken: null, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' },
@@ -239,7 +239,7 @@ export default () => {
   })
 
   describe(nameof(ViewershipStore, 'getLivestreamParticipation'), () => {
-    test('returns empty array if no participation', async () => {
+    test('no participation', async () => {
       await db.chatMessage.createMany({ data: [
         { userId: user1, livestreamId: activeLivestream2.id, time: data.time1, externalId: 'id1' }, // correct user, wrong streamer
         { userId: user2, livestreamId: activeLivestream1.id, time: data.time1, externalId: 'id2' }, // wrong user, correct streamer

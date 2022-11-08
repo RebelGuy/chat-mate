@@ -3,9 +3,14 @@ import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { EmptyObject } from '@rebel/server/types'
-import { InvalidUsernameError, UsernameAlreadyExistsError } from '@rebel/server/util/error'
+import { InvalidUsernameError, TimeoutError, UsernameAlreadyExistsError } from '@rebel/server/util/error'
+import { sleep } from '@rebel/server/util/node'
+import Semaphore from '@rebel/server/util/Semaphore'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { Path, POST, PreProcessor } from 'typescript-rest'
+
+// prevent brute-force login attacks by limiting the number of concurrent requests
+const loginSemaphore = new Semaphore(3, 10000)
 
 type Deps = ControllerDependencies<{
   accountStore: AccountStore
@@ -64,6 +69,19 @@ export default class AccountController extends ControllerBase {
 
     if (isNullOrEmpty(request.username) || isNullOrEmpty(request.password)) {
       return builder.failure(400, 'Username and password must be provided')
+    }
+
+    try {
+      await loginSemaphore.enter()
+      await sleep(2000)
+    } catch (e: any) {
+      if (e instanceof TimeoutError)
+        return builder.failure(500, new Error('Timed out. Please try again later.'))
+      else {
+        return builder.failure(e)
+      }
+    } finally {
+      loginSemaphore.exit()
     }
 
     try {

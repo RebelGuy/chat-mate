@@ -136,6 +136,7 @@ export default class ViewershipStore extends ContextClass {
     reminder<LivestreamType>({ publicLivestream: true })
 
     const livestreams = await this.db.livestream.findMany({
+      where: { streamerId },
       include: {
         chatMessages: {
           where: {

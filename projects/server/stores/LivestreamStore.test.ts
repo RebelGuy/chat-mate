@@ -14,7 +14,7 @@ export default () => {
   const liveId2 = 'id2'
   const liveId3 = 'id3'
   const streamer1 = 1
-  const streamer2 = 1
+  const streamer2 = 2
 
   let livestreamStore: LivestreamStore
   let db: Db
@@ -98,16 +98,16 @@ export default () => {
     test(`gets the ordered list of the streamer's livestreams`, async () => {
       await db.livestream.createMany({
         data: [
-          { liveId: 'puS6DpPKZ3E', streamerId: 2, type: 'publicLivestream', start: data.time3, end: null, isActive: true },
-          { liveId: 'puS6DpPKZ3f', streamerId: 2, type: 'publicLivestream', start: null, end: data.time3, isActive: true },
-          { liveId: 'puS6DpPKZ3g', streamerId: 1, type: 'publicLivestream', start: data.time2, end: data.time3, isActive: false },
-          { liveId: 'puS6DpPKZ3h', streamerId: 2, type: 'publicLivestream', start: data.time2, end: data.time3, isActive: false }
+          { liveId: 'puS6DpPKZ3E', streamerId: streamer2, type: 'publicLivestream', start: data.time3, end: null, isActive: true },
+          { liveId: 'puS6DpPKZ3f', streamerId: streamer2, type: 'publicLivestream', start: null, end: data.time3, isActive: true },
+          { liveId: 'puS6DpPKZ3g', streamerId: streamer1, type: 'publicLivestream', start: data.time2, end: data.time3, isActive: false },
+          { liveId: 'puS6DpPKZ3h', streamerId: streamer2, type: 'publicLivestream', start: data.time2, end: data.time3, isActive: false }
         ],
       })
 
       const result = await livestreamStore.getLivestreams(streamer2)
 
-      expect(result.map(l => l.id)).toEqual([3, 1, 2])
+      expect(result.map(l => l.id)).toEqual([4, 1, 2])
     })
   })
 
@@ -118,9 +118,10 @@ export default () => {
 
       const result = await livestreamStore.setActiveLivestream(streamer1, liveId1, 'publicLivestream')
 
-      const storedLivestream = single(await db.livestream.findMany())
-      expect(storedLivestream).toEqual(expectObject<Livestream>({ liveId: liveId1, streamerId: streamer1, isActive: true }))
-      expect(result).toEqual(storedLivestream)
+      await expectRowCount(db.livestream).toBe(2)
+      const storedLivestreams = await db.livestream.findMany()
+      expect(storedLivestreams[1]).toEqual(expectObject<Livestream>({ liveId: liveId1, streamerId: streamer1, isActive: true }))
+      expect(result).toEqual(storedLivestreams[1])
     })
 
     test('updates existing livestream in the db', async () => {

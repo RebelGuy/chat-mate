@@ -39,6 +39,7 @@ export default class LivestreamStore extends ContextClass {
     }})
   }
 
+  /** Gets the active public livestreams across all streamers. */
   public async getActiveLivestreams (): Promise<Livestream[]> {
     return await this.db.livestream.findMany({ where: {
       isActive: true,

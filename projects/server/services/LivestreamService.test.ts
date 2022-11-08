@@ -182,13 +182,15 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(0)
   })
 
-  test('passes active livestream to masterchatProxyService', async () => {
-    const livestream = makeStream(null, null)
-    mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
+  test('passes active livestreams to masterchatProxyService', async () => {
+    const livestream1 = makeStream(null, null)
+    const livestream2 = { ...makeStream(null, null), id: 2, liveId: 'live2' }
+    mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream1, livestream2])
 
     await livestreamService.initialise()
 
-    expect(single(mockMasterchatProxyService.addMasterchat.mock.calls)).toEqual([livestream.liveId])
+    const addedLiveIds = mockMasterchatProxyService.addMasterchat.mock.calls.map(args => single(args))
+    expect(addedLiveIds).toEqual([livestream1.liveId, livestream2.liveId])
   })
 
   test('updates metadata regularly', async () => {
