@@ -18,7 +18,7 @@ module.exports = (...args) => {
       ...config.resolve,
       fallback: {
         ...config.fallback,
-        'crypto': require.resolve('crypto-browserify'),
+        'crypto': false, // don't need it in Studio, but need to specify an empty implementation so we can import functions from files that contain other functions using `crypto`
         'stream': require.resolve('stream-browserify')
       }
     },
