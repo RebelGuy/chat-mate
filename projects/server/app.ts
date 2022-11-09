@@ -198,7 +198,6 @@ app.use((req, res, next) => {
   const send = res.send.bind(res)
 
   res.send = (body) => {
-    let isSimpleMessage = false
     let responseBody: ApiResponse<any, any> | null
     if (body == null) {
       responseBody = null
@@ -211,14 +210,13 @@ app.use((req, res, next) => {
           throw new Error('It is expected that only errors are ever sent with a simple message.')
         }
 
-        isSimpleMessage = true
         responseBody = {
           schema: 1,
           timestamp: new Date().getTime(),
           success: false,
           error: {
             errorCode: res.statusCode as any,
-            errorType: res.statusMessage ?? 'Something went wrong',
+            errorType: res.statusMessage ?? 'Internal Server Error',
             message: body
           }
         }
@@ -310,10 +308,13 @@ Server.buildServices(app,
 
 // error handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  // do nothing
+  // any errors reaching here are unhandled - just return a 500
+  logContext.logError('Express encountered error for the request at ' + req.url + ':', err)
+  res.sendStatus(500)
 
-  // don't call `next` - the next middleware would be the default express error handler,
-  // which just logs the error to the console
+  // don't call `next(error)` - the next middleware would be the default express error handler,
+  // which just logs the error to the console.
+  // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
 })
 
 process.on('unhandledRejection', (error) => {

@@ -11,8 +11,6 @@ export async function requireAuth (req: Request, res?: Response) {
 
   // the api service will send the request (which gets intercepted by our `send` override in `app.ts`)
   // just before throwing an error.
-  // throwing errors will print a big error message in the console, but it will gracefully interrupt the middlewares flow.
-  // todo: find a better way to cancel a request from within the preprocessor. at the very least, surpress the error log.
   // todo: streamline this so it's reusable (i.e. create a common PreProcessor wrapper function)
   try {
     await apiService.authenticateCurrentUser()
@@ -33,7 +31,7 @@ export async function requireAuth (req: Request, res?: Response) {
 
 /** User must be logged in, and specify the streamer (of which they are a viewer). Both the `registeredUser` and `streamerId` context variables will be available during the request. */
 export async function requireStreamer (req: Request, res?: Response) {
-  await requireAuth(req)
+  await requireAuth(req, res)
 
   const context = getContextProvider(req)
   const apiService = context.getClassInstance(toCamelCase(ApiService.name)) as ApiService

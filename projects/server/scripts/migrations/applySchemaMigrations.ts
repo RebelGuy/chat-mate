@@ -13,7 +13,7 @@ const main = async () => {
     await promptInput('Hit enter to continue, or terminate the script now...')
     console.log('')
 
-    const command = `yarn prisma migrate dev`
+    const command = `prisma migrate dev`
     try {
       await execAsync(`yarn ${command}`)
     } catch (e) {
