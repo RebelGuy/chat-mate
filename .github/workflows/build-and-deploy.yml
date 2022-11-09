@@ -133,6 +133,7 @@ jobs:
         run: |
           touch ./projects/studio/.env
           echo REACT_APP_SERVER_URL=${{ inputs.SERVER_URL }} >> ./projects/studio/.env
+          echo CI=false >> ./projects/studio/.env
           cat ./projects/studio/.env
       
       - name: Build typescript project
