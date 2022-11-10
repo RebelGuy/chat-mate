@@ -95,7 +95,7 @@ export default function LoginProvider (props: Props) {
       setInitialised(true)
     }
     loadContext()
-  }, [])
+  })
 
   return (
     <LoginContext.Provider

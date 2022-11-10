@@ -33,7 +33,7 @@ export default function LoginForm (props: Props) {
       setLoggingIn(false)
     }
     tryLogin()
-  }, [])
+  })
 
   return (
     <ApiRequestTrigger isAnonymous onRequest={() => onLogin(username, password, onSuccess)}>
