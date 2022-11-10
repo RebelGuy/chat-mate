@@ -1,4 +1,4 @@
-import { RegisteredUser } from '@prisma/client'
+import { RankName, RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ApiService from '@rebel/server/controllers/ApiService'
@@ -120,6 +120,10 @@ export abstract class ControllerBase extends ContextClass {
 
   protected getStreamerId (): number | null {
     return this.apiService.getStreamerId()
+  }
+
+  protected getRanks (): RankName[] | null {
+    return this.apiService.getRanks()
   }
 
   protected registerResponseBuilder<

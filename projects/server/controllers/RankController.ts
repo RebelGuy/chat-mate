@@ -15,7 +15,7 @@ import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/server/util/datetime'
-import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
@@ -89,6 +89,7 @@ export default class RankController extends ControllerBase {
   }
 
   @GET
+  @PreProcessor(requireRank('owner'))
   public async getUserRanks (
     @QueryParam('userId') userId: number,
     @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active ranks
@@ -129,6 +130,7 @@ export default class RankController extends ControllerBase {
   }
 
   @POST
+  @PreProcessor(requireRank('owner'))
   public async addUserRank (request: AddUserRankRequest): Promise<AddUserRankResponse> {
     const builder = this.registerResponseBuilder<AddUserRankResponse>('POST', 1)
     if (request == null || request.schema !== builder.schema || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
@@ -157,6 +159,7 @@ export default class RankController extends ControllerBase {
   }
 
   @DELETE
+  @PreProcessor(requireRank('owner'))
   public async removeUserRank (request: RemoveUserRankRequest): Promise<RemoveUserRankResponse> {
     const builder = this.registerResponseBuilder<RemoveUserRankResponse>('DELETE', 1)
     if (request == null || request.schema !== builder.schema || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
@@ -185,6 +188,7 @@ export default class RankController extends ControllerBase {
 
   @POST
   @Path('/mod')
+  @PreProcessor(requireRank('owner'))
   public async addModRank (request: AddModRankRequest): Promise<AddModRankResponse> {
     const builder = this.registerResponseBuilder<AddModRankResponse>('POST /mod', 1)
     if (request == null || request.schema !== builder.schema || request.userId == null) {
@@ -205,6 +209,7 @@ export default class RankController extends ControllerBase {
 
   @DELETE
   @Path('/mod')
+  @PreProcessor(requireRank('owner'))
   public async removeModRank (request: RemoveModRankRequest): Promise<RemoveModRankResponse> {
     const builder = this.registerResponseBuilder<RemoveModRankResponse>('DELETE /mod', 1)
     if (request == null || request.schema !== builder.schema || request.userId == null) {

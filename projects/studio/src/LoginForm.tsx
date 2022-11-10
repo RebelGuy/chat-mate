@@ -23,17 +23,18 @@ export default function LoginForm (props: Props) {
     props.onBack()
   }
 
+  const onBack = props.onBack // just making eslint happy :/
   useEffect(() => {
     const tryLogin = async () => {
       setLoggingIn(true)
       const result = await loginContext.login()
       if (result) {
-        props.onBack()
+        onBack()
       }
       setLoggingIn(false)
     }
     tryLogin()
-  })
+  }, [loginContext, onBack])
 
   return (
     <ApiRequestTrigger isAnonymous onRequest={() => onLogin(username, password, onSuccess)}>
@@ -47,7 +48,7 @@ export default function LoginForm (props: Props) {
             {loadingNode}
             {errorNode}
           </form>
-          <button disabled={loggingIn} onClick={props.onRegister}>Register for an account</button>
+          <button disabled={loggingIn} onClick={() => { console.log('clicked'); props.onRegister() }}>Register for an account</button>
         </>
       )}
     </ApiRequestTrigger>

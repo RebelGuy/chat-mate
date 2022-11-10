@@ -11,7 +11,7 @@ import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
-import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 export type GetSinglePunishment = ApiResponse<2, { punishment: Tagged<1, PublicUserRank> }>
 
@@ -59,6 +59,7 @@ type Deps = ControllerDependencies<{
 
 @Path(buildPath('punishment'))
 @PreProcessor(requireStreamer)
+@PreProcessor(requireRank('mod'))
 export default class PunishmentController extends ControllerBase {
   private readonly rankStore: RankStore
   private readonly punishmentService: PunishmentService

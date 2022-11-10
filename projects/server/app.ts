@@ -198,6 +198,11 @@ app.use((req, res, next) => {
   const send = res.send.bind(res)
 
   res.send = (body) => {
+    if (res.headersSent) {
+      // already sent
+      return res
+    }
+
     let responseBody: ApiResponse<any, any> | null
     if (body == null) {
       responseBody = null
@@ -240,20 +245,6 @@ app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname 
 app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
 app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
 app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
-
-// this is middleware - we can supply an ordered collection of such functions,
-// and they will run in order to do common operations on the request before it
-// reaches the controllers.
-app.use((req, res, next) => {
-  req.on('error', (e) => logContext.logError('Express encountered error for the request at ' + req.url + ':', e))
-  res.on('error', (e) => logContext.logError('Express encountered error for the response at ' + req.url + ':', e))
-
-
-  // todo: do auth here, and fail if not authorised
-
-  // go to the next handler
-  next()
-})
 
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
@@ -310,7 +301,10 @@ Server.buildServices(app,
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   // any errors reaching here are unhandled - just return a 500
   logContext.logError('Express encountered error for the request at ' + req.url + ':', err)
-  res.sendStatus(500)
+
+  if (!res.headersSent) {
+    res.sendStatus(500)
+  }
 
   // don't call `next(error)` - the next middleware would be the default express error handler,
   // which just logs the error to the console.

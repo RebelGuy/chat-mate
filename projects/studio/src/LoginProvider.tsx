@@ -54,7 +54,7 @@ export default function LoginProvider (props: Props) {
     setStreamer(null)
   }
 
-  async function onLogin (): Promise<boolean> {
+  const onLogin = React.useCallback(async (): Promise<boolean> => {
     try {
       const loginToken = window.localStorage.getItem('loginToken')
       if (loginToken == null) {
@@ -76,7 +76,7 @@ export default function LoginProvider (props: Props) {
     }
 
     return false
-  }
+  }, [])
 
   // componentDidMount equivalent
   // authenticate the saved token, if any exists
@@ -95,7 +95,7 @@ export default function LoginProvider (props: Props) {
       setInitialised(true)
     }
     loadContext()
-  })
+  }, [onLogin])
 
   return (
     <LoginContext.Provider

@@ -7,7 +7,7 @@ import env from '@rebel/server/globals'
 import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 import { EmptyObject } from '@rebel/server/types'
-import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 export type PingResponse = ApiResponse<1, EmptyObject>
 
@@ -75,6 +75,7 @@ export default class ChatMateController extends ControllerBase {
   @GET
   @Path('events')
   @PreProcessor(requireStreamer)
+  @PreProcessor(requireRank('owner'))
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
@@ -93,6 +94,7 @@ export default class ChatMateController extends ControllerBase {
   @PATCH
   @Path('livestream')
   @PreProcessor(requireStreamer)
+  @PreProcessor(requireRank('owner'))
   public async setActiveLivestream (request: SetActiveLivestreamRequest): Promise<SetActiveLivestreamResponse> {
     const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream', 2)
     if (request == null || request.livestream === undefined) {
@@ -108,7 +110,7 @@ export default class ChatMateController extends ControllerBase {
 
   @GET
   @Path('masterchat/authentication')
-  @PreProcessor(requireAuth)
+  @PreProcessor(requireRank('admin'))
   public async getMasterchatAuthentication (): Promise<GetMasterchatAuthenticationResponse> {
     const builder = this.registerResponseBuilder<GetMasterchatAuthenticationResponse>('GET /masterchat/authentication', 1)
     try {

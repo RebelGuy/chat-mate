@@ -1,5 +1,5 @@
 import { ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank } from '@rebel/server/controllers/preProcessors'
 import { PublicLogTimestamps } from '@rebel/server/controllers/public/log/PublicLogTimestamps'
 import LogQueryService from '@rebel/server/services/LogQueryService'
 import { GET, Path, PreProcessor } from 'typescript-rest'
@@ -14,6 +14,7 @@ type Deps = ControllerDependencies<{
 
 @Path(buildPath('log'))
 @PreProcessor(requireAuth)
+@PreProcessor(requireRank('admin'))
 export default class LogController extends ControllerBase {
   private readonly logQueryService: LogQueryService
 

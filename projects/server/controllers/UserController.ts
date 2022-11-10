@@ -1,5 +1,5 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicUserNames } from '@rebel/server/controllers/public/user/PublicUserNames'
 import { userDataToPublicUserNames } from '@rebel/server/models/user'
 import ChannelService from '@rebel/server/services/ChannelService'
@@ -28,6 +28,7 @@ type Deps = ControllerDependencies<{
 
 @Path(buildPath('user'))
 @PreProcessor(requireStreamer)
+@PreProcessor(requireRank('owner'))
 export default class UserController extends ControllerBase {
   readonly channelService: ChannelService
   readonly channelStore: ChannelStore

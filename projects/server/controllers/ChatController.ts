@@ -4,7 +4,7 @@ import { ApiResponse, buildPath, ControllerBase, Endpoint, Tagged } from '@rebel
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import env from '@rebel/server/globals'
 import { GET, Path, PreProcessor, QueryParam } from 'typescript-rest'
-import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 export type GetChatResponse = ApiResponse<8, {
   // include the timestamp so it can easily be used for the next request
@@ -20,6 +20,7 @@ export interface IChatController {
 
 @Path(buildPath('chat'))
 @PreProcessor(requireStreamer)
+@PreProcessor(requireRank('owner'))
 export default class ChatController extends ControllerBase {
   private readonly implementation: IChatController
 

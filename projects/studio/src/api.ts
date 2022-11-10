@@ -22,7 +22,7 @@ export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest[
     updatedEmoji
   }
 
-  return await post('/emoji/custom', request, loginToken, streamer)
+  return await patch('/emoji/custom', request, loginToken, streamer)
 }
 
 export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew, loginToken: string, streamer: string): Promise<AddCustomEmojiResponse> {
