@@ -66,6 +66,10 @@ export default function LoginProvider (props: Props) {
       if (response.success) {
         setLoginToken(loginToken)
         setUsername(response.data.username)
+
+        if (response.data.isStreamer && streamer == null) {
+          onSetStreamer(response.data.username)
+        }
         return true
       } else if (response.error.errorCode === 401) {
         console.log('Stored login token was invalid. The user must log in.')
@@ -76,6 +80,7 @@ export default function LoginProvider (props: Props) {
     }
 
     return false
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // componentDidMount equivalent

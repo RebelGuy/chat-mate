@@ -2,6 +2,7 @@ import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependenc
 import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { EmptyObject } from '@rebel/server/types'
 import { InvalidUsernameError, TimeoutError, UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { sleep } from '@rebel/server/util/node'
@@ -15,27 +16,30 @@ const loginSemaphore = new Semaphore(3, 10000)
 type Deps = ControllerDependencies<{
   accountStore: AccountStore
   accountHelpers: AccountHelpers
+  streamerStore: StreamerStore
 }>
 
 export type RegisterRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
 export type RegisterResponse = ApiResponse<1, { loginToken: string }>
 
 export type LoginRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
-export type LoginResponse = ApiResponse<1, { loginToken: string }>
+export type LoginResponse = ApiResponse<1, { loginToken: string, isStreamer: boolean }>
 
 export type LogoutResponse = ApiResponse<1, EmptyObject>
 
-export type AuthenticateResponse = ApiResponse<1, { username: string }>
+export type AuthenticateResponse = ApiResponse<1, { username: string, isStreamer: boolean }>
 
 @Path(buildPath('account'))
 export default class AccountController extends ControllerBase {
   private readonly accountStore: AccountStore
   private readonly accountHelpers: AccountHelpers
+  private readonly streamerStore: StreamerStore
 
   constructor (deps: Deps) {
     super(deps, 'account')
     this.accountStore = deps.resolve('accountStore')
     this.accountHelpers = deps.resolve('accountHelpers')
+    this.streamerStore = deps.resolve('streamerStore')
   }
 
   @POST
@@ -92,7 +96,8 @@ export default class AccountController extends ControllerBase {
       }
 
       const token = await this.accountStore.createLoginToken(username)
-      return builder.success({ loginToken: token })
+      const streamer = await this.streamerStore.getStreamerByName(username)
+      return builder.success({ loginToken: token, isStreamer: streamer != null })
     } catch (e: any) {
       if (e instanceof InvalidUsernameError) {
         return builder.failure(401, new Error('Invalid login details'))
@@ -122,12 +127,13 @@ export default class AccountController extends ControllerBase {
   @POST
   @Path('authenticate')
   @PreProcessor(requireAuth)
-  public authenticate (): AuthenticateResponse {
+  public async authenticate (): Promise<AuthenticateResponse> {
     const builder = this.registerResponseBuilder<AuthenticateResponse>('POST /authenticate', 1)
 
     try {
       const user = super.getCurrentUser()!
-      return builder.success({ username: user.username })
+      const streamer = await this.streamerStore.getStreamerByName(user.username)
+      return builder.success({ username: user.username, isStreamer: streamer != null })
     } catch (e: any) {
       return builder.failure(e)
     }

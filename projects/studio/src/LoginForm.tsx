@@ -36,6 +36,20 @@ export default function LoginForm (props: Props) {
     tryLogin()
   }, [loginContext, onBack])
 
+  const onLogin = async (username: string, password: string, onSuccess: (loginToken: string) => void): Promise<LoginResponse> => {
+    const result = await login(username, password)
+  
+    if (result.success) {
+      onSuccess(result.data.loginToken)
+
+      if (loginContext.streamer == null && result.data.isStreamer) {
+        loginContext.setStreamer(loginContext.username)
+      }
+    }
+  
+    return result
+  }
+
   return (
     <ApiRequestTrigger isAnonymous onRequest={() => onLogin(username, password, onSuccess)}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
@@ -53,14 +67,4 @@ export default function LoginForm (props: Props) {
       )}
     </ApiRequestTrigger>
   )
-}
-
-async function onLogin (username: string, password: string, onSuccess: (loginToken: string) => void): Promise<LoginResponse> {
-  const result = await login(username, password)
-
-  if (result.success) {
-    onSuccess(result.data.loginToken)
-  }
-
-  return result
 }
