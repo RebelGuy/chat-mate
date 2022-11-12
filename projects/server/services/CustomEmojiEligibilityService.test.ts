@@ -99,7 +99,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleDonationEmojis'), () 
   test('Returns only emojis that are eligible to be used in donations', async () => {
     setupCustomEmojis([customEmoji1, []], [customEmoji2, []], [customEmoji3, []])
 
-    const result = await customEmojiEligibilityService.getEligibleDonationEmojis()
+    const result = await customEmojiEligibilityService.getEligibleDonationEmojis(streamerId)
 
     expect(result.length).toBe(2)
     expect(result[0].id).toBe(customEmoji1.id)
@@ -111,6 +111,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleDonationEmojis'), () 
 function setupCustomEmojis (...whitelist: [EmojiData, Rank[]][]) {
   mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue(whitelist.map(w => ({
     ...w[0],
+    streamerId: streamerId,
     isActive: true,
     modifiedAt: new Date(),
     version: 0,

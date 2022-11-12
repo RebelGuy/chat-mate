@@ -13,6 +13,8 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import { PartialChatMessage } from '@rebel/server/models/chat'
 
+const streamerId = 3
+
 let mockDonationStore: MockProxy<DonationStore>
 let mockDonationHelpers: MockProxy<DonationHelpers>
 let mockRankStore: MockProxy<RankStore>
@@ -49,7 +51,7 @@ describe(nameof(DonationService, 'addDonation'), () => {
       streamlabsUserId: null
     }
 
-    await donationService.addDonation(donation)
+    await donationService.addDonation(donation, streamerId)
 
     expect(mockEmojiService.applyCustomEmojisToDonation.mock.calls.length).toBe(0)
 
@@ -70,9 +72,9 @@ describe(nameof(DonationService, 'addDonation'), () => {
       streamlabsUserId: null
     }
     const parts = cast<PartialChatMessage[]>([{ type: 'text' }, { type: 'customEmoji' }])
-    mockEmojiService.applyCustomEmojisToDonation.calledWith(message).mockResolvedValue(parts)
+    mockEmojiService.applyCustomEmojisToDonation.calledWith(message, streamerId).mockResolvedValue(parts)
 
-    await donationService.addDonation(donation)
+    await donationService.addDonation(donation, streamerId)
 
     const addedData = single(single(mockDonationStore.addDonation.mock.calls))
     expect(addedData.messageParts).toBe(parts)
@@ -83,7 +85,6 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
   test('Links the user to the donation and adds/extends the donation user-ranks that the user is eligible for', async () => {
     const donationId = 2
     const userId = 2
-    const streamerId = 3
     const time = new Date()
     const linkedDonation = cast<Donation>({ })
     const allDonations = cast<Donation[]>([
@@ -124,7 +125,6 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
   test('', async () => {
     const donationId = 2
     const userId = 2
-    const streamerId = 3
     const unlinkedDonation = cast<Donation>({ })
     const allDonations = cast<Donation[]>([
       { time: data.time1, amount: 1 },

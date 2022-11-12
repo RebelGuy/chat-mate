@@ -29,6 +29,9 @@ const extYoutubeChannel2 = 'channel_2'
 const twitchUserId = 2
 const extTwitchChannel = 'channel2'
 
+const streamer1 = 1
+const streamer2 = 2
+
 const ytAuthor1: Author = {
   attributes: { isModerator: true, isOwner: false, isVerified: false },
   channelId: extYoutubeChannel1,
@@ -312,7 +315,7 @@ export default () => {
         isActive: true,
         version: 0,
         canUseInDonationMessage: true,
-        customEmoji: { create: { symbol: 'test' }}
+        customEmoji: { create: { streamerId: streamer1, symbol: 'test' }}
       }})
       await db.customEmojiRankWhitelist.createMany({ data: [
         { customEmojiId: 1, rankId: 1 },

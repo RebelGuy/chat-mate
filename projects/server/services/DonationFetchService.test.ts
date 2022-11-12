@@ -2,10 +2,11 @@ import { Dependencies } from '@rebel/server/context/context'
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
 import DonationService from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
-import DonationStore from '@rebel/server/stores/DonationStore'
 import { single } from '@rebel/server/util/arrays'
 import { cast, expectArray, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
+
+const streamerId = 1
 
 let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
 let mockDonationService: MockProxy<DonationService>
@@ -33,17 +34,17 @@ describe(nameof(DonationFetchService, 'initialise'), () => {
 
     await donationFetchService.initialise()
 
-    const initialAddedDonations = mockDonationService.addDonation.mock.calls.map(args => single(args).donationId)
-    expect(initialAddedDonations).toEqual(expectArray(initialDonations.map(d => d.donationId)))
+    const initialAddedDonations = mockDonationService.addDonation.mock.calls.map((args: [donation: StreamlabsDonation, streamerId: number]) => [args[0].donationId, args[1]])
+    expect(initialAddedDonations).toEqual(expectArray(initialDonations.map(d => [d.donationId, 1]))) // todo: properly handle streamerId
 
     // part 2: subscription
     mockDonationService.addDonation.mockClear()
     const additionalDonation = cast<StreamlabsDonation>({ donationId: 4 })
     const callback = single(single(mockStreamlabsProxyService.listen.mock.calls))
 
-    await callback(additionalDonation)
+    await callback(additionalDonation, streamerId)
 
-    const additionalAddedDonation = single(single(mockDonationService.addDonation.mock.calls)).donationId
-    expect(additionalAddedDonation).toEqual(additionalDonation.donationId)
+    const additionalAddedDonation: [donation: StreamlabsDonation, streamerId: number] = single(mockDonationService.addDonation.mock.calls)
+    expect(additionalAddedDonation).toEqual([additionalDonation, streamerId])
   })
 })

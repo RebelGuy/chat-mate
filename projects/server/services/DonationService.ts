@@ -37,10 +37,10 @@ export default class DonationService extends ContextClass {
     this.emojiService = deps.resolve('emojiService')
   }
 
-  public async addDonation (donation: StreamlabsDonation) {
+  public async addDonation (donation: StreamlabsDonation, streamerId: number) {
     let messageParts: PartialChatMessage[] = []
     if (donation.message != null && donation.message.trim().length > 0) {
-      messageParts = await this.emojiService.applyCustomEmojisToDonation(donation.message)
+      messageParts = await this.emojiService.applyCustomEmojisToDonation(donation.message, streamerId)
     }
 
     const data: DonationCreateArgs = {

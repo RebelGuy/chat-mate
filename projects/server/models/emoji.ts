@@ -16,10 +16,11 @@ export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist):
   }
 }
 
-export function publicObjectNewToNewCustomEmoji (emoji: PublicCustomEmojiNew): CustomEmojiCreateData {
+export function publicObjectNewToNewCustomEmoji (emoji: PublicCustomEmojiNew, streamerId: number): CustomEmojiCreateData {
   return {
     name: emoji.name,
     symbol: emoji.symbol,
+    streamerId: streamerId,
     image: Buffer.from(emoji.imageData, 'base64'),
     levelRequirement: emoji.levelRequirement,
     canUseInDonationMessage: emoji.canUseInDonationMessage,

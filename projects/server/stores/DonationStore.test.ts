@@ -12,6 +12,9 @@ import { addTime } from '@rebel/server/util/datetime'
 import { single } from '@rebel/server/util/arrays'
 import { PartialCustomEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 
+const streamer1 = 1
+const streamer2 = 2
+
 export default () => {
   let db: Db
   let donationStore: DonationStore
@@ -47,8 +50,10 @@ export default () => {
         streamlabsUserId: null,
         messageParts: [part1, part2, part3]
       }
+      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
       await db.customEmoji.create({ data: {
         symbol: 'test',
+        streamerId: streamer1,
         customEmojiVersions: { create: {
           image: Buffer.from(''),
           isActive: true,
@@ -118,6 +123,7 @@ export default () => {
     })
 
     test('Gets donation with message', async () => {
+      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
       const donation = await createDonation({})
       await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
       await db.chatCustomEmoji.create({ data: {
@@ -129,7 +135,7 @@ export default () => {
           canUseInDonationMessage: true,
           name: 'name',
           version: 0,
-          customEmoji: { create: { symbol: 'symbol' }}
+          customEmoji: { create: { streamerId: streamer1, symbol: 'symbol' }}
         }}
       }})
       await db.chatMessage.create({ data: {

@@ -54,7 +54,7 @@ export type StreamlabsDonation = {
   message: string | null
 }
 
-export type DonationCallback = (donation: StreamlabsDonation) => void | Promise<void>
+export type DonationCallback = (donation: StreamlabsDonation, streamerId: number) => void | Promise<void>
 
 type GetDonationsRequestParams = Partial<{
   limit: number // defaults to `10`
@@ -123,6 +123,9 @@ export default class StreamlabsProxyService extends ApiService {
   private readonly socketToken: string
   private readonly nodeEnv: NodeEnv
 
+  // todo: need to listen to every streamer. map of websockets? and need to store the token in the db instead
+  private readonly streamerId = 1
+
   private donationCallback: DonationCallback | null
   private readonly webSocket: SocketIOClient.Socket
 
@@ -155,6 +158,7 @@ export default class StreamlabsProxyService extends ApiService {
   public async getDonationsAfterId (id: number | null): Promise<StreamlabsDonation[]> {
     // todo: the access_token doesn't work (returns 401), so the only way to get this to work
     // would be to properly implement the OAuth2 flow described in https://rebel-guy.atlassian.net/browse/CHAT-378?focusedCommentId=10079
+    // todo: must return streamerId
     return []
 
     // todo: will need to implement pagination in the future, but will work just fine for low volumes of data
@@ -209,7 +213,7 @@ export default class StreamlabsProxyService extends ApiService {
     }
 
     try {
-      await this.donationCallback!(donation)
+      await this.donationCallback!(donation, this.streamerId)
     } catch (e: any) {
       this.logService.logError(this, `Donation callback failed to run for donation id ${donation.donationId}:`, e)
     }

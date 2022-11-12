@@ -28,8 +28,8 @@ export default class EmojiService extends ContextClass {
     return this.applyEligibleEmojis(part, eligibleEmojis)
   }
 
-  public async applyCustomEmojisToDonation (text: string): Promise<PartialChatMessage[]> {
-    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleDonationEmojis()
+  public async applyCustomEmojisToDonation (text: string, streamerId: number): Promise<PartialChatMessage[]> {
+    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleDonationEmojis(streamerId)
     const part: PartialTextChatMessage = { type: 'text', text: text, isBold: false, isItalics: false }
     return this.applyEligibleEmojis(part, eligibleEmojis)
   }

@@ -25,9 +25,9 @@ let emojiService: EmojiService
 beforeEach(() => {
   mockCustomEmojiServiceEligibilityService = mock()
   mockCustomEmojiServiceEligibilityService.getEligibleEmojis.calledWith(userId, streamerId).mockResolvedValue([
-    { id: customEmoji1.id, symbol: customEmoji1.symbol, latestVersion: customEmoji1Version },
-    { id: customEmoji2.id, symbol: customEmoji2.symbol, latestVersion: customEmoji2Version },
-    { id: customEmoji3.id, symbol: customEmoji3.symbol, latestVersion: customEmoji3Version }
+    { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
+    { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version },
+    { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, latestVersion: customEmoji3Version }
   ])
 
   emojiService = new EmojiService(new Dependencies({
@@ -131,7 +131,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 
   test('text message contains only ineligible custom emojis', async () => {
     mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(userId, streamerId).mockResolvedValue([
-      { id: customEmoji3.id, symbol: customEmoji3.symbol, latestVersion: customEmoji3Version }
+      { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, latestVersion: customEmoji3Version }
     ])
     const part: PartialTextChatMessage = {
       type: 'text',
@@ -147,7 +147,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 
   test('text message contains one eligible and one ineligible custom emoji', async () => {
     mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(userId, streamerId).mockResolvedValue([
-      { id: customEmoji1.id, symbol: customEmoji1.symbol, latestVersion: customEmoji1Version }
+      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version }
     ])
     const part: PartialTextChatMessage = {
       type: 'text',
@@ -182,9 +182,9 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
     const trollEmoji: EmojiData = { id: 1, name: 'Troll', symbol: 'troll', levelRequirement: 0, image: Buffer.from('') }
     const trollEmojiVersion = 1
     mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(userId, streamerId).mockResolvedValue([
-      { id: customEmoji1.id, symbol: customEmoji1.symbol, latestVersion: customEmoji1Version },
-      { id: customEmoji2.id, symbol: customEmoji2.symbol, latestVersion: customEmoji2Version },
-      { id: trollEmoji.id, symbol: trollEmoji.symbol, latestVersion: trollEmojiVersion }
+      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
+      { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version },
+      { id: trollEmoji.id, symbol: trollEmoji.symbol, streamerId: streamerId, latestVersion: trollEmojiVersion }
     ])
 
     const part: PartialTextChatMessage = {
@@ -222,22 +222,22 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 
 describe(nameof(EmojiService, 'applyCustomEmojisToDonation'), () => {
   test(`Forwards the text if it doesn't contain emojis`, async () => {
-    mockCustomEmojiServiceEligibilityService.getEligibleDonationEmojis.mockResolvedValue([])
+    mockCustomEmojiServiceEligibilityService.getEligibleDonationEmojis.calledWith(streamerId).mockResolvedValue([])
     const text = `:${customEmoji1.symbol}:`
 
-    const result = await emojiService.applyCustomEmojisToDonation(text)
+    const result = await emojiService.applyCustomEmojisToDonation(text, streamerId)
 
     expect(single(result)).toEqual(expectObject<PartialTextChatMessage>({ text }))
   })
 
   test('Applies only custom emojis with the donation flag enabled', async () => {
-    mockCustomEmojiServiceEligibilityService.getEligibleDonationEmojis.mockResolvedValue([
-      { id: customEmoji1.id, symbol: customEmoji1.symbol, latestVersion: customEmoji1Version },
-      { id: customEmoji2.id, symbol: customEmoji2.symbol, latestVersion: customEmoji2Version }
+    mockCustomEmojiServiceEligibilityService.getEligibleDonationEmojis.calledWith(streamerId).mockResolvedValue([
+      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
+      { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version }
     ])
     const text = `abc :${customEmoji1.symbol}:def:${customEmoji2.symbol}: ghi`
 
-    const result = await emojiService.applyCustomEmojisToDonation(text)
+    const result = await emojiService.applyCustomEmojisToDonation(text, streamerId)
 
     expect(result.length).toBe(5)
     expect(result[0]).toEqual(expectObject<PartialTextChatMessage>({ text: 'abc ' }))

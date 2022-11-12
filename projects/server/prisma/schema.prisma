@@ -144,8 +144,9 @@ model Streamer {
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
-  userRanks   UserRank[]
-  livestreams Livestream[]
+  userRanks    UserRank[]
+  livestreams  Livestream[]
+  customEmojis CustomEmoji[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -493,10 +494,14 @@ model CustomEmoji {
 
   symbol String @db.VarChar(32) // unique
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "custom_emoji_streamerId_key")
+
   customEmojiVersions      CustomEmojiVersion[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
 
-  @@unique([symbol], map: "custom_emoji_symbol_key")
+  @@unique([streamerId, symbol], map: "custom_emoji_streamerId_symbol_key")
+  @@index([streamerId], map: "custom_emoji_streamerId_key")
   @@map("custom_emoji")
 }
 
