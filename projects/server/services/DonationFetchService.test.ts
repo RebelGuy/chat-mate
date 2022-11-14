@@ -40,7 +40,7 @@ describe(nameof(DonationFetchService, 'initialise'), () => {
     // part 2: subscription
     mockDonationService.addDonation.mockClear()
     const additionalDonation = cast<StreamlabsDonation>({ donationId: 4 })
-    const callback = single(single(mockStreamlabsProxyService.listen.mock.calls))
+    const callback = single(single(mockStreamlabsProxyService.setDonationCallback.mock.calls))
 
     await callback(additionalDonation, streamerId)
 

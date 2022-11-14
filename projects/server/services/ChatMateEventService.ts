@@ -38,7 +38,7 @@ export default class ChatMateEventService extends ContextClass {
     this.donationStore = deps.resolve('donationStore')
   }
 
-  public async getEventsSince (since: number): Promise<ChatMateEvent[]> {
+  public async getEventsSince (streamerId: number, since: number): Promise<ChatMateEvent[]> {
     const diffs = await this.experienceService.getLevelDiffs(since)
 
     let events: ChatMateEvent[] = []
@@ -64,7 +64,7 @@ export default class ChatMateEventService extends ContextClass {
       })
     }
 
-    const newDonations = await this.donationStore.getDonationsSince(since)
+    const newDonations = await this.donationStore.getDonationsSince(streamerId, since)
     for (let i = 0; i < newDonations.length; i++) {
       const donation = newDonations[i]
       events.push({

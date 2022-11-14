@@ -87,7 +87,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
 
-    const events = await this.chatMateEventService.getEventsSince(since)
+    const events = await this.chatMateEventService.getEventsSince(this.getStreamerId()!, since)
 
     // pre-fetch user data for `levelUp` events
     const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))

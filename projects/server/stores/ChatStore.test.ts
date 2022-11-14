@@ -338,7 +338,8 @@ export default () => {
         formattedAmount: '$1.00',
         name: 'Test user',
         streamlabsId: 1,
-        time: data.time1
+        time: data.time1,
+        streamerId: streamer1
       }})
       await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
       await db.chatMessage.create({ data: {

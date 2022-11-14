@@ -59,7 +59,6 @@ The following environment variables must be set in the `.env` file:
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
-- `STREAMLABS_SOCKET_TOKEN`: The WebSocket token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -311,6 +310,19 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `404`: When the request data is not sent, or when no user was linked to the given donation.
+
+### `POST /streamlabs/socketToken`
+*Current schema: 1.*
+
+Sets the streamlab socket token for listening to the current streamer's donations. The server is unable to get donations if the token is not set, or is invalid.
+
+Request data (body):
+- `websocketToken` (`string | null`): The streamlabs socket token to use. It can be found at https://streamlabs.com/dashboard#/settings/api-settings. If set, the server will immediately start listening to donations. If `null`, the server will stop listening to donations (if applicable).
+
+Returns data with the following properties:
+- `result` (`string`): The result of applying the specified socket token.
+  - Set to `success` if the operation was successful and resulted in a state change.
+  - Set to `noChange` if the operation was successful, but the provided token was the same as the existing token and thus no state change occurred.
 
 ## Emoji Endpoints
 Path: `/emoji`.

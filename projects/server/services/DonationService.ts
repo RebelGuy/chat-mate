@@ -5,7 +5,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
 import { PartialChatMessage } from '@rebel/server/models/chat'
 import EmojiService from '@rebel/server/services/EmojiService'
-import { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
+import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
@@ -18,6 +18,7 @@ type Deps = Dependencies<{
   donationHelpers: DonationHelpers
   dateTimeHelpers: DateTimeHelpers
   emojiService: EmojiService
+  streamlabsProxyService: StreamlabsProxyService
 }>
 
 export default class DonationService extends ContextClass {
@@ -26,6 +27,7 @@ export default class DonationService extends ContextClass {
   private readonly donationHelpers: DonationHelpers
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly emojiService: EmojiService
+  private readonly streamlabsProxyService: StreamlabsProxyService
 
   constructor (deps: Deps) {
     super()
@@ -35,6 +37,7 @@ export default class DonationService extends ContextClass {
     this.donationHelpers = deps.resolve('donationHelpers')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.emojiService = deps.resolve('emojiService')
+    this.streamlabsProxyService = deps.resolve('streamlabsProxyService')
   }
 
   public async addDonation (donation: StreamlabsDonation, streamerId: number) {
@@ -44,6 +47,7 @@ export default class DonationService extends ContextClass {
     }
 
     const data: DonationCreateArgs = {
+      streamerId: streamerId,
       amount: donation.amount,
       currency: donation.currency,
       formattedAmount: donation.formattedAmount,
@@ -62,7 +66,7 @@ export default class DonationService extends ContextClass {
     const time = this.dateTimeHelpers.now()
     await this.donationStore.linkUserToDonation(donationId, userId, time)
 
-    const allDonations = await this.donationStore.getDonationsByUserId(userId)
+    const allDonations = await this.donationStore.getDonationsByUserId(streamerId, userId)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
     const currentRanks = single(await this.rankStore.getUserRanks([userId], streamerId)).ranks
 
@@ -122,12 +126,27 @@ export default class DonationService extends ContextClass {
     }
   }
 
+  /** Returns true if the socket token has been updated, and false if the provided socket token is the same as the existing token. */
+  public async setStreamlabsSocketToken (streamerId: number, streamlabsSocketToken: string | null): Promise<boolean> {
+    const hasUpdated = await this.donationStore.setStreamlabsSocketToken(streamerId, streamlabsSocketToken)
+
+    if (hasUpdated) {
+      if (streamlabsSocketToken != null) {
+        this.streamlabsProxyService.listenToStreamerDonations(streamerId, streamlabsSocketToken)
+      } else {
+        this.streamlabsProxyService.stopListeningToStreamerDonations(streamerId)
+      }
+    }
+
+    return hasUpdated
+  }
+
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the user is no longer eligible for.
   /* @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
   public async unlinkUserFromDonation (donationId: number, streamerId: number): Promise<void> {
     const userId = await this.donationStore.unlinkUserFromDonation(donationId)
 
-    const allDonations = await this.donationStore.getDonationsByUserId(userId)
+    const allDonations = await this.donationStore.getDonationsByUserId(streamerId, userId)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
     const currentRanks = single(await this.rankStore.getUserRanks([userId], streamerId)).ranks
     const now = new Date()

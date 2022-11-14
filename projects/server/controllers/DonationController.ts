@@ -1,5 +1,5 @@
 import { Donation } from '@prisma/client'
-import { ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicDonation } from '@rebel/server/controllers/public/donation/PublicDonation'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { donationToPublicObject } from '@rebel/server/models/donation'
@@ -13,13 +13,16 @@ import { nonNull, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
-import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 type GetDonationsResponse = ApiResponse<1, { donations: Tagged<1, PublicDonation>[] }>
 
 type LinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonation> }>
 
 type UnlinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonation> }>
+
+type SetWebsocketTokenRequest = ApiRequest<1, { schema: 1, websocketToken: string | null }>
+type SetWebsocketTokenResponse = ApiResponse<1, { result: 'success' | 'noChange' }>
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -52,7 +55,7 @@ export default class DonationController extends ControllerBase {
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /', 1)
     try {
-      const donations = await this.donationStore.getDonationsSince(0)
+      const donations = await this.donationStore.getDonationsSince(this.getStreamerId()!, 0)
       return builder.success({
         donations: await this.getPublicDonations(donations)
       })
@@ -106,6 +109,19 @@ export default class DonationController extends ControllerBase {
       if (e instanceof DonationUserLinkNotFoundError) {
         return builder.failure(404, e)
       }
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/streamlabs/socketToken')
+  public async setWebsocketToken (request: SetWebsocketTokenRequest): Promise<SetWebsocketTokenResponse> {
+    const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /websocketToken', 1)
+
+    try {
+      const hasUpdated = await this.donationService.setStreamlabsSocketToken(this.getStreamerId()!, request.websocketToken)
+      return builder.success({ result: hasUpdated ? 'success' : 'noChange' })
+    } catch (e: any) {
       return builder.failure(e)
     }
   }

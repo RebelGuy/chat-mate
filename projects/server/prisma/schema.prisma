@@ -144,9 +144,11 @@ model Streamer {
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
-  userRanks    UserRank[]
-  livestreams  Livestream[]
-  customEmojis CustomEmoji[]
+  userRanks             UserRank[]
+  livestreams           Livestream[]
+  customEmojis          CustomEmoji[]
+  donations             Donation[]
+  streamlabsSocketToken StreamlabsSocketToken?
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -666,10 +668,28 @@ model Donation {
   formattedAmount  String
   name             String   @db.VarChar(256)
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "donation_streamerId_fkey")
+
   chatMessage ChatMessage?
 
   @@unique([streamlabsId], map: "donation_streamlabsId_key")
+  @@index([streamerId], map: "donation_streamerId_fkey")
   @@map("donation")
+}
+
+/// The streamers' streamlabs socket tokens found at https://streamlabs.com/dashboard#/settings/api-settings
+model StreamlabsSocketToken {
+  id Int @id @default(autoincrement())
+
+  time  DateTime @default(now())
+  token String   @db.VarChar(512)
+
+  streamerId Int // unique - every streamer can have at most one websocket token
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "streamlabs_socket_token_streamerId_fkey")
+
+  @@unique([streamerId], map: "streamlabs_socket_token_streamerId_fkey")
+  @@map("streamlabs_socket_token")
 }
 
 model DonationLink {

@@ -78,6 +78,7 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import StreamerController from '@rebel/server/controllers/StreamerController'
 import StreamerService from '@rebel/server/services/StreamerService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -99,7 +100,6 @@ const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
 const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
 const dbTransactionTimeout = env('dbTransactionTimeout')
 const streamlabsAccessToken = env('streamlabsAccessToken')
-const streamlabsSocketToken = env('streamlabsSocketToken')
 
 const globalContext = ContextProvider.create()
   .withObject('app', app)
@@ -120,7 +120,6 @@ const globalContext = ContextProvider.create()
   .withProperty('managedIdentityClientId', managedIdentityClientId)
   .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withProperty('streamlabsAccessToken', streamlabsAccessToken)
-  .withProperty('streamlabsSocketToken', streamlabsSocketToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -129,6 +128,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('accountHelpers', AccountHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
+  .withFactory('websocketFactory', WebsocketFactory)
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('applicationInsightsService', ApplicationInsightsService)

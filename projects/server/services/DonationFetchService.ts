@@ -29,7 +29,7 @@ export default class DonationFetchService extends ContextClass {
       await this.onDonation(donation, 1)
     }
 
-    this.streamlabsProxyService.listen(this.onDonation)
+    this.streamlabsProxyService.setDonationCallback(this.onDonation)
   }
 
   private onDonation = async (donation: StreamlabsDonation, streamerId: number) => {
