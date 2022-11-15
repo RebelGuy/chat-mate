@@ -39,7 +39,7 @@ export default class ChatMateEventService extends ContextClass {
   }
 
   public async getEventsSince (streamerId: number, since: number): Promise<ChatMateEvent[]> {
-    const diffs = await this.experienceService.getLevelDiffs(since)
+    const diffs = await this.experienceService.getLevelDiffs(streamerId, since)
 
     let events: ChatMateEvent[] = []
     for (let i = 0; i < diffs.length; i++) {

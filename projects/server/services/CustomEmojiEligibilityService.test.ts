@@ -128,7 +128,7 @@ function setupCustomEmojis (...whitelist: [EmojiData, Rank[]][]) {
 
 function setupLevel (level: number) {
   mockExperienceService.getLevels
-    .calledWith(expect.arrayContaining([userId]))
+    .calledWith(streamerId, expect.arrayContaining([userId]))
     .mockResolvedValue([{
       userId: userId,
       level: { level: asGte(level, 0), levelProgress: asLte(0, 1), totalExperience: 0 }

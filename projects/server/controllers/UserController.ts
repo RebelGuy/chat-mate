@@ -54,7 +54,7 @@ export default class UserController extends ControllerBase {
     try {
       const matches = await this.channelService.getUserByChannelName(request.searchTerm)
       const userChannels = await this.channelService.getActiveUserChannels(matches.map(m => m.userId))
-      const levels = await this.experienceService.getLevels(matches.map(m => m.userId))
+      const levels = await this.experienceService.getLevels(this.getStreamerId()!, matches.map(m => m.userId))
       const ranks = await this.rankStore.getUserRanks(matches.map(m => m.userId), this.getStreamerId())
       const userData = zipOnStrictMany(matches, 'userId', userChannels, levels, ranks).map(userDataToPublicUserNames)
 

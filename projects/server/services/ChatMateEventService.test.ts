@@ -38,7 +38,7 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
     const donation1 = cast<DonationWithUser>({ time: data.time2 })
     const donation2 = cast<DonationWithUser>({ time: data.time3 })
 
-    mockExperienceService.getLevelDiffs.calledWith(since).mockResolvedValue([levelDiff1, levelDiff2])
+    mockExperienceService.getLevelDiffs.calledWith(streamerId, since).mockResolvedValue([levelDiff1, levelDiff2])
     mockFollowerStore.getFollowersSince.calledWith(since).mockResolvedValue([follower1, follower2])
     mockDonationStore.getDonationsSince.calledWith(streamerId, since).mockResolvedValue([donation1, donation2])
 

@@ -92,7 +92,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     // pre-fetch user data for `levelUp` events
     const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))
     const userChannels = await this.channelService.getActiveUserChannels(userIds)
-    const levelInfo = await this.experienceService.getLevels(userIds)
+    const levelInfo = await this.experienceService.getLevels(this.getStreamerId()!, userIds)
     const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId())
     const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
 

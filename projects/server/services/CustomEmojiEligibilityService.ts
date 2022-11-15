@@ -26,7 +26,7 @@ export default class CustomEmojiEligibilityService extends ContextClass {
   }
 
   public async getEligibleEmojis (userId: number, streamerId: number): Promise<CurrentCustomEmoji[]> {
-    const levelPromise = this.experienceService.getLevels([userId])
+    const levelPromise = this.experienceService.getLevels(streamerId, [userId])
     const userRanksPromise = this.rankStore.getUserRanks([userId], streamerId)
     const allEmojis = await this.customEmojiStore.getAllCustomEmojis(streamerId)
     const allEmojiIds = allEmojis.map(e => e.id)

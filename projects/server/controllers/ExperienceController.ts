@@ -61,7 +61,7 @@ export default class ExperienceController extends ControllerBase {
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
     const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 4)
     try {
-      const leaderboard = await this.experienceService.getLeaderboard()
+      const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId()!)
       const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId), this.getStreamerId())
       const publicLeaderboard = zipOnStrict(leaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
       return builder.success({ rankedUsers: publicLeaderboard })
@@ -86,7 +86,7 @@ export default class ExperienceController extends ControllerBase {
         return builder.failure(404, `Could not find an active channel for user ${id}.`)
       }
 
-      const leaderboard = await this.experienceService.getLeaderboard()
+      const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId()!)
       const match = leaderboard.find(l => l.userId === id)!
 
       // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible

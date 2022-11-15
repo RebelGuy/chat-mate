@@ -144,11 +144,13 @@ model Streamer {
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
-  userRanks             UserRank[]
-  livestreams           Livestream[]
-  customEmojis          CustomEmoji[]
-  donations             Donation[]
-  streamlabsSocketToken StreamlabsSocketToken?
+  userRanks              UserRank[]
+  livestreams            Livestream[]
+  customEmojis           CustomEmoji[]
+  donations              Donation[]
+  streamlabsSocketToken  StreamlabsSocketToken?
+  experienceTransactions ExperienceTransaction[]
+  experienceSnapshots    ExperienceSnapshot[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -416,8 +418,12 @@ model ExperienceTransaction {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "experience_transaction_streamerId_fkey")
+
   @@index([userId], map: "experience_transaction_userId_fkey")
   @@index([userId, time], map: "experience_transaction_userId_time_key")
+  @@index([streamerId], map: "experience_transaction_streamerId_fkey")
   @@map("experience_transaction")
 }
 
@@ -430,7 +436,11 @@ model ExperienceSnapshot {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "experience_snapshot_userId_fkey")
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "experience_snapshot_streamerId_fkey")
+
   @@index([userId], map: "experience_snapshot_userId_fkey")
+  @@index([streamerId], map: "experience_snapshot_streamerId_fkey")
   @@map("experience_snapshot")
 }
 
