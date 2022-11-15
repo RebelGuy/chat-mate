@@ -254,7 +254,7 @@ export default () => {
     })
 
     test('adds chat without connecting to livestream if no active livestream', async () => {
-      mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
+      mockLivestreamStore.getActiveLivestream.mockReset().calledWith(livestream.streamerId).mockResolvedValue(null)
       const chatItem = makeYtChatItem(text1)
 
       await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)

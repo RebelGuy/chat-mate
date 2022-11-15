@@ -256,7 +256,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
   test('ignores API errors', async () => {
     const twitchChannelName = 'twitchChannelName'
-    mockLivestreamStore.getActiveLivestreams.mockResolvedValue([data.livestream1])
+    mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([data.livestream1])
     mockDateTimeHelpers.now.mockReset().calledWith().mockReturnValue(data.livestream1.end!)
     mockStreamerChannelService.getTwitchChannelName.calledWith(data.livestream1.streamerId).mockResolvedValue(twitchChannelName)
     mockMasterchatProxyService.fetchMetadata.calledWith(data.livestream1.liveId).mockRejectedValue(new Error('Test error'))

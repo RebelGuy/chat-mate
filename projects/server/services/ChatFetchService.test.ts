@@ -79,8 +79,8 @@ beforeEach(() => {
   mockTimerHelpers = mock<TimerHelpers>()
   mockChatService = mock<ChatService>()
 
-  mockLivestreamStore.getActiveLivestreams.mockResolvedValue(currentLivestreams)
-  mockChatStore.getChatSince.mockResolvedValue([])
+  mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue(currentLivestreams)
+  mockChatStore.getChatSince.calledWith(expect.any(Number), undefined).mockResolvedValue([])
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -100,7 +100,7 @@ beforeEach(() => {
   }))
 })
 
-describe(nameof(ChatService, 'initialise'), () => {
+describe(nameof(ChatFetchService, 'initialise'), () => {
   test('ignores api if disableExternalApis is true', async () => {
     chatFetchService = new ChatFetchService(new Dependencies({
       chatService: mockChatService,
@@ -151,7 +151,7 @@ describe(nameof(ChatService, 'initialise'), () => {
   })
 
   test('quietly handles no active livestream', async () => {
-    mockLivestreamStore.getActiveLivestreams.mockResolvedValue([])
+    mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([])
 
     await chatFetchService.initialise()
 
@@ -162,7 +162,7 @@ describe(nameof(ChatService, 'initialise'), () => {
   test('passes ordered chat items to ChatService and updates continuation token', async () => {
     mockMasterchatProxyService.fetch.calledWith(currentLivestreams[0].liveId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction2, chatAction1]))
     mockMasterchatProxyService.fetch.calledWith(currentLivestreams[1].liveId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
-    mockChatService.onNewChatItem.mockResolvedValue(true)
+    mockChatService.onNewChatItem.calledWith(expect.anything(), expect.anything()).mockResolvedValue(true)
 
     await chatFetchService.initialise()
 

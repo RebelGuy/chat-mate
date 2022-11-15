@@ -172,7 +172,7 @@ describe(nameof(PunishmentService, 'initialise'), () => {
       streamerId: streamerId2,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockStreamerStore.getStreamers.mockResolvedValue(cast<Streamer[]>([{ id: streamerId1 }, { id: streamerId2 }]))
+    mockStreamerStore.getStreamers.calledWith().mockResolvedValue(cast<Streamer[]>([{ id: streamerId1 }, { id: streamerId2 }]))
     mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId1).mockResolvedValue([activeBan, timeout1] as UserRankWithRelations[])
     mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId2).mockResolvedValue([timeout2] as UserRankWithRelations[])
 
@@ -253,8 +253,8 @@ describe(nameof(PunishmentService, 'banUser'), () => {
 
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
-    mockChannelStore.getUserOwnedChannels.mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
-    mockRankStore.addUserRank.mockRejectedValue(new Error(error))
+    mockChannelStore.getUserOwnedChannels.calledWith(1).mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
+    mockRankStore.addUserRank.calledWith(expect.anything()).mockRejectedValue(new Error(error))
 
     const result = await punishmentService.banUser(1, streamerId1, null)
 
@@ -307,7 +307,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
 
   test('Rethrows store error', async () => {
     const error = new UserRankAlreadyExistsError()
-    mockRankStore.addUserRank.mockRejectedValue(error)
+    mockRankStore.addUserRank.calledWith(expect.anything()).mockRejectedValue(error)
 
     await expect(() => punishmentService.muteUser(1, streamerId1, null, null)).rejects.toThrowError(error)
   })
@@ -372,8 +372,8 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
 
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
-    mockChannelStore.getUserOwnedChannels.mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
-    mockRankStore.addUserRank.mockRejectedValue(new Error(error))
+    mockChannelStore.getUserOwnedChannels.calledWith(1).mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
+    mockRankStore.addUserRank.calledWith(expect.anything()).mockRejectedValue(new Error(error))
 
     const result = await punishmentService.timeoutUser(1, streamerId1, null, 1)
 
@@ -465,7 +465,7 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
 
   test('Rethrows store error', async () => {
     const error = new UserRankNotFoundError()
-    mockRankStore.removeUserRank.mockRejectedValue(error)
+    mockRankStore.removeUserRank.calledWith(expect.anything()).mockRejectedValue(error)
 
     await expect(() => punishmentService.unmuteUser(1, streamerId1, null)).rejects.toThrowError(error)
   })

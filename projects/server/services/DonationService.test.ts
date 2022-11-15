@@ -98,7 +98,7 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
 
     // user is currently donator, and eligible for donator and supporter
     const ranks = cast<UserRankWithRelations[]>([{ id: 20, rank: { name: 'donator' } }])
-    mockDateTimeHelpers.now.mockReturnValue(time)
+    mockDateTimeHelpers.now.calledWith().mockReturnValue(time)
     mockDonationStore.getDonationsByUserId.calledWith(streamerId, userId).mockResolvedValue(allDonations)
     mockRankStore.getUserRanks.calledWith(expectArray<number>([userId]), streamerId).mockResolvedValue([{ userId, ranks }])
     mockDonationHelpers.isEligibleForDonator

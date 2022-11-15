@@ -30,7 +30,7 @@ describe(nameof(DonationFetchService, 'initialise'), () => {
       { donationId: 2 },
       { donationId: 3 },
     ])
-    mockStreamlabsProxyService.getDonationsAfterId.mockResolvedValue(initialDonations)
+    mockStreamlabsProxyService.getDonationsAfterId.calledWith(-1).mockResolvedValue(initialDonations)
 
     await donationFetchService.initialise()
 

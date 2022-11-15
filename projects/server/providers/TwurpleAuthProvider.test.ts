@@ -26,8 +26,8 @@ beforeEach(() => {
   mockClientCredentialsAuthProvider = mock()
   mockClientCredentialsAuthProviderFactory = mock()
 
-  mockRefreshingAuthProviderFactory.create.mockReturnValue(mockRefreshingAuthProvider)
-  mockClientCredentialsAuthProviderFactory.create.mockReturnValue(mockClientCredentialsAuthProvider)
+  mockRefreshingAuthProviderFactory.create.calledWith(expect.anything(), expect.anything()).mockReturnValue(mockRefreshingAuthProvider)
+  mockClientCredentialsAuthProviderFactory.create.calledWith(clientId, clientSecret).mockReturnValue(mockClientCredentialsAuthProvider)
 
   twurpleAuthProvider = new TwurpleAuthProvider(new Dependencies({
     disableExternalApis: false,
@@ -43,14 +43,14 @@ beforeEach(() => {
 
 describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
   test('throws if access token failed to load for RefreshingAuthProvider', async () => {
-    mockAuthStore.loadTwitchAccessToken.mockRejectedValue(new Error('Test'))
+    mockAuthStore.loadTwitchAccessToken.calledWith().mockRejectedValue(new Error('Test'))
 
     await expect(() => twurpleAuthProvider.initialise()).rejects.toThrow()
   })
 
   test('uses loaded token details if access token exists for RefreshingAuthProvider', async () => {
     const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE }
-    mockAuthStore.loadTwitchAccessToken.mockResolvedValue(loadedToken as AccessToken)
+    mockAuthStore.loadTwitchAccessToken.calledWith().mockResolvedValue(loadedToken as AccessToken)
 
     await twurpleAuthProvider.initialise()
 
@@ -61,7 +61,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
 
   test('provides correct client details to RefreshingAuthProvider and saves refresh token when available', async () => {
     const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE }
-    mockAuthStore.loadTwitchAccessToken.mockResolvedValue(loadedToken as AccessToken)
+    mockAuthStore.loadTwitchAccessToken.calledWith().mockResolvedValue(loadedToken as AccessToken)
 
     await twurpleAuthProvider.initialise()
 
@@ -76,7 +76,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
 
   test('uses client id and client secret for the ClientCredentialsAuthProvider', async () => {
     const loadedToken: Partial<AccessToken> = { accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE }
-    mockAuthStore.loadTwitchAccessToken.mockResolvedValue(loadedToken as AccessToken)
+    mockAuthStore.loadTwitchAccessToken.calledWith().mockResolvedValue(loadedToken as AccessToken)
 
     await twurpleAuthProvider.initialise()
 
@@ -87,7 +87,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
 
   test('throws if stored scope differs from expected scope', async () => {
     const loadedToken: Partial<AccessToken> = { scope: ['differentScope'] }
-    mockAuthStore.loadTwitchAccessToken.mockResolvedValue(loadedToken as AccessToken)
+    mockAuthStore.loadTwitchAccessToken.calledWith().mockResolvedValue(loadedToken as AccessToken)
 
     await expect(twurpleAuthProvider.initialise()).rejects.toThrow()
   })

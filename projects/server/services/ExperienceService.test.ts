@@ -27,6 +27,7 @@ let mockChatStore: MockProxy<ChatStore>
 let mockChannelService: MockProxy<ChannelService>
 let mockPunishmentService: MockProxy<PunishmentService>
 let experienceService: ExperienceService
+
 beforeEach(() => {
   mockExperienceHelpers = mock<ExperienceHelpers>()
   mockExperienceStore = mock<ExperienceStore>()
@@ -190,7 +191,7 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
     const channelName2 = 'channel 2'
     const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } }
     const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } }
-    mockChannelService.getActiveUserChannels.mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
+    mockChannelService.getActiveUserChannels.calledWith('all').mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
     mockExperienceStore.getExperience.calledWith(expect.arrayContaining([userId1, userId2]))
       .mockResolvedValue([{ userId: userId2, experience: 811 }, { userId: userId1, experience: 130 }]) // descending order
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))

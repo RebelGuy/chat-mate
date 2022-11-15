@@ -24,7 +24,7 @@ let youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
 
 beforeEach(() => {
   mockTimerHelpers = mock()
-  mockTimerHelpers.createRepeatingTimer.mockReturnValue(timerId)
+  mockTimerHelpers.createRepeatingTimer.calledWith(expect.anything(), expect.anything()).mockReturnValue(timerId)
 
   mockDateTimeHelpers = mock()
   mockDateTimeHelpers.ts.mockImplementation(() => new Date().getTime())
@@ -45,8 +45,9 @@ describe(nameof(YoutubeTimeoutRefreshService, 'startTrackingTimeout'), () => {
   })
 
   test('[on initialisation] refreshes immediately and creates single-use timer if difference is between 5 and 10 minutes', async () => {
-    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
-    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 1).getTime())
+    mockDateTimeHelpers.ts.mockReset()
+    mockDateTimeHelpers.ts.calledWith().mockReturnValueOnce(now.getTime())
+    mockDateTimeHelpers.ts.calledWith().mockReturnValueOnce(addTime(now, 'minutes', 1).getTime())
 
     await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 6), true, onRefresh)
     expect(refreshCount).toBe(1)
@@ -60,9 +61,11 @@ describe(nameof(YoutubeTimeoutRefreshService, 'startTrackingTimeout'), () => {
   })
 
   test('[on initialisation] refreshes immediately and creates multi-use timer if difference is greater than 10 minutes', async () => {
-    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
-    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 5).getTime())
-    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 6).getTime())
+    mockDateTimeHelpers.ts.mockReset()
+    mockDateTimeHelpers.ts.calledWith()
+      .mockReturnValueOnce(now.getTime())
+      .mockReturnValueOnce(addTime(now, 'minutes', 5).getTime())
+      .mockReturnValueOnce(addTime(now, 'minutes', 6).getTime())
 
     await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 11), true, onRefresh)
 
@@ -89,8 +92,10 @@ describe(nameof(YoutubeTimeoutRefreshService, 'startTrackingTimeout'), () => {
   })
 
   test('[during runtime] creates single-use timer if difference is between 5 and 10 minutes', async () => {
-    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
-    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 1).getTime())
+    mockDateTimeHelpers.ts.mockReset()
+    mockDateTimeHelpers.ts.calledWith()
+      .mockReturnValueOnce(now.getTime())
+      .mockReturnValueOnce(addTime(now, 'minutes', 1).getTime())
 
     await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 6), false, onRefresh)
     expect(refreshCount).toBe(0)
@@ -104,9 +109,11 @@ describe(nameof(YoutubeTimeoutRefreshService, 'startTrackingTimeout'), () => {
   })
 
   test('[during runtime] creates multi-use timer if difference is greater than 10 minutes', async () => {
-    mockDateTimeHelpers.ts.mockReturnValueOnce(now.getTime())
-    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 5).getTime())
-    mockDateTimeHelpers.ts.mockReturnValueOnce(addTime(now, 'minutes', 6).getTime())
+    mockDateTimeHelpers.ts.mockReset()
+    mockDateTimeHelpers.ts.calledWith()
+      .mockReturnValueOnce(now.getTime())
+      .mockReturnValueOnce(addTime(now, 'minutes', 5).getTime())
+      .mockReturnValueOnce(addTime(now, 'minutes', 6).getTime())
 
     await youtubeTimeoutRefreshService.startTrackingTimeout(punishmentId, addTime(now, 'minutes', 11), false, onRefresh)
 

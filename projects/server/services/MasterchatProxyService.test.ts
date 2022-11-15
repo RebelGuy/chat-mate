@@ -1,4 +1,4 @@
-import { ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
+import { ChatResponse, FetchChatOptions, Masterchat, Metadata } from '@rebel/masterchat'
 import { YTAction } from '@rebel/masterchat/interfaces/yt/chat'
 import { Dependencies } from '@rebel/server/context/context'
 import { IMasterchat } from '@rebel/server/interfaces'

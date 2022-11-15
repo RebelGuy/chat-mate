@@ -31,7 +31,7 @@ let twurpleService: TwurpleService
 beforeEach(() => {
   mockChatClient = mock()
   mockTwurpleChatClientProvider = mock()
-  mockTwurpleChatClientProvider.get.mockReturnValue(mockChatClient)
+  mockTwurpleChatClientProvider.get.calledWith().mockReturnValue(mockChatClient)
   mockTwurpleApiProxyService = mock()
   mockChannelStore = mock()
   mockEventDispatchService = mock()

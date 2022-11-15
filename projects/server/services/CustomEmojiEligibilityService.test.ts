@@ -109,7 +109,7 @@ describe(nameof(CustomEmojiEligibilityService, 'getEligibleDonationEmojis'), () 
 
 /** Setup all emojis and their rank whitelist */
 function setupCustomEmojis (...whitelist: [EmojiData, Rank[]][]) {
-  mockCustomEmojiStore.getAllCustomEmojis.mockResolvedValue(whitelist.map(w => ({
+  mockCustomEmojiStore.getAllCustomEmojis.calledWith(streamerId).mockResolvedValue(whitelist.map(w => ({
     ...w[0],
     streamerId: streamerId,
     isActive: true,

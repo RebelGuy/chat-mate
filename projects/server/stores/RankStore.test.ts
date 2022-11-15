@@ -70,7 +70,7 @@ export default () => {
 
   describe(nameof(RankStore, 'addUserRank'), () => {
     test('Adds rank to user within the streamer context and with no description and expiration time', async () => {
-      mockDateTimeHelpers.now.mockReturnValue(time1)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
         userId: user1,
         streamerId: streamer1,
@@ -101,7 +101,7 @@ export default () => {
     })
 
     test('Adds rank to user within the streamer context and with description and expiration time', async () => {
-      mockDateTimeHelpers.now.mockReturnValue(time1)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
         userId: user1,
         streamerId: streamer1,
@@ -147,7 +147,7 @@ export default () => {
         assignee: null,
         expirationTime: null
       }
-      mockDateTimeHelpers.now.mockReturnValue(time2)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time2)
 
       await expect(async () => await rankStore.addUserRank(args)).rejects.toThrowError(UserRankAlreadyExistsError)
     })
@@ -160,7 +160,7 @@ export default () => {
         rankId: modRank.id
       }})
 
-      mockDateTimeHelpers.now.mockReturnValue(time1)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
         userId: user1,
         streamerId: streamer2,
@@ -198,7 +198,7 @@ export default () => {
         rankId: famousRank.id
       }})
 
-      mockDateTimeHelpers.now.mockReturnValue(time1)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
         userId: user1,
         streamerId: null,
@@ -244,7 +244,7 @@ export default () => {
         assignee: null,
         expirationTime: null
       }
-      mockDateTimeHelpers.now.mockReturnValue(time5)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time5)
 
       const result = await rankStore.addUserRank(args)
 
@@ -275,7 +275,7 @@ export default () => {
         assignee: null,
         expirationTime: null
       }
-      mockDateTimeHelpers.now.mockReturnValue(time2)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time2)
 
       await expect(async () => await rankStore.addUserRank(args)).rejects.toThrowError(UserRankRequiresStreamerError)
     })
@@ -322,7 +322,7 @@ export default () => {
 
   describe(nameof(RankStore, 'getUserRanks'), () => {
     test('Returns empty array if no user-ranks are present for the specified users', async () => {
-      mockDateTimeHelpers.now.mockReturnValue(time2)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time2)
       await db.userRank.createMany({ data: [
         { userId: user1, streamerId: null, issuedAt: time1, rankId: ownerRank.id }, // wrong user
         { userId: user2, streamerId: 1, issuedAt: time1, rankId: ownerRank.id } // wrong streamer
@@ -336,7 +336,7 @@ export default () => {
     })
 
     test('Returns all ranks for multiple users that are global or within the context of the given streamer', async () => {
-      mockDateTimeHelpers.now.mockReturnValue(time2)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time2)
       await db.userRank.createMany({
         data: [
           { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: ownerRank.id }, // match (streamer context)
@@ -355,7 +355,7 @@ export default () => {
     })
 
     test('Ignores inactive ranks', async () => {
-      mockDateTimeHelpers.now.mockReturnValue(time6)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
       await db.userRank.createMany({
         data: [
           { userId: user1, issuedAt: time1, rankId: famousRank.id, expirationTime: time2 },
@@ -376,7 +376,7 @@ export default () => {
 
   describe(nameof(RankStore, 'getUserRanksForGroup'), () => {
     test('Returns active user ranks of the specified group', async () => {
-      mockDateTimeHelpers.now.mockReturnValue(time6)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
 
       // user 1: muted, user 2: muted and banned
       await db.userRank.createMany({
@@ -446,7 +446,7 @@ export default () => {
         rank: 'famous',
         removedBy: user2
       }
-      mockDateTimeHelpers.now.mockReturnValue(time6)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
 
       await expect(() => rankStore.removeUserRank(args)).rejects.toThrowError(UserRankNotFoundError)
     })
@@ -468,7 +468,7 @@ export default () => {
         rank: 'famous',
         removedBy: user2
       }
-      mockDateTimeHelpers.now.mockReturnValue(time6)
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
 
       const result = await rankStore.removeUserRank(args)
 

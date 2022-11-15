@@ -22,7 +22,7 @@ export default class DonationFetchService extends ContextClass {
   }
 
   override async initialise () {
-    const lastSavedId = 1 // await this.donationStore.getLastStreamlabsId()
+    const lastSavedId = -1 // await this.donationStore.getLastStreamlabsId()
     const donations = await this.streamlabsProxyService.getDonationsAfterId(lastSavedId)
 
     for (const donation of donations) {

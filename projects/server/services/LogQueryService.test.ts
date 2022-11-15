@@ -36,7 +36,7 @@ describe(nameof(LogQueryService, 'queryCriticalLogs'), () => {
       .mockReturnValueOnce(t4_warning)
       .mockReturnValueOnce(t5_warning)
       .mockReturnValueOnce(t6_warning)
-    mockDateTimeHelpers.now.mockReturnValue(now)
+    mockDateTimeHelpers.now.calledWith().mockReturnValue(now)
 
     logQueryService.onWarning()
     logQueryService.onWarning()

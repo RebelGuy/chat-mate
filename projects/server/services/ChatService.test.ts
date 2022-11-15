@@ -180,7 +180,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const streamerId = 2;
     (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
-    mockChatStore.addChat.mockRejectedValue(new Error('Test'))
+    mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockRejectedValue(new Error('Test'))
 
     const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
 
