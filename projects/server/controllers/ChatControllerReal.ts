@@ -32,14 +32,15 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
     let { builder, limit, since } = args
     since = since ?? 0
-    const items = await this.chatStore.getChatSince(since, limit)
+    const streamerId = this.getStreamerId()
+    const items = await this.chatStore.getChatSince(streamerId, since, limit)
     const userIds = unique(items.map(c => c.userId))
     if (userIds.find(id => id == null) != null) {
       throw new Error('Chat items must have a userId set')
     }
 
-    const levels = await this.experienceService.getLevels(this.getStreamerId(), userIds as number[])
-    const ranks = await this.rankStore.getUserRanks(userIds as number[], this.getStreamerId())
+    const levels = await this.experienceService.getLevels(streamerId, userIds as number[])
+    const ranks = await this.rankStore.getUserRanks(userIds as number[], streamerId)
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {

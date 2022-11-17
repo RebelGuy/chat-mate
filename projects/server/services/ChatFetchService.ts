@@ -129,7 +129,7 @@ export default class ChatFetchService extends ContextClass {
       return MIN_INTERVAL
     } else {
       const now = Date.now()
-      const chat = await this.chatStore.getChatSince(now - LIMIT)
+      const chat = await this.chatStore.getChatSince(livestream.streamerId, now - LIMIT)
       const timestamps = chat.map(c => c.time.getTime())
       return getNextInterval(now, timestamps, createLogContext(this.logService, this))
     }

@@ -166,7 +166,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockExperienceHelpers.calculateSpamMultiplier
       .calledWith(chatItem.timestamp, prevData.time.getTime(), asRange(prevData.experienceDataChatMessage.spamMultiplier, 0.1, 1.5))
       .mockReturnValue(asRange(experienceData.spamMultiplier, 0.1, 1.5))
-    mockChatStore.getChatSince.calledWith(anyNumber()).mockResolvedValue(chatItems as ChatItemWithRelations[])
+    mockChatStore.getChatSince.calledWith(streamerId, anyNumber()).mockResolvedValue(chatItems as ChatItemWithRelations[])
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatItem.timestamp, expect.arrayContaining([chatItems[0]])).mockReturnValue(asRange(experienceData.repetitionPenalty!, -2, 0))
 
     await experienceService.addExperienceForChat(chatItem, streamerId)
@@ -193,7 +193,7 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
     const channelName2 = 'channel 2'
     const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } }
     const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } }
-    mockChannelService.getActiveUserChannels.calledWith('all').mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
+    mockChannelService.getActiveUserChannels.calledWith(streamerId, 'all').mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId1, userId2]))
       .mockResolvedValue([{ userId: userId2, experience: 811 }, { userId: userId1, experience: 130 }]) // descending order
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))

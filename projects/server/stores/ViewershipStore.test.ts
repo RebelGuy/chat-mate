@@ -57,9 +57,9 @@ export default () => {
       { userId: 2, livestreamId: 3, startTime: data.time3, lastUpdate: data.time3 },
     ]})
     await db.chatMessage.createMany({ data: [
-      { userId: 2, livestreamId: 1, time: data.time1, externalId: 'id1.1' },
-      { userId: 2, livestreamId: 2, time: data.time2, externalId: 'id2.1' },
-      { userId: 2, livestreamId: 2, time: addTime(data.time2, 'seconds', 1), externalId: 'id3.1' },
+      { streamerId: streamer1, userId: 2, livestreamId: 1, time: data.time1, externalId: 'id1.1' },
+      { streamerId: streamer1, userId: 2, livestreamId: 2, time: data.time2, externalId: 'id2.1' },
+      { streamerId: streamer1, userId: 2, livestreamId: 2, time: addTime(data.time2, 'seconds', 1), externalId: 'id3.1' },
     ]})
   }, DB_TEST_TIMEOUT)
 
@@ -241,8 +241,8 @@ export default () => {
   describe(nameof(ViewershipStore, 'getLivestreamParticipation'), () => {
     test('no participation', async () => {
       await db.chatMessage.createMany({ data: [
-        { userId: user1, livestreamId: activeLivestream2.id, time: data.time1, externalId: 'id1' }, // correct user, wrong streamer
-        { userId: user2, livestreamId: activeLivestream1.id, time: data.time1, externalId: 'id2' }, // wrong user, correct streamer
+        {  streamerId: activeLivestream2.streamerId, userId: user1, livestreamId: activeLivestream2.id, time: data.time1, externalId: 'id1' }, // correct user, wrong streamer
+        {  streamerId: activeLivestream1.streamerId, userId: user2, livestreamId: activeLivestream1.id, time: data.time1, externalId: 'id2' }, // wrong user, correct streamer
       ]})
 
       const result = await viewershipStore.getLivestreamParticipation(streamer1, user1)
@@ -253,8 +253,8 @@ export default () => {
 
     test('does not include chat messages not attached to a public livestream', async () => {
       await db.chatMessage.createMany({ data: [
-        { userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
-        { userId: user1, livestreamId: null, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' }
+        { streamerId: streamer1, userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
+        { streamerId: streamer1, userId: user1, livestreamId: null, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' }
       ]})
 
       const result = await viewershipStore.getLivestreamParticipation(streamer1, user1)
@@ -268,9 +268,9 @@ export default () => {
     test('returns ordered streams where user participated', async () => {
       // 2 messages in stream 1, 0 messages in stream 2, 1 message in stream 3
       await db.chatMessage.createMany({ data: [
-        { userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
-        { userId: user1, livestreamId: 1, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' },
-        { userId: user1, livestreamId: 3, time: data.time3, externalId: 'id3' },
+        { streamerId: streamer1, userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
+        { streamerId: streamer1, userId: user1, livestreamId: 1, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' },
+        { streamerId: streamer1, userId: user1, livestreamId: 3, time: data.time3, externalId: 'id3' },
       ]})
 
       const result = await viewershipStore.getLivestreamParticipation(streamer1, user1)

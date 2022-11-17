@@ -80,7 +80,7 @@ beforeEach(() => {
   mockChatService = mock<ChatService>()
 
   mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue(currentLivestreams)
-  mockChatStore.getChatSince.calledWith(expect.any(Number), undefined).mockResolvedValue([])
+  mockChatStore.getChatSince.calledWith(expect.any(Number), expect.any(Number), undefined).mockResolvedValue([])
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer

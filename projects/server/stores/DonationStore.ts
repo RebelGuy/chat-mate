@@ -63,6 +63,7 @@ export default class DonationStore extends ContextClass {
 
       if (data.messageParts.length > 0) {
         const chatMessage = await db.chatMessage.create({ data: {
+          streamerId: data.streamerId,
           externalId: `${data.streamlabsId}`,
           time: data.time,
           donationId: donation.id

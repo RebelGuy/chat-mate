@@ -31,7 +31,7 @@ export default class ChatControllerFake extends ControllerBase implements IChatC
     since = since ?? 0
 
     if (this.chat == null) {
-      this.chat = await this.chatStore.getChatSince(0)
+      this.chat = await this.chatStore.getChatSince(this.getStreamerId(), 0)
     }
 
     const N = chooseWeightedRandom([0, 10], [1, 1], [2, 0.2])

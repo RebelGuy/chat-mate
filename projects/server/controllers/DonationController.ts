@@ -132,14 +132,15 @@ export default class DonationController extends ControllerBase {
   }
 
   private async getPublicDonations (donations: DonationWithUser[]): Promise<PublicDonation[]> {
+    const streamerId = this.getStreamerId()
     const userIds = nonNull(donations.map(d => d.userId))
     let userData: PublicUser[]
     if (userIds.length === 0) {
       userData = []
     } else {
-      const userChannels = await this.channelService.getActiveUserChannels(userIds)
-      const levels = await this.experienceService.getLevels(this.getStreamerId(), userIds)
-      const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId())
+      const userChannels = await this.channelService.getActiveUserChannels(streamerId, userIds)
+      const levels = await this.experienceService.getLevels(streamerId, userIds)
+      const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
       userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
     }
 

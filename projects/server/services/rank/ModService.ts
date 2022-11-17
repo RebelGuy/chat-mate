@@ -48,7 +48,7 @@ export default class ModService extends ContextClass {
     // we have no way of knowing the _current_ external state (only from the previous message sent from that channel), so, to be safe, apply the rank
     // update to ALL of the user's channels and report back any errors that could arise from duplication.
     const userChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const youtubeResults = await Promise.all(userChannels.youtubeChannels.map(c => this.trySetYoutubeMod(c, isMod)))
+    const youtubeResults = await Promise.all(userChannels.youtubeChannels.map(c => this.trySetYoutubeMod(streamerId, c, isMod)))
     const twitchResults = await Promise.all(userChannels.twitchChannels.map(c => this.trySetTwitchMod(streamerId, c, isMod)))
 
     return {
@@ -94,8 +94,8 @@ export default class ModService extends ContextClass {
     }
   }
 
-  private async trySetYoutubeMod (youtubeChannelId: number, isMod: boolean): Promise<YoutubeRankResult> {
-    const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(youtubeChannelId)
+  private async trySetYoutubeMod (streamerId: number, youtubeChannelId: number, isMod: boolean): Promise<YoutubeRankResult> {
+    const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(streamerId, youtubeChannelId)
 
     const errorSuffix = ' If this is unexpected, please retry the action. Failure to do so may lead to an out-of-sync state with undefined behaviour.'
     const type = isMod ? 'mod' : 'unmod'

@@ -81,7 +81,7 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      let userChannels = await this.channelService.getActiveUserChannels([id])
+      let userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [id])
       if (userChannels.length == 0) {
         return builder.failure(404, `Could not find an active channel for user ${id}.`)
       }
@@ -122,7 +122,7 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      const userChannels = await this.channelService.getActiveUserChannels([request.userId])
+      const userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [request.userId])
       const userChannel = userChannels[0]
       if (userChannel == null) {
         return builder.failure(404, `Could not find an active channel for user ${request.userId}.`)

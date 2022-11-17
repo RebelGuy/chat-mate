@@ -101,7 +101,7 @@ export default class ExperienceService extends ContextClass {
     const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, userId)
     const spamMultiplier = await this.getSpamMultiplier(livestream.id, chatItem, streamerId, userId)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
-    const repetitionPenalty = await this.getMessageRepetitionPenalty(time.getTime(), userId)
+    const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), userId)
     const data: ChatExperienceData = {
       viewershipStreakMultiplier,
       participationStreakMultiplier,
@@ -122,7 +122,7 @@ export default class ExperienceService extends ContextClass {
 
   /** Sorted in ascending order. */
   public async getLeaderboard (streamerId: number): Promise<RankedEntry[]> {
-    const userNames = await this.channelService.getActiveUserChannels('all')
+    const userNames = await this.channelService.getActiveUserChannels(streamerId, 'all')
     const userLevels = await this.getLevels(streamerId, userNames.map(user => user.userId))
 
     const orderedUserLevelChannels = zipOnStrict(userLevels, userNames, 'userId')
@@ -285,8 +285,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateQualityMultiplier(messageQuality)
   }
 
-  private async getMessageRepetitionPenalty (currentTimestamp: number, userId: number): Promise<RepetitionPenalty> {
-    const chat = await this.chatStore.getChatSince(currentTimestamp - 60000)
+  private async getMessageRepetitionPenalty (streamerId: number, currentTimestamp: number, userId: number): Promise<RepetitionPenalty> {
+    const chat = await this.chatStore.getChatSince(streamerId, currentTimestamp - 60000)
     return this.experienceHelpers.calculateRepetitionPenalty(currentTimestamp, chat.filter(c => c.userId === userId))
   }
 }

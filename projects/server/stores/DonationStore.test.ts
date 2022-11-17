@@ -146,6 +146,7 @@ export default () => {
       }})
       await db.chatMessage.create({ data: {
         externalId: '1',
+        streamerId: streamer1,
         time: new Date(),
         donationId: donation.id,
         chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }, { order: 1, customEmojiId: 1 }]}}

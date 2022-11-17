@@ -152,6 +152,7 @@ model Streamer {
   experienceTransactions ExperienceTransaction[]
   experienceSnapshots    ExperienceSnapshot[]
   twitchFollowers        TwitchFollower[]
+  chatMessages           ChatMessage[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -373,6 +374,9 @@ model ChatMessage {
   /// Internally in Youtube, this is called the `contextMenuEndpointParams`.
   contextToken String? @db.VarChar(511)
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "chat_message_streamerId_fkey")
+
   // the user that sent the message, if known.
   // this is always set for livestream messages, that is, if either the `youtubeChannelId` or `twitchChannelId` is set.
   userId Int?
@@ -400,6 +404,7 @@ model ChatMessage {
 
   @@unique([externalId], map: "chat_message_externalId_key")
   @@unique([donationId], map: "chat_message_donationId_fkey")
+  @@index([streamerId], map: "chat_message_streamerId_fkey")
   @@index([userId], map: "chat_message_userId_fkey")
   @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")

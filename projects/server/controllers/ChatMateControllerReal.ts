@@ -86,14 +86,15 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
+    const streamerId = this.getStreamerId()
 
-    const events = await this.chatMateEventService.getEventsSince(this.getStreamerId(), since)
+    const events = await this.chatMateEventService.getEventsSince(streamerId, since)
 
     // pre-fetch user data for `levelUp` events
     const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))
-    const userChannels = await this.channelService.getActiveUserChannels(userIds)
-    const levelInfo = await this.experienceService.getLevels(this.getStreamerId(), userIds)
-    const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId())
+    const userChannels = await this.channelService.getActiveUserChannels(streamerId, userIds)
+    const levelInfo = await this.experienceService.getLevels(streamerId, userIds)
+    const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
     const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
 
     let result: PublicChatMateEvent[] = []

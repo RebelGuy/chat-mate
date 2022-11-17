@@ -98,7 +98,7 @@ export default class PunishmentService extends ContextClass {
     const rankResult = await this.addInternalRank(args)
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'ban')))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'ban')))
     const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'ban')))
 
     return { rankResult, youtubeResults, twitchResults }
@@ -138,7 +138,7 @@ export default class PunishmentService extends ContextClass {
     const rankResult = await this.addInternalRank(args)
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'timeout')))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout')))
     const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
 
     if (rankResult.rank != null) {
@@ -161,7 +161,7 @@ export default class PunishmentService extends ContextClass {
     const rankResult = await this.removeInternalRank(args)
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'unban')))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'unban')))
     const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, unbanMessage, 'unban')))
 
     return { rankResult, youtubeResults, twitchResults }
@@ -201,8 +201,12 @@ export default class PunishmentService extends ContextClass {
 
   /** Re-applies the timeout on Youtube. Note that the timeout always lasts for 5 minutes. */
   private async onRefreshTimeoutForYoutube (timeout: UserRankWithRelations) {
+    if (timeout.streamerId == null) {
+      throw new Error(`Cannot refresh the YouTube timeout of user ${timeout.userId} because no streamerId was supplied, and timeout ranks cannot be global.`)
+    }
+
     const ownedChannels = await this.channelStore.getUserOwnedChannels(timeout.userId)
-    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'refreshTimeout')))
+    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(timeout.streamerId!, c, 'refreshTimeout')))
   }
 
   private async getCurrentPunishmentsForUser (userId: number, streamerId: number) {
@@ -238,8 +242,8 @@ export default class PunishmentService extends ContextClass {
     }
   }
 
-  private async tryApplyYoutubePunishment (youtubeChannelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout'): Promise<YoutubeRankResult> {
-    const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(youtubeChannelId)
+  private async tryApplyYoutubePunishment (streamerId: number, youtubeChannelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout'): Promise<YoutubeRankResult> {
+    const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(streamerId, youtubeChannelId)
 
     if (lastChatItem == null) {
       const error = `Could not ${type} youtube channel ${youtubeChannelId} because no chat item was found for the channel`

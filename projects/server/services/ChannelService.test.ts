@@ -7,6 +7,8 @@ import { nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 
+const streamerId = 5
+
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let channelService: ChannelService
@@ -36,9 +38,9 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
   }
 
   test('returns all active user channels', async () => {
-    mockChatStore.getLastChatOfUsers.calledWith('all').mockResolvedValue([chatItem1 as ChatItemWithRelations, chatItem2 as ChatItemWithRelations])
+    mockChatStore.getLastChatOfUsers.calledWith(streamerId, 'all').mockResolvedValue([chatItem1 as ChatItemWithRelations, chatItem2 as ChatItemWithRelations])
 
-    const result = await channelService.getActiveUserChannels('all')
+    const result = await channelService.getActiveUserChannels(streamerId, 'all')
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expect.objectContaining<UserChannel>({
@@ -58,9 +60,9 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
   })
 
   test('returns specified active user channels', async () => {
-    mockChatStore.getLastChatOfUsers.calledWith(expect.arrayContaining([1])).mockResolvedValue([chatItem1 as ChatItemWithRelations])
+    mockChatStore.getLastChatOfUsers.calledWith(streamerId, expect.arrayContaining([1])).mockResolvedValue([chatItem1 as ChatItemWithRelations])
 
-    const result = await channelService.getActiveUserChannels([1])
+    const result = await channelService.getActiveUserChannels(streamerId, [1])
 
     expect(single(result)).toEqual(expect.objectContaining<UserChannel>({
       userId: 1,

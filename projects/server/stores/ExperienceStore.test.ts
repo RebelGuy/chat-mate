@@ -22,11 +22,11 @@ export default () => {
   const streamer1 = 1
   const streamer2 = 2
 
-  /** time 1, channel 1 */
+  /** time 1, streamer 1, channel 1 */
   let chatMessage1: ChatMessage
-  /** time 2, channel 1 */
+  /** time 2, streamer 1, channel 1 */
   let chatMessage2: ChatMessage
-  /** time 3, channel 2 */
+  /** time 3, streamer 1, channel 2 */
   let chatMessage3: ChatMessage
 
   let mockAdminService: MockProxy<AdminService>
@@ -50,9 +50,11 @@ export default () => {
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
 
-    chatMessage1 = await data.addChatMessage(db, data.time1, null, user1, channelId1)
-    chatMessage2 = await data.addChatMessage(db, data.time2, null, user1, channelId1)
-    chatMessage3 = await data.addChatMessage(db, data.time3, null, user2, channelId2)
+    // the streamerId in these chatMessage is not actually used, as experience transactions have their own streamerId attached to it.
+    // some duplication of data is unavoidable, but there is no reason why the ids should ever be inconsistent so I don't think this is an issue.
+    chatMessage1 = await data.addChatMessage(db, data.time1, streamer1, null, user1, channelId1)
+    chatMessage2 = await data.addChatMessage(db, data.time2, streamer1, null, user1, channelId1)
+    chatMessage3 = await data.addChatMessage(db, data.time3, streamer1, null, user2, channelId2)
 
     await experienceStore.initialise()
   }, DB_TEST_TIMEOUT)

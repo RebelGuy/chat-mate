@@ -179,10 +179,10 @@ describe(nameof(PunishmentService, 'initialise'), () => {
     const contextToken1 = 'token1'
     const contextToken2 = 'token2'
     const contextToken3 = 'token3'
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue({ contextToken: contextToken1 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue({ contextToken: contextToken2 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue({ contextToken: contextToken3 } as Partial<ChatItemWithRelations> as any)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue({ contextToken: contextToken1 } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue({ contextToken: contextToken2 } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId2, 3).mockResolvedValue({ contextToken: contextToken3 } as Partial<ChatItemWithRelations> as any)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId2, 4).mockResolvedValue(null)
     mockChannelStore.getUserOwnedChannels.calledWith(timeout1.userId!).mockResolvedValue({ userId: timeout1.userId!, youtubeChannels: [1, 2], twitchChannels: [] })
     mockChannelStore.getUserOwnedChannels.calledWith(timeout2.userId!).mockResolvedValue({ userId: timeout2.userId!, youtubeChannels: [3, 4], twitchChannels: [] })
 
@@ -214,10 +214,10 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     const error2 = 'error2'
     mockMasterchatProxyService.banYoutubeChannel.calledWith(contextToken1).mockResolvedValue(true)
     mockMasterchatProxyService.banYoutubeChannel.calledWith(contextToken2).mockRejectedValue(new Error(error2))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 4).mockResolvedValue(null)
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
       youtubeChannels: [1, 2, 3, 4],
@@ -322,10 +322,10 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     mockMasterchatProxyService.timeout.calledWith(contextToken1).mockRejectedValue(new Error(error1))
     mockMasterchatProxyService.timeout.calledWith(contextToken2).mockResolvedValue(true)
     mockTwurpleService.timeout.calledWith(streamerId1, 1, 'test', 1000).mockRejectedValue(new Error(error3))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 4).mockResolvedValue(null)
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
       youtubeChannels: [1, 2, 3, 4],
@@ -334,10 +334,11 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
 
     const newPunishment: Partial<UserRankWithRelations> = {
       id: 5,
+      streamerId: streamerId1,
       userId: userId1,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId1, userId: userId1, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
 
     const result = await punishmentService.timeoutUser(userId1, streamerId1, 'test', 1000)
 
@@ -408,10 +409,10 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     const contextToken2 = 'testToken2'
     mockMasterchatProxyService.unbanYoutubeChannel.calledWith(contextToken1).mockResolvedValue(true)
     mockMasterchatProxyService.unbanYoutubeChannel.calledWith(contextToken2).mockResolvedValue(true)
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
-    mockChatStore.getLastChatByYoutubeChannel.calledWith(4).mockResolvedValue(null)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 4).mockResolvedValue(null)
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({
       userId: userId1,
       youtubeChannels: [1, 2, 3, 4],
