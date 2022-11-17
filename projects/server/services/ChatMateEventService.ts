@@ -54,7 +54,7 @@ export default class ChatMateEventService extends ContextClass {
       })
     }
 
-    const newFollowers = await this.followerStore.getFollowersSince(since)
+    const newFollowers = await this.followerStore.getFollowersSince(streamerId, since)
     for (let i = 0; i < newFollowers.length; i++) {
       const follower = newFollowers[i]
       events.push({

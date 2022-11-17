@@ -1,9 +1,10 @@
 import { ChatUser, RegisteredUser, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
-import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import { single } from '@rebel/server/util/arrays'
 import { cast, expectArray, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
@@ -25,7 +26,7 @@ beforeEach(() => {
   }))
 })
 
-describe(nameof(StreamerChannelService, 'getAllTwitchChannelNames'), () => {
+describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
   test('Returns the Twitch channel names of all streamers', async () => {
     const chatUser1 = cast<ChatUser>({ id: 2 })
     const registeredUser1 = cast<RegisteredUser>({ id: 3, chatUserId: chatUser1.id })
@@ -39,9 +40,9 @@ describe(nameof(StreamerChannelService, 'getAllTwitchChannelNames'), () => {
     mockChannelStore.getUserOwnedChannels.calledWith(chatUser1.id).mockResolvedValue(channels)
     mockChannelStore.getTwitchUserNameFromChannelId.calledWith(twitchChannel).mockResolvedValue(channelName)
 
-    const result = await streamerChannelService.getAllTwitchChannelNames()
+    const result = await streamerChannelService.getAllTwitchStreamerChannels()
 
-    expect(result).toEqual([channelName])
+    expect(result).toEqual<TwitchStreamerChannel[]>([{ streamerId: streamer1.id, twitchChannelName: channelName }])
   })
 
   test('Ignores streamers that do not have a linked chat user or Twitch channel', async () => {
@@ -57,9 +58,9 @@ describe(nameof(StreamerChannelService, 'getAllTwitchChannelNames'), () => {
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser2.id])).mockResolvedValue([registeredUser2])
     mockChannelStore.getUserOwnedChannels.calledWith(chatUser1.id).mockResolvedValue(channels)
 
-    const result = await streamerChannelService.getAllTwitchChannelNames()
+    const result = await streamerChannelService.getAllTwitchStreamerChannels()
 
-    expect(result).toEqual([])
+    expect(result).toEqual<TwitchStreamerChannel[]>([])
   })
 })
 

@@ -22,9 +22,12 @@ export default class FollowerStore extends ContextClass {
   }
 
   /** Returns the followers since the given timestamp (exclusive). */
-  public async getFollowersSince (since: number): Promise<TwitchFollower[]> {
+  public async getFollowersSince (streamerId: number, since: number): Promise<TwitchFollower[]> {
     try {
-      return await this.db.twitchFollower.findMany({ where: { date: { gt: new Date(since) }}})
+      return await this.db.twitchFollower.findMany({ where: {
+        streamerId: streamerId,
+        date: { gt: new Date(since) }
+      }})
     } catch (e) {
       this.logService.logError(this, 'Unable to get followers since', since, e)
       return []
@@ -32,10 +35,15 @@ export default class FollowerStore extends ContextClass {
   }
 
   /** Saves the user's details to the TwitchFollowers table if they follow for the first time. */
-  public async saveNewFollower (userId: string, userName: string, userDisplayName: string) {
+  public async saveNewFollower (streamerId: number, userId: string, userName: string, userDisplayName: string) {
     try {
       await this.db.twitchFollower.upsert({
-        create: { twitchId: userId, userName: userName, displayName: userDisplayName },
+        create: {
+          streamerId: streamerId,
+          twitchId: userId,
+          userName: userName,
+          displayName: userDisplayName
+        },
         update: {},
         where: { twitchId: userId }
       })

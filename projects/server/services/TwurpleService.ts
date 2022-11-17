@@ -166,7 +166,7 @@ export default class TwurpleService extends ContextClass {
   }
 
   private async joinStreamerChannels (): Promise<void> {
-    const channels = await this.streamerChannelService.getAllTwitchChannelNames()
-    await Promise.all(channels.map(c => this.chatClient.join(c)))
+    const channels = await this.streamerChannelService.getAllTwitchStreamerChannels()
+    await Promise.all(channels.map(c => this.chatClient.join(c.twitchChannelName)))
   }
 }

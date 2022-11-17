@@ -151,6 +151,7 @@ model Streamer {
   streamlabsSocketToken  StreamlabsSocketToken?
   experienceTransactions ExperienceTransaction[]
   experienceSnapshots    ExperienceSnapshot[]
+  twitchFollowers        TwitchFollower[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -250,7 +251,11 @@ model TwitchFollower {
   userName    String
   displayName String
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "twitch_follower_streamerId_fkey")
+
   @@unique([twitchId], map: "twitch_follower_twitchId_key")
+  @@index([streamerId], map: "twitch_follower_streamerId_fkey")
   @@map("twitch_follower")
 }
 

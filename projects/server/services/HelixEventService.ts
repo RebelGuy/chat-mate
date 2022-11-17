@@ -134,7 +134,7 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
-    await this.subscribeToChannelEventsByChannelName(channelName)
+    await this.subscribeToChannelEventsByChannelName(streamerId, channelName)
   }
 
   private async refreshNgrok () {
@@ -156,11 +156,11 @@ export default class HelixEventService extends ContextClass {
   }
 
   private async initialiseSubscriptions () {
-    const channels = await this.streamerChannelService.getAllTwitchChannelNames()
-    await Promise.all(channels.map(c => this.subscribeToChannelEventsByChannelName(c)))
+    const streamerChannels = await this.streamerChannelService.getAllTwitchStreamerChannels()
+    await Promise.all(streamerChannels.map(c => this.subscribeToChannelEventsByChannelName(c.streamerId, c.twitchChannelName)))
   }
 
-  private async subscribeToChannelEventsByChannelName (channelName: string) {
+  private async subscribeToChannelEventsByChannelName (streamerId: number, channelName: string) {
     const client = this.twurpleApiClientProvider.getClientApi()
     const user = await client.users.getUserByName(channelName)
     if (user == null) {
@@ -168,7 +168,7 @@ export default class HelixEventService extends ContextClass {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(e.userId, e.userName, e.userDisplayName))
+    await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
   }
 
   private createNewListener () {

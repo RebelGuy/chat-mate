@@ -7,6 +7,11 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { singleOrNull } from '@rebel/server/util/arrays'
 
+export type TwitchStreamerChannel = {
+  streamerId: number
+  twitchChannelName: string
+}
+
 type Deps = Dependencies<{
   streamerStore: StreamerStore
   accountStore: AccountStore
@@ -29,12 +34,20 @@ export default class StreamerChannelService extends ContextClass {
     this.logService = deps.resolve('logService')
   }
 
-  public async getAllTwitchChannelNames (): Promise<string[]> {
+  public async getAllTwitchStreamerChannels (): Promise<TwitchStreamerChannel[]> {
     const streamers = await this.streamerStore.getStreamers()
     // todo: this is not very scalable
     const channelResults = await Promise.allSettled(streamers.map(s => this.getTwitchChannelNameFromStreamer(s)))
-    const channels = channelResults.filter(r => r.status === 'fulfilled' && r.value != null).map(r => (r as PromiseFulfilledResult<string>).value)
-    return channels
+
+    let streamerChannels: TwitchStreamerChannel[] = []
+    for (let i = 0; i < channelResults.length; i++) {
+      const result = channelResults[i]
+      if (result.status === 'fulfilled' && result.value != null) {
+        streamerChannels.push({ streamerId: streamers[i].id, twitchChannelName: result.value })
+      }
+    }
+
+    return streamerChannels
   }
 
   /** Returns null when the associated chat user does not have a linked Twitch channel, or if any intermediate db object cannot be found. */
