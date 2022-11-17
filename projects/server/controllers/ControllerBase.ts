@@ -114,12 +114,16 @@ export abstract class ControllerBase extends ContextClass {
   }
 
   // the `ControllerBase` acts as a proxy so we don't have to do `super.apiService.getCurrentUser` but just `super.getCurrentUser`
-  protected getCurrentUser (): RegisteredUser | null {
-    return this.apiService.getCurrentUser()
+  protected getCurrentUser (optional?: false): RegisteredUser
+  protected getCurrentUser (optional: true): RegisteredUser | null
+  protected getCurrentUser (optional?: boolean): RegisteredUser | null {
+    return this.apiService.getCurrentUser(optional as any)
   }
 
-  protected getStreamerId (): number | null {
-    return this.apiService.getStreamerId()
+  public getStreamerId (optional?: false): number
+  public getStreamerId (optional: true): number | null
+  public getStreamerId (optional?: boolean): number | null {
+    return this.apiService.getStreamerId(optional as any)
   }
 
   protected getRanks (): RankName[] | null {

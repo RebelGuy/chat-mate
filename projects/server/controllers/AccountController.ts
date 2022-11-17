@@ -113,7 +113,7 @@ export default class AccountController extends ControllerBase {
 
     try {
       await this.apiService.authenticateCurrentUser()
-      const user = super.getCurrentUser()!
+      const user = super.getCurrentUser()
       await this.accountStore.clearLoginTokens(user.id)
     } catch (e: any) {
       // ignore
@@ -131,7 +131,7 @@ export default class AccountController extends ControllerBase {
     const builder = this.registerResponseBuilder<AuthenticateResponse>('POST /authenticate', 1)
 
     try {
-      const user = super.getCurrentUser()!
+      const user = super.getCurrentUser()
       const streamer = await this.streamerStore.getStreamerByName(user.username)
       return builder.success({ username: user.username, isStreamer: streamer != null })
     } catch (e: any) {

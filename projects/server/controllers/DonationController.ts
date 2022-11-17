@@ -55,7 +55,7 @@ export default class DonationController extends ControllerBase {
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /', 1)
     try {
-      const donations = await this.donationStore.getDonationsSince(this.getStreamerId()!, 0)
+      const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0)
       return builder.success({
         donations: await this.getPublicDonations(donations)
       })
@@ -77,7 +77,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      await this.donationService.linkUserToDonation(donationId, userId, this.getStreamerId()!)
+      await this.donationService.linkUserToDonation(donationId, userId, this.getStreamerId())
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -101,7 +101,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      await this.donationService.unlinkUserFromDonation(donationId, this.getStreamerId()!)
+      await this.donationService.unlinkUserFromDonation(donationId, this.getStreamerId())
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -119,7 +119,7 @@ export default class DonationController extends ControllerBase {
     const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /websocketToken', 1)
 
     try {
-      const hasUpdated = await this.donationService.setStreamlabsSocketToken(this.getStreamerId()!, request.websocketToken)
+      const hasUpdated = await this.donationService.setStreamlabsSocketToken(this.getStreamerId(), request.websocketToken)
       return builder.success({ result: hasUpdated ? 'success' : 'noChange' })
     } catch (e: any) {
       return builder.failure(e)
@@ -138,8 +138,8 @@ export default class DonationController extends ControllerBase {
       userData = []
     } else {
       const userChannels = await this.channelService.getActiveUserChannels(userIds)
-      const levels = await this.experienceService.getLevels(this.getStreamerId()!, userIds)
-      const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId()!)
+      const levels = await this.experienceService.getLevels(this.getStreamerId(), userIds)
+      const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId())
       userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
     }
 

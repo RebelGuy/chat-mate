@@ -77,7 +77,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
     const { builder } = args
-    const livestreamStatus = await this.getLivestreamStatus(this.getStreamerId()!)
+    const livestreamStatus = await this.getLivestreamStatus(this.getStreamerId())
     const youtubeApiStatus = this.masterchatStatusService.getApiStatus()
     const twitchApiStatus = this.twurpleStatusService.getApiStatus()
 
@@ -87,12 +87,12 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
 
-    const events = await this.chatMateEventService.getEventsSince(this.getStreamerId()!, since)
+    const events = await this.chatMateEventService.getEventsSince(this.getStreamerId(), since)
 
     // pre-fetch user data for `levelUp` events
     const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))
     const userChannels = await this.channelService.getActiveUserChannels(userIds)
-    const levelInfo = await this.experienceService.getLevels(this.getStreamerId()!, userIds)
+    const levelInfo = await this.experienceService.getLevels(this.getStreamerId(), userIds)
     const ranks = await this.rankStore.getUserRanks(userIds, this.getStreamerId())
     const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
 
@@ -160,7 +160,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
       }
     }
 
-    const streamerId = this.getStreamerId()!
+    const streamerId = this.getStreamerId()
     const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null && liveId != null) {
       await this.livestreamService.setActiveLivestream(streamerId, liveId)

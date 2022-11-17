@@ -38,8 +38,8 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
       throw new Error('Chat items must have a userId set')
     }
 
-    const levels = await this.experienceService.getLevels(this.getStreamerId()!, userIds as number[])
-    const ranks = await this.rankStore.getUserRanks(userIds as number[], this.getStreamerId()!)
+    const levels = await this.experienceService.getLevels(this.getStreamerId(), userIds as number[])
+    const ranks = await this.rankStore.getUserRanks(userIds as number[], this.getStreamerId())
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {

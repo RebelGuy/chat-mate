@@ -78,7 +78,7 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<CreateApplicationResponse>('POST /application', 1)
 
     try {
-      const registeredUserId = super.getCurrentUser()!.id
+      const registeredUserId = super.getCurrentUser().id
       const application = await this.streamerService.createStreamerApplication(registeredUserId, request.message)
       return builder.success({ newApplication: streamerApplicationToPublicObject(application) })
 

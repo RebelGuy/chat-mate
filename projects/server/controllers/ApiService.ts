@@ -114,11 +114,23 @@ export default class ApiService extends ContextClass {
     this.ranks = userRanks.ranks.map(r => r.rank.name)
   }
 
-  public getCurrentUser (): RegisteredUser | null {
+  public getCurrentUser (optional?: false): RegisteredUser
+  public getCurrentUser (optional: true): RegisteredUser | null
+  public getCurrentUser (optional?: boolean): RegisteredUser | null {
+    if (!optional && this.registeredUser == null) {
+      throw new Error('Current user is required but null - ensure you are using the `requireAuth` pre-processor.')
+    }
+
     return this.registeredUser
   }
 
-  public getStreamerId (): number | null {
+  public getStreamerId (optional?: false): number
+  public getStreamerId (optional: true): number | null
+  public getStreamerId (optional?: boolean): number | null {
+    if (!optional && this.streamerId == null) {
+      throw new Error('StreamerId is required but null - ensure you are using the `requireStreamer` pre-processor.')
+    }
+
     return this.streamerId
   }
 

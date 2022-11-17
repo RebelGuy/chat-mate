@@ -33,7 +33,7 @@ export default class EmojiController extends ControllerBase {
   public async getCustomEmojis (): Promise<GetCustomEmojisResponse> {
     const builder = this.registerResponseBuilder<GetCustomEmojisResponse>('GET /custom', 1)
     try {
-      const emojis = await this.customEmojiStore.getAllCustomEmojis(this.getStreamerId()!)
+      const emojis = await this.customEmojiStore.getAllCustomEmojis(this.getStreamerId())
       return builder.success({ emojis: emojis.map(e => customEmojiToPublicObject(e)) })
     } catch (e: any) {
       return builder.failure(e)
@@ -59,7 +59,7 @@ export default class EmojiController extends ControllerBase {
     }
 
     try {
-      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, this.getStreamerId()!))
+      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, this.getStreamerId()))
       return builder.success({ newEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)
