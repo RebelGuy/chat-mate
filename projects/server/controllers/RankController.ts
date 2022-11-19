@@ -34,6 +34,7 @@ type AddUserRankResponse = ApiResponse<1, {
 
 type RemoveUserRankRequest = ApiRequest<1, {
   schema: 1,
+  removedByRegisteredUserId: number
   userId: number,
   message: string | null,
   rank: 'famous' | 'donator' | 'supporter' | 'member'
@@ -144,7 +145,7 @@ export default class RankController extends ControllerBase {
         streamerId: this.getStreamerId(),
         message: request.message,
         expirationTime: request.durationSeconds ? addTime(new Date(), 'seconds', request.durationSeconds) : null,
-        assignee: null // todo: CHAT-385 use logged-in user details
+        assignee: this.getCurrentUser().id
       }
       const result = await this.rankStore.addUserRank(args)
 
@@ -172,7 +173,7 @@ export default class RankController extends ControllerBase {
         userId: request.userId,
         streamerId: this.getStreamerId(),
         message: request.message,
-        removedBy: null // todo: CHAT-385 use logged-in user details
+        removedBy: this.getCurrentUser().id
       }
       const result = await this.rankStore.removeUserRank(args)
 
@@ -196,7 +197,7 @@ export default class RankController extends ControllerBase {
     }
 
     try {
-      const result = await this.modService.setModRank(request.userId, this.getStreamerId(), true, request.message)
+      const result = await this.modService.setModRank(request.userId, this.getStreamerId(), this.getCurrentUser().id, true, request.message)
       return builder.success({
         newRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
         newRankError: result.rankResult.error,
@@ -217,7 +218,7 @@ export default class RankController extends ControllerBase {
     }
 
     try {
-      const result = await this.modService.setModRank(request.userId, this.getStreamerId(), false, request.message)
+      const result = await this.modService.setModRank(request.userId, this.getStreamerId(), this.getCurrentUser().id, false, request.message)
       return builder.success({
         removedRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
         removedRankError: result.rankResult.error,

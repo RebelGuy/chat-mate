@@ -122,14 +122,15 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      const userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [request.userId])
+      const streamerId = this.getStreamerId()
+      const userChannels = await this.channelService.getActiveUserChannels(streamerId, [request.userId])
       const userChannel = userChannels[0]
       if (userChannel == null) {
         return builder.failure(404, `Could not find an active channel for user ${request.userId}.`)
       }
 
-      const level = await this.experienceService.modifyExperience(request.userId, this.getStreamerId(), request.deltaLevels, request.message)
-      const activeRanks = single(await this.rankStore.getUserRanks([request.userId], this.getStreamerId()))
+      const level = await this.experienceService.modifyExperience(request.userId, streamerId, this.getCurrentUser().id, request.deltaLevels, request.message)
+      const activeRanks = single(await this.rankStore.getUserRanks([request.userId], streamerId))
       const publicUser = userDataToPublicUser({ ...userChannel, ...level, ...activeRanks })
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {

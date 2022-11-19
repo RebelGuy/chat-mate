@@ -327,6 +327,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
     const userId = 1
     const streamerId = 5
+    const loggedInRegisteredUserId = 10
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId]))
       .mockResolvedValueOnce([{ userId: userId, experience: 150 }])
       .mockResolvedValueOnce([{ userId: userId, experience: 650 }])
@@ -334,16 +335,17 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 5 as any, levelProgress: 5.1 - 5 as any })).mockReturnValue(asGte(650.1, 0))
 
-    const result = await experienceService.modifyExperience(userId, streamerId, 3.6, 'Test')
+    const result = await experienceService.modifyExperience(userId, streamerId, loggedInRegisteredUserId, 3.6, 'Test')
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
-    expect(call).toEqual<typeof call>([streamerId, userId, 500, 'Test'])
+    expect(call).toEqual<typeof call>([streamerId, userId, loggedInRegisteredUserId, 500, 'Test'])
     expect(result).toEqual<UserLevel>({ userId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
   })
 
   test('level does not fall below 0', async () => {
     const userId = 1
     const streamerId = 5
+    const loggedInRegisteredUserId = 10
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId]))
       .mockResolvedValueOnce([{ userId: userId, experience: 100 }])
       .mockResolvedValueOnce([{ userId: userId, experience: 0 }])
@@ -351,10 +353,10 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     mockExperienceHelpers.calculateLevel.calledWith(asGte(0, 0)).mockReturnValue({ level: 0, levelProgress: 0 as any })
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 0, levelProgress: 0 })).mockReturnValue(0)
 
-    const result = await experienceService.modifyExperience(userId, streamerId, -2, 'Test')
+    const result = await experienceService.modifyExperience(userId, streamerId, loggedInRegisteredUserId, -2, 'Test')
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
-    expect(call).toEqual<typeof call>([streamerId, userId, -100, 'Test'])
+    expect(call).toEqual<typeof call>([streamerId, userId, loggedInRegisteredUserId, -100, 'Test'])
     expect(result).toEqual<UserLevel>({ userId, level: { level: 0, levelProgress: 0 as any, totalExperience: 0 }})
   })
 })

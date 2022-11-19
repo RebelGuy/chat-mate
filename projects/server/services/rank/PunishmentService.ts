@@ -86,14 +86,14 @@ export default class PunishmentService extends ContextClass {
     return groupFilter(history, 'punishment')
   }
 
-  public async banUser (userId: number, streamerId: number, message: string | null): Promise<SetActionRankResult> {
+  public async banUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null): Promise<SetActionRankResult> {
     const args: AddUserRankArgs = {
       rank: 'ban',
       message: message,
       userId: userId,
       streamerId: streamerId,
       expirationTime: null,
-      assignee: null // todo: CHAT-385 use logged-in user details
+      assignee: loggedInRegisteredUserId
     }
     const rankResult = await this.addInternalRank(args)
 
@@ -111,7 +111,7 @@ export default class PunishmentService extends ContextClass {
 
   /** Mutes are used only in ChatMate and not relayed to Youtube or Twitch.
    * @throws {@link UserRankAlreadyExistsError}: When a user-rank of that type is already active. */
-  public async muteUser (userId: number, streamerId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
+  public async muteUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'mute',
@@ -119,13 +119,13 @@ export default class PunishmentService extends ContextClass {
       message: message,
       userId: userId,
       streamerId: streamerId,
-      assignee: null // todo: CHAT-385 use logged-in user details
+      assignee: loggedInRegisteredUserId
     }
     return await this.rankStore.addUserRank(args)
   }
 
   /** Applies an actual timeout that is relayed to Youtube or Twitch. */
-  public async timeoutUser (userId: number, streamerId: number, message: string | null, durationSeconds: number): Promise<SetActionRankResult> {
+  public async timeoutUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null, durationSeconds: number): Promise<SetActionRankResult> {
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'timeout',
@@ -133,7 +133,7 @@ export default class PunishmentService extends ContextClass {
       message: message,
       userId: userId,
       streamerId: streamerId,
-      assignee: null // todo: CHAT-385 use logged-in user details
+      assignee: loggedInRegisteredUserId
     }
     const rankResult = await this.addInternalRank(args)
 
@@ -150,13 +150,13 @@ export default class PunishmentService extends ContextClass {
   }
 
   /** Returns the updated punishment, if there was one. */
-  public async unbanUser (userId: number, streamerId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
+  public async unbanUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'ban',
       userId: userId,
       streamerId: streamerId,
       message: unbanMessage,
-      removedBy: null // todo: CHAT-385 use logged-in user details
+      removedBy: loggedInRegisteredUserId
     }
     const rankResult = await this.removeInternalRank(args)
 
@@ -167,24 +167,24 @@ export default class PunishmentService extends ContextClass {
     return { rankResult, youtubeResults, twitchResults }
   }
 
-  public async unmuteUser (userId: number, streamerId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
+  public async unmuteUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
     const args: RemoveUserRankArgs = {
       rank: 'mute',
       userId: userId,
       streamerId: streamerId,
       message: revokeMessage,
-      removedBy: null // todo: CHAT-385 use logged-in user details
+      removedBy: loggedInRegisteredUserId
     }
     return await this.rankStore.removeUserRank(args)
   }
 
-  public async untimeoutUser (userId: number, streamerId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
+  public async untimeoutUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'timeout',
       userId: userId,
       streamerId: streamerId,
       message: revokeMessage,
-      removedBy: null // todo: CHAT-385 use logged-in user details
+      removedBy: loggedInRegisteredUserId
     }
     const rankResult = await this.removeInternalRank(args)
 

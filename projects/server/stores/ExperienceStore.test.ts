@@ -120,12 +120,11 @@ export default () => {
 
   describe(nameof(ExperienceStore, 'addManualExperience'), () => {
     test('correctly adds experience', async () => {
-      const admin1 = 3
-      const admin2 = 4
       const streamerId = 2
-      mockAdminService.getAdminUsers.calledWith(streamerId).mockResolvedValue([{ id: admin1 }, { id: admin2 }])
+      const adminRegisteredUserId = 1
+      await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
 
-      await experienceStore.addManualExperience(streamerId, user1, -200, 'This is a test')
+      await experienceStore.addManualExperience(streamerId, user1, adminRegisteredUserId, -200, 'This is a test')
 
       const added = (await db.experienceTransaction.findFirst({ include: {
         experienceDataAdmin: true,
@@ -134,7 +133,7 @@ export default () => {
       expect(added.streamerId).toBe(streamerId)
       expect(added.userId).toBe(user1)
       expect(added.delta).toBe(-200)
-      expect(added.experienceDataAdmin?.adminUserId).toBe(admin1)
+      expect(added.experienceDataAdmin?.adminRegisteredUserId).toBe(adminRegisteredUserId)
       expect(added.experienceDataAdmin?.message).toBe('This is a test')
     })
   })

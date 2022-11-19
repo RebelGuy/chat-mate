@@ -3,9 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import AdminService from '@rebel/server/services/rank/AdminService'
 import { NoNulls } from '@rebel/server/types'
-import { first } from '@rebel/server/util/arrays'
 
 export type ChatExperience =
   NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'user' | 'experienceDataChatMessage'>>
@@ -23,17 +21,14 @@ type ChatExperienceTransaction = ChatExperience & {
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
-  adminService: AdminService
 }>
 
 export default class ExperienceStore extends ContextClass {
   private readonly db: Db
-  private readonly adminService: AdminService
 
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
-    this.adminService = deps.resolve('adminService')
   }
 
   // returns the previous chat experience, may not be for the current livestream
@@ -92,15 +87,14 @@ export default class ExperienceStore extends ContextClass {
     }
   }
 
-  public async addManualExperience (streamerId: number, userId: number, xp: number, message: string | null) {
-    const adminUser = first(await this.adminService.getAdminUsers(streamerId))
-    const experienceTransaction = await this.db.experienceTransaction.create({ data: {
+  public async addManualExperience (streamerId: number, userId: number, adminRegisteredUserId: number, xp: number, message: string | null) {
+    await this.db.experienceTransaction.create({ data: {
       time: new Date(),
-      streamer: { connect: { id: streamerId }},
-      user: { connect: { id: userId }},
+      streamerId: streamerId,
+      userId: userId,
       delta: xp,
       experienceDataAdmin: { create: {
-        adminUser: { connect: { id: adminUser.id }},
+        adminRegisteredUserId: adminRegisteredUserId,
         message
       }}
     }})

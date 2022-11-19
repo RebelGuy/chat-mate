@@ -213,7 +213,7 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
-  public async modifyExperience (userId: number, streamerId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
+  public async modifyExperience (userId: number, streamerId: number, loggedInRegisteredUserId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
     const currentExperiences = await this.experienceStore.getExperience(streamerId, [userId])
 
     // current experience may be negative - this is intentional
@@ -231,7 +231,7 @@ export default class ExperienceService extends ContextClass {
     }
     const requiredExperience = Math.round(this.experienceHelpers.calculateExperience(newLevelData))
     const experienceDelta = requiredExperience - currentExperience
-    await this.experienceStore.addManualExperience(streamerId, userId, experienceDelta, message)
+    await this.experienceStore.addManualExperience(streamerId, userId, loggedInRegisteredUserId, experienceDelta, message)
 
     const updatedLevel = await this.getLevels(streamerId, [userId])
     return single(updatedLevel)

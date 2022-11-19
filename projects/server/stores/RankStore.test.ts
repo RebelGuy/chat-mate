@@ -22,6 +22,8 @@ export default () => {
   let user1: number
   let user2: number
   let user3: number
+  let registeredUser1: number
+  let registeredUser2: number
   let streamer1: number
   let streamer2: number
   let streamer1Name = 'name1'
@@ -87,12 +89,12 @@ export default () => {
         userId: args.userId,
         streamerId: streamer1,
         streamerName: streamer1Name,
-        assignedByUserId: args.assignee,
+        assignedByRegisteredUserId: args.assignee,
         issuedAt: time1,
         message: null,
         expirationTime: null,
         revokeMessage: null,
-        revokedByUserId: null,
+        revokedByRegisteredUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: famousRank.id
@@ -118,12 +120,12 @@ export default () => {
         userId: args.userId,
         streamerId: streamer1,
         streamerName: streamer1Name,
-        assignedByUserId: args.assignee,
+        assignedByRegisteredUserId: args.assignee,
         issuedAt: time1,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByUserId: null,
+        revokedByRegisteredUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: modRank.id
@@ -177,12 +179,12 @@ export default () => {
         userId: args.userId,
         streamerId: streamer2,
         streamerName: streamer2Name,
-        assignedByUserId: args.assignee,
+        assignedByRegisteredUserId: args.assignee,
         issuedAt: time1,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByUserId: null,
+        revokedByRegisteredUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: modRank.id
@@ -215,12 +217,12 @@ export default () => {
         userId: args.userId,
         streamerId: null,
         streamerName: null,
-        assignedByUserId: args.assignee,
+        assignedByRegisteredUserId: args.assignee,
         issuedAt: time1,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByUserId: null,
+        revokedByRegisteredUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: famousRank.id
@@ -253,12 +255,12 @@ export default () => {
         userId: args.userId,
         streamerId: null,
         streamerName: null,
-        assignedByUserId: args.assignee,
+        assignedByRegisteredUserId: args.assignee,
         issuedAt: time5,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByUserId: null,
+        revokedByRegisteredUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: famousRank.id
@@ -477,12 +479,12 @@ export default () => {
         userId: args.userId,
         streamerId: args.streamerId,
         streamerName: streamer1Name,
-        assignedByUserId: null,
+        assignedByRegisteredUserId: null,
         issuedAt: time5,
         message: null,
         expirationTime: null,
         revokeMessage: args.message,
-        revokedByUserId: args.removedBy,
+        revokedByRegisteredUserId: args.removedBy,
         revokedTime: time6,
         rank: expectObject<Rank>({
           id: famousRank.id

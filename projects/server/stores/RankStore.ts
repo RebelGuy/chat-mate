@@ -22,16 +22,16 @@ export type AddUserRankArgs = {
   userId: number
   message: string | null
 
-  // refer to the `GlobalRanks` constant to find out which ranks can have `streamerId = null`
+  /** refer to the `GlobalRanks` constant to find out which ranks can have `streamerId = null` */
   streamerId: number | null
 
-  // null if assigned by system
+  /** registered user id, `null` if assigned by system */
   assignee: number | null
 
-  // null if the rank shouldn't expire
+  /** `null` if the rank shouldn't expire */
   expirationTime: Date | null
 
-  // optionally specify the reported time at which the rank was added. if not provided, uses the current time
+  /** optionally specify the reported time at which the rank was added. if not provided, uses the current time */
   time?: Date
 }
 
@@ -41,7 +41,7 @@ export type RemoveUserRankArgs = {
   streamerId: number | null
   message: string | null
 
-  // null if removed by system
+  /** registered user id, null if removed by system */
   removedBy: number | null
 }
 
@@ -93,7 +93,7 @@ export default class RankStore extends ContextClass {
           rank: { connect: { name: args.rank }},
           streamer: args.streamerId == null ? undefined : { connect: { id: args.streamerId } },
           issuedAt: args.time ?? this.dateTimeHelpers.now(),
-          assignedByUser: args.assignee == null ? undefined : { connect: { id: args.assignee }},
+          assignedByRegisteredUser: args.assignee == null ? undefined : { connect: { id: args.assignee }},
           message: args.message,
           expirationTime: args.expirationTime
         },
@@ -207,7 +207,7 @@ export default class RankStore extends ContextClass {
       data: {
         revokedTime: this.dateTimeHelpers.now(),
         revokeMessage: args.message,
-        revokedByUserId: args.removedBy
+        revokedByRegisteredUserId: args.removedBy
       },
       include: includeUserRankRelations
     })
@@ -270,12 +270,12 @@ type RawResult = UserRank & {
 function rawDataToUserRankWithRelations (data: RawResult): UserRankWithRelations {
   return {
     id: data.id,
-    assignedByUserId: data.assignedByUserId,
+    assignedByRegisteredUserId: data.assignedByRegisteredUserId,
     expirationTime: data.expirationTime,
     issuedAt: data.issuedAt,
     message: data.message,
     rank: data.rank,
-    revokedByUserId: data.revokedByUserId,
+    revokedByRegisteredUserId: data.revokedByRegisteredUserId,
     revokedTime: data.revokedTime,
     revokeMessage: data.revokeMessage,
     userId: data.userId,
