@@ -47,6 +47,20 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.21 - The Auth Update [20/11/2022]
+- Server
+  - Added the ability to register as a user, and for registered users to authenticate themselves. Registered Users may be linked to Chat Users 
+  - Added the concept of Streamers. Almost all data is now isolated within the context of a Streamer, such as experience, custom emojis, donations, and ranks
+  - Added streamlined guards to API endpoints. Some endpoints now require one or more of the following:
+    - A loginToken header
+    - A Streamer name header
+    - The logged-in user to have a certain rank (in the context of the Streamer or, if no Streamer context exists, globally)
+- Studio
+  - Added a registration form to become a Streamer, and a way for admins to approve/rejects applications
+  - Added the ability to log in/out
+  - Added the ability to choose the streamer context
+  - All API requests now use the loginToken and Streamer name, if set
+
 ## v1.20 - The Donation Update v2 [28/10/2022]
 - Server
   - Custom emojis now have a new flag that allows them to be used within donation messages (enabled by default)
