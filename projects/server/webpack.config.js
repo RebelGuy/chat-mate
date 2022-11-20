@@ -46,7 +46,7 @@ module.exports = (env) => {
     copyPatterns.push({
       // the file we are interested in has 'engine' in its name.
       // see https://www.prisma.io/docs/concepts/components/prisma-engines/query-engine
-      from: './node_modules/.prisma/client/*engine*', // `query_engine-windows.dll.node` for windows
+      from: '../../node_modules/.prisma/client/*engine*', // `query_engine-windows.dll.node` for windows
       to: path.resolve(outPath, './[name][ext]'), // place the file directly to the output directory instead of copying the directory tree, otherwise Prisma won't find it
     })
   }
@@ -64,7 +64,7 @@ module.exports = (env) => {
     {
       // required for prisma to find the schema file
       // see https://github.com/prisma/prisma/issues/2303#issuecomment-768358529
-      from: path.resolve(__dirname, './node_modules/.prisma/client/schema.prisma'),
+      from: path.resolve(__dirname, '../../node_modules/.prisma/client/schema.prisma'),
       to: outPath,
     },
     {
