@@ -89,7 +89,7 @@ export default class ChatStore extends ContextClass {
 
   /** For each user, returns the last chat item authored by the user, if any, regardless of which channel was used. */
   public async getLastChatOfUsers (streamerId: number, userIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
-    const filter = userIds === 'all' ? undefined : { userId: { in: userIds }}
+    const filter = userIds === 'all' ? { NOT: { userId: null }} : { userId: { in: userIds }}
 
     return await this.db.chatMessage.findMany({
       distinct: ['userId'],

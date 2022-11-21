@@ -512,5 +512,29 @@ export default () => {
       const msg = single(lastMessages)
       expect(msg.externalId).toBe('user 1 msg 3')
     })
+
+    test.only('ignores donation messages', async () => {
+      const donation = await db.donation.create({ data: {
+        amount: 1,
+        currency: 'USD',
+        formattedAmount: '$1.00',
+        name: 'Test user',
+        streamlabsId: 1,
+        time: data.time1,
+        streamerId: streamer1
+      }})
+      await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
+      await db.chatMessage.create({ data: {
+        streamerId: streamer1,
+        externalId: '1',
+        time: new Date(),
+        donationId: donation.id,
+        chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }]}}
+      }})
+
+      const result = await chatStore.getLastChatOfUsers(streamer1, 'all')
+
+      expect(result.length).toBe(0)
+    })
   })
 }
