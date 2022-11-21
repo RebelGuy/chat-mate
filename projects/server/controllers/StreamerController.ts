@@ -62,10 +62,10 @@ export default class StreamerController extends ControllerBase {
   public async getApplications (): Promise<GetApplicationsResponse> {
     const builder = this.registerResponseBuilder<GetApplicationsResponse>('GET /application', 1)
 
-    // todo: if the user is not an admin, the user can only get their own applications
-
     try {
-      const applications = await this.streamerStore.getStreamerApplications()
+      const isAdmin = this.hasRankOrAbove('admin')
+      const userId = isAdmin ? undefined : this.getCurrentUser().id
+      const applications = await this.streamerStore.getStreamerApplications(userId)
       return builder.success({ streamerApplications: applications.map(streamerApplicationToPublicObject) })
     } catch (e: any) {
       return builder.failure(e)

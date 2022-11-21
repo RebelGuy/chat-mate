@@ -3,7 +3,6 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ApiService from '@rebel/server/controllers/ApiService'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
-import { Context, ServiceContext } from 'typescript-rest'
 
 export const BASE_PATH = '/api'
 
@@ -128,6 +127,10 @@ export abstract class ControllerBase extends ContextClass {
 
   protected getRanks (): RankName[] | null {
     return this.apiService.getRanks()
+  }
+
+  protected hasRankOrAbove (rank: RankName): boolean {
+    return this.apiService.hasRankOrAbove(rank)
   }
 
   protected registerResponseBuilder<

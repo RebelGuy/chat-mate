@@ -9,6 +9,7 @@ import { Request, Response } from 'express'
 export function requireAuth (req: Request, res?: Response) {
   return preProcessorWrapper(req, res, async (apiService) => {
     await apiService.authenticateCurrentUser()
+    await apiService.hydrateRanks()
   })
 }
 

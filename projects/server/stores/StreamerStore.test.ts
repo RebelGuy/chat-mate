@@ -112,13 +112,25 @@ export default () => {
   })
 
   describe(nameof(StreamerStore, 'getStreamerApplications'), () => {
-    test('Gets all streamer applications', async () => {
+    test('Gets all streamer applications if an undefined registeredUserId is provided', async () => {
       await db.streamerApplication.createMany({ data: [
         { message: 'test', registeredUserId: 1 },
         { message: 'test', registeredUserId: 2, timeClosed: new Date() }
       ]})
 
-      const result = await streamerStore.getStreamerApplications()
+      const result = await streamerStore.getStreamerApplications(undefined)
+
+      expect(result.length).toBe(2)
+    })
+
+    test('Gets only applications for the specified registered user', async () => {
+      await db.streamerApplication.createMany({ data: [
+        { message: 'test', registeredUserId: 1 },
+        { message: 'test', registeredUserId: 2 },
+        { message: 'test', registeredUserId: 2, timeClosed: new Date() }
+      ]})
+
+      const result = await streamerStore.getStreamerApplications(2)
 
       expect(result.length).toBe(2)
     })
