@@ -703,7 +703,7 @@ model StreamlabsSocketToken {
   id Int @id @default(autoincrement())
 
   time  DateTime @default(now())
-  token String   @db.VarChar(512)
+  token String   @db.VarChar(1024)
 
   streamerId Int // unique - every streamer can have at most one websocket token
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "streamlabs_socket_token_streamerId_fkey")

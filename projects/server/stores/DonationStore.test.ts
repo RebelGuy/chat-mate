@@ -224,6 +224,27 @@ export default () => {
     })
   })
 
+  describe(nameof(DonationStore, 'getStreamlabsSocketToken'), () => {
+    test('Returns the token for the given streamer', async () => {
+      await db.streamlabsSocketToken.createMany({ data: [
+        { token: 'test1', streamerId: streamer1 },
+        { token: 'test2', streamerId: streamer2 }
+      ]})
+
+      const result = await donationStore.getStreamlabsSocketToken(streamer2)
+
+      expect(result!.token).toBe('test2')
+    })
+
+    test('Returns null if no token exists for the given streamer', async () => {
+      await db.streamlabsSocketToken.create({ data: { token: 'test2', streamerId: streamer2 }})
+
+      const result = await donationStore.getStreamlabsSocketToken(streamer1)
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(DonationStore, 'linkUserToDonation'), () => {
     test('Links specified user to the donations (no streamlabs user)', async () => {
       const user = await db.chatUser.create({ data: {}})

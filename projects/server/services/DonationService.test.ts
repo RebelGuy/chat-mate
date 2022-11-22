@@ -1,4 +1,4 @@
-import { Donation } from '@prisma/client'
+import { Donation, Streamer, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationHelpers'
 import DonationService from '@rebel/server/services/DonationService'
@@ -12,6 +12,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import EmojiService from '@rebel/server/services/EmojiService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import { PartialChatMessage } from '@rebel/server/models/chat'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 
 const streamerId = 3
 
@@ -21,6 +22,7 @@ let mockRankStore: MockProxy<RankStore>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let mockEmojiService: MockProxy<EmojiService>
 let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
+let mockStreamerStore: MockProxy<StreamerStore>
 let donationService: DonationService
 
 beforeEach(() => {
@@ -30,6 +32,7 @@ beforeEach(() => {
   mockDateTimeHelpers = mock()
   mockEmojiService = mock()
   mockStreamlabsProxyService = mock()
+  mockStreamerStore = mock()
 
   donationService = new DonationService(new Dependencies({
     donationStore: mockDonationStore,
@@ -37,8 +40,32 @@ beforeEach(() => {
     rankStore: mockRankStore,
     dateTimeHelpers: mockDateTimeHelpers,
     emojiService: mockEmojiService,
-    streamlabsProxyService: mockStreamlabsProxyService
+    streamlabsProxyService: mockStreamlabsProxyService,
+    streamerStore: mockStreamerStore
   }))
+})
+
+describe(nameof(DonationService, 'initialise'), () => {
+  test(`Listens to all streamers' donations if they have their socket token set`, async () => {
+    const streamer1 = cast<Streamer>({ id: 1 })
+    const streamer2 = cast<Streamer>({ id: 2 })
+    const streamer3 = cast<Streamer>({ id: 3 })
+    mockStreamerStore.getStreamers.calledWith().mockResolvedValue([streamer1, streamer2, streamer3])
+
+    const token1 = 'test1'
+    const token2 = 'test2'
+    mockDonationStore.getStreamlabsSocketToken.calledWith(streamer1.id).mockResolvedValue(cast<StreamlabsSocketToken>({ streamerId: streamer1.id, token: token1 }))
+    mockDonationStore.getStreamlabsSocketToken.calledWith(streamer2.id).mockResolvedValue(cast<StreamlabsSocketToken>({ streamerId: streamer2.id, token: token2 }))
+    mockDonationStore.getStreamlabsSocketToken.calledWith(streamer3.id).mockResolvedValue(null)
+
+    await donationService.initialise()
+
+    const calls: [streamerId: number, socketToken: string][] = mockStreamlabsProxyService.listenToStreamerDonations.mock.calls
+    expect(calls).toEqual(expectArray<[streamerId: number, socketToken: string]>([
+      [streamer1.id, token1],
+      [streamer2.id, token2]
+    ]))
+  })
 })
 
 describe(nameof(DonationService, 'addDonation'), () => {

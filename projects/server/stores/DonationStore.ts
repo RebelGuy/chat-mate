@@ -1,4 +1,4 @@
-import { ChatCustomEmoji, ChatMessage, ChatMessagePart, ChatText, CustomEmojiVersion, Donation } from '@prisma/client'
+import { ChatCustomEmoji, ChatMessage, ChatMessagePart, ChatText, CustomEmojiVersion, Donation, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
@@ -178,6 +178,10 @@ export default class DonationStore extends ContextClass {
     return result?.streamlabsId ?? null
   }
 
+  public async getStreamlabsSocketToken (streamerId: number): Promise<StreamlabsSocketToken | null> {
+    return await this.db.streamlabsSocketToken.findFirst({ where: { streamerId }})
+  }
+
   // we perform side effects when linking/unlinking, which is why we separated the remove/add functionality into two methods
   // instead of just discarding the existing link.
 
@@ -209,8 +213,9 @@ export default class DonationStore extends ContextClass {
     if (streamlabsSocketToken != null) {
       if (existingEntry != null && existingEntry.token === streamlabsSocketToken) {
         return false
+      } else if (existingEntry != null && existingEntry.token !== streamlabsSocketToken) {
+        throw new Error('An existing token is already active. Please first deactivate the active token, then set the new one.')
       } else {
-        // regardless of whether it exists or not, we are making a change so return true
         await this.db.streamlabsSocketToken.upsert({
           create: { streamerId, token: streamlabsSocketToken },
           update: { token: streamlabsSocketToken },

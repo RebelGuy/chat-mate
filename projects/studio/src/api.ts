@@ -6,6 +6,7 @@ import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicatio
 import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
+import { SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -107,6 +108,11 @@ export async function rejectStreamerApplication (loginToken: string, application
 export async function withdrawStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<WithdrawApplicationResponse> {
   const request: WithdrawApplicationRequest = { schema: 1, message }
   return await post(`/streamer/application/${applicationId}/withdraw`, request, loginToken)
+}
+
+export async function setStreamlabsSocketToken (loginToken: string, streamer: string, socketToken: string | null): Promise<SetWebsocketTokenResponse> {
+  const request: SetWebsocketTokenRequest = { schema: 1, websocketToken: socketToken }
+  return await post(`/donation/streamlabs/socketToken`, request, loginToken, streamer)
 }
 
 async function get (path: string, loginToken?: string, streamer?: string): Promise<any> {

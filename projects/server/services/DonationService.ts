@@ -8,6 +8,7 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
 import { addTime } from '@rebel/server/util/datetime'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
@@ -19,6 +20,7 @@ type Deps = Dependencies<{
   dateTimeHelpers: DateTimeHelpers
   emojiService: EmojiService
   streamlabsProxyService: StreamlabsProxyService
+  streamerStore: StreamerStore
 }>
 
 export default class DonationService extends ContextClass {
@@ -28,6 +30,7 @@ export default class DonationService extends ContextClass {
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly emojiService: EmojiService
   private readonly streamlabsProxyService: StreamlabsProxyService
+  private readonly streamerStore: StreamerStore
 
   constructor (deps: Deps) {
     super()
@@ -38,6 +41,20 @@ export default class DonationService extends ContextClass {
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.emojiService = deps.resolve('emojiService')
     this.streamlabsProxyService = deps.resolve('streamlabsProxyService')
+    this.streamerStore = deps.resolve('streamerStore')
+  }
+
+  public override async initialise () {
+    const streamers = await this.streamerStore.getStreamers()
+    const tokens = await Promise.all(streamers.map(streamer => this.donationStore.getStreamlabsSocketToken(streamer.id)))
+
+    for (const token of tokens) {
+      if (token == null) {
+        continue
+      }
+
+      this.streamlabsProxyService.listenToStreamerDonations(token.streamerId, token.token)
+    }
   }
 
   public async addDonation (donation: StreamlabsDonation, streamerId: number) {

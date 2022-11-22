@@ -186,9 +186,9 @@ export default class StreamlabsProxyService extends ApiService {
   public listenToStreamerDonations (streamerId: number, socketToken: string) {
     const adapter: WebsocketAdapter<WebsocketMessage> = {
       onMessage: (data: WebsocketMessage) => this.onSocketData(streamerId, data),
-      onConnect: () => this.logService.logInfo(this, `WebSocket ${streamerId} connected`),
-      onDisconnect: (reason: DisconnectReason) => this.logService.logInfo(this, `WebSocket ${streamerId} disconnected. Reason:`, reason),
-      onError: (e: any) => this.logService.logInfo(this, `WebSocket ${streamerId} encountered an error:`, e.message)
+      onConnect: () => this.logService.logInfo(this, `Donation WebSocket for streamer ${streamerId} connected`),
+      onDisconnect: (reason: DisconnectReason) => this.logService.logInfo(this, `Donation WebSocket for streamer ${streamerId} disconnected. Reason:`, reason),
+      onError: (e: any) => this.logService.logInfo(this, `Donation WebSocket for streamer ${streamerId} encountered an error:`, e.message)
     }
     const options: SocketIOClient.ConnectOpts = {
       reconnection: true,

@@ -21,8 +21,8 @@ type LinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonati
 
 type UnlinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonation> }>
 
-type SetWebsocketTokenRequest = ApiRequest<1, { schema: 1, websocketToken: string | null }>
-type SetWebsocketTokenResponse = ApiResponse<1, { result: 'success' | 'noChange' }>
+export type SetWebsocketTokenRequest = ApiRequest<1, { schema: 1, websocketToken: string | null }>
+export type SetWebsocketTokenResponse = ApiResponse<1, { result: 'success' | 'noChange' }>
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
