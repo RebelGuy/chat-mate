@@ -62,6 +62,7 @@ export default class TwurpleService extends ContextClass {
 
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onJoinFailure((channel, reason) => this.logService.logError(this, 'chatClient.onJoinFailure', channel, reason))
+    this.chatClient.onJoin((channel, user) => this.logService.logInfo(this, 'chatClient.onJoin', channel, user))
     this.chatClient.onMessageFailed((channel, reason) => this.logService.logError(this, 'chatClient.onMessageFailed', channel, reason))
     this.chatClient.onMessageRatelimit((channel, msg) => this.logService.logError(this, 'chatClient.onMessageRatelimit', channel, msg))
     this.chatClient.onNoPermission((channel, msg) => this.logService.logError(this, 'chatClient.onNoPermission', channel, msg))
@@ -148,21 +149,30 @@ export default class TwurpleService extends ContextClass {
     await this.twurpleApiProxyService.timeout(channelName, twitchUserName, 1, reason ?? undefined)
   }
 
-  private async onMessage (channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
-    const evaluated = evalTwitchPrivateMessage(msg)
-    const chatUserId = await this.channelStore.getUserId(channel)
-    const registeredUser = await this.accountStore.getRegisteredUserFromChatUser(chatUserId)
-    if (registeredUser == null) {
-      throw new Error(`Cannot add Twitch chat message from channel ${channel} because the chat user ${chatUserId} is not associated with a registered user`)
-    }
+  private async onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
+    try {
+      const evaluated = evalTwitchPrivateMessage(msg)
+      const channelId = msg.channelId
+      if (channelId == null) {
+        throw new Error(`Cannot add Twitch chat message from channel ${_channel} because the message's channelId property was null`)
+      }
 
-    const streamer = await this.streamerStore.getStreamerByRegisteredUserId(registeredUser.id)
-    if (streamer == null) {
-      throw new Error(`Cannot add Twitch chat message from channel ${channel} because the registered user ${registeredUser.id} is not a streamer`)
-    }
+      const chatUserId = await this.channelStore.getUserId(channelId)
+      const registeredUser = await this.accountStore.getRegisteredUserFromChatUser(chatUserId)
+      if (registeredUser == null) {
+        throw new Error(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the chat user ${chatUserId} is not associated with a registered user`)
+      }
 
-    this.logService.logInfo(this, 'Adding 1 new chat item')
-    this.eventDispatchService.addData('chatItem', { ...evaluated, streamerId: streamer.id })
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(registeredUser.id)
+      if (streamer == null) {
+        throw new Error(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the registered user ${registeredUser.id} is not a streamer`)
+      }
+
+      this.logService.logInfo(this, _channel, 'Adding 1 new chat item')
+      this.eventDispatchService.addData('chatItem', { ...evaluated, streamerId: streamer.id })
+    } catch (e: any) {
+      this.logService.logError(this, e)
+    }
   }
 
   private async joinStreamerChannels (): Promise<void> {

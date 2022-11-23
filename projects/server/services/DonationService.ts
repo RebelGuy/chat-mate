@@ -46,6 +46,8 @@ export default class DonationService extends ContextClass {
 
   public override async initialise () {
     const streamers = await this.streamerStore.getStreamers()
+
+    // todo: this doesn't scale
     const tokens = await Promise.all(streamers.map(streamer => this.donationStore.getStreamlabsSocketToken(streamer.id)))
 
     for (const token of tokens) {

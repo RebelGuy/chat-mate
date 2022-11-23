@@ -103,7 +103,7 @@ export default class LivestreamService extends ContextClass {
     try {
       const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
       if (channelName == null) {
-        throw new Error(`Twitch channel name could not be found for streamer ${streamerId}`)
+        return null
       }
 
       return await this.twurpleApiProxyService.fetchMetadata(channelName)

@@ -75,7 +75,6 @@ export default class StreamerChannelService extends ContextClass {
 
     const channels = await this.channelStore.getUserOwnedChannels(registeredUser.chatUserId)
     if (channels.twitchChannels.length === 0) {
-      this.logService.logWarning(this, `No twitch channels exist for streamer ${streamer.id}`)
       return null
     }
 
