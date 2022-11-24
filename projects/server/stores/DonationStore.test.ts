@@ -322,15 +322,10 @@ export default () => {
       expect(store).toEqual(expectObject<StreamlabsSocketToken>({ streamerId: streamer1, token: streamer1Token }))
     })
 
-    test('Updates the existing token of the streamer and returns true', async () => {
+    test.only('Throws if there is an existing token', async () => {
       const updatedToken = 'streame2UpdatedToken'
 
-      const result = await donationStore.setStreamlabsSocketToken(streamer2, updatedToken)
-
-      expect(result).toBe(true)
-      await expectRowCount(db.streamlabsSocketToken).toBe(1)
-      const store = await db.streamlabsSocketToken.findFirst({ where: { streamerId: streamer2 }})
-      expect(store).toEqual(expectObject<StreamlabsSocketToken>({ streamerId: streamer2, token: updatedToken }))
+      await expect(() => donationStore.setStreamlabsSocketToken(streamer2, updatedToken)).rejects.toThrow()
     })
 
     test('Makes no change and returns false when removing the token when none exists in the db', async () => {
