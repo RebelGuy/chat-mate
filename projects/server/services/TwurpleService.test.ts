@@ -72,8 +72,9 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
 
-  test(`passes new chat message to the EventDispatchService and joins all streamers' channels`, async () => {
-    const twitchMessage = JSON.parse(onMessage_example)
+  test(`joins all streamers' channels and passes new chat message to the EventDispatchService`, async () => {
+    const channelId = '12345'
+    const twitchMessage = { ...JSON.parse(onMessage_example), channelId: channelId }
     const chatItem: ChatItem = cast<ChatItem>({ id: 'id' })
     const evalMockFn = jest.spyOn(chat, 'evalTwitchPrivateMessage').mockImplementation(msg_ => chatItem)
     const twitchChannelNames = ['test1', 'test2']
@@ -86,7 +87,7 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     // set up the channel name -> chat user -> registered user -> streamer conversion
     const chatUserId = 2
     const registeredUserId = 3
-    mockChannelStore.getUserId.calledWith(twitchChannelNames[0]).mockResolvedValue(chatUserId)
+    mockChannelStore.getUserId.calledWith(channelId).mockResolvedValue(chatUserId)
     mockAccountStore.getRegisteredUserFromChatUser.calledWith(chatUserId).mockResolvedValue(cast<RegisteredUser>({ id: registeredUserId }))
     mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue(cast<Streamer>({ id: streamerId }))
 

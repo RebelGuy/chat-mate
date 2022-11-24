@@ -513,7 +513,7 @@ export default () => {
       expect(msg.externalId).toBe('user 1 msg 3')
     })
 
-    test.only('ignores donation messages', async () => {
+    test('ignores donation messages', async () => {
       const donation = await db.donation.create({ data: {
         amount: 1,
         currency: 'USD',
