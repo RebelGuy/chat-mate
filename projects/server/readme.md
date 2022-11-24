@@ -324,6 +324,17 @@ Returns data with the following properties:
   - Set to `success` if the operation was successful and resulted in a state change.
   - Set to `noChange` if the operation was successful, but the provided token was the same as the existing token and thus no state change occurred.
 
+### `GET /streamlabs/status`
+*Current schema: 1.*
+
+Gets the Streamlabs donation WebSocket status.
+
+Returns data with the following properties:
+- `status` (`string`): The status of the current streamer's donation WebSocket.
+  - Set to `notListening` if we are not currently listening to donations. This is most likely because no socket token has been set by the streamer.
+  - Set to `listening` if we are currently listening to donations.
+  - Set to `error` if something went wrong. We are most likely not listening to donations, and it is recommended that the socket token be reset.
+
 ## Emoji Endpoints
 Path: `/emoji`.
 

@@ -24,6 +24,8 @@ type UnlinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDona
 export type SetWebsocketTokenRequest = ApiRequest<1, { schema: 1, websocketToken: string | null }>
 export type SetWebsocketTokenResponse = ApiResponse<1, { result: 'success' | 'noChange' }>
 
+export type GetStreamlabsStatusResponse = ApiResponse<1, { status: 'notListening' | 'listening' | 'error' }>
+
 type Deps = ControllerDependencies<{
   donationService: DonationService
   donationStore: DonationStore
@@ -116,11 +118,24 @@ export default class DonationController extends ControllerBase {
   @POST
   @Path('/streamlabs/socketToken')
   public async setWebsocketToken (request: SetWebsocketTokenRequest): Promise<SetWebsocketTokenResponse> {
-    const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /websocketToken', 1)
+    const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /streamlabs/socketToken', 1)
 
     try {
       const hasUpdated = await this.donationService.setStreamlabsSocketToken(this.getStreamerId(), request.websocketToken)
       return builder.success({ result: hasUpdated ? 'success' : 'noChange' })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/streamlabs/status')
+  public getStreamlabsStatus (): GetStreamlabsStatusResponse {
+    const builder = this.registerResponseBuilder<GetStreamlabsStatusResponse>('POST /streamlabs/status', 1)
+
+    try {
+      const status = this.donationService.getStreamlabsStatus(this.getStreamerId())
+      return builder.success({ status })
     } catch (e: any) {
       return builder.failure(e)
     }

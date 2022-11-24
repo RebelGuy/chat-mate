@@ -160,6 +160,17 @@ export default class DonationService extends ContextClass {
     return hasUpdated
   }
 
+  public getStreamlabsStatus (streamerId: number): 'notListening' | 'listening' | 'error' {
+    const socket = this.streamlabsProxyService.getWebsocket(streamerId)
+    if (socket == null) {
+      return 'notListening'
+    } else if (socket.connected) {
+      return 'listening'
+    } else {
+      return 'error'
+    }
+  }
+
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the user is no longer eligible for.
   /* @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
   public async unlinkUserFromDonation (donationId: number, streamerId: number): Promise<void> {

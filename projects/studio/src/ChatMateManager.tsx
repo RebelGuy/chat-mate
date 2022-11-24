@@ -1,5 +1,5 @@
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { getStatus, setActiveLivestream, setStreamlabsSocketToken } from '@rebel/studio/api'
+import { getStatus, getStreamlabsStatus, setActiveLivestream, setStreamlabsSocketToken } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import * as React from 'react'
@@ -88,8 +88,31 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
       </ApiRequest>
 
       <h3>Donations</h3>
+      <div style={{ marginTop: 4, marginBottom: 4 }}>
+        <ApiRequest repeatInterval={5000} requiresStreamer onDemand={false} onRequest={getStreamlabsStatus}>
+          {(data, loadingNode, errorNode) => {
+            if (data) {
+              if (data.status === 'listening') {
+                return <div>ChatMate is <b style={{ color: 'green' }}>listening</b> to your Streamlabs donations.</div>
+              } else if (data.status === 'notListening') {
+                return <div>ChatMate is <b style={{ color: 'red' }}>not listening</b> to your Streamlabs donations. You can set the socket token below to start listening.</div>
+              } else if (data.status === 'error') {
+                return <div>Looks like something went wrong, and ChatMate is probably <b style={{ color: 'red' }}>not listening</b> to your Streamlabs donations. <br />
+                  It is recommendd that you reset the socket token below.</div>
+              } else {
+                assertUnreachable(data.status)
+              }
+            } else if (loadingNode) {
+              return loadingNode
+            } else {
+              return errorNode
+            }
+          }}
+        </ApiRequest>
+      </div>
+
       <div>
-        Set the StreamLabs socket token to listen for donations. <br />
+        Set the StreamLabs socket token to listen for donations. If the token field is left blank, ChatMate will stop listening to donations.<br />
         You can get your StreamLabs socket token by going to {<a href="https://streamlabs.com/dashboard#/settings/api-settings">your dashboard</a>} -&gt; API Tokens tab -&gt; copying the Socket API Token.
       </div>
       <ApiRequestTrigger requiresStreamer onRequest={this.setToken}>
