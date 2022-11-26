@@ -1,5 +1,5 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank } from '@rebel/server/controllers/preProcessors'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
 import StreamerService from '@rebel/server/services/StreamerService'
@@ -92,6 +92,7 @@ export default class StreamerController extends ControllerBase {
 
   @POST
   @Path('application/:streamerApplicationId/approve')
+  @PreProcessor(requireRank('admin'))
   public async approveApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
     request: ApproveApplicationRequest
@@ -99,7 +100,7 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve', 1)
 
     try {
-      const application = await this.streamerService.approveStreamerApplication(streamerApplicationId, request.message)
+      const application = await this.streamerService.approveStreamerApplication(streamerApplicationId, request.message, this.getCurrentUser().id)
       return builder.success({ updatedApplication: streamerApplicationToPublicObject(application) })
 
     } catch (e: any) {
@@ -112,6 +113,7 @@ export default class StreamerController extends ControllerBase {
 
   @POST
   @Path('application/:streamerApplicationId/reject')
+  @PreProcessor(requireRank('admin'))
   public async rejectApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
     request: RejectApplicationRequest

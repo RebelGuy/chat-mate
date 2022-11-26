@@ -225,7 +225,7 @@ describe(nameof(PunishmentService, 'banUser'), () => {
       twitchChannels: [1, 2]
     })
     const newPunishment: any = {}
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'ban', assignee: loggedInRegisteredUserId })).mockResolvedValue(newPunishment)
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ chatUserId: userId1, rank: 'ban', assignee: loggedInRegisteredUserId })).mockResolvedValue(newPunishment)
 
     const result = await punishmentService.banUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
 
@@ -287,7 +287,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: expect.any(Date) }))
+      .calledWith(expectObject<AddUserRankArgs>({ chatUserId: userId1, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: expect.any(Date) }))
       .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, streamerId1, loggedInRegisteredUserId, 'test', 10)
@@ -298,7 +298,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
   test('mute is permanent if duration is null', async () => {
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expectObject<AddUserRankArgs>({ userId: userId1, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: null }))
+      .calledWith(expectObject<AddUserRankArgs>({ chatUserId: userId1, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: null }))
       .mockResolvedValue(newPunishment)
 
     const result = await punishmentService.muteUser(userId1, streamerId1, loggedInRegisteredUserId, 'test', null)
@@ -339,7 +339,7 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
       userId: userId1,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId1, userId: userId1, assignee: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId1, chatUserId: userId1, assignee: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
 
     const result = await punishmentService.timeoutUser(userId1, streamerId1, loggedInRegisteredUserId, 'test', 1000)
 
@@ -420,7 +420,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
       twitchChannels: [1, 2]
     })
     const revokedPunishment: any = {}
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockResolvedValue(revokedPunishment)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockResolvedValue(revokedPunishment)
 
     const result = await punishmentService.unbanUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
 
@@ -446,7 +446,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError(error))
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError(error))
 
     const result = await punishmentService.unbanUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
 
@@ -458,7 +458,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 describe(nameof(PunishmentService, 'unmuteUser'), () => {
   test('adds mute to database', async () => {
     const expectedResult: any = {}
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, removedBy: loggedInRegisteredUserId, rank: 'mute' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'mute' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.unmuteUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
 
@@ -481,7 +481,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
       twitchChannels: [1, 2]
     })
     const expectedResult = cast<UserRankWithRelations>({ id: 5 })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(expectedResult)
 
     const result = await punishmentService.untimeoutUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
 
@@ -509,7 +509,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
     mockChannelStore.getUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError(error))
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError(error))
 
     const result = await punishmentService.untimeoutUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
 

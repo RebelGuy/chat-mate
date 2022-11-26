@@ -90,7 +90,7 @@ export default class PunishmentService extends ContextClass {
     const args: AddUserRankArgs = {
       rank: 'ban',
       message: message,
-      userId: userId,
+      chatUserId: userId,
       streamerId: streamerId,
       expirationTime: null,
       assignee: loggedInRegisteredUserId
@@ -117,7 +117,7 @@ export default class PunishmentService extends ContextClass {
       rank: 'mute',
       expirationTime: durationSeconds == null ? null : addTime(now, 'seconds', durationSeconds),
       message: message,
-      userId: userId,
+      chatUserId: userId,
       streamerId: streamerId,
       assignee: loggedInRegisteredUserId
     }
@@ -131,7 +131,7 @@ export default class PunishmentService extends ContextClass {
       rank: 'timeout',
       expirationTime: addTime(now, 'seconds', durationSeconds),
       message: message,
-      userId: userId,
+      chatUserId: userId,
       streamerId: streamerId,
       assignee: loggedInRegisteredUserId
     }
@@ -153,7 +153,7 @@ export default class PunishmentService extends ContextClass {
   public async unbanUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'ban',
-      userId: userId,
+      chatUserId: userId,
       streamerId: streamerId,
       message: unbanMessage,
       removedBy: loggedInRegisteredUserId
@@ -170,7 +170,7 @@ export default class PunishmentService extends ContextClass {
   public async unmuteUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
     const args: RemoveUserRankArgs = {
       rank: 'mute',
-      userId: userId,
+      chatUserId: userId,
       streamerId: streamerId,
       message: revokeMessage,
       removedBy: loggedInRegisteredUserId
@@ -181,7 +181,7 @@ export default class PunishmentService extends ContextClass {
   public async untimeoutUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'timeout',
-      userId: userId,
+      chatUserId: userId,
       streamerId: streamerId,
       message: revokeMessage,
       removedBy: loggedInRegisteredUserId

@@ -58,7 +58,7 @@ describe(nameof(ModService, 'setModRank'), () => {
       twitchChannels: [1, 2]
     })
     const newRank: any = {}
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ userId: userId1, streamerId: streamerId1, assignee: loggedInRegisteredUserId, rank: 'mod', expirationTime: null, message: testMessage })).mockResolvedValue(newRank)
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ chatUserId: userId1, streamerId: streamerId1, assignee: loggedInRegisteredUserId, rank: 'mod', expirationTime: null, message: testMessage })).mockResolvedValue(newRank)
 
     const result = await modService.setModRank(userId1, streamerId1, loggedInRegisteredUserId, true, testMessage)
 
@@ -103,7 +103,7 @@ describe(nameof(ModService, 'setModRank'), () => {
       twitchChannels: [1, 2]
     })
     const updatedRank: any = {}
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ userId: userId1, streamerId: streamerId1, removedBy: loggedInRegisteredUserId, rank: 'mod', message: testMessage })).mockResolvedValue(updatedRank)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, streamerId: streamerId1, removedBy: loggedInRegisteredUserId, rank: 'mod', message: testMessage })).mockResolvedValue(updatedRank)
 
     const result = await modService.setModRank(userId1, streamerId1, loggedInRegisteredUserId, false, testMessage)
 

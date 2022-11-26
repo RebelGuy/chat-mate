@@ -141,7 +141,7 @@ export default class RankController extends ControllerBase {
     try {
       const args: AddUserRankArgs = {
         rank: request.rank,
-        userId: request.userId,
+        chatUserId: request.userId,
         streamerId: this.getStreamerId(),
         message: request.message,
         expirationTime: request.durationSeconds ? addTime(new Date(), 'seconds', request.durationSeconds) : null,
@@ -170,7 +170,7 @@ export default class RankController extends ControllerBase {
     try {
       const args: RemoveUserRankArgs = {
         rank: request.rank,
-        userId: request.userId,
+        chatUserId: request.userId,
         streamerId: this.getStreamerId(),
         message: request.message,
         removedBy: this.getCurrentUser().id

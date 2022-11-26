@@ -62,7 +62,7 @@ export default class ModService extends ContextClass {
     try {
       if (isMod) {
         const args: AddUserRankArgs = {
-          userId: userId,
+          chatUserId: userId,
           streamerId: streamerId,
           rank: 'mod',
           expirationTime: null,
@@ -75,7 +75,7 @@ export default class ModService extends ContextClass {
         }
       } else {
         const args: RemoveUserRankArgs = {
-          userId: userId,
+          chatUserId: userId,
           streamerId: streamerId,
           rank: 'mod',
           message: message,

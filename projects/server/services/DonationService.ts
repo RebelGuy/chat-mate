@@ -98,7 +98,7 @@ export default class DonationService extends ContextClass {
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
           rank: 'donator',
-          userId: userId,
+          chatUserId: userId,
           streamerId: streamerId,
           expirationTime: longTermExpiration,
           assignee: null,
@@ -115,7 +115,7 @@ export default class DonationService extends ContextClass {
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
           rank: 'supporter',
-          userId: userId,
+          chatUserId: userId,
           streamerId: streamerId,
           expirationTime: longTermExpiration,
           assignee: null,
@@ -132,7 +132,7 @@ export default class DonationService extends ContextClass {
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
           rank: 'member',
-          userId: userId,
+          chatUserId: userId,
           streamerId: streamerId,
           expirationTime: monthFromNow,
           assignee: null,
@@ -185,21 +185,21 @@ export default class DonationService extends ContextClass {
     if (!this.donationHelpers.isEligibleForDonator(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'donator')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'donator', userId: userId, streamerId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'donator', chatUserId: userId, streamerId, removedBy: null, message: removeMessage })
       }
     }
 
     if (!this.donationHelpers.isEligibleForSupporter(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'supporter')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'supporter', userId: userId, streamerId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'supporter', chatUserId: userId, streamerId, removedBy: null, message: removeMessage })
       }
     }
 
     if (!this.donationHelpers.isEligibleForMember(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'member')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'member', userId: userId, streamerId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'member', chatUserId: userId, streamerId, removedBy: null, message: removeMessage })
       }
     }
   }

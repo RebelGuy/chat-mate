@@ -74,7 +74,7 @@ export default () => {
     test('Adds rank to user within the streamer context and with no description and expiration time', async () => {
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: streamer1,
         assignee: null,
         rank: 'famous',
@@ -86,7 +86,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(1)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.userId,
+        userId: args.chatUserId,
         streamerId: streamer1,
         streamerName: streamer1Name,
         assignedByRegisteredUserId: args.assignee,
@@ -105,7 +105,7 @@ export default () => {
     test('Adds rank to user within the streamer context and with description and expiration time', async () => {
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: streamer1,
         assignee: user2,
         rank: 'mod',
@@ -117,7 +117,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(1)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.userId,
+        userId: args.chatUserId,
         streamerId: streamer1,
         streamerName: streamer1Name,
         assignedByRegisteredUserId: args.assignee,
@@ -142,7 +142,7 @@ export default () => {
       }})
 
       const args: AddUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: streamer1,
         rank: ownerRank.name,
         message: null,
@@ -164,7 +164,7 @@ export default () => {
 
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: streamer2,
         assignee: user2,
         rank: modRank.name,
@@ -176,7 +176,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(2)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.userId,
+        userId: args.chatUserId,
         streamerId: streamer2,
         streamerName: streamer2Name,
         assignedByRegisteredUserId: args.assignee,
@@ -202,7 +202,7 @@ export default () => {
 
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: null,
         assignee: user2,
         rank: famousRank.name,
@@ -214,7 +214,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(2)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.userId,
+        userId: args.chatUserId,
         streamerId: null,
         streamerName: null,
         assignedByRegisteredUserId: args.assignee,
@@ -239,7 +239,7 @@ export default () => {
       })
 
       const args: AddUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: null,
         rank: famousRank.name,
         message: null,
@@ -252,7 +252,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(3)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.userId,
+        userId: args.chatUserId,
         streamerId: null,
         streamerName: null,
         assignedByRegisteredUserId: args.assignee,
@@ -270,7 +270,7 @@ export default () => {
 
     test('Throws if attempting to add a global user-rank for a rank that requires a streamer context', async () => {
       const args: AddUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: null,
         rank: modRank.name,
         message: null,
@@ -442,7 +442,7 @@ export default () => {
       })
 
       const args: RemoveUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: streamer1,
         message: 'Test',
         rank: 'famous',
@@ -464,7 +464,7 @@ export default () => {
       })
 
       const args: RemoveUserRankArgs = {
-        userId: user1,
+        chatUserId: user1,
         streamerId: streamer1,
         message: 'Test',
         rank: 'famous',
@@ -476,7 +476,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(4)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.userId,
+        userId: args.chatUserId,
         streamerId: args.streamerId,
         streamerName: streamer1Name,
         assignedByRegisteredUserId: null,

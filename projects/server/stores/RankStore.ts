@@ -19,7 +19,7 @@ export type UserRankWithRelations = Omit<UserRank, 'rankId'> & {
 
 export type AddUserRankArgs = {
   rank: RankName
-  userId: number
+  chatUserId: number
   message: string | null
 
   /** refer to the `GlobalRanks` constant to find out which ranks can have `streamerId = null` */
@@ -37,7 +37,7 @@ export type AddUserRankArgs = {
 
 export type RemoveUserRankArgs = {
   rank: RankName
-  userId: number
+  chatUserId: number
   streamerId: number | null
   message: string | null
 
@@ -89,7 +89,7 @@ export default class RankStore extends ContextClass {
     try {
       const result = await this.db.userRank.create({
         data: {
-          user: { connect: { id: args.userId }},
+          user: { connect: { id: args.chatUserId }},
           rank: { connect: { name: args.rank }},
           streamer: args.streamerId == null ? undefined : { connect: { id: args.streamerId } },
           issuedAt: args.time ?? this.dateTimeHelpers.now(),
@@ -104,7 +104,7 @@ export default class RankStore extends ContextClass {
     } catch (e: any) {
       // annoyingly we don't have access to the inner server object, as it is only included in serialised form in the message directly
       if (e instanceof PrismaClientUnknownRequestError && e.message.includes('DUPLICATE_RANK')) {
-        throw new UserRankAlreadyExistsError(`The '${args.rank}' rank is already active for user ${args.userId}.`)
+        throw new UserRankAlreadyExistsError(`The '${args.rank}' rank is already active for chat user ${args.chatUserId}.`)
       }
 
       throw e
@@ -188,7 +188,7 @@ export default class RankStore extends ContextClass {
         where: {
           ...activeUserRankFilter(args.streamerId),
           streamerId: args.streamerId, // override filter - the streamerId must match exactly
-          userId: args.userId,
+          userId: args.chatUserId,
           rank: { name: args.rank },
         },
         rejectOnNotFound: true,
@@ -196,7 +196,7 @@ export default class RankStore extends ContextClass {
       })
     } catch (e: any) {
       if (e.name === 'NotFoundError') {
-        throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for user ${args.userId} in the context of streamer ${args.streamerId}.`)
+        throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for chat user ${args.chatUserId} in the context of streamer ${args.streamerId}.`)
       }
 
       throw e
