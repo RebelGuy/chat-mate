@@ -145,6 +145,11 @@ export default class StreamerController extends ControllerBase {
   ): Promise<WithdrawApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/withdraw', 1)
 
+    const applications = await this.streamerStore.getStreamerApplications(this.getCurrentUser().id)
+    if (!applications.map(app => app.id).includes(streamerApplicationId)) {
+      return builder.failure(403, 'Forbidden')
+    }
+
     try {
       const data: CloseApplicationArgs = {
         id: streamerApplicationId,
