@@ -1,4 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
+import WebsocketFactory, { DisconnectReason, WebsocketAdapter } from '@rebel/server/factories/WebsocketFactory'
 import { NodeEnv } from '@rebel/server/globals'
 import ApiService from '@rebel/server/services/abstract/ApiService'
 import LogService from '@rebel/server/services/LogService'
@@ -7,9 +8,7 @@ import { single } from '@rebel/server/util/arrays'
 import { ApiResponseError } from '@rebel/server/util/error'
 import { throws } from 'node:assert'
 
-// we have to use this ancient version thanks to the fantastic work of the streamlabs devs!
-// https://stackoverflow.com/a/67447804
-import io from 'socket.io-client'
+
 
 // https://dev.streamlabs.com/docs/currency-codes
 const CURRENCIES = {
@@ -54,7 +53,7 @@ export type StreamlabsDonation = {
   message: string | null
 }
 
-export type DonationCallback = (donation: StreamlabsDonation) => void | Promise<void>
+export type DonationCallback = (donation: StreamlabsDonation, streamerId: number) => void | Promise<void>
 
 type GetDonationsRequestParams = Partial<{
   limit: number // defaults to `10`
@@ -112,19 +111,19 @@ type WebsocketMessage = {
 
 type Deps = Dependencies<{
   streamlabsAccessToken: string
-  streamlabsSocketToken: string
   streamlabsStatusService: StatusService
   logService: LogService
   nodeEnv: NodeEnv
+  websocketFactory: WebsocketFactory
 }>
 
 export default class StreamlabsProxyService extends ApiService {
   private readonly accessToken: string
-  private readonly socketToken: string
   private readonly nodeEnv: NodeEnv
+  private readonly websocketFactory: WebsocketFactory
 
   private donationCallback: DonationCallback | null
-  private readonly webSocket: SocketIOClient.Socket
+  private readonly streamerWebSockets: Map<number, SocketIOClient.Socket>
 
   constructor (deps: Deps) {
     const name = StreamlabsProxyService.name
@@ -134,19 +133,17 @@ export default class StreamlabsProxyService extends ApiService {
     super(name, logService, statusService, timeout)
 
     this.accessToken = deps.resolve('streamlabsAccessToken')
-    this.socketToken = deps.resolve('streamlabsSocketToken')
     this.nodeEnv = deps.resolve('nodeEnv')
+    this.websocketFactory = deps.resolve('websocketFactory')
 
     this.donationCallback = null
-    this.webSocket = io(SOCKET_BASE_URL + `?token=${this.socketToken}`, {
-      reconnection: true,
-      reconnectionDelay: 10000,
-      autoConnect: false
-    })
+    this.streamerWebSockets = new Map()
   }
 
   public override dispose (): void | Promise<void> {
-    this.webSocket.disconnect()
+    for (const [_, socket] of this.streamerWebSockets) {
+      socket.disconnect()
+    }
   }
 
   // https://streamlabs.readme.io/docs/donations
@@ -155,6 +152,7 @@ export default class StreamlabsProxyService extends ApiService {
   public async getDonationsAfterId (id: number | null): Promise<StreamlabsDonation[]> {
     // todo: the access_token doesn't work (returns 401), so the only way to get this to work
     // would be to properly implement the OAuth2 flow described in https://rebel-guy.atlassian.net/browse/CHAT-378?focusedCommentId=10079
+    // todo: must return streamerId
     return []
 
     // todo: will need to implement pagination in the future, but will work just fine for low volumes of data
@@ -177,20 +175,44 @@ export default class StreamlabsProxyService extends ApiService {
     }))
   }
 
-  public listen (callback: DonationCallback) {
+  public setDonationCallback (callback: DonationCallback) {
     if (this.donationCallback != null) {
       throw new Error('Already listening')
     }
 
     this.donationCallback = callback
-    this.webSocket.on('event', this.onSocketData)
-    this.webSocket.on('connect', () => this.logService.logInfo(this, 'WebSocket connected'))
-    this.webSocket.on('connect_error', (e: any) => this.logService.logInfo(this, 'WebSocket encountered an error:', e.message))
-    this.webSocket.on('disconnect', (reason: any) => this.logService.logInfo(this, 'WebSocket disconnected. Reason:', reason))
-    this.webSocket.connect()
   }
 
-  private onSocketData = async (data: WebsocketMessage) => {
+  public listenToStreamerDonations (streamerId: number, socketToken: string) {
+    const adapter: WebsocketAdapter<WebsocketMessage> = {
+      onMessage: (data: WebsocketMessage) => this.onSocketData(streamerId, data),
+      onConnect: () => this.logService.logInfo(this, `Donation WebSocket for streamer ${streamerId} connected`),
+      onDisconnect: (reason: DisconnectReason) => this.logService.logInfo(this, `Donation WebSocket for streamer ${streamerId} disconnected. Reason:`, reason),
+      onError: (e: any) => this.logService.logInfo(this, `Donation WebSocket for streamer ${streamerId} encountered an error:`, e.message)
+    }
+    const options: SocketIOClient.ConnectOpts = {
+      reconnection: true,
+      reconnectionDelay: 10000,
+      autoConnect: false
+    }
+    const webSocket = this.websocketFactory.create(`${SOCKET_BASE_URL}?token=${socketToken}`, adapter, options)
+    webSocket.connect()
+
+    this.streamerWebSockets.set(streamerId, webSocket)
+  }
+
+  public stopListeningToStreamerDonations (streamerId: number) {
+    if (this.streamerWebSockets.has(streamerId)) {
+      this.streamerWebSockets.get(streamerId)!.disconnect()
+      this.streamerWebSockets.delete(streamerId)
+    }
+  }
+
+  public getWebsocket (streamerId: number): SocketIOClient.Socket | null {
+    return this.streamerWebSockets.get(streamerId) ?? null
+  }
+
+  private onSocketData = async (streamerId: number, data: WebsocketMessage) => {
     this.logService.logDebug(this, 'WebSocket received data:', data)
     if (data.type !== 'donation') {
       return
@@ -209,7 +231,7 @@ export default class StreamlabsProxyService extends ApiService {
     }
 
     try {
-      await this.donationCallback!(donation)
+      await this.donationCallback!(donation, streamerId)
     } catch (e: any) {
       this.logService.logError(this, `Donation callback failed to run for donation id ${donation.donationId}:`, e)
     }

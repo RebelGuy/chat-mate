@@ -1,5 +1,7 @@
+import { RankName, RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import ApiService from '@rebel/server/controllers/ApiService'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
 
 export const BASE_PATH = '/api'
@@ -70,6 +72,8 @@ export type Out<E extends Endpoint<any, any, any>> = ReturnType<E>
 const API_ERRORS = {
   500: 'Internal Error',
   400: 'Bad Request',
+  401: 'Unauthorised',
+  403: 'Forbidden',
   404: 'Not Found',
   422: 'Unprocessable Entity'
 }
@@ -86,9 +90,11 @@ export type ErrorType = Error | string
 
 export type ControllerDependencies<T> = Dependencies<T & {
   logService: LogService
+  apiService: ApiService
 }>
 
 type Deps = Dependencies<{
+  apiService: ApiService
   logService: LogService
 }>
 
@@ -96,12 +102,35 @@ export abstract class ControllerBase extends ContextClass {
   readonly name: string
   protected readonly logService: LogService
   protected readonly logContext: LogContext
+  protected readonly apiService: ApiService
 
   constructor (deps: Deps, controllerName: string) {
     super()
     this.name = controllerName
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
+    this.apiService = deps.resolve('apiService')
+  }
+
+  // the `ControllerBase` acts as a proxy so we don't have to do `super.apiService.getCurrentUser` but just `super.getCurrentUser`
+  protected getCurrentUser (optional?: false): RegisteredUser
+  protected getCurrentUser (optional: true): RegisteredUser | null
+  protected getCurrentUser (optional?: boolean): RegisteredUser | null {
+    return this.apiService.getCurrentUser(optional as any)
+  }
+
+  public getStreamerId (optional?: false): number
+  public getStreamerId (optional: true): number | null
+  public getStreamerId (optional?: boolean): number | null {
+    return this.apiService.getStreamerId(optional as any)
+  }
+
+  protected getRanks (): RankName[] | null {
+    return this.apiService.getRanks()
+  }
+
+  protected hasRankOrAbove (rank: RankName): boolean {
+    return this.apiService.hasRankOrAbove(rank)
   }
 
   protected registerResponseBuilder<

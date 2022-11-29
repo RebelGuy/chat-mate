@@ -7,6 +7,8 @@ import { nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 
+const streamerId = 5
+
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let channelService: ChannelService
@@ -36,9 +38,9 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
   }
 
   test('returns all active user channels', async () => {
-    mockChatStore.getLastChatOfUsers.calledWith('all').mockResolvedValue([chatItem1 as ChatItemWithRelations, chatItem2 as ChatItemWithRelations])
+    mockChatStore.getLastChatOfUsers.calledWith(streamerId, 'all').mockResolvedValue([chatItem1 as ChatItemWithRelations, chatItem2 as ChatItemWithRelations])
 
-    const result = await channelService.getActiveUserChannels('all')
+    const result = await channelService.getActiveUserChannels(streamerId, 'all')
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expect.objectContaining<UserChannel>({
@@ -58,9 +60,9 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
   })
 
   test('returns specified active user channels', async () => {
-    mockChatStore.getLastChatOfUsers.calledWith(expect.arrayContaining([1])).mockResolvedValue([chatItem1 as ChatItemWithRelations])
+    mockChatStore.getLastChatOfUsers.calledWith(streamerId, expect.arrayContaining([1])).mockResolvedValue([chatItem1 as ChatItemWithRelations])
 
-    const result = await channelService.getActiveUserChannels([1])
+    const result = await channelService.getActiveUserChannels(streamerId, [1])
 
     expect(single(result)).toEqual(expect.objectContaining<UserChannel>({
       userId: 1,
@@ -74,7 +76,7 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
 
 describe(nameof(ChannelService, 'getUserById'), () => {
   test('returns null if user with id does not exist', async () => {
-    mockChannelStore.getCurrentUserNames.mockResolvedValue([{ userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] }])
+    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue([{ userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] }])
 
     const result = await channelService.getUserById(2)
 
@@ -87,7 +89,7 @@ describe(nameof(ChannelService, 'getUserById'), () => {
       { userId: 2, youtubeNames: ['Rebel'], twitchNames: [] },
       { userId: 3, youtubeNames: ['Rebel_Guy'], twitchNames: [] }
     ]
-    mockChannelStore.getCurrentUserNames.mockResolvedValue(names)
+    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue(names)
 
     const result = await channelService.getUserById(2)
 
@@ -97,7 +99,7 @@ describe(nameof(ChannelService, 'getUserById'), () => {
 
 describe(nameof(ChannelService, 'getUserByChannelName'), () => {
   test('returns null if there is no match', async () => {
-    mockChannelStore.getCurrentUserNames.mockResolvedValue([{ userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] }])
+    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue([{ userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] }])
 
     const result = await channelService.getUserByChannelName('rebel_guy')
 
@@ -111,7 +113,7 @@ describe(nameof(ChannelService, 'getUserByChannelName'), () => {
       { userId: 3, youtubeNames: ['Rebel_Guy2'], twitchNames: [] },
       { userId: 4, youtubeNames: ['Test'], twitchNames: ['Rebel_Guy420', 'Reb', 'Rebel_Guy10000'] }
     ]
-    mockChannelStore.getCurrentUserNames.mockResolvedValue(names)
+    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue(names)
 
     const result = await channelService.getUserByChannelName('rebel')
 

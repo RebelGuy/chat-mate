@@ -12,6 +12,7 @@ import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
 import { EventSubBase } from '@twurple/eventsub/lib/EventSubBase'
 import { NodeEnv } from '@rebel/server/globals'
+import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -21,7 +22,6 @@ const NGROK_MAX_SESSION = 3600 * 2 * 1000
 type Deps = Dependencies<{
   disableExternalApis: boolean
   nodeEnv: NodeEnv
-  twitchChannelName: string
   hostName: string | null
   twurpleApiClientProvider: TwurpleApiClientProvider
   followerStore: FollowerStore
@@ -29,7 +29,11 @@ type Deps = Dependencies<{
   logService: LogService
   fileService: FileService
   app: Express
+  streamerChannelService: StreamerChannelService
 }>
+
+// this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
+// if it ain't broken, don't fix it
 
 /** This should only subscribe to and relay events to other services, but not do any work (other than some data transformations). */
 export default class HelixEventService extends ContextClass {
@@ -37,7 +41,6 @@ export default class HelixEventService extends ContextClass {
 
   private readonly disableExternalApis: boolean
   private readonly nodeEnv: NodeEnv
-  private readonly twitchChannelName: string
   private readonly hostName: string | null
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
   private readonly followerStore: FollowerStore
@@ -45,10 +48,10 @@ export default class HelixEventService extends ContextClass {
   private readonly logService: LogService
   private readonly fileService: FileService
   private readonly app: Express
+  private readonly streamerChannelService: StreamerChannelService
 
-  // the broadcaster's User object
-  private user!: HelixUser
   private listener: EventSubListener | null
+  private eventSubBase!: EventSubBase
   private eventSubApi!: HelixEventSubApi
 
   constructor (deps: Deps) {
@@ -56,7 +59,6 @@ export default class HelixEventService extends ContextClass {
 
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.nodeEnv = deps.resolve('nodeEnv')
-    this.twitchChannelName = deps.resolve('twitchChannelName')
     this.hostName = deps.resolve('hostName')
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
     this.followerStore = deps.resolve('followerStore')
@@ -64,6 +66,7 @@ export default class HelixEventService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.fileService = deps.resolve('fileService')
     this.app = deps.resolve('app')
+    this.streamerChannelService = deps.resolve('streamerChannelService')
 
     this.listener = null
   }
@@ -78,12 +81,6 @@ export default class HelixEventService extends ContextClass {
     const client = this.twurpleApiClientProvider.getClientApi()
     this.eventSubApi = client.eventSub
 
-    const user = await client.users.getUserByName(this.twitchChannelName)
-    if (user == null) {
-      throw new Error(`Could not get Twitch user '${this.twitchChannelName}. Please review the environment variables.'`)
-    }
-    this.user = user
-
     if (this.nodeEnv === 'local') {
       // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
       // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
@@ -91,9 +88,10 @@ export default class HelixEventService extends ContextClass {
       await this.eventSubApi.deleteAllSubscriptions()
 
       this.listener = this.createNewListener()
+      this.eventSubBase = this.listener
       await this.listener.listen()
       this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
-      await this.subscribeToEvents(this.listener)
+      await this.initialiseSubscriptions()
       this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Ngrok listener]')
     } else {
       // can't use the listener - have to inject the middleware
@@ -103,6 +101,7 @@ export default class HelixEventService extends ContextClass {
         hostName: this.hostName!,
         secret: this.getSecret()
       })
+      this.eventSubBase = middleware
       await middleware.apply(this.app)
 
       // hack: only mark as ready once we are starting the app so no events get lost
@@ -122,11 +121,20 @@ export default class HelixEventService extends ContextClass {
         middleware.onRevoke((subscription) => this.logService.logInfo(this, 'middleware.onRevoke', 'subscription:', subscription.id))
 
         // from what I understand we can safely re-subscribe to events when using the middleware
-        await this.subscribeToEvents(middleware)
+        await this.initialiseSubscriptions()
         this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Middleware listener]')
       }, 5000)
       this.logService.logInfo(this, 'Subscription to Helix events via the EventSub API has been set up and will be initialised in 5 seconds')
     }
+  }
+
+  public async subscribeToChannelEvents (streamerId: number): Promise<void> {
+    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
+    if (channelName == null) {
+      return
+    }
+
+    await this.subscribeToChannelEventsByChannelName(streamerId, channelName)
   }
 
   private async refreshNgrok () {
@@ -138,17 +146,29 @@ export default class HelixEventService extends ContextClass {
 
       // this will create a new Ngrok server/tunnel with a different address
       this.listener = this.createNewListener()
+      this.eventSubBase = this.listener
       await this.listener.listen()
-      await this.subscribeToEvents(this.listener)
+      await this.initialiseSubscriptions()
       this.logService.logInfo(this, 'Successfully refreshed the Ngrok server. The EventSub events will continue to work normally.')
     } catch (e) {
       this.logService.logError(this, 'Failed to refresh the Ngrok server. EventSub notifications will not be received for much longer. Please restart the application at your earliest convenience.', e)
     }
   }
 
-  private async subscribeToEvents (eventSubBase: EventSubBase) {
+  private async initialiseSubscriptions () {
+    const streamerChannels = await this.streamerChannelService.getAllTwitchStreamerChannels()
+    await Promise.all(streamerChannels.map(c => this.subscribeToChannelEventsByChannelName(c.streamerId, c.twitchChannelName)))
+  }
+
+  private async subscribeToChannelEventsByChannelName (streamerId: number, channelName: string) {
+    const client = this.twurpleApiClientProvider.getClientApi()
+    const user = await client.users.getUserByName(channelName)
+    if (user == null) {
+      throw new Error(`Could not get Twitch user '${channelName}' and could not subscribe to channel events`)
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    await eventSubBase.subscribeToChannelFollowEvents(this.user.id, async (e) => await this.followerStore.saveNewFollower(e.userId, e.userName, e.userDisplayName))
+    await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
   }
 
   private createNewListener () {

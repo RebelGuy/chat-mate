@@ -1,5 +1,5 @@
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
-import express from 'express'
+import express, { NextFunction, Request, Response } from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'
 import env from './globals'
@@ -70,6 +70,15 @@ import LivestreamController from '@rebel/server/controllers/LivestreamController
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
 import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
+import AccountController from '@rebel/server/controllers/AccountController'
+import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import AccountStore from '@rebel/server/stores/AccountStore'
+import ApiService from '@rebel/server/controllers/ApiService'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
+import StreamerController from '@rebel/server/controllers/StreamerController'
+import StreamerService from '@rebel/server/services/StreamerService'
+import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -82,7 +91,6 @@ const port = env('port')
 const dataPath = path.resolve(__dirname, `../../data/`)
 const twitchClientId = env('twitchClientId')
 const twitchClientSecret = env('twitchClientSecret')
-const twitchChannelName = env('twitchChannelName')
 const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
 const enableDbLogging = env('enableDbLogging')
 const hostName = env('websiteHostname')
@@ -92,7 +100,6 @@ const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
 const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
 const dbTransactionTimeout = env('dbTransactionTimeout')
 const streamlabsAccessToken = env('streamlabsAccessToken')
-const streamlabsSocketToken = env('streamlabsSocketToken')
 
 const globalContext = ContextProvider.create()
   .withObject('app', app)
@@ -104,7 +111,6 @@ const globalContext = ContextProvider.create()
   .withProperty('disableExternalApis', env('useFakeControllers') === true)
   .withProperty('twitchClientId', twitchClientId)
   .withProperty('twitchClientSecret', twitchClientSecret)
-  .withProperty('twitchChannelName', twitchChannelName)
   .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
   .withProperty('enableDbLogging', enableDbLogging)
   .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
@@ -114,14 +120,15 @@ const globalContext = ContextProvider.create()
   .withProperty('managedIdentityClientId', managedIdentityClientId)
   .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withProperty('streamlabsAccessToken', streamlabsAccessToken)
-  .withProperty('streamlabsSocketToken', streamlabsSocketToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
   .withHelpers('dateTimeHelpers', DateTimeHelpers)
   .withHelpers('rankHelpers', RankHelpers)
   .withHelpers('donationHelpers', DonationHelpers)
+  .withHelpers('accountHelpers', AccountHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
+  .withFactory('websocketFactory', WebsocketFactory)
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('applicationInsightsService', ApplicationInsightsService)
@@ -142,11 +149,14 @@ const globalContext = ContextProvider.create()
   .withClass('streamlabsProxyService', StreamlabsProxyService)
   .withClass('livestreamStore', LivestreamStore)
   .withClass('viewershipStore', ViewershipStore)
+  .withClass('accountStore', AccountStore)
+  .withClass('streamerStore', StreamerStore)
+  .withClass('channelStore', ChannelStore)
+  .withClass('streamerChannelService', StreamerChannelService)
   .withClass('livestreamService', LivestreamService)
   .withClass('rankStore', RankStore)
   .withClass('adminService', AdminService)
   .withClass('experienceStore', ExperienceStore)
-  .withClass('channelStore', ChannelStore)
   .withClass('chatStore', ChatStore)
   .withClass('channelService', ChannelService)
   .withClass('punishmentStore', PunishmentStore)
@@ -167,6 +177,7 @@ const globalContext = ContextProvider.create()
   .withClass('donationService', DonationService)
   .withClass('donationFetchService', DonationFetchService)
   .withClass('chatMateEventService', ChatMateEventService)
+  .withClass('streamerService', StreamerService)
   .build()
 
 app.use((req, res, next) => {
@@ -185,12 +196,44 @@ app.use((req, res, next) => {
   // intercept the JSON body so we can customise the error code
   // "inspired" by https://stackoverflow.com/a/57553226
   const send = res.send.bind(res)
+
   res.send = (body) => {
-    const response = body == null ? null : JSON.parse(body) as ApiResponse<any, any>
-    if (response?.success === false) {
-      res.status(response.error.errorCode ?? 500)
+    if (res.headersSent) {
+      // already sent
+      return res
     }
-    return send(body)
+
+    let responseBody: ApiResponse<any, any> | null
+    if (body == null) {
+      responseBody = null
+    } else {
+      try {
+        responseBody = JSON.parse(body)
+      } catch (e: any) {
+        // the response body was just a message (string), so we must construct the error object explicitly
+        if (res.statusCode === 200) {
+          throw new Error('It is expected that only errors are ever sent with a simple message.')
+        }
+
+        responseBody = {
+          schema: 1,
+          timestamp: new Date().getTime(),
+          success: false,
+          error: {
+            errorCode: res.statusCode as any,
+            errorType: res.statusMessage ?? 'Internal Server Error',
+            message: body
+          }
+        }
+        res.set('Content-Type', 'application/json')
+      }
+    }
+
+    if (responseBody?.success === false) {
+      res.status(responseBody.error.errorCode ?? 500)
+    }
+
+    return send(JSON.stringify(responseBody))
   }
 
   next()
@@ -203,24 +246,13 @@ app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_loc
 app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
 app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
 
-// this is middleware - we can supply an ordered collection of such functions,
-// and they will run in order to do common operations on the request before it
-// reaches the controllers.
-app.use((req, res, next) => {
-  req.on('error', (e) => logContext.logError('Express encountered error for the request at ' + req.url + ':', e))
-  res.on('error', (e) => logContext.logError('Express encountered error for the response at ' + req.url + ':', e))
-
-
-  // todo: do auth here, and fail if not authorised
-
-  // go to the next handler
-  next()
-})
-
 const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
 app.use(async (req, res, next) => {
   const context = globalContext.asParent()
+    .withObject('request', req) // these are required because, within the ApiService, we don't have access to @Context yet at the time that preprocessors fire
+    .withObject('response', res)
+    .withClass('apiService', ApiService)
     .withClass('chatMateController', ChatMateController)
     .withClass('chatController', ChatController)
     .withClass('emojiController', EmojiController)
@@ -231,6 +263,8 @@ app.use(async (req, res, next) => {
     .withClass('rankController', RankController)
     .withClass('donationController', DonationController)
     .withClass('livestreamController', LivestreamController)
+    .withClass('accountController', AccountController)
+    .withClass('streamerController', StreamerController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -258,8 +292,24 @@ Server.buildServices(app,
   LogController,
   RankController,
   DonationController,
-  LivestreamController
+  LivestreamController,
+  AccountController,
+  StreamerController
 )
+
+// error handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  // any errors reaching here are unhandled - just return a 500
+  logContext.logError('Express encountered error for the request at ' + req.url + ':', err)
+
+  if (!res.headersSent) {
+    res.sendStatus(500)
+  }
+
+  // don't call `next(error)` - the next middleware would be the default express error handler,
+  // which just logs the error to the console.
+  // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
+})
 
 process.on('unhandledRejection', (error) => {
   if (error instanceof TimeoutError) {

@@ -13,14 +13,14 @@ export default function ServerStatus () {
 
   return (
     <>
-      <ApiRequest onDemand={false} repeatInterval={5000} onRequest={sendPing}>
+      <ApiRequest onDemand={false} repeatInterval={5000} isAnonymous onRequest={sendPing}>
         {(data, loadingNode, errorNode) => <div style={{ color: data ? 'green' : errorNode ? 'red' : undefined }}>
           {data && `Server available (${pingEnd - pingStart}ms)`}
           {loadingNode && 'Checking availability'}
           {errorNode && `Server unavailable (${pingEnd - pingStart}ms)`}
         </div>}
       </ApiRequest>
-      <ApiRequest onDemand={false} repeatInterval={5000} onRequest={getStatus}>
+      <ApiRequest onDemand={false} requiresStreamer repeatInterval={5000} onRequest={getStatus}>
         {status => <>
           <PlatformStatus status={status?.youtubeApiStatus} name="YouTube" />
           <PlatformStatus status={status?.twitchApiStatus} name="Twitch" />

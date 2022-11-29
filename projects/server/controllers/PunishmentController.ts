@@ -1,7 +1,7 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import { sortBy } from '@rebel/server/util/arrays'
-import { Path, GET, QueryParam, POST, PathParam } from 'typescript-rest'
+import { Path, GET, QueryParam, POST, PathParam, PreProcessor } from 'typescript-rest'
 import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -11,6 +11,7 @@ import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 export type GetSinglePunishment = ApiResponse<2, { punishment: Tagged<1, PublicUserRank> }>
 
@@ -57,6 +58,8 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('punishment'))
+@PreProcessor(requireStreamer)
+@PreProcessor(requireRank('mod'))
 export default class PunishmentController extends ControllerBase {
   private readonly rankStore: RankStore
   private readonly punishmentService: PunishmentService
@@ -100,10 +103,10 @@ export default class PunishmentController extends ControllerBase {
         if (userId == null) {
           return builder.failure(400, 'A user ID must be provided when getting the punishment history')
         }
-        punishments = await this.punishmentService.getPunishmentHistory(userId)
+        punishments = await this.punishmentService.getPunishmentHistory(userId, this.getStreamerId())
 
       } else {
-        punishments = await this.punishmentService.getCurrentPunishments()
+        punishments = await this.punishmentService.getCurrentPunishments(this.getStreamerId())
         if (userId != null) {
           punishments = punishments.filter(p => p.userId === userId)
         }
@@ -125,7 +128,7 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
-      const result = await this.punishmentService.banUser(request.userId, request.message)
+      const result = await this.punishmentService.banUser(request.userId, this.getStreamerId(), this.getCurrentUser().id, request.message)
       return builder.success({
         newPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
         newPunishmentError: result.rankResult.error,
@@ -145,7 +148,7 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
-      const result = await this.punishmentService.unbanUser(request.userId, request.message)
+      const result = await this.punishmentService.unbanUser(request.userId, this.getStreamerId(), this.getCurrentUser().id, request.message)
       return builder.success({
         removedPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
         removedPunishmentError: result.rankResult.error,
@@ -168,7 +171,7 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
-      const result = await this.punishmentService.timeoutUser(request.userId, request.message, request.durationSeconds)
+      const result = await this.punishmentService.timeoutUser(request.userId, this.getStreamerId(), this.getCurrentUser().id, request.message, request.durationSeconds)
       return builder.success({
         newPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
         newPunishmentError: result.rankResult.error,
@@ -188,7 +191,7 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
-      const result = await this.punishmentService.untimeoutUser(request.userId, request.message)
+      const result = await this.punishmentService.untimeoutUser(request.userId, this.getStreamerId(), this.getCurrentUser().id, request.message)
       return builder.success({
         removedPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
         removedPunishmentError: result.rankResult.error,
@@ -209,7 +212,7 @@ export default class PunishmentController extends ControllerBase {
 
     try {
       const duration = request.durationSeconds == null || request.durationSeconds === 0 ? null : request.durationSeconds
-      const result = await this.punishmentService.muteUser(request.userId, request.message, duration)
+      const result = await this.punishmentService.muteUser(request.userId, this.getStreamerId(), this.getCurrentUser().id, request.message, duration)
       return builder.success({ newPunishment: userRankToPublicObject(result) })
     } catch (e: any) {
       if (e instanceof UserRankAlreadyExistsError) {
@@ -229,7 +232,7 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
-      const result = await this.punishmentService.unmuteUser(request.userId, request.message)
+      const result = await this.punishmentService.unmuteUser(request.userId, this.getStreamerId(), this.getCurrentUser().id, request.message)
       return builder.success({ removedPunishment: userRankToPublicObject(result) })
     } catch (e: any) {
       if (e instanceof UserRankNotFoundError) {

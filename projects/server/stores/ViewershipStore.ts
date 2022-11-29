@@ -1,10 +1,8 @@
-import { Livestream, LivestreamType, LiveViewers, ViewingBlock } from '@prisma/client'
+import { Livestream, LivestreamType, ViewingBlock } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
-import LogService from '@rebel/server/services/LogService'
-import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime, maxTime, MAX_DATE, minTime } from '@rebel/server/util/datetime'
 import { assertUnreachableCompile, reminder } from '@rebel/server/util/typescript'
 
@@ -20,33 +18,21 @@ export type LastSeen = { livestream: Livestream, time: Date, viewingBlockId: num
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
-  livestreamStore: LivestreamStore
-  logService: LogService
 }>
 
 export default class ViewershipStore extends ContextClass {
   public readonly name = ViewershipStore.name
 
   private readonly db: Db
-  private readonly livestreamStore: LivestreamStore
-  private readonly logService: LogService
 
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
-    this.livestreamStore = deps.resolve('livestreamStore')
-    this.logService = deps.resolve('logService')
   }
 
-  public async addLiveViewCount (youtubeCount: number, twitchCount: number): Promise<void> {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
-    if (activeLivestream == null) {
-      this.logService.logWarning(this, 'Tried adding live view counts but there is no active public livestream')
-      return
-    }
-
+  public async addLiveViewCount (livestreamId: number, youtubeCount: number, twitchCount: number): Promise<void> {
     await this.db.liveViewers.create({ data: {
-      livestream: { connect: { id: activeLivestream.id }},
+      livestream: { connect: { id: livestreamId }},
       youtubeViewCount: youtubeCount,
       twitchViewCount: twitchCount
     }})
@@ -56,25 +42,20 @@ export default class ViewershipStore extends ContextClass {
    * Adds generous padding on the left and right. Note that this is intentionally channel agnostic - we don't need to know about the
    * viewership of a specific *channel*.
    */
-  public async addViewershipForChatParticipation (userId: number, timestamp: number): Promise<void> {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
-    if (activeLivestream == null) {
-      return
-    }
-
-    const startTime = activeLivestream.start
+  public async addViewershipForChatParticipation (livestream: Livestream, userId: number, timestamp: number): Promise<void> {
+    const startTime = livestream.start
     if (startTime == null) {
       // livestream hasn't started yet
       return
     }
-    const endTime = activeLivestream.end ?? MAX_DATE
+    const endTime = livestream.end ?? MAX_DATE
 
     // get the viewing block range
     const _time = new Date(timestamp)
     const lowerTime = maxTime(addTime(_time, 'minutes', -VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE), startTime)
     const upperTime = minTime(addTime(_time, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER), endTime)
 
-    const lastSeen = await this.getLastSeen(userId)
+    const lastSeen = await this.getLastSeen(livestream.streamerId, userId)
     if (lastSeen && lastSeen.time >= upperTime) {
       return
     }
@@ -92,7 +73,7 @@ export default class ViewershipStore extends ContextClass {
       block = await this.db.viewingBlock.create({
         data: {
           user: { connect: { id: userId }},
-          livestream: { connect: { id: activeLivestream.id }},
+          livestream: { connect: { id: livestream.id }},
           startTime: lowerTime,
           lastUpdate: upperTime
         },
@@ -102,9 +83,12 @@ export default class ViewershipStore extends ContextClass {
   }
 
   /** Returns the time of the previous viewing block. */
-  public async getLastSeen (userId: number): Promise<LastSeen | null> {
+  public async getLastSeen (streamerId: number, userId: number): Promise<LastSeen | null> {
     const block = await this.db.viewingBlock.findFirst({
-      where: { user: { id: userId }},
+      where: {
+        user: { id: userId },
+        livestream: { streamerId }
+      },
       orderBy: { lastUpdate: 'desc'},
       include: { livestream: true }
     })
@@ -123,14 +107,9 @@ export default class ViewershipStore extends ContextClass {
     return result
   }
 
-  public async getLatestLiveCount (): Promise<{ time: Date, viewCount: number, twitchViewCount: number } | null> {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
-    if (activeLivestream == null) {
-      return null
-    }
-
+  public async getLatestLiveCount (livestreamId: number): Promise<{ time: Date, viewCount: number, twitchViewCount: number } | null> {
     const result = await this.db.liveViewers.findFirst({
-      where: { livestreamId: activeLivestream.id },
+      where: { livestreamId: livestreamId },
       orderBy: { time: 'desc' }
     })
 
@@ -148,7 +127,7 @@ export default class ViewershipStore extends ContextClass {
   /** Returns streams in ascending order.
    * The following actions are considered participation:
    * - sending a message in chat */
-  public async getLivestreamParticipation (userId: number): Promise<LivestreamParticipation[]> {
+  public async getLivestreamParticipation (streamerId: number, userId: number): Promise<LivestreamParticipation[]> {
     if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
@@ -157,9 +136,13 @@ export default class ViewershipStore extends ContextClass {
     reminder<LivestreamType>({ publicLivestream: true })
 
     const livestreams = await this.db.livestream.findMany({
+      where: { streamerId },
       include: {
         chatMessages: {
-          where: { user: { id: userId }, livestream: { type: 'publicLivestream' }},
+          where: {
+            user: { id: userId },
+            livestream: { type: 'publicLivestream', streamerId }
+          },
           take: 1 // order doesn't matter
         }
       },
@@ -174,8 +157,9 @@ export default class ViewershipStore extends ContextClass {
   }
 
   /** Returns streams in ascending order. */
-  public async getLivestreamViewership (userId: number): Promise<LivestreamViewership[]> {
+  public async getLivestreamViewership (streamerId: number, userId: number): Promise<LivestreamViewership[]> {
     const livestreams = await this.db.livestream.findMany({
+      where: { streamerId },
       include: {
         viewingBlocks: {
           where: { user: { id: userId }},

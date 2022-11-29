@@ -26,7 +26,8 @@ beforeEach(() => {
 
 describe(nameof(AdminService, 'getAdminUsers'), () => {
   test('Returns the array of all current admin users', async () => {
-    mockRankStore.getUserRanksForGroup.calledWith('administration').mockResolvedValue(cast<UserRankWithRelations[]>([
+    const streamerId = 2
+    mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue(cast<UserRankWithRelations[]>([
       { userId: user1, rank: modRank },
       { userId: user1, rank: adminRank },
       { userId: user2, rank: ownerRank },
@@ -35,7 +36,7 @@ describe(nameof(AdminService, 'getAdminUsers'), () => {
       { userId: user3, rank: modRank }
     ]))
 
-    const result = await adminService.getAdminUsers()
+    const result = await adminService.getAdminUsers(streamerId)
 
     expect(result.map(r => r.id)).toEqual([user1, user2])
   })

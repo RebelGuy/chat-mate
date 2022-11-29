@@ -9,6 +9,9 @@ export type PublicUserRank = PublicObject<1, {
   /** The id of the user rank object. */
   id: number
 
+  /** The streamer context (username) to which this rank belongs. If null, this is a global rank. */
+  streamer: string | null
+
   /** The time at which the rank was originally issued to the user. */
   issuedAt: number
 

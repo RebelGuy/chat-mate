@@ -26,6 +26,12 @@ export class UserRankAlreadyExistsError extends CustomError {
   }
 }
 
+export class UserRankRequiresStreamerError extends CustomError {
+  constructor (message?: string){
+    super(UserRankRequiresStreamerError.prototype, message ?? 'The user-rank can only be applied in a streamer context.')
+  }
+}
+
 export class ApiResponseError extends CustomError {
   constructor (status: number, errorType?: string, errorDescription?: string) {
     super(ApiResponseError.prototype, `Request failed with code ${status}: ${errorType ?? 'Unknown error'}. ${errorDescription ?? 'No further details available'}`)
@@ -41,6 +47,39 @@ export class DonationUserLinkAlreadyExistsError extends CustomError {
 export class DonationUserLinkNotFoundError extends CustomError {
   constructor () {
     super(DonationUserLinkNotFoundError.prototype, `Cannot unlink the user from the donation because no user is linked.`)
+  }
+}
+
+export class InvalidUsernameError extends CustomError {
+  constructor (msg: string) {
+    super(InvalidUsernameError.prototype, `Invalid username: ${msg}`)
+  }
+}
+
+export class UsernameAlreadyExistsError extends CustomError {
+  constructor (username: string) {
+    super(UsernameAlreadyExistsError.prototype, `The username '${username}' already exists.`)
+  }
+}
+
+export class StreamerApplicationAlreadyClosedError extends CustomError {
+  constructor () {
+    super(StreamerApplicationAlreadyClosedError.prototype, `The streamer application is already closed.`)
+  }
+}
+
+export class UserAlreadyStreamerError extends CustomError {
+  constructor () {
+    super(UserAlreadyStreamerError.prototype, `The user is already a streamer.`)
+  }
+}
+
+export class PreProcessorError extends CustomError {
+  public readonly statusCode: number
+
+  constructor (statusCode: number, message: string) {
+    super(PreProcessorError.prototype, message)
+    this.statusCode = statusCode
   }
 }
 

@@ -11,6 +11,7 @@ export const time3 = new Date(2022, 0, 5)
 export const livestream1: Livestream = {
   id: 1,
   liveId: 'liveId1',
+  streamerId: 1,
   continuationToken: 'token1',
   createdAt: time1,
   start: time1,
@@ -21,6 +22,7 @@ export const livestream1: Livestream = {
 export const livestream2: Livestream = {
   id: 2,
   liveId: 'liveId2',
+  streamerId: 1,
   continuationToken: null,
   createdAt: time2,
   start: time2,
@@ -31,6 +33,7 @@ export const livestream2: Livestream = {
 export const livestream3: Livestream = {
   id: 3,
   liveId: 'liveId3',
+  streamerId: 1,
   continuationToken: 'token3',
   createdAt: time3,
   start: time3,
@@ -142,9 +145,10 @@ export const chatExperienceData3: ChatExperienceData = {
 }
 
 /** Adds random data. Assumes the user, channel and livestream have already been created. */
-export function addChatMessage (db: Db, time: Date, livestreamId: number | null, userId: number, youtubeChannelId: number): Promise<ChatMessage> {
+export function addChatMessage (db: Db, time: Date, streamerId: number, livestreamId: number | null, userId: number, youtubeChannelId: number): Promise<ChatMessage> {
   return db.chatMessage.create({ data: {
     time,
+    streamer: { connect: { id: streamerId }},
     externalId: 'testMessage-' + Math.random(),
     user: { connect: { id: userId }},
     youtubeChannel: { connect: { id: youtubeChannelId }},

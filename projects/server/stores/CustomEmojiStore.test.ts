@@ -6,12 +6,16 @@ import CustomEmojiStore, { CustomEmojiCreateData, CustomEmojiUpdateData, CustomE
 import { sortBy } from '@rebel/server/util/arrays'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { anyDate, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { symbolName } from 'typescript'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>
 
 const rank1 = 1
 const rank2 = 2
 const rank3 = 3
+
+const streamer1 = 1
+const streamer2 = 2
 
 export default () => {
   let customEmojiStore: CustomEmojiStore
@@ -26,6 +30,12 @@ export default () => {
       { name: 'supporter', group: 'cosmetic', displayNameAdjective: 'rank2', displayNameNoun: 'rank2' },
       { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
     ]})
+    await db.streamer.create({ data: {
+      registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}
+    }})
+    await db.streamer.create({ data: {
+      registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}
+    }})
 
     customEmojiStore = new CustomEmojiStore(new Dependencies({ dbProvider }))
   }, DB_TEST_TIMEOUT)
@@ -39,7 +49,19 @@ export default () => {
       await customEmojiStore.addCustomEmoji({ ...data, whitelistedRanks: [] })
 
       await expectRowCount(db.customEmoji).toBe(1)
-      await expect(db.customEmoji.findFirst()).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol }))
+      await expect(db.customEmoji.findFirst()).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol, streamerId: data.streamerId }))
+      await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name }))
+    })
+
+    test('symbols must be unique only for the given streamer', async () => {
+      const symbol = 'symbol'
+      await db.customEmoji.create({ data: { symbol: symbol, streamerId: streamer1 }})
+      const data = { ...getEmojiCreateData(1, streamer2), symbol: symbol }
+
+      await customEmojiStore.addCustomEmoji({ ...data, whitelistedRanks: [] })
+
+      await expectRowCount(db.customEmoji).toBe(2)
+      await expect(db.customEmoji.findFirst({ where: { streamerId: streamer2 }})).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol, streamerId: data.streamerId }))
       await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name }))
     })
 
@@ -50,7 +72,7 @@ export default () => {
 
       // verify that emoji is added
       await expectRowCount(db.customEmoji, db.customEmojiRankWhitelist).toEqual([1, 2])
-      await expect(db.customEmoji.findFirst()).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol }))
+      await expect(db.customEmoji.findFirst()).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol, streamerId: data.streamerId }))
       await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name }))
 
       // verify that ranks are whitelisted
@@ -62,7 +84,7 @@ export default () => {
     })
 
     test('duplicate symbol is rejected', async () => {
-      await db.customEmoji.create({ data: { symbol: 'emoji1' } })
+      await db.customEmoji.create({ data: { streamerId: streamer1, symbol: 'emoji1' } })
       const data: CustomEmojiCreateData = { ...getEmojiCreateData(1), whitelistedRanks: [] }
 
       await expect(() => customEmojiStore.addCustomEmoji(data)).rejects.toThrowError()
@@ -70,15 +92,15 @@ export default () => {
   })
 
   describe(nameof(CustomEmojiStore, 'getAllCustomEmojis'), () => {
-    test('returns all custom emojis', async () => {
-      await createEmojis([1, 2, 3])
+    test('returns all custom emojis for the streamer', async () => {
+      await createEmojis([1, 2, 3, 4], [streamer1, streamer1, streamer1, streamer2])
       await db.customEmojiRankWhitelist.createMany({ data: [
         { customEmojiId: 1, rankId: rank1 },
         { customEmojiId: 1, rankId: rank2 },
         { customEmojiId: 2, rankId: rank1 },
       ]})
 
-      const result = await customEmojiStore.getAllCustomEmojis()
+      const result = await customEmojiStore.getAllCustomEmojis(streamer1)
 
       expect(result.length).toBe(3)
       expect(result[0]).toEqual(expectObject<CustomEmojiWithRankWhitelist>({ id: 1, whitelistedRanks: [rank1, rank2] }))
@@ -88,7 +110,7 @@ export default () => {
 
     test('does not return deactivated emojis', async () => {
       await db.customEmojiVersion.create({ data: {
-        customEmoji: { create: { symbol: 'symbol' }},
+        customEmoji: { create: { streamerId: streamer1, symbol: 'symbol' }},
         image: Buffer.from('emoji'),
         isActive: false,
         levelRequirement: 1,
@@ -97,7 +119,7 @@ export default () => {
         version: 0
       }})
 
-      const result = await customEmojiStore.getAllCustomEmojis()
+      const result = await customEmojiStore.getAllCustomEmojis(streamer1)
 
       expect(result.length).toBe(0)
     })
@@ -192,8 +214,8 @@ export default () => {
     })
   })
 
-  async function createEmojis (ids: number[]) {
-    await db.customEmoji.createMany({ data: ids.map(id => ({ id, symbol: 'emoji' + id }))})
+  async function createEmojis (ids: number[], streamerIds?: number[]) {
+    await db.customEmoji.createMany({ data: ids.map((id, i) => ({ id, symbol: 'emoji' + id, streamerId: streamerIds?.at(i) ?? streamer1 }))})
     await db.customEmojiVersion.createMany({ data: ids.map(id => ({
       customEmojiId: id,
       image: Buffer.from('emoji' + id),
@@ -206,9 +228,10 @@ export default () => {
   }
 }
 
-function getEmojiCreateData (id: number): Omit<CustomEmojiCreateData, 'whitelistedRanks'> {
+function getEmojiCreateData (id: number, streamerId?: number): Omit<CustomEmojiCreateData, 'whitelistedRanks'> {
   return {
     name: 'Emoji ' + id,
+    streamerId: streamerId ?? streamer1,
     symbol: 'emoji' + id,
     image: Buffer.from('emoji' + id),
     levelRequirement: id,

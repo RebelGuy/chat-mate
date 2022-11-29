@@ -1,4 +1,4 @@
-import { ChatCustomEmoji, ChatMessage, ChatMessagePart, ChatText, CustomEmojiVersion, Donation } from '@prisma/client'
+import { ChatCustomEmoji, ChatMessage, ChatMessagePart, ChatText, CustomEmojiVersion, Donation, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
@@ -22,6 +22,7 @@ export type DonationWithUser = DonationWithMessage & {
 export type DonationCreateArgs = {
   streamlabsId: number
   streamlabsUserId: number | null
+  streamerId: number
   time: Date
   currency: string
   amount: number
@@ -52,6 +53,7 @@ export default class DonationStore extends ContextClass {
       const donation = await db.donation.create({ data: {
         streamlabsId: data.streamlabsId,
         streamlabsUserId: data.streamlabsUserId ?? null,
+        streamerId: data.streamerId,
         amount: data.amount,
         formattedAmount: data.formattedAmount,
         currency: data.currency,
@@ -61,6 +63,7 @@ export default class DonationStore extends ContextClass {
 
       if (data.messageParts.length > 0) {
         const chatMessage = await db.chatMessage.create({ data: {
+          streamerId: data.streamerId,
           externalId: `${data.streamlabsId}`,
           time: data.time,
           donationId: donation.id
@@ -74,7 +77,7 @@ export default class DonationStore extends ContextClass {
   }
 
   /** Returns donations that have been linked to the user, orderd by time in ascending order. */
-  public async getDonationsByUserId (userId: number): Promise<Donation[]> {
+  public async getDonationsByUserId (streamerId: number, userId: number): Promise<Donation[]> {
     const donationLink = await this.db.donationLink.findMany({ where: { linkedUserId: userId }})
     const linkIdentifiers = donationLink.map(u => u.linkIdentifier)
     const donationIds = linkIdentifiers.filter(id => id.startsWith(INTERNAL_USER_PREFIX)).map(id => Number(id.substring(INTERNAL_USER_PREFIX.length)))
@@ -82,6 +85,7 @@ export default class DonationStore extends ContextClass {
 
     return await this.db.donation.findMany({
       where: {
+        streamerId: streamerId,
         OR: [
           { id: { in: donationIds } },
           { streamlabsUserId: { in: streamlabsUserIds }}
@@ -109,6 +113,7 @@ export default class DonationStore extends ContextClass {
 
     return {
       id: donation.id,
+      streamerId: donation.streamerId,
       amount: donation.amount,
       currency: donation.currency,
       formattedAmount: donation.formattedAmount,
@@ -124,9 +129,12 @@ export default class DonationStore extends ContextClass {
   }
 
   /** Returns donations after the given time, ordered by time in ascending order. */
-  public async getDonationsSince (time: number): Promise<DonationWithUser[]> {
+  public async getDonationsSince (streamerId: number, time: number): Promise<DonationWithUser[]> {
     const donations = await this.db.donation.findMany({
-      where: { time: { gt: new Date(time) }},
+      where: {
+        streamerId: streamerId,
+        time: { gt: new Date(time) }
+      },
       orderBy: { time: 'asc' },
       include: { chatMessage: {
         include: { chatMessageParts: chatMessageIncludeRelations.chatMessageParts }
@@ -143,6 +151,7 @@ export default class DonationStore extends ContextClass {
       const donationLink = donationLinks.find(u => u.linkIdentifier === linkIdentifier)
       return {
         id: donation.id,
+        streamerId: donation.streamerId,
         amount: donation.amount,
         currency: donation.currency,
         formattedAmount: donation.formattedAmount,
@@ -169,6 +178,10 @@ export default class DonationStore extends ContextClass {
     return result?.streamlabsId ?? null
   }
 
+  public async getStreamlabsSocketToken (streamerId: number): Promise<StreamlabsSocketToken | null> {
+    return await this.db.streamlabsSocketToken.findFirst({ where: { streamerId }})
+  }
+
   // we perform side effects when linking/unlinking, which is why we separated the remove/add functionality into two methods
   // instead of just discarding the existing link.
 
@@ -191,6 +204,34 @@ export default class DonationStore extends ContextClass {
       linkedUserId: userId,
       linkedAt: linkedAt
     }})
+  }
+
+  /** Returns true if the socket token has been updated, and false if the provided socket token is the same as the existing token. */
+  public async setStreamlabsSocketToken (streamerId: number, streamlabsSocketToken: string | null): Promise<boolean> {
+    const existingEntry = await this.db.streamlabsSocketToken.findFirst({ where: { streamerId }})
+
+    if (streamlabsSocketToken != null) {
+      if (existingEntry != null && existingEntry.token === streamlabsSocketToken) {
+        return false
+      } else if (existingEntry != null && existingEntry.token !== streamlabsSocketToken) {
+        throw new Error('An existing token is already active. Please first deactivate the active token, then set the new one.')
+      } else {
+        await this.db.streamlabsSocketToken.upsert({
+          create: { streamerId, token: streamlabsSocketToken },
+          update: { token: streamlabsSocketToken },
+          where: { streamerId }
+        })
+        return true
+      }
+
+    } else {
+      if (existingEntry == null) {
+        return false
+      } else {
+        await this.db.streamlabsSocketToken.delete({where: { streamerId }})
+        return true
+      }
+    }
   }
 
   /** Returns the userId that was unlinked.

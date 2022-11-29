@@ -31,6 +31,6 @@ export type PublicCustomEmoji = PublicObject<1, {
   whitelistedRanks: number[]
 }>
 
-export type PublicCustomEmojiNew = Omit<PublicCustomEmoji, 'id' | 'isActive' | 'version'>
+export type PublicCustomEmojiNew = Omit<PublicCustomEmoji, 'id' | 'isActive' | 'version' | 'streamerId'>
 
 export type PublicCustomEmojiUpdate = Omit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version'>

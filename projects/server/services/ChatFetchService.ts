@@ -3,7 +3,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from '@rebel/server/models/chat'
 import { isList, List } from 'immutable'
-import { clamp, clampNormFn, sum } from '@rebel/server/util/math'
+import { avg, clamp, clampNormFn, min, sum } from '@rebel/server/util/math'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
@@ -73,18 +73,24 @@ export default class ChatFetchService extends ContextClass {
       const result = await this.masterchatProxyService.fetch(liveId, token ?? undefined)
       return result
     } catch (e: any) {
-      this.logService.logWarning(this, 'Encountered error while fetching chat:', e.message)
+      this.logService.logWarning(this, `Encountered error while fetching chat for livestream ${livestream.id} for streamer ${livestream.streamerId}:`, e.message)
       await this.livestreamStore.setContinuationToken(liveId, null)
       return null
     }
   }
 
-  private updateMessages = async () => {
-    const livestream = await this.livestreamStore.getActiveLivestream()
-    if (livestream == null) {
+  private updateMessages = async (): Promise<number> => {
+    const livestreams = await this.livestreamStore.getActiveLivestreams()
+
+    if (livestreams.length === 0) {
       return MAX_INTERVAL
     }
 
+    const intervals = await Promise.all(livestreams.map(l => this.updateLivestreamMessages(l)))
+    return min(intervals)[0]!
+  }
+
+  private updateLivestreamMessages = async (livestream: Livestream): Promise<number> => {
     const response = await this.fetchLatest(livestream)
 
     let hasNewChat: boolean = false
@@ -101,7 +107,7 @@ export default class ChatFetchService extends ContextClass {
 
         let anyFailed = false
         for (const item of chatItems) {
-          const success = await this.chatService.onNewChatItem(item)
+          const success = await this.chatService.onNewChatItem(item, livestream.streamerId)
           if (success) {
             hasNewChat = true
           } else {
@@ -123,7 +129,7 @@ export default class ChatFetchService extends ContextClass {
       return MIN_INTERVAL
     } else {
       const now = Date.now()
-      const chat = await this.chatStore.getChatSince(now - LIMIT)
+      const chat = await this.chatStore.getChatSince(livestream.streamerId, now - LIMIT)
       const timestamps = chat.map(c => c.time.getTime())
       return getNextInterval(now, timestamps, createLogContext(this.logService, this))
     }

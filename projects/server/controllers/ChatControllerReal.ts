@@ -1,5 +1,6 @@
+import ApiService from '@rebel/server/controllers/ApiService'
 import { GetChatEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
-import { buildPath, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
@@ -16,12 +17,13 @@ export type ChatControllerDeps = ControllerDependencies<{
 }>
 
 @Path(buildPath('chat'))
-export default class ChatControllerReal implements IChatController {
+export default class ChatControllerReal extends ControllerBase implements IChatController {
   readonly chatStore: ChatStore
   readonly experienceService: ExperienceService
   readonly rankStore: RankStore
 
   constructor (deps: ChatControllerDeps) {
+    super(deps, '/chat')
     this.chatStore = deps.resolve('chatStore')
     this.experienceService = deps.resolve('experienceService')
     this.rankStore = deps.resolve('rankStore')
@@ -30,14 +32,15 @@ export default class ChatControllerReal implements IChatController {
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
     let { builder, limit, since } = args
     since = since ?? 0
-    const items = await this.chatStore.getChatSince(since, limit)
+    const streamerId = this.getStreamerId()
+    const items = await this.chatStore.getChatSince(streamerId, since, limit)
     const userIds = unique(items.map(c => c.userId))
     if (userIds.find(id => id == null) != null) {
       throw new Error('Chat items must have a userId set')
     }
 
-    const levels = await this.experienceService.getLevels(userIds as number[])
-    const ranks = await this.rankStore.getUserRanks(userIds as number[])
+    const levels = await this.experienceService.getLevels(streamerId, userIds as number[])
+    const ranks = await this.rankStore.getUserRanks(userIds as number[], streamerId)
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {

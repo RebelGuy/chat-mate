@@ -3,10 +3,21 @@ import ApiRequest from '@rebel/studio/ApiRequest'
 import * as React from 'react'
 
 type Props<TData extends ResponseData<TData>> = {
-  onRequest: () => Promise<ApiResponse<any, TData>>
   // if providing a function, the children will always be rendered, otherwise they will only be rendered upon a successful response
   children: (onMakeRequest: () => void, response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => React.ReactNode
-}
+} & ({
+  isAnonymous: true
+  requiresStreamer?: false
+  onRequest: () => Promise<ApiResponse<any, TData>>
+} | {
+  isAnonymous?: false
+  requiresStreamer?: false
+  onRequest: (loginToken: string) => Promise<ApiResponse<any, TData>>
+} | {
+  isAnonymous?: false
+  requiresStreamer: true
+  onRequest: (loginToken: string, streamer: string) => Promise<ApiResponse<any, TData>>
+})
 
 type State<TData extends ResponseData<TData>> = {
   token: number
@@ -25,8 +36,17 @@ export default class ApiRequestTrigger<TData extends ResponseData<TData>> extend
   }
 
   override render () {
-    return <ApiRequest onDemand token={this.state.token === 0 ? null : this.state.token} onRequest={this.props.onRequest}>
-      {(response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => this.props.children(this.onMakeRequest, response, loadingNode, errorNode)}
-    </ApiRequest>
+    // any-typing required to make typescript happy
+    return (
+      <ApiRequest
+        onDemand
+        token={this.state.token === 0 ? null : this.state.token}
+        isAnonymous={this.props.isAnonymous as any}
+        requiresStreamer={this.props.requiresStreamer as any}
+        onRequest={this.props.onRequest}
+      >
+        {(response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => this.props.children(this.onMakeRequest, response, loadingNode, errorNode)}
+      </ApiRequest>
+    )
   }
 }

@@ -1,8 +1,9 @@
 import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
-import { Path, GET, POST, PATCH } from 'typescript-rest'
+import { Path, GET, POST, PATCH, PreProcessor } from 'typescript-rest'
 
 export type GetCustomEmojisResponse = ApiResponse<1, { emojis: Tagged<1, PublicCustomEmoji>[] }>
 
@@ -17,6 +18,8 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('emoji'))
+@PreProcessor(requireStreamer)
+@PreProcessor(requireRank('owner'))
 export default class EmojiController extends ControllerBase {
   private readonly customEmojiStore: CustomEmojiStore
 
@@ -30,7 +33,7 @@ export default class EmojiController extends ControllerBase {
   public async getCustomEmojis (): Promise<GetCustomEmojisResponse> {
     const builder = this.registerResponseBuilder<GetCustomEmojisResponse>('GET /custom', 1)
     try {
-      const emojis = await this.customEmojiStore.getAllCustomEmojis()
+      const emojis = await this.customEmojiStore.getAllCustomEmojis(this.getStreamerId())
       return builder.success({ emojis: emojis.map(e => customEmojiToPublicObject(e)) })
     } catch (e: any) {
       return builder.failure(e)
@@ -56,7 +59,7 @@ export default class EmojiController extends ControllerBase {
     }
 
     try {
-      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji))
+      const emoji = await this.customEmojiStore.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, this.getStreamerId()))
       return builder.success({ newEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)

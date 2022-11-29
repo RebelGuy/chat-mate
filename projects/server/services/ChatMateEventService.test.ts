@@ -29,6 +29,7 @@ beforeEach(() => {
 
 describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
   test('returns events after the given timestamp', async () => {
+    const streamerId = 5
     const since = data.time1.getTime()
     const levelDiff1 = cast<LevelDiff>({ timestamp: data.time2.getTime(), userId: 1, startLevel: { level: asGte(0, 0) }, endLevel: { level: asGte(1, 0) } })
     const levelDiff2 = cast<LevelDiff>({ timestamp: data.time3.getTime(), userId: 2, startLevel: { level: asGte(2, 0) }, endLevel: { level: asGte(3, 0) } })
@@ -37,11 +38,11 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
     const donation1 = cast<DonationWithUser>({ time: data.time2 })
     const donation2 = cast<DonationWithUser>({ time: data.time3 })
 
-    mockExperienceService.getLevelDiffs.calledWith(since).mockResolvedValue([levelDiff1, levelDiff2])
-    mockFollowerStore.getFollowersSince.calledWith(since).mockResolvedValue([follower1, follower2])
-    mockDonationStore.getDonationsSince.calledWith(since).mockResolvedValue([donation1, donation2])
+    mockExperienceService.getLevelDiffs.calledWith(streamerId, since).mockResolvedValue([levelDiff1, levelDiff2])
+    mockFollowerStore.getFollowersSince.calledWith(streamerId, since).mockResolvedValue([follower1, follower2])
+    mockDonationStore.getDonationsSince.calledWith(streamerId, since).mockResolvedValue([donation1, donation2])
 
-    const result = await chatMateEventService.getEventsSince(since)
+    const result = await chatMateEventService.getEventsSince(streamerId, since)
 
     expect(result.length).toBe(6)
     expect(filterTypes(result, 'levelUp')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'levelUp' }>>({ timestamp: data.time2.getTime(), userId: 1, oldLevel: 0, newLevel: 1 }))

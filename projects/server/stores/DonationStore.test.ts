@@ -1,16 +1,19 @@
-import { Donation } from '@prisma/client'
+import { Donation, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
 import DonationStore, { DonationCreateArgs, DonationWithUser } from '@rebel/server/stores/DonationStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { expectArray, nameof } from '@rebel/server/_test/utils'
+import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { randomInt } from 'crypto'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 import { addTime } from '@rebel/server/util/datetime'
 import { single } from '@rebel/server/util/arrays'
 import { PartialCustomEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+
+const streamer1 = 1
+const streamer2 = 2
 
 export default () => {
   let db: Db
@@ -22,6 +25,9 @@ export default () => {
       dbProvider
     }))
     db = dbProvider.get()
+
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
@@ -38,6 +44,7 @@ export default () => {
       }
       const part3: PartialTextChatMessage = { type: 'text', text: 'Part3', isBold: false, isItalics: false }
       const donationData: DonationCreateArgs = {
+        streamerId: streamer1,
         amount: 1.45,
         formattedAmount: '$1.45',
         currency: 'USD',
@@ -49,6 +56,7 @@ export default () => {
       }
       await db.customEmoji.create({ data: {
         symbol: 'test',
+        streamerId: streamer1,
         customEmojiVersions: { create: {
           image: Buffer.from(''),
           isActive: true,
@@ -66,6 +74,7 @@ export default () => {
 
     test('Adds the donation without a message to the database', async () => {
       const donationData: DonationCreateArgs = {
+        streamerId: streamer1,
         amount: 1.45,
         formattedAmount: '$1.45',
         currency: 'USD',
@@ -91,6 +100,7 @@ export default () => {
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBeNull()
       expect(result.userId).toBeNull()
+      expect(result.streamerId).toBe(streamer1)
     })
 
     test('Gets donation with internal link', async () => {
@@ -103,6 +113,7 @@ export default () => {
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBeNull()
       expect(result.userId).toBe(user2.id)
+      expect(result.streamerId).toBe(streamer1)
     })
 
     test('Gets donation with external link', async () => {
@@ -115,6 +126,7 @@ export default () => {
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBe(5)
       expect(result.userId).toBe(user2.id)
+      expect(result.streamerId).toBe(streamer1)
     })
 
     test('Gets donation with message', async () => {
@@ -129,11 +141,12 @@ export default () => {
           canUseInDonationMessage: true,
           name: 'name',
           version: 0,
-          customEmoji: { create: { symbol: 'symbol' }}
+          customEmoji: { create: { streamerId: streamer1, symbol: 'symbol' }}
         }}
       }})
       await db.chatMessage.create({ data: {
         externalId: '1',
+        streamerId: streamer1,
         time: new Date(),
         donationId: donation.id,
         chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }, { order: 1, customEmojiId: 1 }]}}
@@ -142,6 +155,7 @@ export default () => {
       const result = await donationStore.getDonation(donation.id)
 
       expect(result.id).toBe(donation.id)
+      expect(result.streamerId).toBe(streamer1)
       expect(result.userId).toBe(null)
       expect(result.streamlabsUserId).toBe(null)
       expect(result.messageParts.length).toBe(2)
@@ -158,28 +172,31 @@ export default () => {
     test('Returns ordered donations linked to the given user', async () => {
       const user1 = await db.chatUser.create({ data: {} })
       const user2 = await db.chatUser.create({ data: {} })
-      const donation1 = await createDonation({ time: data.time1 }, { userId: user2.id, type: 'internal' })
-      const donation2 = await createDonation({ time: data.time2 }, { userId: user1.id, type: 'internal' }) // 2
-      const donation3 = await createDonation({ time: data.time1 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 1 }) // 1
-      const donation4 = await createDonation({ time: data.time2 }, { userId: user2.id, type: 'streamlabs', streamlabsUser: 3 })
-      const donation5 = await createDonation({ time: data.time3 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 2 }) // 3
-      const donation6 = await createDonation({ time: data.time2 }, { userId: user2.id, type: 'streamlabs', streamlabsUser: 3 })
-      const donation7 = await createDonation({ time: addTime(data.time3, 'seconds', 1) })
+      const donation1 = await createDonation({ time: data.time1, streamerId: streamer1 }, { userId: user2.id, type: 'internal' })
+      const donation2 = await createDonation({ time: data.time2, streamerId: streamer1 }, { userId: user1.id, type: 'internal' }) // 2
+      const donation3 = await createDonation({ time: data.time2, streamerId: streamer2 }, { userId: user1.id, type: 'internal' }) // wrong streamer
+      const donation4 = await createDonation({ time: data.time1, streamerId: streamer1 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 1 }) // 1
+      const donation5 = await createDonation({ time: data.time2, streamerId: streamer1 }, { userId: user2.id, type: 'streamlabs', streamlabsUser: 3 })
+      const donation6 = await createDonation({ time: data.time3, streamerId: streamer1 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 2 }) // 3
+      const donation7 = await createDonation({ time: data.time3, streamerId: streamer2 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 2 }) // wrong streamer
+      const donation8 = await createDonation({ time: data.time2, streamerId: streamer1 }, { userId: user2.id, type: 'streamlabs', streamlabsUser: 3 })
+      const donation9 = await createDonation({ time: addTime(data.time3, 'seconds', 1) })
 
-      const result = await donationStore.getDonationsByUserId(user1.id)
+      const result = await donationStore.getDonationsByUserId(streamer1, user1.id)
 
       expect(result.length).toBe(3)
-      expect(result).toEqual([donation3, donation2, donation5])
+      expect(result).toEqual([donation4, donation2, donation6])
     })
   })
 
   describe(nameof(DonationStore, 'getDonationsSince'), () => {
-    test('Returns ordered donations after the given time', async () => {
+    test('Returns ordered donations for the streamer after the given time', async () => {
       const donation1 = await createDonation({ time: data.time1 })
       const donation2 = await createDonation({ time: data.time3 })
       const donation3 = await createDonation({ time: data.time2 })
+      const donation4 = await createDonation({ time: data.time2, streamerId: streamer2 })
 
-      const result = await donationStore.getDonationsSince(donation1.time.getTime())
+      const result = await donationStore.getDonationsSince(streamer1, donation1.time.getTime())
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectArray<DonationWithUser>([
@@ -202,6 +219,27 @@ export default () => {
 
     test('Returns null if no entries exist', async () => {
       const result = await donationStore.getLastStreamlabsId()
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe(nameof(DonationStore, 'getStreamlabsSocketToken'), () => {
+    test('Returns the token for the given streamer', async () => {
+      await db.streamlabsSocketToken.createMany({ data: [
+        { token: 'test1', streamerId: streamer1 },
+        { token: 'test2', streamerId: streamer2 }
+      ]})
+
+      const result = await donationStore.getStreamlabsSocketToken(streamer2)
+
+      expect(result!.token).toBe('test2')
+    })
+
+    test('Returns null if no token exists for the given streamer', async () => {
+      await db.streamlabsSocketToken.create({ data: { token: 'test2', streamerId: streamer2 }})
+
+      const result = await donationStore.getStreamlabsSocketToken(streamer1)
 
       expect(result).toBeNull()
     })
@@ -259,6 +297,52 @@ export default () => {
     })
   })
 
+  describe(nameof(DonationStore, 'setStreamlabsSocketToken'), () => {
+    const streamer1Token = 'streamer1Token'
+    const streamer2Token = 'streamer2Token'
+
+    beforeEach(async () => {
+      // streamer 2 already has a token, streamer 1 does not
+      await db.streamlabsSocketToken.create({ data: { streamerId: streamer2, token: streamer2Token }})
+    })
+
+    test('Makes no change and returns false when setting the same token that already exists in the db', async () => {
+      const result = await donationStore.setStreamlabsSocketToken(streamer2, streamer2Token)
+
+      expect(result).toBe(false)
+      await expectRowCount(db.streamlabsSocketToken).toBe(1)
+    })
+
+    test('Creates the token for the streamer and returns true', async () => {
+      const result = await donationStore.setStreamlabsSocketToken(streamer1, streamer1Token)
+
+      expect(result).toBe(true)
+      await expectRowCount(db.streamlabsSocketToken).toBe(2)
+      const store = await db.streamlabsSocketToken.findFirst({ where: { streamerId: streamer1 }})
+      expect(store).toEqual(expectObject<StreamlabsSocketToken>({ streamerId: streamer1, token: streamer1Token }))
+    })
+
+    test.only('Throws if there is an existing token', async () => {
+      const updatedToken = 'streame2UpdatedToken'
+
+      await expect(() => donationStore.setStreamlabsSocketToken(streamer2, updatedToken)).rejects.toThrow()
+    })
+
+    test('Makes no change and returns false when removing the token when none exists in the db', async () => {
+      const result = await donationStore.setStreamlabsSocketToken(streamer1, null)
+
+      expect(result).toBe(false)
+      await expectRowCount(db.streamlabsSocketToken).toBe(1)
+    })
+
+    test('Removes the existing token of the streamer and returns true', async () => {
+      const result = await donationStore.setStreamlabsSocketToken(streamer2, null)
+
+      expect(result).toBe(true)
+      await expectRowCount(db.streamlabsSocketToken).toBe(0)
+    })
+  })
+
   describe(nameof(DonationStore, 'unlinkUserFromDonation'), () => {
     test('Unlinks the user from the donation, returns the unlinked userId', async () => {
       const user = await db.chatUser.create({ data: {}})
@@ -283,9 +367,10 @@ export default () => {
   })
 
   describe('DonationStore integration tests', () => {
-    test('New donations with a streamlabsUserId that has already been linked in previously automatically inherit the link', async () => {
+    test('New donations with a streamlabsUserId that has already been linked in previously automatically inherit the link, even across different streamers', async () => {
       const streamlabsUserId = 5
       const initialDonation: DonationCreateArgs = {
+        streamerId: streamer1,
         amount: 123,
         currency: 'AUD',
         formattedAmount: '123',
@@ -316,7 +401,7 @@ export default () => {
 
       expect(result.userId).toBe(user2.id)
 
-      const donationsByUser = await donationStore.getDonationsByUserId(2)
+      const donationsByUser = await donationStore.getDonationsByUserId(streamer1, 2)
       expect(donationsByUser.length).toBe(2)
     })
   })
@@ -325,6 +410,7 @@ export default () => {
   async function createDonation (donationData: Partial<DonationCreateArgs>, linkedUser?: { userId: number, type: 'streamlabs', streamlabsUser: number } | { userId: number, type: 'internal' }) {
     const donation = await db.donation.create({
       data: {
+        streamerId: donationData.streamerId ?? 1,
         amount: donationData.amount ?? 1,
         formattedAmount: `$${donationData.amount ?? 1}`,
         currency: donationData.currency ?? 'USD',

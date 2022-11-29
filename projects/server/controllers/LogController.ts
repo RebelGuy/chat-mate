@@ -1,7 +1,8 @@
 import { ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth, requireRank } from '@rebel/server/controllers/preProcessors'
 import { PublicLogTimestamps } from '@rebel/server/controllers/public/log/PublicLogTimestamps'
 import LogQueryService from '@rebel/server/services/LogQueryService'
-import { GET, Path } from 'typescript-rest'
+import { GET, Path, PreProcessor } from 'typescript-rest'
 
 export type GetTimestampsResponse = ApiResponse<1, {
   timestamps: Tagged<1, PublicLogTimestamps>
@@ -12,6 +13,8 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('log'))
+@PreProcessor(requireAuth)
+@PreProcessor(requireRank('admin'))
 export default class LogController extends ControllerBase {
   private readonly logQueryService: LogQueryService
 

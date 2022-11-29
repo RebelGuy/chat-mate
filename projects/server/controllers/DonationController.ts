@@ -1,5 +1,5 @@
 import { Donation } from '@prisma/client'
-import { ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { PublicDonation } from '@rebel/server/controllers/public/donation/PublicDonation'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { donationToPublicObject } from '@rebel/server/models/donation'
@@ -10,15 +10,21 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { nonNull, zipOnStrictMany } from '@rebel/server/util/arrays'
-import { DELETE, GET, Path, POST, QueryParam } from 'typescript-rest'
+import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
+import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 type GetDonationsResponse = ApiResponse<1, { donations: Tagged<1, PublicDonation>[] }>
 
 type LinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonation> }>
 
 type UnlinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonation> }>
+
+export type SetWebsocketTokenRequest = ApiRequest<1, { schema: 1, websocketToken: string | null }>
+export type SetWebsocketTokenResponse = ApiResponse<1, { result: 'success' | 'noChange' }>
+
+export type GetStreamlabsStatusResponse = ApiResponse<1, { status: 'notListening' | 'listening' | 'error' }>
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -29,6 +35,8 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('donation'))
+@PreProcessor(requireStreamer)
+@PreProcessor(requireRank('owner'))
 export default class DonationController extends ControllerBase {
   private readonly donationService: DonationService
   private readonly donationStore: DonationStore
@@ -49,7 +57,7 @@ export default class DonationController extends ControllerBase {
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /', 1)
     try {
-      const donations = await this.donationStore.getDonationsSince(0)
+      const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0)
       return builder.success({
         donations: await this.getPublicDonations(donations)
       })
@@ -71,7 +79,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      await this.donationService.linkUserToDonation(donationId, userId)
+      await this.donationService.linkUserToDonation(donationId, userId, this.getStreamerId())
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -95,7 +103,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      await this.donationService.unlinkUserFromDonation(donationId)
+      await this.donationService.unlinkUserFromDonation(donationId, this.getStreamerId())
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -107,20 +115,47 @@ export default class DonationController extends ControllerBase {
     }
   }
 
+  @POST
+  @Path('/streamlabs/socketToken')
+  public async setWebsocketToken (request: SetWebsocketTokenRequest): Promise<SetWebsocketTokenResponse> {
+    const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /streamlabs/socketToken', 1)
+
+    try {
+      const hasUpdated = await this.donationService.setStreamlabsSocketToken(this.getStreamerId(), request.websocketToken)
+      return builder.success({ result: hasUpdated ? 'success' : 'noChange' })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/streamlabs/status')
+  public getStreamlabsStatus (): GetStreamlabsStatusResponse {
+    const builder = this.registerResponseBuilder<GetStreamlabsStatusResponse>('POST /streamlabs/status', 1)
+
+    try {
+      const status = this.donationService.getStreamlabsStatus(this.getStreamerId())
+      return builder.success({ status })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
   private async getPublicDonation (donationId: number): Promise<PublicDonation> {
     const donation = await this.donationStore.getDonation(donationId)
     return single(await this.getPublicDonations([donation]))
   }
 
   private async getPublicDonations (donations: DonationWithUser[]): Promise<PublicDonation[]> {
+    const streamerId = this.getStreamerId()
     const userIds = nonNull(donations.map(d => d.userId))
     let userData: PublicUser[]
     if (userIds.length === 0) {
       userData = []
     } else {
-      const userChannels = await this.channelService.getActiveUserChannels(userIds)
-      const levels = await this.experienceService.getLevels(userIds)
-      const ranks = await this.rankStore.getUserRanks(userIds)
+      const userChannels = await this.channelService.getActiveUserChannels(streamerId, userIds)
+      const levels = await this.experienceService.getLevels(streamerId, userIds)
+      const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
       userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
     }
 

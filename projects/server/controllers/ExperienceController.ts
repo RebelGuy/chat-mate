@@ -1,4 +1,5 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
@@ -9,7 +10,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single, zipOnStrict } from '@rebel/server/util/arrays'
-import { GET, Path, POST, QueryParam } from 'typescript-rest'
+import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<4, {
   rankedUsers: Tagged<3, PublicRankedUser>[]
@@ -39,6 +40,8 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('experience'))
+@PreProcessor(requireStreamer)
+@PreProcessor(requireRank('owner'))
 export default class ExperienceController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
@@ -58,8 +61,8 @@ export default class ExperienceController extends ControllerBase {
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
     const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 4)
     try {
-      const leaderboard = await this.experienceService.getLeaderboard()
-      const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId))
+      const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
+      const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId), this.getStreamerId())
       const publicLeaderboard = zipOnStrict(leaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
@@ -78,12 +81,12 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      let userChannels = await this.channelService.getActiveUserChannels([id])
+      let userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [id])
       if (userChannels.length == 0) {
         return builder.failure(404, `Could not find an active channel for user ${id}.`)
       }
 
-      const leaderboard = await this.experienceService.getLeaderboard()
+      const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
       const match = leaderboard.find(l => l.userId === id)!
 
       // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
@@ -98,7 +101,7 @@ export default class ExperienceController extends ControllerBase {
       }
       const upperRank = lowerRank + rankPadding * 2
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
-      const activeRanks = await this.rankStore.getUserRanks(prunedLeaderboard.map(entry => entry.userId))
+      const activeRanks = await this.rankStore.getUserRanks(prunedLeaderboard.map(entry => entry.userId), this.getStreamerId())
       const publicLeaderboard = zipOnStrict(prunedLeaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
 
       return builder.success({
@@ -119,14 +122,15 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
-      const userChannels = await this.channelService.getActiveUserChannels([request.userId])
+      const streamerId = this.getStreamerId()
+      const userChannels = await this.channelService.getActiveUserChannels(streamerId, [request.userId])
       const userChannel = userChannels[0]
       if (userChannel == null) {
         return builder.failure(404, `Could not find an active channel for user ${request.userId}.`)
       }
 
-      const level = await this.experienceService.modifyExperience(request.userId, request.deltaLevels, request.message)
-      const activeRanks = single(await this.rankStore.getUserRanks([request.userId]))
+      const level = await this.experienceService.modifyExperience(request.userId, streamerId, this.getCurrentUser().id, request.deltaLevels, request.message)
+      const activeRanks = single(await this.rankStore.getUserRanks([request.userId], streamerId))
       const publicUser = userDataToPublicUser({ ...userChannel, ...level, ...activeRanks })
       return builder.success({ updatedUser: publicUser })
     } catch (e: any) {

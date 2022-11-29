@@ -13,6 +13,7 @@ import * as data from '@rebel/server/_test/testData'
 const livestream: Livestream = {
   id: 1,
   liveId: 'liveId',
+  streamerId: 1,
   continuationToken: 'token',
   createdAt: new Date(),
   start: new Date(),
@@ -27,6 +28,9 @@ const youtube2UserId = 1
 const extYoutubeChannel2 = 'channel_2'
 const twitchUserId = 2
 const extTwitchChannel = 'channel2'
+
+const streamer1 = 1
+const streamer2 = 2
 
 const ytAuthor1: Author = {
   attributes: { isModerator: true, isOwner: false, isVerified: false },
@@ -150,7 +154,7 @@ export default () => {
     const dbProvider = await startTestDb()
 
     mockLivestreamStore = mock<LivestreamStore>()
-    mockLivestreamStore.getActiveLivestream.mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveLivestream.calledWith(livestream.streamerId).mockResolvedValue(livestream)
 
     chatStore = new ChatStore(new Dependencies({
       dbProvider,
@@ -174,6 +178,8 @@ export default () => {
       youtubeId: ytAuthor2.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor2)}
     }})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
     await db.livestream.create({ data: livestream })
     await db.chatEmoji.create({ data: {
       isCustomEmoji: false,
@@ -190,7 +196,7 @@ export default () => {
     test('adds youtube chat item with ordered text message parts', async () => {
       const chatItem = makeYtChatItem(text1, text2, text3)
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))?.text?.text
@@ -209,7 +215,7 @@ export default () => {
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
       const chatItem = makeYtChatItem(emoji1Saved, emoji2New)
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatEmoji).toEqual([1, 2, 2])
     })
@@ -217,7 +223,7 @@ export default () => {
     test('adds twitch chat item with text and cheer parts', async () => {
       const chatItem = makeTwitchChatItem(text1, cheer1)
 
-      await chatStore.addChat(chatItem, twitchUserId, extTwitchChannel)
+      await chatStore.addChat(chatItem, livestream.streamerId, twitchUserId, extTwitchChannel)
 
       // check message contents
       const saved1 = (await db.chatMessagePart.findFirst({ where: { order: 0 }, select: { text: true }}))!.text!.text
@@ -236,6 +242,7 @@ export default () => {
     test('duplicate chat id ignored', async () => {
       const chatItem = makeYtChatItem(text1)
       await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
         user: { connect: { id: youtube1UserId }},
         time: new Date(chatItem.timestamp),
         externalId: chatItem.id,
@@ -243,16 +250,16 @@ export default () => {
         livestream: { connect: { id: 1 }}
       }})
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage).toBe(1)
     })
 
     test('adds chat without connecting to livestream if no active livestream', async () => {
-      mockLivestreamStore.getActiveLivestream.mockResolvedValue(null)
+      mockLivestreamStore.getActiveLivestream.mockReset().calledWith(livestream.streamerId).mockResolvedValue(null)
       const chatItem = makeYtChatItem(text1)
 
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       const savedChatMessage = await db.chatMessage.findFirst()
       expect(savedChatMessage!.livestreamId).toBeNull()
@@ -261,22 +268,24 @@ export default () => {
 
   describe(nameof(ChatStore, 'getChatSince'), () => {
     test('empty database returns empty array', async () => {
-      const result = await chatStore.getChatSince(new Date().getTime())
+      const result = await chatStore.getChatSince(streamer1, new Date().getTime())
 
       expect(result.length).toBe(0)
     })
 
-    test('does not include earlier items', async () => {
+    test('does not include earlier items or items from other streamers', async () => {
       const chatItem1: ChatItem = { author: ytAuthor1, id: 'id1', platform: 'youtube', contextToken: 'params1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
       const chatItem2: ChatItem = { author: ytAuthor1, id: 'id2', platform: 'youtube', contextToken: 'params2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
       const chatItem3: ChatItem = { author: ytAuthor1, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
+      const chatItem4: ChatItem = { author: ytAuthor1, id: 'id4', platform: 'youtube', contextToken: 'params4', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
 
       // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
-      await chatStore.addChat(chatItem1, youtube1UserId, extYoutubeChannel1)
-      await chatStore.addChat(chatItem2, youtube1UserId, extYoutubeChannel1)
-      await chatStore.addChat(chatItem3, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem1, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem2, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem3, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem4, streamer2, youtube1UserId, extYoutubeChannel1)
 
-      const result = await chatStore.getChatSince(chatItem1.timestamp)
+      const result = await chatStore.getChatSince(streamer1, chatItem1.timestamp)
 
       expect(result.map(r => r.externalId)).toEqual([chatItem2.id, chatItem3.id])
     })
@@ -310,15 +319,15 @@ export default () => {
         isActive: true,
         version: 0,
         canUseInDonationMessage: true,
-        customEmoji: { create: { symbol: 'test' }}
+        customEmoji: { create: { streamerId: streamer1, symbol: 'test' }}
       }})
       await db.customEmojiRankWhitelist.createMany({ data: [
         { customEmojiId: 1, rankId: 1 },
         { customEmojiId: 1, rankId: 2 }
       ]})
-      await chatStore.addChat(chatItem, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem, streamer1, youtube1UserId, extYoutubeChannel1)
 
-      const result = await chatStore.getChatSince(0)
+      const result = await chatStore.getChatSince(streamer1, 0)
 
       const emojiResult = single(single(result).chatMessageParts).customEmoji!
       expect(emojiResult.text!.id).toBe(1)
@@ -333,17 +342,19 @@ export default () => {
         formattedAmount: '$1.00',
         name: 'Test user',
         streamlabsId: 1,
-        time: data.time1
+        time: data.time1,
+        streamerId: streamer1
       }})
       await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
       await db.chatMessage.create({ data: {
+        streamerId: streamer1,
         externalId: '1',
         time: new Date(),
         donationId: donation.id,
         chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }]}}
       }})
 
-      const result = await chatStore.getChatSince(0)
+      const result = await chatStore.getChatSince(streamer1, 0)
 
       expect(result.length).toBe(0)
     })
@@ -351,20 +362,22 @@ export default () => {
 
   describe(nameof(ChatStore, 'getLastChatByYoutubeChannel'), () => {
     test('returns null if youtube channel has not posted a message', async () => {
-      const result = await chatStore.getLastChatByYoutubeChannel(1)
+      const result = await chatStore.getLastChatByYoutubeChannel(streamer1, 1)
 
       expect(result).toBeNull()
     })
 
-    test('returns latest chat item of channel', async () => {
+    test('returns latest chat item of channel for the specified streamer', async () => {
       await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
         user: { connect: { id: youtube2UserId }},
-        time: data.time1,
+        time: data.time1, // earlier time
         externalId: 'x1',
         youtubeChannel: { connect: { id: 2 }},
         livestream: { connect: { id: 1 }}
       }})
       await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
         user: { connect: { id: youtube2UserId }},
         time: data.time2,
         externalId: 'x2',
@@ -372,14 +385,23 @@ export default () => {
         livestream: { connect: { id: 1 }}
       }})
       await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
         user: { connect: { id: youtube1UserId }},
         time: data.time3,
         externalId: 'x3',
-        youtubeChannel: { connect: { id: 1 }},
+        youtubeChannel: { connect: { id: 1 }}, // different channel
+        livestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer2, }}, // different streamer
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x4',
+        youtubeChannel: { connect: { id: 2 }},
         livestream: { connect: { id: 1 }}
       }})
 
-      const result = await chatStore.getLastChatByYoutubeChannel(2)
+      const result = await chatStore.getLastChatByYoutubeChannel(streamer1, 2)
 
       expect(result!.time).toEqual(data.time2)
     })
@@ -404,18 +426,21 @@ export default () => {
         // user 1:
         {
           livestreamId: 1,
+          streamerId: 1,
           time: data.time1,
           userId: 1,
           externalId: 'user 1 msg 1',
           youtubeChannelId: 1
         }, {
           livestreamId: 1,
+          streamerId: 1,
           time: data.time3,
           userId: 1,
           externalId: 'user 1 msg 3',
           twitchChannelId: 1
         }, {
           livestreamId: 1,
+          streamerId: 1,
           time: data.time2,
           userId: 1,
           externalId: 'user 1 msg 2',
@@ -425,38 +450,50 @@ export default () => {
         // user 2:
         {
           livestreamId: 1,
+          streamerId: 1,
           time: data.time2,
           userId: twitchUserId,
           externalId: 'user 2 msg 1',
           twitchChannelId: 1
         }, {
           livestreamId: 1,
+          streamerId: 1,
           time: data.time3,
           userId: twitchUserId,
           externalId: 'user 2 msg 2',
           twitchChannelId: 1
+        },
+
+        // user 3:
+        {
+          livestreamId: 1,
+          streamerId: 2, // different streamer
+          time: data.time2,
+          userId: 3,
+          externalId: 'user 3 msg 1',
+          youtubeChannelId: 1
         }
       ]})
     }
 
-    test('returns empty array if no chat item exists for any users', async () => {
-      const result = await chatStore.getLastChatOfUsers('all')
+    test('returns empty array if no chat item exists for any users in the streamer context', async () => {
+      const result = await chatStore.getLastChatOfUsers(streamer1, 'all')
 
       expect(result.length).toBe(0)
     })
 
-    test('returns empty array if no chat item exists for specified users, or users do not exist', async () => {
+    test('returns empty array if no chat item exists for specified users in the streamer context, or users do not exist', async () => {
       await setupMessages()
 
-      const result = await chatStore.getLastChatOfUsers([user3, 10000])
+      const result = await chatStore.getLastChatOfUsers(streamer1, [user3, 10000])
 
       expect(result.length).toBe(0)
     })
 
-    test('returns the latest chat item of all users', async () => {
+    test('returns the latest chat item of all users in the streamer context', async () => {
       await setupMessages()
 
-      const lastMessages = await chatStore.getLastChatOfUsers('all')
+      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, 'all')
 
       expect(lastMessages.length).toBe(2)
 
@@ -470,10 +507,34 @@ export default () => {
     test('returns the latest chat item of a specific user', async () => {
       await setupMessages()
 
-      const lastMessages = await chatStore.getLastChatOfUsers([1])
+      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [1])
 
       const msg = single(lastMessages)
       expect(msg.externalId).toBe('user 1 msg 3')
+    })
+
+    test('ignores donation messages', async () => {
+      const donation = await db.donation.create({ data: {
+        amount: 1,
+        currency: 'USD',
+        formattedAmount: '$1.00',
+        name: 'Test user',
+        streamlabsId: 1,
+        time: data.time1,
+        streamerId: streamer1
+      }})
+      await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
+      await db.chatMessage.create({ data: {
+        streamerId: streamer1,
+        externalId: '1',
+        time: new Date(),
+        donationId: donation.id,
+        chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }]}}
+      }})
+
+      const result = await chatStore.getLastChatOfUsers(streamer1, 'all')
+
+      expect(result.length).toBe(0)
     })
   })
 }

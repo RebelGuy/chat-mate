@@ -25,10 +25,10 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     this.customEmojiStore = deps.resolve('customEmojiStore')
   }
 
-  public async getEligibleEmojis (userId: number): Promise<CurrentCustomEmoji[]> {
-    const levelPromise = this.experienceService.getLevels([userId])
-    const userRanksPromise = this.rankStore.getUserRanks([userId])
-    const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
+  public async getEligibleEmojis (userId: number, streamerId: number): Promise<CurrentCustomEmoji[]> {
+    const levelPromise = this.experienceService.getLevels(streamerId, [userId])
+    const userRanksPromise = this.rankStore.getUserRanks([userId], streamerId)
+    const allEmojis = await this.customEmojiStore.getAllCustomEmojis(streamerId)
     const allEmojiIds = allEmojis.map(e => e.id)
     const whitelistedRanksPromise = this.customEmojiStore.getCustomEmojiWhitelistedRanks(allEmojiIds)
     const level = single(await levelPromise)
@@ -38,13 +38,13 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     return allEmojis.filter(e =>
       this.levelEligibilityCheck(e, level) &&
       this.rankEligibilityCheck(userRanks, whitelistedRanks.find(wr => wr.emojiId === e.id)!)
-    ).map(e => ({ id: e.id, symbol: e.symbol, latestVersion: e.version }))
+    ).map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, latestVersion: e.version }))
   }
 
-  public async getEligibleDonationEmojis (): Promise<CurrentCustomEmoji[]> {
-    const allEmojis = await this.customEmojiStore.getAllCustomEmojis()
+  public async getEligibleDonationEmojis (streamerId: number): Promise<CurrentCustomEmoji[]> {
+    const allEmojis = await this.customEmojiStore.getAllCustomEmojis(streamerId)
     return allEmojis.filter(e => e.canUseInDonationMessage)
-      .map(e => ({ id: e.id, symbol: e.symbol, latestVersion: e.version }))
+      .map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, latestVersion: e.version }))
   }
 
   private levelEligibilityCheck (emoji: CustomEmojiWithRankWhitelist, userLevel: UserLevel) {

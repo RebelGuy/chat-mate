@@ -1,5 +1,5 @@
 import { LiveStatus } from '@rebel/masterchat'
-import { ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
+import { ControllerBase, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -43,7 +43,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   chatMateEventService: ChatMateEventService
 }>
 
-export default class ChatMateControllerReal implements IChatMateController {
+export default class ChatMateControllerReal extends ControllerBase implements IChatMateController {
   readonly livestreamStore: LivestreamStore
   readonly viewershipStore: ViewershipStore
   readonly masterchatStatusService: StatusService
@@ -59,6 +59,7 @@ export default class ChatMateControllerReal implements IChatMateController {
   readonly chatMateEventService: ChatMateEventService
 
   constructor (deps: ChatMateControllerDeps) {
+    super(deps, '/chatMate')
     this.livestreamStore = deps.resolve('livestreamStore')
     this.viewershipStore = deps.resolve('viewershipStore')
     this.masterchatStatusService = deps.resolve('masterchatStatusService')
@@ -76,7 +77,7 @@ export default class ChatMateControllerReal implements IChatMateController {
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
     const { builder } = args
-    const livestreamStatus = await this.getLivestreamStatus()
+    const livestreamStatus = await this.getLivestreamStatus(this.getStreamerId())
     const youtubeApiStatus = this.masterchatStatusService.getApiStatus()
     const twitchApiStatus = this.twurpleStatusService.getApiStatus()
 
@@ -85,14 +86,15 @@ export default class ChatMateControllerReal implements IChatMateController {
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
+    const streamerId = this.getStreamerId()
 
-    const events = await this.chatMateEventService.getEventsSince(since)
+    const events = await this.chatMateEventService.getEventsSince(streamerId, since)
 
     // pre-fetch user data for `levelUp` events
     const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))
-    const userChannels = await this.channelService.getActiveUserChannels(userIds)
-    const levelInfo = await this.experienceService.getLevels(userIds)
-    const ranks = await this.rankStore.getUserRanks(userIds)
+    const userChannels = await this.channelService.getActiveUserChannels(streamerId, userIds)
+    const levelInfo = await this.experienceService.getLevels(streamerId, userIds)
+    const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
     const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
 
     let result: PublicChatMateEvent[] = []
@@ -159,16 +161,16 @@ export default class ChatMateControllerReal implements IChatMateController {
       }
     }
 
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    const streamerId = this.getStreamerId()
+    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null && liveId != null) {
-      await this.livestreamService.setActiveLivestream(liveId)
+      await this.livestreamService.setActiveLivestream(streamerId, liveId)
     } else if (activeLivestream != null && liveId == null) {
-      await this.livestreamService.deactivateLivestream()
+      await this.livestreamService.deactivateLivestream(streamerId)
     } else if (!(activeLivestream == null && liveId == null || activeLivestream!.liveId === liveId)) {
-      return args.builder.failure(422, `Cannot set active livestream ${liveId} because another livestream is already active.`)
+      return args.builder.failure(422, `Cannot set active livestream ${liveId} for streamer ${streamerId} because another livestream is already active.`)
     }
 
-    const newActiveLivestream = await this.livestreamStore.getActiveLivestream()
     return args.builder.success({ livestreamLink: liveId == null ? null : getLivestreamLink(liveId) })
   }
 
@@ -178,8 +180,8 @@ export default class ChatMateControllerReal implements IChatMateController {
     }))
   }
 
-  private async getLivestreamStatus (): Promise<PublicLivestreamStatus | null> {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+  private async getLivestreamStatus (streamerId: number): Promise<PublicLivestreamStatus | null> {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
       return null
     }
@@ -187,7 +189,7 @@ export default class ChatMateControllerReal implements IChatMateController {
     const publicLivestream = livestreamToPublic(activeLivestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
     if (publicLivestream.status === 'live') {
-      viewers = await this.viewershipStore.getLatestLiveCount()
+      viewers = await this.viewershipStore.getLatestLiveCount(streamerId)
     }
 
     return {

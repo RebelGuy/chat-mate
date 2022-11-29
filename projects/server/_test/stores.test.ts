@@ -7,7 +7,9 @@ import CustomEmojiStoreSuite from '@rebel/server/stores/CustomEmojiStore.test'
 import FollowerStoreSuite from '@rebel/server/stores/FollowerStore.test'
 import PunishmentStoreSuite from '@rebel/server/stores/PunishmentStore.test'
 import RankStoreSuite from '@rebel/server/stores/RankStore.test'
-import DonationStore from '@rebel/server/stores/DonationStore.test'
+import DonationStoreSuite from '@rebel/server/stores/DonationStore.test'
+import AccountStoreSuite from '@rebel/server/stores/AccountStore.test'
+import StreamerStoreSuite from '@rebel/server/stores/StreamerStore.test'
 
 // keep an eye on this one: https://github.com/prisma/prisma/issues/732
 // it would HUGELY improve efficiency if we can use an in-memory mock database for testing.
@@ -15,13 +17,15 @@ import DonationStore from '@rebel/server/stores/DonationStore.test'
 // re-enable if CHAT-78 is done
 const describeFn = process.env.CI === 'true' ? describe.skip : describe
 
+describeFn('AccountStore Suite', AccountStoreSuite)
+
 describeFn('ChannelStore Suite', ChannelStoreSuite)
 
 describeFn('ChatStore Suite', ChatStoreSuite)
 
 describeFn('CustomEmojiStore Suite', CustomEmojiStoreSuite)
 
-describeFn('DonationStore Suite', DonationStore)
+describeFn('DonationStore Suite', DonationStoreSuite)
 
 describeFn('ExperienceStore Suite', ExperienceStoreSuite)
 
@@ -32,5 +36,7 @@ describeFn('LivestreamStore Suite', LivestreamStoreSuite)
 describeFn('PunishmentStore Suite', PunishmentStoreSuite)
 
 describeFn('RankStore Suite', RankStoreSuite)
+
+describeFn('StreamerStore Suite', StreamerStoreSuite)
 
 describeFn('ViewershipStore Suite', ViewershipStoreSuite)

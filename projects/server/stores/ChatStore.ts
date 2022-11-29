@@ -1,4 +1,4 @@
-import { ChatMessage, Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -31,9 +31,9 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */
-  public async addChat (chatItem: ChatItem, userId: number, channelId: string) {
+  public async addChat (chatItem: ChatItem, streamerId: number, userId: number, channelId: string) {
     let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
-    const activeLivestream = await this.livestreamStore.getActiveLivestream()
+    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
       livestreamPart = undefined
     } else {
@@ -46,6 +46,7 @@ export default class ChatStore extends ContextClass {
       const chatMessage = await db.chatMessage.upsert({
         create: {
           time: new Date(chatItem.timestamp),
+          streamer: { connect: { id: streamerId }},
           externalId: chatItem.id,
           contextToken: chatItem.platform === 'youtube' ? chatItem.contextToken : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
           user: { connect: { id: userId }},
@@ -75,17 +76,20 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  public async getLastChatByYoutubeChannel (youtubeChannelId: number): Promise<ChatItemWithRelations | null> {
+  public async getLastChatByYoutubeChannel (streamerId: number, youtubeChannelId: number): Promise<ChatItemWithRelations | null> {
     return await this.db.chatMessage.findFirst({
-      where: { youtubeChannel: { id: youtubeChannelId }},
+      where: {
+        streamerId: streamerId,
+        youtubeChannel: { id: youtubeChannelId }
+      },
       orderBy: { time: 'desc' },
       include: chatMessageIncludeRelations
     })
   }
 
   /** For each user, returns the last chat item authored by the user, if any, regardless of which channel was used. */
-  public async getLastChatOfUsers (userIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
-    const filter = userIds === 'all' ? undefined : { userId: { in: userIds }}
+  public async getLastChatOfUsers (streamerId: number, userIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
+    const filter = userIds === 'all' ? { NOT: { userId: null }} : { userId: { in: userIds }}
 
     return await this.db.chatMessage.findMany({
       distinct: ['userId'],
@@ -93,14 +97,21 @@ export default class ChatStore extends ContextClass {
         time: 'desc'
       },
       include: chatMessageIncludeRelations,
-      where: filter
+      where: {
+        ...filter,
+        streamerId: streamerId
+      }
     })
   }
 
   /** Returns ordered chat items that may or may not be from the current livestream. */
-  public async getChatSince (since: number, limit?: number): Promise<ChatItemWithRelations[]> {
+  public async getChatSince (streamerId: number, since: number, limit?: number): Promise<ChatItemWithRelations[]> {
     return await this.db.chatMessage.findMany({
-      where: { time: { gt: new Date(since) }, donationId: null },
+      where: {
+        streamerId: streamerId,
+        time: { gt: new Date(since) },
+        donationId: null
+      },
       orderBy: { time: 'asc' },
       include: chatMessageIncludeRelations,
       take: limit

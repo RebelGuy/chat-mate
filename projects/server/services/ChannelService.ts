@@ -29,12 +29,12 @@ export default class ChannelService extends ContextClass {
    *
    * Given that users rarely use multiple accounts at once, this is probably the most relevant
    * channel we want to associate with the user at the current time. */
-  public async getActiveUserChannels (userIds: number[] | 'all'): Promise<UserChannel[]> {
+  public async getActiveUserChannels (streamerId: number, userIds: number[] | 'all'): Promise<UserChannel[]> {
     if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
 
-    const chatMessages = await this.chatStore.getLastChatOfUsers(userIds)
+    const chatMessages = await this.chatStore.getLastChatOfUsers(streamerId, userIds)
 
     return chatMessages.map(chat => {
       if (chat.userId == null) {

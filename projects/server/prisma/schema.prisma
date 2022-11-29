@@ -52,11 +52,15 @@ model Livestream {
   // for fetching the youtube chat of this livestream
   continuationToken String? @db.VarChar(1023)
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "livestream_streamerId_fkey")
+
   liveViewers   LiveViewers[]
   chatMessages  ChatMessage[]
   viewingBlocks ViewingBlock[]
 
   @@unique([liveId], map: "livestream_liveId_key")
+  @@index([streamerId], map: "livestream_streamerId_fkey")
   @@map("livestream")
 }
 
@@ -94,11 +98,81 @@ model ChatUser {
   receivedPunishments        Punishment[]            @relation("punishment_user")
   administeredPunishments    Punishment[]            @relation("punishment_adminUser")
   userRanks                  UserRank[]              @relation("user_rank_userId")
-  administeredUserRanks      UserRank[]              @relation("user_rank_assignedByUserId")
-  revokedUserRanks           UserRank[]              @relation("user_rank_revokedByUserId")
   donationLinks              DonationLink[]
+  registeredUser             RegisteredUser?
 
   @@map("chat_user")
+}
+
+model RegisteredUser {
+  id Int @id @default(autoincrement())
+
+  username       String   @db.VarChar(32) // unique
+  registeredAt   DateTime @default(now())
+  hashedPassword String   @db.VarChar(64)
+
+  chatUserId Int? // unique
+  chatUser   ChatUser? @relation(fields: [chatUserId], references: [id], map: "registered_user_chatUserId_fkey")
+
+  loginTokens           LoginToken[]
+  streamer              Streamer?
+  streamerApplications  StreamerApplication[]
+  administeredUserRanks UserRank[]            @relation("user_rank_assignedByRegisteredUserId")
+  revokedUserRanks      UserRank[]            @relation("user_rank_revokedByRegisteredUserId")
+
+  @@unique([chatUserId], map: "registered_user_chatUserId_fkey")
+  @@unique([username], map: "registered_user_username_key")
+  @@map("registered_user")
+}
+
+model LoginToken {
+  id Int @id @default(autoincrement())
+
+  token String @db.VarChar(8) // unique
+
+  registeredUserId Int
+  registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "login_token_registeredUserId_fkey")
+
+  @@unique([token], map: "login_token_token_key")
+  @@index([registeredUserId], map: "login_token_registeredUserId_fkey")
+  @@map("login_token")
+}
+
+model Streamer {
+  id Int @id @default(autoincrement())
+
+  registeredUserId Int // unique
+  registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
+
+  userRanks              UserRank[]
+  livestreams            Livestream[]
+  customEmojis           CustomEmoji[]
+  donations              Donation[]
+  streamlabsSocketToken  StreamlabsSocketToken?
+  experienceTransactions ExperienceTransaction[]
+  experienceSnapshots    ExperienceSnapshot[]
+  twitchFollowers        TwitchFollower[]
+  chatMessages           ChatMessage[]
+
+  @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
+  @@map("streamer")
+}
+
+model StreamerApplication {
+  id Int @id @default(autoincrement())
+
+  timeCreated DateTime @default(now())
+  message     String   @db.VarChar(4095)
+
+  timeClosed   DateTime?
+  isApproved   Boolean?
+  closeMessage String?   @db.VarChar(4095)
+
+  registeredUserId Int
+  registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_application_registeredUserId_fkey")
+
+  @@index([registeredUserId], map: "streamer_application_registeredUserId_fkey")
+  @@map("streamer_application")
 }
 
 model YoutubeChannelInfo {
@@ -178,7 +252,11 @@ model TwitchFollower {
   userName    String
   displayName String
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "twitch_follower_streamerId_fkey")
+
   @@unique([twitchId], map: "twitch_follower_twitchId_key")
+  @@index([streamerId], map: "twitch_follower_streamerId_fkey")
   @@map("twitch_follower")
 }
 
@@ -296,6 +374,9 @@ model ChatMessage {
   /// Internally in Youtube, this is called the `contextMenuEndpointParams`.
   contextToken String? @db.VarChar(511)
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "chat_message_streamerId_fkey")
+
   // the user that sent the message, if known.
   // this is always set for livestream messages, that is, if either the `youtubeChannelId` or `twitchChannelId` is set.
   userId Int?
@@ -323,6 +404,7 @@ model ChatMessage {
 
   @@unique([externalId], map: "chat_message_externalId_key")
   @@unique([donationId], map: "chat_message_donationId_fkey")
+  @@index([streamerId], map: "chat_message_streamerId_fkey")
   @@index([userId], map: "chat_message_userId_fkey")
   @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")
@@ -346,8 +428,12 @@ model ExperienceTransaction {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "experience_transaction_streamerId_fkey")
+
   @@index([userId], map: "experience_transaction_userId_fkey")
   @@index([userId, time], map: "experience_transaction_userId_time_key")
+  @@index([streamerId], map: "experience_transaction_streamerId_fkey")
   @@map("experience_transaction")
 }
 
@@ -360,7 +446,11 @@ model ExperienceSnapshot {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "experience_snapshot_userId_fkey")
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "experience_snapshot_streamerId_fkey")
+
   @@index([userId], map: "experience_snapshot_userId_fkey")
+  @@index([streamerId], map: "experience_snapshot_streamerId_fkey")
   @@map("experience_snapshot")
 }
 
@@ -392,14 +482,14 @@ model ExperienceDataAdmin {
 
   message String? @db.VarChar(1023)
 
-  adminUserId Int
-  adminUser   ChatUser @relation(fields: [adminUserId], references: [id], map: "experience_data_admin_adminUserId_fkey")
+  adminRegisteredUserId Int
+  adminRegisteredUser   ChatUser @relation(fields: [adminRegisteredUserId], references: [id], map: "experience_data_admin_adminRegisteredUserId_fkey") //
 
   experienceTransactionId Int // unique
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id], map: "experience_data_admin_experienceTransactionId_fkey")
 
   @@unique([experienceTransactionId], map: "experience_data_admin_experienceTransactionId_key")
-  @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
+  @@index([adminRegisteredUserId], map: "experience_data_admin_adminRegisteredUserId_fkey")
   @@map("experience_data_admin")
 }
 
@@ -426,10 +516,14 @@ model CustomEmoji {
 
   symbol String @db.VarChar(32) // unique
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "custom_emoji_streamerId_key")
+
   customEmojiVersions      CustomEmojiVersion[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
 
-  @@unique([symbol], map: "custom_emoji_symbol_key")
+  @@unique([streamerId, symbol], map: "custom_emoji_streamerId_symbol_key")
+  @@index([streamerId], map: "custom_emoji_streamerId_key")
   @@map("custom_emoji")
 }
 
@@ -533,16 +627,21 @@ model UserRank {
   userId Int
   user   ChatUser @relation("user_rank_userId", fields: [userId], references: [id], map: "user_rank_userId_fkey")
 
+  /// the streamer context to which this user rank belongs to. if null, the rank applies globally.
+  streamerId Int?
+  streamer   Streamer? @relation(fields: [streamerId], references: [id], map: "user_rank_streamerId_fkey")
+
   /// if null, was assigned by the system
-  assignedByUserId Int?
-  assignedByUser   ChatUser? @relation("user_rank_assignedByUserId", fields: [assignedByUserId], references: [id], map: "user_rank_assignedByUserId_fkey")
+  assignedByRegisteredUserId Int?
+  assignedByRegisteredUser   RegisteredUser? @relation("user_rank_assignedByRegisteredUserId", fields: [assignedByRegisteredUserId], references: [id], map: "user_rank_assignedByRegisteredUserId_fkey")
 
   /// if null, was revoked by the system. only relevant when `revokedTime` is non-null, or the rank has expired
-  revokedByUserId Int?
-  revokedByUser   ChatUser? @relation("user_rank_revokedByUserId", fields: [revokedByUserId], references: [id], map: "user_rank_revokedByUserId_fkey")
+  revokedByRegisteredUserId Int?
+  revokedBRegisteredyUser   RegisteredUser? @relation("user_rank_revokedByRegisteredUserId", fields: [revokedByRegisteredUserId], references: [id], map: "user_rank_revokedByRegisteredUserId_fkey")
 
   @@index([rankId], map: "user_rank_rankId_fkey")
   @@index([userId], map: "user_rank_userId_fkey")
+  @@index([streamerId], map: "user_rank_streamerId_fkey")
   @@index([expirationTime], map: "user_rank_expirationTime_key")
   @@index([revokedTime], map: "user_rank_revokedTime_key")
   @@map("user_rank")
@@ -589,10 +688,28 @@ model Donation {
   formattedAmount  String
   name             String   @db.VarChar(256)
 
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "donation_streamerId_fkey")
+
   chatMessage ChatMessage?
 
   @@unique([streamlabsId], map: "donation_streamlabsId_key")
+  @@index([streamerId], map: "donation_streamerId_fkey")
   @@map("donation")
+}
+
+/// The streamers' streamlabs socket tokens found at https://streamlabs.com/dashboard#/settings/api-settings
+model StreamlabsSocketToken {
+  id Int @id @default(autoincrement())
+
+  time  DateTime @default(now())
+  token String   @db.VarChar(1024)
+
+  streamerId Int // unique - every streamer can have at most one websocket token
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "streamlabs_socket_token_streamerId_fkey")
+
+  @@unique([streamerId], map: "streamlabs_socket_token_streamerId_fkey")
+  @@map("streamlabs_socket_token")
 }
 
 model DonationLink {

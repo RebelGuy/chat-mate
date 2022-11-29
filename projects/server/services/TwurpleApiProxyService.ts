@@ -15,14 +15,12 @@ type Deps = Dependencies<{
   twurpleStatusService: StatusService
   twurpleApiClientProvider: TwurpleApiClientProvider
   twurpleChatClientProvider: TwurpleChatClientProvider
-  twitchChannelName: string
 }>
 
 /** Provides access to Twurple API calls - should be a general proxy, not chat-mate specific (that's what the TwurpleService is for). */
 export default class TwurpleApiProxyService extends ApiService implements ITwurpleApi {
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
   private readonly twurpleChatClientProvider: TwurpleChatClientProvider
-  private readonly twitchChannelName: string
   private api!: ApiClient
   private wrappedApi!: DeepPartial<ApiClient>
   private chat!: ChatClient
@@ -37,7 +35,6 @@ export default class TwurpleApiProxyService extends ApiService implements ITwurp
 
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
     this.twurpleChatClientProvider = deps.resolve('twurpleChatClientProvider')
-    this.twitchChannelName = deps.resolve('twitchChannelName')
   }
 
   public override initialise (): void | Promise<void> {
@@ -48,12 +45,12 @@ export default class TwurpleApiProxyService extends ApiService implements ITwurp
     this.wrappedChat = this.createChatWrapper()
   }
 
-  public async ban (twitchUserName: string, reason?: string): Promise<void> {
-    await this.wrappedChat.ban!(this.twitchChannelName, twitchUserName, reason)
+  public async ban (channel: string, twitchUserName: string, reason?: string): Promise<void> {
+    await this.wrappedChat.ban!(channel, twitchUserName, reason)
   }
 
-  public async fetchMetadata (): Promise<TwitchMetadata | null> {
-    const stream = await this.wrappedApi.streams!.getStreamByUserName!(this.twitchChannelName)
+  public async fetchMetadata (channelName: string): Promise<TwitchMetadata | null> {
+    const stream = await this.wrappedApi.streams!.getStreamByUserName!(channelName)
 
     if (stream == null) {
       return null
@@ -72,8 +69,8 @@ export default class TwurpleApiProxyService extends ApiService implements ITwurp
   }
 
   /** Says the message in chat. For the list of available commands that can be said, refer to https://help.twitch.tv/s/article/chat-commands (must include an initial `/`) */
-  public async say (message: string) {
-    await this.wrappedChat.say!(this.twitchChannelName, message, undefined)
+  public async say (channel: string, message: string) {
+    await this.wrappedChat.say!(channel, message, undefined)
   }
 
   public async timeout (channel: string, twitchUserName: string, durationSeconds: number, reason?: string) {

@@ -58,9 +58,7 @@ The following environment variables must be set in the `.env` file:
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
-- `TWITCH_CHANNEL_NAME`: The Twitch channel's name from which we should connect (must have at least moderator permissions).
 - `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
-- `STREAMLABS_SOCKET_TOKEN`: The WebSocket token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -142,6 +140,60 @@ All non-primitive properties of `data` are of type `PublicObject`, which are reu
 
 Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
 
+Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-Login-Token` header.
+
+## Account Endpoints
+Path: `/account`.
+
+### `POST /register` [anonymous]
+*Current schema: 1.*
+
+Registers a new user.
+
+Request data (body):
+- `username` (`string`): *Required.* The username for which to register a new account.
+- `password` (`string`): *Required.* The password that will be used to log the user in.
+
+Returns data with the following properties:
+- `loginToken` (`string`): A token used to authenticate the user when making another API request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /login` [anonymous]
+*Current schema: 1.*
+
+Logs the user into their account.
+
+Request data (body):
+- `username` (`string`): *Required.* The username of the account to log into.
+- `password` (`string`): *Required.* The password of the account to log into.
+
+Returns data with the following properties:
+- `loginToken` (`string`): A token used to authenticate the user when making another API request.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `401`: When the credentials are incorrect.
+
+### `POST /logout`
+*Current schema: 1.*
+
+Logs the user out of their account by invalidating all login tokens. To authenticate, the user must call `/login` again.
+
+Returns an empty response body.
+
+### `POST /authenticate`
+*Current schema: 1.*
+
+Authenticates the login token contained in the header. If successful, the login token can be used to authenticate other API requests.
+
+Returns data with the following properties:
+- `username` (`string`): The username associated with the login token.
+
+Can return the following errors:
+- `401`: When the login token is invalid.
+
 ## Chat Endpoints
 Path: `/chat`.
 
@@ -161,7 +213,7 @@ Returns data with the following properties:
 ## ChatMate Endpoints
 Path: `/chatMate`.
 
-### `GET /ping`
+### `GET /ping` [anonymous]
 *Current schema: 1.*
 
 Pings the server.
@@ -258,6 +310,30 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `404`: When the request data is not sent, or when no user was linked to the given donation.
+
+### `POST /streamlabs/socketToken`
+*Current schema: 1.*
+
+Sets the streamlab socket token for listening to the current streamer's donations. The server is unable to get donations if the token is not set, or is invalid.
+
+Request data (body):
+- `websocketToken` (`string | null`): The streamlabs socket token to use. It can be found at https://streamlabs.com/dashboard#/settings/api-settings. If set, the server will immediately start listening to donations. If `null`, the server will stop listening to donations (if applicable).
+
+Returns data with the following properties:
+- `result` (`string`): The result of applying the specified socket token.
+  - Set to `success` if the operation was successful and resulted in a state change.
+  - Set to `noChange` if the operation was successful, but the provided token was the same as the existing token and thus no state change occurred.
+
+### `GET /streamlabs/status`
+*Current schema: 1.*
+
+Gets the Streamlabs donation WebSocket status.
+
+Returns data with the following properties:
+- `status` (`string`): The status of the current streamer's donation WebSocket.
+  - Set to `notListening` if we are not currently listening to donations. This is most likely because no socket token has been set by the streamer.
+  - Set to `listening` if we are currently listening to donations.
+  - Set to `error` if something went wrong. We are most likely not listening to donations, and it is recommended that the socket token be reset.
 
 ## Emoji Endpoints
 Path: `/emoji`.
@@ -594,6 +670,76 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
+
+
+## Streamer Endpoints
+Path: `/streamer`.
+
+### `GET`
+Gets all streamer usernames in ChatMate.
+
+Returns data with the following properties:
+- `streamers` (`string[]`): The array of streamer usernames.
+
+### `GET /application`
+Gets all streamer applications of the user. If the user is an admin, returns all applications of all users.
+
+Returns data with the following properties:
+- `streamerApplications` (`PublicStreamerApplication[]`): The array of streamer applications with any status.
+
+### `POST /application`
+Creates a new streamer application for the user.
+
+Request data (body):
+- `message` (`string`): *Required.* The user-defined message to include in the application.
+
+Returns data with the following properties:
+- `newApplication` (`PublicStreamerApplication`): The streamer application that was created.
+
+### `POST /application/:streamerApplicationId/approve`
+Approves a pending streamer application.
+
+Path parameters:
+- `streamerApplicationId` (`number`): *Required.* The ID of the streamer application to approve.
+
+Request data (body):
+- `message` (`string`): *Required.* The admin-defined approval message.
+
+Returns data with the following properties:
+- `updatedApplication` (`PublicStreamerApplication`): The updated streamer application.
+
+Can return the following errors:
+- `400`: When the streamer application status was not `pending`, that is, it was already closed.
+
+### `POST /application/:streamerApplicationId/reject`
+Rejects a pending streamer application.
+
+Path parameters:
+- `streamerApplicationId` (`number`): *Required.* The ID of the streamer application to reject.
+
+Request data (body):
+- `message` (`string`): *Required.* The admin-defined rejection message.
+
+Returns data with the following properties:
+- `updatedApplication` (`PublicStreamerApplication`): The updated streamer application.
+
+Can return the following errors:
+- `400`: When the streamer application status was not `pending`, that is, it was already closed.
+
+### `POST /application/:streamerApplicationId/withdraw`
+Withdraws a pending streamer application.
+
+Path parameters:
+- `streamerApplicationId` (`number`): *Required.* The ID of the streamer application to withdraw.
+
+Request data (body):
+- `message` (`string`): *Required.* The user-defined withdrawal message.
+
+Returns data with the following properties:
+- `updatedApplication` (`PublicStreamerApplication`): The updated streamer application.
+
+Can return the following errors:
+- `400`: When the streamer application status was not `pending`, that is, it was already closed.
 
 
 ## User Endpoints

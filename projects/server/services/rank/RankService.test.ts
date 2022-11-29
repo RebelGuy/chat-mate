@@ -22,7 +22,7 @@ describe(nameof(RankService, 'getAccessibleRanks'), () => {
     const donatorRank = cast<Rank>({ name: 'donator', group: 'donation' })
     const adminRank = cast<Rank>({ name: 'admin', group: 'administration' })
     const bannedRank = cast<Rank>({ name: 'ban', group: 'punishment' })
-    mockRankStore.getRanks.mockResolvedValue([ownerRank, famousRank, donatorRank, adminRank, bannedRank])
+    mockRankStore.getRanks.calledWith().mockResolvedValue([ownerRank, famousRank, donatorRank, adminRank, bannedRank])
 
     const result = await rankService.getAccessibleRanks()
 

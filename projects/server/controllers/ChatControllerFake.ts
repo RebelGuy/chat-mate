@@ -1,6 +1,6 @@
 import { GetChatEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
 import { ChatControllerDeps } from '@rebel/server/controllers/ChatControllerReal'
-import { buildPath, In, Out } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItemWithRelations, chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
@@ -14,13 +14,14 @@ import { chooseWeightedRandom, randomInt } from '@rebel/server/util/random'
 import { Path } from 'typescript-rest'
 
 @Path(buildPath('chat'))
-export default class ChatControllerFake implements IChatController {
+export default class ChatControllerFake extends ControllerBase implements IChatController {
   private readonly chatStore: ChatStore
   private readonly rankStore: RankStore
 
   private chat: ChatItemWithRelations[] | null = null
 
   constructor (deps: ChatControllerDeps) {
+    super(deps, '/chat')
     this.chatStore = deps.resolve('chatStore')
     this.rankStore = deps.resolve('rankStore')
   }
@@ -30,7 +31,7 @@ export default class ChatControllerFake implements IChatController {
     since = since ?? 0
 
     if (this.chat == null) {
-      this.chat = await this.chatStore.getChatSince(0)
+      this.chat = await this.chatStore.getChatSince(this.getStreamerId(), 0)
     }
 
     const N = chooseWeightedRandom([0, 10], [1, 1], [2, 0.2])
@@ -44,7 +45,7 @@ export default class ChatControllerFake implements IChatController {
         level: asGte(newLevel, 0),
         levelProgress: asLt(asGte(Math.random(), 0), 1)
       }
-      const ranks = single(await this.rankStore.getUserRanks([item.userId!])).ranks.map(userRankToPublicObject)
+      const ranks = single(await this.rankStore.getUserRanks([item.userId!], this.getStreamerId())).ranks.map(userRankToPublicObject)
       items.push(chatAndLevelToPublicChatItem(item, level, ranks))
     }
 

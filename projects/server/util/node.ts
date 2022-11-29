@@ -10,3 +10,7 @@ export async function execAsync (command: string, consoleOutput?: ConsoleOutput)
     child.on('exit', code => code === 0 ? resolve() : reject())
   })
 }
+
+export async function sleep (ms: number): Promise<void> {
+  return new Promise(r => setTimeout(() => r(), ms))
+}

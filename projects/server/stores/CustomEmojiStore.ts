@@ -10,6 +10,7 @@ export type CustomEmojiWithRankWhitelist = {
   modifiedAt: Date
   version: number
   symbol: string
+  streamerId: number
   name: string
   image: Buffer
   levelRequirement: number
@@ -27,6 +28,7 @@ export type CustomEmojiWhitelistedRanks = {
 }
 
 export type CustomEmojiCreateData = {
+  streamerId: number
   symbol: string
   name: string
   image: Buffer
@@ -58,12 +60,12 @@ export default class CustomEmojiStore extends ContextClass {
   }
 
   /** Returns the latest versions of active emojis. */
-  public async getAllCustomEmojis (): Promise<CustomEmojiWithRankWhitelist[]> {
+  public async getAllCustomEmojis (streamerId: number): Promise<CustomEmojiWithRankWhitelist[]> {
     const emojiWhitelistsPromise = this.db.customEmojiRankWhitelist.findMany()
 
     // note: there is a trigger in the `custom_emoji_version` table that gurantees that there is no more than one active version for each emoji
     const emojis = await this.db.customEmojiVersion.findMany({
-      where: { isActive: true },
+      where: { isActive: true, customEmoji: { streamerId} },
       include: { customEmoji: true }
     })
     const emojiWhitelists = await emojiWhitelistsPromise
@@ -71,6 +73,7 @@ export default class CustomEmojiStore extends ContextClass {
     return emojis.map(emoji => ({
       id: emoji.customEmoji.id,
       symbol: emoji.customEmoji.symbol,
+      streamerId: emoji.customEmoji.streamerId,
       image: emoji.image,
       isActive: emoji.isActive,
       levelRequirement: emoji.levelRequirement,
@@ -85,7 +88,10 @@ export default class CustomEmojiStore extends ContextClass {
   /** Returns the created CustomEmoji. */
   public async addCustomEmoji (data: CustomEmojiCreateData): Promise<CustomEmojiWithRankWhitelist> {
     return await this.db.$transaction(async db => {
-      const newEmoji = await db.customEmoji.create({ data: { symbol: data.symbol }})
+      const newEmoji = await db.customEmoji.create({ data: {
+        streamerId: data.streamerId,
+        symbol: data.symbol
+      }})
 
       // we can only do this after the emoji has been created so we have its id
       const newEmojiVersion = await db.customEmojiVersion.create({ data: {
@@ -108,6 +114,7 @@ export default class CustomEmojiStore extends ContextClass {
       return {
         id: newEmoji.id,
         symbol: newEmoji.symbol,
+        streamerId: newEmoji.streamerId,
         isActive: newEmojiVersion.isActive,
         version: newEmojiVersion.version,
         name: newEmojiVersion.name,
@@ -195,6 +202,7 @@ export default class CustomEmojiStore extends ContextClass {
       return {
         id: updatedEmojiVersion.customEmoji.id,
         symbol: updatedEmojiVersion.customEmoji.symbol,
+        streamerId: updatedEmojiVersion.customEmoji.streamerId,
         isActive: updatedEmojiVersion.isActive,
         version: updatedEmojiVersion.version,
         name: updatedEmojiVersion.name,

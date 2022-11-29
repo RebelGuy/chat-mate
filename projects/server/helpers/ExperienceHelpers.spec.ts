@@ -142,6 +142,7 @@ describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
     return {
       id: 1,
       time: new Date(timestamp),
+      streamerId: 5,
       userId: 1,
       externalId: 'chat id',
       livestreamId: 1,

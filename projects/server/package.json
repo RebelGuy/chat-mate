@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.20.0",
+  "version": "1.210.0",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
@@ -34,7 +34,7 @@
   "dependencies": {
     "@azure/identity": "^2.0.5",
     "@azure/monitor-query": "^1.0.2",
-    "@prisma/client": "^3.6.0",
+    "@prisma/client": "3.15.2",
     "@twurple/api": "^5.0.18",
     "@twurple/auth": "^5.0.18",
     "@twurple/chat": "^5.0.18",
@@ -57,7 +57,7 @@
     "source-map-support": "^0.5.21",
     "tslib": "^2.3.1",
     "typescript": "^4.7.4",
-    "typescript-rest": "^1.6.2",
+    "typescript-rest": "^3.0.4",
     "webpack-node-externals": "^3.0.0",
     "webpack-shell-plugin-next": "^2.2.2"
   },
@@ -81,7 +81,7 @@
     "listr": "^0.14.3",
     "node-fetch": "2.6.6",
     "nodemon": "^2.0.15",
-    "prisma": "^3.6.0",
+    "prisma": "3.15.2",
     "swc-loader": "^0.2.3",
     "ts-jest": "^27.1.2",
     "ts-loader": "9.3.1",

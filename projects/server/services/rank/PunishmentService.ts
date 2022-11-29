@@ -11,6 +11,7 @@ import { addTime } from '@rebel/server/util/datetime'
 import { assert, assertUnreachable } from '@rebel/server/util/typescript'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 
 // It is not an issue on Twitch, but on Youtube we come across the interesting problem of being unable to check
 // the current list of on-platform punishments. This means that, when a punishment occurrs, the platform data
@@ -33,6 +34,7 @@ type Deps = Dependencies<{
   rankStore: RankStore
   chatStore: ChatStore
   youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
+  streamerStore: StreamerStore
 }>
 
 export default class PunishmentService extends ContextClass {
@@ -45,6 +47,7 @@ export default class PunishmentService extends ContextClass {
   private readonly channelStore: ChannelStore
   private readonly chatStore: ChatStore
   private readonly youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
+  private readonly streamerStore: StreamerStore
 
   constructor (deps: Deps) {
     super()
@@ -56,10 +59,13 @@ export default class PunishmentService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.chatStore = deps.resolve('chatStore')
     this.youtubeTimeoutRefreshService = deps.resolve('youtubeTimeoutRefreshService')
+    this.streamerStore = deps.resolve('streamerStore')
   }
 
   public override async initialise () {
-    const currentPunishments = await this.getCurrentPunishments()
+    const streamers = await this.streamerStore.getStreamers()
+    // todo: this is not scalable
+    const currentPunishments = await Promise.all(streamers.map(s => this.getCurrentPunishments(s.id))).then(result => result.flatMap(x => x))
     const timeouts = currentPunishments.filter(p => p.rank.name === 'timeout')
 
     // this never throws an error even if any of the promises reject
@@ -71,66 +77,69 @@ export default class PunishmentService extends ContextClass {
     )))
   }
 
-  public async getCurrentPunishments (): Promise<UserRankWithRelations[]> {
-    return await this.rankStore.getUserRanksForGroup('punishment')
+  public async getCurrentPunishments (streamerId: number): Promise<UserRankWithRelations[]> {
+    return await this.rankStore.getUserRanksForGroup('punishment', streamerId)
   }
 
-  public async getPunishmentHistory (userId: number): Promise<UserRankWithRelations[]> {
-    const history = await this.rankStore.getUserRankHistory(userId)
+  public async getPunishmentHistory (userId: number, streamerId: number): Promise<UserRankWithRelations[]> {
+    const history = await this.rankStore.getUserRankHistory(userId, streamerId)
     return groupFilter(history, 'punishment')
   }
 
-  public async banUser (userId: number, message: string | null): Promise<SetActionRankResult> {
+  public async banUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null): Promise<SetActionRankResult> {
     const args: AddUserRankArgs = {
       rank: 'ban',
       message: message,
-      userId: userId,
+      chatUserId: userId,
+      streamerId: streamerId,
       expirationTime: null,
-      assignee: null // todo: CHAT-385 use logged-in user details
+      assignee: loggedInRegisteredUserId
     }
     const rankResult = await this.addInternalRank(args)
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'ban')))
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'ban')))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'ban')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'ban')))
 
     return { rankResult, youtubeResults, twitchResults }
   }
 
-  public async isUserPunished (userId: number): Promise<boolean> {
-    const currentPunishments = await this.getCurrentPunishmentsForUser(userId)
+  public async isUserPunished (userId: number, streamerId: number): Promise<boolean> {
+    const currentPunishments = await this.getCurrentPunishmentsForUser(userId, streamerId)
     return currentPunishments.ranks.length > 0
   }
 
   /** Mutes are used only in ChatMate and not relayed to Youtube or Twitch.
    * @throws {@link UserRankAlreadyExistsError}: When a user-rank of that type is already active. */
-  public async muteUser (userId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
+  public async muteUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'mute',
       expirationTime: durationSeconds == null ? null : addTime(now, 'seconds', durationSeconds),
       message: message,
-      userId: userId,
-      assignee: null // todo: CHAT-385 use logged-in user details
+      chatUserId: userId,
+      streamerId: streamerId,
+      assignee: loggedInRegisteredUserId
     }
     return await this.rankStore.addUserRank(args)
   }
 
   /** Applies an actual timeout that is relayed to Youtube or Twitch. */
-  public async timeoutUser (userId: number, message: string | null, durationSeconds: number): Promise<SetActionRankResult> {
+  public async timeoutUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null, durationSeconds: number): Promise<SetActionRankResult> {
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'timeout',
       expirationTime: addTime(now, 'seconds', durationSeconds),
       message: message,
-      userId: userId,
-      assignee: null // todo: CHAT-385 use logged-in user details
+      chatUserId: userId,
+      streamerId: streamerId,
+      assignee: loggedInRegisteredUserId
     }
     const rankResult = await this.addInternalRank(args)
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'timeout')))
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, message, 'timeout', durationSeconds)))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
 
     if (rankResult.rank != null) {
       const rank = rankResult.rank
@@ -141,38 +150,41 @@ export default class PunishmentService extends ContextClass {
   }
 
   /** Returns the updated punishment, if there was one. */
-  public async unbanUser (userId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
+  public async unbanUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'ban',
-      userId: userId,
+      chatUserId: userId,
+      streamerId: streamerId,
       message: unbanMessage,
-      removedBy: null // todo: CHAT-385 use logged-in user details
+      removedBy: loggedInRegisteredUserId
     }
     const rankResult = await this.removeInternalRank(args)
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'unban')))
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, unbanMessage, 'unban')))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'unban')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, unbanMessage, 'unban')))
 
     return { rankResult, youtubeResults, twitchResults }
   }
 
-  public async unmuteUser (userId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
+  public async unmuteUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
     const args: RemoveUserRankArgs = {
       rank: 'mute',
-      userId: userId,
+      chatUserId: userId,
+      streamerId: streamerId,
       message: revokeMessage,
-      removedBy: null // todo: CHAT-385 use logged-in user details
+      removedBy: loggedInRegisteredUserId
     }
     return await this.rankStore.removeUserRank(args)
   }
 
-  public async untimeoutUser (userId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
+  public async untimeoutUser (userId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
     const args: RemoveUserRankArgs = {
       rank: 'timeout',
-      userId: userId,
+      chatUserId: userId,
+      streamerId: streamerId,
       message: revokeMessage,
-      removedBy: null // todo: CHAT-385 use logged-in user details
+      removedBy: loggedInRegisteredUserId
     }
     const rankResult = await this.removeInternalRank(args)
 
@@ -181,7 +193,7 @@ export default class PunishmentService extends ContextClass {
     }
 
     const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
-    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(c, revokeMessage, 'untimeout')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, revokeMessage, 'untimeout')))
     const youtubeResults: YoutubeRankResult[] = ownedChannels.youtubeChannels.map(c => ({ youtubeChannelId: c, error: 'YouTube timeouts expire automatically 5 minutes after they were last applied.'}))
 
     return { rankResult, youtubeResults, twitchResults }
@@ -189,12 +201,16 @@ export default class PunishmentService extends ContextClass {
 
   /** Re-applies the timeout on Youtube. Note that the timeout always lasts for 5 minutes. */
   private async onRefreshTimeoutForYoutube (timeout: UserRankWithRelations) {
+    if (timeout.streamerId == null) {
+      throw new Error(`Cannot refresh the YouTube timeout of user ${timeout.userId} because no streamerId was supplied, and timeout ranks cannot be global.`)
+    }
+
     const ownedChannels = await this.channelStore.getUserOwnedChannels(timeout.userId)
-    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(c, 'refreshTimeout')))
+    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(timeout.streamerId!, c, 'refreshTimeout')))
   }
 
-  private async getCurrentPunishmentsForUser (userId: number) {
-    const allRanks = await this.rankStore.getUserRanks([userId])
+  private async getCurrentPunishmentsForUser (userId: number, streamerId: number) {
+    const allRanks = await this.rankStore.getUserRanks([userId], streamerId)
     return groupFilter(allRanks, 'punishment')[0]
   }
 
@@ -226,8 +242,8 @@ export default class PunishmentService extends ContextClass {
     }
   }
 
-  private async tryApplyYoutubePunishment (youtubeChannelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout'): Promise<YoutubeRankResult> {
-    const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(youtubeChannelId)
+  private async tryApplyYoutubePunishment (streamerId: number, youtubeChannelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout'): Promise<YoutubeRankResult> {
+    const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(streamerId, youtubeChannelId)
 
     if (lastChatItem == null) {
       const error = `Could not ${type} youtube channel ${youtubeChannelId} because no chat item was found for the channel`
@@ -264,26 +280,26 @@ export default class PunishmentService extends ContextClass {
     return { error, youtubeChannelId }
   }
 
-  private async tryApplyTwitchPunishment (twitchChannelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<TwitchRankResult> {
+  private async tryApplyTwitchPunishment (streamerId: number, twitchChannelId: number, reason: string | null, type: 'ban' | 'unban' | 'timeout' | 'untimeout', durationSeconds?: number): Promise<TwitchRankResult> {
     let error: string | null = null
     try {
       // if the punishment is already applied, twitch will just send a Notice message which we can ignore
       if (type === 'ban') {
-        await this.twurpleService.banChannel(twitchChannelId, reason)
+        await this.twurpleService.banChannel(streamerId, twitchChannelId, reason)
       } else if (type === 'unban') {
-        await this.twurpleService.unbanChannel(twitchChannelId)
+        await this.twurpleService.unbanChannel(streamerId, twitchChannelId)
       } else if (type === 'timeout') {
         assert(durationSeconds != null, 'Timeout duration must be defined')
-        await this.twurpleService.timeout(twitchChannelId, reason, durationSeconds)
+        await this.twurpleService.timeout(streamerId, twitchChannelId, reason, durationSeconds)
       } else if (type === 'untimeout') {
-        await this.twurpleService.untimeout(twitchChannelId, reason)
+        await this.twurpleService.untimeout(streamerId, twitchChannelId, reason)
       } else {
         assertUnreachable(type)
       }
 
-      this.logService.logInfo(this, `Request to ${type} twitch channel ${twitchChannelId} succeeded.`)
+      this.logService.logInfo(this, `Request to ${type} twitch channel ${twitchChannelId} for streamer ${streamerId} succeeded.`)
     } catch (e: any) {
-      this.logService.logError(this, `Request to ${type} twitch channel ${twitchChannelId} failed:`, e.message)
+      this.logService.logError(this, `Request to ${type} twitch channel ${twitchChannelId} for streamer ${streamerId} failed:`, e.message)
       error = e.message
     }
 

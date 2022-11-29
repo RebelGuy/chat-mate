@@ -55,8 +55,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     this.setState({ editingEmoji: null })
   }
 
-  onUpdate = async () => {
-    const result = await updateCustomEmoji(this.state.editingEmoji!)
+  onUpdate = async (loginToken: string, streamer: string) => {
+    const result = await updateCustomEmoji(this.state.editingEmoji!, loginToken, streamer)
     if (result.success) {
       const updatedEmoji = result.data.updatedEmoji
       this.setState({
@@ -75,8 +75,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     }
   }
 
-  onAdd = async () => {
-    const result = await addCustomEmoji(this.state.newEmoji)
+  onAdd = async (loginToken: string, streamer: string) => {
+    const result = await addCustomEmoji(this.state.newEmoji, loginToken, streamer)
     if (result.success) {
       this.setState({
         newEmoji: {
@@ -94,8 +94,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     return result
   }
 
-  getAccessibleRanks = async () => {
-    const accessibleRanks = await getAccessibleRanks()
+  getAccessibleRanks = async (loginToken: string, streamer: string) => {
+    const accessibleRanks = await getAccessibleRanks(loginToken, streamer)
     if (accessibleRanks.success) {
       this.setState({
         accessibleRanks: accessibleRanks.data.accessibleRanks
@@ -104,8 +104,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     return accessibleRanks
   }
 
-  getEmojis = async () => {
-    const emojis = await getAllCustomEmojis()
+  getEmojis = async (loginToken: string, streamer: string) => {
+    const emojis = await getAllCustomEmojis(loginToken, streamer)
     if (emojis.success) {
       this.setState({
         emojis: sortBy(emojis.data.emojis, e => e.id),
@@ -119,63 +119,67 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
       <>
         <div ref={this.loadingRef} />
         <div ref={this.errorRef} />
-        <ApiRequest onDemand token={1} onRequest={this.getEmojis}>
-          <ApiRequest onDemand token={1} onRequest={this.getAccessibleRanks}>
-            <table style={{ width: '90%', padding: '5%' }}>
-              <thead>
-                <tr>
-                  <td>Name</td>
-                  <td>Symbol</td>
-                  <td>Level Req.</td>
-                  <td><span title="Emoji can be used in donation messages">$</span></td>
-                  <td><span title="If there is no selection, all ranks will be able to use the emoji">Rank Whitelist</span></td>
-                  <td>Image</td>
-                  <td>Action</td>
-                </tr>
-              </thead>
+        <ApiRequest onDemand token={1} requiresStreamer onRequest={this.getEmojis}>
+          {(response, loadingNode, errorNode) => <>
+            {response && <ApiRequest onDemand token={1} requiresStreamer onRequest={this.getAccessibleRanks}>
+              <table style={{ width: '90%', padding: '5%' }}>
+                <thead>
+                  <tr>
+                    <td>Name</td>
+                    <td>Symbol</td>
+                    <td>Level Req.</td>
+                    <td><span title="Emoji can be used in donation messages">$</span></td>
+                    <td><span title="If there is no selection, all ranks will be able to use the emoji">Rank Whitelist</span></td>
+                    <td>Image</td>
+                    <td>Action</td>
+                  </tr>
+                </thead>
 
-              <ApiRequestTrigger onRequest={this.onUpdate}>
-                {(onDoUpdate, responseForUpdate, loadingNodeForUpdate, errorNodeForUpdate) => <>
-                  <tbody>
-                    {this.state.emojis.map(emoji => {
-                      const isEditing = this.state.editingEmoji?.id === emoji.id
-                      const actionCell = <>
-                        {!isEditing && <button data-id={emoji.id} onClick={this.onEdit}>Edit</button>}
-                        {isEditing && <button onClick={onDoUpdate}>Submit</button>}
-                        {isEditing && <button onClick={this.onCancelEdit}>Cancel</button>}
-                      </>
-                      return (
-                        <CustomEmojiRow
-                          key={emoji.symbol}
-                          data={isEditing ? this.state.editingEmoji! : emoji}
-                          actionCell={actionCell}
-                          accessibleRanks={this.state.accessibleRanks}
-                          isNew={false}
-                          onChange={isEditing ? this.onChange : null}
-                        />
-                      )
-                    })}
+                <ApiRequestTrigger requiresStreamer onRequest={this.onUpdate}>
+                  {(onDoUpdate, responseForUpdate, loadingNodeForUpdate, errorNodeForUpdate) => <>
+                    <tbody>
+                      {this.state.emojis.map(emoji => {
+                        const isEditing = this.state.editingEmoji?.id === emoji.id
+                        const actionCell = <>
+                          {!isEditing && <button data-id={emoji.id} onClick={this.onEdit}>Edit</button>}
+                          {isEditing && <button onClick={onDoUpdate}>Submit</button>}
+                          {isEditing && <button onClick={this.onCancelEdit}>Cancel</button>}
+                        </>
+                        return (
+                          <CustomEmojiRow
+                            key={emoji.symbol}
+                            data={isEditing ? this.state.editingEmoji! : emoji}
+                            actionCell={actionCell}
+                            accessibleRanks={this.state.accessibleRanks}
+                            isNew={false}
+                            onChange={isEditing ? this.onChange : null}
+                          />
+                        )
+                      })}
 
-                    <ApiRequestTrigger onRequest={this.onAdd}>
-                      {(onDoAdd, response, loadingNodeForAdd, errorNodeForAdd) => <>
-                        <CustomEmojiRow
-                          data={{ id: -1, ...this.state.newEmoji }}
-                          actionCell={<button onClick={onDoAdd}>Add</button>}
-                          accessibleRanks={this.state.accessibleRanks}
-                          isNew={true}
-                          onChange={this.onChange}
-                        />
-                        {ReactDOM.createPortal(loadingNodeForAdd, this.loadingRef.current!)}
-                        {ReactDOM.createPortal(errorNodeForAdd, this.errorRef.current!)}
-                      </>}
-                    </ApiRequestTrigger>
-                  </tbody>
-                  {ReactDOM.createPortal(loadingNodeForUpdate, this.loadingRef.current!)}
-                  {ReactDOM.createPortal(errorNodeForUpdate, this.errorRef.current!)}
-                </>}
-              </ApiRequestTrigger>
-            </table>
-          </ApiRequest>
+                      <ApiRequestTrigger requiresStreamer onRequest={this.onAdd}>
+                        {(onDoAdd, response, loadingNodeForAdd, errorNodeForAdd) => <>
+                          <CustomEmojiRow
+                            data={{ id: -1, ...this.state.newEmoji }}
+                            actionCell={<button onClick={onDoAdd}>Add</button>}
+                            accessibleRanks={this.state.accessibleRanks}
+                            isNew={true}
+                            onChange={this.onChange}
+                          />
+                          {ReactDOM.createPortal(loadingNodeForAdd, this.loadingRef.current!)}
+                          {ReactDOM.createPortal(errorNodeForAdd, this.errorRef.current!)}
+                        </>}
+                      </ApiRequestTrigger>
+                    </tbody>
+                    {ReactDOM.createPortal(loadingNodeForUpdate, this.loadingRef.current!)}
+                    {ReactDOM.createPortal(errorNodeForUpdate, this.errorRef.current!)}
+                  </>}
+                </ApiRequestTrigger>
+              </table>
+            </ApiRequest>}
+            {loadingNode}
+            {errorNode}
+          </>}
         </ApiRequest>
       </>
     )
