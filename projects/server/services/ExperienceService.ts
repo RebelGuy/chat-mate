@@ -246,7 +246,7 @@ export default class ExperienceService extends ContextClass {
       stream => stream.viewed,
       (score, viewed) => viewed ? score + 1 : score - 1,
       0,
-      positiveInfinity
+      10
     )
 
     return this.experienceHelpers.calculateViewershipMultiplier(viewershipScore)
@@ -261,7 +261,7 @@ export default class ExperienceService extends ContextClass {
       stream => stream.participated,
       (score, participated) => participated ? score + 1 : score - 1,
       0,
-      positiveInfinity
+      10
     )
 
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
