@@ -76,10 +76,12 @@ export default class DonationStore extends ContextClass {
     })
   }
 
-  /** Returns donations that have been linked to the user, orderd by time in ascending order. */
-  public async getDonationsByUserId (streamerId: number, userId: number): Promise<Donation[]> {
-    const donationLink = await this.db.donationLink.findMany({ where: { linkedUserId: userId }})
-    const linkIdentifiers = donationLink.map(u => u.linkIdentifier)
+  /** Returns donations that have been linked to any of the given aggregate or default users, orderd by time in ascending order. */
+  public async getDonationsByUserIds (streamerId: number, userIds: number[]): Promise<Donation[]> {
+    const donationLinks = await this.db.donationLink.findMany({
+      where: { linkedUserId: { in: userIds }}
+    })
+    const linkIdentifiers = donationLinks.map(u => u.linkIdentifier)
     const donationIds = linkIdentifiers.filter(id => id.startsWith(INTERNAL_USER_PREFIX)).map(id => Number(id.substring(INTERNAL_USER_PREFIX.length)))
     const streamlabsUserIds = linkIdentifiers.filter(id => id.startsWith(EXTERNAL_USER_PREFIX)).map(id => Number(id.substring(EXTERNAL_USER_PREFIX.length)))
 
@@ -189,7 +191,7 @@ export default class DonationStore extends ContextClass {
   // (either using the actual streamlabs user id, or by deterministically constructing a synthetic id that is unique to this donation)
   // and link the ChatMate user to that streamlabs user instead.
 
-  /** Links the user to the donation.
+  /** Links the user to the donation. It is the responsibility of the caller to ensure the correct primary user is used.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, userId: number, linkedAt: Date): Promise<void> {
     const linkIdentifier = await this.getLinkIdentifier(donationId)

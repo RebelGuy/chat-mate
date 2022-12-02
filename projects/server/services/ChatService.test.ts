@@ -56,13 +56,13 @@ const chatItem2: ChatItem = {
 
 const youtubeChannel1: YoutubeChannelWithLatestInfo = {
   id: 10,
-  userId: data.user1.id,
+  userId: 1,
   youtubeId: data.youtubeChannel1,
   infoHistory: [{ ...data.youtubeChannelInfo1, id: 1, channelId: 1 }]
 }
 const twitchChannel1: TwitchChannelWithLatestInfo = {
   id: 20,
-  userId: data.user3.id,
+  userId: 3,
   twitchId: data.twitchChannel3,
   infoHistory: [{ ...data.twitchChannelInfo3, id: 2, channelId: 2 }]
 }

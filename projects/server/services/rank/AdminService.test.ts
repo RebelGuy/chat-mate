@@ -38,6 +38,6 @@ describe(nameof(AdminService, 'getAdminUsers'), () => {
 
     const result = await adminService.getAdminUsers(streamerId)
 
-    expect(result.map(r => r.id)).toEqual([user1, user2])
+    expect(result.map(r => r.chatUserId)).toEqual([user1, user2])
   })
 })

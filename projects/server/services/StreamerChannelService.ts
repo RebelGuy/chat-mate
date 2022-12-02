@@ -68,12 +68,7 @@ export default class StreamerChannelService extends ContextClass {
       return null
     }
 
-    if (registeredUser.chatUserId == null) {
-      this.logService.logWarning(this, `The streamer ${streamer.id} is not linked to a chat user`)
-      return null
-    }
-
-    const channels = await this.channelStore.getUserOwnedChannels(registeredUser.chatUserId)
+    const channels = await this.channelStore.getUserOwnedChannels(registeredUser.aggregateChatUserId)
     if (channels.twitchChannels.length === 0) {
       return null
     }

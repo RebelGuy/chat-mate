@@ -10,9 +10,9 @@ import { assertUnreachableCompile, reminder } from '@rebel/server/util/typescrip
 export const VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE = 5
 export const VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER = 10
 
-export type LivestreamParticipation = Livestream & { userId: number, participated: boolean }
+export type LivestreamParticipation = Livestream & { participated: boolean }
 
-export type LivestreamViewership = Livestream & { userId: number, viewed: boolean }
+export type LivestreamViewership = Livestream & { viewed: boolean }
 
 export type LastSeen = { livestream: Livestream, time: Date, viewingBlockId: number }
 
@@ -127,7 +127,7 @@ export default class ViewershipStore extends ContextClass {
   /** Returns streams in ascending order.
    * The following actions are considered participation:
    * - sending a message in chat */
-  public async getLivestreamParticipation (streamerId: number, userId: number): Promise<LivestreamParticipation[]> {
+  public async getLivestreamParticipation (streamerId: number, userIds: number[]): Promise<LivestreamParticipation[]> {
     if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
@@ -140,7 +140,7 @@ export default class ViewershipStore extends ContextClass {
       include: {
         chatMessages: {
           where: {
-            user: { id: userId },
+            user: { id: { in: userIds } },
             livestream: { type: 'publicLivestream', streamerId }
           },
           take: 1 // order doesn't matter
@@ -151,18 +151,17 @@ export default class ViewershipStore extends ContextClass {
 
     return livestreams.map(l => ({
       ...l,
-      userId,
       participated: l.chatMessages.length > 0
     }))
   }
 
   /** Returns streams in ascending order. */
-  public async getLivestreamViewership (streamerId: number, userId: number): Promise<LivestreamViewership[]> {
+  public async getLivestreamViewership (streamerId: number, userIds: number[]): Promise<LivestreamViewership[]> {
     const livestreams = await this.db.livestream.findMany({
       where: { streamerId },
       include: {
         viewingBlocks: {
-          where: { user: { id: userId }},
+          where: { user: { id: { in: userIds } }},
           take: 1 // order doesn't matter
         }
       },
@@ -171,7 +170,6 @@ export default class ViewershipStore extends ContextClass {
 
     return livestreams.map(l => ({
       ...l,
-      userId,
       viewed: l.viewingBlocks.length > 0
     }))
   }

@@ -53,8 +53,8 @@ export default () => {
     user1 = (await db.chatUser.create({ data: {}})).id
     user2 = (await db.chatUser.create({ data: {}})).id
     user3 = (await db.chatUser.create({ data: {}})).id
-    streamer1 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer1Name, hashedPassword: 'pass1' }}}})).id
-    streamer2 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer2Name, hashedPassword: 'pass2' }}}})).id
+    streamer1 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer1Name, hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})).id
+    streamer2 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer2Name, hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})).id
 
     ownerRank = await db.rank.create({ data: { name: 'owner', displayNameNoun: '', displayNameAdjective: '', group: 'administration' }})
     famousRank = await db.rank.create({ data: { name: 'famous', displayNameNoun: '', displayNameAdjective: '', group: 'cosmetic' }})

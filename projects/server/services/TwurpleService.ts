@@ -157,8 +157,8 @@ export default class TwurpleService extends ContextClass {
         throw new Error(`Cannot add Twitch chat message from channel ${_channel} because the message's channelId property was null`)
       }
 
-      const chatUserId = await this.channelStore.getUserId(channelId)
-      const registeredUser = await this.accountStore.getRegisteredUserFromChatUser(chatUserId)
+      const chatUserId = await this.channelStore.getPrimaryUserId(channelId)
+      const registeredUser = await this.accountStore.getRegisteredUserFromAggregateUser(chatUserId)
       if (registeredUser == null) {
         throw new Error(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the chat user ${chatUserId} is not associated with a registered user`)
       }

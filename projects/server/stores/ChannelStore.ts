@@ -112,9 +112,11 @@ export default class ChannelStore extends ContextClass {
     return channel!
   }
 
-  /** Returns all user ids. */
+  /** Returns all effective chat user ids. */
   public async getCurrentUserIds (): Promise<number[]> {
-    const users = await this.db.chatUser.findMany()
+    const users = await this.db.chatUser.findMany({
+      where: { aggregateChatUserId: null }
+    })
     return users.map(user => user.id)
   }
 
@@ -172,26 +174,58 @@ export default class ChannelStore extends ContextClass {
     return channel.infoHistory[0].name
   }
 
-  /** Gets the userId that is associated with the channel that has the given external id. Throws if none is found. */
-  public async getUserId (externalId: string): Promise<number> {
-    const channel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalId } })
-    if (channel != null) {
-      return channel.userId
+  /** Gets the primary userId that is associated with the channel that has the given external id. Throws if none is found. */
+  public async getPrimaryUserId (externalId: string): Promise<number> {
+    const youtubeChannel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalId } })
+    if (youtubeChannel != null) {
+      return await this.getPrimaryUserIdForUser(youtubeChannel.userId)
     }
 
     const twitchChannel = await this.db.twitchChannel.findUnique({ where: { twitchId: externalId } })
     if (twitchChannel != null) {
-      return twitchChannel.userId
+      return await this.getPrimaryUserIdForUser(twitchChannel.userId)
     }
 
     throw new Error('Cannot find user with external id ' + externalId)
   }
 
-  /** Throws if the user does not exist. */
+  /** Returns the channels associated with the chat user. The chat user can either be a default user, or aggregate user, but all channels connected directly or indirectly to the user will be returned.
+   * Throws if the user does not exist. */
   public async getUserOwnedChannels (userId: number): Promise<UserOwnedChannels> {
-    const result = await this.db.chatUser.findUnique({
-      where: { id: userId },
-      rejectOnNotFound: true,
+    const registeredUser = await this.db.registeredUser.findFirst({ where: { aggregateChatUserId: userId }})
+    const isAggregateUser = registeredUser != null
+
+    if (isAggregateUser) {
+      // get all default users attached to this aggregate user
+      return await this.getAggregateUserOwnedChannels(userId)
+    } else {
+      const defaultUser = await this.db.chatUser.findUnique({
+        where: { id: userId },
+        rejectOnNotFound: true,
+        include: {
+          youtubeChannels: { select: { id: true }},
+          twitchChannels: { select: { id: true }}
+        },
+      })
+
+      if (defaultUser.aggregateChatUserId == null) {
+        // this is a standalone default user
+        return {
+          userId: defaultUser.id,
+          youtubeChannels: defaultUser.youtubeChannels.map(c => c.id),
+          twitchChannels: defaultUser.twitchChannels.map(c => c.id)
+        }
+      } else {
+        // this default user is connected to an aggregate user
+        return await this.getAggregateUserOwnedChannels(defaultUser.aggregateChatUserId)
+      }
+    }
+  }
+
+  /** Returns all user channels connected to this aggregate user. */
+  private async getAggregateUserOwnedChannels (aggregateChatUserId: number): Promise<UserOwnedChannels> {
+    const defaultUsers = await this.db.chatUser.findMany({
+      where: { aggregateChatUserId: aggregateChatUserId },
       include: {
         youtubeChannels: { select: { id: true }},
         twitchChannels: { select: { id: true }}
@@ -199,9 +233,28 @@ export default class ChannelStore extends ContextClass {
     })
 
     return {
-      userId: result.id,
-      youtubeChannels: result.youtubeChannels.map(c => c.id),
-      twitchChannels: result.twitchChannels.map(c => c.id)
+      userId: aggregateChatUserId,
+      youtubeChannels: defaultUsers.flatMap(u => u.youtubeChannels.map(c => c.id)),
+      twitchChannels: defaultUsers.flatMap(u => u.twitchChannels.map(c => c.id))
+    }
+  }
+
+  /** Returns the same userId if the chat user is a default user, otherwise returns the id of the attached aggregate user. */
+  private async getPrimaryUserIdForUser (userId: number) {
+    const chatUser = await this.db.chatUser.findFirst({
+      where: { id: userId },
+      include: { registeredUser: true, aggregateChatUser: true }
+    })
+
+    if (chatUser!.registeredUser != null) {
+      // is an aggregate user
+      return userId
+    } else if (chatUser!.aggregateChatUserId != null) {
+      // is linked to an aggreate user
+      return chatUser!.aggregateChatUserId
+    } else {
+      // is a default user
+      return userId
     }
   }
 

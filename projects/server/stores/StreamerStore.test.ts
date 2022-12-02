@@ -18,9 +18,10 @@ export default () => {
     streamerStore = new StreamerStore(new Dependencies({ dbProvider }))
     db = dbProvider.get()
 
+    await db.chatUser.createMany({ data: [{}, {}]})
     await db.registeredUser.createMany({ data: [
-      { username: username1, hashedPassword: '123' },
-      { username: username2, hashedPassword: '123' }
+      { username: username1, hashedPassword: '123', aggregateChatUserId: 1 },
+      { username: username2, hashedPassword: '123', aggregateChatUserId: 2 }
     ]})
 
   }, DB_TEST_TIMEOUT)

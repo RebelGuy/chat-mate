@@ -33,7 +33,10 @@ export default class AccountStore extends ContextClass {
     try {
       await this.db.registeredUser.create({ data: {
         username: registeredUser.username,
-        hashedPassword: hashedPassword
+        hashedPassword: hashedPassword,
+
+        // create a new aggregate chat user
+        aggregateChatUser: { create: {}}
       }})
     } catch (e: any) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -68,6 +71,33 @@ export default class AccountStore extends ContextClass {
     return token
   }
 
+  /** Returns all chat user ids, including the given id, that are connected to the given id. The first id is always the primary id, i.e. aggregate user, if it exists. */
+  public async getConnectedChatUserIds (chatUserId: number): Promise<number[]> {
+    const chatUser = await this.db.chatUser.findFirst({
+      where: { id: chatUserId },
+      include: { registeredUser: true, aggregateChatUser: true }
+    })
+
+    if (chatUser!.registeredUser != null) {
+      // is an aggregate user
+      const defaultUsers = await this.db.chatUser.findMany({
+        where: { aggregateChatUserId: chatUserId }
+      })
+      return [chatUserId, ...defaultUsers.map(u => u.id)]
+
+    } else if (chatUser!.aggregateChatUserId != null) {
+      // is linked to an aggreate user
+      const defaultUsers = await this.db.chatUser.findMany({
+        where: { aggregateChatUserId: chatUser!.aggregateChatUserId }
+      })
+      return [chatUser!.aggregateChatUserId, ...defaultUsers.map(u => u.id)]
+
+    } else {
+      // is a default user
+      return [chatUserId]
+    }
+  }
+
   public async getRegisteredUsersFromIds (registeredUserIds: number[]): Promise<RegisteredUser[]> {
     return await this.db.registeredUser.findMany({
       where: { id: { in: registeredUserIds } }
@@ -83,9 +113,9 @@ export default class AccountStore extends ContextClass {
     return result?.registeredUser ?? null
   }
 
-  public async getRegisteredUserFromChatUser (chatUserId: number): Promise<RegisteredUser | null> {
+  public async getRegisteredUserFromAggregateUser (aggregateChatUserId: number): Promise<RegisteredUser | null> {
     return await this.db.registeredUser.findFirst({
-      where: { chatUserId }
+      where: { aggregateChatUserId }
     })
   }
 }

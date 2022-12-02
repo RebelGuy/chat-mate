@@ -47,8 +47,8 @@ export default () => {
     const channelId1 = 1
     const channelId2 = 2
     await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2}] })
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})
 
     // the streamerId in these chatMessage is not actually used, as experience transactions have their own streamerId attached to it.
     // some duplication of data is unavoidable, but there is no reason why the ids should ever be inconsistent so I don't think this is an issue.
@@ -122,7 +122,7 @@ export default () => {
     test('correctly adds experience', async () => {
       const streamerId = 2
       const adminRegisteredUserId = 1
-      await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
+      await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
       await experienceStore.addManualExperience(streamerId, user1, adminRegisteredUserId, -200, 'This is a test')
 

@@ -42,7 +42,7 @@ describe(nameof(StreamerService, 'approveStreamerApplication'), () => {
     const registeredUserId = 58
     const streamer = cast<Streamer>({ id: 4, registeredUserId: registeredUserId })
     const chatUserId = 28
-    const registeredUser = cast<RegisteredUser>({ id: registeredUserId, chatUserId: chatUserId })
+    const registeredUser = cast<RegisteredUser>({ id: registeredUserId, aggregateChatUserId: chatUserId })
     const loggedInRegisteredUserId = 2
     mockStreamerStore.closeStreamerApplication.calledWith(expectObject<CloseApplicationArgs>({ id: streamerApplicationId, message, approved: true })).mockResolvedValue(closedApplication)
     mockStreamerStore.addStreamer.calledWith(closedApplication.registeredUserId).mockResolvedValue(streamer)

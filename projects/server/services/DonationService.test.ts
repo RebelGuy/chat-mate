@@ -13,6 +13,7 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import { PartialChatMessage } from '@rebel/server/models/chat'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import AccountStore from '@rebel/server/stores/AccountStore'
 
 const streamerId = 3
 
@@ -23,6 +24,7 @@ let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let mockEmojiService: MockProxy<EmojiService>
 let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
 let mockStreamerStore: MockProxy<StreamerStore>
+let mockAccountStore: MockProxy<AccountStore>
 let donationService: DonationService
 
 beforeEach(() => {
@@ -33,6 +35,7 @@ beforeEach(() => {
   mockEmojiService = mock()
   mockStreamlabsProxyService = mock()
   mockStreamerStore = mock()
+  mockAccountStore = mock()
 
   donationService = new DonationService(new Dependencies({
     donationStore: mockDonationStore,
@@ -41,7 +44,8 @@ beforeEach(() => {
     dateTimeHelpers: mockDateTimeHelpers,
     emojiService: mockEmojiService,
     streamlabsProxyService: mockStreamlabsProxyService,
-    streamerStore: mockStreamerStore
+    streamerStore: mockStreamerStore,
+    accountStore: mockAccountStore
   }))
 })
 
@@ -112,9 +116,11 @@ describe(nameof(DonationService, 'addDonation'), () => {
 })
 
 describe(nameof(DonationService, 'linkUserToDonation'), () => {
-  test('Links the user to the donation and adds/extends the donation user-ranks that the user is eligible for', async () => {
+  test('Links the primary user to the donation and adds/extends the donation user-ranks that the user is eligible for', async () => {
     const donationId = 2
     const userId = 2
+    const primaryUserId = 3
+    const connectedUserIds = [primaryUserId, userId]
     const time = new Date()
     const linkedDonation = cast<Donation>({ })
     const allDonations = cast<Donation[]>([
@@ -126,8 +132,9 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
     // user is currently donator, and eligible for donator and supporter
     const ranks = cast<UserRankWithRelations[]>([{ id: 20, rank: { name: 'donator' } }])
     mockDateTimeHelpers.now.calledWith().mockReturnValue(time)
-    mockDonationStore.getDonationsByUserId.calledWith(streamerId, userId).mockResolvedValue(allDonations)
-    mockRankStore.getUserRanks.calledWith(expectArray<number>([userId]), streamerId).mockResolvedValue([{ userId, ranks }])
+    mockAccountStore.getConnectedChatUserIds.calledWith(userId).mockResolvedValue(connectedUserIds)
+    mockDonationStore.getDonationsByUserIds.calledWith(streamerId, expectArray<number>(connectedUserIds)).mockResolvedValue(allDonations)
+    mockRankStore.getUserRanks.calledWith(expectArray<number>([primaryUserId]), streamerId).mockResolvedValue([{ userId: primaryUserId, ranks }])
     mockDonationHelpers.isEligibleForDonator
       .calledWith(expectArray<DonationAmount>([[data.time1, 1], [data.time2, 2], [data.time3, 3]]), any())
       .mockReturnValue(true)
@@ -140,13 +147,13 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
 
     await donationService.linkUserToDonation(donationId, userId, streamerId)
 
-    expect(mockDonationStore.linkUserToDonation).toBeCalledWith(donationId, userId, time)
+    expect(mockDonationStore.linkUserToDonation).toBeCalledWith(donationId, primaryUserId, time)
 
     // only two rank changes should have been made:
     const providedUpdateArgs = single(mockRankStore.updateRankExpiration.mock.calls)
     expect(providedUpdateArgs).toEqual<typeof providedUpdateArgs>([ranks[0].id, expect.anything()])
     const providedCreateArgs = single2(mockRankStore.addUserRank.mock.calls)
-    expect(providedCreateArgs).toEqual(expectObject<AddUserRankArgs>({ rank: 'supporter', time: time }))
+    expect(providedCreateArgs).toEqual(expectObject<AddUserRankArgs>({ rank: 'supporter', time: time, chatUserId: primaryUserId }))
     expect(mockRankStore.removeUserRank).not.toHaveBeenCalled()
   })
 })
@@ -190,6 +197,8 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
   test('Unlinks the user from the donation, and calls dependencies to remove the Supporter rank', async () => {
     const donationId = 2
     const userId = 2
+    const primaryUserId = 3
+    const connectedUserIds = [primaryUserId, userId]
     const unlinkedDonation = cast<Donation>({ })
     const allDonations = cast<Donation[]>([
       { time: data.time1, amount: 1 },
@@ -203,8 +212,9 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
       { id: 21, rank: { name: 'supporter' } }
     ])
     mockDonationStore.unlinkUserFromDonation.calledWith(donationId).mockResolvedValue(userId)
-    mockDonationStore.getDonationsByUserId.calledWith(streamerId, userId).mockResolvedValue(allDonations)
-    mockRankStore.getUserRanks.calledWith(expectArray<number>([userId]), streamerId).mockResolvedValue([{ userId, ranks }])
+    mockAccountStore.getConnectedChatUserIds.calledWith(userId).mockResolvedValue(connectedUserIds)
+    mockDonationStore.getDonationsByUserIds.calledWith(streamerId, expectArray<number>(connectedUserIds)).mockResolvedValue(allDonations)
+    mockRankStore.getUserRanks.calledWith(expectArray<number>([primaryUserId]), streamerId).mockResolvedValue([{ userId: primaryUserId, ranks }])
     mockDonationHelpers.isEligibleForDonator
       .calledWith(expectArray<DonationAmount>([[data.time1, 1], [data.time2, 2], [data.time3, 3]]), any())
       .mockReturnValue(true)
@@ -219,7 +229,7 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
 
     // only one rank change should have been made:
     const providedRemoveArgs = single2(mockRankStore.removeUserRank.mock.calls)
-    expect(providedRemoveArgs).toEqual(expectObject<RemoveUserRankArgs>({ rank: 'supporter' }))
+    expect(providedRemoveArgs).toEqual(expectObject<RemoveUserRankArgs>({ rank: 'supporter', chatUserId: primaryUserId }))
     expect(mockRankStore.addUserRank).not.toHaveBeenCalled()
     expect(mockRankStore.updateRankExpiration).not.toHaveBeenCalled()
   })

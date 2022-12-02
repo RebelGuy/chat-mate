@@ -87,8 +87,8 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     // set up the channel name -> chat user -> registered user -> streamer conversion
     const chatUserId = 2
     const registeredUserId = 3
-    mockChannelStore.getUserId.calledWith(channelId).mockResolvedValue(chatUserId)
-    mockAccountStore.getRegisteredUserFromChatUser.calledWith(chatUserId).mockResolvedValue(cast<RegisteredUser>({ id: registeredUserId }))
+    mockChannelStore.getPrimaryUserId.calledWith(channelId).mockResolvedValue(chatUserId)
+    mockAccountStore.getRegisteredUserFromAggregateUser.calledWith(chatUserId).mockResolvedValue(cast<RegisteredUser>({ id: registeredUserId }))
     mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue(cast<Streamer>({ id: streamerId }))
 
     await twurpleService.initialise()

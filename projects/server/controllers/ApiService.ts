@@ -104,13 +104,7 @@ export default class ApiService extends ContextClass {
       throw new Error('Context user must be set')
     }
 
-    // registered user isn't linked to a chat user
-    if (user.chatUserId == null) {
-      this.ranks = []
-      return
-    }
-
-    const userRanks = single(await this.rankStore.getUserRanks([user.chatUserId!], this.streamerId))
+    const userRanks = single(await this.rankStore.getUserRanks([user.aggregateChatUserId], this.streamerId))
     this.ranks = userRanks.ranks.map(r => r.rank.name)
   }
 

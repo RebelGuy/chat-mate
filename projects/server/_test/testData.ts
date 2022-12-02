@@ -42,10 +42,6 @@ export const livestream3: Livestream = {
   type: 'publicLivestream'
 }
 
-export const user1: ChatUser = { id: 1 }
-export const user2: ChatUser = { id: 2 }
-export const user3: ChatUser = { id: 3 }
-
 export const youtubeChannel1 = 'channel1'
 export const author1: Author = {
   attributes: { isModerator: true, isOwner: false, isVerified: false },

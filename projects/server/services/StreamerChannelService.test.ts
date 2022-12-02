@@ -29,7 +29,7 @@ beforeEach(() => {
 describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
   test('Returns the Twitch channel names of all streamers', async () => {
     const chatUser1 = cast<ChatUser>({ id: 2 })
-    const registeredUser1 = cast<RegisteredUser>({ id: 3, chatUserId: chatUser1.id })
+    const registeredUser1 = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser1.id })
     const streamer1 = cast<Streamer>({ id: 4, registeredUserId: registeredUser1.id })
     const twitchChannel = 5
     const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel] })
@@ -44,31 +44,13 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
 
     expect(result).toEqual<TwitchStreamerChannel[]>([{ streamerId: streamer1.id, twitchChannelName: channelName }])
   })
-
-  test('Ignores streamers that do not have a linked chat user or Twitch channel', async () => {
-    const chatUser1 = cast<ChatUser>({ id: 2 })
-    const registeredUser1 = cast<RegisteredUser>({ id: 3, chatUserId: chatUser1.id })
-    const registeredUser2 = cast<RegisteredUser>({ id: 4, chatUserId: null })
-    const streamer1 = cast<Streamer>({ id: 4, registeredUserId: registeredUser1.id })
-    const streamer2 = cast<Streamer>({ id: 5, registeredUserId: registeredUser2.id })
-    const channels = cast<UserOwnedChannels>({ twitchChannels: [] })
-
-    mockStreamerStore.getStreamers.calledWith().mockResolvedValue([streamer1, streamer2])
-    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser1.id])).mockResolvedValue([registeredUser1])
-    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser2.id])).mockResolvedValue([registeredUser2])
-    mockChannelStore.getUserOwnedChannels.calledWith(chatUser1.id).mockResolvedValue(channels)
-
-    const result = await streamerChannelService.getAllTwitchStreamerChannels()
-
-    expect(result).toEqual<TwitchStreamerChannel[]>([])
-  })
 })
 
 describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
   test(`Returns the streamer's linked Twitch channel`, async () => {
     const streamerId = 50
     const chatUser = cast<ChatUser>({ id: 2 })
-    const registeredUser = cast<RegisteredUser>({ id: 3, chatUserId: chatUser.id })
+    const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
     const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
     const twitchChannel = 5
     const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel] })
@@ -88,7 +70,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
   test('Returns the first channel if a streamer has multiple linked Twitch channels', async () => {
     const streamerId = 50
     const chatUser = cast<ChatUser>({ id: 2 })
-    const registeredUser = cast<RegisteredUser>({ id: 3, chatUserId: chatUser.id })
+    const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
     const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
     const twitchChannel1 = 5
     const twitchChannel2 = 6
@@ -108,7 +90,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
   test('Returns null if the streamer does not have a linked Twitch channel', async () => {
     const streamerId = 50
     const chatUser = cast<ChatUser>({ id: 2 })
-    const registeredUser = cast<RegisteredUser>({ id: 3, chatUserId: chatUser.id })
+    const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
     const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
     const channels = cast<UserOwnedChannels>({ twitchChannels: [] })
 

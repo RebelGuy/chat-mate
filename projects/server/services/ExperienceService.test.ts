@@ -17,6 +17,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { DeepPartial } from '@rebel/server/types'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
+import AccountStore from '@rebel/server/stores/AccountStore'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -26,6 +27,7 @@ let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let mockChannelService: MockProxy<ChannelService>
 let mockPunishmentService: MockProxy<PunishmentService>
+let mockAccountStore: MockProxy<AccountStore>
 let experienceService: ExperienceService
 
 beforeEach(() => {
@@ -37,6 +39,7 @@ beforeEach(() => {
   mockChatStore = mock<ChatStore>()
   mockChannelService = mock<ChannelService>()
   mockPunishmentService = mock<PunishmentService>()
+  mockAccountStore = mock<AccountStore>()
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -46,7 +49,8 @@ beforeEach(() => {
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
     channelService: mockChannelService,
-    punishmentService: mockPunishmentService
+    punishmentService: mockPunishmentService,
+    accountStore: mockAccountStore
   }))
 })
 
@@ -92,7 +96,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     })
     const userId = 5
     const streamerId = 2
-    mockChannelStore.getUserId.calledWith(data.author1.channelId).mockResolvedValue(userId)
+    mockChannelStore.getPrimaryUserId.calledWith(data.author1.channelId).mockResolvedValue(userId)
     mockPunishmentService.isUserPunished.calledWith(userId, streamerId).mockResolvedValue(true)
 
     await experienceService.addExperienceForChat(chatItem, streamerId)
@@ -101,7 +105,8 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
   })
 
   test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, does not notify ViewershipStore', async () => {
-    const userId = 1
+    const primaryUserId = 3
+    const connectedUserIds = [3, 5]
     const streamerId = 2
     const chatItem: ChatItem = {
       id: 'chat1',
@@ -125,7 +130,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       * experienceData.messageQualityMultiplier
     const msgQuality = asRange(0.2, 0, 2)
     const prevData: ChatExperience = {
-      user: { id: userId },
+      user: { id: primaryUserId, aggregateChatUserId: null, linkedAt: null },
       delta: 100,
       time: data.livestream3.start!,
       experienceDataChatMessage: {
@@ -139,25 +144,26 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     }
 
     // cheating a little here since we don't want to write out all properties
-    const chatItems: Partial<ChatItemWithRelations>[] = [{ userId }]
+    const chatItems: Partial<ChatItemWithRelations>[] = [{ userId: connectedUserIds[1] }]
 
     mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(data.livestream3)
-    mockChannelStore.getUserId.calledWith(chatItem.author.channelId).mockResolvedValue(userId)
-    mockPunishmentService.isUserPunished.calledWith(userId, streamerId).mockResolvedValue(false)
-    mockExperienceStore.getPreviousChatExperience.calledWith(streamerId, userId).mockResolvedValue(prevData)
-    mockViewershipStore.getLivestreamViewership.calledWith(streamerId, userId).mockResolvedValue([
-      { ...data.livestream1, userId: userId, viewed: true },
-      { ...data.livestream2, userId: userId, viewed: false },
-      { ...data.livestream2, userId: userId, viewed: false },
-      { ...data.livestream2, userId: userId, viewed: true },
-      { ...data.livestream3, userId: userId, viewed: true }
+    mockChannelStore.getPrimaryUserId.calledWith(chatItem.author.channelId).mockResolvedValue(primaryUserId)
+    mockAccountStore.getConnectedChatUserIds.calledWith(primaryUserId).mockResolvedValue(connectedUserIds)
+    mockPunishmentService.isUserPunished.calledWith(primaryUserId, streamerId).mockResolvedValue(false)
+    mockExperienceStore.getPreviousChatExperience.calledWith(streamerId, primaryUserId).mockResolvedValue(prevData)
+    mockViewershipStore.getLivestreamViewership.calledWith(streamerId, connectedUserIds).mockResolvedValue([
+      { ...data.livestream1, viewed: true },
+      { ...data.livestream2, viewed: false },
+      { ...data.livestream2, viewed: false },
+      { ...data.livestream2, viewed: true },
+      { ...data.livestream3, viewed: true }
     ]) // -> walking viewership score: 2
-    mockViewershipStore.getLivestreamParticipation.calledWith(streamerId, userId).mockResolvedValue([
-      { ...data.livestream1, userId: userId, participated: true },
-      { ...data.livestream2, userId: userId, participated: true },
-      { ...data.livestream2, userId: userId, participated: false },
-      { ...data.livestream2, userId: userId, participated: true },
-      { ...data.livestream3, userId: userId, participated: false }
+    mockViewershipStore.getLivestreamParticipation.calledWith(streamerId, connectedUserIds).mockResolvedValue([
+      { ...data.livestream1, participated: true },
+      { ...data.livestream2, participated: true },
+      { ...data.livestream2, participated: false },
+      { ...data.livestream2, participated: true },
+      { ...data.livestream3, participated: false }
     ]) // -> walking participation score: 1
     mockExperienceHelpers.calculateChatMessageQuality.calledWith(chatItem).mockReturnValue(msgQuality)
     mockExperienceHelpers.calculateParticipationMultiplier.calledWith(asGte(1, 0)).mockReturnValue(asGte(experienceData.participationStreakMultiplier, 1))
@@ -173,7 +179,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 
     const storeData = single(mockExperienceStore.addChatExperience.mock.calls)
     const expectedStoreData: typeof storeData = [
-      streamerId, userId, chatItem.timestamp, expectedExperienceToAdd, experienceData
+      streamerId, primaryUserId, chatItem.timestamp, expectedExperienceToAdd, experienceData
     ]
     expect(storeData[0]).toEqual(expectedStoreData[0])
     expect(storeData[1]).toEqual(expectedStoreData[1])

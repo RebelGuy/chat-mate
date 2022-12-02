@@ -14,6 +14,7 @@ import { sortBy, zip, zipOnStrict } from '@rebel/server/util/arrays'
 import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 import { single } from '@rebel/server/util/arrays'
+import AccountStore from '@rebel/server/stores/AccountStore'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
@@ -49,6 +50,7 @@ type Deps = Dependencies<{
   chatStore: ChatStore
   channelService: ChannelService
   punishmentService: PunishmentService
+  accountStore: AccountStore
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -60,6 +62,7 @@ export default class ExperienceService extends ContextClass {
   private readonly chatStore: ChatStore
   private readonly channelService: ChannelService
   private readonly punishmentService: PunishmentService
+  private readonly accountStore: AccountStore
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -73,6 +76,7 @@ export default class ExperienceService extends ContextClass {
     this.chatStore = deps.resolve('chatStore')
     this.channelService = deps.resolve('channelService')
     this.punishmentService = deps.resolve('punishmentService')
+    this.accountStore = deps.resolve('accountStore')
   }
 
   /** Adds experience only for chat messages sent during the livestream for unpunished users.
@@ -91,17 +95,18 @@ export default class ExperienceService extends ContextClass {
     }
 
     const externalId = getExternalId(chatItem)
-    const userId = await this.channelStore.getUserId(externalId)
-    const isPunished = await this.punishmentService.isUserPunished(userId, streamerId)
+    const primaryUserId = await this.channelStore.getPrimaryUserId(externalId)
+    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(primaryUserId)
+    const isPunished = await this.punishmentService.isUserPunished(primaryUserId, streamerId)
     if (isPunished) {
       return
     }
 
-    const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, userId)
-    const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, userId)
-    const spamMultiplier = await this.getSpamMultiplier(livestream.id, chatItem, streamerId, userId)
+    const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, connectedUserIds)
+    const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, connectedUserIds)
+    const spamMultiplier = await this.getSpamMultiplier(livestream.id, chatItem, streamerId, primaryUserId)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
-    const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), userId)
+    const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
     const data: ChatExperienceData = {
       viewershipStreakMultiplier,
       participationStreakMultiplier,
@@ -117,7 +122,7 @@ export default class ExperienceService extends ContextClass {
     // repetitive messages are anything but high quality, and thus receive a bigger punishment.
     const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
     const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
-    await this.experienceStore.addChatExperience(streamerId, userId, chatItem.timestamp, xpAmount, data)
+    await this.experienceStore.addChatExperience(streamerId, primaryUserId, chatItem.timestamp, xpAmount, data)
   }
 
   /** Sorted in ascending order. */
@@ -135,6 +140,7 @@ export default class ExperienceService extends ContextClass {
     }))
   }
 
+  // todo: this won't work if there is a mix between aggregate/default users that are linked, due to duplicate results. maybe we need a type (branded number) "PrimaryUserId" that ensures this doesn't happen
   /** Sorted in descending order by experience. */
   public async getLevels (streamerId: number, userIds: number[]): Promise<UserLevel[]> {
     const userExperiences = await this.experienceStore.getExperience(streamerId, userIds)
@@ -237,8 +243,8 @@ export default class ExperienceService extends ContextClass {
     return single(updatedLevel)
   }
 
-  private async getViewershipMultiplier (streamerId: number, userId: number): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamViewership(streamerId, userId)
+  private async getViewershipMultiplier (streamerId: number, userIds: number[]): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamViewership(streamerId, userIds)
 
     const viewershipScore = calculateWalkingScore(
       streams,
@@ -252,8 +258,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateViewershipMultiplier(viewershipScore)
   }
 
-  private async getParticipationMultiplier (streamerId: number, userId: number): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamParticipation(streamerId, userId)
+  private async getParticipationMultiplier (streamerId: number, userIds: number[]): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamParticipation(streamerId, userIds)
 
     const participationScore = calculateWalkingScore(
       streams,
@@ -267,8 +273,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
 
-  private async getSpamMultiplier (currentLivestreamId: number, chatItem: ChatItem, streamerId: number, userId: number): Promise<SpamMult> {
-    const prev = await this.experienceStore.getPreviousChatExperience(streamerId, userId)
+  private async getSpamMultiplier (currentLivestreamId: number, chatItem: ChatItem, streamerId: number, primaryUserId: number): Promise<SpamMult> {
+    const prev = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId)
     if (prev == null || prev.experienceDataChatMessage.chatMessage.livestreamId !== currentLivestreamId) {
       // always start with a multiplier of 1 at the start of the livestream
       return 1 as SpamMult
@@ -285,8 +291,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateQualityMultiplier(messageQuality)
   }
 
-  private async getMessageRepetitionPenalty (streamerId: number, currentTimestamp: number, userId: number): Promise<RepetitionPenalty> {
+  private async getMessageRepetitionPenalty (streamerId: number, currentTimestamp: number, userIds: number[]): Promise<RepetitionPenalty> {
     const chat = await this.chatStore.getChatSince(streamerId, currentTimestamp - 60000)
-    return this.experienceHelpers.calculateRepetitionPenalty(currentTimestamp, chat.filter(c => c.userId === userId))
+    return this.experienceHelpers.calculateRepetitionPenalty(currentTimestamp, chat.filter(c => c.userId != null && userIds.includes(c.userId)))
   }
 }

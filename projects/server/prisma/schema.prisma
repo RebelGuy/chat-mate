@@ -86,7 +86,14 @@ model LiveViewers {
 model ChatUser {
   id Int @id @default(autoincrement())
 
-  // the channels associated with the user
+  // the time at which the user was linked to an aggregate user, if any
+  linkedAt DateTime?
+
+  /// Never defined for aggregate chat users, and possibly defined for normal chat users.
+  aggregateChatUserId Int?
+  aggregateChatUser   ChatUser? @relation(name: "aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "chat_user_aggregateChatUserId_fkey")
+
+  // the channels associated with the user. Empty if this is an aggregate user
   youtubeChannels YoutubeChannel[]
   twitchChannels  TwitchChannel[]
 
@@ -101,6 +108,9 @@ model ChatUser {
   donationLinks              DonationLink[]
   registeredUser             RegisteredUser?
 
+  /// The chat users connected to this aggregate user. Empty if this is not an aggregate user.
+  connectedChatUsers ChatUser[] @relation("aggregateChatUser")
+
   @@map("chat_user")
 }
 
@@ -111,8 +121,8 @@ model RegisteredUser {
   registeredAt   DateTime @default(now())
   hashedPassword String   @db.VarChar(64)
 
-  chatUserId Int? // unique
-  chatUser   ChatUser? @relation(fields: [chatUserId], references: [id], map: "registered_user_chatUserId_fkey")
+  aggregateChatUserId Int // unique
+  aggregateChatUser   ChatUser @relation(fields: [aggregateChatUserId], references: [id], map: "registered_user_aggregateChatUserId_fkey")
 
   loginTokens           LoginToken[]
   streamer              Streamer?
@@ -120,7 +130,7 @@ model RegisteredUser {
   administeredUserRanks UserRank[]            @relation("user_rank_assignedByRegisteredUserId")
   revokedUserRanks      UserRank[]            @relation("user_rank_revokedByRegisteredUserId")
 
-  @@unique([chatUserId], map: "registered_user_chatUserId_fkey")
+  @@unique([aggregateChatUserId], map: "registered_user_aggregateChatUserId_fkey")
   @@unique([username], map: "registered_user_username_key")
   @@map("registered_user")
 }

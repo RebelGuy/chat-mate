@@ -25,13 +25,16 @@ export default () => {
       await accountStore.addRegisteredUser({ username: username, password: 'test' })
 
       await expectRowCount(db.registeredUser).toBe(1)
-      const storedUser = await db.registeredUser.findFirst()
-      expect(storedUser!.username).toBe(username)
+      await expectRowCount(db.chatUser).toBe(1)
+      const storedRegisteredUser = await db.registeredUser.findFirst()
+      expect(storedRegisteredUser!.username).toBe(username)
+      const storedAggregateUser = await db.chatUser.findFirst()
+      expect(storedRegisteredUser!.aggregateChatUserId).toBe(storedAggregateUser!.id)
     })
 
     test('Throws if username already exists', async () => {
       const username = 'username'
-      await db.registeredUser.create({ data: { username: username, hashedPassword: 'test' }})
+      await db.registeredUser.create({ data: { username: username, hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
       await expect(() => accountStore.addRegisteredUser({ username: username, password: 'test' })).rejects.toThrowError(UsernameAlreadyExistsError)
     })
@@ -41,7 +44,7 @@ export default () => {
     test('Returns true if user exists and password matches', async () => {
       const username = 'username'
       const password = 'test'
-      await db.registeredUser.create({ data: { username: username, hashedPassword: hashString(username + password) }})
+      await db.registeredUser.create({ data: { username: username, hashedPassword: hashString(username + password), aggregateChatUser: { create: {}} }})
 
       const result = await accountStore.checkPassword(username, password)
 
@@ -50,7 +53,7 @@ export default () => {
 
     test('Returns false if user exists but password does not match', async () => {
       const username = 'username'
-      await db.registeredUser.create({ data: { username: username, hashedPassword: 'test' }})
+      await db.registeredUser.create({ data: { username: username, hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
       const result = await accountStore.checkPassword(username, 'test')
 
@@ -66,9 +69,10 @@ export default () => {
 
   describe(nameof(AccountStore, 'clearLoginTokens'), () => {
     test(`Clears all of the user's login tokens`, async () => {
+      await db.chatUser.createMany({ data: [{}, {}]})
       await db.registeredUser.createMany({ data: [
-        { username: 'user1', hashedPassword: 'pass1' },
-        { username: 'user2', hashedPassword: 'pass2' }
+        { username: 'user1', hashedPassword: 'pass1', aggregateChatUserId: 1 },
+        { username: 'user2', hashedPassword: 'pass2', aggregateChatUserId: 2 }
       ]})
       await db.loginToken.createMany({ data: [
         { registeredUserId: 1, token: 'a' },
@@ -85,7 +89,7 @@ export default () => {
   describe(nameof(AccountStore, 'createLoginToken'), () => {
     test('Creates a new token for the given user', async () => {
       const username = 'test'
-      const registeredUser = await db.registeredUser.create({ data: { username: username, hashedPassword: 'test' }})
+      const registeredUser = await db.registeredUser.create({ data: { username: username, hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
       const result = await accountStore.createLoginToken(username)
 
@@ -98,10 +102,53 @@ export default () => {
     })
   })
 
+  describe(nameof(AccountStore, 'getConnectedChatUserIds'), () => {
+    beforeEach(async () => {
+      // user 1: aggregate user
+      // user 2: aggregate user
+      // user 3: aggregate user
+      // user 4: default, connected to aggregate user 1
+      // user 5: default, not connected
+      // user 6: default, connected to aggregate user 1
+      // user 7: default, connected to aggregate user 2
+      await db.chatUser.createMany({ data: [{}, {}, {}]})
+      await db.registeredUser.createMany({ data: [
+        { username: 'user1', hashedPassword: 'pass1', aggregateChatUserId: 1 },
+        { username: 'user2', hashedPassword: 'pass2', aggregateChatUserId: 2 },
+        { username: 'user3', hashedPassword: 'pass3', aggregateChatUserId: 3 }
+      ]})
+      await db.chatUser.createMany({ data: [{ aggregateChatUserId: 1 }, {}, { aggregateChatUserId: 1 }, { aggregateChatUserId: 2 }]})
+    })
+
+    test('Unconnected default user returns only its own id', async () => {
+      const result = await accountStore.getConnectedChatUserIds(5)
+
+      expect(result).toEqual([5])
+    })
+
+    test('Connected default user returns its own id, the aggregate user, and any other connected default users', async () => {
+      const result = await accountStore.getConnectedChatUserIds(4)
+
+      expect(result).toEqual([1, 4, 6])
+    })
+
+    test('Aggregate user with connections returns its own id and all connected default users', async () => {
+      const result = await accountStore.getConnectedChatUserIds(1)
+
+      expect(result).toEqual([1, 4, 6])
+    })
+
+    test('Aggregate user without connections returns only its own id', async () => {
+      const result = await accountStore.getConnectedChatUserIds(3)
+
+      expect(result).toEqual([3])
+    })
+  })
+
   describe(nameof(AccountStore, 'getRegisteredUsersFromIds'), () => {
     test('Returns known registered users for the given ids', async () => {
-      const registeredUser1 = await db.registeredUser.create({ data: { username: 'test1', hashedPassword: 'test1' }})
-      const registeredUser2 = await db.registeredUser.create({ data: { username: 'test2', hashedPassword: 'test2' }})
+      const registeredUser1 = await db.registeredUser.create({ data: { username: 'test1', hashedPassword: 'test1', aggregateChatUser: { create: {}} }})
+      const registeredUser2 = await db.registeredUser.create({ data: { username: 'test2', hashedPassword: 'test2', aggregateChatUser: { create: {}} }})
 
       const result = await accountStore.getRegisteredUsersFromIds([registeredUser1.id, 5, registeredUser2.id])
 
@@ -109,21 +156,21 @@ export default () => {
     })
   })
 
-  describe(nameof(AccountStore, 'getRegisteredUserFromChatUser'), () => {
+  describe(nameof(AccountStore, 'getRegisteredUserFromAggregateUser'), () => {
     test('Returns registered user for the given chat user id', async () => {
       const registeredUser = await db.registeredUser.create({ data: {
         username: 'test',
         hashedPassword: 'test',
-        chatUser: { create: {} }
+        aggregateChatUser: { create: {} }
       }})
 
-      const result = await accountStore.getRegisteredUserFromChatUser(registeredUser.chatUserId!)
+      const result = await accountStore.getRegisteredUserFromAggregateUser(registeredUser.aggregateChatUserId!)
 
       expect(result).toEqual(registeredUser)
     })
 
     test('Returns null if the given chat user is not associated with a registered user', async () => {
-      const result = await accountStore.getRegisteredUserFromChatUser(1)
+      const result = await accountStore.getRegisteredUserFromAggregateUser(1)
 
       expect(result).toBeNull()
     })
@@ -132,7 +179,7 @@ export default () => {
   describe(nameof(AccountStore, 'getRegisteredUserFromToken'), () => {
     test('Returns registered user for the given token', async () => {
       const token = 'token'
-      const registeredUser = await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
+      const registeredUser = await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test', aggregateChatUser: { create: {}} }})
       await db.loginToken.create({ data: { token, registeredUserId: registeredUser.id }})
 
       const result = await accountStore.getRegisteredUserFromToken(token)
