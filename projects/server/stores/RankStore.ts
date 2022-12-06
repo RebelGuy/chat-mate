@@ -131,7 +131,7 @@ export default class RankStore extends ContextClass {
     }
   }
 
-  /** Gets the active ranks for each of the provided users in the context of the streamer id. Note that global ranks are always returned, where applicable. */
+  /** Gets the active ranks for each of the provided users (exact users only - does not take into account links) in the context of the streamer id. Note that global ranks are always returned, where applicable. */
   public async getUserRanks (userIds: number[], streamerId: number | null): Promise<UserRanks[]> {
     const result = await this.db.userRank.findMany({
       where: {
@@ -146,6 +146,22 @@ export default class RankStore extends ContextClass {
       userId: userId,
       ranks: groups.find(g => g.group === userId)?.items ?? []
     }))
+  }
+
+  /** Gets the active ranks for the exact user, for all streamers and global ranks. Does not take into account user links. */
+  public async getAllUserRanks (userId: number): Promise<UserRanks> {
+    const result = await this.db.userRank.findMany({
+      where: {
+        ...activeUserRankFilter(),
+        userId: userId,
+      },
+      include: includeUserRankRelations
+    })
+
+    return {
+      userId: userId,
+      ranks: result.map(rawDataToUserRankWithRelations)
+    }
   }
 
   /** Gets the active user-ranks that are part of the given group in the context of the streamer id. Note that global ranks are always returned, where applicable. */
@@ -218,12 +234,15 @@ export default class RankStore extends ContextClass {
   /** Sets the expiration time for the given user-rank.
    * @throws {@link UserRankNotFoundError}: When the user-rank was not found.
   */
-  public async updateRankExpiration (rankId: number, newExpiration: Date | null) {
+  public async updateRankExpiration (rankId: number, newExpiration: Date | null): Promise<UserRankWithRelations> {
     try {
-      return await this.db.userRank.update({
+      const result = await this.db.userRank.update({
         where: { id: rankId },
-        data: { expirationTime: newExpiration }
+        data: { expirationTime: newExpiration },
+        include: includeUserRankRelations
       })
+
+      return rawDataToUserRankWithRelations(result)
     } catch (e: any) {
       // https://www.prisma.io/docs/reference/api-reference/error-reference#p2025
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
@@ -235,7 +254,10 @@ export default class RankStore extends ContextClass {
   }
 }
 
-const activeUserRankFilter = (streamerId: number | null) => Prisma.validator<Prisma.UserRankWhereInput>()({
+/** If `streamerId` is a number, matches only active ranks in the context of the streamer, and global ranks.
+ * If `streamerId` is null, matches only global ranks.
+ * If `streamerId` is `undefined`, will match ALL ranks across all streamers, and global ranks. */
+const activeUserRankFilter = (streamerId?: number | null) => Prisma.validator<Prisma.UserRankWhereInput>()({
   AND: [
     // the rank is not revoked
     { revokedTime: null },
@@ -250,7 +272,7 @@ const activeUserRankFilter = (streamerId: number | null) => Prisma.validator<Pri
     ]},
 
     // include global ranks and ranks for the given streamer context
-    { OR: [
+    { OR: streamerId === undefined ? [] : [
       { streamerId: null },
       { streamerId: streamerId }
     ]}

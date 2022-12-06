@@ -203,6 +203,57 @@ export type ChatItemWithRelations = (ChatMessage & {
   })[]
 })
 
+export function convertInternalMessagePartsToExternal (messageParts: ChatItemWithRelations['chatMessageParts']): PartialChatMessage[] {
+  const convertText = (text: ChatText): PartialTextChatMessage => ({
+    type: 'text',
+    text: text.text,
+    isBold: text.isBold,
+    isItalics: text.isItalics
+  })
+
+  const convertEmoji = (emoji: ChatEmoji): PartialEmojiChatMessage => ({
+    type: 'emoji',
+    emojiId: emoji.externalId,
+    image: {
+      url: emoji.imageUrl ?? '',
+      height: emoji.imageHeight ?? 0,
+      width: emoji.imageWidth ?? 0,
+    },
+    label: emoji.label ?? '',
+    name: emoji.name ?? ''
+  })
+
+  let result: PartialChatMessage[] = []
+
+  for (const part of messageParts) {
+    if (part.text != null) {
+      result.push(convertText(part.text))
+    } else if (part.emoji != null) {
+      result.push(convertEmoji(part.emoji))
+    } else if (part.customEmoji != null) {
+      result.push({
+        type: 'customEmoji',
+        customEmojiId: part.customEmoji.id,
+        customEmojiVersion: part.customEmoji.customEmojiVersion.id,
+        emoji: part.customEmoji.emoji == null ? null : convertEmoji(part.customEmoji.emoji),
+        text: part.customEmoji.text == null ? null : convertText(part.customEmoji.text)
+      })
+    } else if (part.cheer != null) {
+      result.push({
+        type: 'cheer',
+        amount: part.cheer.amount,
+        colour: part.cheer.colour,
+        imageUrl: part.cheer.imageUrl,
+        name: part.cheer.name
+      })
+    } else {
+      throw new Error('Chat message part has an invalid type')
+    }
+  }
+
+  return result
+}
+
 export function getUniqueEmojiId (emoji: YTEmoji): string {
   if (emoji.image.thumbnails[0].height && emoji.image.thumbnails[0].width && emoji.emojiId.length > 24) {
     // emojis with images already have a unique ids in the form UCkszU2WH9gy1mb0dV-11UJg/xxxxxxxxxxxxxxxxxxxxxx

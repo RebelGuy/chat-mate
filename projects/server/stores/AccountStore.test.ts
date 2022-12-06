@@ -193,4 +193,18 @@ export default () => {
       expect(result).toBeNull()
     })
   })
+
+  describe(nameof(AccountStore, 'linkUser'), () => {
+    test('Throws exception when the user is already linked', async () => {
+
+    })
+
+    test('Links the user when no other link to the aggregate user exists', async () => {
+
+    })
+
+    test('Links the user when another link to the aggregate user exists', async () => {
+      
+    })
+  })
 }

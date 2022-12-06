@@ -2,12 +2,12 @@ import { ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
-import { ChatItem, getExternalId } from '@rebel/server/models/chat'
+import { ChatItem, convertInternalMessagePartsToExternal, getExternalId, PartialChatMessage } from '@rebel/server/models/chat'
 import ChannelService, { getUserName } from '@rebel/server/services/ChannelService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import ExperienceStore, { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
+import ExperienceStore, { ChatExperienceData, ModifyChatExperienceArgs } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { sortBy, zip, zipOnStrict } from '@rebel/server/util/arrays'
@@ -15,6 +15,7 @@ import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, positiveInf
 import { calculateWalkingScore } from '@rebel/server/util/score'
 import { single } from '@rebel/server/util/arrays'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import RankHelpers from '@rebel/server/helpers/RankHelpers'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
@@ -51,6 +52,7 @@ type Deps = Dependencies<{
   channelService: ChannelService
   punishmentService: PunishmentService
   accountStore: AccountStore
+  rankHelpers: RankHelpers
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -63,6 +65,7 @@ export default class ExperienceService extends ContextClass {
   private readonly channelService: ChannelService
   private readonly punishmentService: PunishmentService
   private readonly accountStore: AccountStore
+  private readonly rankHelpers: RankHelpers
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -77,6 +80,7 @@ export default class ExperienceService extends ContextClass {
     this.channelService = deps.resolve('channelService')
     this.punishmentService = deps.resolve('punishmentService')
     this.accountStore = deps.resolve('accountStore')
+    this.rankHelpers = deps.resolve('rankHelpers')
   }
 
   /** Adds experience only for chat messages sent during the livestream for unpunished users.
@@ -104,8 +108,8 @@ export default class ExperienceService extends ContextClass {
 
     const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, connectedUserIds)
     const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, connectedUserIds)
-    const spamMultiplier = await this.getSpamMultiplier(livestream.id, chatItem, streamerId, primaryUserId)
-    const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem)
+    const spamMultiplier = await this.getSpamMultiplier(livestream.id, chatItem.timestamp, streamerId, primaryUserId)
+    const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem.messageParts)
     const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
     const data: ChatExperienceData = {
       viewershipStreakMultiplier,
@@ -243,6 +247,63 @@ export default class ExperienceService extends ContextClass {
     return single(updatedLevel)
   }
 
+  public async recalculateChatExperience (exactUserId: number) {
+    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(exactUserId)
+    const primaryUserId = connectedUserIds[0]
+
+    const streamerIds = await this.experienceStore.getChatExperienceStreamerIdsForUser(exactUserId)
+    for (const streamerId of streamerIds) {
+      // this may need to be optimised in the future (chunk-wise processing). I'd estimate it works fine for up to 1k-10k experience txs/chat messages
+      const punishments = (await Promise.all(connectedUserIds.map(userId => this.punishmentService.getPunishmentHistory(userId, streamerId)))).flatMap(x => x)
+      const chatExperienceTxs = await this.experienceStore.getAllUserChatExperience(streamerId, exactUserId)
+      const chatMessages = await Promise.all(chatExperienceTxs.map(tx => this.chatStore.getChatById(tx.experienceDataChatMessage.chatMessageId)))
+
+      let args: ModifyChatExperienceArgs[] = []
+      for (const tx of chatExperienceTxs) {
+        const time = tx.time
+        const livestreamId = tx.experienceDataChatMessage.chatMessage.livestreamId
+        const chatMessage = chatMessages.find(msg => msg.id === tx.experienceDataChatMessage.chatMessageId)!
+
+        if (livestreamId == null) {
+          // todo: 0 xp
+          continue
+        }
+
+        const isPunished = punishments.find(p => this.rankHelpers.isRankActive(p, time)) != null
+        if (isPunished) {
+          // todo: 0 xp
+          continue
+        }
+
+        const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, connectedUserIds)
+        const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, connectedUserIds)
+        const spamMultiplier = await this.getSpamMultiplier(livestreamId, time.getTime(), streamerId, primaryUserId)
+        const messageParts = convertInternalMessagePartsToExternal(chatMessage.chatMessageParts)
+        const messageQualityMultiplier = this.getMessageQualityMultiplier(messageParts)
+        const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
+
+        // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
+        // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
+        // repetitive messages are anything but high quality, and thus receive a bigger punishment.
+        const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
+        const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
+
+        args.push({
+          experienceTransactionId: tx.id,
+          chatExperienceDataId: tx.experienceDataChatMessage.id,
+          delta: xpAmount,
+          baseExperience: ExperienceService.CHAT_BASE_XP,
+          viewershipStreakMultiplier,
+          participationStreakMultiplier,
+          spamMultiplier,
+          messageQualityMultiplier,
+          repetitionPenalty
+        })
+      }
+      await this.experienceStore.modifyChatExperiences(args)
+    }
+  }
+
   private async getViewershipMultiplier (streamerId: number, userIds: number[]): Promise<GreaterThanOrEqual<1>> {
     const streams = await this.viewershipStore.getLivestreamViewership(streamerId, userIds)
 
@@ -273,21 +334,20 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
 
-  private async getSpamMultiplier (currentLivestreamId: number, chatItem: ChatItem, streamerId: number, primaryUserId: number): Promise<SpamMult> {
+  private async getSpamMultiplier (currentLivestreamId: number, messageTimestamp: number, streamerId: number, primaryUserId: number): Promise<SpamMult> {
     const prev = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId)
     if (prev == null || prev.experienceDataChatMessage.chatMessage.livestreamId !== currentLivestreamId) {
       // always start with a multiplier of 1 at the start of the livestream
       return 1 as SpamMult
     }
 
-    const currentTimestamp = chatItem.timestamp
     const prevTimestamp = prev.time.getTime()
     const prevSpamMultiplier = prev.experienceDataChatMessage.spamMultiplier as SpamMult
-    return this.experienceHelpers.calculateSpamMultiplier(currentTimestamp, prevTimestamp, prevSpamMultiplier)
+    return this.experienceHelpers.calculateSpamMultiplier(messageTimestamp, prevTimestamp, prevSpamMultiplier)
   }
 
-  private getMessageQualityMultiplier (chatItem: ChatItem): NumRange<0, 2> {
-    const messageQuality = this.experienceHelpers.calculateChatMessageQuality(chatItem)
+  private getMessageQualityMultiplier (messageParts: PartialChatMessage[]): NumRange<0, 2> {
+    const messageQuality = this.experienceHelpers.calculateChatMessageQuality(messageParts)
     return this.experienceHelpers.calculateQualityMultiplier(messageQuality)
   }
 

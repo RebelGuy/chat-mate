@@ -117,6 +117,14 @@ export default class ChatStore extends ContextClass {
       take: limit
     })
   }
+
+  public async getChatById (chatMessageId: number): Promise<ChatItemWithRelations> {
+    return await this.db.chatMessage.findUnique({
+      where: { id: chatMessageId },
+      include: chatMessageIncludeRelations,
+      rejectOnNotFound: true
+    })
+  }
 }
 
 const includeChannelInfo = {

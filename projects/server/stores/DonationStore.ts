@@ -76,10 +76,11 @@ export default class DonationStore extends ContextClass {
     })
   }
 
-  /** Returns donations that have been linked to any of the given aggregate or default users, orderd by time in ascending order. */
-  public async getDonationsByUserIds (streamerId: number, userIds: number[]): Promise<Donation[]> {
+  /** Returns donations that have been linked to any of the given aggregate or default users, orderd by time in ascending order. Does not take into account the user connections - exact userIds must be provided.
+   * If `streamerId` is `null`, returns donations across all streamers. */
+  public async getDonationsByUserIds (streamerId: number | null, exactUserIds: number[]): Promise<Donation[]> {
     const donationLinks = await this.db.donationLink.findMany({
-      where: { linkedUserId: { in: userIds }}
+      where: { linkedUserId: { in: exactUserIds }}
     })
     const linkIdentifiers = donationLinks.map(u => u.linkIdentifier)
     const donationIds = linkIdentifiers.filter(id => id.startsWith(INTERNAL_USER_PREFIX)).map(id => Number(id.substring(INTERNAL_USER_PREFIX.length)))
@@ -87,7 +88,7 @@ export default class DonationStore extends ContextClass {
 
     return await this.db.donation.findMany({
       where: {
-        streamerId: streamerId,
+        streamerId: streamerId ?? undefined,
         OR: [
           { id: { in: donationIds } },
           { streamlabsUserId: { in: streamlabsUserIds }}

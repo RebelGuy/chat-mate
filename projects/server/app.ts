@@ -79,6 +79,8 @@ import StreamerController from '@rebel/server/controllers/StreamerController'
 import StreamerService from '@rebel/server/services/StreamerService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
+import LinkService from '@rebel/server/services/LinkService'
+import LinkStore from '@rebel/server/stores/LinkStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -178,6 +180,8 @@ const globalContext = ContextProvider.create()
   .withClass('donationFetchService', DonationFetchService)
   .withClass('chatMateEventService', ChatMateEventService)
   .withClass('streamerService', StreamerService)
+  .withClass('linkStore', LinkStore)
+  .withClass('linkService', LinkService)
   .build()
 
 app.use((req, res, next) => {

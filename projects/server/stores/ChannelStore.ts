@@ -222,6 +222,24 @@ export default class ChannelStore extends ContextClass {
     }
   }
 
+  /** Like `getUserOwnedChannels`, but returns only the channels for the default user, ignoring any connected users. */
+  public async getDefaultUserOwnedChannels (defaultUserId: number): Promise<UserOwnedChannels> {
+    const result = await this.db.chatUser.findUnique({
+      where: { id: defaultUserId },
+      rejectOnNotFound: true,
+      include: {
+        youtubeChannels: { select: { id: true }},
+        twitchChannels: { select: { id: true }}
+      },
+    })
+
+    return {
+      userId: result.id,
+      youtubeChannels: result.youtubeChannels.map(c => c.id),
+      twitchChannels: result.twitchChannels.map(c => c.id)
+    }
+  }
+
   /** Returns all user channels connected to this aggregate user. */
   private async getAggregateUserOwnedChannels (aggregateChatUserId: number): Promise<UserOwnedChannels> {
     const defaultUsers = await this.db.chatUser.findMany({

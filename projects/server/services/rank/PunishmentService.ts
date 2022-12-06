@@ -73,7 +73,7 @@ export default class PunishmentService extends ContextClass {
       t.id,
       t.expirationTime!,
       true,
-      () => this.onRefreshTimeoutForYoutube(t)
+      () => this.onRefreshTimeoutForYoutube(t.streamerId, t.userId)
     )))
   }
 
@@ -102,6 +102,15 @@ export default class PunishmentService extends ContextClass {
     const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'ban')))
 
     return { rankResult, youtubeResults, twitchResults }
+  }
+
+  /** Like `banUser` except we don't make any changes to UserRanks, and does not take into account any other users connected to this one. */
+  public async banUserExternal (defaultUserId: number, streamerId: number, message: string | null): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+    const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserId)
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'ban')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'ban')))
+
+    return { youtubeResults, twitchResults }
   }
 
   public async isUserPunished (userId: number, streamerId: number): Promise<boolean> {
@@ -143,10 +152,21 @@ export default class PunishmentService extends ContextClass {
 
     if (rankResult.rank != null) {
       const rank = rankResult.rank
-      this.youtubeTimeoutRefreshService.startTrackingTimeout(rank.id, rank.expirationTime!, false, () => this.onRefreshTimeoutForYoutube(rank))
+      this.youtubeTimeoutRefreshService.startTrackingTimeout(rank.id, rank.expirationTime!, false, () => this.onRefreshTimeoutForYoutube(rank.streamerId, rank.userId))
     }
 
     return { rankResult, youtubeResults, twitchResults }
+  }
+
+  /** Like `timeoutUser` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. Must provide the `rankId` of the internal rank so. */
+  public async timeoutUserExternal (defaultUserId: number, streamerId: number, rankId: number, message: string | null, durationSeconds: number): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+    const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserId)
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout')))
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
+
+    this.youtubeTimeoutRefreshService.startTrackingTimeout(rankId, addTime(new Date(), 'seconds', durationSeconds), false, () => this.onRefreshTimeoutForYoutube(streamerId, defaultUserId))
+
+    return { youtubeResults, twitchResults }
   }
 
   /** Returns the updated punishment, if there was one. */
@@ -199,14 +219,25 @@ export default class PunishmentService extends ContextClass {
     return { rankResult, youtubeResults, twitchResults }
   }
 
+  /** Like `untimeoutUser` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. Must provide the `rankId` of the internal rank that is/was linked to the user's timeout. */
+  public async untimeoutUserExternal (defaultUserId: number, streamerId: number, rankId: number, revokeMessage: string | null): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+    this.youtubeTimeoutRefreshService.stopTrackingTimeout(rankId)
+
+    const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserId)
+    const twitchResults = await Promise.all(ownedChannels.twitchChannels.map(c => this.tryApplyTwitchPunishment(streamerId, c, revokeMessage, 'untimeout')))
+    const youtubeResults: YoutubeRankResult[] = ownedChannels.youtubeChannels.map(c => ({ youtubeChannelId: c, error: 'YouTube timeouts expire automatically 5 minutes after they were last applied.'}))
+
+    return { youtubeResults, twitchResults }
+  }
+
   /** Re-applies the timeout on Youtube. Note that the timeout always lasts for 5 minutes. */
-  private async onRefreshTimeoutForYoutube (timeout: UserRankWithRelations) {
-    if (timeout.streamerId == null) {
-      throw new Error(`Cannot refresh the YouTube timeout of user ${timeout.userId} because no streamerId was supplied, and timeout ranks cannot be global.`)
+  private async onRefreshTimeoutForYoutube (streamerId: number | null, userId: number) {
+    if (streamerId == null) {
+      throw new Error(`Cannot refresh the YouTube timeout of user ${userId} because no streamerId was supplied, and timeout ranks cannot be global.`)
     }
 
-    const ownedChannels = await this.channelStore.getUserOwnedChannels(timeout.userId)
-    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(timeout.streamerId!, c, 'refreshTimeout')))
+    const ownedChannels = await this.channelStore.getUserOwnedChannels(userId)
+    await Promise.all(ownedChannels.youtubeChannels.map(c => this.tryApplyYoutubePunishment(streamerId!, c, 'refreshTimeout')))
   }
 
   private async getCurrentPunishmentsForUser (userId: number, streamerId: number) {

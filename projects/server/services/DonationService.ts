@@ -10,8 +10,8 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { first, single } from '@rebel/server/util/arrays'
-import { addTime } from '@rebel/server/util/datetime'
+import { first, group, single } from '@rebel/server/util/arrays'
+import { addTime, maxTime } from '@rebel/server/util/datetime'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 
 type Deps = Dependencies<{
@@ -95,11 +95,10 @@ export default class DonationService extends ContextClass {
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
     const currentRanks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
 
-    const now = new Date()
-    const longTermExpiration = addTime(now, 'days', DONATION_EPOCH_DAYS)
-    const monthFromNow = addTime(now, 'days', 31)
+    const longTermExpiration = addTime(time, 'days', DONATION_EPOCH_DAYS)
+    const monthFromNow = addTime(time, 'days', 31)
 
-    if (this.donationHelpers.isEligibleForDonator(donationAmounts, now)) {
+    if (this.donationHelpers.isEligibleForDonator(donationAmounts, time)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'donator')
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
@@ -116,7 +115,7 @@ export default class DonationService extends ContextClass {
       }
     }
 
-    if (this.donationHelpers.isEligibleForSupporter(donationAmounts, now)) {
+    if (this.donationHelpers.isEligibleForSupporter(donationAmounts, time)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'supporter')
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
@@ -133,7 +132,7 @@ export default class DonationService extends ContextClass {
       }
     }
 
-    if (this.donationHelpers.isEligibleForMember(donationAmounts, now)) {
+    if (this.donationHelpers.isEligibleForMember(donationAmounts, time)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'member')
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
@@ -174,6 +173,80 @@ export default class DonationService extends ContextClass {
       return 'listening'
     } else {
       return 'error'
+    }
+  }
+
+  /** Re-evaluates and applies eligible donation ranks for the user across all streamers. Assumes the user does not currently have any donation ranks. */
+  public async reEvaluateDonationRanks (userId: number, message: string | null) {
+    const time = this.dateTimeHelpers.now()
+    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(userId)
+    const primaryUserId = first(connectedUserIds)
+
+    const allDonations = await this.donationStore.getDonationsByUserIds(null, connectedUserIds)
+    const groupedDonations = group(allDonations, d => d.streamerId)
+
+    for (const { group: streamerId, items: donations } of groupedDonations) {
+      if (donations.length === 0) {
+        continue
+      }
+
+      const donationAmounts = donations.map(d => [d.time, d.amount] as DonationAmount)
+      const currentRanks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
+
+      const lastDonationTime = maxTime(...donations.map(d => d.time))
+      const longTermExpiration = addTime(lastDonationTime, 'days', DONATION_EPOCH_DAYS)
+      const monthFromNow = addTime(lastDonationTime, 'days', 31)
+
+      if (this.donationHelpers.isEligibleForDonator(donationAmounts, time)) {
+        const existingDonatorRank = currentRanks.find(r => r.rank.name === 'donator')
+        if (existingDonatorRank == null) {
+          await this.rankStore.addUserRank({
+            rank: 'donator',
+            chatUserId: primaryUserId,
+            streamerId: streamerId,
+            expirationTime: longTermExpiration,
+            assignee: null,
+            message: message,
+            time: time
+          })
+        } else {
+          await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
+        }
+      }
+
+      if (this.donationHelpers.isEligibleForSupporter(donationAmounts, time)) {
+        const existingDonatorRank = currentRanks.find(r => r.rank.name === 'supporter')
+        if (existingDonatorRank == null) {
+          await this.rankStore.addUserRank({
+            rank: 'supporter',
+            chatUserId: primaryUserId,
+            streamerId: streamerId,
+            expirationTime: longTermExpiration,
+            assignee: null,
+            message: message,
+            time: time
+          })
+        } else {
+          await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
+        }
+      }
+
+      if (this.donationHelpers.isEligibleForMember(donationAmounts, time)) {
+        const existingDonatorRank = currentRanks.find(r => r.rank.name === 'member')
+        if (existingDonatorRank == null) {
+          await this.rankStore.addUserRank({
+            rank: 'member',
+            chatUserId: primaryUserId,
+            streamerId: streamerId,
+            expirationTime: monthFromNow,
+            assignee: null,
+            message: message,
+            time: time
+          })
+        } else {
+          await this.rankStore.updateRankExpiration(existingDonatorRank.id, monthFromNow)
+        }
+      }
     }
   }
 

@@ -97,21 +97,44 @@ model ChatUser {
   youtubeChannels YoutubeChannel[]
   twitchChannels  TwitchChannel[]
 
-  chatMessages               ChatMessage[]
-  experienceTransactions     ExperienceTransaction[]
-  experienceSnapshots        ExperienceSnapshot[]
-  viewingBlocks              ViewingBlock[]
-  experienceDataAdministered ExperienceDataAdmin[]
-  receivedPunishments        Punishment[]            @relation("punishment_user")
-  administeredPunishments    Punishment[]            @relation("punishment_adminUser")
-  userRanks                  UserRank[]              @relation("user_rank_userId")
-  donationLinks              DonationLink[]
-  registeredUser             RegisteredUser?
+  chatMessages                   ChatMessage[]
+  experienceTransactions         ExperienceTransaction[] @relation("experience_transaction_user")
+  originalExperienceTransactions ExperienceTransaction[] @relation("experience_transaction_originalUser")
+  experienceSnapshots            ExperienceSnapshot[]
+  viewingBlocks                  ViewingBlock[]
+  experienceDataAdministered     ExperienceDataAdmin[]
+  receivedPunishments            Punishment[]            @relation("punishment_user")
+  administeredPunishments        Punishment[]            @relation("punishment_adminUser")
+  userRanks                      UserRank[]              @relation("user_rank_userId")
+  donationLinks                  DonationLink[]
+  registeredUser                 RegisteredUser?
+  linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
+  linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
 
   /// The chat users connected to this aggregate user. Empty if this is not an aggregate user.
   connectedChatUsers ChatUser[] @relation("aggregateChatUser")
 
   @@map("chat_user")
+}
+
+model LinkAttempt {
+  id Int @id @default(autoincrement())
+
+  startTime    DateTime
+  endTime      DateTime?
+  errorMessage String?   @db.VarChar(16384)
+
+  // the user that we are linking
+  defaultChatUserId Int
+  defaultChatUser   ChatUser @relation(name: "link_attempt_defaultChatUser", fields: [defaultChatUserId], references: [id], map: "link_attempt_defaultChatUserId_fkey")
+
+  // the user that we are linking to
+  aggregateChatUserId Int
+  aggregateChatUser   ChatUser @relation(name: "link_attempt_aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "link_attempt_aggregateChatUserId_fkey")
+
+  @@index([defaultChatUserId], map: "link_attempt_defaultChatUserId_fkey")
+  @@index([aggregateChatUserId], map: "link_attempt_aggregateChatUserId_fkey")
+  @@map("link_attempt")
 }
 
 model RegisteredUser {
@@ -435,13 +458,19 @@ model ExperienceTransaction {
   experienceDataChatMessage ExperienceDataChatMessage?
   experienceDataAdmin       ExperienceDataAdmin?
 
+  /// The user to which the experience is currently linked to
   userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
+  user   ChatUser @relation(name: "experience_transaction_user", fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
+
+  /// The user to which the experience was originally linked to. If null, the experience has not been re-linked and the original user is implied to be identical to the current user.
+  originalUserId Int?
+  originalUser   ChatUser? @relation(name: "experience_transaction_originalUser", fields: [userId], references: [id], map: "experience_transaction_originalUserId_fkey")
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "experience_transaction_streamerId_fkey")
 
   @@index([userId], map: "experience_transaction_userId_fkey")
+  @@index([originalUserId], map: "experience_transaction_originalUserId_fkey")
   @@index([userId, time], map: "experience_transaction_userId_time_key")
   @@index([streamerId], map: "experience_transaction_streamerId_fkey")
   @@map("experience_transaction")
@@ -468,6 +497,7 @@ model ExperienceSnapshot {
 model ExperienceDataChatMessage {
   id Int @id @default(autoincrement())
 
+  // if you add any new fields to this, be sure to update the `ExperienceStore.updateChatExperiences()` method
   baseExperience                Int
   viewershipStreakMultiplier    Float
   participationStreakMultiplier Float

@@ -6,7 +6,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { NoNulls } from '@rebel/server/types'
 
 export type ChatExperience =
-  NoNulls<Pick<Entity.ExperienceTransaction, 'time' | 'delta' | 'user' | 'experienceDataChatMessage'>>
+  NoNulls<Pick<Entity.ExperienceTransaction, 'id' | 'time' | 'delta' | 'user' | 'experienceDataChatMessage'>>
   & { experienceDataChatMessage: { chatMessage: ChatMessage} }
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
@@ -15,9 +15,20 @@ export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
 
 export type UserExperience = { userId: number, experience: number }
 
-type ChatExperienceTransaction = ChatExperience & {
-    experienceDataChatMessage: ExperienceDataChatMessage & { chatMessage: ChatMessage }
-  }
+
+type ChatExperienceTransaction = ExperienceTransaction & { experienceDataChatMessage: ExperienceDataChatMessage }
+
+export type ModifyChatExperienceArgs = {
+  experienceTransactionId: number
+  chatExperienceDataId: number
+  delta: number
+  baseExperience: number
+  viewershipStreakMultiplier: number
+  participationStreakMultiplier: number
+  spamMultiplier: number
+  messageQualityMultiplier: number
+  repetitionPenalty: number | null
+}
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -169,5 +180,82 @@ export default class ExperienceStore extends ContextClass {
       },
       orderBy: { time: 'asc' }
     })
+  }
+
+  /** Gets all of the user's chat experience in the context of the given streamer. */
+  public async getAllUserChatExperience (streamerId: number, exactUserId: number): Promise<ChatExperience[]> {
+    const transactions = await this.db.experienceTransaction.findMany({
+      where: {
+        userId: exactUserId,
+        streamerId: streamerId,
+        experienceDataChatMessage: { isNot: null }
+      },
+      orderBy: { time: 'desc' },
+      include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
+    })
+
+    return transactions.map(tx => ({ ...tx, experienceDataChatMessage: tx.experienceDataChatMessage! }))
+  }
+
+  /** Gets all streamer ids for which the user has chat experience. */
+  public async getChatExperienceStreamerIdsForUser (exactUserId: number): Promise<number[]> {
+    const transactions = await this.db.experienceTransaction.groupBy({
+      by: ['streamerId'],
+      where: {
+        userId: exactUserId,
+        experienceDataChatMessage: { isNot: null }
+      }
+    })
+
+    return transactions.map(tx => tx.streamerId)
+  }
+
+  public async getUserChatMessageTransactions (userId: number): Promise<ChatExperienceTransaction[]> {
+    return await this.db.experienceTransaction.findMany({
+      where: {
+        userId: userId,
+        experienceDataChatMessage: { isNot: null }
+      },
+      include: { experienceDataChatMessage: true }
+    }) as ChatExperienceTransaction[]
+  }
+
+  /** Updates experience transactions that originally linked to the `fromUserId` to point to the `toUserId`. */
+  public async relinkChatExperience (fromUserId: number, toUserId: number) {
+    await this.db.experienceTransaction.updateMany({
+      where: { userId: fromUserId },
+      data: {
+        originalUserId: fromUserId,
+        userId: toUserId
+      }
+    })
+  }
+
+  // uses an array for the input data for efficiency, since we may update thousands of entries in bulk
+  public async modifyChatExperiences (args: ModifyChatExperienceArgs[]) {
+    await this.db.$transaction(args.flatMap(arg => {
+      return [
+        // update the main transaction delta
+        this.db.experienceTransaction.update({
+          where: { id: arg.experienceTransactionId },
+          data: {
+            delta: arg.delta
+          }
+        }),
+
+        // update the chat message experience data
+        this.db.experienceDataChatMessage.update({
+          where: { id: arg.chatExperienceDataId },
+          data: {
+            baseExperience: arg.baseExperience,
+            messageQualityMultiplier: arg.messageQualityMultiplier,
+            participationStreakMultiplier: arg.participationStreakMultiplier,
+            repetitionPenalty: arg.repetitionPenalty,
+            spamMultiplier: arg.spamMultiplier,
+            viewershipStreakMultiplier: arg.viewershipStreakMultiplier
+          }
+        })
+      ]
+    }))
   }
 }

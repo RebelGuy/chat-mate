@@ -1,0 +1,81 @@
+import { Dependencies } from '@rebel/server/context/context'
+import ContextClass from '@rebel/server/context/ContextClass'
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+
+type Deps = Dependencies<{
+  dbProvider: DbProvider
+}>
+
+export default class LinkStore extends ContextClass {
+  private readonly db: Db
+
+  constructor (deps: Deps) {
+    super()
+
+    this.db = deps.resolve('dbProvider').get()
+  }
+
+  /** Links the default user to the aggregate user.
+   * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
+  */
+  public async linkUser (userId: number, aggregateChatUserId: number): Promise<void> {
+    const defaultUser = await this.db.chatUser.findUnique({
+      where: { id: userId },
+      rejectOnNotFound: true
+    })
+
+    if (defaultUser.aggregateChatUserId != null) {
+      throw new UserAlreadyLinkedToAggregateUserError(`Cannot link the user because it is already linked to another user.`, defaultUser.aggregateChatUserId, userId)
+    }
+
+    await this.db.chatUser.update({
+      where: { id: userId },
+      data: {
+        aggregateChatUserId: aggregateChatUserId,
+        linkedAt: new Date()
+      }
+    })
+  }
+
+  /** Returns the created linkAttempt id.
+   * @throws {@link LinkAttemptInProgressError}: When the user is already linked to an aggregate user.
+  */
+  public async startLinkAttempt (defaultUserId: number, aggregateUserId: number): Promise<number> {
+    const existingAttempt = await this.db.linkAttempt.findFirst({
+      where: {
+        defaultChatUserId: defaultUserId,
+        aggregateChatUserId: aggregateUserId,
+        endTime: null
+      }
+    })
+
+    if (existingAttempt != null) {
+      let message: string
+      if (existingAttempt.errorMessage == null) {
+        message = `The user is currently being linked (attempt id ${existingAttempt.id}). Please wait until this process is complete.`
+      } else {
+        message = `An attempt was made to link the user previously, but it failed. Please contact an admin referncing the attempt id ${existingAttempt.id}.`
+      }
+      throw new LinkAttemptInProgressError(message)
+    }
+
+    const attempt = await this.db.linkAttempt.create({ data: {
+      defaultChatUserId: defaultUserId,
+      aggregateChatUserId: aggregateUserId,
+      startTime: new Date()
+    }})
+    return attempt.id
+  }
+
+  /** If `errorMessage` is null, it is implied that the link completed successfully, otherwise it is implied that it failed. */
+  public async completeLinkAttempt (linkAttemptId: number, errorMessage: string | null) {
+    await this.db.linkAttempt.update({
+      where: { id: linkAttemptId },
+      data: {
+        endTime: errorMessage == null ? new Date() : null, // safety catch so that we don't half-complete a link, and then start it again. someone needs to look at what went wrong before giving the all-clear to re-attempt the link.
+        errorMessage: errorMessage
+      }
+    })
+  }
+}

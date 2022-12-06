@@ -83,6 +83,23 @@ export class PreProcessorError extends CustomError {
   }
 }
 
+export class UserAlreadyLinkedToAggregateUserError extends CustomError {
+  public readonly aggregateUserId: number
+  public readonly userId: number
+
+  constructor (message: string, aggregateUserId: number, userId: number) {
+    super(UserAlreadyLinkedToAggregateUserError.prototype, message)
+    this.aggregateUserId = aggregateUserId
+    this.userId = userId
+  }
+}
+
+export class LinkAttemptInProgressError extends CustomError {
+  constructor (message: string) {
+    super(LinkAttemptInProgressError.prototype, message)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {
