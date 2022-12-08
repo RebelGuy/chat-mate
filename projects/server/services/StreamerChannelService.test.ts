@@ -37,7 +37,7 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
 
     mockStreamerStore.getStreamers.calledWith().mockResolvedValue([streamer1])
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser1.id])).mockResolvedValue([registeredUser1])
-    mockChannelStore.getUserOwnedChannels.calledWith(chatUser1.id).mockResolvedValue(channels)
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(chatUser1.id).mockResolvedValue(channels)
     mockChannelStore.getTwitchUserNameFromChannelId.calledWith(twitchChannel).mockResolvedValue(channelName)
 
     const result = await streamerChannelService.getAllTwitchStreamerChannels()
@@ -58,7 +58,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
-    mockChannelStore.getUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
     mockChannelStore.getTwitchUserNameFromChannelId.calledWith(twitchChannel).mockResolvedValue(channelName)
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
@@ -79,7 +79,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
-    mockChannelStore.getUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
     mockChannelStore.getTwitchUserNameFromChannelId.calledWith(twitchChannel1).mockResolvedValue(channelName)
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
@@ -96,7 +96,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
-    mockChannelStore.getUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
 

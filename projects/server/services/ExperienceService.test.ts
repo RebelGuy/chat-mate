@@ -18,6 +18,7 @@ import ChannelService from '@rebel/server/services/ChannelService'
 import { DeepPartial } from '@rebel/server/types'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import RankHelpers from '@rebel/server/helpers/RankHelpers'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -28,6 +29,7 @@ let mockChatStore: MockProxy<ChatStore>
 let mockChannelService: MockProxy<ChannelService>
 let mockPunishmentService: MockProxy<PunishmentService>
 let mockAccountStore: MockProxy<AccountStore>
+let mockRankHelpers: MockProxy<RankHelpers>
 let experienceService: ExperienceService
 
 beforeEach(() => {
@@ -40,6 +42,7 @@ beforeEach(() => {
   mockChannelService = mock<ChannelService>()
   mockPunishmentService = mock<PunishmentService>()
   mockAccountStore = mock<AccountStore>()
+  mockRankHelpers = mock<RankHelpers>()
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -50,7 +53,8 @@ beforeEach(() => {
     chatStore: mockChatStore,
     channelService: mockChannelService,
     punishmentService: mockPunishmentService,
-    accountStore: mockAccountStore
+    accountStore: mockAccountStore,
+    rankHelpers: mockRankHelpers
   }))
 })
 
@@ -130,6 +134,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       * experienceData.messageQualityMultiplier
     const msgQuality = asRange(0.2, 0, 2)
     const prevData: ChatExperience = {
+      id: 1,
       user: { id: primaryUserId, aggregateChatUserId: null, linkedAt: null },
       delta: 100,
       time: data.livestream3.start!,
@@ -165,7 +170,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       { ...data.livestream2, participated: true },
       { ...data.livestream3, participated: false }
     ]) // -> walking participation score: 1
-    mockExperienceHelpers.calculateChatMessageQuality.calledWith(chatItem).mockReturnValue(msgQuality)
+    mockExperienceHelpers.calculateChatMessageQuality.calledWith(chatItem.messageParts).mockReturnValue(msgQuality)
     mockExperienceHelpers.calculateParticipationMultiplier.calledWith(asGte(1, 0)).mockReturnValue(asGte(experienceData.participationStreakMultiplier, 1))
     mockExperienceHelpers.calculateViewershipMultiplier.calledWith(asGte(2, 0)).mockReturnValue(asGte(experienceData.viewershipStreakMultiplier, 1))
     mockExperienceHelpers.calculateQualityMultiplier.calledWith(msgQuality).mockReturnValue(asRange(experienceData.messageQualityMultiplier, 0, 2))
@@ -288,11 +293,11 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const user1BaseXp = 100
     const user2BaseXp = 500
     const transactions: ExperienceTransaction[] = [
-      { id: 1, streamerId, userId: userId1, time: time3, delta: 10 },
-      { id: 2, streamerId, userId: userId1, time: time4, delta: 20 },
-      { id: 3, streamerId, userId: userId2, time: time5, delta: 150 },
-      { id: 4, streamerId, userId: userId2, time: time6, delta: 160 },
-      { id: 5, streamerId, userId: userId2, time: time7, delta: 1 },
+      { id: 1, streamerId, userId: userId1, originalUserId: null, time: time3, delta: 10 },
+      { id: 2, streamerId, userId: userId1, originalUserId: null, time: time4, delta: 20 },
+      { id: 3, streamerId, userId: userId2, originalUserId: null, time: time5, delta: 150 },
+      { id: 4, streamerId, userId: userId2, originalUserId: null, time: time6, delta: 160 },
+      { id: 5, streamerId, userId: userId2, originalUserId: null, time: time7, delta: 1 },
     ]
 
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId1, userId2]))
@@ -317,7 +322,7 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const time1 = new Date()
     const time2 = addTime(time1, 'seconds', 1)
     const streamerId = 5
-    const transactions: ExperienceTransaction[] = [{ id: 1, streamerId: streamerId, userId: 1, time: time1, delta: -500 }]
+    const transactions: ExperienceTransaction[] = [{ id: 1, streamerId: streamerId, userId: 1, originalUserId: null, time: time1, delta: -500 }]
 
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, experience: -100 }])
     mockExperienceStore.getAllTransactionsStartingAt.calledWith(streamerId, time2.getTime() + 1).mockResolvedValue(transactions)

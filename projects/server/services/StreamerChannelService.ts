@@ -68,7 +68,7 @@ export default class StreamerChannelService extends ContextClass {
       return null
     }
 
-    const channels = await this.channelStore.getUserOwnedChannels(registeredUser.aggregateChatUserId)
+    const channels = await this.channelStore.getConnectedUserOwnedChannels(registeredUser.aggregateChatUserId)
     if (channels.twitchChannels.length === 0) {
       return null
     }

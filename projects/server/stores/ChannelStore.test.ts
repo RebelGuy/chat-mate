@@ -370,9 +370,9 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getUserOwnedChannels'), () => {
+  describe(nameof(ChannelStore, 'getConnectedUserOwnedChannels'), () => {
     test('throws if user does not exist', async () => {
-      await expect(() => channelStore.getUserOwnedChannels(1)).rejects.toThrow()
+      await expect(() => channelStore.getConnectedUserOwnedChannels(1)).rejects.toThrow()
     })
 
     test('returns all youtube and twitch channel ids for this default user', async () => {
@@ -393,7 +393,7 @@ export default () => {
         user: { create: {}}
       }})
 
-      const result = await channelStore.getUserOwnedChannels(2)
+      const result = await channelStore.getConnectedUserOwnedChannels(2)
 
       expect(result.userId).toBe(2)
       expect(result.youtubeChannels).toEqual([2])
@@ -419,7 +419,7 @@ export default () => {
         user: { create: { aggregateChatUserId: 1 }}
       }})
 
-      const result = await channelStore.getUserOwnedChannels(1)
+      const result = await channelStore.getConnectedUserOwnedChannels(1)
 
       expect(result.userId).toBe(1)
       expect(result.youtubeChannels).toEqual([1, 2])

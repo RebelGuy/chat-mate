@@ -9,16 +9,16 @@ const experienceHelpers = new ExperienceHelpers()
 
 describe(nameof(ExperienceHelpers, 'calculateChatMessageQuality'), () => {
   test('empty chat leads to zero quality', () => {
-    const result = experienceHelpers.calculateChatMessageQuality(data.chatItem1)
+    const result = experienceHelpers.calculateChatMessageQuality(data.chatItem1.messageParts)
 
     expect(result).toBe(0)
   })
 
   test('more emojis lead to higher quality', () => {
-    const r0 = experienceHelpers.calculateChatMessageQuality(data.chatItem1)
-    const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(emoji('id1')))
-    const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(emoji('id1'), emoji('id2')))
-    const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(emoji('id1'), emoji('id2'), emoji('id3')))
+    const r0 = experienceHelpers.calculateChatMessageQuality(data.chatItem1.messageParts)
+    const r1 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(emoji('id1')))
+    const r2 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(emoji('id1'), emoji('id2')))
+    const r3 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(emoji('id1'), emoji('id2'), emoji('id3')))
 
     expectStrictIncreasing(r0, r1, r2, r3)
   })
@@ -26,37 +26,37 @@ describe(nameof(ExperienceHelpers, 'calculateChatMessageQuality'), () => {
   test('longer text leads to higher quality', () => {
     // this is kind of difficult to test because longer messages lead to longer words, more words, or both,
     // which also affects the score
-    const r0 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('a')))
-    const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aa')))
-    const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaa')))
-    const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaa')))
+    const r0 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('a')))
+    const r1 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('aa')))
+    const r2 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('aaa')))
+    const r3 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('aaaa')))
 
     expectStrictIncreasing(r0, r1, r2, r3)
   })
 
   test('more words lead to higher quality', () => {
-    const r0 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('a a')))
-    const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('a a a')))
-    const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('a a a a')))
-    const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('a a a a a')))
+    const r0 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('a a')))
+    const r1 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('a a a')))
+    const r2 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('a a a a')))
+    const r3 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('a a a a a')))
 
     expectStrictIncreasing(r0, r1, r2, r3)
   })
 
   test('higher average word length leads to higher quality', () => {
-    const r0 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aa aa aa aa')))
-    const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaa aaaa aaaa aaaa')))
-    const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaaaa aaaaaa aaaaaa aaaaaa')))
-    const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('aaaaaaaa aaaaaaaa aaaaaaaa aaaaaaaa')))
+    const r0 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('aa aa aa aa')))
+    const r1 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('aaaa aaaa aaaa aaaa')))
+    const r2 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('aaaaaa aaaaaa aaaaaa aaaaaa')))
+    const r3 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('aaaaaaaa aaaaaaaa aaaaaaaa aaaaaaaa')))
 
     expectStrictIncreasing(r0, r1, r2, r3)
   })
 
   test('more unique characters lead to higher quality', () => {
-    const r0 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('12340000000')))
-    const r1 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('12345600000')))
-    const r2 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('12345678000')))
-    const r3 = experienceHelpers.calculateChatMessageQuality(getChatItem(text('123456789ab')))
+    const r0 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('12340000000')))
+    const r1 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('12345600000')))
+    const r2 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('12345678000')))
+    const r3 = experienceHelpers.calculateChatMessageQuality(getPartialChatMessages(text('123456789ab')))
 
     expectStrictIncreasing(r0, r1, r2, r3)
   })
@@ -323,9 +323,6 @@ function emoji (id: string): PartialEmojiChatMessage {
   }
 }
 
-function getChatItem (...msgs: PartialChatMessage[]): ChatItem {
-  return {
-    ...data.chatItem1,
-    messageParts: msgs
-  }
+function getPartialChatMessages (...msgs: PartialChatMessage[]): PartialChatMessage[] {
+  return msgs
 }

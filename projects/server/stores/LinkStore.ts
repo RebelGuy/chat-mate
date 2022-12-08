@@ -2,6 +2,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { ensureMaxTextWidth } from '@rebel/server/util/text'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -74,7 +75,7 @@ export default class LinkStore extends ContextClass {
       where: { id: linkAttemptId },
       data: {
         endTime: errorMessage == null ? new Date() : null, // safety catch so that we don't half-complete a link, and then start it again. someone needs to look at what went wrong before giving the all-clear to re-attempt the link.
-        errorMessage: errorMessage
+        errorMessage: errorMessage == null ? null : ensureMaxTextWidth(errorMessage, 4096) // max length comes directly from the db - do not change this.
       }
     })
   }

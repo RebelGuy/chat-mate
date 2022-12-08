@@ -191,7 +191,7 @@ export default class ChannelStore extends ContextClass {
 
   /** Returns the channels associated with the chat user. The chat user can either be a default user, or aggregate user, but all channels connected directly or indirectly to the user will be returned.
    * Throws if the user does not exist. */
-  public async getUserOwnedChannels (userId: number): Promise<UserOwnedChannels> {
+  public async getConnectedUserOwnedChannels (userId: number): Promise<UserOwnedChannels> {
     const registeredUser = await this.db.registeredUser.findFirst({ where: { aggregateChatUserId: userId }})
     const isAggregateUser = registeredUser != null
 

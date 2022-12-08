@@ -47,7 +47,7 @@ export default class ModService extends ContextClass {
 
     // we have no way of knowing the _current_ external state (only from the previous message sent from that channel), so, to be safe, apply the rank
     // update to ALL of the user's channels and report back any errors that could arise from duplication.
-    const userChannels = await this.channelStore.getUserOwnedChannels(userId)
+    const userChannels = await this.channelStore.getConnectedUserOwnedChannels(userId)
     const youtubeResults = await Promise.all(userChannels.youtubeChannels.map(c => this.trySetYoutubeMod(streamerId, c, isMod)))
     const twitchResults = await Promise.all(userChannels.twitchChannels.map(c => this.trySetTwitchMod(streamerId, c, isMod)))
 

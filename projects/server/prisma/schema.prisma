@@ -122,7 +122,8 @@ model LinkAttempt {
 
   startTime    DateTime
   endTime      DateTime?
-  errorMessage String?   @db.VarChar(16384)
+  // if you change the length, it must also be updated in the LinkStore.completeLinkAttempt method
+  errorMessage String?   @db.VarChar(4096)
 
   // the user that we are linking
   defaultChatUserId Int
