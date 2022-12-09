@@ -20,18 +20,18 @@ export default class LinkStore extends ContextClass {
   /** Links the default user to the aggregate user.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
   */
-  public async linkUser (userId: number, aggregateChatUserId: number): Promise<void> {
+  public async linkUser (defaultUserId: number, aggregateChatUserId: number): Promise<void> {
     const defaultUser = await this.db.chatUser.findUnique({
-      where: { id: userId },
+      where: { id: defaultUserId },
       rejectOnNotFound: true
     })
 
     if (defaultUser.aggregateChatUserId != null) {
-      throw new UserAlreadyLinkedToAggregateUserError(`Cannot link the user because it is already linked to another user.`, defaultUser.aggregateChatUserId, userId)
+      throw new UserAlreadyLinkedToAggregateUserError(`Cannot link the user because it is already linked to another user.`, defaultUser.aggregateChatUserId, defaultUserId)
     }
 
     await this.db.chatUser.update({
-      where: { id: userId },
+      where: { id: defaultUserId },
       data: {
         aggregateChatUserId: aggregateChatUserId,
         linkedAt: new Date()
@@ -40,14 +40,25 @@ export default class LinkStore extends ContextClass {
   }
 
   /** Returns the created linkAttempt id.
-   * @throws {@link LinkAttemptInProgressError}: When the user is already linked to an aggregate user.
+   * @throws {@link LinkAttemptInProgressError}: When the default or aggregate user is already currently involved in a link attempt,
+   * or if a previous attempt had failed and its state was not cleaned up.
   */
   public async startLinkAttempt (defaultUserId: number, aggregateUserId: number): Promise<number> {
     const existingAttempt = await this.db.linkAttempt.findFirst({
       where: {
-        defaultChatUserId: defaultUserId,
-        aggregateChatUserId: aggregateUserId,
-        endTime: null
+        AND: [{
+          OR: [
+            { aggregateChatUserId: aggregateUserId },
+            { defaultChatUserId: defaultUserId }
+          ]
+        }, {
+          OR: [
+            { endTime: null },
+
+            // safety catch so that we don't half-complete a link, and then start it again. someone needs to look at what went wrong before giving the all-clear to re-attempt the link.
+            { errorMessage: { not: null } }
+          ]
+        }]
       }
     })
 
@@ -74,7 +85,7 @@ export default class LinkStore extends ContextClass {
     await this.db.linkAttempt.update({
       where: { id: linkAttemptId },
       data: {
-        endTime: errorMessage == null ? new Date() : null, // safety catch so that we don't half-complete a link, and then start it again. someone needs to look at what went wrong before giving the all-clear to re-attempt the link.
+        endTime: new Date(),
         errorMessage: errorMessage == null ? null : ensureMaxTextWidth(errorMessage, 4096) // max length comes directly from the db - do not change this.
       }
     })

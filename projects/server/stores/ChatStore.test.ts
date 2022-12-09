@@ -537,4 +537,25 @@ export default () => {
       expect(result.length).toBe(0)
     })
   })
+
+  describe(nameof(ChatStore, 'getChatById'), () => {
+    test('Gets chat message by id', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      const chatItem2 = { ...makeYtChatItem(text2), id: 'id2' }
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem2, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.getChatById(2)
+
+      expect(result.id).toBe(2)
+      expect(single(result.chatMessageParts).text!.text).toBe(text2.text)
+    })
+
+    test('Throws if not found', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+
+      await expect(() => chatStore.getChatById(2)).rejects.toThrow()
+    })
+  })
 }
