@@ -210,17 +210,7 @@ export default class ExperienceStore extends ContextClass {
     return transactions.map(tx => tx.streamerId)
   }
 
-  public async getUserChatMessageTransactions (userId: number): Promise<ChatExperienceTransaction[]> {
-    return await this.db.experienceTransaction.findMany({
-      where: {
-        userId: userId,
-        experienceDataChatMessage: { isNot: null }
-      },
-      include: { experienceDataChatMessage: true }
-    }) as ChatExperienceTransaction[]
-  }
-
-  /** Updates experience transactions that originally linked to the `fromUserId` to point to the `toUserId`. */
+  /** Updates experience transactions (across all streamers) that originally linked to the `fromUserId` to point to the `toUserId`. */
   public async relinkChatExperience (fromUserId: number, toUserId: number) {
     await this.db.experienceTransaction.updateMany({
       where: { userId: fromUserId },

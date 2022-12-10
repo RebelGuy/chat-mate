@@ -149,17 +149,17 @@ export default class RankStore extends ContextClass {
   }
 
   /** Gets the active ranks for the exact user, for all streamers and global ranks. Does not take into account user links. */
-  public async getAllUserRanks (userId: number): Promise<UserRanks> {
+  public async getAllUserRanks (exactUserId: number): Promise<UserRanks> {
     const result = await this.db.userRank.findMany({
       where: {
         ...activeUserRankFilter(),
-        userId: userId,
+        userId: exactUserId,
       },
       include: includeUserRankRelations
     })
 
     return {
-      userId: userId,
+      userId: exactUserId,
       ranks: result.map(rawDataToUserRankWithRelations)
     }
   }

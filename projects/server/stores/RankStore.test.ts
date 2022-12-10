@@ -376,6 +376,40 @@ export default () => {
     })
   })
 
+  describe(nameof(RankStore, 'getAllUserRanks'), () => {
+    test('Returns current ranks across all streamers', async () => {
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
+
+      // user 1: muted, user 2: muted and banned
+      await db.userRank.createMany({
+        data: [
+          { userId: user1, streamerId: streamer2, issuedAt: time1, rankId: famousRank.id }, // other streamer
+          { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: famousRank.id },
+          { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: ownerRank.id },
+          { userId: user1, streamerId: null,      issuedAt: time1, rankId: mutedRank.id }, // global rank should be returned
+          { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: modRank.id, revokedTime: time2 },
+          { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: mutedRank.id, expirationTime: time2 },
+          { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: bannedRank.id, revokedTime: time4 },
+          { userId: user2, streamerId: streamer1, issuedAt: time2, rankId: mutedRank.id },
+          { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: bannedRank.id },
+        ]
+      })
+
+      let result = await rankStore.getAllUserRanks(user1)
+
+      const ranks = sortBy(result.ranks, r => `${r.streamerId}${r.rank}`)
+      expect(ranks.length).toBe(4)
+      expect(ranks[0].streamerId).toBe(streamer1)
+      expect(ranks[0].rank.name).toBe('famous')
+      expect(ranks[1].streamerId).toBe(streamer1)
+      expect(ranks[1].rank.name).toBe('owner')
+      expect(ranks[2].streamerId).toBe(streamer2)
+      expect(ranks[2].rank.name).toBe('famous')
+      expect(ranks[3].streamerId).toBe(null)
+      expect(ranks[3].rank.name).toBe('mute')
+    })
+  })
+
   describe(nameof(RankStore, 'getUserRanksForGroup'), () => {
     test('Returns active user ranks of the specified group', async () => {
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
