@@ -33,7 +33,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     let { builder, limit, since } = args
     since = since ?? 0
     const streamerId = this.getStreamerId()
-    const items = await this.chatStore.getChatSince(streamerId, since, limit)
+    const items = await this.chatStore.getChatSince(streamerId, since, undefined, limit)
     const userIds = unique(items.map(c => c.userId))
     if (userIds.find(id => id == null) != null) {
       throw new Error('Chat items must have a userId set')
