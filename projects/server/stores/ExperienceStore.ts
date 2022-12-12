@@ -42,10 +42,16 @@ export default class ExperienceStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  // returns the previous chat experience, may not be for the current livestream
-  public async getPreviousChatExperience (streamerId: number, userId: number): Promise<ChatExperience | null> {
+  /** Returns the most recent chat experience or, if a transaction id is provided, the most recent chat experience before the given transaction.
+   * May not be for the current livestream. */
+  public async getPreviousChatExperience (streamerId: number, exactUserId: number, beforeTransactionId: number | null): Promise<ChatExperience | null> {
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
-      where: { streamerId, userId, experienceDataChatMessage: { isNot: null }},
+      where: {
+        streamerId: streamerId,
+        userId: exactUserId,
+        experienceDataChatMessage: { isNot: null },
+        id: beforeTransactionId == null ? undefined : { lt: beforeTransactionId }
+      },
       orderBy: { time: 'desc' },
       include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
     })
@@ -63,7 +69,7 @@ export default class ExperienceStore extends ContextClass {
 
   public async addChatExperience (streamerId: number, userId: number, timestamp: number, xp: number, data: ChatExperienceData) {
     // don't allow backfilling or duplicates
-    const prev = await this.getPreviousChatExperience(streamerId, userId)
+    const prev = await this.getPreviousChatExperience(streamerId, userId, null)
     if (prev != null && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.externalId === data.externalId)) {
       return
     }

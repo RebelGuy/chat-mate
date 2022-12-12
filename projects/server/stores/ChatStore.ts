@@ -4,6 +4,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import { reverse } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
 export type ChatSave = {
@@ -104,18 +105,24 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** Returns ordered chat items that may or may not be from the current livestream. */
-  public async getChatSince (streamerId: number, since: number, limit?: number): Promise<ChatItemWithRelations[]> {
-    return await this.db.chatMessage.findMany({
+  /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream. */
+  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number): Promise<ChatItemWithRelations[]> {
+    const result = await this.db.chatMessage.findMany({
       where: {
         streamerId: streamerId,
-        time: { gt: new Date(since) },
+        time: {
+          gt: new Date(since),
+          lte: beforeOrAt == null ? undefined : new Date(beforeOrAt)
+        },
         donationId: null
       },
-      orderBy: { time: 'asc' },
+      // we want to get the latest results
+      orderBy: { time: 'desc' },
       include: chatMessageIncludeRelations,
       take: limit
     })
+
+    return reverse(result)
   }
 
   public async getChatById (chatMessageId: number): Promise<ChatItemWithRelations> {

@@ -290,6 +290,40 @@ export default () => {
       expect(result.map(r => r.externalId)).toEqual([chatItem2.id, chatItem3.id])
     })
 
+    test('only returns results before or at the given timestamp, if set', async () => {
+      const chatItem1: ChatItem = { author: ytAuthor1, id: 'id1', platform: 'youtube', contextToken: 'params1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
+      const chatItem2: ChatItem = { author: ytAuthor1, id: 'id2', platform: 'youtube', contextToken: 'params2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
+      const chatItem3: ChatItem = { author: ytAuthor1, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
+      const chatItem4: ChatItem = { author: ytAuthor1, id: 'id4', platform: 'youtube', contextToken: 'params4', timestamp: new Date(2021, 5, 4).getTime(), messageParts: [text3] }
+
+      // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
+      await chatStore.addChat(chatItem1, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem2, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem3, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem4, streamer1, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.getChatSince(streamer1, chatItem1.timestamp, chatItem3.timestamp)
+
+      expect(result.map(r => r.externalId)).toEqual([chatItem2.id, chatItem3.id])
+    })
+
+    test('only returns the first N results as specified by the limit, if set', async () => {
+      const chatItem1: ChatItem = { author: ytAuthor1, id: 'id1', platform: 'youtube', contextToken: 'params1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
+      const chatItem2: ChatItem = { author: ytAuthor1, id: 'id2', platform: 'youtube', contextToken: 'params2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
+      const chatItem3: ChatItem = { author: ytAuthor1, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
+      const chatItem4: ChatItem = { author: ytAuthor1, id: 'id4', platform: 'youtube', contextToken: 'params4', timestamp: new Date(2021, 5, 4).getTime(), messageParts: [text3] }
+
+      // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
+      await chatStore.addChat(chatItem1, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem2, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem3, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem4, streamer1, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.getChatSince(streamer1, chatItem1.timestamp, undefined, 2)
+
+      expect(result.map(r => r.externalId)).toEqual([chatItem3.id, chatItem4.id])
+    })
+
     test('attaches custom emoji rank whitelist', async () => {
       const customEmojiMessage: PartialCustomEmojiChatMessage = {
         customEmojiId: 1,

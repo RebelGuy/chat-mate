@@ -316,12 +316,12 @@ export default () => {
         }}
       }})
 
-      const result = await experienceStore.getPreviousChatExperience(streamer1, user1)
+      const result = await experienceStore.getPreviousChatExperience(streamer1, user1, null)
 
       expect(result).toBeNull()
     })
 
-    test('gets correct data', async () => {
+    test('Returns the latest chat experience', async () => {
       await db.experienceTransaction.create({ data: {
         streamerId: streamer1,
         userId: user1,
@@ -353,12 +353,52 @@ export default () => {
         }}
       }})
 
-      const result = (await experienceStore.getPreviousChatExperience(streamer1, user1))!
+      const result = (await experienceStore.getPreviousChatExperience(streamer1, user1, null))!
 
       expect(result.user.id).toBe(user1)
       expect(result.delta).toBe(20)
       expect(result.time).toEqual(data.time2)
       expect(result.experienceDataChatMessage).toEqual(expect.objectContaining(chatExperienceData2))
+    })
+
+    test('Returns the latest chat experience that is before the given transaction id', async () => {
+      await db.experienceTransaction.create({ data: {
+        streamerId: streamer1,
+        userId: user1,
+        delta: 10,
+        time: data.time1,
+        experienceDataChatMessage: { create: {
+          ...chatExperienceData1,
+          chatMessage: { connect: { externalId: chatMessage1.externalId }}
+        }}
+      }})
+      await db.experienceTransaction.create({ data: {
+        streamerId: streamer1,
+        userId: user1,
+        delta: 20,
+        time: data.time2,
+        experienceDataChatMessage: { create: {
+          ...chatExperienceData2,
+          chatMessage: { connect: { externalId: chatMessage2.externalId }}
+        }}
+      }})
+      await db.experienceTransaction.create({ data: {
+        streamerId: streamer2, // different streamer
+        userId: user1,
+        delta: 30,
+        time: data.time3,
+        experienceDataChatMessage: { create: {
+          ...chatExperienceData1,
+          chatMessage: { connect: { externalId: chatMessage3.externalId }}
+        }}
+      }})
+
+      const result = (await experienceStore.getPreviousChatExperience(streamer1, user1, 2))!
+
+      expect(result.user.id).toBe(user1)
+      expect(result.delta).toBe(10)
+      expect(result.time).toEqual(data.time1)
+      expect(result.experienceDataChatMessage).toEqual(expect.objectContaining(chatExperienceData1))
     })
   })
 
