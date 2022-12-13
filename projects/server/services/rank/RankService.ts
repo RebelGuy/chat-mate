@@ -1,8 +1,10 @@
 import { Rank, RankName } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import LogService from '@rebel/server/services/LogService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { singleOrNull, unique } from '@rebel/server/util/arrays'
+import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { randomString } from '@rebel/server/util/random'
 import { isOneOf } from '@rebel/server/util/validation'
 
@@ -10,6 +12,13 @@ import { isOneOf } from '@rebel/server/util/validation'
 export type RegularRank = Extract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
 
 const rankNames = Object.keys(RankName) as RankName[] // RankName the const vs RankName the type. not confusing at all
+
+export type CombinedMergeResult = {
+  individualResults: MergeResult[]
+
+  /** The total number of warnings that were encountered while merging ranks. These may require admin attention. Log messages can befound by searching for the associated merge id. */
+  warnings: number
+}
 
 export type MergeResult = {
   streamerId: number | null
@@ -42,15 +51,19 @@ export type TwitchRankResult = { twitchChannelId: number, error: string | null }
 
 type Deps = Dependencies<{
   rankStore: RankStore
+  logService: LogService
 }>
 
 export default class RankService extends ContextClass {
+  public readonly name = RankService.name
+
   private readonly rankStore: RankStore
+  private readonly logService: LogService
 
   constructor (deps: Deps) {
     super()
-
     this.rankStore = deps.resolve('rankStore')
+    this.logService = deps.resolve('logService')
   }
 
   public async getAccessibleRanks (): Promise<Rank[]> {
@@ -97,15 +110,13 @@ export default class RankService extends ContextClass {
    * If both users have the same rank, but the default user's expiration is longer, the aggregate user will inherit the expiration.
    * `removeRanks` specifies which ranks should be removed on both users - they must manually be refreshed by the caller.
    * Returns the rank modifications to the aggregate user. */
-  public async mergeRanks (defaultUser: number, aggregateUser: number, removeRanks: RankName[]): Promise<MergeResult[]> {
+  public async mergeRanks (defaultUser: number, aggregateUser: number, removeRanks: RankName[], mergeId: string): Promise<CombinedMergeResult> {
     const ranks1 = await this.rankStore.getAllUserRanks(defaultUser)
     const ranks2 = await this.rankStore.getAllUserRanks(aggregateUser)
 
     const streamerIds = unique([...ranks1.ranks.map(r => r.streamerId), ...ranks2.ranks.map(r => r.streamerId)])
-    let result: MergeResult[] = []
-
-    // reference a common id so we can more easily reconciliate data later on
-    const mergeId = randomString(8)
+    let results: MergeResult[] = []
+    let warnings = 0
 
     for (const streamerId of streamerIds) {
       let oldRanks: UserRankWithRelations[] = []
@@ -145,15 +156,33 @@ export default class RankService extends ContextClass {
             removedBy: null,
             streamerId: streamerId
           }
-          const rank = await this.rankStore.removeUserRank(removeArgs)
-          oldRanks.push(rank)
+          try {
+            const rank = await this.rankStore.removeUserRank(removeArgs)
+            oldRanks.push(rank)
+          } catch (e: any) {
+            if (e instanceof UserRankNotFoundError) {
+              this.logService.logWarning(this, `[Merge ${mergeId}] Cannot remove old rank ${rankName} from default user ${defaultUser} for streamer ${streamerId} because it doesn't exist`)
+              warnings++
+            } else {
+              throw e
+            }
+          }
         }
 
         // if required, copy the default user's rank over
         if (requiresTransfer && !removeRanks.includes(rankName)) {
           if (baseRank != null) {
-            const rank = await this.rankStore.updateRankExpiration(baseRank.id, oldRank!.expirationTime)
-            extensions.push(rank)
+            try {
+              const rank = await this.rankStore.updateRankExpiration(baseRank.id, oldRank!.expirationTime)
+              extensions.push(rank)
+            } catch (e: any) {
+              if (e instanceof UserRankNotFoundError) {
+                this.logService.logWarning(this, `[Merge ${mergeId}] Cannot update expiration for rank ${rankName} of aggregate user ${aggregateUser} for streamer ${streamerId} because it doesn't exist`)
+                warnings++
+              } else {
+                throw e
+              }
+            }
 
           } else {
             const addArgs: AddUserRankArgs = {
@@ -165,11 +194,20 @@ export default class RankService extends ContextClass {
               expirationTime: oldRank!.expirationTime,
               time: new Date()
             }
-            const rank = await this.rankStore.addUserRank(addArgs)
-            additions.push(rank)
+            try {
+              const rank = await this.rankStore.addUserRank(addArgs)
+              additions.push(rank)
+            } catch (e: any) {
+              if (e instanceof UserRankAlreadyExistsError) {
+                this.logService.logWarning(this, `[Merge ${mergeId}] Cannot add transferred rank ${rankName} to aggregate user ${aggregateUser} for streamer ${streamerId} because it already exists`)
+                warnings++
+              } else {
+                throw e
+              }
+            }
           }
 
-        } else if (removeRanks.includes(rankName)) {
+        } else if (removeRanks.includes(rankName) && baseRank != null) {
           const removeArgs: RemoveUserRankArgs = {
             chatUserId: aggregateUser,
             message: `Revoked as part of rank merge ${mergeId} of user ${defaultUser} with user ${aggregateUser}`,
@@ -177,18 +215,27 @@ export default class RankService extends ContextClass {
             removedBy: null,
             streamerId: streamerId
           }
-          const rank = await this.rankStore.removeUserRank(removeArgs)
-          removals.push(rank)
+          try {
+            const rank = await this.rankStore.removeUserRank(removeArgs)
+            removals.push(rank)
+          } catch (e: any) {
+            if (e instanceof UserRankNotFoundError) {
+              this.logService.logWarning(this, `[Merge ${mergeId}] Cannot remove rank ${rankName} from aggregate user ${aggregateUser} for streamer ${streamerId} because it doesn't exist`)
+              warnings++
+            } else {
+              throw e
+            }
+          }
 
-        } else {
-          unchanged.push(baseRank!)
+        } else if (baseRank != null) {
+          unchanged.push(baseRank)
         }
       }
 
-      result.push({ streamerId, mergeId, oldRanks, additions, removals, extensions, unchanged })
+      results.push({ streamerId, mergeId, oldRanks, additions, removals, extensions, unchanged })
     }
 
-    return result
+    return { individualResults: results, warnings }
   }
 }
 

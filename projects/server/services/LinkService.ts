@@ -58,6 +58,7 @@ export default class LinkService extends ContextClass {
   */
   public async linkUser (defaultUserId: number, aggregateUserId: number) {
     const linkAttemptId = await this.linkStore.startLinkAttempt(defaultUserId, aggregateUserId)
+    let warnings = 0
 
     try {
       await this.linkStore.linkUser(defaultUserId, aggregateUserId)
@@ -74,10 +75,11 @@ export default class LinkService extends ContextClass {
         // at least one other default chat user is already connected to the aggregate user - this will be complicated
         // todo: mergeId should be `linkAttempt-${linkAttemptId}`?
         // todo: do we need to worry about new ranks/messages/xp/donations while the merge is happening? test it out with 10k messages, and see what happens. as long as we don't get a crash, it's probably fine if one or two xp transactions don't get copied over (or similar) - they are not "lost", just assigned to the old user that we aren't using anymore. or if a new xp tx isn't taken into consideration during the recalculation - not a big deal.
-        const mergeResults = await this.rankService.mergeRanks(defaultUserId, aggregateUserId, ['donator', 'member', 'supporter'])
+        const mergeResults = await this.rankService.mergeRanks(defaultUserId, aggregateUserId, ['donator', 'member', 'supporter'], `link attempt ${linkAttemptId}`)
+        warnings += mergeResults.warnings
 
         const otherDefaultUserIds = connectedUserIds.filter(userId => userId !== defaultUserId && userId !== aggregateUserId)
-        await this.reconciliateExternalRanks(defaultUserId, otherDefaultUserIds, aggregateUserId, mergeResults)
+        await this.reconciliateExternalRanks(defaultUserId, otherDefaultUserIds, aggregateUserId, mergeResults.individualResults)
 
         await this.donationService.reEvaluateDonationRanks(aggregateUserId, `Added as part of the donation rank re-evaluation while linking default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}.`)
 
@@ -86,7 +88,7 @@ export default class LinkService extends ContextClass {
 
 
     } catch (e: any) {
-      this.logService.logError(this, `Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}.`, e)
+      this.logService.logError(this, `Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${warnings}.`, e)
       await this.linkStore.completeLinkAttempt(linkAttemptId, e.message)
       throw e
     }
