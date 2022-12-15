@@ -14,6 +14,7 @@ import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/servic
 import { PartialChatMessage } from '@rebel/server/models/chat'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import { UserRankAlreadyExistsError } from '@rebel/server/util/error'
 
 const streamerId = 3
 
@@ -45,7 +46,8 @@ beforeEach(() => {
     emojiService: mockEmojiService,
     streamlabsProxyService: mockStreamlabsProxyService,
     streamerStore: mockStreamerStore,
-    accountStore: mockAccountStore
+    accountStore: mockAccountStore,
+    logService: mock()
   }))
 })
 
@@ -190,6 +192,56 @@ describe(nameof(DonationService, 'setStreamlabsSocketToken'), () => {
     expect(result).toBe(true)
     expect(mockStreamlabsProxyService.listenToStreamerDonations.mock.calls.length).toBe(0)
     expect(single(mockStreamlabsProxyService.stopListeningToStreamerDonations.mock.calls)).toEqual([streamerId])
+  })
+})
+
+describe(nameof(DonationService, 'reEvaluateDonationRanks'), () => {
+  test('Adds eligible ranks for all streamers', async () => {
+    const userId = 55
+    const connectedUserIds = [userId, 4]
+    const streamer1 = 12
+    const streamer2 = 13
+    const donation1 = cast<Donation>({ streamerId: streamer1, time: data.time1, amount: 1 })
+    const donation2 = cast<Donation>({ streamerId: streamer2, time: data.time2, amount: 2 })
+    const donation3 = cast<Donation>({ streamerId: streamer2, time: data.time3, amount: 3 })
+
+    mockDateTimeHelpers.now.calledWith().mockReturnValue(new Date())
+    mockAccountStore.getConnectedChatUserIds.calledWith(userId).mockResolvedValue(connectedUserIds)
+    mockDonationStore.getDonationsByUserIds.calledWith(null, connectedUserIds).mockResolvedValue([donation1, donation2, donation3])
+    mockDonationHelpers.isEligibleForDonator
+      .calledWith(expect.objectContaining<DonationAmount[]>([[data.time1, 1]]), expect.any(Date))
+      .mockReturnValue(true)
+    mockDonationHelpers.isEligibleForMember
+      .calledWith(expect.objectContaining<DonationAmount[]>([[data.time2, 2], [data.time3, 3]]), expect.any(Date))
+      .mockReturnValue(true)
+
+    const result = await donationService.reEvaluateDonationRanks(userId, null, '')
+
+    expect(result).toBe(0)
+    const args = mockRankStore.addUserRank.mock.calls.map(x => single(x))
+    expect(args.length).toBe(2)
+    expect(args).toEqual(expectObject<AddUserRankArgs[]>([
+      { streamerId: streamer1, rank: 'donator', chatUserId: userId },
+      { streamerId: streamer2, rank: 'member', chatUserId: userId }
+    ]))
+  })
+
+  test(`Gracefully handles ${UserRankAlreadyExistsError.name}s`, async () => {
+    const userId = 55
+    const connectedUserIds = [userId]
+    const donation = cast<Donation>({ streamerId: 1, time: new Date() })
+
+    mockDateTimeHelpers.now.calledWith().mockReturnValue(new Date())
+    mockAccountStore.getConnectedChatUserIds.calledWith(userId).mockResolvedValue(connectedUserIds)
+    mockDonationStore.getDonationsByUserIds.calledWith(null, connectedUserIds).mockResolvedValue([donation])
+    mockDonationHelpers.isEligibleForDonator.calledWith(expect.anything(), expect.any(Date)).mockReturnValue(true)
+    mockDonationHelpers.isEligibleForMember.calledWith(expect.anything(), expect.any(Date)).mockReturnValue(true)
+    mockDonationHelpers.isEligibleForSupporter.calledWith(expect.anything(), expect.any(Date)).mockReturnValue(true)
+    mockRankStore.addUserRank.calledWith(expect.anything()).mockRejectedValue(new UserRankAlreadyExistsError())
+
+    const result = await donationService.reEvaluateDonationRanks(userId, null, '')
+
+    expect(result).toBe(3)
   })
 })
 

@@ -65,7 +65,12 @@ export function cast<T> (data: DeepPartial<T>): T {
 }
 
 export function expectObject<T> (data: DeepPartial<T>): T {
-  return expect.objectContaining(data)
+  if (Array.isArray(data)) {
+    // expect.objectContaining doesn't seem to work properly with an array, so instead apply expect.objectContaining on the array items
+    return data.map(x => expectObject(x)) as any
+  } else {
+    return expect.objectContaining(data)
+  }
 }
 
 export function expectArray<T> (data: Partial<T>[]): T[] {

@@ -81,11 +81,10 @@ export default class LinkService extends ContextClass {
         const otherDefaultUserIds = connectedUserIds.filter(userId => userId !== defaultUserId && userId !== aggregateUserId)
         await this.reconciliateExternalRanks(defaultUserId, otherDefaultUserIds, aggregateUserId, mergeResults.individualResults)
 
-        await this.donationService.reEvaluateDonationRanks(aggregateUserId, `Added as part of the donation rank re-evaluation while linking default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}.`)
+        warnings += await this.donationService.reEvaluateDonationRanks(aggregateUserId, `Added as part of the donation rank re-evaluation while linking default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}.`, `link attempt ${linkAttemptId}`)
 
         await this.experienceService.recalculateChatExperience(aggregateUserId)
       }
-
 
     } catch (e: any) {
       this.logService.logError(this, `Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${warnings}.`, e)
