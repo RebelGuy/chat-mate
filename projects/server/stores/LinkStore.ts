@@ -1,6 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { LinkLog } from '@rebel/server/services/LinkService'
 import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
 import { ensureMaxTextWidth } from '@rebel/server/util/text'
 
@@ -75,17 +76,19 @@ export default class LinkStore extends ContextClass {
     const attempt = await this.db.linkAttempt.create({ data: {
       defaultChatUserId: defaultUserId,
       aggregateChatUserId: aggregateUserId,
-      startTime: new Date()
+      startTime: new Date(),
+      log: 'Starting...'
     }})
     return attempt.id
   }
 
   /** If `errorMessage` is null, it is implied that the link completed successfully, otherwise it is implied that it failed. */
-  public async completeLinkAttempt (linkAttemptId: number, errorMessage: string | null) {
+  public async completeLinkAttempt (linkAttemptId: number, logs: LinkLog[], errorMessage: string | null) {
     await this.db.linkAttempt.update({
       where: { id: linkAttemptId },
       data: {
         endTime: new Date(),
+        log: ensureMaxTextWidth(JSON.stringify(logs), 4096), // max length comes directly from the db - do not change this.
         errorMessage: errorMessage == null ? null : ensureMaxTextWidth(errorMessage, 4096) // max length comes directly from the db - do not change this.
       }
     })

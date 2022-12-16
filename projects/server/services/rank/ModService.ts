@@ -59,7 +59,7 @@ export default class ModService extends ContextClass {
   }
 
   /** Like `setModRank` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. */
-  public async setModRankExternal (defaultUserId: number, streamerId: number, isMod: boolean, message: string | null): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+  public async setModRankExternal (defaultUserId: number, streamerId: number, isMod: boolean,): Promise<Omit<SetActionRankResult, 'rankResult'>> {
     const userChannels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserId)
     const youtubeResults = await Promise.all(userChannels.youtubeChannels.map(c => this.trySetYoutubeMod(streamerId, c, isMod)))
     const twitchResults = await Promise.all(userChannels.twitchChannels.map(c => this.trySetTwitchMod(streamerId, c, isMod)))

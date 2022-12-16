@@ -6,6 +6,7 @@ import LinkStore from '@rebel/server/stores/LinkStore'
 import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
 import { LinkAttempt } from '@prisma/client'
 import { randomString } from '@rebel/server/util/random'
+import { LinkLog } from '@rebel/server/services/LinkService'
 
 export default () => {
   let linkStore: LinkStore
@@ -49,7 +50,8 @@ export default () => {
       await db.linkAttempt.create({ data: {
         startTime: new Date(),
         aggregateChatUserId: 1,
-        defaultChatUserId: 2
+        defaultChatUserId: 2,
+        log: ''
       }})
 
       const result = await linkStore.startLinkAttempt(3, 4)
@@ -65,6 +67,7 @@ export default () => {
         startTime: new Date(),
         aggregateChatUserId: 1,
         defaultChatUserId: 2,
+        log: '',
         endTime: new Date()
       }})
 
@@ -79,7 +82,8 @@ export default () => {
       await db.linkAttempt.create({ data: {
         startTime: new Date(),
         aggregateChatUserId: 3,
-        defaultChatUserId: 1
+        defaultChatUserId: 1,
+        log: ''
       }})
 
       await expect(() => linkStore.startLinkAttempt(1, 2)).rejects.toThrowError(LinkAttemptInProgressError)
@@ -90,7 +94,8 @@ export default () => {
       await db.linkAttempt.create({ data: {
         startTime: new Date(),
         aggregateChatUserId: 2,
-        defaultChatUserId: 3
+        defaultChatUserId: 3,
+        log: ''
       }})
 
       await expect(() => linkStore.startLinkAttempt(1, 2)).rejects.toThrowError(LinkAttemptInProgressError)
@@ -102,6 +107,7 @@ export default () => {
         startTime: new Date(),
         aggregateChatUserId: 3,
         defaultChatUserId: 1,
+        log: '',
         errorMessage: 'error'
       }})
 
@@ -114,6 +120,7 @@ export default () => {
         startTime: new Date(),
         aggregateChatUserId: 2,
         defaultChatUserId: 3,
+        log: '',
         errorMessage: 'error'
       }})
 
@@ -127,13 +134,15 @@ export default () => {
       await db.linkAttempt.create({ data: {
         startTime: new Date(),
         aggregateChatUserId: 1,
-        defaultChatUserId: 2
+        defaultChatUserId: 2,
+        log: ''
       }})
+      const log: LinkLog[] = []
 
-      await linkStore.completeLinkAttempt(1, null)
+      await linkStore.completeLinkAttempt(1, log, null)
 
       const storedLinkAttempt = await db.linkAttempt.findFirst()
-      expect(storedLinkAttempt).toEqual(expectObject<LinkAttempt>({ endTime: expect.any(Date), errorMessage: null }))
+      expect(storedLinkAttempt).toEqual(expectObject<LinkAttempt>({ endTime: expect.any(Date), errorMessage: null, log: '[]' }))
     })
 
     test('Truncates the error message if required so it can be inserted into the db', async () => {
@@ -141,14 +150,16 @@ export default () => {
       await db.linkAttempt.create({ data: {
         startTime: new Date(),
         aggregateChatUserId: 1,
-        defaultChatUserId: 2
+        defaultChatUserId: 2,
+        log: ''
       }})
       const error = randomString(10000)
+      const log: LinkLog[] = []
 
-      await linkStore.completeLinkAttempt(1, error)
+      await linkStore.completeLinkAttempt(1, log, error)
 
       const storedLinkAttempt = await db.linkAttempt.findFirst()
-      expect(storedLinkAttempt).toEqual(expectObject<LinkAttempt>({ endTime: expect.any(Date), errorMessage: expect.any(String) }))
+      expect(storedLinkAttempt).toEqual(expectObject<LinkAttempt>({ endTime: expect.any(Date), errorMessage: expect.any(String), log: '[]' }))
       expect(error.startsWith(storedLinkAttempt!.errorMessage!)).toBeTruthy()
     })
   })

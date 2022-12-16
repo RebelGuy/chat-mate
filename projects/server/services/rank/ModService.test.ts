@@ -11,6 +11,8 @@ import { single } from '@rebel/server/util/arrays'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
+import { youtubeChannel1 } from '@rebel/server/_test/testData'
 
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
@@ -133,5 +135,48 @@ describe(nameof(ModService, 'setModRank'), () => {
     const result = await modService.setModRank(userId1, streamerId1, loggedInRegisteredUserId, false, null)
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: expect.anything() }))
+  })
+})
+
+describe(nameof(ModService, 'setModRankExternal'), () => {
+  const defaultUserId = 125
+  const streamerId = 81
+  const twitchChannel = 5
+  const youtubeChannel = 2
+  const userChannels: UserOwnedChannels = {
+    userId: defaultUserId,
+    twitchChannels: [twitchChannel],
+    youtubeChannels: [youtubeChannel]
+  }
+  const contextToken = 'test'
+
+  test('Calls Twurple/Masterchat methods to add the mod rank', async () => {
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
+    mockMasterchatProxyService.mod.calledWith(contextToken).mockResolvedValue(true)
+    mockTwurpleService.modChannel.calledWith(streamerId, twitchChannel).mockResolvedValue()
+
+    const result = await modService.setModRankExternal(defaultUserId, streamerId, true)
+
+    expect(single(result.twitchResults).error).toBeNull()
+    expect(single(result.youtubeResults).error).toBeNull()
+    expect(single(mockTwurpleService.modChannel.mock.calls)).toEqual([streamerId, twitchChannel])
+    expect(mockMasterchatProxyService.mod.mock.calls.length).toBe(1)
+    expect(mockRankStore.addUserRank.mock.calls.length).toBe(0)
+  })
+
+  test('Calls Twurple/Masterchat methods to remove the mod rank', async () => {
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
+    mockMasterchatProxyService.unmod.calledWith(contextToken).mockResolvedValue(true)
+    mockTwurpleService.unmodChannel.calledWith(streamerId, twitchChannel).mockResolvedValue()
+
+    const result = await modService.setModRankExternal(defaultUserId, streamerId, false)
+
+    expect(single(result.twitchResults).error).toBeNull()
+    expect(single(result.youtubeResults).error).toBeNull()
+    expect(single(mockTwurpleService.unmodChannel.mock.calls)).toEqual([streamerId, twitchChannel])
+    expect(mockMasterchatProxyService.unmod.mock.calls.length).toBe(1)
+    expect(mockRankStore.removeUserRank.mock.calls.length).toBe(0)
   })
 })

@@ -6,13 +6,16 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ModService from '@rebel/server/services/rank/ModService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import RankService, { MergeResult } from '@rebel/server/services/rank/RankService'
+import RankService, { MergeResult, SetActionRankResult } from '@rebel/server/services/rank/RankService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { UserAlreadyLinkedToAggregateUserError, LinkAttemptInProgressError } from '@rebel/server/util/error'
 import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
+import { nameof } from '@rebel/server/_test/utils'
+
+export type LinkLog = [time: Date, step: string, warnings: number]
 
 type Deps = Dependencies<{
   logService: LogService
@@ -54,50 +57,58 @@ export default class LinkService extends ContextClass {
 
   /** Links the default user to the aggregate user and performs all required side effects.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
-   * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress. Please wait before creating another one.
+   * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and its state was not cleaned up. Please wait before creating another attempt, or clean up the state.
   */
   public async linkUser (defaultUserId: number, aggregateUserId: number) {
     const linkAttemptId = await this.linkStore.startLinkAttempt(defaultUserId, aggregateUserId)
-    let warnings = 0
+    let cumWarnings = 0
+    let logs: LinkLog[] = [[new Date(), 'Start', cumWarnings]]
 
     try {
       await this.linkStore.linkUser(defaultUserId, aggregateUserId)
-      const connectedUserIds = await this.accountStore.getConnectedChatUserIds(defaultUserId)
+      logs.push([new Date(), nameof(LinkStore, 'linkUser'), cumWarnings])
 
       await this.experienceStore.relinkChatExperience(defaultUserId, aggregateUserId)
+      logs.push([new Date(), nameof(ExperienceStore, 'relinkChatExperience'), cumWarnings])
 
+      const connectedUserIds = await this.accountStore.getConnectedChatUserIds(defaultUserId)
       if (connectedUserIds.length === 2) {
         // this is a new link - life will be simple
         // don't need to re-apply external punishments, re-apply donations, or re-calculate chat experience data
-        await this.rankService.transferRanks(defaultUserId, aggregateUserId)
+        cumWarnings += await this.rankService.transferRanks(defaultUserId, aggregateUserId, `link attempt ${linkAttemptId}`)
+        logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
 
       } else {
         // at least one other default chat user is already connected to the aggregate user - this will be complicated
-        // todo: mergeId should be `linkAttempt-${linkAttemptId}`?
         // todo: do we need to worry about new ranks/messages/xp/donations while the merge is happening? test it out with 10k messages, and see what happens. as long as we don't get a crash, it's probably fine if one or two xp transactions don't get copied over (or similar) - they are not "lost", just assigned to the old user that we aren't using anymore. or if a new xp tx isn't taken into consideration during the recalculation - not a big deal.
         const mergeResults = await this.rankService.mergeRanks(defaultUserId, aggregateUserId, ['donator', 'member', 'supporter'], `link attempt ${linkAttemptId}`)
-        warnings += mergeResults.warnings
+        cumWarnings += mergeResults.warnings
+        logs.push([new Date(), nameof(RankService, 'mergeRanks'), cumWarnings])
 
         const otherDefaultUserIds = connectedUserIds.filter(userId => userId !== defaultUserId && userId !== aggregateUserId)
-        await this.reconciliateExternalRanks(defaultUserId, otherDefaultUserIds, aggregateUserId, mergeResults.individualResults)
+        cumWarnings += await this.reconciliateExternalRanks(defaultUserId, otherDefaultUserIds, aggregateUserId, mergeResults.individualResults)
+        logs.push([new Date(), 'reconciliateExternalRanks', cumWarnings])
 
-        warnings += await this.donationService.reEvaluateDonationRanks(aggregateUserId, `Added as part of the donation rank re-evaluation while linking default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}.`, `link attempt ${linkAttemptId}`)
+        cumWarnings += await this.donationService.reEvaluateDonationRanks(aggregateUserId, `Added as part of the donation rank re-evaluation while linking default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}.`, `link attempt ${linkAttemptId}`)
+        logs.push([new Date(), nameof(DonationService, 'reEvaluateDonationRanks'), cumWarnings])
 
         await this.experienceService.recalculateChatExperience(aggregateUserId)
+        logs.push([new Date(), nameof(ExperienceService, 'recalculateChatExperience'), cumWarnings])
       }
 
     } catch (e: any) {
-      this.logService.logError(this, `Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${warnings}.`, e)
-      await this.linkStore.completeLinkAttempt(linkAttemptId, e.message)
+      this.logService.logError(this, `Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
+      await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
       throw e
     }
 
-    await this.linkStore.completeLinkAttempt(linkAttemptId, null)
+    await this.linkStore.completeLinkAttempt(linkAttemptId, logs, null)
   }
 
-  /** Applies external timeouts/bans/mod ranks to the default user so that it is in sync with the aggregate user's external punishment state after the merge. */
-  private async reconciliateExternalRanks (oldDefaultUserId: number, otherDefaultUserIds: number[], aggregateUserId: number, mergeResults: MergeResult[]) {
-    const allDefaultUserIds = [oldDefaultUserId, ...otherDefaultUserIds]
+  /** Applies external timeouts/bans/mod ranks to the default user so that it is in sync with the aggregate user's external punishment state after the merge.
+   * Returns the number of warnings encountered. */
+  private async reconciliateExternalRanks (oldDefaultUserId: number, otherDefaultUserIds: number[], aggregateUserId: number, mergeResults: MergeResult[]): Promise<number> {
+    let warnings = 0
 
     // deliberately do these in series, we don't want to get rate limited
     for (const result of mergeResults) {
@@ -142,36 +153,57 @@ export default class LinkService extends ContextClass {
         otherDefaultUserIds,
         result,
         NO_OP_ASYNC,
-        (_, defaultUsers) => {
-          const message = `Added as part of rank merge ${result.mergeId} of user ${oldDefaultUserId} with user ${aggregateUserId}`
-          return Promise.all(defaultUsers.map(userId => this.modService.setModRankExternal(userId, result.streamerId!, true, message)))
-        }
+        (_, defaultUsers) => Promise.all(defaultUsers.map(userId => this.modService.setModRankExternal(userId, result.streamerId!, true)))
       )
     }
+
+    return warnings
   }
 
-  /** Revokes the existing rank of the old default user, then of the remaining connected default users, and finally re-applies the rank for all connected default users. */
+  /** Revokes the existing rank of the old default user, then of the remaining connected default users, and finally re-applies the rank for all connected default users.
+   * Returns the number of warnings. */
   private async reconciliateRank (
     rankName: RankName,
     oldDefaultUserId: number,
     otherDefaultUserIds: number[],
     mergeResult: MergeResult,
-    onRevokeExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<any>,
-    onApplyExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<any>
-  ): Promise<void> {
+    onRevokeExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<(Omit<SetActionRankResult, 'rankResult'> | void)[] | void>,
+    onApplyExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<(Omit<SetActionRankResult, 'rankResult'> | void)[] | void>
+  ): Promise<number> {
+    let warnings = 0
+
     const oldRank = mergeResult.oldRanks.find(r => r.rank.name === rankName)
     if (oldRank != null) {
-      await onRevokeExternal(oldRank, [oldDefaultUserId])
+      const result = await onRevokeExternal(oldRank, [oldDefaultUserId])
+      warnings += getWarnings(result)
     }
 
+    // extensions and unchanged ranks are removed and then re-applied so that we can be sure the state is consistent
     const removeRank = [...mergeResult.extensions, ...mergeResult.unchanged, ...mergeResult.removals].find(r => r.rank.name === rankName)
     if (removeRank != null) {
-      await onRevokeExternal(removeRank, otherDefaultUserIds)
+      const result = await onRevokeExternal(removeRank, otherDefaultUserIds)
+      warnings += getWarnings(result)
     }
 
     const newRank = [...mergeResult.additions, ...mergeResult.extensions, ...mergeResult.unchanged].find(r => r.rank.name === rankName)
     if (newRank != null) {
-      await onApplyExternal(newRank, [oldDefaultUserId, ...otherDefaultUserIds])
+      const result = await onApplyExternal(newRank, [oldDefaultUserId, ...otherDefaultUserIds])
+      warnings += getWarnings(result)
     }
+
+    return warnings
+  }
+}
+
+/** Gets the number of warnings from the external action results. */
+function getWarnings (result: (Omit<SetActionRankResult, 'rankResult'> | void)[] | void): number {
+  if (result == null) {
+    return 0
+  } else {
+    return (result.filter(r => r != null) as Omit<SetActionRankResult, 'rankResult'>[])
+      .flatMap(r => [
+        ...r.twitchResults.filter(x => x.error != null),
+        ...r.youtubeResults.filter(x => x.error != null)
+      ]).length
   }
 }

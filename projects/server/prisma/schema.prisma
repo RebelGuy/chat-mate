@@ -122,6 +122,7 @@ model LinkAttempt {
 
   startTime    DateTime
   endTime      DateTime?
+  log          String    @db.VarChar(4096)
   // if you change the length, it must also be updated in the LinkStore.completeLinkAttempt method
   errorMessage String?   @db.VarChar(4096)
 

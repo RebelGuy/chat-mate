@@ -2,10 +2,10 @@ import { Rank, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { cast, nameof, expectObject, expectArray } from '@rebel/server/_test/utils'
-import { single } from '@rebel/server/util/arrays'
+import { single, single2 } from '@rebel/server/util/arrays'
 import { any, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/server/util/datetime'
@@ -263,6 +263,35 @@ describe(nameof(PunishmentService, 'banUser'), () => {
   })
 })
 
+describe(nameof(PunishmentService, 'banUserExternal'), () => {
+  test('Calls Twurple/Masterchat methods to add the ban', async () => {
+    const defaultUserId = 125
+    const streamerId = 81
+    const twitchChannel = 5
+    const youtubeChannel = 2
+    const userChannels: UserOwnedChannels = {
+      userId: defaultUserId,
+      twitchChannels: [twitchChannel],
+      youtubeChannels: [youtubeChannel]
+    }
+    const contextToken = 'test'
+    const banMessage = 'test123'
+
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
+    mockMasterchatProxyService.banYoutubeChannel.calledWith(contextToken).mockResolvedValue(true)
+    mockTwurpleService.banChannel.calledWith(streamerId, twitchChannel, banMessage).mockResolvedValue()
+
+    const result = await punishmentService.banUserExternal(defaultUserId, streamerId, banMessage)
+
+    expect(single(result.twitchResults).error).toBeNull()
+    expect(single(result.youtubeResults).error).toBeNull()
+    expect(single(mockTwurpleService.banChannel.mock.calls)).toEqual([streamerId, twitchChannel, banMessage])
+    expect(mockMasterchatProxyService.banYoutubeChannel.mock.calls.length).toBe(1)
+    expect(mockRankStore.addUserRank.mock.calls.length).toBe(0)
+  })
+})
+
 describe(nameof(PunishmentService, 'isUserPunished'), () => {
   test('returns false if there are no active punishments for the user', async () => {
     mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1]), streamerId1)
@@ -380,6 +409,38 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     const result = await punishmentService.timeoutUser(1, streamerId1, loggedInRegisteredUserId, null, 1)
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
+  })
+})
+
+describe(nameof(PunishmentService, 'timeoutUserExternal'), () => {
+  test('Calls Twurple/Masterchat methods to add the timeout', async () => {
+    const defaultUserId = 125
+    const streamerId = 81
+    const twitchChannel = 5
+    const youtubeChannel = 2
+    const userChannels: UserOwnedChannels = {
+      userId: defaultUserId,
+      twitchChannels: [twitchChannel],
+      youtubeChannels: [youtubeChannel]
+    }
+    const contextToken = 'test'
+    const rankId = 12
+    const timeoutMessage = 'test123'
+    const durationSeconds = 1000
+
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
+    mockMasterchatProxyService.timeout.calledWith(contextToken).mockResolvedValue(true)
+    mockTwurpleService.timeout.calledWith(streamerId, twitchChannel, timeoutMessage, durationSeconds).mockResolvedValue()
+
+    const result = await punishmentService.timeoutUserExternal(defaultUserId, streamerId, rankId, timeoutMessage, durationSeconds)
+
+    expect(single(result.twitchResults).error).toBeNull()
+    expect(single(result.youtubeResults).error).toBeNull()
+    expect(single(mockTwurpleService.timeout.mock.calls)).toEqual([streamerId, twitchChannel, timeoutMessage, durationSeconds])
+    expect(mockMasterchatProxyService.timeout.mock.calls.length).toBe(1)
+    expect(single(mockYoutubeTimeoutRefreshService.startTrackingTimeout.mock.calls)).toEqual([rankId, expect.any(Date), false, expect.any(Function)])
+    expect(mockRankStore.addUserRank.mock.calls.length).toBe(0)
   })
 })
 
@@ -514,5 +575,32 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     const result = await punishmentService.untimeoutUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
+  })
+})
+
+describe(nameof(PunishmentService, 'untimeoutUserExternal'), () => {
+  test('Calls Twurple method to remove the timeout', async () => {
+    const defaultUserId = 125
+    const streamerId = 81
+    const twitchChannel = 5
+    const youtubeChannel = 2
+    const userChannels: UserOwnedChannels = {
+      userId: defaultUserId,
+      twitchChannels: [twitchChannel],
+      youtubeChannels: [youtubeChannel]
+    }
+    const rankId = 581
+    const revokeMessage = 'test123'
+
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockTwurpleService.untimeout.calledWith(streamerId, twitchChannel, revokeMessage).mockResolvedValue()
+
+    const result = await punishmentService.untimeoutUserExternal(defaultUserId, streamerId, rankId, revokeMessage)
+
+    expect(single2(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls)).toBe(rankId)
+    expect(single(result.twitchResults).error).toBeNull()
+    expect(single(result.youtubeResults).error).not.toBeNull()
+    expect(mockTwurpleService.untimeout.mock.calls.length).toBe(1)
+    expect(mockRankStore.removeUserRank.mock.calls.length).toBe(0)
   })
 })

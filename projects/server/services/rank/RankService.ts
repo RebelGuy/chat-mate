@@ -74,15 +74,18 @@ export default class RankService extends ContextClass {
     return ranks.filter(rank => isOneOf<RegularRank[]>(rank.name, 'famous', 'donator', 'member', 'supporter') || rank.group === 'punishment' || rank.name === 'mod')
   }
 
-  /** Revokes the ranks of the first user, and re-adds them to the second user. */
-  public async transferRanks (fromUserId: number, toUserId: number): Promise<void> {
+  /** Revokes the ranks of the first user, and re-adds them to the second user.
+   * Assumes the second user has no ranks.
+   * Returns the number of warnings.
+  */
+  public async transferRanks (fromUserId: number, toUserId: number, transferId: string): Promise<number> {
     const ranks = await this.rankStore.getAllUserRanks(fromUserId)
 
-    // reference a common id so we can more easily reconciliate data later on
-    const transferId = randomString(8)
+    let warnings = 0
+
     for (const rank of ranks.ranks) {
       // we don't strictly need to revoke the old user's ranks, as we will never query those while the new link is in place.
-      // however, if we ever were to unlink the user, it's easier to start from a clean state where the original user has not active ranks associated with it.
+      // however, if we ever were to unlink the user, it's easier to start from a clean state where the original user has no active ranks associated with it.
       const removeArgs: RemoveUserRankArgs = {
         chatUserId: fromUserId,
         message: `Revoked as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}`,
@@ -90,7 +93,16 @@ export default class RankService extends ContextClass {
         removedBy: null,
         streamerId: rank.streamerId
       }
-      await this.rankStore.removeUserRank(removeArgs)
+      try {
+        await this.rankStore.removeUserRank(removeArgs)
+      } catch (e: any) {
+        if (e instanceof UserRankNotFoundError) {
+          this.logService.logWarning(this, `[Transfer ${transferId}] Cannot remove old rank ${rank.rank.name} from user ${fromUserId} for streamer ${rank.streamerId} because it doesn't exist`)
+          warnings++
+        } else {
+          throw e
+        }
+      }
 
       const addArgs: AddUserRankArgs = {
         chatUserId: toUserId,
@@ -101,8 +113,19 @@ export default class RankService extends ContextClass {
         expirationTime: rank.expirationTime,
         time: new Date()
       }
-      await this.rankStore.addUserRank(addArgs)
+      try {
+        await this.rankStore.addUserRank(addArgs)
+      } catch (e: any) {
+        if (e instanceof UserRankAlreadyExistsError) {
+          this.logService.logWarning(this, `[Transfer ${transferId}] Cannot add transferred rank ${rank.rank.name} to user ${toUserId} for streamer ${rank.streamerId} because it already exists`)
+          warnings++
+        } else {
+          throw e
+        }
+      }
     }
+
+    return warnings
   }
 
   /** Merges the ranks from the first user onto the second user.

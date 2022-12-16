@@ -32,7 +32,7 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
   private readonly timerHelpers: TimerHelpers
   private readonly dateTime: DateTimeHelpers
 
-  private punishmentTimerMap: Map<number, [NextInterval, number]> = new Map()
+  private timeoutTimerMap: Map<number, [NextInterval, number]> = new Map()
 
   constructor (deps: Deps) {
     super()
@@ -43,8 +43,8 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
 
   /** Periodically calls the onRefresh method such that the timeout on Youtube expires at the provided time.
    * `startImmediately` should be set to true when initialising from a fresh start, and set to false when adding a new timeout punishment. */
-  public async startTrackingTimeout (punishmentId: number, expirationTime: Date, startImmediately: boolean, onRefresh: () => Promise<void>) {
-    this.stopTrackingTimeout(punishmentId)
+  public async startTrackingTimeout (timeoutRankId: number, expirationTime: Date, startImmediately: boolean, onRefresh: () => Promise<void>) {
+    this.stopTrackingTimeout(timeoutRankId)
 
     const initialInterval = this.calculateNextInterval(expirationTime, null)
 
@@ -59,7 +59,7 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
     const options: TimerOptions = {
       behaviour: 'dynamicEnd',
       initialInterval: initialInterval.interval,
-      callback: () => this.onElapsed(punishmentId, expirationTime, onRefresh)
+      callback: () => this.onElapsed(timeoutRankId, expirationTime, onRefresh)
     }
 
     let timerId: number
@@ -69,31 +69,31 @@ export default class YoutubeTimeoutRefreshService extends ContextClass {
       timerId = this.timerHelpers.createRepeatingTimer(options, false)
     }
 
-    this.punishmentTimerMap.set(punishmentId, [initialInterval, timerId])
+    this.timeoutTimerMap.set(timeoutRankId, [initialInterval, timerId])
   }
 
   /** Should be called when the punishment has been revoked. It will take up to 5 minutes for the revokation to come into effect on Youtube. */
-  public stopTrackingTimeout (punishmentId: number) {
-    if (this.punishmentTimerMap.has(punishmentId)) {
-      const timerId = this.punishmentTimerMap.get(punishmentId)![1]
+  public stopTrackingTimeout (timeoutRankId: number) {
+    if (this.timeoutTimerMap.has(timeoutRankId)) {
+      const timerId = this.timeoutTimerMap.get(timeoutRankId)![1]
       this.timerHelpers.disposeSingle(timerId)
-      this.punishmentTimerMap.delete(punishmentId)
+      this.timeoutTimerMap.delete(timeoutRankId)
     }
   }
 
-  private async onElapsed (punishmentId: number, expirationTime: Date, onRefresh: () => Promise<void>): Promise<number> {
-    const [prevInterval, timerId] = this.punishmentTimerMap.get(punishmentId)!
+  private async onElapsed (timeoutRankId: number, expirationTime: Date, onRefresh: () => Promise<void>): Promise<number> {
+    const [prevInterval, timerId] = this.timeoutTimerMap.get(timeoutRankId)!
 
     if (prevInterval.type === 'noMore') {
-      this.stopTrackingTimeout(punishmentId)
+      this.stopTrackingTimeout(timeoutRankId)
       return 0
 
     } else {
       await onRefresh()
       const nextInterval = this.calculateNextInterval(expirationTime, prevInterval)
-      this.punishmentTimerMap.set(punishmentId, [nextInterval, timerId])
+      this.timeoutTimerMap.set(timeoutRankId, [nextInterval, timerId])
       if (nextInterval.type === 'noMore') {
-        this.stopTrackingTimeout(punishmentId)
+        this.stopTrackingTimeout(timeoutRankId)
         return 0
       } else {
         return nextInterval.interval

@@ -5,6 +5,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
 import { PartialChatMessage } from '@rebel/server/models/chat'
 import EmojiService from '@rebel/server/services/EmojiService'
+import LogService from '@rebel/server/services/LogService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
@@ -12,7 +13,7 @@ import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { first, group, single } from '@rebel/server/util/arrays'
 import { addTime, maxTime } from '@rebel/server/util/datetime'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
+import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, UserRankAlreadyExistsError } from '@rebel/server/util/error'
 
 type Deps = Dependencies<{
   donationStore: DonationStore
@@ -23,9 +24,12 @@ type Deps = Dependencies<{
   streamlabsProxyService: StreamlabsProxyService
   streamerStore: StreamerStore
   accountStore: AccountStore
+  logService: LogService
 }>
 
 export default class DonationService extends ContextClass {
+  public readonly name = DonationService.name
+
   private readonly donationStore: DonationStore
   private readonly rankStore: RankStore
   private readonly donationHelpers: DonationHelpers
@@ -34,6 +38,7 @@ export default class DonationService extends ContextClass {
   private readonly streamlabsProxyService: StreamlabsProxyService
   private readonly streamerStore: StreamerStore
   private readonly accountStore: AccountStore
+  private readonly logService: LogService
 
   constructor (deps: Deps) {
     super()
@@ -46,6 +51,7 @@ export default class DonationService extends ContextClass {
     this.streamlabsProxyService = deps.resolve('streamlabsProxyService')
     this.streamerStore = deps.resolve('streamerStore')
     this.accountStore = deps.resolve('accountStore')
+    this.logService = deps.resolve('logService')
   }
 
   public override async initialise () {
@@ -85,9 +91,9 @@ export default class DonationService extends ContextClass {
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, userId: number, streamerId: number): Promise<void> {
+  public async linkUserToDonation (donationId: number, anyUserId: number, streamerId: number): Promise<void> {
     const time = this.dateTimeHelpers.now()
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(userId)
+    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(anyUserId)
     const primaryUserId = first(connectedUserIds)
     await this.donationStore.linkUserToDonation(donationId, primaryUserId, time)
 
@@ -176,8 +182,10 @@ export default class DonationService extends ContextClass {
     }
   }
 
-  /** Re-evaluates and applies eligible donation ranks for the user across all streamers. Assumes the user does not currently have any donation ranks. */
-  public async reEvaluateDonationRanks (userId: number, message: string | null) {
+  /** Re-evaluates and applies eligible donation ranks for connected users across all streamers.
+   * Assumes the associated primary user does not currently have any donation ranks.
+   * Returns the number of warnings encountered. */
+  public async reEvaluateDonationRanks (userId: number, message: string | null, reEvaluationId: string): Promise<number> {
     const time = this.dateTimeHelpers.now()
     const connectedUserIds = await this.accountStore.getConnectedChatUserIds(userId)
     const primaryUserId = first(connectedUserIds)
@@ -185,21 +193,20 @@ export default class DonationService extends ContextClass {
     const allDonations = await this.donationStore.getDonationsByUserIds(null, connectedUserIds)
     const groupedDonations = group(allDonations, d => d.streamerId)
 
+    let warnings = 0
     for (const { group: streamerId, items: donations } of groupedDonations) {
       if (donations.length === 0) {
         continue
       }
 
       const donationAmounts = donations.map(d => [d.time, d.amount] as DonationAmount)
-      const currentRanks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
 
       const lastDonationTime = maxTime(...donations.map(d => d.time))
       const longTermExpiration = addTime(lastDonationTime, 'days', DONATION_EPOCH_DAYS)
       const monthFromNow = addTime(lastDonationTime, 'days', 31)
 
       if (this.donationHelpers.isEligibleForDonator(donationAmounts, time)) {
-        const existingDonatorRank = currentRanks.find(r => r.rank.name === 'donator')
-        if (existingDonatorRank == null) {
+        try {
           await this.rankStore.addUserRank({
             rank: 'donator',
             chatUserId: primaryUserId,
@@ -209,14 +216,18 @@ export default class DonationService extends ContextClass {
             message: message,
             time: time
           })
-        } else {
-          await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
+        } catch (e: any) {
+          if (e instanceof UserRankAlreadyExistsError) {
+            this.logService.logWarning(this, `[Re-evaluation ${reEvaluationId}] Cannot add rank donator to primary user ${primaryUserId} for streamer ${streamerId} because it already exists`)
+            warnings++
+          } else {
+            throw e
+          }
         }
       }
 
       if (this.donationHelpers.isEligibleForSupporter(donationAmounts, time)) {
-        const existingDonatorRank = currentRanks.find(r => r.rank.name === 'supporter')
-        if (existingDonatorRank == null) {
+        try {
           await this.rankStore.addUserRank({
             rank: 'supporter',
             chatUserId: primaryUserId,
@@ -226,14 +237,18 @@ export default class DonationService extends ContextClass {
             message: message,
             time: time
           })
-        } else {
-          await this.rankStore.updateRankExpiration(existingDonatorRank.id, longTermExpiration)
+        } catch (e: any) {
+          if (e instanceof UserRankAlreadyExistsError) {
+            this.logService.logWarning(this, `[Re-evaluation ${reEvaluationId}] Cannot add rank supporter to primary user ${primaryUserId} for streamer ${streamerId} because it already exists`)
+            warnings++
+          } else {
+            throw e
+          }
         }
       }
 
       if (this.donationHelpers.isEligibleForMember(donationAmounts, time)) {
-        const existingDonatorRank = currentRanks.find(r => r.rank.name === 'member')
-        if (existingDonatorRank == null) {
+        try {
           await this.rankStore.addUserRank({
             rank: 'member',
             chatUserId: primaryUserId,
@@ -243,11 +258,18 @@ export default class DonationService extends ContextClass {
             message: message,
             time: time
           })
-        } else {
-          await this.rankStore.updateRankExpiration(existingDonatorRank.id, monthFromNow)
+        } catch (e: any) {
+          if (e instanceof UserRankAlreadyExistsError) {
+            this.logService.logWarning(this, `[Re-evaluation ${reEvaluationId}] Cannot add rank member to primary user ${primaryUserId} for streamer ${streamerId} because it already exists`)
+            warnings++
+          } else {
+            throw e
+          }
         }
       }
     }
+
+    return warnings
   }
 
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the primary user is no longer eligible for.
