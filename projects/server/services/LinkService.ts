@@ -89,7 +89,7 @@ export default class LinkService extends ContextClass {
         // don't need to re-apply external punishments, re-apply donations, or re-calculate chat experience data
         // we don't strictly need to revoke the old user's ranks, as we will never query those while the new link is in place.
         // however, if we ever were to unlink the user, it's easier to start from a clean state where the original user has no active ranks associated with it.
-        cumWarnings += await this.rankService.transferRanks(defaultUserId, aggregateUserId, `link attempt ${linkAttemptId}`, true)
+        cumWarnings += await this.rankService.transferRanks(defaultUserId, aggregateUserId, `link attempt ${linkAttemptId}`, true, [])
         logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
 
       } else {
@@ -149,7 +149,7 @@ export default class LinkService extends ContextClass {
       if (connectedUserIds.length === 1) {
         // we unlinked the only user
         if (options.transferRanks) {
-          cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, true)
+          cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, true, ['owner'])
           logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
         }
 
@@ -157,7 +157,7 @@ export default class LinkService extends ContextClass {
         // at least one other default chat user is still connected to the aggregate user
         if (options.transferRanks) {
           // importantly, leave the existing aggregate user's ranks intact
-          cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, false)
+          cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, false, ['owner'])
           logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
         }
       }

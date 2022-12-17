@@ -62,7 +62,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
 
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
-    expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true])
+    expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true, expect.anything()])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
 
@@ -256,7 +256,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
       await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })
 
       expect(single(mockExperienceStore.undoChatExperienceRelink.mock.calls)).toEqual([defaultUserId])
-      expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), true])
+      expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), true, expect.anything()])
       expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
     })
 
@@ -289,7 +289,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
       await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })
 
       expect(single(mockExperienceStore.undoChatExperienceRelink.mock.calls)).toEqual([defaultUserId])
-      expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), false]) // important - keep existing ranks of the aggreagte user
+      expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), false, expect.anything()]) // important - keep existing ranks of the aggreagte user
       expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
     })
 
@@ -302,7 +302,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
       mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
       mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue(connectedUserIds)
       mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
-      mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean)).mockRejectedValue(new Error())
+      mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean), expect.anything()).mockRejectedValue(new Error())
 
       await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })).rejects.toThrow()
 
