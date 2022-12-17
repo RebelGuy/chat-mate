@@ -74,17 +74,18 @@ export default class RankService extends ContextClass {
     return ranks.filter(rank => isOneOf<RegularRank[]>(rank.name, 'famous', 'donator', 'member', 'supporter') || rank.group === 'punishment' || rank.name === 'mod')
   }
 
-  /** Revokes the ranks of the first user, and re-adds them to the second user.
+  /** Revokes the ranks of the first user if specified, and re-adds them to the second user.
    * Assumes the second user has no ranks.
+   * `ignoreRanks` specifies which ranks, if any, should not be transferred (note that they will still be revoked, if specified).
    * Returns the number of warnings.
   */
-  public async transferRanks (fromUserId: number, toUserId: number, transferId: string, revokeOldRanks: boolean): Promise<number> {
+  public async transferRanks (fromUserId: number, toUserId: number, transferId: string, revokeAllOldRanks: boolean, ignoreRanks: RankName[]): Promise<number> {
     const ranks = await this.rankStore.getAllUserRanks(fromUserId)
 
     let warnings = 0
 
     for (const rank of ranks.ranks) {
-      if (revokeOldRanks) {
+      if (revokeAllOldRanks) {
         const removeArgs: RemoveUserRankArgs = {
           chatUserId: fromUserId,
           message: `Revoked as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}`,
@@ -102,6 +103,10 @@ export default class RankService extends ContextClass {
             throw e
           }
         }
+      }
+
+      if (ignoreRanks.includes(rank.rank.name)) {
+        continue
       }
 
       const addArgs: AddUserRankArgs = {
