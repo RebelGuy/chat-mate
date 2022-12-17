@@ -65,11 +65,32 @@ describe(nameof(RankService, 'transferRanks'), () => {
     })
     mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ userId: fromUserId, ranks: [rank1, rank2, rank3] })
 
-    const result = await rankService.transferRanks(fromUserId, toUserId, '')
+    const result = await rankService.transferRanks(fromUserId, toUserId, '', true)
 
     // honestly there's not much else that is useful to test, so this will do
     expect(mockRankStore.removeUserRank.mock.calls.length).toBe(3)
     expect(mockRankStore.addUserRank.mock.calls.length).toBe(3)
+    expect(result).toBe(0)
+  })
+
+  test('Copies the ranks of the old user to the new user', async () => {
+    const fromUserId = 5
+    const toUserId = 19
+    const streamer1 = 124
+
+    const rank1 = cast<UserRankWithRelations>({
+      rank: famousRank,
+      streamerId: streamer1,
+      assignedByRegisteredUserId: 2,
+      expirationTime: null
+    })
+    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ userId: fromUserId, ranks: [rank1] })
+
+    const result = await rankService.transferRanks(fromUserId, toUserId, '', false)
+
+    // honestly there's not much else that is useful to test, so this will do
+    expect(mockRankStore.removeUserRank.mock.calls.length).toBe(0)
+    expect(mockRankStore.addUserRank.mock.calls.length).toBe(1)
     expect(result).toBe(0)
   })
 
@@ -88,7 +109,7 @@ describe(nameof(RankService, 'transferRanks'), () => {
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ streamerId: streamerId, chatUserId: fromUserId, rank: 'famous' })).mockRejectedValue(new UserRankNotFoundError())
     mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId, chatUserId: toUserId, rank: 'famous' })).mockRejectedValue(new UserRankAlreadyExistsError())
 
-    const result = await rankService.transferRanks(fromUserId, toUserId, '')
+    const result = await rankService.transferRanks(fromUserId, toUserId, '', true)
 
     expect(result).toBe(2)
   })

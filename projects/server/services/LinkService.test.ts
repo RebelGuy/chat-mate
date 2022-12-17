@@ -48,7 +48,7 @@ beforeEach(() => {
   }))
 })
 
-describe.only(nameof(LinkService, 'linkUser'), () => {
+describe(nameof(LinkService, 'linkUser'), () => {
   test('First-time link only relinks experience and transfers rank, but does not merge ranks nor recalculate donations or xp', async () => {
     const defaultUserId = 5
     const aggregateUserId = 12
@@ -62,7 +62,7 @@ describe.only(nameof(LinkService, 'linkUser'), () => {
 
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
-    expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String)])
+    expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
 
@@ -241,5 +241,83 @@ describe.only(nameof(LinkService, 'linkUser'), () => {
     await expect(() => linkService.linkUser(defaultUserId, aggregateUserId)).rejects.toThrowError(LinkAttemptInProgressError)
 
     expect(mockLinkStore.completeLinkAttempt.mock.calls.length).toBe(0)
+  })
+
+  describe(nameof(LinkService, 'unlinkUser'), () => {
+    test('Unlinking a single user relinks the chat experience and transfers ranks if specified in options', async () => {
+      const defaultUserId = 5
+      const aggregateUserId = 12
+      const linkAttemptId = 2
+
+      mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+      mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
+      mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue([defaultUserId])
+
+      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })
+
+      expect(single(mockExperienceStore.undoChatExperienceRelink.mock.calls)).toEqual([defaultUserId])
+      expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), true])
+      expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
+    })
+
+    test('Unlinking a single user does not relink the chat experience or transfer ranks if not specified in options', async () => {
+      const defaultUserId = 5
+      const aggregateUserId = 12
+      const linkAttemptId = 2
+
+      mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+      mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
+      mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue([defaultUserId])
+
+      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false })
+
+      expect(mockExperienceStore.undoChatExperienceRelink.mock.calls.length).toBe(0)
+      expect(mockRankService.transferRanks.mock.calls.length).toBe(0)
+      expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
+    })
+
+    test('Unlinking a user that had multiple connected users relinks the chat experience and transfers ranks if specified in options', async () => {
+      const defaultUserId = 5
+      const aggregateUserId = 12
+      const linkAttemptId = 2
+      const connectedUserIds = [12, 6]
+
+      mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+      mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
+      mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue(connectedUserIds)
+
+      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })
+
+      expect(single(mockExperienceStore.undoChatExperienceRelink.mock.calls)).toEqual([defaultUserId])
+      expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), false]) // important - keep existing ranks of the aggreagte user
+      expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
+    })
+
+    test('Completes the link attempt even when an error is encountered', async () => {
+      const defaultUserId = 5
+      const aggregateUserId = 12
+      const linkAttemptId = 2
+      const connectedUserIds = [12, 6]
+
+      mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+      mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue(connectedUserIds)
+      mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
+      mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean)).mockRejectedValue(new Error())
+
+      await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })).rejects.toThrow()
+
+      expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), expect.any(String)])
+    })
+
+    test('Throws if a link attempt fails to be created', async () => {
+      // e.g. another link is already in progress, or the previous one failed to complete
+      const defaultUserId = 5
+
+      mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId,).mockRejectedValue(new LinkAttemptInProgressError(''))
+
+      await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })).rejects.toThrowError(LinkAttemptInProgressError)
+
+      expect(mockLinkStore.completeLinkAttempt.mock.calls.length).toBe(0)
+    })
   })
 })

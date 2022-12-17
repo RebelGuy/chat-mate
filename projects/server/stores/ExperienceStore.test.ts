@@ -609,6 +609,22 @@ export default () => {
     })
   })
 
+  describe(nameof(ExperienceStore, 'undoChatExperienceRelink'), () => {
+    test('Updates all transactions across several', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer1, userId: user1, originalUserId: user3, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, originalUserId: user3, delta: 2, time: data.time1 },
+        { streamerId: streamer2, userId: user2, originalUserId: user1, delta: 3, time: data.time1 }
+      ]})
+
+      await experienceStore.undoChatExperienceRelink(user3)
+
+      const stored = await db.experienceTransaction.findMany()
+      expect(stored.map(tx => tx.userId)).toEqual([user3, user3, user2])
+      expect(stored.map(tx => tx.originalUserId)).toEqual([null, null, user1])
+    })
+  })
+
   describe(nameof(ExperienceStore, 'modifyChatExperiences'), () => {
     test('Updates the transaction delta and chat experience', async () => {
       await db.experienceTransaction.createMany({ data: [

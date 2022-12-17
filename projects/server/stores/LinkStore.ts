@@ -1,8 +1,9 @@
+import { LinkAttempt, LinkType } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LinkLog } from '@rebel/server/services/LinkService'
-import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/server/util/error'
 import { ensureMaxTextWidth } from '@rebel/server/util/text'
 
 type Deps = Dependencies<{
@@ -41,10 +42,71 @@ export default class LinkStore extends ContextClass {
   }
 
   /** Returns the created linkAttempt id.
-   * @throws {@link LinkAttemptInProgressError}: When the default or aggregate user is already currently involved in a link attempt,
+   * @throws {@link LinkAttemptInProgressError}: When the default or aggregate user is already currently involved in a link/unlink attempt,
    * or if a previous attempt had failed and its state was not cleaned up.
   */
   public async startLinkAttempt (defaultUserId: number, aggregateUserId: number): Promise<number> {
+    return await this.startLinkOrUnlinkAttempt(defaultUserId, aggregateUserId, 'link')
+  }
+
+  /** Returns the created linkAttempt id.
+   * @throws {@link LinkAttemptInProgressError}: When the default or aggregate user is already currently involved in a link/unlink attempt,
+   * or if a previous attempt had failed and its state was not cleaned up.
+   * @throws {@link UserNotLinkedError}: When the default user is not currently linked to an aggregate user.
+  */
+  public async startUnlinkAttempt (defaultUserId: number): Promise<number> {
+    const defaultUser = await this.db.chatUser.findUnique({
+      where: { id: defaultUserId },
+      rejectOnNotFound: true
+    })
+
+    if (defaultUser.aggregateChatUserId == null) {
+      throw new UserNotLinkedError()
+    }
+
+    return await this.startLinkOrUnlinkAttempt(defaultUserId, defaultUser.aggregateChatUserId, 'unlink')
+  }
+
+  /** If `errorMessage` is null, it is implied that the link completed successfully, otherwise it is implied that it failed. */
+  public async completeLinkAttempt (linkAttemptId: number, logs: LinkLog[], errorMessage: string | null) {
+    await this.db.linkAttempt.update({
+      where: { id: linkAttemptId },
+      data: {
+        endTime: new Date(),
+        log: ensureMaxTextWidth(JSON.stringify(logs), 4096), // max length comes directly from the db - do not change this.
+        errorMessage: errorMessage == null ? null : ensureMaxTextWidth(errorMessage, 4096) // max length comes directly from the db - do not change this.
+      }
+    })
+  }
+
+  public async deleteLinkAttempt (linkAttemptId: number) {
+    await this.db.linkAttempt.delete({ where: { id: linkAttemptId }})
+  }
+
+  /** Returns the aggregate user's id that was unlinked. Throws if the user is not linked.
+   * @throws {@link UserNotLinkedError}: When the default user is not currently linked to an aggregate user. */
+  public async unlinkUser (defaultUserId: number): Promise<number> {
+    const defaultUser = await this.db.chatUser.findUnique({
+      where: { id: defaultUserId },
+      rejectOnNotFound: true
+    })
+
+    if (defaultUser.aggregateChatUserId == null) {
+      throw new UserNotLinkedError(`Cannot unlink the user because it is not linked to an aggregate user.`)
+    }
+
+    await this.db.chatUser.update({
+      where: { id: defaultUserId },
+      data: {
+        aggregateChatUserId: null,
+        linkedAt: null
+      }
+    })
+
+    return defaultUser.aggregateChatUserId
+  }
+
+  private async startLinkOrUnlinkAttempt (defaultUserId: number, aggregateUserId: number, type: LinkType) {
     const existingAttempt = await this.db.linkAttempt.findFirst({
       where: {
         AND: [{
@@ -66,9 +128,9 @@ export default class LinkStore extends ContextClass {
     if (existingAttempt != null) {
       let message: string
       if (existingAttempt.errorMessage == null) {
-        message = `The user is currently being linked (attempt id ${existingAttempt.id}). Please wait until this process is complete.`
+        message = `Cannot ${type} the user. The user is currently being ${existingAttempt.type}ed (attempt id ${existingAttempt.id}). Please wait until this process is complete.`
       } else {
-        message = `An attempt was made to link the user previously, but it failed. Please contact an admin referncing the attempt id ${existingAttempt.id}.`
+        message = `Cannot ${type} the user. An attempt was made to ${existingAttempt.type} the user previously, but it failed. Please contact an admin referncing the attempt id ${existingAttempt.id}.`
       }
       throw new LinkAttemptInProgressError(message)
     }
@@ -77,20 +139,9 @@ export default class LinkStore extends ContextClass {
       defaultChatUserId: defaultUserId,
       aggregateChatUserId: aggregateUserId,
       startTime: new Date(),
-      log: 'Starting...'
+      log: 'Starting...',
+      type: type
     }})
     return attempt.id
-  }
-
-  /** If `errorMessage` is null, it is implied that the link completed successfully, otherwise it is implied that it failed. */
-  public async completeLinkAttempt (linkAttemptId: number, logs: LinkLog[], errorMessage: string | null) {
-    await this.db.linkAttempt.update({
-      where: { id: linkAttemptId },
-      data: {
-        endTime: new Date(),
-        log: ensureMaxTextWidth(JSON.stringify(logs), 4096), // max length comes directly from the db - do not change this.
-        errorMessage: errorMessage == null ? null : ensureMaxTextWidth(errorMessage, 4096) // max length comes directly from the db - do not change this.
-      }
-    })
   }
 }

@@ -125,18 +125,24 @@ model LinkAttempt {
   log          String    @db.VarChar(4096)
   // if you change the length, it must also be updated in the LinkStore.completeLinkAttempt method
   errorMessage String?   @db.VarChar(4096)
+  type         LinkType
 
   // the user that we are linking
   defaultChatUserId Int
   defaultChatUser   ChatUser @relation(name: "link_attempt_defaultChatUser", fields: [defaultChatUserId], references: [id], map: "link_attempt_defaultChatUserId_fkey")
 
-  // the user that we are linking to
+  // the user that we are linking to/unlinking from
   aggregateChatUserId Int
   aggregateChatUser   ChatUser @relation(name: "link_attempt_aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "link_attempt_aggregateChatUserId_fkey")
 
   @@index([defaultChatUserId], map: "link_attempt_defaultChatUserId_fkey")
   @@index([aggregateChatUserId], map: "link_attempt_aggregateChatUserId_fkey")
   @@map("link_attempt")
+}
+
+enum LinkType {
+  link
+  unlink
 }
 
 model RegisteredUser {

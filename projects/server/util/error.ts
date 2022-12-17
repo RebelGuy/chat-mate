@@ -100,6 +100,12 @@ export class LinkAttemptInProgressError extends CustomError {
   }
 }
 
+export class UserNotLinkedError extends CustomError {
+  constructor (message?: string) {
+    super(UserNotLinkedError.prototype, message)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

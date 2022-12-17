@@ -11,11 +11,23 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { UserAlreadyLinkedToAggregateUserError, LinkAttemptInProgressError } from '@rebel/server/util/error'
+import { UserAlreadyLinkedToAggregateUserError, LinkAttemptInProgressError, UserNotLinkedError } from '@rebel/server/util/error'
 import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
 import { nameof } from '@rebel/server/_test/utils'
 
 export type LinkLog = [time: Date, step: string, warnings: number]
+
+export type UnlinkUserOptions = {
+  /** If true, will copy any ranks that the aggregate user had to the default user (does not include external ranks). */
+  transferRanks: boolean
+
+  /** If true, will relink any chat experience that the user originally had at the time of linking back to this user. */
+  relinkChatExperience: boolean
+
+  // todo:
+  // reEvaluateDonations: boolean
+  // recalculateChatExperience: boolean
+}
 
 type Deps = Dependencies<{
   logService: LogService
@@ -75,7 +87,9 @@ export default class LinkService extends ContextClass {
       if (connectedUserIds.length === 2) {
         // this is a new link - life will be simple
         // don't need to re-apply external punishments, re-apply donations, or re-calculate chat experience data
-        cumWarnings += await this.rankService.transferRanks(defaultUserId, aggregateUserId, `link attempt ${linkAttemptId}`)
+        // we don't strictly need to revoke the old user's ranks, as we will never query those while the new link is in place.
+        // however, if we ever were to unlink the user, it's easier to start from a clean state where the original user has no active ranks associated with it.
+        cumWarnings += await this.rankService.transferRanks(defaultUserId, aggregateUserId, `link attempt ${linkAttemptId}`, true)
         logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
 
       } else {
@@ -97,8 +111,65 @@ export default class LinkService extends ContextClass {
       }
 
     } catch (e: any) {
-      this.logService.logError(this, `Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
-      await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
+      this.logService.logError(this, `[${linkAttemptId}] Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
+
+      if (e instanceof UserAlreadyLinkedToAggregateUserError) {
+        await this.linkStore.deleteLinkAttempt(linkAttemptId)
+      } else {
+        await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
+      }
+      throw e
+    }
+
+    await this.linkStore.completeLinkAttempt(linkAttemptId, logs, null)
+  }
+
+  /** Unlinks the specified default user from the aggregate user that it is currently linked to.
+   * If the default user was the only linked user, we can restore the unlinked state completely. Otherwise, only the state specified in the options will be restored.
+   * Does NOT reconciliate external ranks in any way - this is up to the admin to take care of.
+   * @throws {@link UserNotLinkedError}: When the user is not linked to an aggregate user.
+   * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and its state was not cleaned up. Please wait before creating another attempt, or clean up the state.
+   */
+  public async unlinkUser (defaultUserId: number, options: UnlinkUserOptions) {
+    const linkAttemptId = await this.linkStore.startUnlinkAttempt(defaultUserId)
+    let cumWarnings = 0
+    let logs: LinkLog[] = [[new Date(), 'Start', cumWarnings]]
+    let aggregateUserId: number
+
+    try {
+      aggregateUserId = await this.linkStore.unlinkUser(defaultUserId)
+      logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
+
+      if (options.relinkChatExperience) {
+        await this.experienceStore.undoChatExperienceRelink(defaultUserId)
+        logs.push([new Date(), nameof(ExperienceStore, 'undoChatExperienceRelink'), cumWarnings])
+      }
+
+      const connectedUserIds = await this.accountStore.getConnectedChatUserIds(defaultUserId)
+      if (connectedUserIds.length === 1) {
+        // we unlinked the only user
+        if (options.transferRanks) {
+          cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, true)
+          logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
+        }
+
+      } else {
+        // at least one other default chat user is still connected to the aggregate user
+        if (options.transferRanks) {
+          // importantly, leave the existing aggregate user's ranks intact
+          cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, false)
+          logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
+        }
+      }
+
+    } catch (e: any) {
+      this.logService.logError(this, `[${linkAttemptId}] Failed to unlink default user ${defaultUserId} from aggregate user ${aggregateUserId! ?? 'n/a'} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
+
+      if (e instanceof UserNotLinkedError) {
+        await this.linkStore.deleteLinkAttempt(linkAttemptId)
+      } else {
+        await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
+      }
       throw e
     }
 

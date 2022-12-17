@@ -227,6 +227,17 @@ export default class ExperienceStore extends ContextClass {
     })
   }
 
+  // new method for undoing link
+  public async undoChatExperienceRelink (originalUserId: number) {
+    await this.db.experienceTransaction.updateMany({
+      where: { originalUserId: originalUserId },
+      data: {
+        originalUserId: null,
+        userId: originalUserId
+      }
+    })
+  }
+
   // uses an array for the input data for efficiency, since we may update thousands of entries in bulk
   public async modifyChatExperiences (args: ModifyChatExperienceArgs[]) {
     await this.db.$transaction(args.flatMap(arg => {

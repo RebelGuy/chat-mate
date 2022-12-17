@@ -78,29 +78,29 @@ export default class RankService extends ContextClass {
    * Assumes the second user has no ranks.
    * Returns the number of warnings.
   */
-  public async transferRanks (fromUserId: number, toUserId: number, transferId: string): Promise<number> {
+  public async transferRanks (fromUserId: number, toUserId: number, transferId: string, revokeOldRanks: boolean): Promise<number> {
     const ranks = await this.rankStore.getAllUserRanks(fromUserId)
 
     let warnings = 0
 
     for (const rank of ranks.ranks) {
-      // we don't strictly need to revoke the old user's ranks, as we will never query those while the new link is in place.
-      // however, if we ever were to unlink the user, it's easier to start from a clean state where the original user has no active ranks associated with it.
-      const removeArgs: RemoveUserRankArgs = {
-        chatUserId: fromUserId,
-        message: `Revoked as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}`,
-        rank: rank.rank.name,
-        removedBy: null,
-        streamerId: rank.streamerId
-      }
-      try {
-        await this.rankStore.removeUserRank(removeArgs)
-      } catch (e: any) {
-        if (e instanceof UserRankNotFoundError) {
-          this.logService.logWarning(this, `[Transfer ${transferId}] Cannot remove old rank ${rank.rank.name} from user ${fromUserId} for streamer ${rank.streamerId} because it doesn't exist`)
-          warnings++
-        } else {
-          throw e
+      if (revokeOldRanks) {
+        const removeArgs: RemoveUserRankArgs = {
+          chatUserId: fromUserId,
+          message: `Revoked as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}`,
+          rank: rank.rank.name,
+          removedBy: null,
+          streamerId: rank.streamerId
+        }
+        try {
+          await this.rankStore.removeUserRank(removeArgs)
+        } catch (e: any) {
+          if (e instanceof UserRankNotFoundError) {
+            this.logService.logWarning(this, `[Transfer ${transferId}] Cannot remove old rank ${rank.rank.name} from user ${fromUserId} for streamer ${rank.streamerId} because it doesn't exist`)
+            warnings++
+          } else {
+            throw e
+          }
         }
       }
 
