@@ -106,6 +106,18 @@ export class UserNotLinkedError extends CustomError {
   }
 }
 
+export class UnknownCommandError extends CustomError {
+  constructor (normalisedCommandName: string) {
+    super(UnknownCommandError.prototype, `Unknown command '${normalisedCommandName}'`)
+  }
+}
+
+export class InvalidCommandArgumentsError extends CustomError {
+  constructor (message: string) {
+    super(InvalidCommandArgumentsError.prototype, 'Invalid arguments: ' + message)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

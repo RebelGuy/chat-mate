@@ -81,6 +81,8 @@ import StreamerChannelService from '@rebel/server/services/StreamerChannelServic
 import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
 import LinkService from '@rebel/server/services/LinkService'
 import LinkStore from '@rebel/server/stores/LinkStore'
+import CommandService from '@rebel/server/services/CommandService'
+import CommandStore from '@rebel/server/stores/CommandStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -169,19 +171,21 @@ const globalContext = ContextProvider.create()
   .withClass('customEmojiStore', CustomEmojiStore)
   .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
   .withClass('emojiService', EmojiService)
+  .withClass('commandStore', CommandStore)
+  .withClass('linkStore', LinkStore)
+  .withClass('donationStore', DonationStore)
+  .withClass('modService', ModService)
+  .withClass('rankService', RankService)
+  .withClass('donationService', DonationService)
+  .withClass('linkService', LinkService)
+  .withClass('commandService', CommandService)
   .withClass('chatService', ChatService)
   .withClass('chatFetchService', ChatFetchService)
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
-  .withClass('modService', ModService)
-  .withClass('rankService', RankService)
-  .withClass('donationStore', DonationStore)
-  .withClass('donationService', DonationService)
   .withClass('donationFetchService', DonationFetchService)
   .withClass('chatMateEventService', ChatMateEventService)
   .withClass('streamerService', StreamerService)
-  .withClass('linkStore', LinkStore)
-  .withClass('linkService', LinkService)
   .build()
 
 app.use((req, res, next) => {

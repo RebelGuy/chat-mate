@@ -1,8 +1,9 @@
-import { Prisma } from '@prisma/client'
+import { ChatMessage, ChatMessagePart, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { NormalisedCommand } from '@rebel/server/services/CommandService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { reverse } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -32,7 +33,7 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */
-  public async addChat (chatItem: ChatItem, streamerId: number, userId: number, channelId: string) {
+  public async addChat (chatItem: ChatItem, streamerId: number, userId: number, channelId: string): Promise<ChatMessage> {
     let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
     const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
@@ -43,7 +44,7 @@ export default class ChatStore extends ContextClass {
 
     // there is a race condition where the client may request messages whose message parts haven't yet been
     // completely written to the DB. bundle everything into a single transaction to solve this.
-    await this.db.$transaction(async (db) => {
+    return await this.db.$transaction(async (db) => {
       const chatMessage = await db.chatMessage.upsert({
         create: {
           time: new Date(chatItem.timestamp),
@@ -72,6 +73,7 @@ export default class ChatStore extends ContextClass {
       }
 
       await Promise.all(createParts)
+      return chatMessage
     }, {
       timeout: this.dbTransactionTimeout ?? undefined
     })
@@ -158,7 +160,8 @@ export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageIn
     },
   },
   youtubeChannel: includeChannelInfo,
-  twitchChannel: includeChannelInfo
+  twitchChannel: includeChannelInfo,
+  chatCommand: true
 })
 
 export function createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {

@@ -375,6 +375,27 @@ model ChatCustomEmoji {
   @@map("chat_custom_emoji")
 }
 
+model ChatCommand {
+  id Int @id @default(autoincrement())
+
+  /// The normalised text part of the chat message after the initial `!`
+  normalisedCommandName String @db.VarChar(64)
+
+  startTime DateTime?
+  endTime   DateTime?
+
+  // Only one of result or error can be set, and they are only set after the command has completed execution.
+  // These text lengths are used in `CommandStore.ts` - don't change them here without also changing them there
+  result String? @db.VarChar(1024)
+  error  String? @db.VarChar(1024)
+
+  chatMessageId Int // unique
+  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id], map: "chat_command_chatMessageId_fkey")
+
+  @@unique([chatMessageId], map: "chat_command_chatMessageId_fkey")
+  @@map("chat_command")
+}
+
 /// Has exactly one text, emoji, or cheer component attached, and possibly also a custom emoji in addition to the other three.
 model ChatMessagePart {
   id    Int @id @default(autoincrement())
@@ -442,6 +463,7 @@ model ChatMessage {
 
   chatMessageParts          ChatMessagePart[]
   experienceDataChatMessage ExperienceDataChatMessage?
+  chatCommand               ChatCommand?
 
   @@unique([externalId], map: "chat_message_externalId_key")
   @@unique([donationId], map: "chat_message_donationId_fkey")

@@ -30,6 +30,10 @@ export default class TimerHelpers extends ContextClass {
     this.timers = new Map()
   }
 
+  public setTimeout (callback: () => Promise<any> | any, ms?: number): void {
+    setTimeout(() => callback, ms)
+  }
+
   /**
    * Create a new timer. The caller is responsible for catching errors in the `callback`.
    *
