@@ -1,11 +1,9 @@
-import { ChatMessagePart } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
-import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
-import LinkService from '@rebel/server/services/LinkService'
+import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
+import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LogService from '@rebel/server/services/LogService'
-import AccountStore from '@rebel/server/stores/AccountStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import { InvalidCommandArgumentsError, UnknownCommandError } from '@rebel/server/util/error'
@@ -15,12 +13,23 @@ export type NormalisedCommand = {
   normalisedName: string
 }
 
+export interface ICommand {
+  /** Returns the array of normalised names by which the command is known. */
+  getNormalisedNames: () => string[]
+
+  /** The `defaultUserId` is the id of the executor. If this method resolves, it is assumed that it successfully ran to completion.
+   * @throws {@link InvalidCommandArgumentsError}: When the arguments provided to the command are invalid.
+  */
+  executeCommand: (defaultUserId: number, args: string[]) => Promise<string | null>
+}
+
 type Deps = Dependencies<{
   logService: LogService
   timerHelpers: TimerHelpers
   commandStore: CommandStore
-  linkService: LinkService
+  commandHelpers: CommandHelpers
   chatStore: ChatStore
+  linkCommand: LinkCommand
 }>
 
 export default class CommandService extends ContextClass {
@@ -29,8 +38,10 @@ export default class CommandService extends ContextClass {
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
   private readonly commandStore: CommandStore
-  private readonly linkService: LinkService
+  private readonly commandHelpers: CommandHelpers
   private readonly chatStore: ChatStore
+
+  private readonly commands: ICommand[]
 
   private semaphore: Semaphore = new Semaphore(1, null)
 
@@ -39,23 +50,11 @@ export default class CommandService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.commandStore = deps.resolve('commandStore')
-    this.linkService = deps.resolve('linkService')
+    this.commandHelpers = deps.resolve('commandHelpers')
     this.chatStore = deps.resolve('chatStore')
-  }
-
-  public extractNormalisedCommand (parts: PartialChatMessage[]): NormalisedCommand | null {
-    if (parts.length === 0 || parts[0].type !== 'text') {
-      return null
-    }
-
-    const startText = parts[0].text.trim().split(' ')[0]
-    if (startText.startsWith('!')) {
-      return {
-        normalisedName: startText.substring(1).toUpperCase()
-      }
-    } else {
-      return null
-    }
+    this.commands = [
+      deps.resolve('linkCommand')
+    ]
   }
 
   // because commands perform side effects and may be long-running tasks, we always defer execution to a later point in time
@@ -64,12 +63,13 @@ export default class CommandService extends ContextClass {
     this.timerHelpers.setTimeout(async () => await this.executeCommandSafe(commandId), 500)
   }
 
+  /** This method never throws. */
   private async executeCommandSafe (commandId: number): Promise<any> {
     await this.semaphore.enter()
     try {
       this.commandStore.executionStarted(commandId)
       const result = await this.executeCommand(commandId)
-      this.commandStore.executionFinished(commandId, result ?? '')
+      this.commandStore.executionFinished(commandId, result ?? 'Success')
     } catch (e: any) {
       this.logService.logError(this, 'Encountered error while executing command', commandId, e)
       await this.saveErrorSafe(commandId, e)
@@ -78,9 +78,10 @@ export default class CommandService extends ContextClass {
     }
   }
 
+  /** This method never throws. */
   private async saveErrorSafe (commandId: number, error: any) {
     try {
-      await this.commandStore.executionFailed(commandId, error.message ?? '')
+      await this.commandStore.executionFailed(commandId, error.message ?? 'Unknown error')
     } catch (innerError: any) {
       this.logService.logError(this, 'Failed to save error of command', commandId, innerError)
     }
@@ -91,44 +92,19 @@ export default class CommandService extends ContextClass {
    * @throws {@link InvalidCommandArgumentsError}: When the arguments provided to the command are invalid.
   */
   private async executeCommand (commandId: number): Promise<string | null> {
-    const command = await this.commandStore.getCommand(commandId)
-    const message = await this.chatStore.getChatById(command.chatMessageId)
+    const chatCommand = await this.commandStore.getCommand(commandId)
+    const message = await this.chatStore.getChatById(chatCommand.chatMessageId)
 
     if (message.userId == null) {
-      throw new Error('Chat command message must have a chat user attached to them')
+      throw new Error('Chat command message must have a chat user attached to it')
     }
 
-    const args = getArguments(message)
-
-    if (command.normalisedCommandName === 'LINK') {
-      return await this.executeLinkCommand(message.userId, args)
-    } else {
-      throw new UnknownCommandError(command.normalisedCommandName)
-    }
-  }
-
-  private async executeLinkCommand (defaultUserId: number, args: string[]): Promise<string | null> {
-    if (args.length !== 1) {
-      throw new InvalidCommandArgumentsError(`Expected 1 argument but received ${args.length}`)
+    const command = this.commands.find(c => c.getNormalisedNames().includes(chatCommand.normalisedCommandName))
+    if (command == null) {
+      throw new UnknownCommandError(chatCommand.normalisedCommandName)
     }
 
-    const linkToken = args[0]
-    const aggregateUserId = 1 // todo: get from link token. may have to get registered user, then its aggregate user id
-    await this.linkService.linkUser(defaultUserId, aggregateUserId)
-    return `Successfully linked user ${defaultUserId} to ${aggregateUserId}`
+    const args = this.commandHelpers.getCommandArguments(message.chatMessageParts)
+    return await command.executeCommand(message.userId, args)
   }
-}
-
-function getArguments (message: ChatItemWithRelations): string[] {
-  if (message.chatMessageParts.find(p => p.text == null) != null) {
-    throw new InvalidCommandArgumentsError('Cannot parse arguments of a chat message that contains non-text parts')
-  }
-
-  const flattened = message.chatMessageParts.map(p => p.text!.text).join().trim()
-  const parts = flattened.split(' ').filter(p => p.length > 0)
-  if (!parts[0].startsWith('!')) {
-    throw new Error('Invalid command format - must start with `!`')
-  }
-
-  return parts.slice(1)
 }

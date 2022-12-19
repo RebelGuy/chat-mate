@@ -52,7 +52,8 @@ export type Nullify<T> = {
 export type DeepPartial<T> = {
   [P in keyof T]?:
     T[P] extends (...args: any[]) => any ? T[P] :
-    T[P] extends object ? DeepPartial<T[P]> :
+    // if the object is null or undefined, the result is the partial object plus null or undefined, whichever applied
+    T[P] extends GenericObject | null | undefined ? DeepPartial<Exclude<T[P], null | undefined>> | Extract<T[P], null | undefined> :
     T[P] extends Array<infer A> ? DeepPartial<A>[] :
     T[P]
 }

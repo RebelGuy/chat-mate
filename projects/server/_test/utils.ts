@@ -1,4 +1,4 @@
-import { DeepPartial } from '@rebel/server/types'
+import { DeepPartial, Singular } from '@rebel/server/types'
 import { Matcher, MatcherCreator, MockProxy } from 'jest-mock-extended'
 
 type Class = new (...args: any[]) => any
@@ -59,7 +59,7 @@ export function expectStrictIncreasing (...values: number[]) {
 
 /** Shorthand for casting a partial type to its full version, such as `{} as Partial<T> as T`. */
 export function cast<T> (data: DeepPartial<T>): T
-export function cast<T extends Array<any>> (data: DeepPartial<(T extends Array<infer A> ? A : never)>[]): T // the array's underlying type should be made partial, not the array type itself
+export function cast<T extends any[]> (data: DeepPartial<Singular<T>>[]): T // the array's underlying type should be made partial, not the array type itself
 export function cast<T> (data: DeepPartial<T>): T {
   return data as T
 }

@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { NormalisedCommand } from '@rebel/server/services/CommandService'
+import { NormalisedCommand } from '@rebel/server/services/command/CommandService'
 import { ensureMaxTextWidth } from '@rebel/server/util/text'
 
 

@@ -11,9 +11,10 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import CommandService from '@rebel/server/services/CommandService'
+import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import { ChatMessage } from '@prisma/client'
+import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 
 type ChatEvents = {
   newChatItem: {
@@ -31,6 +32,7 @@ type Deps = Dependencies<{
   eventDispatchService: EventDispatchService
   livestreamStore: LivestreamStore
   commandService: CommandService
+  commandHelpers: CommandHelpers
   commandStore: CommandStore
 }>
 
@@ -44,6 +46,7 @@ export default class ChatService extends ContextClass {
   private readonly emojiService: EmojiService
   private readonly eventDispatchService: EventDispatchService
   private readonly livestreamStore: LivestreamStore
+  private readonly commandHelpers: CommandHelpers
   private readonly commandService: CommandService
   private readonly commandStore: CommandStore
 
@@ -57,6 +60,7 @@ export default class ChatService extends ContextClass {
     this.emojiService = deps.resolve('emojiService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.commandHelpers = deps.resolve('commandHelpers')
     this.commandService = deps.resolve('commandService')
     this.commandStore = deps.resolve('commandStore')
   }
@@ -120,7 +124,7 @@ export default class ChatService extends ContextClass {
       this.logService.logError(this, 'Failed to add chat.', e)
     }
 
-    const command = this.commandService.extractNormalisedCommand(item.messageParts)
+    const command = this.commandHelpers.extractNormalisedCommand(item.messageParts)
 
     // either perform side effects for a normal message, or for a chat command
     if (message != null && command == null) {

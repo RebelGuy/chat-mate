@@ -81,8 +81,10 @@ import StreamerChannelService from '@rebel/server/services/StreamerChannelServic
 import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
 import LinkService from '@rebel/server/services/LinkService'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import CommandService from '@rebel/server/services/CommandService'
+import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
+import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
+import LinkCommand from '@rebel/server/services/command/LinkCommand'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -130,6 +132,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('rankHelpers', RankHelpers)
   .withHelpers('donationHelpers', DonationHelpers)
   .withHelpers('accountHelpers', AccountHelpers)
+  .withHelpers('commandHelpers', CommandHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withFactory('websocketFactory', WebsocketFactory)
@@ -178,6 +181,7 @@ const globalContext = ContextProvider.create()
   .withClass('rankService', RankService)
   .withClass('donationService', DonationService)
   .withClass('linkService', LinkService)
+  .withClass('linkCommand', LinkCommand)
   .withClass('commandService', CommandService)
   .withClass('chatService', ChatService)
   .withClass('chatFetchService', ChatFetchService)
