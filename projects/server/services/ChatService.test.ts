@@ -6,7 +6,7 @@ import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { cast, nameof, promised } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof, promised } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -132,10 +132,10 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const livestream = cast<Livestream>({}); // required semicolon for some reason lol
 
     (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
-    mockChatStore.addChat.calledWith(chatItemWithCustomEmoji, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(addedChatMessage)
-    mockCommandHelpers.extractNormalisedCommand.calledWith(chatItemWithCustomEmoji.messageParts).mockReturnValue(null)
+    mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(addedChatMessage)
     mockEmojiService.applyCustomEmojis.calledWith(textPart, youtubeChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
     mockEmojiService.applyCustomEmojis.calledWith(emojiPart, youtubeChannel1.userId, streamerId).mockResolvedValue([emojiPart])
+    mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining([textPart, customEmojiPart, emojiPart])).mockReturnValue(null)
     mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
 
     const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
@@ -162,10 +162,10 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const livestream = cast<Livestream>({})
 
     mockChannelStore.createOrUpdate.calledWith('twitch', data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
-    mockChatStore.addChat.calledWith(chatItemWithCustomEmoji, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
-    mockCommandHelpers.extractNormalisedCommand.calledWith(chatItemWithCustomEmoji.messageParts).mockReturnValue(null)
+    mockChatStore.addChat.calledWith(chatItem2, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
     mockEmojiService.applyCustomEmojis.calledWith(textPart, twitchChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
     mockEmojiService.applyCustomEmojis.calledWith(emojiPart, twitchChannel1.userId, streamerId).mockResolvedValue([emojiPart])
+    mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining([textPart, customEmojiPart, emojiPart])).mockReturnValue(null)
     mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
 
     const addedChat = await chatService.onNewChatItem(chatItem2, streamerId)
@@ -189,8 +189,9 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const commandId = 5
 
     mockChannelStore.createOrUpdate.calledWith('twitch', data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
+    mockEmojiService.applyCustomEmojis.mockImplementation(part => Promise.resolve([part]))
     mockChatStore.addChat.calledWith(chatItem2, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
-    mockCommandHelpers.extractNormalisedCommand.calledWith(chatItem2.messageParts).mockReturnValue(command)
+    mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining(chatItem2.messageParts)).mockReturnValue(command)
     mockCommandStore.addCommand.calledWith(addedChatMessage.id, command).mockResolvedValue(commandId)
 
     const addedChat = await chatService.onNewChatItem(chatItem2, streamerId)

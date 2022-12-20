@@ -31,7 +31,7 @@ export default class TimerHelpers extends ContextClass {
   }
 
   public setTimeout (callback: () => Promise<any> | any, ms?: number): void {
-    setTimeout(() => callback, ms)
+    setTimeout(() => callback(), ms)
   }
 
   /**

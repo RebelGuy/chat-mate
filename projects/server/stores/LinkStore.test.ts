@@ -220,7 +220,7 @@ export default () => {
       expect(storedUser).toEqual(expectObject<ChatUser>({ aggregateChatUserId: null, linkedAt: null }))
     })
 
-    test(`Throws ${UserNotLinkedError} if the user is not linkd`, async () => {
+    test(`Throws ${UserNotLinkedError.name} if the user is not linkd`, async () => {
       await db.chatUser.createMany({ data: [{}, {}, { aggregateChatUserId: 1 }] })
 
       await expect(() => linkStore.unlinkUser(2)).rejects.toThrowError(UserNotLinkedError)

@@ -1,5 +1,6 @@
 import ChannelStoreSuite from '@rebel/server/stores/ChannelStore.test'
 import ChatStoreSuite from '@rebel/server/stores/ChatStore.test'
+import CommandStoreSuite from '@rebel/server/stores/CommandStore.test'
 import LivestreamStoreSuite from '@rebel/server/stores/LivestreamStore.test'
 import ExperienceStoreSuite from '@rebel/server/stores/ExperienceStore.test'
 import ViewershipStoreSuite from '@rebel/server/stores/ViewershipStore.test'
@@ -23,6 +24,8 @@ describeFn('AccountStore Suite', AccountStoreSuite)
 describeFn('ChannelStore Suite', ChannelStoreSuite)
 
 describeFn('ChatStore Suite', ChatStoreSuite)
+
+describeFn('CommandStore Suite', CommandStoreSuite)
 
 describeFn('CustomEmojiStore Suite', CustomEmojiStoreSuite)
 

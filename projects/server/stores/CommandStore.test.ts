@@ -62,7 +62,7 @@ export default () => {
 
       const stored = await db.chatCommand.findFirst()
       expect(stored).toEqual(expectObject<ChatCommand>({ endTime: expect.any(Date), error: null }))
-      expect(result.startsWith(stored!.error!)).toBe(true)
+      expect(result.startsWith(stored!.result!)).toBe(true)
     })
   })
 
@@ -85,7 +85,7 @@ export default () => {
 
       const result = await commandStore.getCommand(1)
 
-      expect(result).toEqual(expectObject<ChatCommand & { chatMessage: ChatMessage }>({ ...command, ...chatMessage }))
+      expect(result).toEqual(expectObject<ChatCommand & { chatMessage: ChatMessage }>({ ...command, chatMessage }))
     })
   })
 }

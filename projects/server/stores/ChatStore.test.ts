@@ -3,7 +3,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { mockGetter, nameof } from '@rebel/server/_test/utils'
+import { expectObject, mockGetter, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
@@ -210,7 +210,7 @@ export default () => {
       expect(chatMessage!.userId).toBe(1)
       expect(chatMessage!.youtubeChannelId).toBe(1)
       expect(chatMessage!.twitchChannelId).toBeNull()
-      expect(result).toEqual(chatMessage)
+      expect(result).toEqual(expectObject(chatMessage!))
     })
 
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
@@ -218,7 +218,8 @@ export default () => {
 
       const result = await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      expect(result).toEqual(await db.chatMessage.findFirst())
+      const savedChatMessage = await db.chatMessage.findFirst()
+      expect(result).toEqual(expectObject(savedChatMessage!))
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatEmoji).toEqual([1, 2, 2])
     })
 
@@ -239,7 +240,7 @@ export default () => {
       expect(chatMessage!.userId).toBe(2)
       expect(chatMessage!.youtubeChannelId).toBeNull()
       expect(chatMessage!.twitchChannelId).toBe(1)
-      expect(result).toEqual(chatMessage)
+      expect(result).toEqual(expectObject(chatMessage!))
     })
 
     test('duplicate chat id ignored', async () => {
@@ -256,7 +257,8 @@ export default () => {
       const result = await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage).toBe(1)
-      expect(result).toEqual(await db.chatMessage.findFirst())
+      const savedChatMessage = await db.chatMessage.findFirst()
+      expect(result).toEqual(expectObject(savedChatMessage!))
     })
 
     test('adds chat without connecting to livestream if no active livestream', async () => {
@@ -267,7 +269,7 @@ export default () => {
 
       const savedChatMessage = await db.chatMessage.findFirst()
       expect(savedChatMessage!.livestreamId).toBeNull()
-      expect(result).toEqual(savedChatMessage)
+      expect(result).toEqual(expectObject(savedChatMessage!))
     })
   })
 

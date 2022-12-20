@@ -15,7 +15,7 @@ export type NormalisedCommand = {
 
 export interface ICommand {
   /** Returns the array of normalised names by which the command is known. */
-  getNormalisedNames: () => string[]
+  normalisedNames: ReadonlyArray<string>
 
   /** The `defaultUserId` is the id of the executor. If this method resolves, it is assumed that it successfully ran to completion.
    * @throws {@link InvalidCommandArgumentsError}: When the arguments provided to the command are invalid.
@@ -67,9 +67,9 @@ export default class CommandService extends ContextClass {
   private async executeCommandSafe (commandId: number): Promise<any> {
     await this.semaphore.enter()
     try {
-      this.commandStore.executionStarted(commandId)
+      await this.commandStore.executionStarted(commandId)
       const result = await this.executeCommand(commandId)
-      this.commandStore.executionFinished(commandId, result ?? 'Success')
+      await this.commandStore.executionFinished(commandId, result ?? 'Success')
     } catch (e: any) {
       this.logService.logError(this, 'Encountered error while executing command', commandId, e)
       await this.saveErrorSafe(commandId, e)
@@ -99,7 +99,7 @@ export default class CommandService extends ContextClass {
       throw new Error('Chat command message must have a chat user attached to it')
     }
 
-    const command = this.commands.find(c => c.getNormalisedNames().includes(chatCommand.normalisedCommandName))
+    const command = this.commands.find(c => c.normalisedNames.includes(chatCommand.normalisedCommandName))
     if (command == null) {
       throw new UnknownCommandError(chatCommand.normalisedCommandName)
     }

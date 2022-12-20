@@ -9,15 +9,13 @@ type Deps = Dependencies<{
 }>
 
 export default class LinkCommand extends ContextClass implements ICommand {
+  public readonly normalisedNames = ['LINK']
+
   private readonly linkService: LinkService
 
   constructor (deps: Deps) {
     super()
     this.linkService = deps.resolve('linkService')
-  }
-
-  public getNormalisedNames (): string[] {
-    return ['LINK']
   }
 
   public async executeCommand (defaultUserId: number, args: string[]): Promise<string | null> {

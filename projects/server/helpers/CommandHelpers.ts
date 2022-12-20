@@ -4,6 +4,7 @@ import { NormalisedCommand } from '@rebel/server/services/command/CommandService
 import { InvalidCommandArgumentsError } from '@rebel/server/util/error'
 
 export default class CommandHelpers extends ContextClass {
+  /** Returns null if the chat message is not command. */
   public extractNormalisedCommand (parts: PartialChatMessage[]): NormalisedCommand | null {
     if (parts.length === 0 || parts[0].type !== 'text') {
       return null
@@ -19,7 +20,8 @@ export default class CommandHelpers extends ContextClass {
     }
   }
 
-  /**  @throws {@link InvalidCommandArgumentsError}: When the arguments provided to the command are invalid. */
+  /** Given the complete chat message parts constituting the command, returns the trimmed arguments given to the command.
+   * @throws {@link InvalidCommandArgumentsError}: When the arguments provided to the command are invalid. */
   public getCommandArguments (messageParts: ChatItemWithRelations['chatMessageParts']): string[] {
     if (messageParts.find(p => p.text == null) != null) {
       throw new InvalidCommandArgumentsError('Cannot parse arguments of a chat message that contains non-text parts')
