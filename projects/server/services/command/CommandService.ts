@@ -13,6 +13,12 @@ export type NormalisedCommand = {
   normalisedName: string
 }
 
+export type CommandData = NormalisedCommand & {
+  commandId: number
+  userId: number // the executor ChatUser id
+  arguments: string[]
+}
+
 export interface ICommand {
   /** Returns the array of normalised names by which the command is known. */
   normalisedNames: ReadonlyArray<string>
@@ -32,6 +38,7 @@ type Deps = Dependencies<{
   linkCommand: LinkCommand
 }>
 
+// this class has an in-memory state
 export default class CommandService extends ContextClass {
   public readonly name = CommandService.name
 
@@ -44,6 +51,8 @@ export default class CommandService extends ContextClass {
   private readonly commands: ICommand[]
 
   private semaphore: Semaphore = new Semaphore(1, null)
+  private queuedCommands: Set<CommandData> = new Set()
+  private runningCommand: CommandData | null = null
 
   constructor (deps: Deps) {
     super()
@@ -63,19 +72,63 @@ export default class CommandService extends ContextClass {
     this.timerHelpers.setTimeout(async () => await this.executeCommandSafe(commandId), 500)
   }
 
+  /** Returns the array of commands that are currently queued (does not include the currently executing command, if any). */
+  public getQueuedCommands (): CommandData[] {
+    return [...this.queuedCommands]
+  }
+
+  public getRunningCommand (): CommandData | null {
+    return this.runningCommand
+  }
+
   /** This method never throws. */
   private async executeCommandSafe (commandId: number): Promise<any> {
+    // get related data
+    let commandData: CommandData
+    try {
+      commandData = await this.getCommandData(commandId)
+    } catch (e: any) {
+      this.logService.logError(this, 'Could not queue command', commandId, e)
+      return
+    }
+
+    // queue the command
+    this.queuedCommands.add(commandData)
     await this.semaphore.enter()
+    this.queuedCommands.delete(commandData)
+
+    // execute the command
+    this.runningCommand = commandData
     try {
       await this.commandStore.executionStarted(commandId)
-      const result = await this.executeCommand(commandId)
+      const result = await this.executeCommand(commandData)
       await this.commandStore.executionFinished(commandId, result ?? 'Success')
     } catch (e: any) {
       this.logService.logError(this, 'Encountered error while executing command', commandId, e)
       await this.saveErrorSafe(commandId, e)
     } finally {
+      this.runningCommand = null
       this.semaphore.exit()
     }
+  }
+
+  private async getCommandData (commandId: number) {
+    const chatCommand = await this.commandStore.getCommand(commandId)
+    const message = await this.chatStore.getChatById(chatCommand.chatMessageId)
+
+    if (message.userId == null) {
+      throw new Error('Chat command message must have a chat user attached to it')
+    }
+
+    const args = this.commandHelpers.getCommandArguments(message.chatMessageParts)
+
+    const commandData: CommandData = {
+      commandId: commandId,
+      userId: message.userId,
+      normalisedName: chatCommand.normalisedCommandName,
+      arguments: args
+    }
+    return commandData
   }
 
   /** This method never throws. */
@@ -89,22 +142,13 @@ export default class CommandService extends ContextClass {
 
   /** Possibly long-running task to execute the specified command. Returns the result of executing the command, if any. Awaiting this method guarantees that the command has run to completion.
    * @throws {@link UnknownCommandError}: When the specified command does not exist.
-   * @throws {@link InvalidCommandArgumentsError}: When the arguments provided to the command are invalid.
   */
-  private async executeCommand (commandId: number): Promise<string | null> {
-    const chatCommand = await this.commandStore.getCommand(commandId)
-    const message = await this.chatStore.getChatById(chatCommand.chatMessageId)
-
-    if (message.userId == null) {
-      throw new Error('Chat command message must have a chat user attached to it')
-    }
-
-    const command = this.commands.find(c => c.normalisedNames.includes(chatCommand.normalisedCommandName))
+  private async executeCommand (commandData: CommandData): Promise<string | null> {
+    const command = this.commands.find(c => c.normalisedNames.includes(commandData.normalisedName))
     if (command == null) {
-      throw new UnknownCommandError(chatCommand.normalisedCommandName)
+      throw new UnknownCommandError(commandData.normalisedName)
     }
 
-    const args = this.commandHelpers.getCommandArguments(message.chatMessageParts)
-    return await command.executeCommand(message.userId, args)
+    return await command.executeCommand(commandData.userId, commandData.arguments)
   }
 }

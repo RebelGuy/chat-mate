@@ -5,6 +5,12 @@ abstract class CustomError extends Error {
   }
 }
 
+export class NotFoundError extends CustomError {
+  constructor (message: string) {
+    super(NotFoundError.prototype, message)
+  }
+}
+
 export class TimeoutError extends CustomError {
   public readonly timeout?: number
 

@@ -111,6 +111,12 @@ model ChatUser {
   linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
   linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
 
+  // only used if this is an aggregate user
+  linkTokensAggregateUser LinkToken[] @relation("link_token_aggregateChatUser")
+
+  // only used if this is a default user
+  linkTokensDefaultUser LinkToken[] @relation("link_token_defaultChatUser")
+
   /// The chat users connected to this aggregate user. Empty if this is not an aggregate user.
   connectedChatUsers ChatUser[] @relation("aggregateChatUser")
 
@@ -135,6 +141,11 @@ model LinkAttempt {
   aggregateChatUserId Int
   aggregateChatUser   ChatUser @relation(name: "link_attempt_aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "link_attempt_aggregateChatUserId_fkey")
 
+  // the link token will be attached if the link attempt was conducted as part of a command execution
+  linkTokenId Int?
+  linkToken   LinkToken? @relation(fields: [linkTokenId], references: [id], map: "link_attempt_linkTokenId_fkey")
+
+  @@unique([linkTokenId], map: "link_attempt_linkTokenId_fkey")
   @@index([defaultChatUserId], map: "link_attempt_defaultChatUserId_fkey")
   @@index([aggregateChatUserId], map: "link_attempt_aggregateChatUserId_fkey")
   @@map("link_attempt")
@@ -143,6 +154,26 @@ model LinkAttempt {
 enum LinkType {
   link
   unlink
+}
+
+model LinkToken {
+  id Int @id @default(autoincrement())
+
+  token String // unique
+
+  aggregateChatUserId Int
+  aggregateChatUser   ChatUser @relation(name: "link_token_aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "link_token_aggregateChatUserId_fkey")
+
+  defaultChatUserId Int
+  defaultChatUser   ChatUser @relation(name: "link_token_defaultChatUser", fields: [defaultChatUserId], references: [id], map: "link_token_defaultChatUserId_fkey")
+
+  // only defined if an attempt to link has already been made via this token
+  linkAttempt LinkAttempt?
+
+  @@unique([token], map: "link_token_token_key")
+  @@index([aggregateChatUserId], map: "link_token_aggregateChatUserId_fkey")
+  @@index([defaultChatUserId], map: "link_token_defaultChatUserId_fkey")
+  @@map("link_token")
 }
 
 model RegisteredUser {

@@ -283,8 +283,8 @@ export function subGroupedSingle<T, G, S> (arr: T[], mainGrouper: (item: T) => G
   return result
 }
 
-export function nonNull<T> (arr: (T | null)[]): T[] {
-  return arr.filter(value => value != null) as T[]
+export function nonNull<T> (arr: (T | null)[]): Exclude<T, null>[] {
+  return arr.filter(value => value != null) as Exclude<T, null>[]
 }
 
 export function values<T> (map: Map<any, T>): T[] {

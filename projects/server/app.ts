@@ -85,6 +85,7 @@ import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
+import LinkDataService from '@rebel/server/services/LinkDataService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -190,6 +191,7 @@ const globalContext = ContextProvider.create()
   .withClass('donationFetchService', DonationFetchService)
   .withClass('chatMateEventService', ChatMateEventService)
   .withClass('streamerService', StreamerService)
+  .withClass('linkDataService', LinkDataService)
   .build()
 
 app.use((req, res, next) => {

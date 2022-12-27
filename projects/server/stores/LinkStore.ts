@@ -1,9 +1,11 @@
-import { LinkAttempt, LinkType } from '@prisma/client'
+import { LinkAttempt, LinkToken, LinkType } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LinkLog } from '@rebel/server/services/LinkService'
+import { addTime } from '@rebel/server/util/datetime'
 import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/server/util/error'
+import { randomString } from '@rebel/server/util/random'
 import { ensureMaxTextWidth } from '@rebel/server/util/text'
 
 type Deps = Dependencies<{
@@ -17,6 +19,55 @@ export default class LinkStore extends ContextClass {
     super()
 
     this.db = deps.resolve('dbProvider').get()
+  }
+
+  /** Returns true if the given token is valid. */
+  public async validateAndDeleteLinkToken (aggregateChatUserId: number, token: string): Promise<boolean> {
+    const linkToken = await this.db.linkToken.findFirst({ where: {
+      aggregateChatUserId: aggregateChatUserId,
+      token: token
+    }})
+
+    if (linkToken == null) {
+      return false
+    }
+
+    // todo: don't delete, just invalidate. this way, we have a history
+    await this.db.linkToken.deleteMany({
+      where: { token: linkToken.token }
+    })
+
+    return true
+  }
+
+  public async getOrCreateLinkToken (aggregateChatUserId: number, defaultChatUserId: number): Promise<LinkToken> {
+    const linkToken = await this.db.linkToken.findFirst({ where: {
+      aggregateChatUserId: aggregateChatUserId,
+      defaultChatUserId: defaultChatUserId,
+      OR: [{
+        linkAttempt: null
+      }, {
+        // don't match completed link attempts that used this token
+        linkAttempt: { endTime: { not: null }}
+      }]
+    }})
+
+    if (linkToken != null) {
+      return linkToken
+    }
+
+    return await this.db.linkToken.create({ data: {
+      token: randomString(8),
+      aggregateChatUserId: aggregateChatUserId,
+      defaultChatUserId: defaultChatUserId
+    }})
+  }
+
+  public async getAllLinkTokens (aggregateChatUserId: number) {
+    return await this.db.linkToken.findMany({
+      where: { aggregateChatUserId: aggregateChatUserId },
+      include: { linkAttempt: true }
+    })
   }
 
   /** Links the default user to the aggregate user.

@@ -1,9 +1,14 @@
+import { ChatCommand, ChatMessage } from '@prisma/client'
+import { Command } from '@rebel/masterchat/interfaces/yt/context'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { NormalisedCommand } from '@rebel/server/services/command/CommandService'
 import { ensureMaxTextWidth } from '@rebel/server/util/text'
 
+export type CommandWithMessage = ChatCommand & {
+  chatMessage: ChatMessage
+}
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -55,11 +60,21 @@ export default class CommandStore extends ContextClass {
     })
   }
 
-  public async getCommand (commandId: number) {
+  public async getCommand (commandId: number): Promise<CommandWithMessage> {
     return await this.db.chatCommand.findUnique({
       where: { id: commandId },
       include: { chatMessage: true },
       rejectOnNotFound: true
+    })
+  }
+
+  public async getUserCommands (exactUserIds: number[], normalisedCommandNames: string[]): Promise<CommandWithMessage[]> {
+    return await this.db.chatCommand.findMany({
+      where: {
+        chatMessage: { userId: { in: exactUserIds }},
+        normalisedCommandName: { in: normalisedCommandNames }
+      },
+      include: { chatMessage: true }
     })
   }
 }

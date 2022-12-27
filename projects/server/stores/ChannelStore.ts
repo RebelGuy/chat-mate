@@ -1,4 +1,4 @@
-import { YoutubeChannelInfo, Prisma, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelInfo, Prisma, TwitchChannelInfo, TwitchChannel, YoutubeChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatPlatform } from '@rebel/server/models/chat'
@@ -172,6 +172,17 @@ export default class ChannelStore extends ContextClass {
       include: channelQuery_includeLatestChannelInfo
     })
     return channel.infoHistory[0].name
+  }
+
+  /** Returns null if the channel was not found. */
+  public async getChannelFromExternalId (externalId: string): Promise<YoutubeChannel | TwitchChannel | null> {
+    const youtubeChannel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalId } })
+    if (youtubeChannel != null) {
+      return youtubeChannel
+    }
+
+    const twitchChannel = await this.db.twitchChannel.findUnique({ where: { twitchId: externalId } })
+    return twitchChannel
   }
 
   /** Gets the primary userId that is associated with the channel that has the given external id. Throws if none is found. */
