@@ -54,12 +54,14 @@ describe(nameof(LinkService, 'linkUser'), () => {
     const aggregateUserId = 12
     const linkAttemptId = 2
     const connectedUserIds = [12, 5]
+    const linkToken = 'token'
 
     mockLinkStore.startLinkAttempt.calledWith(defaultUserId, aggregateUserId).mockResolvedValue(linkAttemptId)
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue(connectedUserIds)
 
-    await linkService.linkUser(defaultUserId, aggregateUserId)
+    await linkService.linkUser(defaultUserId, aggregateUserId, linkToken)
 
+    expect(single(mockLinkStore.addLinkAttemptToLinkToken.mock.calls)).toEqual([linkToken, linkAttemptId])
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true, expect.anything()])
@@ -76,7 +78,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue(connectedUserIds)
     mockRankService.mergeRanks.calledWith(defaultUserId, aggregateUserId, expect.anything(), expect.any(String)).mockResolvedValue({ warnings: 0, individualResults: [] })
 
-    await linkService.linkUser(defaultUserId, aggregateUserId)
+    await linkService.linkUser(defaultUserId, aggregateUserId, 'token')
 
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
@@ -115,7 +117,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId1).mockResolvedValue(connectedUserIds)
     mockRankService.mergeRanks.calledWith(defaultUserId1, aggregateUserId, expect.anything(), expect.any(String)).mockResolvedValue({ warnings: 0, individualResults: [mergeResult1, mergeResult2] })
 
-    await linkService.linkUser(defaultUserId1, aggregateUserId)
+    await linkService.linkUser(defaultUserId1, aggregateUserId, 'token')
 
     const calls = mockModService.setModRankExternal.mock.calls
     expect(calls.length).toBe(4)
@@ -156,7 +158,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId1).mockResolvedValue(connectedUserIds)
     mockRankService.mergeRanks.calledWith(defaultUserId1, aggregateUserId, expect.anything(), expect.any(String)).mockResolvedValue({ warnings: 0, individualResults: [mergeResult1, mergeResult2] })
 
-    await linkService.linkUser(defaultUserId1, aggregateUserId)
+    await linkService.linkUser(defaultUserId1, aggregateUserId, 'token')
 
     const calls = mockPunishmentService.banUserExternal.mock.calls
     expect(calls.length).toBe(4)
@@ -201,7 +203,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId1).mockResolvedValue(connectedUserIds)
     mockRankService.mergeRanks.calledWith(defaultUserId1, aggregateUserId, expect.anything(), expect.any(String)).mockResolvedValue({ warnings: 0, individualResults: [mergeResult1, mergeResult2] })
 
-    await linkService.linkUser(defaultUserId1, aggregateUserId)
+    await linkService.linkUser(defaultUserId1, aggregateUserId, 'token')
 
     const timeoutCalls = mockPunishmentService.timeoutUserExternal.mock.calls
     expect(timeoutCalls.length).toBe(4)
@@ -226,7 +228,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue(connectedUserIds)
     mockRankService.mergeRanks.calledWith(defaultUserId, aggregateUserId, expect.anything(), expect.any(String)).mockRejectedValue(new Error())
 
-    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId)).rejects.toThrow()
+    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId, 'token')).rejects.toThrow()
 
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), expect.any(String)])
   })
@@ -238,7 +240,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
 
     mockLinkStore.startLinkAttempt.calledWith(defaultUserId, aggregateUserId).mockRejectedValue(new LinkAttemptInProgressError(''))
 
-    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId)).rejects.toThrowError(LinkAttemptInProgressError)
+    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId, 'token')).rejects.toThrowError(LinkAttemptInProgressError)
 
     expect(mockLinkStore.completeLinkAttempt.mock.calls.length).toBe(0)
   })

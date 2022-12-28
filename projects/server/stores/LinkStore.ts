@@ -21,23 +21,29 @@ export default class LinkStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  /** Returns true if the given token is valid. */
-  public async validateAndDeleteLinkToken (aggregateChatUserId: number, token: string): Promise<boolean> {
-    const linkToken = await this.db.linkToken.findFirst({ where: {
-      aggregateChatUserId: aggregateChatUserId,
-      token: token
-    }})
+  public async addLinkAttemptToLinkToken (linkToken: string, linkAttemptId: number) {
+    await this.db.linkToken.update({
+      where: { token: linkToken },
+      data: { linkAttempt: { connect: { id: linkAttemptId }}}
+    })
+  }
 
-    if (linkToken == null) {
-      return false
-    }
-
-    // todo: don't delete, just invalidate. this way, we have a history
-    await this.db.linkToken.deleteMany({
-      where: { token: linkToken.token }
+  /** Returns true if the given token is valid. A valid token is one that has been saved against the default user, and has not been previously used to link the users. */
+  public async validateLinkToken (defaultChatUserId: number, token: string): Promise<LinkToken | null> {
+    const linkToken = await this.db.linkToken.findFirst({
+      where: {
+        defaultChatUserId: defaultChatUserId,
+        token: token
+      },
+      include: { linkAttempt: true }
     })
 
-    return true
+    // token doesn't exist or has already been used up
+    if (linkToken == null || linkToken.linkAttempt != null) {
+      return null
+    } else {
+      return linkToken
+    }
   }
 
   public async getOrCreateLinkToken (aggregateChatUserId: number, defaultChatUserId: number): Promise<LinkToken> {

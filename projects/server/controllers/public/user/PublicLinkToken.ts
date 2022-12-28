@@ -9,7 +9,9 @@ export type PublicLinkToken = PublicObject<1, {
   /** The current status of the link token. */
   status: 'waiting' | 'processing' | 'succeeded' | 'failed'
 
+  /** Which platform the channel is on. */
   platform: 'youtube' | 'twitch'
 
+  /** The current display name of the channel. */
   channelUserName: string
 }>

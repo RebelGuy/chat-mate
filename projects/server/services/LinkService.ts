@@ -71,12 +71,14 @@ export default class LinkService extends ContextClass {
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
    * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and its state was not cleaned up. Please wait before creating another attempt, or clean up the state.
   */
-  public async linkUser (defaultUserId: number, aggregateUserId: number) {
+  public async linkUser (defaultUserId: number, aggregateUserId: number, linkToken: string) {
     const linkAttemptId = await this.linkStore.startLinkAttempt(defaultUserId, aggregateUserId)
     let cumWarnings = 0
     let logs: LinkLog[] = [[new Date(), 'Start', cumWarnings]]
 
     try {
+      await this.linkStore.addLinkAttemptToLinkToken(linkToken, linkAttemptId)
+
       await this.linkStore.linkUser(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(LinkStore, 'linkUser'), cumWarnings])
 

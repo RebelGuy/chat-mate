@@ -6,6 +6,8 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { Singular } from '@rebel/server/types'
 import { NotFoundError } from 'typescript-rest/dist/server/model/errors'
+import AccountStore from '@rebel/server/stores/AccountStore'
+import { UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
 
 export type LinkHistory = ({
   type: 'pending' | 'running'
@@ -25,6 +27,7 @@ type Deps = Dependencies<{
   commandService: CommandService
   linkCommand: LinkCommand
   channelStore: ChannelStore
+  accountStore: AccountStore
 }>
 
 // split from `LinkService` because of circular dependencies
@@ -33,6 +36,7 @@ export default class LinkDataService extends ContextClass {
   private readonly commandService: CommandService
   private readonly linkCommand: LinkCommand
   private readonly channelStore: ChannelStore
+  private readonly accountStore: AccountStore
 
   constructor (deps: Deps) {
     super()
@@ -40,8 +44,12 @@ export default class LinkDataService extends ContextClass {
     this.commandService = deps.resolve('commandService')
     this.linkCommand = deps.resolve('linkCommand')
     this.channelStore = deps.resolve('channelStore')
+    this.accountStore = deps.resolve('accountStore')
   }
 
+  /**
+   * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the specified channel is already linked to the aggregate user.
+  */
   public async getOrCreateLinkToken (aggregateUserId: number, externalChannelId: string) {
     const channel = await this.channelStore.getChannelFromExternalId(externalChannelId)
     if (channel == null) {
@@ -49,6 +57,13 @@ export default class LinkDataService extends ContextClass {
     }
 
     const defaultUserId = channel.userId
+
+    // don't bother going ahead if the users are already linked
+    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(defaultUserId)
+    if (connectedUserIds[0] === aggregateUserId) {
+      throw new UserAlreadyLinkedToAggregateUserError(`Channel ${externalChannelId} is already linked to user ${aggregateUserId}`, aggregateUserId, defaultUserId)
+    }
+
     return await this.linkStore.getOrCreateLinkToken(aggregateUserId, defaultUserId)
   }
 

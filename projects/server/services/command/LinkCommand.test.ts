@@ -1,19 +1,23 @@
 import { Dependencies } from '@rebel/server/context/context'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LinkService from '@rebel/server/services/LinkService'
+import LinkStore from '@rebel/server/stores/LinkStore'
 import { single } from '@rebel/server/util/arrays'
 import { InvalidCommandArgumentsError } from '@rebel/server/util/error'
 import { nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockLinkService: MockProxy<LinkService>
+let mockLinkStore: MockProxy<LinkStore>
 let linkCommand: LinkCommand
 
 beforeEach(() => {
   mockLinkService = mock()
+  mockLinkStore = mock()
 
   linkCommand = new LinkCommand(new Dependencies({
-    linkService: mockLinkService
+    linkService: mockLinkService,
+    linkStore: mockLinkStore
   }))
 })
 
