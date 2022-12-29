@@ -68,7 +68,6 @@ export default class LinkDataService extends ContextClass {
   }
 
   public async getLinkHistory (aggregateUserId: number): Promise<LinkHistory> {
-    // todo: verify that the same def user can't be linked again, even if running another command.
     let linkHistory: LinkHistory = this.commandService.getQueuedCommands()
       .filter(c => this.linkCommand.normalisedNames.includes(c.normalisedName))
       .map(c => ({ type: 'pending', defaultUserId: c.userId, maybeToken: c.arguments[0] ?? '' }))

@@ -126,7 +126,7 @@ export default class ChatService extends ContextClass {
 
     const command = this.commandHelpers.extractNormalisedCommand(item.messageParts)
 
-    // either perform side effects for a normal message, or for a chat command
+    // either perform side effects for a normal message, or execute command for a chat command message
     if (message != null && command == null) {
       try {
         const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
@@ -140,8 +140,12 @@ export default class ChatService extends ContextClass {
       }
 
     } else if (message != null && command != null) {
-      const id = await this.commandStore.addCommand(message.id, command)
-      this.commandService.queueCommandExecution(id)
+      try {
+        const id = await this.commandStore.addCommand(message.id, command)
+        this.commandService.queueCommandExecution(id)
+      } catch (e: any) {
+        this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to handle the command represented by the message.`, e)
+      }
     }
 
     const addedChat = message != null
