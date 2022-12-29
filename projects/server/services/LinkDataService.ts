@@ -5,9 +5,8 @@ import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { Singular } from '@rebel/server/types'
-import { NotFoundError } from 'typescript-rest/dist/server/model/errors'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import { UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
 
 export type LinkHistory = ({
   type: 'pending' | 'running'
@@ -48,6 +47,7 @@ export default class LinkDataService extends ContextClass {
   }
 
   /**
+   * @throws {@link NotFoundError}: When no YouTube or Twitch channel was found with the given external ID.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the specified channel is already linked to the aggregate user.
   */
   public async getOrCreateLinkToken (aggregateUserId: number, externalChannelId: string) {

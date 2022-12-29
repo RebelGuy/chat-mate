@@ -1,13 +1,13 @@
 import { Dependencies } from '@rebel/server/context/context'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
-import CommandService from '@rebel/server/services/command/CommandService'
+import CommandService, { CommandData } from '@rebel/server/services/command/CommandService'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LinkService from '@rebel/server/services/LinkService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import { mock, MockProxy } from 'jest-mock-extended'
-import { cast, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject } from '@rebel/server/_test/utils'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import { ChatCommand, ChatMessage } from '@prisma/client'
 import { sleep } from '@rebel/server/util/node'
@@ -40,7 +40,7 @@ beforeEach(() => {
 })
 
 // 'tis a bit hard to follow, i guess. do i care?                                                                    nope
-describe(nameof(CommandService, 'queueCommandExecution'), () => {
+describe('Integration tests', () => {
   test('Commands are run one at a time and the result is saved to the CommandStore', async () => {
     const commandId1 = 2
     const commandId2 = 3
@@ -84,6 +84,10 @@ describe(nameof(CommandService, 'queueCommandExecution'), () => {
     mockCommandHelpers.getCommandArguments.calledWith(chatMessage2.chatMessageParts).mockReturnValue(args2)
     mockCommandHelpers.getCommandArguments.calledWith(chatMessage3.chatMessageParts).mockReturnValue(args3)
 
+    // ensure our initial state is correct
+    expect(commandService.getRunningCommand()).toBeNull()
+    expect(commandService.getQueuedCommands().length).toBe(0)
+
     // act
     commandService.queueCommandExecution(commandId1)
     commandService.queueCommandExecution(commandId2)
@@ -98,18 +102,30 @@ describe(nameof(CommandService, 'queueCommandExecution'), () => {
     expect(command2Started).toBe(false)
     expect(command3Started).toBe(false)
 
+    // do a full check of the state (later on, we will check again but taking some shortcuts as we have verified here that the data is complete)
+    expect(commandService.getRunningCommand()).toEqual(expectObject<CommandData>({ commandId: commandId1, arguments: args1, normalisedName: 'LINK', userId: defaultUser1 }))
+    expect(commandService.getQueuedCommands().length).toBe(2)
+    expect(commandService.getQueuedCommands()).toEqual(expectArray<CommandData>([
+      { commandId: commandId2, arguments: args2, normalisedName: 'LINK', userId: defaultUser2 },
+      { commandId: commandId3, arguments: args3, normalisedName: 'LINK', userId: defaultUser3 }
+    ]))
+
     resolve1!('success 1') // finish the first command
 
     await sleep(0)
 
     expect(command2Started).toBe(true)
     expect(command3Started).toBe(false)
+    expect(commandService.getRunningCommand()!.commandId).toBe(commandId2)
+    expect(commandService.getQueuedCommands().length).toBe(1)
 
     reject2!(new Error('failure 2')) // finish the second command
 
     await sleep(0)
 
     expect(command3Started).toBe(true)
+    expect(commandService.getRunningCommand()!.commandId).toBe(commandId3)
+    expect(commandService.getQueuedCommands().length).toBe(0)
 
     resolve3!('success 3') // finish the third command
 
@@ -117,5 +133,9 @@ describe(nameof(CommandService, 'queueCommandExecution'), () => {
 
     expect(mockCommandStore.executionFinished.mock.calls).toEqual([[commandId1, 'success 1'], [commandId3, 'success 3']])
     expect(mockCommandStore.executionFailed.mock.calls).toEqual([[commandId2, 'failure 2']])
+
+    // state should be cleaned up
+    expect(commandService.getRunningCommand()).toBeNull()
+    expect(commandService.getQueuedCommands().length).toBe(0)
   })
 })

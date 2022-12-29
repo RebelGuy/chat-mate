@@ -4,7 +4,7 @@ import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel
 import { expectObject, nameof } from '@rebel/server/_test/utils'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/server/util/error'
-import { LinkAttempt, ChatUser } from '@prisma/client'
+import { LinkAttempt, ChatUser, LinkToken } from '@prisma/client'
 import { randomString } from '@rebel/server/util/random'
 import { LinkLog } from '@rebel/server/services/LinkService'
 
@@ -22,6 +22,99 @@ export default () => {
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
+
+  describe(nameof(LinkStore, 'addLinkAttemptToLinkToken'), () => {
+    test('Links the token to the LinkAttempt', async () => {
+      const linkToken = 'test token'
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.linkAttempt.create({ data: { startTime: new Date(), log: '', type: 'link', defaultChatUserId: 1, aggregateChatUserId: 2 }})
+      await db.linkToken.create({ data: { token: linkToken, defaultChatUserId: 1, aggregateChatUserId: 2 }})
+
+      await linkStore.addLinkAttemptToLinkToken(linkToken, 1)
+
+      const stored = await db.linkAttempt.findUnique({ where: { id: 1 }, rejectOnNotFound: true })
+      expect(stored.linkTokenId).toBe(1)
+    })
+  })
+
+  describe(nameof(LinkStore, 'validateLinkToken'), () => {
+    test('Returns null if the link token could not be found for the default user', async () => {
+      const linkToken = 'test token'
+      await db.chatUser.createMany({ data: [{}, {}, {}]})
+      await db.linkToken.create({ data: { token: linkToken, defaultChatUserId: 3, aggregateChatUserId: 2 }})
+
+      const result = await linkStore.validateLinkToken(1, linkToken)
+
+      expect(result).toBeNull()
+    })
+
+    test('Returns null if the link token was already used for a previous link attempt', async () => {
+      const linkToken = 'test token'
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.linkToken.create({ data: { token: linkToken, defaultChatUserId: 1, aggregateChatUserId: 2 }})
+      await db.linkAttempt.create({ data: { startTime: new Date(), log: '', type: 'link', defaultChatUserId: 1, aggregateChatUserId: 2, linkTokenId: 1 }})
+
+      const result = await linkStore.validateLinkToken(1, linkToken)
+
+      expect(result).toBeNull()
+    })
+
+    test('Returns the link token object', async () => {
+      const linkToken = 'test token'
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.linkToken.create({ data: { token: linkToken, defaultChatUserId: 1, aggregateChatUserId: 2 }})
+
+      const result = await linkStore.validateLinkToken(1, linkToken)
+
+      expect(result).toEqual(expectObject<LinkToken>({ id: 1, token: linkToken, defaultChatUserId: 1, aggregateChatUserId: 2 }))
+    })
+  })
+
+  describe(nameof(LinkStore, 'getOrCreateLinkToken'), () => {
+    test('Creates a new token if no existing token exists for the aggregate-default user pair', async () => {
+      await db.chatUser.createMany({ data: [{}, {}]})
+
+      const result = await linkStore.getOrCreateLinkToken(1, 2)
+
+      expect(result.token).toEqual(expect.any(String))
+    })
+
+    test('Creates a new token if an existing token exists for the aggregate-default user pair, but it was part of a completed link attempt', async () => {
+      const existingToken = 'existing token'
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.linkToken.create({ data: { token: existingToken, defaultChatUserId: 2, aggregateChatUserId: 1 }})
+      await db.linkAttempt.create({ data: { startTime: new Date(), endTime: new Date(), log: '', type: 'link', defaultChatUserId: 1, aggregateChatUserId: 2, linkTokenId: 1 }})
+
+      const result = await linkStore.getOrCreateLinkToken(1, 2)
+
+      expect(result.token).not.toEqual(existingToken)
+    })
+
+    test(`Returns the existing token for the aggregate-default user pair if it hasn't been matched to a link attempt`, async () => {
+      const existingToken = 'existing token'
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.linkToken.create({ data: { token: existingToken, defaultChatUserId: 2, aggregateChatUserId: 1 }})
+
+      const result = await linkStore.getOrCreateLinkToken(1, 2)
+
+      expect(result.token).toEqual(existingToken)
+    })
+  })
+
+  describe(nameof(LinkStore, 'getAllLinkTokens'), () => {
+    test('Returns all link tokens for the aggregate user', async () => {
+      await db.chatUser.createMany({ data: [{}, {}, {}, {}, {}]})
+      await db.linkToken.createMany({ data: [
+        { token: 'test1', aggregateChatUserId: 1, defaultChatUserId: 2 },
+        { token: 'test2', aggregateChatUserId: 1, defaultChatUserId: 3 },
+        { token: 'test3', aggregateChatUserId: 4, defaultChatUserId: 5 }
+      ]})
+
+      const result = await linkStore.getAllLinkTokens(1)
+
+      expect(result.map(t => t.token)).toEqual(['test1', 'test2'])
+    })
+  })
 
   describe(nameof(LinkStore, 'linkUser'), () => {
     test('Links the default user to the aggregate user', async () => {

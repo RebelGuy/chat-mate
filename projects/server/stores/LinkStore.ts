@@ -22,6 +22,7 @@ export default class LinkStore extends ContextClass {
   }
 
   public async addLinkAttemptToLinkToken (linkToken: string, linkAttemptId: number) {
+    // this seems weird... should the schema be changed to reverse the relationship?
     await this.db.linkToken.update({
       where: { token: linkToken },
       data: { linkAttempt: { connect: { id: linkAttemptId }}}
@@ -54,7 +55,7 @@ export default class LinkStore extends ContextClass {
         linkAttempt: null
       }, {
         // don't match completed link attempts that used this token
-        linkAttempt: { endTime: { not: null }}
+        linkAttempt: { endTime: null }
       }]
     }})
 

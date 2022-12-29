@@ -67,14 +67,4 @@ export default class CommandStore extends ContextClass {
       rejectOnNotFound: true
     })
   }
-
-  public async getUserCommands (exactUserIds: number[], normalisedCommandNames: string[]): Promise<CommandWithMessage[]> {
-    return await this.db.chatCommand.findMany({
-      where: {
-        chatMessage: { userId: { in: exactUserIds }},
-        normalisedCommandName: { in: normalisedCommandNames }
-      },
-      include: { chatMessage: true }
-    })
-  }
 }

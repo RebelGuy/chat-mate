@@ -323,6 +323,45 @@ export default () => {
     })
   })
 
+  describe(nameof(ChannelStore, 'getChannelFromExternalId'), () => {
+    beforeEach(async () => {
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+      }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}},
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}},
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { create: {}},
+      }})
+    })
+
+    test('Returns the YouTube channel associated with the external id', async () => {
+      const result = await channelStore.getChannelFromExternalId(ytChannelId2)
+
+      expect(result!.userId).toBe(2)
+    })
+
+    test('Returns the Twitch channel associated with the external id', async () => {
+      const result = await channelStore.getChannelFromExternalId(extTwitchChannelId1)
+
+      expect(result!.userId).toBe(3)
+    })
+
+    test('Returns null if no YouTube or Twitch channel can be found', async () => {
+      const result = await channelStore.getChannelFromExternalId('test')
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(ChannelStore, 'getPrimaryUserId'), () => {
     test('throws if channel with given not found', async () => {
       await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})
