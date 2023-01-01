@@ -19,6 +19,10 @@ export type LinkHistory = ({
   completionTime: Date
   message: string
   token: string
+} | {
+  type: 'waiting' // waiting for the user to execute the link
+  defaultUserId: number
+  token: string
 })[]
 
 type Deps = Dependencies<{
@@ -81,10 +85,16 @@ export default class LinkDataService extends ContextClass {
       })
     }
 
-    // add copmleted links - those that don't have a link attempt, or where the link attempt is not finished yet, will have been collected above.
+    // add completed links - those that don't have a link attempt, or where the link attempt is not finished yet, will have been collected above.
     const historicTokens = await this.linkStore.getAllLinkTokens(aggregateUserId)
     linkHistory.push(...historicTokens.map<Singular<LinkHistory> | null>(t => {
-      if (t.linkAttempt == null || t.linkAttempt.endTime == null) {
+      if (t.linkAttempt == null) {
+        return {
+          type: 'waiting',
+          defaultUserId: t.defaultChatUserId,
+          token: t.token
+        }
+      } else if (t.linkAttempt.endTime == null) {
         return null
       } else {
         return {

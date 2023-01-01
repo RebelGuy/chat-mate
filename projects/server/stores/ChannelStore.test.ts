@@ -334,12 +334,14 @@ export default () => {
         user: { create: {}},
       }})
       await db.twitchChannel.create({ data: {
-        twitchId: extTwitchChannelId1,
+        twitchId: 'ext' + extTwitchChannelId1,
         user: { create: {}},
+        infoHistory: { create: { userName: extTwitchChannelId1, colour: '', displayName: '', isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false, time: new Date(), userType: '' }}
       }})
       await db.twitchChannel.create({ data: {
-        twitchId: extTwitchChannelId2,
+        twitchId: 'ext' + extTwitchChannelId2,
         user: { create: {}},
+        infoHistory: { create: { userName: extTwitchChannelId2, colour: '', displayName: '', isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false, time: new Date(), userType: '' }}
       }})
     })
 

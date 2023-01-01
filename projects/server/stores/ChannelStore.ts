@@ -175,14 +175,17 @@ export default class ChannelStore extends ContextClass {
   }
 
   /** Returns null if the channel was not found. */
-  public async getChannelFromExternalId (externalId: string): Promise<YoutubeChannel | TwitchChannel | null> {
-    const youtubeChannel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalId } })
+  public async getChannelFromExternalId (externalIdOrUserName: string): Promise<YoutubeChannel | TwitchChannel | null> {
+    const youtubeChannel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalIdOrUserName } })
     if (youtubeChannel != null) {
       return youtubeChannel
     }
 
-    const twitchChannel = await this.db.twitchChannel.findUnique({ where: { twitchId: externalId } })
-    return twitchChannel
+    const twitchChannel = await this.db.twitchChannelInfo.findFirst({
+      where: { userName: externalIdOrUserName },
+      include: { channel: true }
+    })
+    return twitchChannel?.channel ?? null
   }
 
   /** Gets the primary userId that is associated with the channel that has the given external id. Throws if none is found. */

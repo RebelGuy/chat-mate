@@ -77,11 +77,13 @@ describe(nameof(LinkDataService, 'getLinkHistory'), () => {
     const token3 = 'token3'
     const token4 = 'token4'
     const token5 = 'token5'
+    const token6 = 'token6'
     const defaultUserId1 = 5
     const defaultUserId2 = 6
     const defaultUserId3 = 7
     const defaultUserId4 = 8
     const defaultUserId5 = 9
+    const defaultUserId6 = 10
     const endTime1 = new Date()
     const endTime2 = addTime(endTime1, 'seconds', 1)
 
@@ -93,19 +95,20 @@ describe(nameof(LinkDataService, 'getLinkHistory'), () => {
     mockCommandService.getRunningCommand.calledWith().mockReturnValue(cast<CommandData>({ normalisedName: 'LINK', arguments: [token3], userId: defaultUserId3 }))
     mockLinkStore.getAllLinkTokens.calledWith(aggregateUserId).mockResolvedValue([
       cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token4, defaultChatUserId: defaultUserId4, linkAttempt: { errorMessage: 'error', endTime: endTime1 }}),
-      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: 'blah', defaultChatUserId: 123, linkAttempt: null}),
-      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token5, defaultChatUserId: defaultUserId5, linkAttempt: { errorMessage: null, endTime: endTime2 }}),
+      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token5, defaultChatUserId: defaultUserId5, linkAttempt: null}),
+      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token6, defaultChatUserId: defaultUserId6, linkAttempt: { errorMessage: null, endTime: endTime2 }}),
     ])
 
     const result = await linkDataService.getLinkHistory(aggregateUserId)
 
-    expect(result.length).toBe(5)
+    expect(result.length).toBe(6)
     expect(result).toEqual(expectObject<LinkHistory>([
       { type: 'pending', defaultUserId: defaultUserId1, maybeToken: token1 },
       { type: 'pending', defaultUserId: defaultUserId2, maybeToken: token2 },
       { type: 'running', defaultUserId: defaultUserId3, maybeToken: token3 },
       { type: 'fail', defaultUserId: defaultUserId4, token: token4, completionTime: endTime1 },
-      { type: 'success', defaultUserId: defaultUserId5, token: token5, completionTime: endTime2 }
+      { type: 'waiting', defaultUserId: defaultUserId5, token: token5 },
+      { type: 'success', defaultUserId: defaultUserId6, token: token6, completionTime: endTime2 }
     ]))
   })
 })

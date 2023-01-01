@@ -7,6 +7,7 @@ import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/Pub
 import { SERVER_URL } from '@rebel/studio/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
+import { GetLinkTokensResponse, CreateLinkTokenResponse } from '@rebel/server/controllers/UserController'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -117,6 +118,14 @@ export async function setStreamlabsSocketToken (loginToken: string, streamer: st
 
 export async function getStreamlabsStatus (loginToken: string, streamer: string): Promise<GetStreamlabsStatusResponse> {
   return await get(`/donation/streamlabs/status`, loginToken, streamer)
+}
+
+export async function getLinkTokens (loginToken: string): Promise<GetLinkTokensResponse> {
+  return await get('/user/link/token', loginToken)
+}
+
+export async function createLinkToken (loginToken: string, externalId: string): Promise<CreateLinkTokenResponse> {
+  return await post(`/user/link/token?externalId=${externalId}`, undefined, loginToken)
 }
 
 async function get (path: string, loginToken?: string, streamer?: string): Promise<any> {

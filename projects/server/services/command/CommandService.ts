@@ -103,6 +103,7 @@ export default class CommandService extends ContextClass {
       await this.commandStore.executionStarted(commandId)
       const result = await this.executeCommand(commandData)
       await this.commandStore.executionFinished(commandId, result ?? 'Success')
+      this.logService.logInfo(this, `Successfully executed command ${commandId} (${commandData.normalisedName}). Result:`, result)
     } catch (e: any) {
       this.logService.logError(this, 'Encountered error while executing command', commandId, e)
       await this.saveErrorSafe(commandId, e)

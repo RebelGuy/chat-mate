@@ -4,6 +4,7 @@ import CustomEmojiManager from '@rebel/studio/CustomEmojiManager'
 import DebugInfo from '@rebel/studio/DebugInfo'
 import Home from '@rebel/studio/Home'
 import HomePageButton from '@rebel/studio/HomePageButton'
+import LinkUser from '@rebel/studio/LinkUser'
 import LoginForm from '@rebel/studio/LoginForm'
 import LoginProvider from '@rebel/studio/LoginProvider'
 import RegistrationForm from '@rebel/studio/RegistrationForm'
@@ -51,6 +52,7 @@ export default class App extends React.PureComponent<Props, State> {
           {this.state.currentPage === 'chatMate' && <ChatMateManager />}
           {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
           {this.state.currentPage === 'applyForStreamer' && <ApplyForStreamer />}
+          {this.state.currentPage === 'linkUser' && <LinkUser />}
         </LoginProvider>
       </div>
     )

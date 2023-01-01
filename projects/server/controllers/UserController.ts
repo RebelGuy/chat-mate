@@ -14,7 +14,7 @@ import { EmptyObject } from '@rebel/server/types'
 import { single, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
+import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 type SearchUserRequest = ApiRequest<4, {
   schema: 4,
@@ -25,13 +25,13 @@ type SearchUserResponse = ApiResponse<4, {
   results: Tagged<3, PublicUserNames>[]
 }>
 
-type GetLinkTokensResponse = ApiResponse<1, {
+export type GetLinkTokensResponse = ApiResponse<1, {
   tokens: PublicLinkToken[]
 }>
 
-type CreateLinkTokenResponse = ApiResponse<1, EmptyObject>
-
-type DeleteLinkTokenResponse = ApiResponse<1, EmptyObject>
+export type CreateLinkTokenResponse = ApiResponse<1, {
+  token: string
+}>
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
@@ -106,10 +106,11 @@ export default class UserController extends ControllerBase {
           if (h.type === 'pending' || h.type ===  'running') {
             return {
               schema: 1,
-              status: h.type === 'pending' ? 'waiting' : 'processing',
+              status: h.type === 'pending' ? 'pending' : 'processing',
               token: h.maybeToken,
               channelUserName: userName.name,
-              platform: platform
+              platform: platform,
+              message: null
             }
           } else if (h.type === 'success' || h.type === 'fail') {
             return {
@@ -117,7 +118,17 @@ export default class UserController extends ControllerBase {
               status: h.type === 'success' ? 'succeeded' : 'failed',
               token: h.token,
               channelUserName: userName.name,
-              platform: platform
+              platform: platform,
+              message: h.message
+            }
+          } else if (h.type === 'waiting') {
+            return {
+              schema: 1,
+              status: 'waiting',
+              token: h.token,
+              channelUserName: userName.name,
+              platform: platform,
+              message: null
             }
           } else {
             assertUnreachable(h.type)
@@ -132,12 +143,14 @@ export default class UserController extends ControllerBase {
   @POST
   @Path('link/token')
   @PreProcessor(requireAuth)
-  public async createLinkToken (externalId: string): Promise<CreateLinkTokenResponse> {
-    const builder = this.registerResponseBuilder<DeleteLinkTokenResponse>('DELETE /link/token', 1)
+  public async createLinkToken (
+    @QueryParam('externalId') externalId: string
+  ): Promise<CreateLinkTokenResponse> {
+    const builder = this.registerResponseBuilder<CreateLinkTokenResponse>('POST /link/token', 1)
 
     try {
-      await this.linkDataService.getOrCreateLinkToken(this.getCurrentUser().aggregateChatUserId, externalId)
-      return builder.success({})
+      const linkToken = await this.linkDataService.getOrCreateLinkToken(this.getCurrentUser().aggregateChatUserId, externalId)
+      return builder.success({ token: linkToken.token })
     } catch (e: any) {
       return builder.failure(e)
     }
