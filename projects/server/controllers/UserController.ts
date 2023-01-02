@@ -12,6 +12,7 @@ import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { EmptyObject } from '@rebel/server/types'
 import { single, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
@@ -148,11 +149,21 @@ export default class UserController extends ControllerBase {
   ): Promise<CreateLinkTokenResponse> {
     const builder = this.registerResponseBuilder<CreateLinkTokenResponse>('POST /link/token', 1)
 
+    if (externalId == null || externalId.length === 0) {
+      return builder.failure(400, 'ExternalId must be provided')
+    }
+
     try {
       const linkToken = await this.linkDataService.getOrCreateLinkToken(this.getCurrentUser().aggregateChatUserId, externalId)
       return builder.success({ token: linkToken.token })
     } catch (e: any) {
-      return builder.failure(e)
+      if (e instanceof NotFoundError) {
+        return builder.failure(404, e)
+      } else if (e instanceof UserAlreadyLinkedToAggregateUserError) {
+        return builder.failure(422, e)
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 }

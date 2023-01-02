@@ -758,3 +758,25 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `GET /link/token`
+
+Get the link history for the logged-in user.
+
+Returns data with the following properties:
+- `tokens` (`PublicLinkToken[]`): The array representing the user's link history. The ordering of items is undefined.
+
+### `POST /link/token`
+
+Create a link token for a YouTube or Twitch channel that is connected to the logged-in account.
+
+Path parameters:
+- `externalId` (`string`): The YouTube channel ID or Twitch username of the channel.
+
+Returns data with the following properties:
+- `token` (`PublicLinkToken`): The new link token that was created or, if an unused token already existed for the specified channel, an existing token.
+
+Can return the following errors:
+- `400`: When the `externalId` is not sent.
+- `404`: When no channel matching the given `externalId` could be found. The channel in question must have sent at least one chat message in the past so that it is added to our database.
+- `422`: When the specified channel is already linked to a user.
