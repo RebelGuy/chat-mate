@@ -74,7 +74,8 @@ function CreateLinkToken (props: { onCreated: () => void }) {
   }
 
   return <div style={{ marginTop: 24 }}>
-    <label>Link a new channel: </label>
+    <div>You can link a channel to your account to manage your profile and access other exclusive features.</div>
+    <div>If linking multiple channels, all data (experience, ranks, etc.) will be merged as if you were using a single account all along. This cannot be undone.</div>
     <ApiRequestTrigger onRequest={onCreateLinkToken}>
       {(onMakeRequest, response, loadingNode, errorNode) =>
         <>
