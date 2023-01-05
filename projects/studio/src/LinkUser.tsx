@@ -1,30 +1,61 @@
+import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import { GetLinkTokensResponse } from '@rebel/server/controllers/UserController'
 import { sortBy } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { createLinkToken, getLinkTokens } from '@rebel/studio/api'
+import { createLinkToken, getLinkedChannels, getLinkTokens } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import * as React from 'react'
 
 export default function LinkUser () {
-  const [updateToken, setUpdateToken] = React.useState(new Date().getTime())
+  const [updateToken, setUpdateToken] = React.useState(Date.now())
 
-  const regenerateUpdateToken = () => setUpdateToken(new Date().getTime())
+  const regenerateUpdateToken = () => setUpdateToken(Date.now())
 
   return (
-    <ApiRequest onDemand={true} token={updateToken} onRequest={getLinkTokens}>
-      {(response, loadingNode, errorNode) => <>
-        <button style={{ display: 'block', margin: 'auto', marginBottom: 32 }} disabled={loadingNode != null} onClick={regenerateUpdateToken}>Refresh</button>
-        {response && <>
-          <LinkHistory data={response} />
-          <CreateLinkToken onCreated={regenerateUpdateToken} />
+    <div>
+      <button style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>Refresh</button>
+      <div style={{ marginBottom: 16 }}>
+        <ApiRequest onDemand token={updateToken} onRequest={getLinkedChannels}>
+          {(response, loadingNode, errorNode) => <>
+            {response && <LinkedChannels channels={response.channels} />}
+            {loadingNode}
+            {errorNode}
+          </>}
+        </ApiRequest>
+      </div>
+      <ApiRequest onDemand token={updateToken} onRequest={getLinkTokens}>
+        {(response, loadingNode, errorNode) => <>
+          {response && <>
+            <LinkHistory data={response} />
+            <CreateLinkToken onCreated={regenerateUpdateToken} />
+          </>}
+          {loadingNode}
+          {errorNode}
         </>}
-        {loadingNode}
-        {errorNode}
-      </>}
-    </ApiRequest>
+      </ApiRequest>
+    </div>
   )
+}
+
+function LinkedChannels (props: { channels: PublicChannelInfo[] }) {
+  if (props.channels.length === 0) {
+    return <div>
+      No YouTube or Twitch channels are linked. Create a new link using the below input field.
+    </div>
+  }
+
+  return <table style={{ margin: 'auto' }}>
+    <tr>
+      <th>Channel name</th>
+      <th>Platform</th>
+    </tr>
+    {props.channels.map(c => <tr>
+      <td><a href={getChannelUrl(c)}>{c.channelName}</a></td>
+      <td>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</td>
+    </tr>)}
+  </table>
 }
 
 function LinkHistory (props: { data: Extract<GetLinkTokensResponse, { success: true }>['data'] }) {
@@ -140,5 +171,15 @@ function TokenMessage (props: { token: PublicLinkToken }) {
     </>
   } else {
     return <div>n/a</div>
+  }
+}
+
+function getChannelUrl (channel: PublicChannelInfo) {
+  if (channel.platform === 'youtube') {
+    return `https://www.youtube.com/channel/${channel.externalIdOrUserName}`
+  } else if (channel.platform === 'twitch') {
+    return `https://www.twitch.tv/${channel.externalIdOrUserName}`
+  } else {
+    assertUnreachable(channel.platform)
   }
 }
