@@ -4,13 +4,14 @@ import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/Cha
 import { RankedEntry } from '@rebel/server/services/ExperienceService'
 import { UserRanks } from '@rebel/server/stores/RankStore'
 
-export function rankedEntryToPublic (data: RankedEntry & UserRanks): PublicRankedUser {
+export function rankedEntryToPublic (data: RankedEntry & UserRanks, isRegistered: boolean): PublicRankedUser {
   return {
     schema: 3,
     rank: data.rank,
     user: {
       schema: 3,
       id: data.userId,
+      isRegistered: isRegistered,
       userInfo: {
         schema: 1,
         channelName: getUserName(data.channel),

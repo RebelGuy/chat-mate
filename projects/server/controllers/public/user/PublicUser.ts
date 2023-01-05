@@ -9,6 +9,9 @@ export type PublicUser = PublicObject<3, {
   /** The internal id of the user. */
   id: number
 
+  /** Whether the user has a registered account that is linked to this channel. */
+  isRegistered: boolean
+
   /** Current information about the user. */
   userInfo: Tagged<1, PublicChannelInfo>
 

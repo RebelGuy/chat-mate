@@ -4,10 +4,12 @@ import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicC
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import { PublicUserNames } from '@rebel/server/controllers/public/user/PublicUserNames'
 import { userDataToPublicUserNames } from '@rebel/server/models/user'
+import AccountService from '@rebel/server/services/AccountService'
 import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import LinkService from '@rebel/server/services/LinkService'
+import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
@@ -45,6 +47,7 @@ type Deps = ControllerDependencies<{
   experienceService: ExperienceService
   rankStore: RankStore
   linkDataService: LinkDataService
+  accountStore: AccountStore
 }>
 
 @Path(buildPath('user'))
@@ -54,6 +57,7 @@ export default class UserController extends ControllerBase {
   readonly experienceService: ExperienceService
   readonly rankStore: RankStore
   readonly linkDataService: LinkDataService
+  readonly accountStore: AccountStore
 
   constructor (deps: Deps) {
     super(deps, 'user')
@@ -62,6 +66,7 @@ export default class UserController extends ControllerBase {
     this.experienceService = deps.resolve('experienceService')
     this.rankStore = deps.resolve('rankStore')
     this.linkDataService = deps.resolve('linkDataService')
+    this.accountStore = deps.resolve('accountStore')
   }
 
   @POST
@@ -79,7 +84,9 @@ export default class UserController extends ControllerBase {
       const userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), matches.map(m => m.userId))
       const levels = await this.experienceService.getLevels(this.getStreamerId(), matches.map(m => m.userId))
       const ranks = await this.rankStore.getUserRanks(matches.map(m => m.userId), this.getStreamerId())
-      const userData = zipOnStrictMany(matches, 'userId', userChannels, levels, ranks).map(userDataToPublicUserNames)
+      const areRegisterd = await this.accountStore.areUsersRegistered(matches.map(m => m.userId))
+      const userData = zipOnStrictMany(matches, 'userId', userChannels, levels, ranks)
+        .map(data => userDataToPublicUserNames(data, areRegisterd.find(r => r.userId === data.userId)!.isRegistered))
 
       return builder.success({ results: userData })
     } catch (e: any) {

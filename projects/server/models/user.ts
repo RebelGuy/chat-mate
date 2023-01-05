@@ -6,10 +6,11 @@ import { UserLevel } from '@rebel/server/services/ExperienceService'
 import { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
 import { UserRanks } from '@rebel/server/stores/RankStore'
 
-export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks): PublicUser {
+export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks, isRegistered: boolean): PublicUser {
   return {
     schema: 3,
     id: data.userId,
+    isRegistered: isRegistered,
     userInfo: {
       schema: 1,
       channelName: getUserName(data),
@@ -25,10 +26,10 @@ export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks)
   }
 }
 
-export function userDataToPublicUserNames (data: UserNames & UserChannel & UserLevel & UserRanks): PublicUserNames {
+export function userDataToPublicUserNames (data: UserNames & UserChannel & UserLevel & UserRanks, isRegistered: boolean): PublicUserNames {
   return {
     schema: 3,
-    user: userDataToPublicUser(data),
+    user: userDataToPublicUser(data, isRegistered),
     youtubeChannelNames: data.youtubeNames,
     twitchChannelNames: data.twitchNames,
   }

@@ -46,6 +46,15 @@ export default class AccountStore extends ContextClass {
     }
   }
 
+  /** For each of the given users, checks whether they are an aggregate user, or have an aggregate user linked to them and therefore belong to a registered user. */
+  public async areUsersRegistered (anyUserIds: number[]): Promise<{ userId: number, isRegistered: boolean }[]> {
+    const chatUsers = await this.db.chatUser.findMany({
+      where: { id: { in: anyUserIds }},
+      include: { registeredUser: true }
+    })
+    return chatUsers.map(user => ({ userId: user.id, isRegistered: user.registeredUser != null || user.aggregateChatUserId != null }))
+  }
+
   public async checkPassword (username: string, password: string): Promise<boolean> {
     const hashedPassword = hashString(username + password)
     const match = await this.db.registeredUser.findUnique({
@@ -71,7 +80,8 @@ export default class AccountStore extends ContextClass {
     return token
   }
 
-  /** Returns all chat user ids, including the given id, that are connected to the given id. The first id is always the primary id, i.e. aggregate user, if it exists. */
+  /** Returns all chat user ids, including the given id, that are connected to the given id. The first id is always the primary id, i.e. aggregate user, if it exists.
+   * Otherwise, the first (and only) item is the user id that is being queried. */
   public async getConnectedChatUserIds (chatUserId: number): Promise<number[]> {
     const chatUser = await this.db.chatUser.findFirst({
       where: { id: chatUserId },

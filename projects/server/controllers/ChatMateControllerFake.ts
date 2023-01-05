@@ -80,7 +80,8 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
         }
         const userChannel = pickRandom(users)
         const ranks = single(await this.rankStore.getUserRanks([userChannel.userId], this.getStreamerId())).ranks
-        const user: PublicUser = userDataToPublicUser({ ...userChannel, userId: userChannel.userId, level, ranks })
+        const isRegistered = pickRandom([true, false, false])
+        const user: PublicUser = userDataToPublicUser({ ...userChannel, userId: userChannel.userId, level, ranks }, isRegistered)
 
         events.push({
           schema: 5,

@@ -14,6 +14,7 @@ import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-re
 import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import AccountStore from '@rebel/server/stores/AccountStore'
 
 type GetDonationsResponse = ApiResponse<1, { donations: Tagged<1, PublicDonation>[] }>
 
@@ -32,6 +33,7 @@ type Deps = ControllerDependencies<{
   channelService: ChannelService
   experienceService: ExperienceService
   rankStore: RankStore
+  accountStore: AccountStore
 }>
 
 @Path(buildPath('donation'))
@@ -43,6 +45,7 @@ export default class DonationController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
   private readonly rankStore: RankStore
+  private readonly accountStore: AccountStore
 
   constructor (deps: Deps) {
     super(deps, 'donation')
@@ -51,6 +54,7 @@ export default class DonationController extends ControllerBase {
     this.channelService = deps.resolve('channelService')
     this.experienceService = deps.resolve('experienceService')
     this.rankStore = deps.resolve('rankStore')
+    this.accountStore = deps.resolve('accountStore')
   }
 
   @GET
@@ -156,7 +160,9 @@ export default class DonationController extends ControllerBase {
       const userChannels = await this.channelService.getActiveUserChannels(streamerId, userIds)
       const levels = await this.experienceService.getLevels(streamerId, userIds)
       const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
-      userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
+      const areRegistered = await this.accountStore.areUsersRegistered(userIds)
+      userData = zipOnStrictMany(userChannels, 'userId', levels, ranks)
+        .map(data => userDataToPublicUser(data, areRegistered.find(r => r.userId === data.userId)!.isRegistered))
     }
 
     return donations.map(d => donationToPublicObject(d, d.linkIdentifier, d.linkedAt, userData.find(u => u.id === d.userId) ?? null))

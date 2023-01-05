@@ -10,7 +10,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
 import { asGte, asLt } from '@rebel/server/util/math'
-import { chooseWeightedRandom, randomInt } from '@rebel/server/util/random'
+import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/server/util/random'
 import { Path } from 'typescript-rest'
 
 @Path(buildPath('chat'))
@@ -46,7 +46,8 @@ export default class ChatControllerFake extends ControllerBase implements IChatC
         levelProgress: asLt(asGte(Math.random(), 0), 1)
       }
       const ranks = single(await this.rankStore.getUserRanks([item.userId!], this.getStreamerId())).ranks.map(userRankToPublicObject)
-      items.push(chatAndLevelToPublicChatItem(item, level, ranks))
+      const isRegistered = pickRandom([true, false, false])
+      items.push(chatAndLevelToPublicChatItem(item, level, ranks, isRegistered))
     }
 
     return builder.success({ reusableTimestamp: since, chat: items })

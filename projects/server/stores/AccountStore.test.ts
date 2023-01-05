@@ -4,7 +4,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import { UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { hashString } from '@rebel/server/util/strings'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/server/_test/utils'
 
 export default () => {
   let db: Db
@@ -37,6 +37,33 @@ export default () => {
       await db.registeredUser.create({ data: { username: username, hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
       await expect(() => accountStore.addRegisteredUser({ username: username, password: 'test' })).rejects.toThrowError(UsernameAlreadyExistsError)
+    })
+  })
+
+  describe(nameof(AccountStore, 'areUsersRegistered'), () => {
+    test('Returns the correct registered flag for each of the provided users', async () => {
+      await db.chatUser.createMany({ data: [{}, {}]}) // 2 aggregate chat users
+      await db.chatUser.createMany({ data: [
+        {}, // 3
+        { aggregateChatUserId: 1 }, // 4
+        { aggregateChatUserId: 1 }, // 5
+        {}, // 6
+        { aggregateChatUserId: 2 }, // 7
+      ]})
+      await db.chatUser.create({ data: {
+        registeredUser: { create: { username: 'name', hashedPassword: 'test' }}
+      }})
+
+      const result = await accountStore.areUsersRegistered([3, 4, 5, 6, 7, 8])
+
+      expect(result).toEqual(expectObject(result, [
+        { userId: 3, isRegistered: false },
+        { userId: 4, isRegistered: true },
+        { userId: 5, isRegistered: true },
+        { userId: 6, isRegistered: false },
+        { userId: 7, isRegistered: true },
+        { userId: 8, isRegistered: true },
+      ]))
     })
   })
 

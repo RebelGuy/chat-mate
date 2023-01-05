@@ -26,6 +26,7 @@ import { PublicLevelUpData } from '@rebel/server/controllers/public/event/Public
 import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/event/PublicNewTwitchFollowerData'
 import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
+import AccountStore from '@rebel/server/stores/AccountStore'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -41,6 +42,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   rankStore: RankStore
   donationStore: DonationStore
   chatMateEventService: ChatMateEventService
+  accountStore: AccountStore
 }>
 
 export default class ChatMateControllerReal extends ControllerBase implements IChatMateController {
@@ -57,6 +59,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
   readonly rankStore: RankStore
   readonly donationStore: DonationStore
   readonly chatMateEventService: ChatMateEventService
+  readonly accountStore: AccountStore
 
   constructor (deps: ChatMateControllerDeps) {
     super(deps, '/chatMate')
@@ -73,6 +76,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     this.rankStore = deps.resolve('rankStore')
     this.donationStore = deps.resolve('donationStore')
     this.chatMateEventService = deps.resolve('chatMateEventService')
+    this.accountStore = deps.resolve('accountStore')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -96,6 +100,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     const levelInfo = await this.experienceService.getLevels(streamerId, userIds)
     const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
     const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
+    const areRegistered = await this.accountStore.areUsersRegistered(userIds)
 
     let result: PublicChatMateEvent[] = []
     for (const event of events) {
@@ -104,7 +109,8 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
       let donationData: PublicDonationData | null = null
 
       if (event.type === 'levelUp') {
-        const user: PublicUser = userDataToPublicUser(userData.find(d => d.userId === event.userId)!)
+        const isRegistered = areRegistered.find(r => r.userId === event.userId)!.isRegistered
+        const user: PublicUser = userDataToPublicUser(userData.find(d => d.userId === event.userId)!, isRegistered)
         levelUpData = {
           schema: 3,
           newLevel: event.newLevel,
@@ -117,7 +123,8 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
           displayName: event.displayName
         }
       } else if (event.type === 'donation') {
-        const user: PublicUser | null = event.userId == null ? null : userDataToPublicUser(userData.find(d => d.userId === event.userId)!)
+        const isRegistered = areRegistered.find(r => r.userId === event.userId)!.isRegistered
+        const user: PublicUser | null = event.userId == null ? null : userDataToPublicUser(userData.find(d => d.userId === event.userId)!, isRegistered)
         donationData = {
           schema: 1,
           id: event.donation.id,

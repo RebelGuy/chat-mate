@@ -5,6 +5,7 @@ import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChat
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import ExperienceService from '@rebel/server/services/ExperienceService'
+import AccountStore from '@rebel/server/stores/AccountStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { unique } from '@rebel/server/util/arrays'
@@ -14,6 +15,7 @@ export type ChatControllerDeps = ControllerDependencies<{
   chatStore: ChatStore,
   experienceService: ExperienceService
   rankStore: RankStore
+  accountStore: AccountStore
 }>
 
 @Path(buildPath('chat'))
@@ -21,12 +23,14 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
   readonly chatStore: ChatStore
   readonly experienceService: ExperienceService
   readonly rankStore: RankStore
+  readonly accountStore: AccountStore
 
   constructor (deps: ChatControllerDeps) {
     super(deps, '/chat')
     this.chatStore = deps.resolve('chatStore')
     this.experienceService = deps.resolve('experienceService')
     this.rankStore = deps.resolve('rankStore')
+    this.accountStore = deps.resolve('accountStore')
   }
 
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
@@ -41,12 +45,14 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
 
     const levels = await this.experienceService.getLevels(streamerId, userIds as number[])
     const ranks = await this.rankStore.getUserRanks(userIds as number[], streamerId)
+    const areRegistered = await this.accountStore.areUsersRegistered(userIds as number[])
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
       const level = levels.find(l => l.userId === chat.userId)!.level
       const activeRanks = ranks.find(r => r.userId === chat.userId)!.ranks.map(userRankToPublicObject)
-      chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks))
+      const isRegistered = areRegistered.find(r => r.userId === chat.userId)!.isRegistered
+      chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks, isRegistered))
     }
 
     return builder.success({
