@@ -4,8 +4,9 @@ import ChannelStore, { UserNames, CreateOrUpdateYoutubeChannelArgs, CreateOrUpda
 import { sortBy } from '@rebel/server/util/arrays'
 import { randomString } from '@rebel/server/util/random'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
+import { addTime } from '@rebel/server/util/datetime'
 
 const ytChannelId1 = 'channelId1'
 const ytChannelId2 = 'channelId2'
@@ -285,8 +286,11 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getTwitchUserNameFromChannelId'), () => {
-    test('gets correct name', async () => {
+  describe(nameof(ChannelStore, 'getTwitchChannelFromChannelId'), () => {
+    test('Gets Twitch channel with latest info', async () => {
+      const time1 = new Date()
+      const time2 = addTime(time1, 'seconds', 10)
+
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
         user: { create: {}},
@@ -295,17 +299,20 @@ export default () => {
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId2,
         user: { create: {}},
-        infoHistory: { createMany: { data: [twitchChannelInfo2]} }
+        infoHistory: { createMany: { data: [{ ...twitchChannelInfo2, time: time1 }, { ...twitchChannelInfo3, time: time2 }]} }
       }})
 
-      const result = await channelStore.getTwitchUserNameFromChannelId(2)
+      const result = await channelStore.getTwitchChannelFromChannelId(2)
 
-      expect(result).toEqual(twitchChannelInfo2.userName)
+      expect(result).toEqual(expectObject(result, { twitchId: extTwitchChannelId2, infoHistory: expectObject([{ userName: twitchChannelInfo3.userName }]) }))
     })
   })
 
-  describe(nameof(ChannelStore, 'getYoutubeChannelNameFromChannelId'), () => {
-    test('gets correct name', async () => {
+  describe(nameof(ChannelStore, 'getYoutubeChannelFromChannelId'), () => {
+    test('Gets YouTube channel with latest info', async () => {
+      const time1 = new Date()
+      const time2 = addTime(time1, 'seconds', 10)
+
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}},
@@ -314,12 +321,12 @@ export default () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo3]} }
+        infoHistory: { createMany: { data: [{ ...channelInfo2, time: time2 }, { ...channelInfo3, time: time2 }]} }
       }})
 
-      const result = await channelStore.getYoutubeChannelNameFromChannelId(2)
+      const result = await channelStore.getYoutubeChannelFromChannelId(2)
 
-      expect(result).toEqual(channelInfo3.name)
+      expect(result).toEqual(expectObject(result, { youtubeId: ytChannelId2, infoHistory: expectObject([{ name: channelInfo2.name }]) }))
     })
   })
 

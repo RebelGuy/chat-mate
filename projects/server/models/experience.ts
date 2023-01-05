@@ -1,5 +1,6 @@
 import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
+import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import { RankedEntry } from '@rebel/server/services/ExperienceService'
 import { UserRanks } from '@rebel/server/stores/RankStore'
 
@@ -12,7 +13,9 @@ export function rankedEntryToPublic (data: RankedEntry & UserRanks): PublicRanke
       id: data.userId,
       userInfo: {
         schema: 1,
-        channelName: data.userName
+        channelName: getUserName(data.channel),
+        externalIdOrUserName: getExternalIdOrUserName(data.channel),
+        platform: data.channel.platformInfo.platform
       },
       levelInfo: {
         schema: 1,

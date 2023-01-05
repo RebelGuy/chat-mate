@@ -203,17 +203,17 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
     const userId2 = 2
     const channelName1 = 'channel 1'
     const channelName2 = 'channel 2'
-    const userChannel1: DeepPartial<UserChannel> = { userId: userId1, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } }
-    const userChannel2: DeepPartial<UserChannel> = { userId: userId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } }
-    mockChannelService.getActiveUserChannels.calledWith(streamerId, 'all').mockResolvedValue([userChannel1 as UserChannel, userChannel2 as UserChannel])
+    const userChannel1 = cast<UserChannel>({ userId: userId1, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } })
+    const userChannel2 = cast<UserChannel>({ userId: userId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } })
+    mockChannelService.getActiveUserChannels.calledWith(streamerId, 'all').mockResolvedValue([userChannel1, userChannel2])
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId1, userId2]))
       .mockResolvedValue([{ userId: userId2, experience: 811 }, { userId: userId1, experience: 130 }]) // descending order
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const leaderboard = await experienceService.getLeaderboard(streamerId)
 
-    const expectedEntry1: RankedEntry = { userId: userId2, userName: channelName2, rank: 1, level: asGte(8, 0), levelProgress: asLt(0, 1) }
-    const expectedEntry2: RankedEntry = { userId: userId1, userName: channelName1, rank: 2, level: asGte(1, 0), levelProgress: asLt(0, 1) }
+    const expectedEntry1: RankedEntry = { userId: userId2, channel: userChannel2, rank: 1, level: asGte(8, 0), levelProgress: asLt(0, 1) }
+    const expectedEntry2: RankedEntry = { userId: userId1, channel: userChannel1, rank: 2, level: asGte(1, 0), levelProgress: asLt(0, 1) }
     expect(leaderboard).toEqual([expectedEntry1, expectedEntry2])
   })
 })

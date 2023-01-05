@@ -1,9 +1,10 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import { PublicUserNames } from '@rebel/server/controllers/public/user/PublicUserNames'
 import { userDataToPublicUserNames } from '@rebel/server/models/user'
-import ChannelService from '@rebel/server/services/ChannelService'
+import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import LinkService from '@rebel/server/services/LinkService'
@@ -24,6 +25,10 @@ type SearchUserRequest = ApiRequest<4, {
 
 type SearchUserResponse = ApiResponse<4, {
   results: Tagged<3, PublicUserNames>[]
+}>
+
+export type GetLinkedChannelsResponse = ApiResponse<1, {
+  channels: PublicChannelInfo[]
 }>
 
 export type GetLinkTokensResponse = ApiResponse<1, {
@@ -83,6 +88,27 @@ export default class UserController extends ControllerBase {
   }
 
   @GET
+  @Path('link/channels')
+  @PreProcessor(requireAuth)
+  public async getLinkedChannels (): Promise<GetLinkedChannelsResponse> {
+    const builder = this.registerResponseBuilder<GetLinkedChannelsResponse>('GET /link/channels', 1)
+
+    try {
+      const channels = await this.channelService.getConnectedUserChannels(this.getCurrentUser().aggregateChatUserId)
+      return builder.success({
+        channels: channels.map(channel => ({
+          schema: 1,
+          externalIdOrUserName: getExternalIdOrUserName(channel),
+          platform: channel.platformInfo.platform,
+          channelName: getUserName(channel)
+        }))
+      })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
   @Path('link/token')
   @PreProcessor(requireAuth)
   public async getLinkTokens (): Promise<GetLinkTokensResponse> {
@@ -91,8 +117,8 @@ export default class UserController extends ControllerBase {
     try {
       const history = await this.linkDataService.getLinkHistory(this.getCurrentUser().aggregateChatUserId)
       const channels = await Promise.all(history.map(h => this.channelStore.getDefaultUserOwnedChannels(h.defaultUserId)))
-      const youtubeNames = await Promise.all(channels.flatMap(c => c.youtubeChannels).map(id => this.channelStore.getYoutubeChannelNameFromChannelId(id).then(name => ({ id, name }))))
-      const twitchNames = await Promise.all(channels.flatMap(c => c.twitchChannels).map(id => this.channelStore.getTwitchUserNameFromChannelId(id).then(name => ({ id, name }))))
+      const youtubeNames = await Promise.all(channels.flatMap(c => c.youtubeChannels).map(id => this.channelStore.getYoutubeChannelFromChannelId(id).then(channel => ({ id, name: channel.infoHistory[0].name }))))
+      const twitchNames = await Promise.all(channels.flatMap(c => c.twitchChannels).map(id => this.channelStore.getTwitchChannelFromChannelId(id).then(channel => ({ id, name: channel.infoHistory[0].displayName }))))
 
       return builder.success({
         tokens: history.map<PublicLinkToken>(h => {

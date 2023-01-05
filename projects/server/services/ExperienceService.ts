@@ -5,7 +5,7 @@ import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebe
 import { ChatItem, convertInternalMessagePartsToExternal, getExternalId, PartialChatMessage } from '@rebel/server/models/chat'
 import ChannelService, { getUserName } from '@rebel/server/services/ChannelService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore, { ChatExperience, ChatExperienceData, ModifyChatExperienceArgs } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -39,7 +39,7 @@ export type LevelDiff = {
 export type RankedEntry = LevelData & {
   rank: number
   userId: number
-  userName: string
+  channel: UserChannel
 }
 
 type Deps = Dependencies<{
@@ -139,7 +139,10 @@ export default class ExperienceService extends ContextClass {
     return orderedUserLevelChannels.map((item, i) => ({
       rank: i + 1,
       userId: item.userId,
-      userName: getUserName(item),
+      channel: {
+        userId: item.userId,
+        platformInfo: item.platformInfo
+      },
       level: item.level.level,
       levelProgress: item.level.levelProgress
     }))

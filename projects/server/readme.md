@@ -759,6 +759,13 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
+### `GET /link/channels`
+
+Gets the list of channels linked to the logged-in user.
+
+Returns data with the following properties:
+- `channels` (`PublicChannelInfo[]`): The channels linked to the user.
+
 ### `GET /link/token`
 
 Get the link history for the logged-in user.

@@ -1,10 +1,10 @@
 import { Dependencies } from '@rebel/server/context/context'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelService from '@rebel/server/services/ChannelService'
-import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserNames, UserChannel } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserNames, UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { nameof } from '@rebel/server/_test/utils'
-import { single } from '@rebel/server/util/arrays'
+import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
+import { single, sortBy } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 const streamerId = 5
@@ -71,6 +71,34 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
         channel: channel1
       }
     }))
+  })
+})
+
+describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
+  test('Gets channel info of connected channels', async () => {
+    const userId = 9515
+    const youtubeChannel1 = cast<YoutubeChannelWithLatestInfo>({ userId: 3, youtubeId: 'x', infoHistory: [{ name: 'name1' }] })
+    const youtubeChannel2 = cast<YoutubeChannelWithLatestInfo>({ userId: 5, youtubeId: 'y', infoHistory: [{ name: 'name2' }] })
+    const twitchChannel1 = cast<TwitchChannelWithLatestInfo>({ userId: 67, twitchId: '12', infoHistory: [{ userName: 'name1' }] })
+    const twitchChannel2 = cast<TwitchChannelWithLatestInfo>({ userId: 69, twitchId: '34', infoHistory: [{ userName: 'name2' }] })
+    const connectedChannelIds = cast<UserOwnedChannels>({
+      youtubeChannels: [10, 20],
+      twitchChannels: [10, 25]
+    })
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId).mockResolvedValue(connectedChannelIds)
+    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(10).mockResolvedValue(youtubeChannel1)
+    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(20).mockResolvedValue(youtubeChannel2)
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(10).mockResolvedValue(twitchChannel1)
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(25).mockResolvedValue(twitchChannel2)
+
+    const result = await channelService.getConnectedUserChannels(userId)
+
+    expect(sortBy(result, c => c.userId)).toEqual(expectObject(result, [
+      { userId: youtubeChannel1.userId, platformInfo: { platform: 'youtube', channel: youtubeChannel1 } },
+      { userId: youtubeChannel2.userId, platformInfo: { platform: 'youtube', channel: youtubeChannel2 } },
+      { userId: twitchChannel1.userId, platformInfo: { platform: 'twitch', channel: twitchChannel1 } },
+      { userId: twitchChannel2.userId, platformInfo: { platform: 'twitch', channel: twitchChannel2 } },
+    ]))
   })
 })
 

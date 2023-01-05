@@ -2,7 +2,7 @@ import { ChatUser, RegisteredUser, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import ChannelStore, { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { TwitchChannelWithLatestInfo, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
 import { cast, expectArray, nameof } from '@rebel/server/_test/utils'
@@ -34,11 +34,12 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
     const twitchChannel = 5
     const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel] })
     const channelName = 'test'
+    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
 
     mockStreamerStore.getStreamers.calledWith().mockResolvedValue([streamer1])
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser1.id])).mockResolvedValue([registeredUser1])
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(chatUser1.id).mockResolvedValue(channels)
-    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(twitchChannel).mockResolvedValue(channelName)
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(twitchChannel).mockResolvedValue(channel)
 
     const result = await streamerChannelService.getAllTwitchStreamerChannels()
 
@@ -55,11 +56,12 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
     const twitchChannel = 5
     const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel] })
     const channelName = 'test'
+    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
-    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(twitchChannel).mockResolvedValue(channelName)
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(twitchChannel).mockResolvedValue(channel)
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
 
@@ -76,11 +78,12 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
     const twitchChannel2 = 6
     const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel1, twitchChannel2] })
     const channelName = 'test'
+    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(chatUser.id).mockResolvedValue(channels)
-    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(twitchChannel1).mockResolvedValue(channelName)
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(twitchChannel1).mockResolvedValue(channel)
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
 

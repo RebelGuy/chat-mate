@@ -247,9 +247,11 @@ export default class PunishmentController extends ControllerBase {
     const makePublicResult = async (channelId: number, platform: 'youtube' | 'twitch', error: string | null): Promise<PublicChannelRankChange> => {
       let channelName: string
       if (platform === 'youtube') {
-        channelName = await this.channelStore.getYoutubeChannelNameFromChannelId(channelId)
+        const channel = await this.channelStore.getYoutubeChannelFromChannelId(channelId)
+        channelName = channel.infoHistory[0].name
       } else if (platform === 'twitch') {
-        channelName = await this.channelStore.getTwitchUserNameFromChannelId(channelId)
+        const channel = await this.channelStore.getTwitchChannelFromChannelId(channelId)
+        channelName = channel.infoHistory[0].displayName
       } else {
         assertUnreachable(platform)
       }

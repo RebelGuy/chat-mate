@@ -10,7 +10,7 @@ import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUser
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
-import { getUserName } from '@rebel/server/services/ChannelService'
+import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { Singular } from '@rebel/server/types'
@@ -324,7 +324,9 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
 
   const userInfo: PublicChannelInfo = {
     schema: 1,
-    channelName: getUserName(userChannel)
+    externalIdOrUserName: getExternalIdOrUserName(userChannel),
+    platform: userChannel.platformInfo.platform,
+    channelName: getUserName(userChannel),
   }
 
   const levelInfo: PublicLevelInfo = {

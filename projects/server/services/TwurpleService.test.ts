@@ -9,7 +9,7 @@ import { ChatClient } from '@twurple/chat'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as chat from '@rebel/server/models/chat'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import EventDispatchService, { DataPair } from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -118,8 +118,9 @@ describe(nameof(TwurpleService, 'banChannel'), () => {
     const channelId = 5
     const streamerChannelName = 'streamerChannelName'
     const channelName = 'testChannelName'
+    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
     const reason = 'test reason'
-    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(channelName)
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(channelId).mockResolvedValue(channel)
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
 
     await twurpleService.banChannel(streamerId, channelId, reason)
@@ -134,7 +135,8 @@ describe(nameof(TwurpleService, 'unbanChannel'), () => {
     const channelId = 5
     const streamerChannelName = 'streamerChannelName'
     const channelName = 'testChannelName'
-    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(channelName)
+    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(channelId).mockResolvedValue(channel)
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
 
     await twurpleService.unbanChannel(streamerId, channelId)
@@ -164,7 +166,8 @@ describe(nameof(TwurpleService, 'modChannel'), () => {
     const channelId = 5
     const streamerChannelName = 'streamerChannelName'
     const userChannelName = 'testChannelName'
-    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(userChannelName)
+    const userChannel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: userChannelName }] })
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(channelId).mockResolvedValue(userChannel)
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
 
     await twurpleService.modChannel(streamerId, channelId)
@@ -179,7 +182,8 @@ describe(nameof(TwurpleService, 'unmodChannel'), () => {
     const channelId = 5
     const streamerChannelName = 'streamerChannelName'
     const userChannelName = 'testChannelName'
-    mockChannelStore.getTwitchUserNameFromChannelId.calledWith(channelId).mockResolvedValue(userChannelName)
+    const userChannel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: userChannelName }] })
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(channelId).mockResolvedValue(userChannel)
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
 
     await twurpleService.unmodChannel(streamerId, channelId)

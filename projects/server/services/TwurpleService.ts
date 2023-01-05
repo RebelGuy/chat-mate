@@ -83,7 +83,8 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const channel = await this.channelStore.getTwitchChannelFromChannelId(twitchChannelId)
+    const twitchUserName = channel.infoHistory[0].userName
     await this.twurpleApiProxyService.ban(channelName, twitchUserName, reason ?? undefined)
   }
 
@@ -93,7 +94,8 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const channel = await this.channelStore.getTwitchChannelFromChannelId(twitchChannelId)
+    const twitchUserName = channel.infoHistory[0].userName
     await this.twurpleApiProxyService.mod(channelName, twitchUserName)
   }
 
@@ -113,7 +115,8 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const channel = await this.channelStore.getTwitchChannelFromChannelId(twitchChannelId)
+    const twitchUserName = channel.infoHistory[0].userName
     await this.twurpleApiProxyService.timeout(channelName, twitchUserName, durationSeconds, reason ?? undefined)
   }
 
@@ -124,7 +127,8 @@ export default class TwurpleService extends ContextClass {
     }
 
     // there is no API for unbanning a user, but the `ban` implementation is essentially just a wrapper around the `say` method, so we can manually use it here
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const channel = await this.channelStore.getTwitchChannelFromChannelId(twitchChannelId)
+    const twitchUserName = channel.infoHistory[0].userName
     this.twurpleApiProxyService.say(channelName, `/unban ${twitchUserName}`)
   }
 
@@ -134,7 +138,8 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const channel = await this.channelStore.getTwitchChannelFromChannelId(twitchChannelId)
+    const twitchUserName = channel.infoHistory[0].userName
     await this.twurpleApiProxyService.unmod(channelName, twitchUserName)
   }
 
@@ -145,7 +150,8 @@ export default class TwurpleService extends ContextClass {
     }
 
     // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const channel = await this.channelStore.getTwitchChannelFromChannelId(twitchChannelId)
+    const twitchUserName = channel.infoHistory[0].userName
     await this.twurpleApiProxyService.timeout(channelName, twitchUserName, 1, reason ?? undefined)
   }
 

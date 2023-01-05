@@ -74,6 +74,7 @@ export default class StreamerChannelService extends ContextClass {
     }
 
     const channelId = channels.twitchChannels[0]
-    return await this.channelStore.getTwitchUserNameFromChannelId(channelId)
+    const channel = await this.channelStore.getTwitchChannelFromChannelId(channelId)
+    return channel.infoHistory[0].displayName
   }
 }

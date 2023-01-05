@@ -63,6 +63,30 @@ export default class ChannelService extends ContextClass {
     })
   }
 
+  public async getConnectedUserChannels (anyUserId: number): Promise<UserChannel[]> {
+    const channelIds = await this.channelStore.getConnectedUserOwnedChannels(anyUserId)
+
+    // ??????
+    const channels: UserChannel[] = await Promise.all([
+      ...channelIds.youtubeChannels.map(c => this.channelStore.getYoutubeChannelFromChannelId(c).then(channel => ({
+        userId: channel.userId,
+        platformInfo: {
+          platform: 'youtube' as const,
+          channel: channel
+        }
+      }))),
+      ...channelIds.twitchChannels.map(c => this.channelStore.getTwitchChannelFromChannelId(c).then(channel => ({
+        userId: channel.userId,
+        platformInfo: {
+          platform: 'twitch' as const,
+          channel: channel
+        }
+      })))
+    ])
+
+    return channels
+  }
+
   /** Returns channels matching the given name, sorted in ascending order of channel name length (i.e. best sequential match is first). */
   public async getUserByChannelName (name: string): Promise<UserNames[]> {
     if (name == null || name.length === 0) {
@@ -92,6 +116,16 @@ export function getUserName (userChannel: UserChannel) {
     return userChannel.platformInfo.channel.infoHistory[0].name
   } else if (userChannel.platformInfo.platform === 'twitch') {
     return userChannel.platformInfo.channel.infoHistory[0].displayName
+  } else {
+    assertUnreachable(userChannel.platformInfo)
+  }
+}
+
+export function getExternalIdOrUserName (userChannel: UserChannel) {
+  if (userChannel.platformInfo.platform === 'youtube') {
+    return userChannel.platformInfo.channel.youtubeId
+  } else if (userChannel.platformInfo.platform === 'twitch') {
+    return userChannel.platformInfo.channel.infoHistory[0].userName
   } else {
     assertUnreachable(userChannel.platformInfo)
   }

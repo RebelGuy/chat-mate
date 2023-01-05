@@ -155,23 +155,20 @@ export default class ChannelStore extends ContextClass {
     }))
   }
 
-  /** Gets the user's name, e.g. rebel_guymc. */
-  public async getTwitchUserNameFromChannelId (twitchChannelId: number): Promise<string> {
-    const channel = await this.db.twitchChannel.findUnique({
+  public async getTwitchChannelFromChannelId (twitchChannelId: number): Promise<TwitchChannelWithLatestInfo> {
+    return await this.db.twitchChannel.findUnique({
       where: { id: twitchChannelId },
       rejectOnNotFound: true,
       include: channelQuery_includeLatestChannelInfo
     })
-    return channel.infoHistory[0].userName
   }
 
-  public async getYoutubeChannelNameFromChannelId (youtubeChannelId: number): Promise<string> {
-    const channel = await this.db.youtubeChannel.findUnique({
+  public async getYoutubeChannelFromChannelId (youtubeChannelId: number): Promise<YoutubeChannelWithLatestInfo> {
+    return await this.db.youtubeChannel.findUnique({
       where: { id: youtubeChannelId },
-      rejectOnNotFound: true,
-      include: channelQuery_includeLatestChannelInfo
+      include: channelQuery_includeLatestChannelInfo,
+      rejectOnNotFound: true
     })
-    return channel.infoHistory[0].name
   }
 
   /** Returns null if the channel was not found. */
