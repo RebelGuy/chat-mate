@@ -9,7 +9,7 @@ import DonationService from '@rebel/server/services/DonationService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { nonNull, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { nonNull, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
@@ -152,7 +152,7 @@ export default class DonationController extends ControllerBase {
 
   private async getPublicDonations (donations: DonationWithUser[]): Promise<PublicDonation[]> {
     const streamerId = this.getStreamerId()
-    const userIds = nonNull(donations.map(d => d.userId))
+    const userIds = unique(nonNull(donations.map(d => d.userId)))
     let userData: PublicUser[]
     if (userIds.length === 0) {
       userData = []

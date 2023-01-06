@@ -89,9 +89,23 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** For each user, returns the last chat item authored by the user, if any, regardless of which channel was used. */
-  public async getLastChatOfUsers (streamerId: number, userIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
-    const filter = userIds === 'all' ? { NOT: { userId: null }} : { userId: { in: userIds }}
+  /** For each user, returns the last chat item authored by the user, if any.
+   * **For aggregate users, the latest message of all linked users is returned.**
+  */
+  public async getLastChatOfUsers (streamerId: number, anyUserIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
+    let filter: Prisma.ChatMessageWhereInput
+    if (anyUserIds === 'all') {
+      filter = {
+        NOT: { userId: null }
+      }
+    } else {
+      filter = {
+        OR: [
+          { userId: { in: anyUserIds }},
+          { user: { aggregateChatUserId: { in: anyUserIds } }}
+        ]
+      }
+    }
 
     return await this.db.chatMessage.findMany({
       distinct: ['userId'],
@@ -160,7 +174,8 @@ export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageIn
   },
   youtubeChannel: includeChannelInfo,
   twitchChannel: includeChannelInfo,
-  chatCommand: true
+  chatCommand: true,
+  user: { include: { aggregateChatUser: true } }
 })
 
 export function createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {

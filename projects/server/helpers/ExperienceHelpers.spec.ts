@@ -153,6 +153,7 @@ describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
       youtubeChannel: { userId: 1, id: 1, youtubeId: 'id', infoHistory: [] },
       donationId: null,
       chatCommand: null,
+      user: null,
       chatMessageParts: [{
         id: 1,
         chatMessageId: 1,

@@ -14,3 +14,9 @@ beforeEach(() => {
     accountStore: mockAccountStore
   }))
 })
+
+describe('', () => {
+  test('', () => {
+    expect(true)
+  })
+})

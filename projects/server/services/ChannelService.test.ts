@@ -6,6 +6,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
 import { single, sortBy } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
+import * as data from '@rebel/server/_test/testData'
 
 const streamerId = 5
 
@@ -25,17 +26,21 @@ beforeEach(() => {
 
 describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
   const channel1: YoutubeChannelWithLatestInfo = {} as any
-  const chatItem1: Partial<ChatItemWithRelations> = {
+  const chatItem1 = cast<ChatItemWithRelations>({
     userId: 1,
     youtubeChannelId: 10, youtubeChannel: channel1,
     twitchChannelId: null, twitchChannel: null,
-  }
+    time: data.time1,
+    user: {}
+  })
   const channel2: TwitchChannelWithLatestInfo = {} as any
-  const chatItem2: Partial<ChatItemWithRelations> = {
+  const chatItem2 = cast<ChatItemWithRelations>({
     userId: 2,
     youtubeChannelId: null, youtubeChannel: null,
-    twitchChannelId: 5, twitchChannel: channel2
-  }
+    twitchChannelId: 5, twitchChannel: channel2,
+    time: data.time2,
+    user: {}
+  })
 
   test('returns all active user channels', async () => {
     mockChatStore.getLastChatOfUsers.calledWith(streamerId, 'all').mockResolvedValue([chatItem1 as ChatItemWithRelations, chatItem2 as ChatItemWithRelations])
@@ -43,14 +48,14 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
     const result = await channelService.getActiveUserChannels(streamerId, 'all')
 
     expect(result.length).toBe(2)
-    expect(result[0]).toEqual(expect.objectContaining<UserChannel>({
+    expect(result.find(r => r.userId === 1)).toEqual(expect.objectContaining<UserChannel>({
       userId: 1,
       platformInfo: {
         platform: 'youtube',
         channel: channel1
       }
     }))
-    expect(result[1]).toEqual(expect.objectContaining<UserChannel>({
+    expect(result.find(r => r.userId === 2)).toEqual(expect.objectContaining<UserChannel>({
       userId: 2,
       platformInfo: {
         platform: 'twitch',
@@ -71,6 +76,24 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
         channel: channel1
       }
     }))
+  })
+
+  test('Returns only the channel with the most recent activity if the user has several linked channels', async () => {
+    const channel3 = { id: 12345 }
+    mockChatStore.getLastChatOfUsers.calledWith(streamerId, expect.arrayContaining([1, 7])).mockResolvedValue(cast<ChatItemWithRelations[]>([
+      { userId: 5, user: { aggregateChatUserId: 1 }, twitchChannel: channel2, time: data.time2 },
+      { userId: 6, user: { aggregateChatUserId: 1 }, youtubeChannel: channel1, time: data.time1 },
+      { userId: 7, user: { aggregateChatUserId: 2 }, youtubeChannel: channel3, time: data.time3 },
+      { userId: 8, user: { aggregateChatUserId: 2 }, youtubeChannel: channel3, time: data.time4 } // same aggregate user but we are not interested in this particular channel
+    ]))
+
+    const result = await channelService.getActiveUserChannels(streamerId, [1, 7])
+
+    expect(result.length).toBe(2)
+    expect(result).toEqual(expectObject(result, [
+      { userId: 7, platformInfo: { platform: 'youtube', channel: channel3 } },
+      { userId: 1, platformInfo: { platform: 'twitch', channel: channel2 } } // should have re-routed to the aggregate user
+    ]))
   })
 })
 

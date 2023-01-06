@@ -164,12 +164,12 @@ export default () => {
     db = dbProvider.get()
 
     await db.youtubeChannel.create({ data: {
-      user: { create: {}},
+      user: { create: {}}, // user id: 1
       youtubeId: ytAuthor1.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor1)}
     }})
     await db.twitchChannel.create({ data: {
-      user: { create: {}},
+      user: { create: {}}, // user id: 2
       twitchId: twitchAuthor.userId,
       infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
     }})
@@ -178,8 +178,8 @@ export default () => {
       youtubeId: ytAuthor2.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor2)}
     }})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 3
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 4
     await db.livestream.create({ data: livestream })
     await db.chatEmoji.create({ data: {
       isCustomEmoji: false,
@@ -499,7 +499,7 @@ export default () => {
         }, {
           livestreamId: 1,
           streamerId: 1,
-          time: data.time3,
+          time: data.time4,
           userId: twitchUserId,
           externalId: 'user 2 msg 2',
           twitchChannelId: 1
@@ -531,7 +531,7 @@ export default () => {
       expect(result.length).toBe(0)
     })
 
-    test('returns the latest chat item of all users in the streamer context', async () => {
+    test('returns the latest chat item of all default users in the streamer context', async () => {
       await setupMessages()
 
       const lastMessages = await chatStore.getLastChatOfUsers(streamer1, 'all')
@@ -545,13 +545,29 @@ export default () => {
       expect(lastMessageUser2.externalId).toBe('user 2 msg 2')
     })
 
-    test('returns the latest chat item of a specific user', async () => {
+    test('returns the latest chat item of a specific default user', async () => {
       await setupMessages()
 
       const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [1])
 
       const msg = single(lastMessages)
       expect(msg.externalId).toBe('user 1 msg 3')
+    })
+
+    test('returns the latest chat item of each channel attached to an aggregate user', async () => {
+      await setupMessages()
+      await db.chatUser.update({ where: { id: 1 }, data: { aggregateChatUserId: 3 }})
+      await db.chatUser.update({ where: { id: 2 }, data: { aggregateChatUserId: 3 }})
+
+      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [3])
+
+      expect(lastMessages.length).toBe(2)
+      expect(lastMessages[0].user!.aggregateChatUserId).toBe(3)
+      expect(lastMessages[0].userId).toBe(2)
+      expect(lastMessages[0].externalId).toBe('user 2 msg 2')
+      expect(lastMessages[1].user!.aggregateChatUserId).toBe(3)
+      expect(lastMessages[1].userId).toBe(1)
+      expect(lastMessages[1].externalId).toBe('user 1 msg 3')
     })
 
     test('ignores donation messages', async () => {

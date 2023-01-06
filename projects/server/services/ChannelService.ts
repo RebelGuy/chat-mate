@@ -1,8 +1,9 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { nonNull, sortBy } from '@rebel/server/util/arrays'
+import { nonNull, sortBy, values } from '@rebel/server/util/arrays'
 import { min, sum } from '@rebel/server/util/math'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
 
@@ -25,25 +26,54 @@ export default class ChannelService extends ContextClass {
   }
 
   /** Returns active user channels for each user. A user's active channel is the one with which the user
-   * has last participated in chat. It is null if the user has not yet participated in chat.
+   * has last participated in chat. The entry of users who have not yet participated in chat are ommitted,
+   * and results are not necessarily ordered.
+   *
+   * If a userId is a default ID, any connected channels are ignored. If a userId is an aggregate ID, only the most recent
+   * chat item of any of its connected users will be returned, but **rewired so that the chat item's user is the aggregate user**.
+   *
+   * If getting all users, aggregate users will be ignored completely.
    *
    * Given that users rarely use multiple accounts at once, this is probably the most relevant
    * channel we want to associate with the user at the current time. */
-  public async getActiveUserChannels (streamerId: number, userIds: number[] | 'all'): Promise<UserChannel[]> {
+  public async getActiveUserChannels (streamerId: number, anyUserIds: number[] | 'all'): Promise<UserChannel[]> {
     if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
 
-    const chatMessages = await this.chatStore.getLastChatOfUsers(streamerId, userIds)
+    const chatMessages = await this.chatStore.getLastChatOfUsers(streamerId, anyUserIds)
 
-    return chatMessages.map(chat => {
-      if (chat.userId == null) {
+    const relevantChatItems = new Map<number, ChatItemWithRelations>()
+    for (const chat of sortBy(chatMessages, c => c.time.getTime(), 'desc')) {
+      if (chat.user == null) {
         throw new Error('UserId of Youtube/Twitch chat messages was expected to be set')
       }
 
+      // due to the ordering, we only need to check whether a chat message for a user
+      // already exists in the set - if it does, we know it's the most recent one.
+
+      // save the chat mesage against the default user, if we are interested in this user
+      const defaultUserId = chat.userId!
+      if ((anyUserIds === 'all' || anyUserIds.includes(defaultUserId)) && !relevantChatItems.has(defaultUserId)) {
+        relevantChatItems.set(defaultUserId, chat)
+      }
+
+      if (anyUserIds === 'all') {
+        continue
+      }
+
+      // save the chat message against the aggregate user, if we are interested in this user
+      const aggregateUserId = chat.user!.aggregateChatUserId
+      if (aggregateUserId != null && anyUserIds.includes(aggregateUserId) && !relevantChatItems.has(aggregateUserId)) {
+        const aggregateUser = { ...chat.user!.aggregateChatUser!, aggregateChatUserId: null, aggregateChatUser: null }
+        relevantChatItems.set(aggregateUserId, { ...chat, userId: aggregateUserId, user: aggregateUser })
+      }
+    }
+
+    return values(relevantChatItems).map<UserChannel>(chat => {
       if (chat.youtubeChannel != null) {
         return {
-          userId: chat.userId,
+          userId: chat.userId!,
           platformInfo: {
             platform: 'youtube',
             channel: chat.youtubeChannel
@@ -51,7 +81,7 @@ export default class ChannelService extends ContextClass {
         }
       } else if (chat.twitchChannel != null) {
         return {
-          userId: chat.userId,
+          userId: chat.userId!,
           platformInfo: {
             platform: 'twitch',
             channel: chat.twitchChannel
