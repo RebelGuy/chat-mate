@@ -42,7 +42,7 @@ export default class ViewershipStore extends ContextClass {
    * Adds generous padding on the left and right. Note that this is intentionally channel agnostic - we don't need to know about the
    * viewership of a specific *channel*.
    */
-  public async addViewershipForChatParticipation (livestream: Livestream, userId: number, timestamp: number): Promise<void> {
+  public async addViewershipForChatParticipation (livestream: Livestream, anyUserId: number, timestamp: number): Promise<void> {
     const startTime = livestream.start
     if (startTime == null) {
       // livestream hasn't started yet
@@ -55,7 +55,7 @@ export default class ViewershipStore extends ContextClass {
     const lowerTime = maxTime(addTime(_time, 'minutes', -VIEWING_BLOCK_PARTICIPATION_PADDING_BEFORE), startTime)
     const upperTime = minTime(addTime(_time, 'minutes', VIEWING_BLOCK_PARTICIPATION_PADDING_AFTER), endTime)
 
-    const lastSeen = await this.getLastSeen(livestream.streamerId, userId)
+    const lastSeen = await this.getLastSeen(livestream.streamerId, anyUserId)
     if (lastSeen && lastSeen.time >= upperTime) {
       return
     }
@@ -72,7 +72,7 @@ export default class ViewershipStore extends ContextClass {
     } else {
       block = await this.db.viewingBlock.create({
         data: {
-          user: { connect: { id: userId }},
+          user: { connect: { id: anyUserId }},
           livestream: { connect: { id: livestream.id }},
           startTime: lowerTime,
           lastUpdate: upperTime
@@ -83,10 +83,10 @@ export default class ViewershipStore extends ContextClass {
   }
 
   /** Returns the time of the previous viewing block. */
-  public async getLastSeen (streamerId: number, userId: number): Promise<LastSeen | null> {
+  public async getLastSeen (streamerId: number, anyUserId: number): Promise<LastSeen | null> {
     const block = await this.db.viewingBlock.findFirst({
       where: {
-        user: { id: userId },
+        user: { id: anyUserId },
         livestream: { streamerId }
       },
       orderBy: { lastUpdate: 'desc'},
@@ -124,10 +124,10 @@ export default class ViewershipStore extends ContextClass {
     }
   }
 
-  /** Returns streams in ascending order.
+  /** Returns streams in ascending order where any of the given user ids have participated in the livestream.
    * The following actions are considered participation:
    * - sending a message in chat */
-  public async getLivestreamParticipation (streamerId: number, userIds: number[]): Promise<LivestreamParticipation[]> {
+  public async getLivestreamParticipation (streamerId: number, anyUserIds: number[]): Promise<LivestreamParticipation[]> {
     if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
@@ -140,7 +140,7 @@ export default class ViewershipStore extends ContextClass {
       include: {
         chatMessages: {
           where: {
-            user: { id: { in: userIds } },
+            user: { id: { in: anyUserIds } },
             livestream: { type: 'publicLivestream', streamerId }
           },
           take: 1 // order doesn't matter
@@ -155,13 +155,13 @@ export default class ViewershipStore extends ContextClass {
     }))
   }
 
-  /** Returns streams in ascending order. */
-  public async getLivestreamViewership (streamerId: number, userIds: number[]): Promise<LivestreamViewership[]> {
+  /** Returns streams in ascending order where any of the given user ids have viewed the livestream. */
+  public async getLivestreamViewership (streamerId: number, anyUserIds: number[]): Promise<LivestreamViewership[]> {
     const livestreams = await this.db.livestream.findMany({
       where: { streamerId },
       include: {
         viewingBlocks: {
-          where: { user: { id: { in: userIds } }},
+          where: { user: { id: { in: anyUserIds } }},
           take: 1 // order doesn't matter
         }
       },

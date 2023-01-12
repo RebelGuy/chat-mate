@@ -16,7 +16,7 @@ export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
 export type DonationWithUser = DonationWithMessage & {
   linkIdentifier: string
   linkedAt: Date | null
-  userId: number | null
+  primaryUserId: number | null
 }
 
 export type DonationCreateArgs = {
@@ -76,7 +76,7 @@ export default class DonationStore extends ContextClass {
     })
   }
 
-  /** Returns donations that have been linked to any of the given aggregate or default users, orderd by time in ascending order. Does not take into account the user connections - exact userIds must be provided.
+  /** Returns donations that have been linked to any of the given exact users, orderd by time in ascending order. Does not take into account the user connections - exact userIds must be provided.
    * If `streamerId` is `null`, returns donations across all streamers. */
   public async getDonationsByUserIds (streamerId: number | null, exactUserIds: number[]): Promise<Donation[]> {
     const donationLinks = await this.db.donationLink.findMany({
@@ -126,7 +126,7 @@ export default class DonationStore extends ContextClass {
       streamlabsUserId: donation.streamlabsUserId,
       messageParts: donation.chatMessage?.chatMessageParts ?? [],
       linkIdentifier: linkIdentifier,
-      userId: donationLink?.linkedUserId ?? null,
+      primaryUserId: donationLink?.linkedUserId ?? null,
       linkedAt: donationLink?.linkedAt ?? null
     }
   }
@@ -164,7 +164,7 @@ export default class DonationStore extends ContextClass {
         streamlabsUserId: donation.streamlabsUserId,
         messageParts: donation.chatMessage?.chatMessageParts ?? [],
         linkIdentifier: linkIdentifier,
-        userId: donationLink?.linkedUserId ?? null,
+        primaryUserId: donationLink?.linkedUserId ?? null,
         linkedAt: donationLink?.linkedAt ?? null
       }
     })
@@ -194,7 +194,7 @@ export default class DonationStore extends ContextClass {
 
   /** Links the user to the donation. It is the responsibility of the caller to ensure the correct primary user is used.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, userId: number, linkedAt: Date): Promise<void> {
+  public async linkUserToDonation (donationId: number, primaryUserId: number, linkedAt: Date): Promise<void> {
     const linkIdentifier = await this.getLinkIdentifier(donationId)
 
     const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
@@ -204,7 +204,7 @@ export default class DonationStore extends ContextClass {
 
     await this.db.donationLink.create({ data: {
       linkIdentifier: linkIdentifier,
-      linkedUserId: userId,
+      linkedUserId: primaryUserId,
       linkedAt: linkedAt
     }})
   }
@@ -237,7 +237,7 @@ export default class DonationStore extends ContextClass {
     }
   }
 
-  /** Returns the userId that was unlinked.
+  /** Returns the primaryUserId that was unlinked.
    * @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
   public async unlinkUserFromDonation (donationId: number): Promise<number> {
     const linkIdentifier = await this.getLinkIdentifier(donationId)

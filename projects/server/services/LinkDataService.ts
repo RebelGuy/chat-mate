@@ -74,13 +74,13 @@ export default class LinkDataService extends ContextClass {
   public async getLinkHistory (aggregateUserId: number): Promise<LinkHistory> {
     let linkHistory: LinkHistory = this.commandService.getQueuedCommands()
       .filter(c => this.linkCommand.normalisedNames.includes(c.normalisedName))
-      .map(c => ({ type: 'pending', defaultUserId: c.userId, maybeToken: c.arguments[0] ?? '' }))
+      .map(c => ({ type: 'pending', defaultUserId: c.defaultUserId, maybeToken: c.arguments[0] ?? '' }))
 
     const runningCommand = this.commandService.getRunningCommand()
     if (runningCommand != null && this.linkCommand.normalisedNames.includes(runningCommand.normalisedName)) {
       linkHistory.push({
         type: 'running',
-        defaultUserId: runningCommand.userId,
+        defaultUserId: runningCommand.defaultUserId,
         maybeToken: runningCommand.arguments[0] ?? ''
       })
     }

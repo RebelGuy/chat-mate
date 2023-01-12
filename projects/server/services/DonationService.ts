@@ -4,6 +4,7 @@ import ContextClass from '@rebel/server/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
 import { PartialChatMessage } from '@rebel/server/models/chat'
+import AccountService from '@rebel/server/services/AccountService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import LogService from '@rebel/server/services/LogService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
@@ -25,6 +26,7 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   accountStore: AccountStore
   logService: LogService
+  accountService: AccountService
 }>
 
 export default class DonationService extends ContextClass {
@@ -39,6 +41,7 @@ export default class DonationService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly accountStore: AccountStore
   private readonly logService: LogService
+  private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super()
@@ -52,6 +55,7 @@ export default class DonationService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.accountStore = deps.resolve('accountStore')
     this.logService = deps.resolve('logService')
+    this.accountService = deps.resolve('accountService')
   }
 
   public override async initialise () {
@@ -93,11 +97,10 @@ export default class DonationService extends ContextClass {
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, anyUserId: number, streamerId: number): Promise<void> {
     const time = this.dateTimeHelpers.now()
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(anyUserId)
-    const primaryUserId = first(connectedUserIds)
+    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser(anyUserId)
     await this.donationStore.linkUserToDonation(donationId, primaryUserId, time)
 
-    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, connectedUserIds)
+    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId])
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
     const currentRanks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
 
@@ -109,7 +112,7 @@ export default class DonationService extends ContextClass {
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
           rank: 'donator',
-          chatUserId: primaryUserId,
+          primaryUserId: primaryUserId,
           streamerId: streamerId,
           expirationTime: longTermExpiration,
           assignee: null,
@@ -126,7 +129,7 @@ export default class DonationService extends ContextClass {
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
           rank: 'supporter',
-          chatUserId: primaryUserId,
+          primaryUserId: primaryUserId,
           streamerId: streamerId,
           expirationTime: longTermExpiration,
           assignee: null,
@@ -143,7 +146,7 @@ export default class DonationService extends ContextClass {
       if (existingDonatorRank == null) {
         await this.rankStore.addUserRank({
           rank: 'member',
-          chatUserId: primaryUserId,
+          primaryUserId: primaryUserId,
           streamerId: streamerId,
           expirationTime: monthFromNow,
           assignee: null,
@@ -185,12 +188,10 @@ export default class DonationService extends ContextClass {
   /** Re-evaluates and applies eligible donation ranks for connected users across all streamers.
    * Assumes the associated primary user does not currently have any donation ranks.
    * Returns the number of warnings encountered. */
-  public async reEvaluateDonationRanks (userId: number, message: string | null, reEvaluationId: string): Promise<number> {
+  public async reEvaluateDonationRanks (anyUserId: number, message: string | null, reEvaluationId: string): Promise<number> {
     const time = this.dateTimeHelpers.now()
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(userId)
-    const primaryUserId = first(connectedUserIds)
-
-    const allDonations = await this.donationStore.getDonationsByUserIds(null, connectedUserIds)
+    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser(anyUserId)
+    const allDonations = await this.donationStore.getDonationsByUserIds(null, [primaryUserId])
     const groupedDonations = group(allDonations, d => d.streamerId)
 
     let warnings = 0
@@ -209,7 +210,7 @@ export default class DonationService extends ContextClass {
         try {
           await this.rankStore.addUserRank({
             rank: 'donator',
-            chatUserId: primaryUserId,
+            primaryUserId: primaryUserId,
             streamerId: streamerId,
             expirationTime: longTermExpiration,
             assignee: null,
@@ -230,7 +231,7 @@ export default class DonationService extends ContextClass {
         try {
           await this.rankStore.addUserRank({
             rank: 'supporter',
-            chatUserId: primaryUserId,
+            primaryUserId: primaryUserId,
             streamerId: streamerId,
             expirationTime: longTermExpiration,
             assignee: null,
@@ -251,7 +252,7 @@ export default class DonationService extends ContextClass {
         try {
           await this.rankStore.addUserRank({
             rank: 'member',
-            chatUserId: primaryUserId,
+            primaryUserId: primaryUserId,
             streamerId: streamerId,
             expirationTime: monthFromNow,
             assignee: null,
@@ -275,11 +276,9 @@ export default class DonationService extends ContextClass {
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the primary user is no longer eligible for.
   /* @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
   public async unlinkUserFromDonation (donationId: number, streamerId: number): Promise<void> {
-    const userId = await this.donationStore.unlinkUserFromDonation(donationId)
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(userId)
-    const primaryUserId = first(connectedUserIds)
+    const primaryUserId = await this.donationStore.unlinkUserFromDonation(donationId)
 
-    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, connectedUserIds)
+    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId])
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
     const currentRanks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
     const now = new Date()
@@ -288,21 +287,21 @@ export default class DonationService extends ContextClass {
     if (!this.donationHelpers.isEligibleForDonator(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'donator')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'donator', chatUserId: primaryUserId, streamerId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'donator', primaryUserId: primaryUserId, streamerId, removedBy: null, message: removeMessage })
       }
     }
 
     if (!this.donationHelpers.isEligibleForSupporter(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'supporter')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'supporter', chatUserId: primaryUserId, streamerId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'supporter', primaryUserId: primaryUserId, streamerId, removedBy: null, message: removeMessage })
       }
     }
 
     if (!this.donationHelpers.isEligibleForMember(donationAmounts, now)) {
       const existingDonatorRank = currentRanks.find(r => r.rank.name === 'member')
       if (existingDonatorRank != null) {
-        await this.rankStore.removeUserRank({ rank: 'member', chatUserId: primaryUserId, streamerId, removedBy: null, message: removeMessage })
+        await this.rankStore.removeUserRank({ rank: 'member', primaryUserId: primaryUserId, streamerId, removedBy: null, message: removeMessage })
       }
     }
   }

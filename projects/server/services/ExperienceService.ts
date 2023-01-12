@@ -16,6 +16,7 @@ import { calculateWalkingScore } from '@rebel/server/util/score'
 import { single } from '@rebel/server/util/arrays'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
@@ -25,20 +26,20 @@ export type Level = {
 }
 
 export type UserLevel = {
-  userId: number
+  primaryUserId: number
   level: Level
 }
 
 export type LevelDiff = {
   timestamp: number // at what time the last level transition occurred
-  userId: number
+  primaryUserId: number
   startLevel: Level
   endLevel: Level
 }
 
 export type RankedEntry = LevelData & {
   rank: number
-  userId: number
+  primaryUserId: number
   channel: UserChannel
 }
 
@@ -53,6 +54,7 @@ type Deps = Dependencies<{
   punishmentService: PunishmentService
   accountStore: AccountStore
   rankHelpers: RankHelpers
+  accountService: AccountService
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -66,6 +68,7 @@ export default class ExperienceService extends ContextClass {
   private readonly punishmentService: PunishmentService
   private readonly accountStore: AccountStore
   private readonly rankHelpers: RankHelpers
+  private readonly accountService: AccountService
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -81,6 +84,7 @@ export default class ExperienceService extends ContextClass {
     this.punishmentService = deps.resolve('punishmentService')
     this.accountStore = deps.resolve('accountStore')
     this.rankHelpers = deps.resolve('rankHelpers')
+    this.accountService = deps.resolve('accountService')
   }
 
   /** Adds experience only for chat messages sent during the livestream for unpunished users.
@@ -132,32 +136,34 @@ export default class ExperienceService extends ContextClass {
 
   /** Sorted in ascending order. */
   public async getLeaderboard (streamerId: number): Promise<RankedEntry[]> {
-    const userNames = await this.channelService.getActiveUserChannels(streamerId, 'all')
-    const userLevels = await this.getLevels(streamerId, userNames.map(user => user.userId))
+    const userChannels = await this.channelService.getActiveUserChannels(streamerId, null)
+    const userLevels = await this.getLevels(streamerId, userChannels.map(getPrimaryUserId))
 
-    const orderedUserLevelChannels = zipOnStrict(userLevels, userNames, 'userId')
-    return orderedUserLevelChannels.map((item, i) => ({
-      rank: i + 1,
-      userId: item.userId,
-      channel: {
-        userId: item.userId,
-        platformInfo: item.platformInfo
-      },
-      level: item.level.level,
-      levelProgress: item.level.levelProgress
-    }))
+    return userLevels.map<RankedEntry>((userLevel, i) => {
+      const channel = userChannels.find(c => getPrimaryUserId(c) === userLevel.primaryUserId)
+      if (channel == null) {
+        throw new Error(`Could not find channel for primary user ${userLevel.primaryUserId}`)
+      }
+
+      return {
+        rank: i + 1,
+        primaryUserId: userLevel.primaryUserId,
+        channel: channel,
+        level: userLevel.level.level,
+        levelProgress: userLevel.level.levelProgress
+      }
+    })
   }
 
-  // todo: this won't work if there is a mix between aggregate/default users that are linked, due to duplicate results. maybe we need a type (branded number) "PrimaryUserId" that ensures this doesn't happen
   /** Sorted in descending order by experience. */
-  public async getLevels (streamerId: number, userIds: number[]): Promise<UserLevel[]> {
-    const userExperiences = await this.experienceStore.getExperience(streamerId, userIds)
+  public async getLevels (streamerId: number, primaryUserIds: number[]): Promise<UserLevel[]> {
+    const userExperiences = await this.experienceStore.getExperience(streamerId, primaryUserIds)
 
     return userExperiences.map(xp => {
       const totalExperience = clamp(xp.experience, 0, null)
       const level = this.experienceHelpers.calculateLevel(totalExperience)
       return {
-        userId: xp.userId,
+        primaryUserId: xp.primaryUserId,
         level: {
           totalExperience: totalExperience,
           ...level
@@ -168,11 +174,13 @@ export default class ExperienceService extends ContextClass {
 
   /** Returns the level difference since the given timestamp, where there is a level difference of at least 1. */
   public async getLevelDiffs (streamerId: number, since: number): Promise<LevelDiff[]> {
-    const transactions = await this.experienceStore.getAllTransactionsStartingAt(streamerId, since + 1)
+    const primaryUserIds = await this.accountService.getStreamerPrimaryUserIds(streamerId)
+    const transactions = await this.experienceStore.getAllTransactionsStartingAt(streamerId, primaryUserIds, since + 1)
     if (transactions.length === 0) {
       return []
     }
 
+    // all users hereforth are primary users - we can compare them without requiring intermediate transformations
     const userTxs: Map<number, ExperienceTransaction[]> = new Map()
     for (const tx of transactions) {
       const userId = tx.userId
@@ -190,7 +198,7 @@ export default class ExperienceService extends ContextClass {
         continue
       }
 
-      const endXp = userExperiences.find(x => x.userId === userId)!.experience
+      const endXp = userExperiences.find(x => x.primaryUserId === userId)!.experience
       const totalDelta = sum(txs.map(tx => tx.delta))
       if (endXp <= 0 || totalDelta <= 0 || endXp - totalDelta < 0) {
         // these are unusual edge cases that we get only when playing around with negative xp, especially at low levels, e.g. for spammers
@@ -217,7 +225,7 @@ export default class ExperienceService extends ContextClass {
       }
 
       diffs.push({
-        userId: userId,
+        primaryUserId: userId,
         timestamp: transitionTime!,
         startLevel: { ...startLevel, totalExperience: startXp },
         endLevel: { ...endLevel, totalExperience: asGte(endXp, 0) }
@@ -227,8 +235,8 @@ export default class ExperienceService extends ContextClass {
     return diffs
   }
 
-  public async modifyExperience (userId: number, streamerId: number, loggedInRegisteredUserId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
-    const currentExperiences = await this.experienceStore.getExperience(streamerId, [userId])
+  public async modifyExperience (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
+    const currentExperiences = await this.experienceStore.getExperience(streamerId, [primaryUserId])
 
     // current experience may be negative - this is intentional
     const currentExperience = single(currentExperiences).experience
@@ -245,21 +253,21 @@ export default class ExperienceService extends ContextClass {
     }
     const requiredExperience = Math.round(this.experienceHelpers.calculateExperience(newLevelData))
     const experienceDelta = requiredExperience - currentExperience
-    await this.experienceStore.addManualExperience(streamerId, userId, loggedInRegisteredUserId, experienceDelta, message)
+    await this.experienceStore.addManualExperience(streamerId, primaryUserId, loggedInRegisteredUserId, experienceDelta, message)
 
-    const updatedLevel = await this.getLevels(streamerId, [userId])
+    const updatedLevel = await this.getLevels(streamerId, [primaryUserId])
     return single(updatedLevel)
   }
 
-  public async recalculateChatExperience (exactUserId: number) {
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(exactUserId)
+  public async recalculateChatExperience (aggregateUserId: number) {
+    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(aggregateUserId)
     const primaryUserId = connectedUserIds[0]
-    const streamerIds = await this.experienceStore.getChatExperienceStreamerIdsForUser(exactUserId)
+    const streamerIds = await this.experienceStore.getChatExperienceStreamerIdsForUser(aggregateUserId)
 
     for (const streamerId of streamerIds) {
       // this may need to be optimised in the future (chunk-wise processing). I'd estimate it works fine for up to 1k-10k experience txs/chat messages
       const punishments = (await Promise.all(connectedUserIds.map(userId => this.punishmentService.getPunishmentHistory(userId, streamerId)))).flatMap(x => x)
-      const chatExperienceTxs = await this.experienceStore.getAllUserChatExperience(streamerId, exactUserId)
+      const chatExperienceTxs = await this.experienceStore.getAllUserChatExperience(streamerId, aggregateUserId)
       const chatMessages = await Promise.all(chatExperienceTxs.map(tx => this.chatStore.getChatById(tx.experienceDataChatMessage.chatMessageId)))
 
       let args: ModifyChatExperienceArgs[] = []
@@ -309,8 +317,8 @@ export default class ExperienceService extends ContextClass {
     }
   }
 
-  private async getViewershipMultiplier (streamerId: number, userIds: number[]): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamViewership(streamerId, userIds)
+  private async getViewershipMultiplier (streamerId: number, anyUserIds: number[]): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamViewership(streamerId, anyUserIds)
 
     const viewershipScore = calculateWalkingScore(
       streams,
@@ -324,8 +332,8 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateViewershipMultiplier(viewershipScore)
   }
 
-  private async getParticipationMultiplier (streamerId: number, userIds: number[]): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamParticipation(streamerId, userIds)
+  private async getParticipationMultiplier (streamerId: number, anyUserIds: number[]): Promise<GreaterThanOrEqual<1>> {
+    const streams = await this.viewershipStore.getLivestreamParticipation(streamerId, anyUserIds)
 
     const participationScore = calculateWalkingScore(
       streams,

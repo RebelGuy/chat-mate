@@ -49,7 +49,7 @@ export default class StreamerService extends ContextClass {
       message: `Streamer application ${streamerApplicationId} was approved.`,
       rank: 'owner',
       streamerId: streamer.id,
-      chatUserId: registeredUser.aggregateChatUserId
+      primaryUserId: registeredUser.aggregateChatUserId
     }
     await this.rankStore.addUserRank(userRankArgs)
 

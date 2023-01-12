@@ -1,11 +1,12 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
-import { PublicUserNames } from '@rebel/server/controllers/public/user/PublicUserNames'
-import { userDataToPublicUserNames } from '@rebel/server/models/user'
-import AccountService from '@rebel/server/services/AccountService'
-import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
+import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
+import { userDataToPublicUser } from '@rebel/server/models/user'
+import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import ChannelService, { getExternalIdOrUserName, getUserName, getUserNameFromChannelInfo } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import LinkService from '@rebel/server/services/LinkService'
@@ -14,7 +15,7 @@ import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { EmptyObject } from '@rebel/server/types'
-import { single, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { single, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { assertUnreachable } from '@rebel/server/util/typescript'
@@ -26,7 +27,7 @@ type SearchUserRequest = ApiRequest<4, {
 }>
 
 type SearchUserResponse = ApiResponse<4, {
-  results: Tagged<3, PublicUserNames>[]
+  results: Tagged<1, PublicUserSearchResult>[]
 }>
 
 export type GetLinkedChannelsResponse = ApiResponse<1, {
@@ -80,15 +81,38 @@ export default class UserController extends ControllerBase {
     }
 
     try {
-      const matches = await this.channelService.getUserByChannelName(request.searchTerm)
-      const userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), matches.map(m => m.userId))
-      const levels = await this.experienceService.getLevels(this.getStreamerId(), matches.map(m => m.userId))
-      const ranks = await this.rankStore.getUserRanks(matches.map(m => m.userId), this.getStreamerId())
-      const areRegisterd = await this.accountStore.areUsersRegistered(matches.map(m => m.userId))
-      const userData = zipOnStrictMany(matches, 'userId', userChannels, levels, ranks)
-        .map(data => userDataToPublicUserNames(data, areRegisterd.find(r => r.userId === data.userId)!.isRegistered))
+      const matches = await this.channelService.searchChannelsByName(this.getStreamerId(), request.searchTerm)
+      const defaultUserIds = unique(matches.map(m => m.defaultUserId))
+      const userChannels = await this.channelService.getConnectedUserChannels(defaultUserIds)
 
-      return builder.success({ results: userData })
+      const primaryUserIds = userChannels.map(c => c.aggregateUserId ?? c.userId)
+
+      const allData = await this.apiService.getAllData(primaryUserIds)
+      const results = matches.map<PublicUserSearchResult>(match => {
+        const userId = match.defaultUserId
+        const channels = userChannels.find(c => c.userId === userId)!
+        const primaryUserId = channels.aggregateUserId ?? userId
+        const data = allData.find(d => d.primaryUserId === primaryUserId)!
+
+        return {
+          schema: 1,
+          user: userDataToPublicUser(data),
+          matchedChannel: {
+            schema: 1,
+            channelId: match.platformInfo.channel.id,
+            platform: match.platformInfo.platform,
+            displayName: getUserName(match)
+          },
+          allChannels: channels.channels.map(c => ({
+            schema: 1,
+            channelId: c.platformInfo.channel.id,
+            platform: c.platformInfo.platform,
+            displayName: getUserName(c)
+          }))
+        }
+      })
+
+      return builder.success({ results })
     } catch (e: any) {
       return builder.failure(e)
     }
@@ -101,10 +125,11 @@ export default class UserController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetLinkedChannelsResponse>('GET /link/channels', 1)
 
     try {
-      const channels = await this.channelService.getConnectedUserChannels(this.getCurrentUser().aggregateChatUserId)
+      const channels = single(await this.channelService.getConnectedUserChannels([this.getCurrentUser().aggregateChatUserId]))
       return builder.success({
-        channels: channels.map(channel => ({
+        channels: channels.channels.map<PublicChannelInfo>(channel => ({
           schema: 1,
+          defaultUserId: channel.defaultUserId,
           externalIdOrUserName: getExternalIdOrUserName(channel),
           platform: channel.platformInfo.platform,
           channelName: getUserName(channel)
@@ -123,26 +148,27 @@ export default class UserController extends ControllerBase {
 
     try {
       const history = await this.linkDataService.getLinkHistory(this.getCurrentUser().aggregateChatUserId)
-      const channels = await Promise.all(history.map(h => this.channelStore.getDefaultUserOwnedChannels(h.defaultUserId)))
-      const youtubeNames = await Promise.all(channels.flatMap(c => c.youtubeChannels).map(id => this.channelStore.getYoutubeChannelFromChannelId(id).then(channel => ({ id, name: channel.infoHistory[0].name }))))
-      const twitchNames = await Promise.all(channels.flatMap(c => c.twitchChannels).map(id => this.channelStore.getTwitchChannelFromChannelId(id).then(channel => ({ id, name: channel.infoHistory[0].displayName }))))
+      const defaultUserIds = history.map(h => h.defaultUserId)
+      const channels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserIds)
+      const youtubeNames = await this.channelStore.getYoutubeChannelFromChannelId(channels.flatMap(c => c.youtubeChannelIds))
+      const twitchNames = await this.channelStore.getTwitchChannelFromChannelId(channels.flatMap(c => c.twitchChannelIds))
 
       return builder.success({
         tokens: history.map<PublicLinkToken>(h => {
           const channel = channels.find(c => c.userId === h.defaultUserId)!
-          if (channel.youtubeChannels.length + channel.twitchChannels.length !== 1) {
+          if (channel.youtubeChannelIds.length + channel.twitchChannelIds.length !== 1) {
             throw new Error(`Only a single channel is supported for default user ${channel.userId}`)
           }
 
-          const platform = channel.youtubeChannels.length === 1 ? 'youtube' : 'twitch'
-          const userName = platform === 'youtube' ? youtubeNames.find(y => y.id === single(channel.youtubeChannels))! : twitchNames.find(t => t.id === single(channel.twitchChannels))!
+          const platform = channel.youtubeChannelIds.length === 1 ? 'youtube' : 'twitch'
+          const channelInfo = platform === 'youtube' ? youtubeNames.find(y => y.id === single(channel.youtubeChannelIds))! : twitchNames.find(t => t.id === single(channel.twitchChannelIds))!
 
           if (h.type === 'pending' || h.type ===  'running') {
             return {
               schema: 1,
               status: h.type === 'pending' ? 'pending' : 'processing',
               token: h.maybeToken,
-              channelUserName: userName.name,
+              channelUserName: getUserNameFromChannelInfo(platform, channelInfo),
               platform: platform,
               message: null
             }
@@ -151,7 +177,7 @@ export default class UserController extends ControllerBase {
               schema: 1,
               status: h.type === 'success' ? 'succeeded' : 'failed',
               token: h.token,
-              channelUserName: userName.name,
+              channelUserName: getUserNameFromChannelInfo(platform, channelInfo),
               platform: platform,
               message: h.message
             }
@@ -160,7 +186,7 @@ export default class UserController extends ControllerBase {
               schema: 1,
               status: 'waiting',
               token: h.token,
-              channelUserName: userName.name,
+              channelUserName: getUserNameFromChannelInfo(platform, channelInfo),
               platform: platform,
               message: null
             }

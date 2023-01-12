@@ -2,6 +2,7 @@ import { CustomEmoji } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
+import AccountService from '@rebel/server/services/AccountService'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
 
@@ -12,19 +13,23 @@ type SearchResult = {
 
 type Deps = Dependencies<{
   customEmojiEligibilityService: CustomEmojiEligibilityService
+  accountService: AccountService
 }>
 
 export default class EmojiService extends ContextClass {
   private readonly customEmojiEligibilityService: CustomEmojiEligibilityService
+  private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super()
     this.customEmojiEligibilityService = deps.resolve('customEmojiEligibilityService')
+    this.accountService = deps.resolve('accountService')
   }
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
-  public async applyCustomEmojis (part: PartialChatMessage, userId: number, streamerId: number): Promise<PartialChatMessage[]> {
-    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(userId, streamerId)
+  public async applyCustomEmojis (part: PartialChatMessage, defaultUserId: number, streamerId: number): Promise<PartialChatMessage[]> {
+    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser(defaultUserId)
+    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(primaryUserId, streamerId)
     return this.applyEligibleEmojis(part, eligibleEmojis)
   }
 

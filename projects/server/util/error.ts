@@ -91,12 +91,12 @@ export class PreProcessorError extends CustomError {
 
 export class UserAlreadyLinkedToAggregateUserError extends CustomError {
   public readonly aggregateUserId: number
-  public readonly userId: number
+  public readonly defaultUserId: number
 
-  constructor (message: string, aggregateUserId: number, userId: number) {
+  constructor (message: string, aggregateUserId: number, defaultUserId: number) {
     super(UserAlreadyLinkedToAggregateUserError.prototype, message)
     this.aggregateUserId = aggregateUserId
-    this.userId = userId
+    this.defaultUserId = defaultUserId
   }
 }
 

@@ -754,7 +754,7 @@ Request data (body):
 - `searchTerm` (`string`): *Required.* The string to search in user's channel names.
 
 Returns data with the following properties:
-- `results` (`PublicUserNames[]`): An array containing the users with matching channel names. If no match was found, the array is empty. Users are sorted in ascending order according to the match quality, with the first user having the best match.
+- `results` (`PublicUserSearchResult[]`): An array containing information about matched channels. If no match was found, the array is empty. Results are sorted in ascending order according to the match quality, with the first result having the best match. It is possible that multiple of the user's channels appear in different results.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.

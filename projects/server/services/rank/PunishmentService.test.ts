@@ -271,7 +271,7 @@ describe(nameof(PunishmentService, 'banUserExternal'), () => {
     const youtubeChannel = 2
     const userChannels: UserOwnedChannels = {
       userId: defaultUserId,
-      twitchChannels: [twitchChannel],
+      twitchChannelIds: [twitchChannel],
       youtubeChannels: [youtubeChannel]
     }
     const contextToken = 'test'
@@ -420,7 +420,7 @@ describe(nameof(PunishmentService, 'timeoutUserExternal'), () => {
     const youtubeChannel = 2
     const userChannels: UserOwnedChannels = {
       userId: defaultUserId,
-      twitchChannels: [twitchChannel],
+      twitchChannelIds: [twitchChannel],
       youtubeChannels: [youtubeChannel]
     }
     const contextToken = 'test'
@@ -586,7 +586,7 @@ describe(nameof(PunishmentService, 'untimeoutUserExternal'), () => {
     const youtubeChannel = 2
     const userChannels: UserOwnedChannels = {
       userId: defaultUserId,
-      twitchChannels: [twitchChannel],
+      twitchChannelIds: [twitchChannel],
       youtubeChannels: [youtubeChannel]
     }
     const rankId = 581

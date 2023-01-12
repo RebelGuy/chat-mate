@@ -1,4 +1,4 @@
-import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel, CustomEmojiVersion, ChatCommand, ChatUser } from '@prisma/client'
+import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel, CustomEmojiVersion, ChatCommand, ChatUser, RegisteredUser } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { PublicMessageCheer } from '@rebel/server/controllers/public/chat/PublicMessageCheer'
@@ -10,6 +10,8 @@ import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUser
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
+import { registeredUserToPublic } from '@rebel/server/models/user'
+import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
@@ -291,21 +293,22 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   }
 }
 
-export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[], isRegistered: boolean): PublicChatItem {
+export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[], registeredUser: RegisteredUser | null): PublicChatItem {
   const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
   if (PLATFORM_TYPES !== 'youtube' && PLATFORM_TYPES !== 'twitch') {
     assertUnreachableCompile(PLATFORM_TYPES)
   }
 
-  if (chat.userId == null) {
+  if (chat.userId == null || chat.user == null) {
     throw new Error('ChatItem is expected to have a userId attached')
   }
 
   let userChannel: UserChannel
   if (chat.youtubeChannel != null) {
     userChannel = {
-      userId: chat.userId,
+      aggregateUserId: chat.user.aggregateChatUserId,
+      defaultUserId: chat.userId,
       platformInfo: {
         platform: 'youtube',
         channel: chat.youtubeChannel
@@ -313,7 +316,8 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     }
   } else if (chat.twitchChannel != null) {
     userChannel = {
-      userId: chat.userId,
+      aggregateUserId: chat.user.aggregateChatUserId,
+      defaultUserId: chat.userId,
       platformInfo: {
         platform: 'twitch',
         channel: chat.twitchChannel
@@ -325,6 +329,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
 
   const userInfo: PublicChannelInfo = {
     schema: 1,
+    defaultUserId: chat.userId,
     externalIdOrUserName: getExternalIdOrUserName(userChannel),
     platform: userChannel.platformInfo.platform,
     channelName: getUserName(userChannel),
@@ -345,9 +350,9 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     messageParts,
     author: {
       schema: 3,
-      id: chat.userId,
-      isRegistered: isRegistered,
-      userInfo,
+      primaryUserId: getPrimaryUserId(chat.user),
+      registeredUser: registeredUserToPublic(registeredUser),
+      channelInfo: userInfo,
       levelInfo,
       activeRanks: activeRanks
     }

@@ -87,7 +87,7 @@ export default class RankService extends ContextClass {
     for (const rank of ranks.ranks) {
       if (revokeAllOldRanks) {
         const removeArgs: RemoveUserRankArgs = {
-          chatUserId: fromUserId,
+          primaryUserId: fromUserId,
           message: `Revoked as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}`,
           rank: rank.rank.name,
           removedBy: null,
@@ -110,7 +110,7 @@ export default class RankService extends ContextClass {
       }
 
       const addArgs: AddUserRankArgs = {
-        chatUserId: toUserId,
+        primaryUserId: toUserId,
         message: `Added as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}`,
         rank: rank.rank.name,
         assignee: rank.assignedByRegisteredUserId,
@@ -178,7 +178,7 @@ export default class RankService extends ContextClass {
         // always remove the default user's rank
         if (oldRank != null) {
           const removeArgs: RemoveUserRankArgs = {
-            chatUserId: defaultUser,
+            primaryUserId: defaultUser,
             message: `Revoked as part of rank merge ${mergeId} of user ${defaultUser} with user ${aggregateUser}`,
             rank: rankName,
             removedBy: null,
@@ -214,7 +214,7 @@ export default class RankService extends ContextClass {
 
           } else {
             const addArgs: AddUserRankArgs = {
-              chatUserId: aggregateUser,
+              primaryUserId: aggregateUser,
               message: `Added as part of rank merge ${mergeId} of user ${defaultUser} with user ${aggregateUser}`,
               rank: rankName,
               assignee: oldRank!.assignedByRegisteredUserId,
@@ -237,7 +237,7 @@ export default class RankService extends ContextClass {
 
         } else if (removeRanks.includes(rankName) && baseRank != null) {
           const removeArgs: RemoveUserRankArgs = {
-            chatUserId: aggregateUser,
+            primaryUserId: aggregateUser,
             message: `Revoked as part of rank merge ${mergeId} of user ${defaultUser} with user ${aggregateUser}`,
             rank: rankName,
             removedBy: null,

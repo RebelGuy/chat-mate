@@ -32,7 +32,7 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
     const registeredUser1 = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser1.id })
     const streamer1 = cast<Streamer>({ id: 4, registeredUserId: registeredUser1.id })
     const twitchChannel = 5
-    const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel] })
+    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [twitchChannel] })
     const channelName = 'test'
     const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
 
@@ -54,7 +54,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
     const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
     const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
     const twitchChannel = 5
-    const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel] })
+    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [twitchChannel] })
     const channelName = 'test'
     const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
 
@@ -76,7 +76,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
     const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
     const twitchChannel1 = 5
     const twitchChannel2 = 6
-    const channels = cast<UserOwnedChannels>({ twitchChannels: [twitchChannel1, twitchChannel2] })
+    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [twitchChannel1, twitchChannel2] })
     const channelName = 'test'
     const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
 
@@ -95,7 +95,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
     const chatUser = cast<ChatUser>({ id: 2 })
     const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
     const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
-    const channels = cast<UserOwnedChannels>({ twitchChannels: [] })
+    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [] })
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])

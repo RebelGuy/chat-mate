@@ -1,11 +1,12 @@
 import { Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import { getUserName } from '@rebel/server/services/ChannelService'
 import LogService from '@rebel/server/services/LogService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { singleOrNull } from '@rebel/server/util/arrays'
+import { single, singleOrNull } from '@rebel/server/util/arrays'
 
 export type TwitchStreamerChannel = {
   streamerId: number
@@ -68,13 +69,13 @@ export default class StreamerChannelService extends ContextClass {
       return null
     }
 
-    const channels = await this.channelStore.getConnectedUserOwnedChannels(registeredUser.aggregateChatUserId)
-    if (channels.twitchChannels.length === 0) {
+    const channels = await this.channelStore.getConnectedUserOwnedChannels([registeredUser.aggregateChatUserId]).then(single)
+    if (channels.twitchChannelIds.length === 0) {
       return null
     }
 
-    const channelId = channels.twitchChannels[0]
-    const channel = await this.channelStore.getTwitchChannelFromChannelId(channelId)
-    return channel.infoHistory[0].displayName
+    const channelId = channels.twitchChannelIds[0]
+    const channel = await this.channelStore.getTwitchChannelFromChannelId([channelId]).then(single)
+    return getUserName(channel)
   }
 }

@@ -13,10 +13,7 @@ export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
   'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier' | 'repetitionPenalty'>
   & { externalId: string }
 
-export type UserExperience = { userId: number, experience: number }
-
-
-type ChatExperienceTransaction = ExperienceTransaction & { experienceDataChatMessage: ExperienceDataChatMessage }
+export type UserExperience = { primaryUserId: number, experience: number }
 
 export type ModifyChatExperienceArgs = {
   experienceTransactionId: number
@@ -44,11 +41,11 @@ export default class ExperienceStore extends ContextClass {
 
   /** Returns the most recent chat experience or, if a transaction id is provided, the most recent chat experience before the given transaction.
    * May not be for the current livestream. */
-  public async getPreviousChatExperience (streamerId: number, exactUserId: number, beforeTransactionId: number | null): Promise<ChatExperience | null> {
+  public async getPreviousChatExperience (streamerId: number, anyExactUserId: number, beforeTransactionId: number | null): Promise<ChatExperience | null> {
     const experienceTransaction = await this.db.experienceTransaction.findFirst({
       where: {
         streamerId: streamerId,
-        userId: exactUserId,
+        userId: anyExactUserId,
         experienceDataChatMessage: { isNot: null },
         id: beforeTransactionId == null ? undefined : { lt: beforeTransactionId }
       },
@@ -67,9 +64,9 @@ export default class ExperienceStore extends ContextClass {
     }
   }
 
-  public async addChatExperience (streamerId: number, userId: number, timestamp: number, xp: number, data: ChatExperienceData) {
+  public async addChatExperience (streamerId: number, primaryUserId: number, timestamp: number, xp: number, data: ChatExperienceData) {
     // don't allow backfilling or duplicates
-    const prev = await this.getPreviousChatExperience(streamerId, userId, null)
+    const prev = await this.getPreviousChatExperience(streamerId, primaryUserId, null)
     if (prev != null && (prev.time.getTime() > timestamp || prev.experienceDataChatMessage.chatMessage.externalId === data.externalId)) {
       return
     }
@@ -78,7 +75,7 @@ export default class ExperienceStore extends ContextClass {
       data: {
         time: new Date(timestamp),
         streamer: { connect: { id: streamerId }},
-        user: { connect: { id: userId }},
+        user: { connect: { id: primaryUserId }},
         delta: xp,
         experienceDataChatMessage: { create: {
           baseExperience: data.baseExperience,
@@ -104,14 +101,14 @@ export default class ExperienceStore extends ContextClass {
     }
   }
 
-  public async addManualExperience (streamerId: number, userId: number, adminRegisteredUserId: number, xp: number, message: string | null) {
+  public async addManualExperience (streamerId: number, primaryUserId: number, adminUserId: number, xp: number, message: string | null) {
     await this.db.experienceTransaction.create({ data: {
       time: new Date(),
       streamerId: streamerId,
-      userId: userId,
+      userId: primaryUserId,
       delta: xp,
       experienceDataAdmin: { create: {
-        adminRegisteredUserId: adminRegisteredUserId,
+        adminRegisteredUserId: adminUserId,
         message
       }}
     }})
@@ -119,19 +116,19 @@ export default class ExperienceStore extends ContextClass {
 
   /** Returns the experience for the user's snapshot, if it exists.
    * Note that snapshots are updated by running the RefreshSnapshots.ts script. */
-  public getSnapshot (streamerId: number, userId: number): Promise<ExperienceSnapshot | null> {
+  public getSnapshot (streamerId: number, primaryUserId: number): Promise<ExperienceSnapshot | null> {
     return this.db.experienceSnapshot.findFirst({
-      where: { streamerId, userId },
+      where: { streamerId, userId: primaryUserId },
       orderBy: { time: 'desc' }
     })
   }
 
   /** Returns the sum of all of the user's experience deltas between now and the given timestamp. */
-  public async getTotalDeltaStartingAt (streamerId: number, userId: number, timestamp: number): Promise<number> {
+  public async getTotalDeltaStartingAt (streamerId: number, primaryUserId: number, timestamp: number): Promise<number> {
     const result = await this.db.experienceTransaction.aggregate({
       where: {
         streamerId,
-        userId,
+        userId: primaryUserId,
         time: { gte: new Date(timestamp) }
       },
       _sum: { delta: true }
@@ -141,8 +138,8 @@ export default class ExperienceStore extends ContextClass {
   }
 
   /** Gets the total experience of the specified users, sorted in descending order. */
-  public async getExperience (streamerId: number, userIds: number[]): Promise<UserExperience[]> {
-    if (userIds.length === 0) {
+  public async getExperience (streamerId: number, primaryUserIds: number[]): Promise<UserExperience[]> {
+    if (primaryUserIds.length === 0) {
       return []
     }
 
@@ -150,7 +147,7 @@ export default class ExperienceStore extends ContextClass {
     // adds the snapshot experience to get the current total experience.
     // oof
     return await this.db.$queryRaw<UserExperience[]>`
-      SELECT User.id AS userId, (COALESCE(SUM(TxsAfterSnap.xp), 0) + COALESCE(Snapshot.experience, 0)) AS experience
+      SELECT User.id AS primaryUserId, (COALESCE(SUM(TxsAfterSnap.xp), 0) + COALESCE(Snapshot.experience, 0)) AS experience
       FROM (
         SELECT * FROM experience_snapshot AS snapshot
         WHERE snapshot.streamerId = ${streamerId}
@@ -170,7 +167,7 @@ export default class ExperienceStore extends ContextClass {
         WHERE tx.time > COALESCE(InnerSnapshot.time, 0) AND tx.streamerId = ${streamerId}
         GROUP BY tx.userId
       ) AS TxsAfterSnap ON TxsAfterSnap.userId = User.Id
-      WHERE User.id IN (${Prisma.join(userIds)})
+      WHERE User.id IN (${Prisma.join(primaryUserIds)})
       -- grouping required because of the aggregation 'SUM()' in the selection
       GROUP BY User.id, Snapshot.experience
       ORDER BY experience DESC;
@@ -178,21 +175,22 @@ export default class ExperienceStore extends ContextClass {
   }
 
   /** Returns the transactions in ascending order. */
-  public async getAllTransactionsStartingAt (streamerId: number, timestamp: number): Promise<ExperienceTransaction[]> {
+  public async getAllTransactionsStartingAt (streamerId: number, primaryUserIds: number[], timestamp: number): Promise<ExperienceTransaction[]> {
     return await this.db.experienceTransaction.findMany({
       where: {
         streamerId,
-        time: { gte: new Date(timestamp) }
+        time: { gte: new Date(timestamp) },
+        userId: { in: primaryUserIds },
       },
       orderBy: { time: 'asc' }
     })
   }
 
   /** Gets all of the user's chat experience in the context of the given streamer. */
-  public async getAllUserChatExperience (streamerId: number, exactUserId: number): Promise<ChatExperience[]> {
+  public async getAllUserChatExperience (streamerId: number, primaryUserId: number): Promise<ChatExperience[]> {
     const transactions = await this.db.experienceTransaction.findMany({
       where: {
-        userId: exactUserId,
+        userId: primaryUserId,
         streamerId: streamerId,
         experienceDataChatMessage: { isNot: null }
       },
@@ -204,11 +202,11 @@ export default class ExperienceStore extends ContextClass {
   }
 
   /** Gets all streamer ids for which the user has chat experience. */
-  public async getChatExperienceStreamerIdsForUser (exactUserId: number): Promise<number[]> {
+  public async getChatExperienceStreamerIdsForUser (primaryUserId: number): Promise<number[]> {
     const transactions = await this.db.experienceTransaction.groupBy({
       by: ['streamerId'],
       where: {
-        userId: exactUserId,
+        userId: primaryUserId,
         experienceDataChatMessage: { isNot: null }
       }
     })

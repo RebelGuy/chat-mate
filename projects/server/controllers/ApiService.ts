@@ -1,11 +1,15 @@
-import { RankName, RegisteredUser, Streamer } from '@prisma/client'
+import { RankName, RegisteredUser, Streamer, UserRank } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import ChannelService from '@rebel/server/services/ChannelService'
+import ExperienceService, { UserLevel } from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import RankStore from '@rebel/server/stores/RankStore'
+import { UserChannel } from '@rebel/server/stores/ChannelStore'
+import RankStore, { UserRanks } from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { single } from '@rebel/server/util/arrays'
+import { single, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { InvalidUsernameError, PreProcessorError } from '@rebel/server/util/error'
 import { Request, Response } from 'express'
 import { Errors } from 'typescript-rest'
@@ -21,6 +25,8 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   accountHelpers: AccountHelpers
   rankStore: RankStore
+  channelService: ChannelService
+  experienceService: ExperienceService
 }>
 
 // we could do a lot of these things directly in the ControllerBase, but it will be trickier to get the preProcessors to work because we don't know which controller instance from the context to use
@@ -31,6 +37,8 @@ export default class ApiService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly accountHelpers: AccountHelpers
   private readonly rankStore: RankStore
+  private readonly channelService: ChannelService
+  private readonly experienceService: ExperienceService
 
   private registeredUser: RegisteredUser | null = null
   private streamerId: number | null = null
@@ -44,6 +52,8 @@ export default class ApiService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.accountHelpers = deps.resolve('accountHelpers')
     this.rankStore = deps.resolve('rankStore')
+    this.channelService = deps.resolve('channelService')
+    this.experienceService = deps.resolve('experienceService')
   }
 
   /** If this method runs to completion, `getCurrentUser` will return a non-null object.
@@ -145,5 +155,15 @@ export default class ApiService extends ContextClass {
 
     // todo: implement rank hierarchy
     return this.ranks!.includes(rank)
+  }
+
+  public async getAllData (primaryUserIds: number[]): Promise<(UserChannel & UserRanks & UserLevel & { registeredUser: RegisteredUser | null })[]> {
+    const activeUserChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), primaryUserIds)
+      .then(channels => channels.map(c => ({ ...c, primaryUserId: getPrimaryUserId(c) })))
+    const levels = await this.experienceService.getLevels(this.getStreamerId(), primaryUserIds)
+    const ranks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
+    const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
+
+    return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers)
   }
 }

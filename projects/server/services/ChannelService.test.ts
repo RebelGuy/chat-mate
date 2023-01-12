@@ -48,15 +48,15 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
     const result = await channelService.getActiveUserChannels(streamerId, 'all')
 
     expect(result.length).toBe(2)
-    expect(result.find(r => r.userId === 1)).toEqual(expect.objectContaining<UserChannel>({
-      userId: 1,
+    expect(result.find(r => r.defaultUserId === 1)).toEqual(expect.objectContaining<UserChannel>({
+      defaultUserId: 1,
       platformInfo: {
         platform: 'youtube',
         channel: channel1
       }
     }))
-    expect(result.find(r => r.userId === 2)).toEqual(expect.objectContaining<UserChannel>({
-      userId: 2,
+    expect(result.find(r => r.defaultUserId === 2)).toEqual(expect.objectContaining<UserChannel>({
+      defaultUserId: 2,
       platformInfo: {
         platform: 'twitch',
         channel: channel2
@@ -70,7 +70,7 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
     const result = await channelService.getActiveUserChannels(streamerId, [1])
 
     expect(single(result)).toEqual(expect.objectContaining<UserChannel>({
-      userId: 1,
+      defaultUserId: 1,
       platformInfo: {
         platform: 'youtube',
         channel: channel1
@@ -91,8 +91,8 @@ describe(nameof(ChannelService, 'getActiveUserChannels'), () => {
 
     expect(result.length).toBe(2)
     expect(result).toEqual(expectObject(result, [
-      { userId: 7, platformInfo: { platform: 'youtube', channel: channel3 } },
-      { userId: 1, platformInfo: { platform: 'twitch', channel: channel2 } } // should have re-routed to the aggregate user
+      { defaultUserId: 7, platformInfo: { platform: 'youtube', channel: channel3 } },
+      { defaultUserId: 1, platformInfo: { platform: 'twitch', channel: channel2 } } // should have re-routed to the aggregate user
     ]))
   })
 })
@@ -106,7 +106,7 @@ describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
     const twitchChannel2 = cast<TwitchChannelWithLatestInfo>({ userId: 69, twitchId: '34', infoHistory: [{ userName: 'name2' }] })
     const connectedChannelIds = cast<UserOwnedChannels>({
       youtubeChannels: [10, 20],
-      twitchChannels: [10, 25]
+      twitchChannelIds: [10, 25]
     })
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId).mockResolvedValue(connectedChannelIds)
     mockChannelStore.getYoutubeChannelFromChannelId.calledWith(10).mockResolvedValue(youtubeChannel1)
@@ -116,43 +116,20 @@ describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
 
     const result = await channelService.getConnectedUserChannels(userId)
 
-    expect(sortBy(result, c => c.userId)).toEqual(expectObject(result, [
-      { userId: youtubeChannel1.userId, platformInfo: { platform: 'youtube', channel: youtubeChannel1 } },
-      { userId: youtubeChannel2.userId, platformInfo: { platform: 'youtube', channel: youtubeChannel2 } },
-      { userId: twitchChannel1.userId, platformInfo: { platform: 'twitch', channel: twitchChannel1 } },
-      { userId: twitchChannel2.userId, platformInfo: { platform: 'twitch', channel: twitchChannel2 } },
+    expect(sortBy(result, c => c.defaultUserId)).toEqual(expectObject(result, [
+      { defaultUserId: youtubeChannel1.userId, platformInfo: { platform: 'youtube', channel: youtubeChannel1 } },
+      { defaultUserId: youtubeChannel2.userId, platformInfo: { platform: 'youtube', channel: youtubeChannel2 } },
+      { defaultUserId: twitchChannel1.userId, platformInfo: { platform: 'twitch', channel: twitchChannel1 } },
+      { defaultUserId: twitchChannel2.userId, platformInfo: { platform: 'twitch', channel: twitchChannel2 } },
     ]))
   })
 })
 
-describe(nameof(ChannelService, 'getUserById'), () => {
-  test('returns null if user with id does not exist', async () => {
-    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue([{ userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] }])
-
-    const result = await channelService.getUserById(2)
-
-    expect(result).toBeNull()
-  })
-
-  test('returns correct channel with id', async () => {
-    const names: UserNames[] = [
-      { userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] },
-      { userId: 2, youtubeNames: ['Rebel'], twitchNames: [] },
-      { userId: 3, youtubeNames: ['Rebel_Guy'], twitchNames: [] }
-    ]
-    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue(names)
-
-    const result = await channelService.getUserById(2)
-
-    expect(result).toEqual(names[1])
-  })
-})
-
-describe(nameof(ChannelService, 'getUserByChannelName'), () => {
+describe(nameof(ChannelService, 'searchChannelsByName'), () => {
   test('returns null if there is no match', async () => {
-    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue([{ userId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] }])
+    mockChannelStore.getAllChannels.calledWith().mockResolvedValue([{ defaultUserId: 1, youtubeNames: ['Mr Cool Guy'], twitchNames: [] }])
 
-    const result = await channelService.getUserByChannelName('rebel_guy')
+    const result = await channelService.searchChannelsByName('rebel_guy')
 
     expect(result).toEqual([])
   })
@@ -164,9 +141,9 @@ describe(nameof(ChannelService, 'getUserByChannelName'), () => {
       { userId: 3, youtubeNames: ['Rebel_Guy2'], twitchNames: [] },
       { userId: 4, youtubeNames: ['Test'], twitchNames: ['Rebel_Guy420', 'Reb', 'Rebel_Guy10000'] }
     ]
-    mockChannelStore.getCurrentUserNames.calledWith().mockResolvedValue(names)
+    mockChannelStore.getAllChannels.calledWith().mockResolvedValue(names)
 
-    const result = await channelService.getUserByChannelName('rebel')
+    const result = await channelService.searchChannelsByName('rebel')
 
     expect(result.length).toBe(3)
     expect(result[0]).toEqual<UserNames>({ userId: 2, youtubeNames: ['Rebel_Guy'], twitchNames: [] })

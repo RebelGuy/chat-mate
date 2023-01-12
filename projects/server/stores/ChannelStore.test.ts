@@ -192,7 +192,7 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getCurrentUserIds'), () => {
+  describe(nameof(ChannelStore, 'getAllChannels'), () => {
     test('returns single user if all channels belong to the same user', async () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
@@ -278,7 +278,7 @@ export default () => {
         infoHistory: { createMany: { data: [twitchChannelInfo1] } }
       }})
 
-      const result = await channelStore.getCurrentUserNames()
+      const result = await channelStore.getAllChannels()
 
       const expected1: UserNames = { userId: 1, youtubeNames: [channelInfo3.name], twitchNames: [] }
       const expected2: UserNames = { userId: 2, youtubeNames: [channelInfo4.name], twitchNames: [twitchChannelInfo4.displayName, twitchChannelInfo3.displayName, twitchChannelInfo1.displayName] }

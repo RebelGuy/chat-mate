@@ -15,7 +15,7 @@ export type NormalisedCommand = {
 
 export type CommandData = NormalisedCommand & {
   commandId: number
-  userId: number // the executor ChatUser id
+  defaultUserId: number // the executor ChatUser id
   arguments: string[]
 }
 
@@ -125,7 +125,7 @@ export default class CommandService extends ContextClass {
 
     const commandData: CommandData = {
       commandId: commandId,
-      userId: message.userId,
+      defaultUserId: message.userId,
       normalisedName: chatCommand.normalisedCommandName,
       arguments: args
     }
@@ -150,6 +150,6 @@ export default class CommandService extends ContextClass {
       throw new UnknownCommandError(commandData.normalisedName)
     }
 
-    return await command.executeCommand(commandData.userId, commandData.arguments)
+    return await command.executeCommand(commandData.defaultUserId, commandData.arguments)
   }
 }

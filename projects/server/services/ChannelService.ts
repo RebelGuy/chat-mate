@@ -1,7 +1,9 @@
+import { TwitchChannelInfo, YoutubeChannelInfo } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
-import ChannelStore, { UserChannel, UserNames } from '@rebel/server/stores/ChannelStore'
+import AccountService from '@rebel/server/services/AccountService'
+import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { nonNull, sortBy, values } from '@rebel/server/util/arrays'
 import { min, sum } from '@rebel/server/util/math'
@@ -10,70 +12,53 @@ import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/
 /** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
 export const LIVESTREAM_PARTICIPATION_TYPES = 'chatParticipation' as const
 
+export type ConnectedUserChannels = {
+  /** The userId for which connected channels were requested. */
+  userId: number,
+  /** The aggregate user that the queried user is connected to. May be the same as `userId`. */
+  aggregateUserId: number | null
+  channels: UserChannel[]
+}
+
 type Deps = Dependencies<{
   chatStore: ChatStore
   channelStore: ChannelStore
+  accountService: AccountService
 }>
 
 export default class ChannelService extends ContextClass {
   private readonly chatStore: ChatStore
   private readonly channelStore: ChannelStore
+  private readonly accountService: AccountService
 
   public constructor (deps: Deps) {
     super()
     this.chatStore = deps.resolve('chatStore')
     this.channelStore = deps.resolve('channelStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   /** Returns active user channels for each user. A user's active channel is the one with which the user
    * has last participated in chat. The entry of users who have not yet participated in chat are ommitted,
    * and results are not necessarily ordered.
    *
-   * If a userId is a default ID, any connected channels are ignored. If a userId is an aggregate ID, only the most recent
-   * chat item of any of its connected users will be returned, but **rewired so that the chat item's user is the aggregate user**.
-   *
-   * If getting all users, aggregate users will be ignored completely.
-   *
    * Given that users rarely use multiple accounts at once, this is probably the most relevant
    * channel we want to associate with the user at the current time. */
-  public async getActiveUserChannels (streamerId: number, anyUserIds: number[] | 'all'): Promise<UserChannel[]> {
+  public async getActiveUserChannels (streamerId: number, primaryUserIds: number[] | null): Promise<UserChannel[]> {
     if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
 
-    const chatMessages = await this.chatStore.getLastChatOfUsers(streamerId, anyUserIds)
-
-    const relevantChatItems = new Map<number, ChatItemWithRelations>()
-    for (const chat of sortBy(chatMessages, c => c.time.getTime(), 'desc')) {
-      if (chat.user == null) {
-        throw new Error('UserId of Youtube/Twitch chat messages was expected to be set')
-      }
-
-      // due to the ordering, we only need to check whether a chat message for a user
-      // already exists in the set - if it does, we know it's the most recent one.
-
-      // save the chat mesage against the default user, if we are interested in this user
-      const defaultUserId = chat.userId!
-      if ((anyUserIds === 'all' || anyUserIds.includes(defaultUserId)) && !relevantChatItems.has(defaultUserId)) {
-        relevantChatItems.set(defaultUserId, chat)
-      }
-
-      if (anyUserIds === 'all') {
-        continue
-      }
-
-      // save the chat message against the aggregate user, if we are interested in this user
-      const aggregateUserId = chat.user!.aggregateChatUserId
-      if (aggregateUserId != null && anyUserIds.includes(aggregateUserId) && !relevantChatItems.has(aggregateUserId)) {
-        const aggregateUser = { ...chat.user!.aggregateChatUser!, aggregateChatUserId: null, aggregateChatUser: null }
-        relevantChatItems.set(aggregateUserId, { ...chat, userId: aggregateUserId, user: aggregateUser })
-      }
+    if (primaryUserIds == null) {
+      primaryUserIds = await this.accountService.getStreamerPrimaryUserIds(streamerId)
     }
 
-    return values(relevantChatItems).map<UserChannel>(chat => {
+    const chatMessages = await this.chatStore.getLastChatOfUsers(streamerId, primaryUserIds)
+    return chatMessages.map(chat => {
       if (chat.youtubeChannel != null) {
         return {
-          userId: chat.userId!,
+          aggregateUserId: chat.user!.aggregateChatUserId,
+          defaultUserId: chat.userId!,
           platformInfo: {
             platform: 'youtube',
             channel: chat.youtubeChannel
@@ -81,7 +66,8 @@ export default class ChannelService extends ContextClass {
         }
       } else if (chat.twitchChannel != null) {
         return {
-          userId: chat.userId!,
+          aggregateUserId: chat.user!.aggregateChatUserId,
+          defaultUserId: chat.userId!,
           platformInfo: {
             platform: 'twitch',
             channel: chat.twitchChannel
@@ -93,51 +79,35 @@ export default class ChannelService extends ContextClass {
     })
   }
 
-  public async getConnectedUserChannels (anyUserId: number): Promise<UserChannel[]> {
-    const channelIds = await this.channelStore.getConnectedUserOwnedChannels(anyUserId)
+  /** UserIds are preserved according to the `anyUserIds` parameter. */
+  public async getConnectedUserChannels (anyUserIds: number[]): Promise<ConnectedUserChannels[]> {
+    const allChannelIds = await this.channelStore.getConnectedUserOwnedChannels(anyUserIds)
+    const youtubeChannels = await this.channelStore.getYoutubeChannelFromChannelId(allChannelIds.flatMap(id => id.youtubeChannelIds))
+    const twitchChannels = await this.channelStore.getTwitchChannelFromChannelId(allChannelIds.flatMap(id => id.twitchChannelIds))
 
-    // ??????
-    const channels: UserChannel[] = await Promise.all([
-      ...channelIds.youtubeChannels.map(c => this.channelStore.getYoutubeChannelFromChannelId(c).then(channel => ({
-        userId: channel.userId,
-        platformInfo: {
-          platform: 'youtube' as const,
-          channel: channel
-        }
-      }))),
-      ...channelIds.twitchChannels.map(c => this.channelStore.getTwitchChannelFromChannelId(c).then(channel => ({
-        userId: channel.userId,
-        platformInfo: {
-          platform: 'twitch' as const,
-          channel: channel
-        }
-      })))
-    ])
+    return anyUserIds.map<ConnectedUserChannels>(userId => {
+      const channelIds = allChannelIds.find(c => c.userId === userId)!
 
-    return channels
+      return {
+        userId: userId,
+        aggregateUserId: channelIds.aggregateUserId,
+        channels: [
+          ...channelIds.youtubeChannelIds.map<UserChannel>(channelId => youtubeChannels.find(i => i.platformInfo.channel.id === channelId)!),
+          ...channelIds.twitchChannelIds.map<UserChannel>(channelId => twitchChannels.find(i => i.platformInfo.channel.id === channelId)!)
+        ]
+      }
+    })
   }
 
-  /** Returns channels matching the given name, sorted in ascending order of channel name length (i.e. best sequential match is first). */
-  public async getUserByChannelName (name: string): Promise<UserNames[]> {
+  /** Returns channels whose current name matches the given name (case insensitive). */
+  public async searchChannelsByName (streamerId: number, name: string): Promise<UserChannel[]> {
     if (name == null || name.length === 0) {
       return []
     }
 
-    const userNames = await this.channelStore.getCurrentUserNames()
-
     name = name.toLowerCase()
-    const matches = userNames.map(user => ({
-      userId: user.userId,
-      youtubeNames: user.youtubeNames.filter(n => n.toLowerCase().includes(name)),
-      twitchNames: user.twitchNames.filter(n => n.toLowerCase().includes(name))
-    })).filter(user => user.youtubeNames.length > 0 || user.twitchNames.length > 0)
-
-    return sortBy(matches, m => sum([...m.youtubeNames.map(n => n.length), ...m.twitchNames.map(n => n.length)]), 'asc')
-  }
-
-  public async getUserById (userId: number): Promise<UserNames | null> {
-    const channelNames = await this.channelStore.getCurrentUserNames()
-    return channelNames.find(userName => userName.userId === userId) ?? null
+    const channels = await this.channelStore.getAllChannels(streamerId)
+    return channels.filter(channel => getUserName(channel).toLowerCase().includes(name))
   }
 }
 
@@ -148,6 +118,16 @@ export function getUserName (userChannel: UserChannel) {
     return userChannel.platformInfo.channel.infoHistory[0].displayName
   } else {
     assertUnreachable(userChannel.platformInfo)
+  }
+}
+
+export function getUserNameFromChannelInfo (platform: 'youtube' | 'twitch', channelInfo: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo) {
+  if (platform === 'youtube') {
+    return (channelInfo.infoHistory[0] as YoutubeChannelInfo).name
+  } else if (platform === 'twitch') {
+    return (channelInfo.infoHistory[0] as TwitchChannelInfo).displayName
+  } else {
+    assertUnreachable(platform)
   }
 }
 

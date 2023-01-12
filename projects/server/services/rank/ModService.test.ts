@@ -145,7 +145,7 @@ describe(nameof(ModService, 'setModRankExternal'), () => {
   const youtubeChannel = 2
   const userChannels: UserOwnedChannels = {
     userId: defaultUserId,
-    twitchChannels: [twitchChannel],
+    twitchChannelIds: [twitchChannel],
     youtubeChannels: [youtubeChannel]
   }
   const contextToken = 'test'

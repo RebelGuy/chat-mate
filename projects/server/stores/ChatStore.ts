@@ -32,7 +32,7 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */
-  public async addChat (chatItem: ChatItem, streamerId: number, userId: number, channelId: string): Promise<ChatMessage> {
+  public async addChat (chatItem: ChatItem, streamerId: number, defaultUserId: number, channelId: string): Promise<ChatMessage> {
     let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
     const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
@@ -50,7 +50,7 @@ export default class ChatStore extends ContextClass {
           streamer: { connect: { id: streamerId }},
           externalId: chatItem.id,
           contextToken: chatItem.platform === 'youtube' ? chatItem.contextToken : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
-          user: { connect: { id: userId }},
+          user: { connect: { id: defaultUserId }},
           youtubeChannel: chatItem.platform === 'youtube' ? { connect: { youtubeId: channelId }} : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
           twitchChannel: chatItem.platform === 'twitch' ? { connect: { twitchId: channelId }} : chatItem.platform === 'youtube' ? undefined : assertUnreachable(chatItem),
           livestream: livestreamPart
@@ -89,33 +89,39 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** For each user, returns the last chat item authored by the user, if any.
-   * **For aggregate users, the latest message of all linked users is returned.**
-  */
-  public async getLastChatOfUsers (streamerId: number, anyUserIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
-    let filter: Prisma.ChatMessageWhereInput
-    if (anyUserIds === 'all') {
-      filter = {
-        NOT: { userId: null }
-      }
-    } else {
-      filter = {
-        OR: [
-          { userId: { in: anyUserIds }},
-          { user: { aggregateChatUserId: { in: anyUserIds } }}
-        ]
-      }
-    }
-
-    return await this.db.chatMessage.findMany({
+  /** For each user, returns the last chat item authored by the user or any of its linked users.
+   * Throws if no chat message was found for any of the given user ids. */
+  public async getLastChatOfUsers (streamerId: number, primaryUserIds: number[]): Promise<ChatItemWithRelations[]> {
+    const chatMessagesForDefaultUsers = await this.db.chatMessage.findMany({
       distinct: ['userId'],
       orderBy: {
         time: 'desc'
       },
       include: chatMessageIncludeRelations,
       where: {
-        ...filter,
-        streamerId: streamerId
+        streamerId: streamerId,
+        userId: { in: primaryUserIds }
+      }
+    })
+
+    const chatMessagesForAggregateUsers = await this.db.chatMessage.findMany({
+      distinct: ['userId'],
+      orderBy: {
+        time: 'desc'
+      },
+      include: chatMessageIncludeRelations,
+      where: {
+        streamerId: streamerId,
+        user: { aggregateChatUserId: { in: primaryUserIds } }
+      }
+    })
+
+    return primaryUserIds.map(id => {
+      const message = chatMessagesForDefaultUsers.find(c => c.userId === id)?? chatMessagesForAggregateUsers.find(c => c.user!.aggregateChatUserId === id)
+      if (message == null) {
+        throw new Error(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
+      } else {
+        return message
       }
     })
   }
