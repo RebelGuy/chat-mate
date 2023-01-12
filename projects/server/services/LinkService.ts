@@ -11,6 +11,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { single } from '@rebel/server/util/arrays'
 import { UserAlreadyLinkedToAggregateUserError, LinkAttemptInProgressError, UserNotLinkedError } from '@rebel/server/util/error'
 import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
 import { nameof } from '@rebel/server/_test/utils'
@@ -85,7 +86,7 @@ export default class LinkService extends ContextClass {
       await this.experienceStore.relinkChatExperience(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(ExperienceStore, 'relinkChatExperience'), cumWarnings])
 
-      const connectedUserIds = await this.accountStore.getConnectedChatUserIds(defaultUserId)
+      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
       if (connectedUserIds.length === 2) {
         // this is a new link - life will be simple
         // don't need to re-apply external punishments, re-apply donations, or re-calculate chat experience data
@@ -147,7 +148,7 @@ export default class LinkService extends ContextClass {
         logs.push([new Date(), nameof(ExperienceStore, 'undoChatExperienceRelink'), cumWarnings])
       }
 
-      const connectedUserIds = await this.accountStore.getConnectedChatUserIds(defaultUserId)
+      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
       if (connectedUserIds.length === 1) {
         // we unlinked the only user
         if (options.transferRanks) {

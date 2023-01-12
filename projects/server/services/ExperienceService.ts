@@ -104,7 +104,7 @@ export default class ExperienceService extends ContextClass {
 
     const externalId = getExternalId(chatItem)
     const primaryUserId = await this.channelStore.getPrimaryUserId(externalId)
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(primaryUserId)
+    const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([primaryUserId])).connectedChatUserIds
     const isPunished = await this.punishmentService.isUserPunished(primaryUserId, streamerId)
     if (isPunished) {
       return
@@ -260,7 +260,7 @@ export default class ExperienceService extends ContextClass {
   }
 
   public async recalculateChatExperience (aggregateUserId: number) {
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(aggregateUserId)
+    const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([aggregateUserId])).connectedChatUserIds
     const primaryUserId = connectedUserIds[0]
     const streamerIds = await this.experienceStore.getChatExperienceStreamerIdsForUser(aggregateUserId)
 

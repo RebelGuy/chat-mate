@@ -7,6 +7,8 @@ import LinkStore from '@rebel/server/stores/LinkStore'
 import { Singular } from '@rebel/server/types'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { single } from '@rebel/server/util/arrays'
+import AccountService from '@rebel/server/services/AccountService'
 
 export type LinkHistory = ({
   type: 'pending' | 'running'
@@ -30,7 +32,7 @@ type Deps = Dependencies<{
   commandService: CommandService
   linkCommand: LinkCommand
   channelStore: ChannelStore
-  accountStore: AccountStore
+  accountService: AccountService
 }>
 
 // split from `LinkService` because of circular dependencies
@@ -39,7 +41,7 @@ export default class LinkDataService extends ContextClass {
   private readonly commandService: CommandService
   private readonly linkCommand: LinkCommand
   private readonly channelStore: ChannelStore
-  private readonly accountStore: AccountStore
+  private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super()
@@ -47,7 +49,7 @@ export default class LinkDataService extends ContextClass {
     this.commandService = deps.resolve('commandService')
     this.linkCommand = deps.resolve('linkCommand')
     this.channelStore = deps.resolve('channelStore')
-    this.accountStore = deps.resolve('accountStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   /**
@@ -63,8 +65,8 @@ export default class LinkDataService extends ContextClass {
     const defaultUserId = channel.userId
 
     // don't bother going ahead if the users are already linked
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(defaultUserId)
-    if (connectedUserIds[0] === aggregateUserId) {
+    const primaryUserId = single(await this.accountService.getPrimaryUserIdFromAnyUser([defaultUserId]))
+    if (primaryUserId === aggregateUserId) {
       throw new UserAlreadyLinkedToAggregateUserError(`Channel ${externalChannelId} is already linked to user ${aggregateUserId}`, aggregateUserId, defaultUserId)
     }
 

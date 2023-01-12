@@ -287,6 +287,10 @@ export function nonNull<T> (arr: (T | null)[]): Exclude<T, null>[] {
   return arr.filter(value => value != null) as Exclude<T, null>[]
 }
 
+export function allDefined<T> (arr: (T | null)[]): arr is T[] {
+  return arr.find(value => value == null) == null
+}
+
 export function values<T> (map: Map<any, T>): T[] {
   return kvp(map).map(pair => pair.value)
 }

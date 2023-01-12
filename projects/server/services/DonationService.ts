@@ -97,7 +97,7 @@ export default class DonationService extends ContextClass {
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, anyUserId: number, streamerId: number): Promise<void> {
     const time = this.dateTimeHelpers.now()
-    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser(anyUserId)
+    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
     await this.donationStore.linkUserToDonation(donationId, primaryUserId, time)
 
     const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId])
@@ -190,7 +190,7 @@ export default class DonationService extends ContextClass {
    * Returns the number of warnings encountered. */
   public async reEvaluateDonationRanks (anyUserId: number, message: string | null, reEvaluationId: string): Promise<number> {
     const time = this.dateTimeHelpers.now()
-    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser(anyUserId)
+    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
     const allDonations = await this.donationStore.getDonationsByUserIds(null, [primaryUserId])
     const groupedDonations = group(allDonations, d => d.streamerId)
 

@@ -32,9 +32,10 @@ export default class AccountService extends ContextClass {
     return unique(channels.map(c => c.aggregateUserId ?? c.defaultUserId))
   }
 
-  public async getPrimaryUserIdFromAnyUser (anyUserId: number) {
-    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(anyUserId)
-    return first(connectedUserIds)
+  /** Retains the order of users passed in. */
+  public async getPrimaryUserIdFromAnyUser (anyUserIds: number[]): Promise<number[]> {
+    const connectedUserIds = await this.accountStore.getConnectedChatUserIds(anyUserIds)
+    return anyUserIds.map(userId => first(connectedUserIds.find(c => c.queriedAnyUserId === userId)!.connectedChatUserIds))
   }
 }
 

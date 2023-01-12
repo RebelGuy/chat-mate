@@ -5,6 +5,7 @@ import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from 
 import AccountService from '@rebel/server/services/AccountService'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
+import { single } from '@rebel/server/util/arrays'
 
 type SearchResult = {
   searchTerm: string,
@@ -28,7 +29,7 @@ export default class EmojiService extends ContextClass {
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
   public async applyCustomEmojis (part: PartialChatMessage, defaultUserId: number, streamerId: number): Promise<PartialChatMessage[]> {
-    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser(defaultUserId)
+    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([defaultUserId]).then(single)
     const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(primaryUserId, streamerId)
     return this.applyEligibleEmojis(part, eligibleEmojis)
   }
