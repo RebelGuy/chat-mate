@@ -119,9 +119,9 @@ export abstract class ControllerBase extends ContextClass {
     return this.apiService.getCurrentUser(optional as any)
   }
 
-  public getStreamerId (optional?: false): number
-  public getStreamerId (optional: true): number | null
-  public getStreamerId (optional?: boolean): number | null {
+  protected getStreamerId (optional?: false): number
+  protected getStreamerId (optional: true): number | null
+  protected getStreamerId (optional?: boolean): number | null {
     return this.apiService.getStreamerId(optional as any)
   }
 

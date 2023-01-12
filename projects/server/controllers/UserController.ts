@@ -89,9 +89,9 @@ export default class UserController extends ControllerBase {
 
       const allData = await this.apiService.getAllData(primaryUserIds)
       const results = matches.map<PublicUserSearchResult>(match => {
-        const userId = match.defaultUserId
-        const channels = userChannels.find(c => c.userId === userId)!
-        const primaryUserId = channels.aggregateUserId ?? userId
+        const defaultUserId = match.defaultUserId
+        const channels = userChannels.find(c => c.userId === defaultUserId)! // userChannels were requested with the matches' default users
+        const primaryUserId = channels.aggregateUserId ?? defaultUserId
         const data = allData.find(d => d.primaryUserId === primaryUserId)!
 
         return {
@@ -150,25 +150,25 @@ export default class UserController extends ControllerBase {
       const history = await this.linkDataService.getLinkHistory(this.getCurrentUser().aggregateChatUserId)
       const defaultUserIds = history.map(h => h.defaultUserId)
       const channels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserIds)
-      const youtubeNames = await this.channelStore.getYoutubeChannelFromChannelId(channels.flatMap(c => c.youtubeChannelIds))
-      const twitchNames = await this.channelStore.getTwitchChannelFromChannelId(channels.flatMap(c => c.twitchChannelIds))
+      const youtubeChannels = await this.channelStore.getYoutubeChannelFromChannelId(channels.flatMap(c => c.youtubeChannelIds))
+      const twitchChannels = await this.channelStore.getTwitchChannelFromChannelId(channels.flatMap(c => c.twitchChannelIds))
 
       return builder.success({
         tokens: history.map<PublicLinkToken>(h => {
-          const channel = channels.find(c => c.userId === h.defaultUserId)!
-          if (channel.youtubeChannelIds.length + channel.twitchChannelIds.length !== 1) {
-            throw new Error(`Only a single channel is supported for default user ${channel.userId}`)
+          const userOwnedChannels = channels.find(c => c.userId === h.defaultUserId)!
+          if (userOwnedChannels.youtubeChannelIds.length + userOwnedChannels.twitchChannelIds.length !== 1) {
+            throw new Error(`Only a single channel is supported for default user ${userOwnedChannels.userId}`)
           }
 
-          const platform = channel.youtubeChannelIds.length === 1 ? 'youtube' : 'twitch'
-          const channelInfo = platform === 'youtube' ? youtubeNames.find(y => y.id === single(channel.youtubeChannelIds))! : twitchNames.find(t => t.id === single(channel.twitchChannelIds))!
+          const platform = userOwnedChannels.youtubeChannelIds.length === 1 ? 'youtube' : 'twitch'
+          const channel = platform === 'youtube' ? youtubeChannels.find(y => y.platformInfo.channel.id === single(userOwnedChannels.youtubeChannelIds))! : twitchChannels.find(t => t.platformInfo.channel.id === single(userOwnedChannels.twitchChannelIds))!
 
           if (h.type === 'pending' || h.type ===  'running') {
             return {
               schema: 1,
               status: h.type === 'pending' ? 'pending' : 'processing',
               token: h.maybeToken,
-              channelUserName: getUserNameFromChannelInfo(platform, channelInfo),
+              channelUserName: getUserName(channel),
               platform: platform,
               message: null
             }
@@ -177,7 +177,7 @@ export default class UserController extends ControllerBase {
               schema: 1,
               status: h.type === 'success' ? 'succeeded' : 'failed',
               token: h.token,
-              channelUserName: getUserNameFromChannelInfo(platform, channelInfo),
+              channelUserName: getUserName(channel),
               platform: platform,
               message: h.message
             }
@@ -186,7 +186,7 @@ export default class UserController extends ControllerBase {
               schema: 1,
               status: 'waiting',
               token: h.token,
-              channelUserName: getUserNameFromChannelInfo(platform, channelInfo),
+              channelUserName: getUserName(channel),
               platform: platform,
               message: null
             }

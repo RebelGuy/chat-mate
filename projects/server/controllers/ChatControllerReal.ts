@@ -4,11 +4,12 @@ import { buildPath, ControllerBase, ControllerDependencies, In, Out } from '@reb
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
+import AccountService from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { unique } from '@rebel/server/util/arrays'
+import { allDefined, unique } from '@rebel/server/util/arrays'
 import { Path } from 'typescript-rest'
 
 export type ChatControllerDeps = ControllerDependencies<{
@@ -16,6 +17,7 @@ export type ChatControllerDeps = ControllerDependencies<{
   experienceService: ExperienceService
   rankStore: RankStore
   accountStore: AccountStore
+  accountService: AccountService
 }>
 
 @Path(buildPath('chat'))
@@ -24,6 +26,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
   readonly experienceService: ExperienceService
   readonly rankStore: RankStore
   readonly accountStore: AccountStore
+  readonly accountService: AccountService
 
   constructor (deps: ChatControllerDeps) {
     super(deps, '/chat')
@@ -31,6 +34,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     this.experienceService = deps.resolve('experienceService')
     this.rankStore = deps.resolve('rankStore')
     this.accountStore = deps.resolve('accountStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
@@ -38,21 +42,24 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     since = since ?? 0
     const streamerId = this.getStreamerId()
     const items = await this.chatStore.getChatSince(streamerId, since, undefined, limit)
-    const userIds = unique(items.map(c => c.userId))
-    if (userIds.find(id => id == null) != null) {
-      throw new Error('Chat items must have a userId set')
-    }
 
-    const levels = await this.experienceService.getLevels(streamerId, userIds as number[])
-    const ranks = await this.rankStore.getUserRanks(userIds as number[], streamerId)
-    const areRegistered = await this.accountStore.areUsersRegistered(userIds as number[])
+    const users = items.map(c => c.user)
+    if (!allDefined(users)) {
+      throw new Error('Chat items must have a user set')
+    }
+    const primaryUserIds = unique(users.map(user => user.aggregateChatUserId ?? user.id))
+
+    const levels = await this.experienceService.getLevels(streamerId, primaryUserIds)
+    const ranks = await this.rankStore.getUserRanks(primaryUserIds, streamerId)
+    const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
-      const level = levels.find(l => l.userId === chat.userId)!.level
-      const activeRanks = ranks.find(r => r.userId === chat.userId)!.ranks.map(userRankToPublicObject)
-      const isRegistered = areRegistered.find(r => r.userId === chat.userId)!.isRegistered
-      chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks, isRegistered))
+      const primaryUserId = chat.user!.aggregateChatUserId ?? chat.user!.id
+      const level = levels.find(l => l.primaryUserId === primaryUserId)!.level
+      const activeRanks = ranks.find(r => r.primaryUserId === primaryUserId)!.ranks.map(userRankToPublicObject)
+      const registeredUser = registeredUsers.find(r => r.primaryUserId === primaryUserId)!.registeredUser
+      chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks, registeredUser))
     }
 
     return builder.success({

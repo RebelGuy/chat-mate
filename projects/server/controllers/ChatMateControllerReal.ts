@@ -27,6 +27,7 @@ import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/ev
 import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import AccountService from '@rebel/server/services/AccountService'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
@@ -43,6 +44,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   donationStore: DonationStore
   chatMateEventService: ChatMateEventService
   accountStore: AccountStore
+  accountService: AccountService
 }>
 
 export default class ChatMateControllerReal extends ControllerBase implements IChatMateController {
@@ -60,6 +62,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
   readonly donationStore: DonationStore
   readonly chatMateEventService: ChatMateEventService
   readonly accountStore: AccountStore
+  readonly accountService: AccountService
 
   constructor (deps: ChatMateControllerDeps) {
     super(deps, '/chatMate')
@@ -77,6 +80,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     this.donationStore = deps.resolve('donationStore')
     this.chatMateEventService = deps.resolve('chatMateEventService')
     this.accountStore = deps.resolve('accountStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   public async getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -94,13 +98,9 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
 
     const events = await this.chatMateEventService.getEventsSince(streamerId, since)
 
-    // pre-fetch user data for `levelUp` events
-    const userIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.userId)))
-    const userChannels = await this.channelService.getActiveUserChannels(streamerId, userIds)
-    const levelInfo = await this.experienceService.getLevels(streamerId, userIds)
-    const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
-    const userData = zipOnStrictMany(userChannels, 'userId', levelInfo, ranks)
-    const areRegistered = await this.accountStore.areUsersRegistered(userIds)
+    // pre-fetch user data for `levelUp` and `donation` events
+    const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.primaryUserId)))
+    const allData = await this.apiService.getAllData(primaryUserIds)
 
     let result: PublicChatMateEvent[] = []
     for (const event of events) {
@@ -109,13 +109,12 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
       let donationData: PublicDonationData | null = null
 
       if (event.type === 'levelUp') {
-        const isRegistered = areRegistered.find(r => r.userId === event.userId)!.isRegistered
-        const user: PublicUser = userDataToPublicUser(userData.find(d => d.userId === event.userId)!, isRegistered)
+        const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
         levelUpData = {
           schema: 3,
           newLevel: event.newLevel,
           oldLevel: event.oldLevel,
-          user
+          user: user
         }
       } else if (event.type === 'newTwitchFollower') {
         newTwitchFollowerData = {
@@ -123,8 +122,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
           displayName: event.displayName
         }
       } else if (event.type === 'donation') {
-        const isRegistered = areRegistered.find(r => r.userId === event.userId)!.isRegistered
-        const user: PublicUser | null = event.userId == null ? null : userDataToPublicUser(userData.find(d => d.userId === event.userId)!, isRegistered)
+        const user: PublicUser | null = event.primaryUserId == null ? null : userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
         donationData = {
           schema: 1,
           id: event.donation.id,

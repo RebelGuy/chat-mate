@@ -64,8 +64,8 @@ export default class StreamerController extends ControllerBase {
 
     try {
       const isAdmin = this.hasRankOrAbove('admin')
-      const userId = isAdmin ? undefined : this.getCurrentUser().id
-      const applications = await this.streamerStore.getStreamerApplications(userId)
+      const registeredUserId = isAdmin ? undefined : this.getCurrentUser().id
+      const applications = await this.streamerStore.getStreamerApplications(registeredUserId)
       return builder.success({ streamerApplications: applications.map(streamerApplicationToPublicObject) })
     } catch (e: any) {
       return builder.failure(e)
@@ -95,7 +95,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireRank('admin'))
   public async approveApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-    request: ApproveApplicationRequest
+      request: ApproveApplicationRequest
   ): Promise<ApproveApplicationResponse> {
     const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve', 1)
 
@@ -116,7 +116,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireRank('admin'))
   public async rejectApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-    request: RejectApplicationRequest
+      request: RejectApplicationRequest
   ): Promise<RejectApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/reject', 1)
 
@@ -141,13 +141,13 @@ export default class StreamerController extends ControllerBase {
   @Path('application/:streamerApplicationId/withdraw')
   public async withdrawApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-    request: WithdrawApplicationRequest
+      request: WithdrawApplicationRequest
   ): Promise<WithdrawApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/withdraw', 1)
 
     const applications = await this.streamerStore.getStreamerApplications(this.getCurrentUser().id)
     if (!applications.map(app => app.id).includes(streamerApplicationId)) {
-      return builder.failure(403, 'Forbidden')
+      return builder.failure(404, 'Not Found')
     }
 
     try {

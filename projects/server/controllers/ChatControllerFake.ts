@@ -1,3 +1,4 @@
+import { RegisteredUser } from '@prisma/client'
 import { GetChatEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
 import { ChatControllerDeps } from '@rebel/server/controllers/ChatControllerReal'
 import { buildPath, ControllerBase, In, Out } from '@rebel/server/controllers/ControllerBase'
@@ -11,6 +12,7 @@ import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
 import { asGte, asLt } from '@rebel/server/util/math'
 import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/server/util/random'
+import { cast } from '@rebel/server/_test/utils'
 import { Path } from 'typescript-rest'
 
 @Path(buildPath('chat'))
@@ -46,8 +48,8 @@ export default class ChatControllerFake extends ControllerBase implements IChatC
         levelProgress: asLt(asGte(Math.random(), 0), 1)
       }
       const ranks = single(await this.rankStore.getUserRanks([item.userId!], this.getStreamerId())).ranks.map(userRankToPublicObject)
-      const isRegistered = pickRandom([true, false, false])
-      items.push(chatAndLevelToPublicChatItem(item, level, ranks, isRegistered))
+      const registeredUser = item.user?.aggregateChatUserId == null ? null : cast<RegisteredUser>({ aggregateChatUserId: item.user!.aggregateChatUserId!, username: 'test username' })
+      items.push(chatAndLevelToPublicChatItem(item, level, ranks, registeredUser))
     }
 
     return builder.success({ reusableTimestamp: since, chat: items })

@@ -5,7 +5,7 @@ import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUser
 import { userRankToPublicObject, rankToPublicObject } from '@rebel/server/models/rank'
 import LogService from '@rebel/server/services/LogService'
 import ModService from '@rebel/server/services/rank/ModService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { single, sortBy } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
@@ -16,6 +16,8 @@ import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/server/util/datetime'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import AccountService from '@rebel/server/services/AccountService'
+import { getUserName } from '@rebel/server/services/ChannelService'
 
 type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
@@ -71,6 +73,7 @@ type Deps = ControllerDependencies<{
   modService: ModService
   rankStore: RankStore
   rankService: RankService
+  accountService: AccountService
 }>
 
 @Path(buildPath('rank'))
@@ -80,6 +83,7 @@ export default class RankController extends ControllerBase {
   private readonly channelStore: ChannelStore
   private readonly rankStore: RankStore
   private readonly rankService: RankService
+  private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super(deps, 'rank')
@@ -87,26 +91,28 @@ export default class RankController extends ControllerBase {
     this.channelStore = deps.resolve('channelStore')
     this.rankStore = deps.resolve('rankStore')
     this.rankService = deps.resolve('rankService')
+    this.accountService = deps.resolve('accountService')
   }
 
   @GET
   @PreProcessor(requireRank('owner'))
   public async getUserRanks (
-    @QueryParam('userId') userId: number,
+    @QueryParam('userId') anyUserId: number,
     @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active ranks
   ): Promise<GetUserRanksResponse> {
     const builder = this.registerResponseBuilder<GetUserRanksResponse>('GET', 1)
-    if (userId == null) {
+    if (anyUserId == null) {
       return builder.failure(400, 'A user ID must be provided')
     }
 
     try {
-      let ranks: UserRankWithRelations[]
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
 
+      let ranks: UserRankWithRelations[]
       if (includeInactive === true) {
-        ranks = await this.rankStore.getUserRankHistory(userId, this.getStreamerId())
+        ranks = await this.rankStore.getUserRankHistory(primaryUserId, this.getStreamerId())
       } else {
-        ranks = single(await this.rankStore.getUserRanks([userId], this.getStreamerId())).ranks
+        ranks = single(await this.rankStore.getUserRanks([primaryUserId], this.getStreamerId())).ranks
       }
 
       ranks = sortBy(ranks, p => p.issuedAt.getTime(), 'desc')
@@ -139,9 +145,10 @@ export default class RankController extends ControllerBase {
     }
 
     try {
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
       const args: AddUserRankArgs = {
         rank: request.rank,
-        chatUserId: request.userId,
+        primaryUserId: primaryUserId,
         streamerId: this.getStreamerId(),
         message: request.message,
         expirationTime: request.durationSeconds ? addTime(new Date(), 'seconds', request.durationSeconds) : null,
@@ -168,9 +175,10 @@ export default class RankController extends ControllerBase {
     }
 
     try {
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
       const args: RemoveUserRankArgs = {
         rank: request.rank,
-        chatUserId: request.userId,
+        primaryUserId: primaryUserId,
         streamerId: this.getStreamerId(),
         message: request.message,
         removedBy: this.getCurrentUser().id
@@ -197,7 +205,8 @@ export default class RankController extends ControllerBase {
     }
 
     try {
-      const result = await this.modService.setModRank(request.userId, this.getStreamerId(), this.getCurrentUser().id, true, request.message)
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
+      const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, true, request.message)
       return builder.success({
         newRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
         newRankError: result.rankResult.error,
@@ -218,7 +227,8 @@ export default class RankController extends ControllerBase {
     }
 
     try {
-      const result = await this.modService.setModRank(request.userId, this.getStreamerId(), this.getCurrentUser().id, false, request.message)
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
+      const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, false, request.message)
       return builder.success({
         removedRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
         removedRankError: result.rankResult.error,
@@ -231,23 +241,21 @@ export default class RankController extends ControllerBase {
 
   private async getChannelRankChanges (results: { youtubeResults: YoutubeRankResult[], twitchResults: TwitchRankResult[] }): Promise<PublicChannelRankChange[]> {
     const makePublicResult = async (channelId: number, platform: 'youtube' | 'twitch', error: string | null): Promise<PublicChannelRankChange> => {
-      let channelName: string
+      let channel: UserChannel
       if (platform === 'youtube') {
-        const channel = await this.channelStore.getYoutubeChannelFromChannelId(channelId)
-        channelName = channel.infoHistory[0].name
+        channel = await this.channelStore.getYoutubeChannelFromChannelId([channelId]).then(single)
       } else if (platform === 'twitch') {
-        const channel = await this.channelStore.getTwitchChannelFromChannelId(channelId)
-        channelName = channel.infoHistory[0].displayName
+        channel = await this.channelStore.getTwitchChannelFromChannelId([channelId]).then(single)
       } else {
         assertUnreachable(platform)
       }
 
       return {
         schema: 1,
-        channelId,
-        platform,
-        error,
-        channelName
+        channelId: channelId,
+        platform: platform,
+        error: error,
+        channelName: getUserName(channel)
       }
     }
 

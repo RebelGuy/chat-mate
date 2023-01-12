@@ -95,9 +95,8 @@ export default class DonationService extends ContextClass {
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, anyUserId: number, streamerId: number): Promise<void> {
+  public async linkUserToDonation (donationId: number, primaryUserId: number, streamerId: number): Promise<void> {
     const time = this.dateTimeHelpers.now()
-    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
     await this.donationStore.linkUserToDonation(donationId, primaryUserId, time)
 
     const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId])
