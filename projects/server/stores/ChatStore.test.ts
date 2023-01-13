@@ -517,24 +517,16 @@ export default () => {
       ]})
     }
 
-    test('returns empty array if no chat item exists for any users in the streamer context', async () => {
-      const result = await chatStore.getLastChatOfUsers(streamer1, 'all')
-
-      expect(result.length).toBe(0)
-    })
-
-    test('returns empty array if no chat item exists for specified users in the streamer context, or users do not exist', async () => {
+    test('Throws if no chat message was found for the stream for any of the given users', async () => {
       await setupMessages()
 
-      const result = await chatStore.getLastChatOfUsers(streamer1, [user3, 10000])
-
-      expect(result.length).toBe(0)
+      await expect(() => chatStore.getLastChatOfUsers(streamer1, [user3])).rejects.toThrow()
     })
 
     test('returns the latest chat item of all default users in the streamer context', async () => {
       await setupMessages()
 
-      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, 'all')
+      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [1, 2])
 
       expect(lastMessages.length).toBe(2)
 
@@ -554,20 +546,17 @@ export default () => {
       expect(msg.externalId).toBe('user 1 msg 3')
     })
 
-    test('returns the latest chat item of each channel attached to an aggregate user', async () => {
+    test('returns the latest chat item out of all channels attached to an aggregate user', async () => {
       await setupMessages()
       await db.chatUser.update({ where: { id: 1 }, data: { aggregateChatUserId: 3 }})
       await db.chatUser.update({ where: { id: 2 }, data: { aggregateChatUserId: 3 }})
 
       const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [3])
 
-      expect(lastMessages.length).toBe(2)
+      expect(lastMessages.length).toBe(1)
       expect(lastMessages[0].user!.aggregateChatUserId).toBe(3)
       expect(lastMessages[0].userId).toBe(2)
       expect(lastMessages[0].externalId).toBe('user 2 msg 2')
-      expect(lastMessages[1].user!.aggregateChatUserId).toBe(3)
-      expect(lastMessages[1].userId).toBe(1)
-      expect(lastMessages[1].externalId).toBe('user 1 msg 3')
     })
 
     test('ignores donation messages', async () => {
@@ -581,6 +570,7 @@ export default () => {
         streamerId: streamer1
       }})
       await db.chatText.create({ data: { isBold: false, isItalics: false, text: 'sample text' }})
+      // no user attached to donation messages
       await db.chatMessage.create({ data: {
         streamerId: streamer1,
         externalId: '1',
@@ -589,9 +579,7 @@ export default () => {
         chatMessageParts: { createMany: { data: [{ order: 0, textId: 1 }]}}
       }})
 
-      const result = await chatStore.getLastChatOfUsers(streamer1, 'all')
-
-      expect(result.length).toBe(0)
+      await expect(() => chatStore.getLastChatOfUsers(streamer1, [1, 2])).rejects.toThrow()
     })
   })
 

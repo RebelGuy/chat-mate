@@ -16,6 +16,10 @@ export function isPrimitive (value: any): value is boolean | number | string | s
   return (typeof value !== 'object' && typeof value !== 'function') || value == null
 }
 
+export function isNullable (value: any): value is null | undefined {
+  return value === null || value === undefined
+}
+
 // returns false for null values
 export function isReferenceType (value: any): value is object {
   return value != null && (typeof value === 'object' || typeof value === 'function')

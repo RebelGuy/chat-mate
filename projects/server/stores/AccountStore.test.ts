@@ -1,6 +1,8 @@
+import { RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import { sortBy } from '@rebel/server/util/arrays'
 import { UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { hashString } from '@rebel/server/util/strings'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
@@ -40,9 +42,14 @@ export default () => {
     })
   })
 
-  describe(nameof(AccountStore, 'areUsersRegistered'), () => {
-    test('Returns the correct registered flag for each of the provided users', async () => {
-      await db.chatUser.createMany({ data: [{}, {}]}) // 2 aggregate chat users
+  describe(nameof(AccountStore, 'getRegisteredUsers'), () => {
+    test('Returns the registered user or null for each of the provided users', async () => {
+      await db.chatUser.create({ data: { // 1: aggregate chat user
+        registeredUser: { create: { username: 'name1', hashedPassword: 'test' }}
+      }})
+      await db.chatUser.create({ data: { // 2: aggregate chat user
+        registeredUser: { create: { username: 'name2', hashedPassword: 'test' }}
+      }})
       await db.chatUser.createMany({ data: [
         {}, // 3
         { aggregateChatUserId: 1 }, // 4
@@ -50,19 +57,17 @@ export default () => {
         {}, // 6
         { aggregateChatUserId: 2 }, // 7
       ]})
-      await db.chatUser.create({ data: {
-        registeredUser: { create: { username: 'name', hashedPassword: 'test' }}
-      }})
 
-      const result = await accountStore.areUsersRegistered([3, 4, 5, 6, 7, 8])
+      const result = await accountStore.getRegisteredUsers([1, 2, 3, 4, 5, 6, 7])
 
       expect(result).toEqual(expectObject(result, [
-        { userId: 3, isRegistered: false },
-        { userId: 4, isRegistered: true },
-        { userId: 5, isRegistered: true },
-        { userId: 6, isRegistered: false },
-        { userId: 7, isRegistered: true },
-        { userId: 8, isRegistered: true },
+        { queriedUserId: 1, primaryUserId: 1, registeredUser: expectObject<RegisteredUser>({ id: 1 }) },
+        { queriedUserId: 2, primaryUserId: 2, registeredUser: expectObject<RegisteredUser>({ id: 2 }) },
+        { queriedUserId: 3, primaryUserId: 3, registeredUser: null },
+        { queriedUserId: 4, primaryUserId: 1, registeredUser: expectObject<RegisteredUser>({ id: 1 }) },
+        { queriedUserId: 5, primaryUserId: 1, registeredUser: expectObject<RegisteredUser>({ id: 1 }) },
+        { queriedUserId: 6, primaryUserId: 6, registeredUser: null },
+        { queriedUserId: 7, primaryUserId: 2, registeredUser: expectObject<RegisteredUser>({ id: 2 }) },
       ]))
     })
   })
@@ -130,7 +135,7 @@ export default () => {
   })
 
   describe(nameof(AccountStore, 'getConnectedChatUserIds'), () => {
-    beforeEach(async () => {
+    test('Unconnected default user returns only its own id', async () => {
       // user 1: aggregate user
       // user 2: aggregate user
       // user 3: aggregate user
@@ -145,30 +150,23 @@ export default () => {
         { username: 'user3', hashedPassword: 'pass3', aggregateChatUserId: 3 }
       ]})
       await db.chatUser.createMany({ data: [{ aggregateChatUserId: 1 }, {}, { aggregateChatUserId: 1 }, { aggregateChatUserId: 2 }]})
-    })
 
-    test('Unconnected default user returns only its own id', async () => {
-      const result = await accountStore.getConnectedChatUserIds(5)
+      const queryingUserIds = [5, 4, 1, 3]
+      const result = await accountStore.getConnectedChatUserIds(queryingUserIds)
 
-      expect(result).toEqual([5])
-    })
+      expect(sortBy(result, r => queryingUserIds.indexOf(r.queriedAnyUserId))).toEqual(expectObject(result, [
+        // Unconnected default user returns only its own id
+        { queriedAnyUserId: 5, connectedChatUserIds: [5] },
 
-    test('Connected default user returns its own id, the aggregate user, and any other connected default users', async () => {
-      const result = await accountStore.getConnectedChatUserIds(4)
+        // Connected default user returns its own id, the aggregate user, and any other connected default users
+        { queriedAnyUserId: 4, connectedChatUserIds: [1, 4, 6] },
 
-      expect(result).toEqual([1, 4, 6])
-    })
+        // Aggregate user with connections returns its own id and all connected default users
+        { queriedAnyUserId: 1, connectedChatUserIds: [1, 4, 6] },
 
-    test('Aggregate user with connections returns its own id and all connected default users', async () => {
-      const result = await accountStore.getConnectedChatUserIds(1)
-
-      expect(result).toEqual([1, 4, 6])
-    })
-
-    test('Aggregate user without connections returns only its own id', async () => {
-      const result = await accountStore.getConnectedChatUserIds(3)
-
-      expect(result).toEqual([3])
+        // Aggregate user without connections returns only its own id
+        { queriedAnyUserId: 3, connectedChatUserIds: [3] },
+      ]))
     })
   })
 

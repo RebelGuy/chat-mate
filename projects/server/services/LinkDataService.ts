@@ -57,7 +57,7 @@ export default class LinkDataService extends ContextClass {
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the specified channel is already linked to the aggregate user.
   */
   public async getOrCreateLinkToken (aggregateUserId: number, externalChannelId: string) {
-    const channel = await this.channelStore.getChannelFromExternalId(externalChannelId)
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(externalChannelId)
     if (channel == null) {
       throw new NotFoundError(`Unable to find a YouTube or Twitch channel with id ${externalChannelId}. Ensure the ID is correct and the channel has sent at least one chat message.`)
     }

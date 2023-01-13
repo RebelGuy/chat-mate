@@ -99,7 +99,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBeNull()
-      expect(result.userId).toBeNull()
+      expect(result.primaryUserId).toBeNull()
       expect(result.streamerId).toBe(streamer1)
     })
 
@@ -112,7 +112,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBeNull()
-      expect(result.userId).toBe(user2.id)
+      expect(result.primaryUserId).toBe(user2.id)
       expect(result.streamerId).toBe(streamer1)
     })
 
@@ -125,7 +125,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBe(5)
-      expect(result.userId).toBe(user2.id)
+      expect(result.primaryUserId).toBe(user2.id)
       expect(result.streamerId).toBe(streamer1)
     })
 
@@ -156,7 +156,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamerId).toBe(streamer1)
-      expect(result.userId).toBe(null)
+      expect(result.primaryUserId).toBe(null)
       expect(result.streamlabsUserId).toBe(null)
       expect(result.messageParts.length).toBe(2)
       expect(result.messageParts[0].text!.text).toBe('sample text')
@@ -201,8 +201,8 @@ export default () => {
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectArray<DonationWithUser>([
-        { ...donation3, linkIdentifier: 'internal-3', userId: null, linkedAt: null, messageParts: [] },
-        { ...donation2, linkIdentifier: 'internal-2', userId: null, linkedAt: null, messageParts: [] }
+        { ...donation3, linkIdentifier: 'internal-3', primaryUserId: null, linkedAt: null, messageParts: [] },
+        { ...donation2, linkIdentifier: 'internal-2', primaryUserId: null, linkedAt: null, messageParts: [] }
       ]))
     })
   })
@@ -400,7 +400,7 @@ export default () => {
       await donationStore.addDonation(otherDonation) // other streamlabs user
       const result = await donationStore.getDonation(1)
 
-      expect(result.userId).toBe(user2.id)
+      expect(result.primaryUserId).toBe(user2.id)
 
       const donationsByUser = await donationStore.getDonationsByUserIds(streamer1, [user2.id])
       expect(donationsByUser.length).toBe(2)

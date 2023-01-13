@@ -54,8 +54,8 @@ export default class AccountStore extends ContextClass {
     }
   }
 
-  /** For each of the given chat users, returns the registered user that they belong to. */
-  public async getRegisteredUsers (anyUserIds: number[]): Promise<{ primaryUserId: number, registeredUser: RegisteredUser | null }[]> {
+  /** For each of the given chat users, returns the registered user that they belong to. The results are sorted in an undefined order. */
+  public async getRegisteredUsers (anyUserIds: number[]): Promise<{ queriedUserId: number, primaryUserId: number, registeredUser: RegisteredUser | null }[]> {
     const aggregateChatUsers = await this.db.chatUser.findMany({
       where: {
         id: { in: anyUserIds },
@@ -75,6 +75,7 @@ export default class AccountStore extends ContextClass {
       const aggregateChatUser = aggregateChatUsers.find(user => user.id === id)
       if (aggregateChatUser != null) {
         return {
+          queriedUserId: id,
           primaryUserId: id,
           registeredUser: aggregateChatUser.registeredUser!
         }
@@ -83,7 +84,8 @@ export default class AccountStore extends ContextClass {
       const defaultChatUser = defaultChatUsers.find(user => user.id === id)
       if (defaultChatUser != null) {
         return {
-          primaryUserId: id,
+          queriedUserId: id,
+          primaryUserId: defaultChatUser.aggregateChatUserId ?? id,
           registeredUser: defaultChatUser.aggregateChatUser?.registeredUser ?? null
         }
       }

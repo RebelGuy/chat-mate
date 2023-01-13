@@ -40,7 +40,7 @@ describe(nameof(LinkDataService, 'getOrCreateLinkToken'), () => {
     const aggregateUserId = 2
     const defaultUserId = 5
     const externalChannelId = 'external'
-    mockChannelStore.getChannelFromExternalId.calledWith(externalChannelId).mockResolvedValue(cast<YoutubeChannel>({ userId: defaultUserId }))
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(externalChannelId).mockResolvedValue(cast<YoutubeChannel>({ userId: defaultUserId }))
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue([defaultUserId])
     const expectedToken = cast<LinkToken>({})
     mockLinkStore.getOrCreateLinkToken.calledWith(aggregateUserId, defaultUserId).mockResolvedValue(expectedToken)
@@ -53,7 +53,7 @@ describe(nameof(LinkDataService, 'getOrCreateLinkToken'), () => {
   test(`Throws ${NotFoundError.name} when the channel could not be found`, async () => {
     const aggregateUserId = 2
     const externalChannelId = 'external'
-    mockChannelStore.getChannelFromExternalId.calledWith(externalChannelId).mockResolvedValue(null)
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(externalChannelId).mockResolvedValue(null)
 
     await expect(() => linkDataService.getOrCreateLinkToken(aggregateUserId, externalChannelId)).rejects.toThrowError(NotFoundError)
   })
@@ -62,7 +62,7 @@ describe(nameof(LinkDataService, 'getOrCreateLinkToken'), () => {
     const aggregateUserId = 2
     const defaultUserId = 5
     const externalChannelId = 'external'
-    mockChannelStore.getChannelFromExternalId.calledWith(externalChannelId).mockResolvedValue(cast<YoutubeChannel>({ userId: defaultUserId }))
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(externalChannelId).mockResolvedValue(cast<YoutubeChannel>({ userId: defaultUserId }))
     mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue([aggregateUserId, defaultUserId])
 
     await expect(() => linkDataService.getOrCreateLinkToken(aggregateUserId, externalChannelId)).rejects.toThrowError(UserAlreadyLinkedToAggregateUserError)

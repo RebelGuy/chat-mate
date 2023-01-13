@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import ExperienceStore, { ModifyChatExperienceArgs, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { deleteProps, nameof } from '@rebel/server/_test/utils'
+import { deleteProps, expectObject, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -19,6 +19,7 @@ export default () => {
   const user2 = 2
   const user3 = 3
   const user4 = 4
+  const user5 = 5
   const streamer1 = 1
   const streamer2 = 2
   const streamer3 = 3
@@ -45,7 +46,7 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.chatUser.createMany({ data: [{}, {}, {}, {}]})
+    await db.chatUser.createMany({ data: [{}, {}, {}, {}, {}]})
 
     await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2}] })
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
@@ -151,8 +152,8 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: 0
       }))
     })
@@ -167,8 +168,8 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: xp
       }))
     })
@@ -186,8 +187,8 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: xp1 + xp2 + xp3
       }))
     })
@@ -210,13 +211,13 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: xpSnap + xp2 + xp3
       }))
     })
 
-    test('returns information for multiple users', async () => {
+    test('Returns information for multiple users', async () => {
       await db.experienceTransaction.createMany({ data: [
         { streamerId: streamer1, userId: user2, delta: 10, time: data.time1 },
         { streamerId: streamer1, userId: user2, delta: 11, time: data.time3 },
@@ -225,7 +226,8 @@ export default () => {
         { streamerId: streamer1, userId: user3, delta: 30, time: data.time3 },
         { streamerId: streamer2, userId: user4, delta: 10, time: data.time1 }, // different streamer
         { streamerId: streamer2, userId: user2, delta: 11, time: data.time3 }, // different streamer
-        { streamerId: streamer2, userId: user3, delta: 10, time: data.time1 } // different streamer
+        { streamerId: streamer2, userId: user3, delta: 10, time: data.time1 }, // different streamer
+        { streamerId: streamer1, userId: user5, delta: 10, time: data.time1 } // different user
       ]})
       await db.experienceSnapshot.createMany({ data: [
         { streamerId: streamer1, userId: user1, experience: 100, time: data.time2 },
@@ -236,11 +238,11 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [1, 2, 3, 4])
 
-      expect(result).toEqual(expect.arrayContaining<UserExperience>([
-        { userId: 1, experience: 100 },
-        { userId: 2, experience: 200 + 11 },
-        { userId: 3, experience: 10 + 20 + 30 },
-        { userId: 4, experience: 0}
+      expect(result).toEqual(expectObject(result, [
+        { primaryUserId: 2, experience: 200 + 11 },
+        { primaryUserId: 1, experience: 100 },
+        { primaryUserId: 3, experience: 10 + 20 + 30 },
+        { primaryUserId: 4, experience: 0}
       ]))
     })
 
@@ -403,7 +405,7 @@ export default () => {
   })
 
   describe(nameof(ExperienceStore, 'getAllTransactionsStartingAt'), () => {
-    test('returns empty array if no transactions at/after specified time', async () => {
+    test('Returns empty array if no transactions at/after specified time', async () => {
       await db.experienceTransaction.createMany({ data: [{
         streamerId: streamer1,
         userId: user1,
@@ -414,14 +416,19 @@ export default () => {
         userId: user1,
         delta: 30,
         time: data.time3
+      }, {
+        streamerId: streamer1,
+        userId: user2, // different user
+        delta: 50,
+        time: data.time3
       }]})
 
-      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, data.time2.getTime())
+      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, [1], data.time2.getTime())
 
       expect(result.length).toBe(0)
     })
 
-    test('returns array of correct transactions, including the one starting on the same time', async () => {
+    test('Returns array of correct transactions, including the one starting on the same time', async () => {
       await db.experienceTransaction.createMany({ data: [{
         streamerId: streamer1,
         userId: user1,
@@ -438,15 +445,24 @@ export default () => {
         delta: 30,
         time: data.time3,
       }, {
+        streamerId: streamer1,
+        userId: user3, // different user
+        delta: 40,
+        time: data.time3,
+      }, {
         streamerId: streamer2, // different streamer
         userId: user1,
-        delta: 40,
+        delta: 50,
         time: data.time3,
       }]})
 
-      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, data.time2.getTime())
+      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, [user1, user2], data.time2.getTime())
 
       expect(result.length).toBe(2)
+      expect(result).toEqual(expectObject(result, [
+        { delta: 20 },
+        { delta: 30 }
+      ]))
       expect(result[0].time).toEqual(data.time2)
       expect(result[1].time).toEqual(data.time3)
     })

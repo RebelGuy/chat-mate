@@ -115,14 +115,6 @@ export default class ChannelStore extends ContextClass {
     return channel!
   }
 
-  /** Returns all effective chat user ids. */
-  public async getCurrentUserIds (): Promise<number[]> {
-    const users = await this.db.chatUser.findMany({
-      where: { aggregateChatUserId: null }
-    })
-    return users.map(user => user.id)
-  }
-
   /** Returns channels that have authored chat messages for the given streamer. */
   public async getAllChannels (streamerId: number): Promise<UserChannel[]> {
     const currentYoutubeChannelInfos = await this.db.youtubeChannelInfo.findMany({
@@ -200,8 +192,8 @@ export default class ChannelStore extends ContextClass {
     })
   }
 
-  /** Returns null if the channel was not found. */
-  public async getChannelFromExternalId (externalIdOrUserName: string): Promise<YoutubeChannel | TwitchChannel | null> {
+  /** Returns null if the channel was not found. Not case sensitive. Do NOT provide the twitch external id - provide the twitch username instead. */
+  public async getChannelFromUserNameOrExternalId (externalIdOrUserName: string): Promise<YoutubeChannel | TwitchChannel | null> {
     const youtubeChannel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalIdOrUserName } })
     if (youtubeChannel != null) {
       return youtubeChannel
@@ -229,8 +221,9 @@ export default class ChannelStore extends ContextClass {
     throw new Error('Cannot find user with external id ' + externalId)
   }
 
-  /** Returns the channels associated with the chat user.
-   * The chat user can either be a default user, or aggregate user, but all channels connected directly or indirectly to the user will be returned. */
+  /** Returns the ordered channels associated with the chat user.
+   * The chat user can either be a default user, or aggregate user, but all channels connected directly or indirectly to the user will be returned.
+   * Throws if any of the users cannot be found. */
   public async getConnectedUserOwnedChannels (anyUserIds: number[]): Promise<UserOwnedChannels[]> {
     const registeredUsers = await this.db.registeredUser.findMany({ where: { aggregateChatUserId: { in: anyUserIds } }})
 
@@ -241,7 +234,15 @@ export default class ChannelStore extends ContextClass {
     const userOwnedChannels2 = await this.getDefaultUserOwnedChannelsWithLinks(defaultUserIds)
 
     const userOwnedChannels = [...userOwnedChannels1, ...userOwnedChannels2]
-    return anyUserIds.map(id => userOwnedChannels.find(c => c.userId === id) ?? { userId: id, aggregateUserId: null, youtubeChannelIds: [], twitchChannelIds: [] })
+
+    return anyUserIds.map(id => {
+      const channels = userOwnedChannels.find(c => c.userId === id)
+      if (channels == null) {
+        throw new Error(`Could not find connected channels for user ${id}`)
+      } else {
+        return channels
+      }
+    })
   }
 
   /** Like `getConnectedUserOwnedChannels`, but returns only the channels for the default user, ignoring any connected users.
@@ -267,9 +268,9 @@ export default class ChannelStore extends ContextClass {
 
       return {
         userId: id,
-        aggregateUserId: result?.aggregateChatUserId,
-        youtubeChannelIds: result?.youtubeChannels.map(c => c.id),
-        twitchChannelIds: result?.twitchChannels.map(c => c.id)
+        aggregateUserId: result.aggregateChatUserId,
+        youtubeChannelIds: result.youtubeChannels.map(c => c.id),
+        twitchChannelIds: result.twitchChannels.map(c => c.id)
       }
     })
   }
