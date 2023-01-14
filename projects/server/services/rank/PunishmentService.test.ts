@@ -17,7 +17,7 @@ import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server
 import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 
-const userId1 = 2
+const primaryUserId = 2
 const streamerId1 = 3
 const streamerName1 = 'name1'
 const streamerId2 = 4
@@ -30,7 +30,7 @@ const muteRank: Rank = { id: 3, name: 'mute', group: 'punishment', displayNameNo
 
 const expiredTimeout: UserRankWithRelations = {
   id: 1,
-  userId: userId1,
+  primaryUserId: primaryUserId,
   streamerId: streamerId1,
   streamerName: streamerName1,
   expirationTime: addTime(data.time1, 'seconds', 1),
@@ -44,7 +44,7 @@ const expiredTimeout: UserRankWithRelations = {
 }
 const activeTimeout: UserRankWithRelations = {
   id: 2,
-  userId: userId1,
+  primaryUserId: primaryUserId,
   streamerId: streamerId1,
   streamerName: streamerName1,
   expirationTime: addTime(new Date(), 'hours', 1),
@@ -58,7 +58,7 @@ const activeTimeout: UserRankWithRelations = {
 }
 const revokedBan: UserRankWithRelations = {
   id: 3,
-  userId: userId1,
+  primaryUserId: primaryUserId,
   streamerId: streamerId1,
   streamerName: streamerName1,
   expirationTime: null,
@@ -72,7 +72,7 @@ const revokedBan: UserRankWithRelations = {
 }
 const activeBan: UserRankWithRelations = {
   id: 4,
-  userId: userId1,
+  primaryUserId: primaryUserId,
   streamerId: streamerId1,
   streamerName: streamerName1,
   expirationTime: null,
@@ -86,7 +86,7 @@ const activeBan: UserRankWithRelations = {
 }
 const expiredMute: UserRankWithRelations = {
   id: 5,
-  userId: userId1,
+  primaryUserId: primaryUserId,
   streamerId: streamerId1,
   streamerName: streamerName1,
   expirationTime: addTime(data.time1, 'seconds', 1),
@@ -100,7 +100,7 @@ const expiredMute: UserRankWithRelations = {
 }
 const activeMute: UserRankWithRelations = {
   id: 6,
-  userId: userId1,
+  primaryUserId: primaryUserId,
   streamerId: streamerId1,
   streamerName: streamerName1,
   expirationTime: addTime(new Date(), 'hours', 1),
@@ -114,7 +114,7 @@ const activeMute: UserRankWithRelations = {
 }
 const activeModRank: UserRankWithRelations = {
   id: 7,
-  userId: userId1,
+  primaryUserId: primaryUserId,
   streamerId: streamerId1,
   streamerName: streamerName1,
   expirationTime: null,
@@ -162,14 +162,14 @@ describe(nameof(PunishmentService, 'initialise'), () => {
     const timeout1: Partial<UserRankWithRelations> = {
       rank: timeoutRank,
       id: 1,
-      userId: 3,
+      primaryUserId: 3,
       streamerId: streamerId1,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
     const timeout2: Partial<UserRankWithRelations> = {
       rank: timeoutRank,
       id: 2,
-      userId: 4,
+      primaryUserId: 4,
       streamerId: streamerId2,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
@@ -184,8 +184,8 @@ describe(nameof(PunishmentService, 'initialise'), () => {
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue({ contextToken: contextToken2 } as Partial<ChatItemWithRelations> as any)
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId2, 3).mockResolvedValue({ contextToken: contextToken3 } as Partial<ChatItemWithRelations> as any)
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId2, 4).mockResolvedValue(null)
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(timeout1.userId!).mockResolvedValue({ userId: timeout1.userId!, youtubeChannels: [1, 2], twitchChannels: [] })
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(timeout2.userId!).mockResolvedValue({ userId: timeout2.userId!, youtubeChannels: [3, 4], twitchChannels: [] })
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([timeout1.primaryUserId])).mockResolvedValue([{ userId: timeout1.primaryUserId!, aggregateUserId: null, youtubeChannelIds: [1, 2], twitchChannelIds: [] }])
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([timeout2.primaryUserId])).mockResolvedValue([{ userId: timeout2.primaryUserId!, aggregateUserId: null, youtubeChannelIds: [3, 4], twitchChannelIds: [] }])
 
     await punishmentService.initialise()
 
@@ -219,15 +219,16 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 4).mockResolvedValue(null)
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId1).mockResolvedValue({
-      userId: userId1,
-      youtubeChannels: [1, 2, 3, 4],
-      twitchChannels: [1, 2]
-    })
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{
+      userId: primaryUserId,
+      aggregateUserId: null,
+      youtubeChannelIds: [1, 2, 3, 4],
+      twitchChannelIds: [1, 2]
+    }])
     const newPunishment: any = {}
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ chatUserId: userId1, rank: 'ban', assignee: loggedInRegisteredUserId })).mockResolvedValue(newPunishment)
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ primaryUserId: primaryUserId, rank: 'ban', assignee: loggedInRegisteredUserId })).mockResolvedValue(newPunishment)
 
-    const result = await punishmentService.banUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
+    const result = await punishmentService.banUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result.rankResult.rank).toBe(newPunishment)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
@@ -254,7 +255,7 @@ describe(nameof(PunishmentService, 'banUser'), () => {
 
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(1).mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, aggregateUserId: null, twitchChannelIds: [], youtubeChannelIds: []}])
     mockRankStore.addUserRank.calledWith(expect.anything()).mockRejectedValue(new Error(error))
 
     const result = await punishmentService.banUser(1, streamerId1, loggedInRegisteredUserId, null)
@@ -271,13 +272,14 @@ describe(nameof(PunishmentService, 'banUserExternal'), () => {
     const youtubeChannel = 2
     const userChannels: UserOwnedChannels = {
       userId: defaultUserId,
+      aggregateUserId: null,
       twitchChannelIds: [twitchChannel],
-      youtubeChannels: [youtubeChannel]
+      youtubeChannelIds: [youtubeChannel]
     }
     const contextToken = 'test'
     const banMessage = 'test123'
 
-    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
     mockMasterchatProxyService.banYoutubeChannel.calledWith(contextToken).mockResolvedValue(true)
     mockTwurpleService.banChannel.calledWith(streamerId, twitchChannel, banMessage).mockResolvedValue()
@@ -294,19 +296,19 @@ describe(nameof(PunishmentService, 'banUserExternal'), () => {
 
 describe(nameof(PunishmentService, 'isUserPunished'), () => {
   test('returns false if there are no active punishments for the user', async () => {
-    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1]), streamerId1)
-      .mockResolvedValue([{ userId: userId1, ranks: [activeModRank] }])
+    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([primaryUserId]), streamerId1)
+      .mockResolvedValue([{ primaryUserId: primaryUserId, ranks: [activeModRank] }])
 
-    const result = await punishmentService.isUserPunished(userId1, streamerId1)
+    const result = await punishmentService.isUserPunished(primaryUserId, streamerId1)
 
     expect(result).toBe(false)
   })
 
   test('returns true if there are active punishments for the user', async () => {
-    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([userId1]), streamerId1)
-      .mockResolvedValue([{ userId: userId1, ranks: [activeModRank, activeMute] }])
+    mockRankStore.getUserRanks.calledWith(expect.arrayContaining([primaryUserId]), streamerId1)
+      .mockResolvedValue([{ primaryUserId: primaryUserId, ranks: [activeModRank, activeMute] }])
 
-    const result = await punishmentService.isUserPunished(userId1, streamerId1)
+    const result = await punishmentService.isUserPunished(primaryUserId, streamerId1)
 
     expect(result).toBe(true)
   })
@@ -316,10 +318,10 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
   test('adds mute punishment to database', async () => {
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expectObject<AddUserRankArgs>({ chatUserId: userId1, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: expect.any(Date) }))
+      .calledWith(expectObject<AddUserRankArgs>({ primaryUserId: primaryUserId, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: expect.any(Date) }))
       .mockResolvedValue(newPunishment)
 
-    const result = await punishmentService.muteUser(userId1, streamerId1, loggedInRegisteredUserId, 'test', 10)
+    const result = await punishmentService.muteUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test', 10)
 
     expect(result).toBe(newPunishment)
   })
@@ -327,10 +329,10 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
   test('mute is permanent if duration is null', async () => {
     const newPunishment: any = {}
     mockRankStore.addUserRank
-      .calledWith(expectObject<AddUserRankArgs>({ chatUserId: userId1, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: null }))
+      .calledWith(expectObject<AddUserRankArgs>({ primaryUserId: primaryUserId, rank: 'mute', assignee: loggedInRegisteredUserId, expirationTime: null }))
       .mockResolvedValue(newPunishment)
 
-    const result = await punishmentService.muteUser(userId1, streamerId1, loggedInRegisteredUserId, 'test', null)
+    const result = await punishmentService.muteUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test', null)
 
     expect(result).toBe(newPunishment)
   })
@@ -356,21 +358,22 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 4).mockResolvedValue(null)
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId1).mockResolvedValue({
-      userId: userId1,
-      youtubeChannels: [1, 2, 3, 4],
-      twitchChannels: [1, 2]
-    })
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{
+      userId: primaryUserId,
+      aggregateUserId: null,
+      youtubeChannelIds: [1, 2, 3, 4],
+      twitchChannelIds: [1, 2]
+    }])
 
     const newPunishment: Partial<UserRankWithRelations> = {
       id: 5,
       streamerId: streamerId1,
-      userId: userId1,
+      primaryUserId: primaryUserId,
       expirationTime: addTime(new Date(), 'seconds', 1000)
     }
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId1, chatUserId: userId1, assignee: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId1, primaryUserId: primaryUserId, assignee: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(newPunishment as UserRankWithRelations)
 
-    const result = await punishmentService.timeoutUser(userId1, streamerId1, loggedInRegisteredUserId, 'test', 1000)
+    const result = await punishmentService.timeoutUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test', 1000)
 
     expect(result.rankResult.rank).toBe(newPunishment)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
@@ -403,7 +406,7 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
 
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(1).mockResolvedValue({ userId: 1, twitchChannels: [], youtubeChannels: []})
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, aggregateUserId: null, twitchChannelIds: [], youtubeChannelIds: []}])
     mockRankStore.addUserRank.calledWith(expect.anything()).mockRejectedValue(new Error(error))
 
     const result = await punishmentService.timeoutUser(1, streamerId1, loggedInRegisteredUserId, null, 1)
@@ -420,15 +423,16 @@ describe(nameof(PunishmentService, 'timeoutUserExternal'), () => {
     const youtubeChannel = 2
     const userChannels: UserOwnedChannels = {
       userId: defaultUserId,
+      aggregateUserId: null,
       twitchChannelIds: [twitchChannel],
-      youtubeChannels: [youtubeChannel]
+      youtubeChannelIds: [youtubeChannel]
     }
     const contextToken = 'test'
     const rankId = 12
     const timeoutMessage = 'test123'
     const durationSeconds = 1000
 
-    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
     mockMasterchatProxyService.timeout.calledWith(contextToken).mockResolvedValue(true)
     mockTwurpleService.timeout.calledWith(streamerId, twitchChannel, timeoutMessage, durationSeconds).mockResolvedValue()
@@ -457,9 +461,9 @@ describe(nameof(PunishmentService, 'getCurrentPunishments'), () => {
 describe(nameof(PunishmentService, 'getPunishmentHistory'), () => {
   test('gets history from store and returns', async () => {
     const history = [activeBan, activeModRank, revokedBan, expiredMute]
-    mockRankStore.getUserRankHistory.calledWith(userId1, streamerId1).mockResolvedValue(history)
+    mockRankStore.getUserRankHistory.calledWith(primaryUserId, streamerId1).mockResolvedValue(history)
 
-    const result = await punishmentService.getPunishmentHistory(userId1, streamerId1)
+    const result = await punishmentService.getPunishmentHistory(primaryUserId, streamerId1)
 
     expect(result).toEqual([activeBan, revokedBan, expiredMute])
   })
@@ -475,15 +479,16 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 4).mockResolvedValue(null)
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId1).mockResolvedValue({
-      userId: userId1,
-      youtubeChannels: [1, 2, 3, 4],
-      twitchChannels: [1, 2]
-    })
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{
+      userId: primaryUserId,
+      aggregateUserId: null,
+      youtubeChannelIds: [1, 2, 3, 4],
+      twitchChannelIds: [1, 2]
+    }])
     const revokedPunishment: any = {}
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockResolvedValue(revokedPunishment)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ primaryUserId: primaryUserId, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockResolvedValue(revokedPunishment)
 
-    const result = await punishmentService.unbanUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
+    const result = await punishmentService.unbanUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result.rankResult.rank).toBe(revokedPunishment)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
@@ -506,10 +511,10 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError(error))
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ userId: primaryUserId, aggregateUserId: null, youtubeChannelIds: [], twitchChannelIds: [] }])
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ primaryUserId: primaryUserId, removedBy: loggedInRegisteredUserId, rank: 'ban' })).mockRejectedValue(new UserRankNotFoundError(error))
 
-    const result = await punishmentService.unbanUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
+    const result = await punishmentService.unbanUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
@@ -519,9 +524,9 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 describe(nameof(PunishmentService, 'unmuteUser'), () => {
   test('adds mute to database', async () => {
     const expectedResult: any = {}
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'mute' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ primaryUserId: primaryUserId, removedBy: loggedInRegisteredUserId, rank: 'mute' })).mockResolvedValue(expectedResult)
 
-    const result = await punishmentService.unmuteUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
+    const result = await punishmentService.unmuteUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result).toBe(expectedResult)
   })
@@ -536,15 +541,16 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
 
 describe(nameof(PunishmentService, 'untimeoutUser'), () => {
   test('untimeouts user on twitch and revokes timeout in database', async () => {
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId1).mockResolvedValue({
-      userId: userId1,
-      youtubeChannels: [1, 2, 3, 4],
-      twitchChannels: [1, 2]
-    })
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{
+      userId: primaryUserId,
+      aggregateUserId: null,
+      youtubeChannelIds: [1, 2, 3, 4],
+      twitchChannelIds: [1, 2]
+    }])
     const expectedResult = cast<UserRankWithRelations>({ id: 5 })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(expectedResult)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ primaryUserId: primaryUserId, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockResolvedValue(expectedResult)
 
-    const result = await punishmentService.untimeoutUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
+    const result = await punishmentService.untimeoutUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result.rankResult.rank).toBe(expectedResult)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
@@ -569,10 +575,10 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
 
   test('Catches error and returns error message', async () => {
     const error = 'Test error'
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(userId1).mockResolvedValue({ userId: userId1, youtubeChannels: [], twitchChannels: [] })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ chatUserId: userId1, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError(error))
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ userId: primaryUserId, aggregateUserId: null, youtubeChannelIds: [], twitchChannelIds: [] }])
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ primaryUserId: primaryUserId, removedBy: loggedInRegisteredUserId, rank: 'timeout' })).mockRejectedValue(new UserRankNotFoundError(error))
 
-    const result = await punishmentService.untimeoutUser(userId1, streamerId1, loggedInRegisteredUserId, 'test')
+    const result = await punishmentService.untimeoutUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
@@ -586,13 +592,14 @@ describe(nameof(PunishmentService, 'untimeoutUserExternal'), () => {
     const youtubeChannel = 2
     const userChannels: UserOwnedChannels = {
       userId: defaultUserId,
+      aggregateUserId: null,
       twitchChannelIds: [twitchChannel],
-      youtubeChannels: [youtubeChannel]
+      youtubeChannelIds: [youtubeChannel]
     }
     const rankId = 581
     const revokeMessage = 'test123'
 
-    mockChannelStore.getDefaultUserOwnedChannels.calledWith(defaultUserId).mockResolvedValue(userChannels)
+    mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
     mockTwurpleService.untimeout.calledWith(streamerId, twitchChannel, revokeMessage).mockResolvedValue()
 
     const result = await punishmentService.untimeoutUserExternal(defaultUserId, streamerId, rankId, revokeMessage)

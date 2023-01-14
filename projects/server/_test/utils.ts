@@ -110,8 +110,8 @@ export function expectObjectDeep<T> (fullOrPartialObject: T | DeepPartial<T>, pa
   }
 }
 
-export function expectArray<T> (fullObj: T[], partialObj: DeepPartial<T>[]): T
-export function expectArray<T> (data: DeepPartial<T>[]): T
+export function expectArray<T> (fullObj: T[], partialObj: DeepPartial<T>[]): T[]
+export function expectArray<T> (data: DeepPartial<T>[]): T[]
 export function expectArray<T> (fullOrPartialObject: T[] | DeepPartial<T>[], partialObj?: DeepPartial<T>[]): T[] {
   if (partialObj == null) {
     partialObj = fullOrPartialObject

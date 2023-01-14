@@ -103,11 +103,11 @@ describe('Integration tests', () => {
     expect(command3Started).toBe(false)
 
     // do a full check of the state (later on, we will check again but taking some shortcuts as we have verified here that the data is complete)
-    expect(commandService.getRunningCommand()).toEqual(expectObject<CommandData>({ commandId: commandId1, arguments: args1, normalisedName: 'LINK', userId: defaultUser1 }))
+    expect(commandService.getRunningCommand()).toEqual(expectObject<CommandData>({ commandId: commandId1, arguments: args1, normalisedName: 'LINK', defaultUserId: defaultUser1 }))
     expect(commandService.getQueuedCommands().length).toBe(2)
     expect(commandService.getQueuedCommands()).toEqual(expectArray<CommandData>([
-      { commandId: commandId2, arguments: args2, normalisedName: 'LINK', userId: defaultUser2 },
-      { commandId: commandId3, arguments: args3, normalisedName: 'LINK', userId: defaultUser3 }
+      { commandId: commandId2, arguments: args2, normalisedName: 'LINK', defaultUserId: defaultUser2 },
+      { commandId: commandId3, arguments: args3, normalisedName: 'LINK', defaultUserId: defaultUser3 }
     ]))
 
     resolve1!('success 1') // finish the first command

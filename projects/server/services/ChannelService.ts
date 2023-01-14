@@ -38,9 +38,8 @@ export default class ChannelService extends ContextClass {
     this.accountService = deps.resolve('accountService')
   }
 
-  /** Returns active user channels for each user. A user's active channel is the one with which the user
-   * has last participated in chat. The entry of users who have not yet participated in chat are ommitted,
-   * and results are not necessarily ordered.
+  /** Returns the active user channel for each primary user. A user's active channel is the one with which the user
+   * has last participated in chat. Results are unordered.
    *
    * Given that users rarely use multiple accounts at once, this is probably the most relevant
    * channel we want to associate with the user at the current time. */
@@ -99,7 +98,7 @@ export default class ChannelService extends ContextClass {
     })
   }
 
-  /** Returns channels whose current name matches the given name (case insensitive). */
+  /** Returns channels of the streamer whose current name matches the given name (case insensitive). */
   public async searchChannelsByName (streamerId: number, name: string): Promise<UserChannel[]> {
     if (name == null || name.length === 0) {
       return []

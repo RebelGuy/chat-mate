@@ -24,7 +24,6 @@ type Deps = Dependencies<{
   emojiService: EmojiService
   streamlabsProxyService: StreamlabsProxyService
   streamerStore: StreamerStore
-  accountStore: AccountStore
   logService: LogService
   accountService: AccountService
 }>
@@ -39,7 +38,6 @@ export default class DonationService extends ContextClass {
   private readonly emojiService: EmojiService
   private readonly streamlabsProxyService: StreamlabsProxyService
   private readonly streamerStore: StreamerStore
-  private readonly accountStore: AccountStore
   private readonly logService: LogService
   private readonly accountService: AccountService
 
@@ -53,7 +51,6 @@ export default class DonationService extends ContextClass {
     this.emojiService = deps.resolve('emojiService')
     this.streamlabsProxyService = deps.resolve('streamlabsProxyService')
     this.streamerStore = deps.resolve('streamerStore')
-    this.accountStore = deps.resolve('accountStore')
     this.logService = deps.resolve('logService')
     this.accountService = deps.resolve('accountService')
   }

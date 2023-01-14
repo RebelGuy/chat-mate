@@ -1,16 +1,18 @@
 import { Dependencies } from '@rebel/server/context/context'
 import EmojiService from '@rebel/server/services/EmojiService'
-import { expectObject, nameof } from '@rebel/server/_test/utils'
+import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Entity } from '@rebel/server/models/entities'
 import { PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import { CustomEmoji, CustomEmojiVersion } from '@prisma/client'
+import AccountService from '@rebel/server/services/AccountService'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>
 
-const userId = 1
+const defaultUserId = 100
+const primaryUserId = 45
 const streamerId = 2
 const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 1, image: Buffer.from('') }
 const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 2, image: Buffer.from('') }
@@ -20,24 +22,29 @@ const customEmoji2Version = 1
 const customEmoji3Version = 2
 
 let mockCustomEmojiServiceEligibilityService: MockProxy<CustomEmojiEligibilityService>
+let mockAccountService: MockProxy<AccountService>
 let emojiService: EmojiService
 
 beforeEach(() => {
+  mockAccountService = mock()
+  mockAccountService.getPrimaryUserIdFromAnyUser.calledWith(expectArray<number>([defaultUserId])).mockResolvedValue([primaryUserId])
+
   mockCustomEmojiServiceEligibilityService = mock()
-  mockCustomEmojiServiceEligibilityService.getEligibleEmojis.calledWith(userId, streamerId).mockResolvedValue([
+  mockCustomEmojiServiceEligibilityService.getEligibleEmojis.calledWith(primaryUserId, streamerId).mockResolvedValue([
     { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
     { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version },
     { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, latestVersion: customEmoji3Version }
   ])
 
   emojiService = new EmojiService(new Dependencies({
-    customEmojiEligibilityService: mockCustomEmojiServiceEligibilityService
+    customEmojiEligibilityService: mockCustomEmojiServiceEligibilityService,
+    accountService: mockAccountService
   }))
 })
 
 describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
   test('part passed through if not eligible for any emojis', async () => {
-    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(userId, streamerId).mockResolvedValue([])
+    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([])
     const part: PartialTextChatMessage = {
       type: 'text',
       text: `:${customEmoji1.symbol}:`,
@@ -45,7 +52,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(single(result)).toBe(part)
   })
@@ -59,7 +66,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       name: 'TestEmoji'
     }
 
-    const result = await emojiService.applyCustomEmojis(emojiPart, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(emojiPart, defaultUserId, streamerId)
 
     expect(single(result)).toBe(emojiPart)
   })
@@ -73,7 +80,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       name: 'cheer name'
     }
 
-    const result = await emojiService.applyCustomEmojis(cheerPart, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(cheerPart, defaultUserId, streamerId)
 
     expect(single(result)).toBe(cheerPart)
   })
@@ -87,7 +94,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       name: 'TestEmoji'
     }
 
-    const result = await emojiService.applyCustomEmojis(emojiPart, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(emojiPart, defaultUserId, streamerId)
 
     expect(single(result)).toEqual<PartialCustomEmojiChatMessage>({
       type: 'customEmoji',
@@ -106,7 +113,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(single(result)).toEqual(expectedCustomEmojiPart(customEmoji1, customEmoji1Version, part))
   })
@@ -119,7 +126,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(result.length).toBe(5)
     expect(result[0]).toEqual(expectedTextPart('abc ', part))
@@ -130,7 +137,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
   })
 
   test('text message contains only ineligible custom emojis', async () => {
-    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(userId, streamerId).mockResolvedValue([
+    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([
       { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, latestVersion: customEmoji3Version }
     ])
     const part: PartialTextChatMessage = {
@@ -140,13 +147,13 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(single(result)).toEqual(expectedTextPart(part.text, part))
   })
 
   test('text message contains one eligible and one ineligible custom emoji', async () => {
-    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(userId, streamerId).mockResolvedValue([
+    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([
       { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version }
     ])
     const part: PartialTextChatMessage = {
@@ -156,7 +163,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expectedCustomEmojiPart(customEmoji1, customEmoji1Version, part))
@@ -171,7 +178,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     const expectedResult = expectedCustomEmojiPart(customEmoji1, customEmoji1Version, part)
     expectedResult.text = part
@@ -181,7 +188,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
   test('secondary troll emoji is matched if the user has access', async () => {
     const trollEmoji: EmojiData = { id: 1, name: 'Troll', symbol: 'troll', levelRequirement: 0, image: Buffer.from('') }
     const trollEmojiVersion = 1
-    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(userId, streamerId).mockResolvedValue([
+    mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([
       { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
       { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version },
       { id: trollEmoji.id, symbol: trollEmoji.symbol, streamerId: streamerId, latestVersion: trollEmojiVersion }
@@ -194,7 +201,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expectedCustomEmojiPart(trollEmoji, trollEmojiVersion, part))
@@ -214,7 +221,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await emojiService.applyCustomEmojis(part, userId, streamerId)
+    const result = await emojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(single(result)).toEqual(expectedTextPart(part.text, part))
   })

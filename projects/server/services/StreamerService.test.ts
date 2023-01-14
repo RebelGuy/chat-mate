@@ -53,7 +53,7 @@ describe(nameof(StreamerService, 'approveStreamerApplication'), () => {
     expect(result).toBe(closedApplication)
     expect(mockTwurpleService.joinChannel).toHaveBeenCalledWith(streamer.id)
     expect(mockHelixEventService.subscribeToChannelEvents).toHaveBeenCalledWith(streamer.id)
-    expect(single2(mockRankStore.addUserRank.mock.calls)).toEqual(expect.objectContaining({ rank: 'owner', assignee: loggedInRegisteredUserId, chatUserId: chatUserId, streamerId: streamer.id }))
+    expect(single2(mockRankStore.addUserRank.mock.calls)).toEqual(expect.objectContaining({ rank: 'owner', assignee: loggedInRegisteredUserId, primaryUserId: chatUserId, streamerId: streamer.id }))
   })
 })
 

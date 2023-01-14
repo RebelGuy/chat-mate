@@ -3,7 +3,7 @@ import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebe
 import ExperienceService, { RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, ModifyChatExperienceArgs, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { getGetterMock, cast, nameof, expectObject } from '@rebel/server/_test/utils'
+import { getGetterMock, cast, nameof, expectObject, expectArray } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -20,6 +20,7 @@ import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import AccountService from '@rebel/server/services/AccountService'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -31,6 +32,7 @@ let mockChannelService: MockProxy<ChannelService>
 let mockPunishmentService: MockProxy<PunishmentService>
 let mockAccountStore: MockProxy<AccountStore>
 let mockRankHelpers: MockProxy<RankHelpers>
+let mockAccountService: MockProxy<AccountService>
 let experienceService: ExperienceService
 
 beforeEach(() => {
@@ -44,6 +46,7 @@ beforeEach(() => {
   mockPunishmentService = mock<PunishmentService>()
   mockAccountStore = mock<AccountStore>()
   mockRankHelpers = mock<RankHelpers>()
+  mockAccountService = mock<AccountService>()
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -55,7 +58,8 @@ beforeEach(() => {
     channelService: mockChannelService,
     punishmentService: mockPunishmentService,
     accountStore: mockAccountStore,
-    rankHelpers: mockRankHelpers
+    rankHelpers: mockRankHelpers,
+    accountService: mockAccountService
   }))
 })
 
@@ -154,7 +158,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
 
     mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(data.livestream3)
     mockChannelStore.getPrimaryUserId.calledWith(chatItem.author.channelId).mockResolvedValue(primaryUserId)
-    mockAccountStore.getConnectedChatUserIds.calledWith(primaryUserId).mockResolvedValue(connectedUserIds)
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ queriedAnyUserId: primaryUserId, connectedChatUserIds: connectedUserIds }])
     mockPunishmentService.isUserPunished.calledWith(primaryUserId, streamerId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(streamerId, primaryUserId, null).mockResolvedValue(prevData)
     mockViewershipStore.getLivestreamViewership.calledWith(streamerId, connectedUserIds).mockResolvedValue([
@@ -201,19 +205,21 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
     const streamerId = 5
     const userId1 = 1
     const userId2 = 2
+    const primaryUserId1 = 1
+    const primaryUserId2 = 3
     const channelName1 = 'channel 1'
     const channelName2 = 'channel 2'
-    const userChannel1 = cast<UserChannel>({ defaultUserId: userId1, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } })
-    const userChannel2 = cast<UserChannel>({ defaultUserId: userId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } })
-    mockChannelService.getActiveUserChannels.calledWith(streamerId, 'all').mockResolvedValue([userChannel1, userChannel2])
-    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId1, userId2]))
-      .mockResolvedValue([{ userId: userId2, experience: 811 }, { userId: userId1, experience: 130 }]) // descending order
+    const userChannel1 = cast<UserChannel>({ defaultUserId: userId1, aggregateUserId: null, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } })
+    const userChannel2 = cast<UserChannel>({ defaultUserId: userId2, aggregateUserId: primaryUserId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } })
+    mockChannelService.getActiveUserChannels.calledWith(streamerId, null).mockResolvedValue([userChannel1, userChannel2])
+    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([primaryUserId1, primaryUserId2]))
+      .mockResolvedValue([{ primaryUserId: primaryUserId2, experience: 811 }, { primaryUserId: primaryUserId1, experience: 130 }]) // descending order
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const leaderboard = await experienceService.getLeaderboard(streamerId)
 
-    const expectedEntry1: RankedEntry = { primaryUserId: userId2, channel: userChannel2, rank: 1, level: asGte(8, 0), levelProgress: asLt(0, 1) }
-    const expectedEntry2: RankedEntry = { primaryUserId: userId1, channel: userChannel1, rank: 2, level: asGte(1, 0), levelProgress: asLt(0, 1) }
+    const expectedEntry1: RankedEntry = { primaryUserId: primaryUserId2, channel: userChannel2, rank: 1, level: asGte(8, 0), levelProgress: asLt(0, 1) }
+    const expectedEntry2: RankedEntry = { primaryUserId: primaryUserId1, channel: userChannel1, rank: 2, level: asGte(1, 0), levelProgress: asLt(0, 1) }
     expect(leaderboard).toEqual([expectedEntry1, expectedEntry2])
   })
 })
@@ -221,7 +227,7 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
 describe(nameof(ExperienceService, 'getLevels'), () => {
   test('gets experience and calculates level', async () => {
     const streamerId = 5
-    const userExperiences: UserExperience[] = [{ userId: 1, experience: 0 }, { userId: 2, experience: 100 }]
+    const userExperiences: UserExperience[] = [{ primaryUserId: 1, experience: 0 }, { primaryUserId: 2, experience: 100 }]
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([1, 2])).mockResolvedValue(userExperiences)
 
     const level0: LevelData = { level: 0, levelProgress: asLt(0, 1) }
@@ -232,14 +238,14 @@ describe(nameof(ExperienceService, 'getLevels'), () => {
     const result = await experienceService.getLevels(streamerId, [1, 2])
 
     const expectedArray: UserLevel[] = [{
-      userId: 1,
+      primaryUserId: 1,
       level: {
         level: 0,
         totalExperience: 0,
         levelProgress: asLt(asGte(0), 1)
       }
     }, {
-      userId: 2,
+      primaryUserId: 2,
       level: {
         level: asGte(1, 0),
         totalExperience: asGte(100, 0),
@@ -251,13 +257,13 @@ describe(nameof(ExperienceService, 'getLevels'), () => {
 
   test('clamps negative values', async () => {
     const streamerId = 5
-    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, experience: -100 }])
+    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([1])).mockResolvedValue([{ primaryUserId: 1, experience: -100 }])
     mockExperienceHelpers.calculateLevel.calledWith(0).mockReturnValue({ level: 0, levelProgress: asLt(0, 1) })
 
     const result = await experienceService.getLevels(streamerId, [1])
 
     const expected: UserLevel = {
-      userId: 1,
+      primaryUserId: 1,
       level: {
         level: 0,
         totalExperience: 0,
@@ -272,7 +278,9 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
   test('returns empty array if there are no xp transactions', async () => {
     const streamerId = 5
     const time = data.time1.getTime()
-    mockExperienceStore.getAllTransactionsStartingAt.calledWith(streamerId, time + 1).mockResolvedValue([])
+    const primaryUserIds = [1, 2, 3]
+    mockAccountService.getStreamerPrimaryUserIds.calledWith(streamerId).mockResolvedValue(primaryUserIds)
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(streamerId, expectArray<number>(primaryUserIds), time + 1).mockResolvedValue([])
 
     const result = await experienceService.getLevelDiffs(streamerId, time)
 
@@ -288,31 +296,32 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const time6 = addTime(time1, 'seconds', 5)
     const time7 = addTime(time1, 'seconds', 6)
     const streamerId = 5
-    const userId1 = 1
-    const userId2 = 2
+    const primaryUserId1 = 1
+    const primaryUserId2 = 2
 
     const user1BaseXp = 100
     const user2BaseXp = 500
     const transactions: ExperienceTransaction[] = [
-      { id: 1, streamerId, userId: userId1, originalUserId: null, time: time3, delta: 10 },
-      { id: 2, streamerId, userId: userId1, originalUserId: null, time: time4, delta: 20 },
-      { id: 3, streamerId, userId: userId2, originalUserId: null, time: time5, delta: 150 },
-      { id: 4, streamerId, userId: userId2, originalUserId: null, time: time6, delta: 160 },
-      { id: 5, streamerId, userId: userId2, originalUserId: null, time: time7, delta: 1 },
+      { id: 1, streamerId, userId: primaryUserId1, originalUserId: null, time: time3, delta: 10 },
+      { id: 2, streamerId, userId: primaryUserId1, originalUserId: null, time: time4, delta: 20 },
+      { id: 3, streamerId, userId: primaryUserId2, originalUserId: null, time: time5, delta: 150 },
+      { id: 4, streamerId, userId: primaryUserId2, originalUserId: null, time: time6, delta: 160 },
+      { id: 5, streamerId, userId: primaryUserId2, originalUserId: null, time: time7, delta: 1 },
     ]
 
-    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId1, userId2]))
+    mockAccountService.getStreamerPrimaryUserIds.calledWith(streamerId).mockResolvedValue([primaryUserId1, primaryUserId2])
+    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([primaryUserId1, primaryUserId2]))
       .mockResolvedValue([
-        { userId: userId1, experience: user1BaseXp + 10 + 20 },
-        { userId: userId2, experience: user2BaseXp + 150 + 160 + 1}
+        { primaryUserId: primaryUserId1, experience: user1BaseXp + 10 + 20 },
+        { primaryUserId: primaryUserId2, experience: user2BaseXp + 150 + 160 + 1}
       ])
-    mockExperienceStore.getAllTransactionsStartingAt.calledWith(streamerId, time3.getTime() + 1).mockResolvedValue(transactions)
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(streamerId, expect.arrayContaining<number>([primaryUserId1, primaryUserId2]), time3.getTime() + 1).mockResolvedValue(transactions)
     mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ level: asGte(Math.floor(xp / 100), 0), levelProgress: asLt(0, 1) }))
 
     const result = await experienceService.getLevelDiffs(streamerId, time3.getTime())
 
     const diff = single(result)
-    expect(diff.userId).toBe(userId2)
+    expect(diff.primaryUserId).toBe(primaryUserId2)
     expect(diff.timestamp).toBe(time6.getTime())
     expect(diff.startLevel).toEqual(expect.objectContaining({ level: 5, totalExperience: 500 }))
     expect(diff.endLevel).toEqual(expect.objectContaining({ level: 8, totalExperience: 811 }))
@@ -323,10 +332,11 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
     const time1 = new Date()
     const time2 = addTime(time1, 'seconds', 1)
     const streamerId = 5
-    const transactions: ExperienceTransaction[] = [{ id: 1, streamerId: streamerId, userId: 1, originalUserId: null, time: time1, delta: -500 }]
-
-    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([1])).mockResolvedValue([{ userId: 1, experience: -100 }])
-    mockExperienceStore.getAllTransactionsStartingAt.calledWith(streamerId, time2.getTime() + 1).mockResolvedValue(transactions)
+    const primaryUserId = 2
+    const transactions: ExperienceTransaction[] = [{ id: 1, streamerId: streamerId, userId: primaryUserId, originalUserId: null, time: time1, delta: -500 }]
+    mockAccountService.getStreamerPrimaryUserIds.calledWith(streamerId).mockResolvedValue([primaryUserId])
+    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([primaryUserId])).mockResolvedValue([{ primaryUserId: primaryUserId, experience: -100 }])
+    mockExperienceStore.getAllTransactionsStartingAt.calledWith(streamerId, expect.arrayContaining([primaryUserId]), time2.getTime() + 1).mockResolvedValue(transactions)
 
     const result = await experienceService.getLevelDiffs(streamerId, time2.getTime())
 
@@ -337,46 +347,46 @@ describe(nameof(ExperienceService, 'getLevelDiffs'), () => {
 describe(nameof(ExperienceService, 'modifyExperience'), () => {
   test('gets the correct delta and saves rounded value to the db', async () => {
     const updatedLevel: LevelData = { level: asGte(4, 0), levelProgress: 0.1 as any }
-    const userId = 1
+    const primaryUserId = 1
     const streamerId = 5
     const loggedInRegisteredUserId = 10
-    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId]))
-      .mockResolvedValueOnce([{ userId: userId, experience: 150 }])
-      .mockResolvedValueOnce([{ userId: userId, experience: 650 }])
+    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([primaryUserId]))
+      .mockResolvedValueOnce([{ primaryUserId: primaryUserId, experience: 150 }])
+      .mockResolvedValueOnce([{ primaryUserId: primaryUserId, experience: 650 }])
     mockExperienceHelpers.calculateLevel.calledWith(asGte(150, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0.5 as any })
     mockExperienceHelpers.calculateLevel.calledWith(asGte(650, 0)).mockReturnValue(updatedLevel)
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 5 as any, levelProgress: 5.1 - 5 as any })).mockReturnValue(asGte(650.1, 0))
 
-    const result = await experienceService.modifyExperience(userId, streamerId, loggedInRegisteredUserId, 3.6, 'Test')
+    const result = await experienceService.modifyExperience(primaryUserId, streamerId, loggedInRegisteredUserId, 3.6, 'Test')
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
-    expect(call).toEqual<typeof call>([streamerId, userId, loggedInRegisteredUserId, 500, 'Test'])
-    expect(result).toEqual<UserLevel>({ userId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
+    expect(call).toEqual<typeof call>([streamerId, primaryUserId, loggedInRegisteredUserId, 500, 'Test'])
+    expect(result).toEqual<UserLevel>({ primaryUserId: primaryUserId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
   })
 
   test('level does not fall below 0', async () => {
-    const userId = 1
+    const primaryUserId = 1
     const streamerId = 5
     const loggedInRegisteredUserId = 10
-    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([userId]))
-      .mockResolvedValueOnce([{ userId: userId, experience: 100 }])
-      .mockResolvedValueOnce([{ userId: userId, experience: 0 }])
+    mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([primaryUserId]))
+      .mockResolvedValueOnce([{ primaryUserId: primaryUserId, experience: 100 }])
+      .mockResolvedValueOnce([{ primaryUserId: primaryUserId, experience: 0 }])
     mockExperienceHelpers.calculateLevel.calledWith(asGte(100, 0)).mockReturnValue({ level: asGte(1, 0), levelProgress: 0 as any })
     mockExperienceHelpers.calculateLevel.calledWith(asGte(0, 0)).mockReturnValue({ level: 0, levelProgress: 0 as any })
     mockExperienceHelpers.calculateExperience.calledWith(expect.objectContaining({ level: 0, levelProgress: 0 })).mockReturnValue(0)
 
-    const result = await experienceService.modifyExperience(userId, streamerId, loggedInRegisteredUserId, -2, 'Test')
+    const result = await experienceService.modifyExperience(primaryUserId, streamerId, loggedInRegisteredUserId, -2, 'Test')
 
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
-    expect(call).toEqual<typeof call>([streamerId, userId, loggedInRegisteredUserId, -100, 'Test'])
-    expect(result).toEqual<UserLevel>({ userId, level: { level: 0, levelProgress: 0 as any, totalExperience: 0 }})
+    expect(call).toEqual<typeof call>([streamerId, primaryUserId, loggedInRegisteredUserId, -100, 'Test'])
+    expect(result).toEqual<UserLevel>({ primaryUserId: primaryUserId, level: { level: 0, levelProgress: 0 as any, totalExperience: 0 }})
   })
 })
 
 describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
   // probably shouldn't have written a test for this, wtf
   test('Recalculates experience across all streamers', async () => {
-    const userId = 4
+    const aggregateUserId = 4
     const connectedUserIds = [4, 1, 6]
     const streamerIds = [7, 8]
 
@@ -432,11 +442,11 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     const messageQuality = 2
     const repetitionPenalty = -1 as RepetitionPenalty
 
-    mockAccountStore.getConnectedChatUserIds.calledWith(userId).mockResolvedValue(connectedUserIds)
-    mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(userId).mockResolvedValue(streamerIds)
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: aggregateUserId, connectedChatUserIds: connectedUserIds }])
+    mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(aggregateUserId).mockResolvedValue(streamerIds)
     streamerIds.forEach(sid => connectedUserIds.forEach(uid => mockPunishmentService.getPunishmentHistory.calledWith(uid, sid).mockResolvedValue([])))
-    mockExperienceStore.getAllUserChatExperience.calledWith(streamerIds[0], userId).mockResolvedValue([chatExperience1, chatExperience2])
-    mockExperienceStore.getAllUserChatExperience.calledWith(streamerIds[1], userId).mockResolvedValue([chatExperience3])
+    mockExperienceStore.getAllUserChatExperience.calledWith(streamerIds[0], aggregateUserId).mockResolvedValue([chatExperience1, chatExperience2])
+    mockExperienceStore.getAllUserChatExperience.calledWith(streamerIds[1], aggregateUserId).mockResolvedValue([chatExperience3])
     mockChatStore.getChatById.calledWith(chatMessageId1).mockResolvedValue(chatMessage1)
     mockChatStore.getChatById.calledWith(chatMessageId2).mockResolvedValue(chatMessage2)
     mockChatStore.getChatById.calledWith(chatMessageId3).mockResolvedValue(chatMessage3)
@@ -449,9 +459,9 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     mockViewershipStore.getLivestreamParticipation.calledWith(streamerIds[1], connectedUserIds).mockResolvedValue(livestreamParticipationStreamer2)
     mockExperienceHelpers.calculateParticipationMultiplier.mockImplementation(score => score + 1 as GreaterThanOrEqual<1>)
 
-    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[0], userId, chatExperience1.id).mockResolvedValue(null)
-    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[0], userId, chatExperience2.id).mockResolvedValue(chatExperience1)
-    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[1], userId, chatExperience3.id).mockResolvedValue(null)
+    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[0], aggregateUserId, chatExperience1.id).mockResolvedValue(null)
+    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[0], aggregateUserId, chatExperience2.id).mockResolvedValue(chatExperience1)
+    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[1], aggregateUserId, chatExperience3.id).mockResolvedValue(null)
     mockExperienceHelpers.calculateSpamMultiplier.calledWith(chatExperience2.time.getTime(), chatExperience1.time.getTime(), chatExperience1.experienceDataChatMessage.spamMultiplier as SpamMult).mockReturnValue(chatExperience2SpamMultiplier as SpamMult)
 
     mockExperienceHelpers.calculateChatMessageQuality.calledWith(expect.anything()).mockReturnValue(messageQuality as NumRange<0, 2>)
@@ -465,7 +475,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatExperience3.time.getTime(), expect.anything()).mockReturnValue(repetitionPenalty)
 
     // act
-    await experienceService.recalculateChatExperience(userId)
+    await experienceService.recalculateChatExperience(aggregateUserId)
 
     // assert
     expect(mockExperienceStore.modifyChatExperiences.mock.calls.length).toBe(2)
@@ -508,7 +518,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
   })
 
   test('Does not count experience for a chat message if a different, but connected, user was punished at the time', async () => {
-    const userId = 4
+    const aggregateUserId = 4
     const connectedUserIds = [4, 1]
     const streamerId = 8
     const punishment1 = cast<UserRankWithRelations>({})
@@ -524,16 +534,16 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     })
     const chatMessage = cast<ChatItemWithRelations>({ id: chatMessageId })
 
-    mockAccountStore.getConnectedChatUserIds.calledWith(userId).mockResolvedValue(connectedUserIds)
-    mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(userId).mockResolvedValue([streamerId])
-    mockPunishmentService.getPunishmentHistory.calledWith(userId, streamerId).mockResolvedValue([punishment1])
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: aggregateUserId, connectedChatUserIds: connectedUserIds }])
+    mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(aggregateUserId).mockResolvedValue([streamerId])
+    mockPunishmentService.getPunishmentHistory.calledWith(aggregateUserId, streamerId).mockResolvedValue([punishment1])
     mockPunishmentService.getPunishmentHistory.calledWith(connectedUserIds[1], streamerId).mockResolvedValue([punishment2])
-    mockExperienceStore.getAllUserChatExperience.calledWith(streamerId, userId).mockResolvedValue([chatExperience])
+    mockExperienceStore.getAllUserChatExperience.calledWith(streamerId, aggregateUserId).mockResolvedValue([chatExperience])
     mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chatMessage)
     mockRankHelpers.isRankActive.calledWith(punishment1, chatExperience.time).mockReturnValue(false)
     mockRankHelpers.isRankActive.calledWith(punishment2, chatExperience.time).mockReturnValue(true)
 
-    await experienceService.recalculateChatExperience(userId)
+    await experienceService.recalculateChatExperience(aggregateUserId)
 
     // no modifications
     const call = single(mockExperienceStore.modifyChatExperiences.mock.calls)
@@ -542,7 +552,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
   })
 
   test('Does not count experience for chat experience gained off-livestream', async () => {
-    const userId = 4
+    const aggregateUserId = 4
     const streamerId = 8
 
     const chatMessageId = 125
@@ -555,13 +565,13 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     })
     const chatMessage = cast<ChatItemWithRelations>({ id: chatMessageId })
 
-    mockAccountStore.getConnectedChatUserIds.calledWith(userId).mockResolvedValue([userId])
-    mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(userId).mockResolvedValue([streamerId])
-    mockPunishmentService.getPunishmentHistory.calledWith(userId, streamerId).mockResolvedValue([])
-    mockExperienceStore.getAllUserChatExperience.calledWith(streamerId, userId).mockResolvedValue([chatExperience])
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: aggregateUserId, connectedChatUserIds: [aggregateUserId] }])
+    mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(aggregateUserId).mockResolvedValue([streamerId])
+    mockPunishmentService.getPunishmentHistory.calledWith(aggregateUserId, streamerId).mockResolvedValue([])
+    mockExperienceStore.getAllUserChatExperience.calledWith(streamerId, aggregateUserId).mockResolvedValue([chatExperience])
     mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chatMessage)
 
-    await experienceService.recalculateChatExperience(userId)
+    await experienceService.recalculateChatExperience(aggregateUserId)
 
     // no modifications
     const call = single(mockExperienceStore.modifyChatExperiences.mock.calls)

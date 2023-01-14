@@ -1,5 +1,6 @@
 import { LinkAttempt, LinkToken, YoutubeChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import AccountService from '@rebel/server/services/AccountService'
 import CommandService, { CommandData } from '@rebel/server/services/command/CommandService'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LinkDataService, { LinkHistory } from '@rebel/server/services/LinkDataService'
@@ -16,6 +17,7 @@ let mockChannelStore: MockProxy<ChannelStore>
 let mockCommandService: MockProxy<CommandService>
 let mockLinkCommand: MockProxy<LinkCommand>
 let mockLinkStore: MockProxy<LinkStore>
+let mockAccountService: MockProxy<AccountService>
 let linkDataService: LinkDataService
 
 beforeEach(() => {
@@ -24,14 +26,15 @@ beforeEach(() => {
   mockCommandService = mock()
   mockLinkCommand = mock<LinkCommand>({ normalisedNames: ['LINK'] })
   mockLinkStore = mock()
-  linkDataService = mock()
+  mockAccountService = mock()
 
   linkDataService = new LinkDataService(new Dependencies({
     accountStore: mockAccountStore,
     channelStore: mockChannelStore,
     commandService: mockCommandService,
     linkCommand: mockLinkCommand,
-    linkStore: mockLinkStore
+    linkStore: mockLinkStore,
+    accountService: mockAccountService
   }))
 })
 
@@ -41,7 +44,7 @@ describe(nameof(LinkDataService, 'getOrCreateLinkToken'), () => {
     const defaultUserId = 5
     const externalChannelId = 'external'
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(externalChannelId).mockResolvedValue(cast<YoutubeChannel>({ userId: defaultUserId }))
-    mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue([defaultUserId])
+    mockAccountService.getPrimaryUserIdFromAnyUser.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([defaultUserId])
     const expectedToken = cast<LinkToken>({})
     mockLinkStore.getOrCreateLinkToken.calledWith(aggregateUserId, defaultUserId).mockResolvedValue(expectedToken)
 
@@ -63,7 +66,7 @@ describe(nameof(LinkDataService, 'getOrCreateLinkToken'), () => {
     const defaultUserId = 5
     const externalChannelId = 'external'
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(externalChannelId).mockResolvedValue(cast<YoutubeChannel>({ userId: defaultUserId }))
-    mockAccountStore.getConnectedChatUserIds.calledWith(defaultUserId).mockResolvedValue([aggregateUserId, defaultUserId])
+    mockAccountService.getPrimaryUserIdFromAnyUser.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([aggregateUserId])
 
     await expect(() => linkDataService.getOrCreateLinkToken(aggregateUserId, externalChannelId)).rejects.toThrowError(UserAlreadyLinkedToAggregateUserError)
   })
@@ -88,11 +91,11 @@ describe(nameof(LinkDataService, 'getLinkHistory'), () => {
     const endTime2 = addTime(endTime1, 'seconds', 1)
 
     mockCommandService.getQueuedCommands.calledWith().mockReturnValue([
-      cast<CommandData>({ normalisedName: 'LINK', arguments: [token1], userId: defaultUserId1 }),
-      cast<CommandData>({ normalisedName: 'OTHER', arguments: [], userId: 1 }),
-      cast<CommandData>({ normalisedName: 'LINK', arguments: [token2], userId: defaultUserId2 })
+      cast<CommandData>({ normalisedName: 'LINK', arguments: [token1], defaultUserId: defaultUserId1 }),
+      cast<CommandData>({ normalisedName: 'OTHER', arguments: [], defaultUserId: 1 }),
+      cast<CommandData>({ normalisedName: 'LINK', arguments: [token2], defaultUserId: defaultUserId2 })
     ])
-    mockCommandService.getRunningCommand.calledWith().mockReturnValue(cast<CommandData>({ normalisedName: 'LINK', arguments: [token3], userId: defaultUserId3 }))
+    mockCommandService.getRunningCommand.calledWith().mockReturnValue(cast<CommandData>({ normalisedName: 'LINK', arguments: [token3], defaultUserId: defaultUserId3 }))
     mockLinkStore.getAllLinkTokens.calledWith(aggregateUserId).mockResolvedValue([
       cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token4, defaultChatUserId: defaultUserId4, linkAttempt: { errorMessage: 'error', endTime: endTime1 }}),
       cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token5, defaultChatUserId: defaultUserId5, linkAttempt: null}),

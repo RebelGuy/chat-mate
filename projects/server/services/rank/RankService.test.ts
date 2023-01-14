@@ -63,7 +63,7 @@ describe(nameof(RankService, 'transferRanks'), () => {
       assignedByRegisteredUserId: 4,
       expirationTime: null
     })
-    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ userId: fromUserId, ranks: [rank1, rank2, rank3] })
+    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1, rank2, rank3] })
 
     const result = await rankService.transferRanks(fromUserId, toUserId, '', true, [])
 
@@ -84,7 +84,7 @@ describe(nameof(RankService, 'transferRanks'), () => {
       assignedByRegisteredUserId: 2,
       expirationTime: null
     })
-    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ userId: fromUserId, ranks: [rank1] })
+    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1] })
 
     const result = await rankService.transferRanks(fromUserId, toUserId, '', false, [])
 
@@ -105,9 +105,9 @@ describe(nameof(RankService, 'transferRanks'), () => {
       assignedByRegisteredUserId: 2,
       expirationTime: null
     })
-    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ userId: fromUserId, ranks: [rank1] })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ streamerId: streamerId, chatUserId: fromUserId, rank: 'famous' })).mockRejectedValue(new UserRankNotFoundError())
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId, chatUserId: toUserId, rank: 'famous' })).mockRejectedValue(new UserRankAlreadyExistsError())
+    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1] })
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ streamerId: streamerId, primaryUserId: fromUserId, rank: 'famous' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId, primaryUserId: toUserId, rank: 'famous' })).mockRejectedValue(new UserRankAlreadyExistsError())
 
     const result = await rankService.transferRanks(fromUserId, toUserId, '', true, [])
 
@@ -132,7 +132,7 @@ describe(nameof(RankService, 'transferRanks'), () => {
       assignedByRegisteredUserId: 3,
       expirationTime: new Date()
     })
-    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ userId: fromUserId, ranks: [rank1, rank2] })
+    mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1, rank2] })
 
     const result = await rankService.transferRanks(fromUserId, toUserId, '', true, ['famous'])
 
@@ -232,7 +232,7 @@ describe(nameof(RankService, 'mergeRanks'), () => {
     const removalCalls = mockRankStore.removeUserRank.mock.calls.map(args => single(args))
     expect(removalCalls.length).toBe(1)
     expect(removalCalls).toEqual([
-      expectObject<Singular<typeof removalCalls>>({ chatUserId: defaultUser, rank: 'owner' }),
+      expectObject<Singular<typeof removalCalls>>({ primaryUserId: defaultUser, rank: 'owner' }),
     ])
 
     const updateCalls = mockRankStore.updateRankExpiration.mock.calls
@@ -241,7 +241,7 @@ describe(nameof(RankService, 'mergeRanks'), () => {
     const addCalls = mockRankStore.addUserRank.mock.calls.map(args => single(args))
     expect(addCalls.length).toBe(1)
     expect(addCalls).toEqual([
-      expectObject<Singular<typeof addCalls>>({ chatUserId: aggregateUser, rank: 'owner', expirationTime: ranks1.ranks[0].expirationTime }),
+      expectObject<Singular<typeof addCalls>>({ primaryUserId: aggregateUser, rank: 'owner', expirationTime: ranks1.ranks[0].expirationTime }),
     ])
 
     expect(mergeResult.oldRanks.length).toBe(1)
@@ -283,8 +283,8 @@ describe(nameof(RankService, 'mergeRanks'), () => {
     const removalCalls = mockRankStore.removeUserRank.mock.calls.map(args => single(args))
     expect(removalCalls.length).toBe(2)
     expect(removalCalls).toEqual([
-      expectObject<Singular<typeof removalCalls>>({ chatUserId: defaultUser, rank: 'owner' }),
-      expectObject<Singular<typeof removalCalls>>({ chatUserId: defaultUser, rank: 'famous' })
+      expectObject<Singular<typeof removalCalls>>({ primaryUserId: defaultUser, rank: 'owner' }),
+      expectObject<Singular<typeof removalCalls>>({ primaryUserId: defaultUser, rank: 'famous' })
     ])
 
     const updateCalls = mockRankStore.updateRankExpiration.mock.calls
@@ -331,8 +331,8 @@ describe(nameof(RankService, 'mergeRanks'), () => {
     const removalCalls = mockRankStore.removeUserRank.mock.calls.map(args => single(args))
     expect(removalCalls.length).toBe(2)
     expect(removalCalls).toEqual([
-      expectObject<Singular<typeof removalCalls>>({ chatUserId: defaultUser, rank: 'owner' }),
-      expectObject<Singular<typeof removalCalls>>({ chatUserId: defaultUser, rank: 'famous' })
+      expectObject<Singular<typeof removalCalls>>({ primaryUserId: defaultUser, rank: 'owner' }),
+      expectObject<Singular<typeof removalCalls>>({ primaryUserId: defaultUser, rank: 'famous' })
     ])
 
     const updateCalls = mockRankStore.updateRankExpiration.mock.calls
@@ -372,9 +372,9 @@ describe(nameof(RankService, 'mergeRanks'), () => {
     const removedRank1 = cast<UserRankWithRelations>({ id: 1 })
     const removedRank2 = cast<UserRankWithRelations>({ id: 2 })
     const removedRank3 = cast<UserRankWithRelations>({ id: 3 })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'owner', chatUserId: defaultUser })).mockResolvedValue(removedRank1)
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'famous', chatUserId: defaultUser })).mockResolvedValue(removedRank2)
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'famous', chatUserId: aggregateUser })).mockResolvedValue(removedRank3)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'owner', primaryUserId: defaultUser })).mockResolvedValue(removedRank1)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'famous', primaryUserId: defaultUser })).mockResolvedValue(removedRank2)
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'famous', primaryUserId: aggregateUser })).mockResolvedValue(removedRank3)
 
     // act
     const result = await rankService.mergeRanks(defaultUser, aggregateUser, ['owner', 'famous'], '')
@@ -414,11 +414,11 @@ describe(nameof(RankService, 'mergeRanks'), () => {
     mockRankStore.getAllUserRanks.calledWith(defaultUser).mockResolvedValue(ranks1)
     mockRankStore.getAllUserRanks.calledWith(aggregateUser).mockResolvedValue(ranks2)
 
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'famous', chatUserId: defaultUser })).mockRejectedValue(new UserRankNotFoundError())
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'member', chatUserId: defaultUser })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'famous', primaryUserId: defaultUser })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'member', primaryUserId: defaultUser })).mockRejectedValue(new UserRankNotFoundError())
     mockRankStore.updateRankExpiration.calledWith(ranks2.ranks[0].id, ranks1.ranks[0].expirationTime).mockRejectedValue(new UserRankNotFoundError())
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'ban', chatUserId: aggregateUser })).mockRejectedValue(new UserRankNotFoundError())
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ rank: 'member', chatUserId: aggregateUser })).mockRejectedValue(new UserRankAlreadyExistsError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'ban', primaryUserId: aggregateUser })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ rank: 'member', primaryUserId: aggregateUser })).mockRejectedValue(new UserRankAlreadyExistsError())
 
     // act
     const result = await rankService.mergeRanks(defaultUser, aggregateUser, ['ban'], '')

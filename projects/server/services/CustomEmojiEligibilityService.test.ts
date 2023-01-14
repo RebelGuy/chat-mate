@@ -130,7 +130,7 @@ function setupLevel (level: number) {
   mockExperienceService.getLevels
     .calledWith(streamerId, expect.arrayContaining([userId]))
     .mockResolvedValue([{
-      userId: userId,
+      primaryUserId: userId,
       level: { level: asGte(level, 0), levelProgress: asLte(0, 1), totalExperience: 0 }
     }])
 }
@@ -139,7 +139,7 @@ function setupUserRanks (...ranks: Rank[]) {
   mockRankStore.getUserRanks
     .calledWith(expectArray<number>([userId]), streamerId)
     .mockResolvedValue([{
-      userId,
+      primaryUserId: userId,
       ranks: ranks.map(r => cast<UserRankWithRelations>({ rank: r }))
     }])
 }
