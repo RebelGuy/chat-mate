@@ -9,7 +9,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import RankStore, { UserRanks } from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { single, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { single, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { InvalidUsernameError, PreProcessorError } from '@rebel/server/util/error'
 import { Request, Response } from 'express'
 import { Errors } from 'typescript-rest'
@@ -158,6 +158,7 @@ export default class ApiService extends ContextClass {
   }
 
   public async getAllData (primaryUserIds: number[]): Promise<(UserChannel & UserRanks & UserLevel & { registeredUser: RegisteredUser | null })[]> {
+    primaryUserIds = unique(primaryUserIds)
     const activeUserChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), primaryUserIds)
       .then(channels => channels.map(c => ({ ...c, primaryUserId: getPrimaryUserId(c) })))
     const levels = await this.experienceService.getLevels(this.getStreamerId(), primaryUserIds)

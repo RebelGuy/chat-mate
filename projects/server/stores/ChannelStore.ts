@@ -292,7 +292,14 @@ export default class ChannelStore extends ContextClass {
     const aggregateChannels = await this.getAggregateUserOwnedChannels(aggregateUserIds)
 
     // the `userId` should be for the default user, NOT the aggregate user
-    const aggregateChannelsRerouted = aggregateChannels.map(c => ({ ...c, userId: linkedUsers.find(user => user.aggregateChatUserId === c.userId)!.id }))
+    let aggregateChannelsRerouted: UserOwnedChannels[] = []
+    for (const aggregateChannel of aggregateChannels) {
+      // it is possible that multiple queried user ids reference the same aggregate channel. our results should include each queried user once with no duplicates
+      const allIds = linkedUsers.filter(user => user.aggregateChatUserId === aggregateChannel.aggregateUserId).map(user => user.id)
+      const usedIds = aggregateChannelsRerouted.filter(c => c.aggregateUserId === aggregateChannel.aggregateUserId).map(c => c.userId)
+      const thisId = allIds.find(id => !usedIds.includes(id))!
+      aggregateChannelsRerouted.push({ ...aggregateChannel, userId: thisId })
+    }
 
     const linkedUserIds = linkedUsers.map(user => user.id)
     const unlinkedUserIds = defaultUserIds.filter(id => !linkedUserIds.includes(id))
