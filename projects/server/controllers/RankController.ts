@@ -19,7 +19,7 @@ import { requireAuth, requireRank, requireStreamer } from '@rebel/server/control
 import AccountService from '@rebel/server/services/AccountService'
 import { getUserName } from '@rebel/server/services/ChannelService'
 
-type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
+export type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
 
 export type GetAccessibleRanksResponse = ApiResponse<1, { accessibleRanks: PublicRank[] }>
 
@@ -77,7 +77,6 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('rank'))
-@PreProcessor(requireStreamer)
 export default class RankController extends ControllerBase {
   private readonly modService: ModService
   private readonly channelStore: ChannelStore
@@ -95,24 +94,24 @@ export default class RankController extends ControllerBase {
   }
 
   @GET
-  @PreProcessor(requireRank('owner'))
+  @PreProcessor(requireAuth)
   public async getUserRanks (
-    @QueryParam('userId') anyUserId: number,
+    @QueryParam('userId') anyUserId?: number,
     @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active ranks
   ): Promise<GetUserRanksResponse> {
     const builder = this.registerResponseBuilder<GetUserRanksResponse>('GET', 1)
-    if (anyUserId == null) {
-      return builder.failure(400, 'A user ID must be provided')
-    }
 
     try {
+      if (anyUserId == null) {
+        anyUserId = this.getCurrentUser().aggregateChatUserId
+      }
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
 
       let ranks: UserRankWithRelations[]
       if (includeInactive === true) {
-        ranks = await this.rankStore.getUserRankHistory(primaryUserId, this.getStreamerId())
+        ranks = await this.rankStore.getUserRankHistory(primaryUserId, this.getStreamerId(true))
       } else {
-        ranks = single(await this.rankStore.getUserRanks([primaryUserId], this.getStreamerId())).ranks
+        ranks = single(await this.rankStore.getUserRanks([primaryUserId], this.getStreamerId(true))).ranks
       }
 
       ranks = sortBy(ranks, p => p.issuedAt.getTime(), 'desc')
@@ -124,6 +123,7 @@ export default class RankController extends ControllerBase {
 
   @GET
   @Path('/accessible')
+  @PreProcessor(requireStreamer)
   public async getAccessibleRanks (): Promise<GetAccessibleRanksResponse> {
     const builder = this.registerResponseBuilder<GetAccessibleRanksResponse>('GET /accessible', 1)
     const accessibleRanks = await this.rankService.getAccessibleRanks()
@@ -137,6 +137,7 @@ export default class RankController extends ControllerBase {
   }
 
   @POST
+  @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async addUserRank (request: AddUserRankRequest): Promise<AddUserRankResponse> {
     const builder = this.registerResponseBuilder<AddUserRankResponse>('POST', 1)
@@ -167,6 +168,7 @@ export default class RankController extends ControllerBase {
   }
 
   @DELETE
+  @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async removeUserRank (request: RemoveUserRankRequest): Promise<RemoveUserRankResponse> {
     const builder = this.registerResponseBuilder<RemoveUserRankResponse>('DELETE', 1)
@@ -197,6 +199,7 @@ export default class RankController extends ControllerBase {
 
   @POST
   @Path('/mod')
+  @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async addModRank (request: AddModRankRequest): Promise<AddModRankResponse> {
     const builder = this.registerResponseBuilder<AddModRankResponse>('POST /mod', 1)
@@ -219,6 +222,7 @@ export default class RankController extends ControllerBase {
 
   @DELETE
   @Path('/mod')
+  @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async removeModRank (request: RemoveModRankRequest): Promise<RemoveModRankResponse> {
     const builder = this.registerResponseBuilder<RemoveModRankResponse>('DELETE /mod', 1)

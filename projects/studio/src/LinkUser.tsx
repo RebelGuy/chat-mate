@@ -1,25 +1,39 @@
+import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import { GetLinkTokensResponse } from '@rebel/server/controllers/UserController'
 import { sortBy } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { createLinkToken, getLinkedChannels, getLinkTokens } from '@rebel/studio/api'
+import { createLinkToken, getGlobalRanks, getLinkedChannels, getLinkTokens, removeLinkedChannel } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import * as React from 'react'
 
 export default function LinkUser () {
   const [updateToken, setUpdateToken] = React.useState(Date.now())
+  const [userRanks, setUserRanks] = React.useState<PublicUserRank[]>([])
 
   const regenerateUpdateToken = () => setUpdateToken(Date.now())
+  const getRanks = async (loginToken: string) => {
+    const response = await getGlobalRanks(loginToken)
+
+    if (response.success) {
+      setUserRanks(response.data.ranks)
+    }
+
+    return response
+  }
+
+  const isAdmin = userRanks.find(r => r.rank.name === 'admin') != null
 
   return (
     <div>
+      <ApiRequest onDemand token={updateToken} onRequest={getRanks} />
       <button style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>Refresh</button>
       <div style={{ marginBottom: 16 }}>
         <ApiRequest onDemand token={updateToken} onRequest={getLinkedChannels}>
           {(response, loadingNode, errorNode) => <>
-            {response && <LinkedChannels channels={response.channels} />}
+            {response && <LinkedChannels channels={response.channels} isAdmin={isAdmin} onChange={regenerateUpdateToken} />}
             {loadingNode}
             {errorNode}
           </>}
@@ -39,7 +53,8 @@ export default function LinkUser () {
   )
 }
 
-function LinkedChannels (props: { channels: PublicChannelInfo[] }) {
+function LinkedChannels (props: { channels: PublicChannelInfo[], isAdmin: boolean, onChange: () => void }) {
+  
   if (props.channels.length === 0) {
     return <div>
       No YouTube or Twitch channels are linked. Create a new link using the below input field.
@@ -50,12 +65,47 @@ function LinkedChannels (props: { channels: PublicChannelInfo[] }) {
     <tr>
       <th>Channel name</th>
       <th>Platform</th>
+      {props.isAdmin && <th></th>}
     </tr>
     {props.channels.map(c => <tr>
       <td><a href={getChannelUrl(c)}>{c.channelName}</a></td>
       <td>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</td>
+      {props.isAdmin && <UnlinkUser channel={c} onChange={props.onChange} />}
     </tr>)}
   </table>
+}
+
+function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }) {
+  const [transferRanks, setTransferRanks] = React.useState(true)
+  const [relinkChatExperience, setRelinkChatExperience] = React.useState(true)
+
+  const removeLink = async (loginToken: string) => {
+    const result = await removeLinkedChannel(loginToken, props.channel.defaultUserId, transferRanks, relinkChatExperience)
+
+    if (result.success) {
+      props.onChange()
+    }
+
+    return result
+  }
+
+  return (
+    <ApiRequestTrigger onRequest={removeLink}>
+      {(onMakeRequest, response, loading, error) => <>
+        <td>
+          <div style={{ display: 'flex' }}>
+            <input type="checkbox" name="Transfer ranks" checked={transferRanks} onChange={() => setTransferRanks(!transferRanks)} />
+            <label>Transfer ranks</label>
+          </div>
+          <div style={{ display: 'flex' }}>
+            <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
+            <label>Relink chat experience</label>
+          </div>
+          <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
+        </td>
+      </>}
+    </ApiRequestTrigger>
+  )
 }
 
 function LinkHistory (props: { data: Extract<GetLinkTokensResponse, { success: true }>['data'] }) {

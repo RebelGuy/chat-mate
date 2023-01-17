@@ -9,7 +9,7 @@ import AccountService, { getPrimaryUserId } from '@rebel/server/services/Account
 import ChannelService, { getExternalIdOrUserName, getUserName, getUserNameFromChannelInfo } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
-import LinkService from '@rebel/server/services/LinkService'
+import LinkService, { UnlinkUserOptions } from '@rebel/server/services/LinkService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
@@ -19,7 +19,7 @@ import { single, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { assertUnreachable } from '@rebel/server/util/typescript'
-import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
+import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 type SearchUserRequest = ApiRequest<4, {
   schema: 4,
@@ -33,6 +33,8 @@ type SearchUserResponse = ApiResponse<4, {
 export type GetLinkedChannelsResponse = ApiResponse<1, {
   channels: PublicChannelInfo[]
 }>
+
+export type RemoveLinkedChannelResponse = ApiResponse<1, EmptyObject>
 
 export type GetLinkTokensResponse = ApiResponse<1, {
   tokens: PublicLinkToken[]
@@ -49,6 +51,7 @@ type Deps = ControllerDependencies<{
   rankStore: RankStore
   linkDataService: LinkDataService
   accountStore: AccountStore
+  linkService: LinkService
 }>
 
 @Path(buildPath('user'))
@@ -59,6 +62,7 @@ export default class UserController extends ControllerBase {
   readonly rankStore: RankStore
   readonly linkDataService: LinkDataService
   readonly accountStore: AccountStore
+  readonly linkService: LinkService
 
   constructor (deps: Deps) {
     super(deps, 'user')
@@ -68,6 +72,7 @@ export default class UserController extends ControllerBase {
     this.rankStore = deps.resolve('rankStore')
     this.linkDataService = deps.resolve('linkDataService')
     this.accountStore = deps.resolve('accountStore')
+    this.linkService = deps.resolve('linkService')
   }
 
   @POST
@@ -135,6 +140,32 @@ export default class UserController extends ControllerBase {
           channelName: getUserName(channel)
         }))
       })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @DELETE
+  @Path('link/channels/:defaultUserId')
+  @PreProcessor(requireRank('admin'))
+  public async removeLinkedChannel (
+    @PathParam('defaultUserId') defaultUserId: number,
+    @QueryParam('transferRanks') transferRanks?: boolean,
+    @QueryParam('relinkChatExperience') relinkChatExperience?: boolean
+  ): Promise<RemoveLinkedChannelResponse> {
+    const builder = this.registerResponseBuilder<RemoveLinkedChannelResponse>('DELETE /link/channels/:defaultUserId', 1)
+
+    if (defaultUserId == null) {
+      return builder.failure(400, 'Default user id must be provided.')
+    }
+
+    try {
+      const options: UnlinkUserOptions = {
+        transferRanks: transferRanks ?? true,
+        relinkChatExperience: relinkChatExperience ?? true
+      }
+      await this.linkService.unlinkUser(defaultUserId, options)
+      return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
     }

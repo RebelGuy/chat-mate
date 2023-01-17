@@ -582,10 +582,10 @@ Note: For punishment-specific functionality, refer to the [punishment endpoints]
 ### `GET`
 *Current schema: 1.*
 
-Gets the list of current or historical user-ranks.
+Gets the list of current or historical user-ranks. If the streamer header is provided, returns ranks for the streamer and global ranks, otherwise returns global ranks only.
 
 Query parameters:
-- `userId` (`number`): *Required.* The ID of the user for which to get the list of ranks.
+- `userId` (`number`): *Optional.* The ID of the user for which to get the list of ranks. Defaults to the logged-in user.
 - `includeInactive` (`boolean`): *Optional.* If true, returns the list of historical ranks (active and inactive) for a user. If false, returns only ranks that are currently active.
 
 Returns data with the following properties:
@@ -765,6 +765,14 @@ Gets the list of channels linked to the logged-in user.
 
 Returns data with the following properties:
 - `channels` (`PublicChannelInfo[]`): The channels linked to the user.
+
+### `DELETE /link/channels/:defaultUserId`
+
+Removes the link between the given default user with its aggregate user.
+
+Query parameters:
+- `transferRanks` (`boolean`): *Optional.* Whether to copy the current aggregate user's ranks to the default user. Does not affect the aggregate user's ranks. Defaults to `true`.
+- `relinkChatExperience` (`boolean`): *Optional.* Whether to relink any chat experience earned by the default user before or during the current link back to the default user. This will affect the aggregate user's level. Defaults to `true`.
 
 ### `GET /link/token`
 
