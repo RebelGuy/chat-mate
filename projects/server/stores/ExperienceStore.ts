@@ -225,7 +225,7 @@ export default class ExperienceStore extends ContextClass {
     })
   }
 
-  // new method for undoing link
+  /** Updates experience transactions (across all streamers) that originally linked to the `fromUserId` to now point to that user again. */
   public async undoChatExperienceRelink (originalUserId: number) {
     await this.db.experienceTransaction.updateMany({
       where: { originalUserId: originalUserId },

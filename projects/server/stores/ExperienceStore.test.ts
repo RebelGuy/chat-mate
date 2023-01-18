@@ -610,7 +610,7 @@ export default () => {
   })
 
   describe(nameof(ExperienceStore, 'relinkChatExperience'), () => {
-    test('Updates all transactions across several', async () => {
+    test('Updates all transactions across several streamers', async () => {
       await db.experienceTransaction.createMany({ data: [
         { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
         { streamerId: streamer1, userId: user2, delta: 2, time: data.time1 },
@@ -626,7 +626,7 @@ export default () => {
   })
 
   describe(nameof(ExperienceStore, 'undoChatExperienceRelink'), () => {
-    test('Updates all transactions across several', async () => {
+    test('Updates all transactions across several streamers', async () => {
       await db.experienceTransaction.createMany({ data: [
         { streamerId: streamer1, userId: user1, originalUserId: user3, delta: 1, time: data.time1 },
         { streamerId: streamer2, userId: user2, originalUserId: user3, delta: 2, time: data.time1 },

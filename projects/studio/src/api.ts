@@ -128,8 +128,8 @@ export async function getLinkedChannels (loginToken: string): Promise<GetLinkedC
   return await GET('/user/link/channels', loginToken)
 }
 
-export async function removeLinkedChannel (loginToken: string, defaultUserId: number, transferRanks: boolean, relinkChatExperience: boolean): Promise<RemoveLinkedChannelResponse> {
-  return await DELETE(`/user/link/channels/${defaultUserId}?transferRanks=${transferRanks}&relinkChatExperience=${relinkChatExperience}`, null, loginToken)
+export async function removeLinkedChannel (loginToken: string, defaultUserId: number, transferRanks: boolean, relinkChatExperience: boolean, relinkDonations: boolean): Promise<RemoveLinkedChannelResponse> {
+  return await DELETE(`/user/link/channels/${defaultUserId}?transferRanks=${transferRanks}&relinkChatExperience=${relinkChatExperience}&relinkDonations=${relinkDonations}`, null, loginToken)
 }
 
 export async function getLinkTokens (loginToken: string): Promise<GetLinkTokensResponse> {

@@ -6,6 +6,7 @@ import ModService from '@rebel/server/services/rank/ModService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import RankService, { MergeResult } from '@rebel/server/services/rank/RankService'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import DonationStore from '@rebel/server/stores/DonationStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
@@ -23,6 +24,7 @@ let mockLinkStore: MockProxy<LinkStore>
 let mockModService: MockProxy<ModService>
 let mockPunishmentService: MockProxy<PunishmentService>
 let mockRankService: MockProxy<RankService>
+let mockDonationStore: MockProxy<DonationStore>
 let linkService: LinkService
 
 beforeEach(() => {
@@ -34,6 +36,7 @@ beforeEach(() => {
   mockModService = mock()
   mockPunishmentService = mock()
   mockRankService = mock()
+  mockDonationStore = mock()
 
   linkService = new LinkService(new Dependencies({
     logService: mock(),
@@ -44,7 +47,8 @@ beforeEach(() => {
     linkStore: mockLinkStore,
     modService: mockModService,
     punishmentService: mockPunishmentService,
-    rankService: mockRankService
+    rankService: mockRankService,
+    donationStore: mockDonationStore
   }))
 })
 
@@ -64,6 +68,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockLinkStore.addLinkAttemptToLinkToken.mock.calls)).toEqual([linkToken, linkAttemptId])
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
+    expect(single(mockDonationStore.relinkDonation.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true, expect.anything()])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
@@ -82,6 +87,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
 
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
+    expect(single(mockDonationStore.relinkDonation.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankService.mergeRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.anything(), expect.any(String)])
     expect(single(mockDonationService.reEvaluateDonationRanks.mock.calls)).toEqual([aggregateUserId, expect.any(String), expect.any(String)])
     expect(single(mockExperienceService.recalculateChatExperience.mock.calls)).toEqual([aggregateUserId])
@@ -255,9 +261,10 @@ describe(nameof(LinkService, 'linkUser'), () => {
       mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
       mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
 
-      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })
+      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })
 
       expect(single(mockExperienceStore.undoChatExperienceRelink.mock.calls)).toEqual([defaultUserId])
+      expect(single(mockDonationStore.undoDonationRelink.mock.calls)).toEqual([defaultUserId])
       expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), true, expect.anything()])
       expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
     })
@@ -271,9 +278,10 @@ describe(nameof(LinkService, 'linkUser'), () => {
       mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
       mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
 
-      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false })
+      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false, relinkDonations: false })
 
       expect(mockExperienceStore.undoChatExperienceRelink.mock.calls.length).toBe(0)
+      expect(mockDonationStore.undoDonationRelink.mock.calls.length).toBe(0)
       expect(mockRankService.transferRanks.mock.calls.length).toBe(0)
       expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
     })
@@ -288,9 +296,10 @@ describe(nameof(LinkService, 'linkUser'), () => {
       mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
       mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
 
-      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })
+      await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })
 
       expect(single(mockExperienceStore.undoChatExperienceRelink.mock.calls)).toEqual([defaultUserId])
+      expect(single(mockDonationStore.undoDonationRelink.mock.calls)).toEqual([defaultUserId])
       expect(single(mockRankService.transferRanks.mock.calls)).toEqual([aggregateUserId, defaultUserId, expect.any(String), false, expect.anything()]) // important - keep existing ranks of the aggreagte user
       expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
     })
@@ -306,7 +315,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
       mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
       mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean), expect.anything()).mockRejectedValue(new Error())
 
-      await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })).rejects.toThrow()
+      await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })).rejects.toThrow()
 
       expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), expect.any(String)])
     })
@@ -317,7 +326,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
 
       mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId,).mockRejectedValue(new LinkAttemptInProgressError(''))
 
-      await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true })).rejects.toThrowError(LinkAttemptInProgressError)
+      await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })).rejects.toThrowError(LinkAttemptInProgressError)
 
       expect(mockLinkStore.completeLinkAttempt.mock.calls.length).toBe(0)
     })

@@ -8,6 +8,7 @@ import ModService from '@rebel/server/services/rank/ModService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import RankService, { MergeResult, SetActionRankResult } from '@rebel/server/services/rank/RankService'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import DonationStore from '@rebel/server/stores/DonationStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
@@ -22,8 +23,11 @@ export type UnlinkUserOptions = {
   /** If true, will copy any ranks that the aggregate user had to the default user (does not include external ranks). */
   transferRanks: boolean
 
-  /** If true, will relink any chat experience that the user originally had at the time of linking back to this user. */
+  /** If true, will relink back to this user any chat experience that the user was originally associated with at the time of linking. */
   relinkChatExperience: boolean
+
+  /** If true, will relink back to this user any donations that the user was originally associated with at the time of linking. */
+  relinkDonations: boolean
 
   // todo:
   // reEvaluateDonations: boolean
@@ -40,6 +44,7 @@ type Deps = Dependencies<{
   donationService: DonationService
   experienceService: ExperienceService
   modService: ModService
+  donationStore: DonationStore
 }>
 
 export default class LinkService extends ContextClass {
@@ -54,6 +59,7 @@ export default class LinkService extends ContextClass {
   private readonly donationService: DonationService
   private readonly experienceService: ExperienceService
   private readonly modService: ModService
+  private readonly donationStore: DonationStore
 
   constructor (deps: Deps) {
     super()
@@ -66,6 +72,7 @@ export default class LinkService extends ContextClass {
     this.donationService = deps.resolve('donationService')
     this.experienceService = deps.resolve('experienceService')
     this.modService = deps.resolve('modService')
+    this.donationStore = deps.resolve('donationStore')
   }
 
   /** Links the default user to the aggregate user and performs all required side effects.
@@ -85,6 +92,9 @@ export default class LinkService extends ContextClass {
 
       await this.experienceStore.relinkChatExperience(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(ExperienceStore, 'relinkChatExperience'), cumWarnings])
+
+      await this.donationStore.relinkDonation(defaultUserId, aggregateUserId)
+      logs.push([new Date(), nameof(DonationStore, 'relinkDonation'), cumWarnings])
 
       const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
       if (connectedUserIds.length === 2) {
@@ -146,6 +156,11 @@ export default class LinkService extends ContextClass {
       if (options.relinkChatExperience) {
         await this.experienceStore.undoChatExperienceRelink(defaultUserId)
         logs.push([new Date(), nameof(ExperienceStore, 'undoChatExperienceRelink'), cumWarnings])
+      }
+
+      if (options.relinkDonations) {
+        await this.donationStore.undoDonationRelink(defaultUserId)
+        logs.push([new Date(), nameof(DonationStore, 'undoDonationRelink'), cumWarnings])
       }
 
       const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds

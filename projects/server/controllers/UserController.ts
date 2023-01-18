@@ -151,7 +151,8 @@ export default class UserController extends ControllerBase {
   public async removeLinkedChannel (
     @PathParam('defaultUserId') defaultUserId: number,
     @QueryParam('transferRanks') transferRanks?: boolean,
-    @QueryParam('relinkChatExperience') relinkChatExperience?: boolean
+    @QueryParam('relinkChatExperience') relinkChatExperience?: boolean,
+    @QueryParam('relinkDonations') relinkDonations?: boolean
   ): Promise<RemoveLinkedChannelResponse> {
     const builder = this.registerResponseBuilder<RemoveLinkedChannelResponse>('DELETE /link/channels/:defaultUserId', 1)
 
@@ -162,7 +163,8 @@ export default class UserController extends ControllerBase {
     try {
       const options: UnlinkUserOptions = {
         transferRanks: transferRanks ?? true,
-        relinkChatExperience: relinkChatExperience ?? true
+        relinkChatExperience: relinkChatExperience ?? true,
+        relinkDonations: relinkDonations ?? true
       }
       await this.linkService.unlinkUser(defaultUserId, options)
       return builder.success({})

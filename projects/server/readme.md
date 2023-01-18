@@ -772,7 +772,8 @@ Removes the link between the given default user with its aggregate user.
 
 Query parameters:
 - `transferRanks` (`boolean`): *Optional.* Whether to copy the current aggregate user's ranks to the default user. Does not affect the aggregate user's ranks. Defaults to `true`.
-- `relinkChatExperience` (`boolean`): *Optional.* Whether to relink any chat experience earned by the default user before or during the current link back to the default user. This will affect the aggregate user's level. Defaults to `true`.
+- `relinkChatExperience` (`boolean`): *Optional.* Whether to relink back to the default user any chat experience earned by that default user before or during the current link. This will affect the aggregate user's level. Defaults to `true`.
+- `relinkDonations` (`boolean`): *Optional.* Whether to relink back to the default user any donations assigned to that default user before or during the current link. Defaults to `true`.
 
 ### `GET /link/token`
 

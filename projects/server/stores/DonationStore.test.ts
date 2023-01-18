@@ -298,6 +298,26 @@ export default () => {
     })
   })
 
+  describe(nameof(DonationStore, 'relinkDonation'), () => {
+    test('Updates all donation links of the given user', async () => {
+      const user1 = await db.chatUser.create({ data: {}})
+      const user2 = await db.chatUser.create({ data: {}})
+      const user3 = await db.chatUser.create({ data: {}})
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user2.id, type: 'internal' })
+
+      await donationStore.relinkDonation(user1.id, user3.id)
+
+      const stored = await db.donationLink.findMany({})
+      expect(stored).toEqual(expectObject(stored, [
+        { linkedUserId: user3.id, originalLinkedUserId: user1.id },
+        { linkedUserId: user3.id, originalLinkedUserId: user1.id },
+        { linkedUserId: user2.id, originalLinkedUserId: null }
+      ]))
+    })
+  })
+
   describe(nameof(DonationStore, 'setStreamlabsSocketToken'), () => {
     const streamer1Token = 'streamer1Token'
     const streamer2Token = 'streamer2Token'
@@ -341,6 +361,28 @@ export default () => {
 
       expect(result).toBe(true)
       await expectRowCount(db.streamlabsSocketToken).toBe(0)
+    })
+  })
+
+  describe(nameof(DonationStore, 'undoDonationRelink'), () => {
+    test('Updates all donation links of the given user', async () => {
+      const user1 = await db.chatUser.create({ data: {}})
+      const user2 = await db.chatUser.create({ data: {}})
+      const user3 = await db.chatUser.create({ data: {}})
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user2.id, type: 'internal' })
+
+      await donationStore.relinkDonation(user1.id, user3.id)
+
+      await donationStore.undoDonationRelink(user1.id)
+
+      const stored = await db.donationLink.findMany({})
+      expect(stored).toEqual(expectObject(stored, [
+        { linkedUserId: user1.id, originalLinkedUserId: null },
+        { linkedUserId: user1.id, originalLinkedUserId: null },
+        { linkedUserId: user2.id, originalLinkedUserId: null }
+      ]))
     })
   })
 

@@ -106,7 +106,8 @@ model ChatUser {
   receivedPunishments            Punishment[]            @relation("punishment_user")
   administeredPunishments        Punishment[]            @relation("punishment_adminUser")
   userRanks                      UserRank[]              @relation("user_rank_userId")
-  donationLinks                  DonationLink[]
+  donationLinks                  DonationLink[]          @relation("donation_link_linkedUser")
+  originalDonationLinks          DonationLink[]          @relation("donation_link_originalLinkedUser")
   registeredUser                 RegisteredUser?
   linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
   linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
@@ -820,11 +821,17 @@ model DonationLink {
 
   linkedAt DateTime
 
+  /// The user to which the link identifier is currently linked to
   linkedUserId Int
-  linkedUser   ChatUser @relation(fields: [linkedUserId], references: [id], map: "donation_link_linkedUserId_fkey")
+  linkedUser   ChatUser @relation(name: "donation_link_linkedUser", fields: [linkedUserId], references: [id], map: "donation_link_linkedUserId_fkey")
+
+  /// The user to which the link identifier was originally linked to. If null, the link identifier has not been re-linked and the original user is implied to be identical to the current user.
+  originalLinkedUserId Int?
+  originalLinkedUser   ChatUser? @relation(name: "donation_link_originalLinkedUser", fields: [originalLinkedUserId], references: [id], map: "donation_link_originalLinkedUserId_fkey")
 
   @@unique([linkIdentifier], map: "donation_link_linkIdentifier_key")
   // one-to-one mapping
   @@unique([linkIdentifier, linkedUserId], map: "donation_link_linkIdentifier_linkedUserId_key")
+  @@index([originalLinkedUserId], map: "donation_link_originalLinkedUserId_fkey")
   @@map("donation_link")
 }

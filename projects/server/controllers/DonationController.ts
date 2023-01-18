@@ -31,10 +31,6 @@ export type GetStreamlabsStatusResponse = ApiResponse<1, { status: 'notListening
 type Deps = ControllerDependencies<{
   donationService: DonationService
   donationStore: DonationStore
-  channelService: ChannelService
-  experienceService: ExperienceService
-  rankStore: RankStore
-  accountStore: AccountStore
   accountService: AccountService
 }>
 
@@ -44,20 +40,12 @@ type Deps = ControllerDependencies<{
 export default class DonationController extends ControllerBase {
   private readonly donationService: DonationService
   private readonly donationStore: DonationStore
-  private readonly channelService: ChannelService
-  private readonly experienceService: ExperienceService
-  private readonly rankStore: RankStore
-  private readonly accountStore: AccountStore
   private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super(deps, 'donation')
     this.donationService = deps.resolve('donationService')
     this.donationStore = deps.resolve('donationStore')
-    this.channelService = deps.resolve('channelService')
-    this.experienceService = deps.resolve('experienceService')
-    this.rankStore = deps.resolve('rankStore')
-    this.accountStore = deps.resolve('accountStore')
     this.accountService = deps.resolve('accountService')
   }
 

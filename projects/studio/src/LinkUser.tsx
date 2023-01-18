@@ -78,9 +78,10 @@ function LinkedChannels (props: { channels: PublicChannelInfo[], isAdmin: boolea
 function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }) {
   const [transferRanks, setTransferRanks] = React.useState(true)
   const [relinkChatExperience, setRelinkChatExperience] = React.useState(true)
+  const [relinkDoantions, setRelinkDonations] = React.useState(true)
 
   const removeLink = async (loginToken: string) => {
-    const result = await removeLinkedChannel(loginToken, props.channel.defaultUserId, transferRanks, relinkChatExperience)
+    const result = await removeLinkedChannel(loginToken, props.channel.defaultUserId, transferRanks, relinkChatExperience, relinkDoantions)
 
     if (result.success) {
       props.onChange()
@@ -100,6 +101,10 @@ function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }
           <div style={{ display: 'flex' }}>
             <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
             <label>Relink chat experience</label>
+          </div>
+          <div style={{ display: 'flex' }}>
+            <input type="checkbox" name="Relink donations" checked={relinkDoantions} onChange={() => setRelinkDonations(!relinkDoantions)} />
+            <label>Relink donations</label>
           </div>
           <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
         </td>

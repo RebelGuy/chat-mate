@@ -188,9 +188,9 @@ export default class DonationStore extends ContextClass {
   // we perform side effects when linking/unlinking, which is why we separated the remove/add functionality into two methods
   // instead of just discarding the existing link.
 
-  // an internal detail is that ChatMate users are no longer matchd to the donations directly, but rather we construct a streamlabs user
+  // an internal detail is that ChatMate users are no longer matched to the donations directly, but rather we construct a link identifier
   // (either using the actual streamlabs user id, or by deterministically constructing a synthetic id that is unique to this donation)
-  // and link the ChatMate user to that streamlabs user instead.
+  // and link the ChatMate user to that link identifier instead.
 
   /** Links the user to the donation. It is the responsibility of the caller to ensure the correct primary user is used.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
@@ -207,6 +207,17 @@ export default class DonationStore extends ContextClass {
       linkedUserId: primaryUserId,
       linkedAt: linkedAt
     }})
+  }
+
+  /** Updates donation links such that donations originally linked to `fromUserId` now point to `toUserId`. */
+  public async relinkDonation (fromUserId: number, toUserId: number) {
+    await this.db.donationLink.updateMany({
+      where: { linkedUserId: fromUserId },
+      data: {
+        linkedUserId: toUserId,
+        originalLinkedUserId: fromUserId
+      }
+    })
   }
 
   /** Returns true if the socket token has been updated, and false if the provided socket token is the same as the existing token. */
@@ -235,6 +246,17 @@ export default class DonationStore extends ContextClass {
         return true
       }
     }
+  }
+
+  /** Updates donation links that originally pointed to `originalUserId` to now point to that user again. */
+  public async undoDonationRelink (originalUserId: number) {
+    await this.db.donationLink.updateMany({
+      where: { originalLinkedUserId: originalUserId },
+      data: {
+        originalLinkedUserId: null,
+        linkedUserId: originalUserId
+      }
+    })
   }
 
   /** Returns the primaryUserId that was unlinked.
