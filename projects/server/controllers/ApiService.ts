@@ -5,6 +5,7 @@ import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService, { UserLevel } from '@rebel/server/services/ExperienceService'
+import LogService from '@rebel/server/services/LogService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import RankStore, { UserRanks } from '@rebel/server/stores/RankStore'
@@ -27,10 +28,13 @@ type Deps = Dependencies<{
   rankStore: RankStore
   channelService: ChannelService
   experienceService: ExperienceService
+  logService: LogService
 }>
 
 // we could do a lot of these things directly in the ControllerBase, but it will be trickier to get the preProcessors to work because we don't know which controller instance from the context to use
 export default class ApiService extends ContextClass {
+  public readonly name = ApiService.name
+
   private readonly accountStore: AccountStore
   private readonly request: Request
   private readonly response: Response
@@ -39,6 +43,7 @@ export default class ApiService extends ContextClass {
   private readonly rankStore: RankStore
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
+  private readonly logService: LogService
 
   private registeredUser: RegisteredUser | null = null
   private streamerId: number | null = null
@@ -54,6 +59,7 @@ export default class ApiService extends ContextClass {
     this.rankStore = deps.resolve('rankStore')
     this.channelService = deps.resolve('channelService')
     this.experienceService = deps.resolve('experienceService')
+    this.logService = deps.resolve('logService')
   }
 
   /** If this method runs to completion, `getCurrentUser` will return a non-null object.
@@ -158,6 +164,10 @@ export default class ApiService extends ContextClass {
   }
 
   public async getAllData (primaryUserIds: number[]): Promise<(UserChannel & UserRanks & UserLevel & { registeredUser: RegisteredUser | null })[]> {
+    if (primaryUserIds.length === 0) {
+      return []
+    }
+
     primaryUserIds = unique(primaryUserIds)
     const activeUserChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), primaryUserIds)
       .then(channels => channels.map(c => ({ ...c, primaryUserId: getPrimaryUserId(c) })))
@@ -165,6 +175,11 @@ export default class ApiService extends ContextClass {
     const ranks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
     const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
 
-    return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers)
+    try {
+      return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers)
+    } catch (e: any) {
+      this.logService.logError(this, `Failed to get all data for primaryUserIds [${primaryUserIds.join(', ')}]. Most likely one or more of the ids were not primary (leading to duplicate effective primary user ids) or a link/unlink was not successful such that fetching data for a (probably default) primary user returned data for another (proabbly aggregate) primary user.`, e)
+      throw new Error('Unable to get all data.')
+    }
   }
 }
