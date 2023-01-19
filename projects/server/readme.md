@@ -763,6 +763,9 @@ Can return the following errors:
 
 Gets the list of channels linked to the logged-in user.
 
+Query parameters:
+- `admin_aggregateUserId` (`number`): *Optional, admin-only.* Gets the list of channels linked to a particular user.
+
 Returns data with the following properties:
 - `channels` (`PublicChannelInfo[]`): The channels linked to the user.
 
@@ -778,6 +781,9 @@ Query parameters:
 ### `GET /link/token`
 
 Get the link history for the logged-in user.
+
+Query parameters:
+- `admin_aggregateUserId` (`number`): *Optional, admin-only.* Gets the link history for a particular user.
 
 Returns data with the following properties:
 - `tokens` (`PublicLinkToken[]`): The array representing the user's link history. The ordering of items is undefined.

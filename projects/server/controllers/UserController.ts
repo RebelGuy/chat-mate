@@ -21,12 +21,12 @@ import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
-type SearchUserRequest = ApiRequest<4, {
+export type SearchUserRequest = ApiRequest<4, {
   schema: 4,
   searchTerm: string
 }>
 
-type SearchUserResponse = ApiResponse<4, {
+export type SearchUserResponse = ApiResponse<4, {
   results: Tagged<1, PublicUserSearchResult>[]
 }>
 
@@ -126,11 +126,17 @@ export default class UserController extends ControllerBase {
   @GET
   @Path('link/channels')
   @PreProcessor(requireAuth)
-  public async getLinkedChannels (): Promise<GetLinkedChannelsResponse> {
+  public async getLinkedChannels (
+    @QueryParam('admin_aggregateUserId') admin_aggregateUserId?: number
+  ): Promise<GetLinkedChannelsResponse> {
     const builder = this.registerResponseBuilder<GetLinkedChannelsResponse>('GET /link/channels', 1)
 
+    if (!this.hasRankOrAbove('admin') && admin_aggregateUserId != null) {
+      builder.failure(403, 'You do not have permission to use the `admin_aggregateUserId` query parameter.')
+    }
+
     try {
-      const channels = single(await this.channelService.getConnectedUserChannels([this.getCurrentUser().aggregateChatUserId]))
+      const channels = single(await this.channelService.getConnectedUserChannels([admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId]))
       return builder.success({
         channels: channels.channels.map<PublicChannelInfo>(channel => ({
           schema: 1,
@@ -176,11 +182,17 @@ export default class UserController extends ControllerBase {
   @GET
   @Path('link/token')
   @PreProcessor(requireAuth)
-  public async getLinkTokens (): Promise<GetLinkTokensResponse> {
+  public async getLinkTokens (
+    @QueryParam('admin_aggregateUserId') admin_aggregateUserId?: number
+  ): Promise<GetLinkTokensResponse> {
     const builder = this.registerResponseBuilder<GetLinkTokensResponse>('GET /link/token', 1)
 
+    if (!this.hasRankOrAbove('admin') && admin_aggregateUserId != null) {
+      builder.failure(403, 'You do not have permission to use the `admin_aggregateUserId` query parameter.')
+    }
+
     try {
-      const history = await this.linkDataService.getLinkHistory(this.getCurrentUser().aggregateChatUserId)
+      const history = await this.linkDataService.getLinkHistory(admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId)
       const defaultUserIds = history.map(h => h.defaultUserId)
       const channels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserIds)
       const youtubeChannels = await this.channelStore.getYoutubeChannelFromChannelId(channels.flatMap(c => c.youtubeChannelIds))

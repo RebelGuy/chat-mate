@@ -1,15 +1,13 @@
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
-import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
-import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
-import { GetLinkTokensResponse } from '@rebel/server/controllers/UserController'
-import { sortBy } from '@rebel/server/util/arrays'
-import { assertUnreachable } from '@rebel/server/util/typescript'
-import { createLinkToken, getGlobalRanks, getLinkedChannels, getLinkTokens, removeLinkedChannel } from '@rebel/studio/api'
+import AdminLink from '@rebel/studio/AdminLink'
+import { createLinkToken, getGlobalRanks, getLinkedChannels, getLinkTokens } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import LinkedChannels from '@rebel/studio/LinkedChannels'
+import { LinkHistory } from '@rebel/studio/LinkHistory'
 import * as React from 'react'
 
-export default function LinkUser () {
+export default function LinkUser (props: { admin_aggregateUserId?: number }) {
   const [updateToken, setUpdateToken] = React.useState(Date.now())
   const [userRanks, setUserRanks] = React.useState<PublicUserRank[]>([])
 
@@ -24,6 +22,10 @@ export default function LinkUser () {
     return response
   }
 
+  // for some reason the output type is not accepted when these are put in-line, but works fine when saved as a variable first
+  const onGetLinkedChannels = (loginToken: string) => getLinkedChannels(loginToken, props.admin_aggregateUserId)
+  const onGetLinkToken = (loginToken: string) => getLinkTokens(loginToken, props.admin_aggregateUserId)
+
   const isAdmin = userRanks.find(r => r.rank.name === 'admin') != null
 
   return (
@@ -31,7 +33,7 @@ export default function LinkUser () {
       <ApiRequest onDemand token={updateToken} onRequest={getRanks} />
       <button style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>Refresh</button>
       <div style={{ marginBottom: 16 }}>
-        <ApiRequest onDemand token={updateToken} onRequest={getLinkedChannels}>
+        <ApiRequest onDemand token={updateToken} onRequest={onGetLinkedChannels}>
           {(response, loadingNode, errorNode) => <>
             {response && <LinkedChannels channels={response.channels} isAdmin={isAdmin} onChange={regenerateUpdateToken} />}
             {loadingNode}
@@ -39,105 +41,21 @@ export default function LinkUser () {
           </>}
         </ApiRequest>
       </div>
-      <ApiRequest onDemand token={updateToken} onRequest={getLinkTokens}>
+      <ApiRequest onDemand token={updateToken} onRequest={onGetLinkToken}>
         {(response, loadingNode, errorNode) => <>
           {response && <>
             <LinkHistory data={response} />
-            <CreateLinkToken onCreated={regenerateUpdateToken} />
+            {props.admin_aggregateUserId == null && <CreateLinkToken onCreated={regenerateUpdateToken} />}
           </>}
           {loadingNode}
           {errorNode}
         </>}
       </ApiRequest>
+      {isAdmin && props.admin_aggregateUserId == null && <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
+        <AdminLink />
+      </div>}
     </div>
   )
-}
-
-function LinkedChannels (props: { channels: PublicChannelInfo[], isAdmin: boolean, onChange: () => void }) {
-  
-  if (props.channels.length === 0) {
-    return <div>
-      No YouTube or Twitch channels are linked. Create a new link using the below input field.
-    </div>
-  }
-
-  return <table style={{ margin: 'auto' }}>
-    <tr>
-      <th>Channel name</th>
-      <th>Platform</th>
-      {props.isAdmin && <th></th>}
-    </tr>
-    {props.channels.map(c => <tr>
-      <td><a href={getChannelUrl(c)}>{c.channelName}</a></td>
-      <td>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</td>
-      {props.isAdmin && <UnlinkUser channel={c} onChange={props.onChange} />}
-    </tr>)}
-  </table>
-}
-
-function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }) {
-  const [transferRanks, setTransferRanks] = React.useState(true)
-  const [relinkChatExperience, setRelinkChatExperience] = React.useState(true)
-  const [relinkDoantions, setRelinkDonations] = React.useState(true)
-
-  const removeLink = async (loginToken: string) => {
-    const result = await removeLinkedChannel(loginToken, props.channel.defaultUserId, transferRanks, relinkChatExperience, relinkDoantions)
-
-    if (result.success) {
-      props.onChange()
-    }
-
-    return result
-  }
-
-  return (
-    <ApiRequestTrigger onRequest={removeLink}>
-      {(onMakeRequest, response, loading, error) => <>
-        <td>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Transfer ranks" checked={transferRanks} onChange={() => setTransferRanks(!transferRanks)} />
-            <label>Transfer ranks</label>
-          </div>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
-            <label>Relink chat experience</label>
-          </div>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Relink donations" checked={relinkDoantions} onChange={() => setRelinkDonations(!relinkDoantions)} />
-            <label>Relink donations</label>
-          </div>
-          <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
-        </td>
-      </>}
-    </ApiRequestTrigger>
-  )
-}
-
-function LinkHistory (props: { data: Extract<GetLinkTokensResponse, { success: true }>['data'] }) {
-  if (props.data.tokens.length === 0) {
-    return <div>
-      No existing link attempts to show. Create a new link using the below input field.
-    </div>
-  }
-
-  const tokens = sortBy(props.data.tokens, t => t.status === 'processing' ? 0 : t.status === 'waiting' ? 1 : 2)
-
-  return <table style={{ margin: 'auto' }}>
-    <tr>
-      <th>Channel name</th>
-      <th>Platform</th>
-      <th>Link status</th>
-      <th>Link token</th>
-      <th>Message</th>
-    </tr>
-    {tokens.map(t => <tr>
-      <td>{t.channelUserName}</td>
-      <td>{t.platform === 'youtube' ? 'YouTube' : t.platform === 'twitch' ? 'Twitch' : assertUnreachable(t.platform)}</td>
-      <td>{t.status}</td>
-      <td>{t.token}</td>
-      <td><TokenMessage token={t} /></td>
-    </tr>)}
-  </table>
 }
 
 // todo: should also be searchable by username
@@ -196,45 +114,4 @@ function validateChannel (channel: string): { channelId: string | null, error: s
   }
 
   return { channelId: channel, error: null }
-}
-
-let timeout: number | null = null
-function TokenMessage (props: { token: PublicLinkToken }) {
-  const [showCopied, setShowCopied] = React.useState(false)
-
-  const command = `!link ${props.token.token}`
-  const onCopy = () => {
-    navigator.clipboard.writeText(command)
-    setShowCopied(true)
-    if (timeout != null) {
-      clearTimeout(timeout)
-    }
-    timeout = window.setTimeout(() => setShowCopied(false), 2000)
-  }
-
-  if (props.token.message != null) {
-    return <div>{props.token.message}</div>
-  } else if (props.token.status === 'pending' || props.token.status === 'processing') {
-    return <div>Please wait for the link to complete</div>
-  } else if (props.token.status === 'waiting') {
-    return <>
-      <div style={{ display: 'block' }}>
-        <div>To initiate the link, type the following command: </div><code>{command}</code>
-      </div>
-      <button onClick={onCopy}>Copy command</button>
-      {showCopied && <div>Copied!</div>}
-    </>
-  } else {
-    return <div>n/a</div>
-  }
-}
-
-function getChannelUrl (channel: PublicChannelInfo) {
-  if (channel.platform === 'youtube') {
-    return `https://www.youtube.com/channel/${channel.externalIdOrUserName}`
-  } else if (channel.platform === 'twitch') {
-    return `https://www.twitch.tv/${channel.externalIdOrUserName}`
-  } else {
-    assertUnreachable(channel.platform)
-  }
 }
