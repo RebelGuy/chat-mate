@@ -2,9 +2,11 @@ import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependenc
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
+import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
+import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
 import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
-import { userDataToPublicUser } from '@rebel/server/models/user'
+import { registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ChannelService, { getExternalIdOrUserName, getUserName, getUserNameFromChannelInfo } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -15,10 +17,11 @@ import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { EmptyObject } from '@rebel/server/types'
-import { single, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
-import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { first, single, singleOrNull, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { sleep } from '@rebel/server/util/node'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { assertUnreachable, firstOrDefault } from '@rebel/server/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 export type SearchUserRequest = ApiRequest<4, {
@@ -31,13 +34,16 @@ export type SearchUserResponse = ApiResponse<4, {
 }>
 
 export type GetLinkedChannelsResponse = ApiResponse<1, {
+  registeredUser: PublicRegisteredUser
   channels: PublicChannelInfo[]
 }>
 
+export type AddLinkedChannelResponse = ApiResponse<1, EmptyObject>
+
 export type RemoveLinkedChannelResponse = ApiResponse<1, EmptyObject>
 
-export type GetLinkTokensResponse = ApiResponse<1, {
-  tokens: PublicLinkToken[]
+export type GetLinkHistoryResponse = ApiResponse<1, {
+  items: PublicLinkHistoryItem[]
 }>
 
 export type CreateLinkTokenResponse = ApiResponse<1, {
@@ -105,12 +111,14 @@ export default class UserController extends ControllerBase {
           matchedChannel: {
             schema: 1,
             channelId: match.platformInfo.channel.id,
+            defaultUserId: match.defaultUserId,
             platform: match.platformInfo.platform,
             displayName: getUserName(match)
           },
           allChannels: channels.channels.map(c => ({
             schema: 1,
             channelId: c.platformInfo.channel.id,
+            defaultUserId: c.defaultUserId,
             platform: c.platformInfo.platform,
             displayName: getUserName(c)
           }))
@@ -136,8 +144,15 @@ export default class UserController extends ControllerBase {
     }
 
     try {
-      const channels = single(await this.channelService.getConnectedUserChannels([admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId]))
+      const channels = await this.channelService.getConnectedUserChannels([admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId]).then(single)
+      const registeredUser = await this.accountStore.getRegisteredUsers([admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId]).then(single)
+
+      if (registeredUser == null) {
+        throw new Error('Expected registered user for aggregate user to be defined.')
+      }
+
       return builder.success({
+        registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
         channels: channels.channels.map<PublicChannelInfo>(channel => ({
           schema: 1,
           defaultUserId: channel.defaultUserId,
@@ -146,6 +161,32 @@ export default class UserController extends ControllerBase {
           channelName: getUserName(channel)
         }))
       })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('link/channels/:aggregateUserId/:defaultUserId')
+  @PreProcessor(requireRank('admin'))
+  public async addLinkedChannel (
+    @PathParam('aggregateUserId') aggregateUserId: number,
+    @PathParam('defaultUserId') defaultUserId: number
+  ): Promise<AddLinkedChannelResponse> {
+    const builder = this.registerResponseBuilder<AddLinkedChannelResponse>('POST /link/channels/:aggregateUserId/:defaultUserId', 1)
+
+    if (aggregateUserId == null || defaultUserId == null) {
+      return builder.failure(400, 'An aggregate and default user id must be provided.')
+    }
+
+    try {
+      const registeredUser = await this.accountStore.getRegisteredUserFromAggregateUser(aggregateUserId)
+      if (registeredUser == null) {
+        return builder.failure(400, `User ${aggregateUserId} is not an aggregate user.`)
+      }
+
+      await retryLinkAttempt(() => this.linkService.linkUser(defaultUserId, aggregateUserId, null))
+      return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
     }
@@ -172,7 +213,7 @@ export default class UserController extends ControllerBase {
         relinkChatExperience: relinkChatExperience ?? true,
         relinkDonations: relinkDonations ?? true
       }
-      await this.linkService.unlinkUser(defaultUserId, options)
+      await retryLinkAttempt(() => this.linkService.unlinkUser(defaultUserId, options))
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
@@ -180,12 +221,12 @@ export default class UserController extends ControllerBase {
   }
 
   @GET
-  @Path('link/token')
+  @Path('link/history')
   @PreProcessor(requireAuth)
-  public async getLinkTokens (
+  public async getLinkHistory (
     @QueryParam('admin_aggregateUserId') admin_aggregateUserId?: number
-  ): Promise<GetLinkTokensResponse> {
-    const builder = this.registerResponseBuilder<GetLinkTokensResponse>('GET /link/token', 1)
+  ): Promise<GetLinkHistoryResponse> {
+    const builder = this.registerResponseBuilder<GetLinkHistoryResponse>('GET /link/token', 1)
 
     if (!this.hasRankOrAbove('admin') && admin_aggregateUserId != null) {
       builder.failure(403, 'You do not have permission to use the `admin_aggregateUserId` query parameter.')
@@ -199,7 +240,7 @@ export default class UserController extends ControllerBase {
       const twitchChannels = await this.channelStore.getTwitchChannelFromChannelId(channels.flatMap(c => c.twitchChannelIds))
 
       return builder.success({
-        tokens: history.map<PublicLinkToken>(h => {
+        items: history.map<PublicLinkHistoryItem>(h => {
           const userOwnedChannels = channels.find(c => c.userId === h.defaultUserId)!
           if (userOwnedChannels.youtubeChannelIds.length + userOwnedChannels.twitchChannelIds.length !== 1) {
             throw new Error(`Only a single channel is supported for default user ${userOwnedChannels.userId}`)
@@ -215,7 +256,9 @@ export default class UserController extends ControllerBase {
               token: h.maybeToken,
               channelUserName: getUserName(channel),
               platform: platform,
-              message: null
+              message: null,
+              dateCompleted: null,
+              type: h.isLink ? 'link' : 'unlink'
             }
           } else if (h.type === 'success' || h.type === 'fail') {
             return {
@@ -224,7 +267,9 @@ export default class UserController extends ControllerBase {
               token: h.token,
               channelUserName: getUserName(channel),
               platform: platform,
-              message: h.message
+              message: h.message,
+              dateCompleted: h.completionTime.getTime(),
+              type: h.isLink ? 'link' : 'unlink'
             }
           } else if (h.type === 'waiting') {
             return {
@@ -233,7 +278,9 @@ export default class UserController extends ControllerBase {
               token: h.token,
               channelUserName: getUserName(channel),
               platform: platform,
-              message: null
+              message: null,
+              dateCompleted: null,
+              type: h.isLink ? 'link' : 'unlink'
             }
           } else {
             assertUnreachable(h.type)
@@ -267,6 +314,24 @@ export default class UserController extends ControllerBase {
         return builder.failure(422, e)
       } else {
         return builder.failure(e)
+      }
+    }
+  }
+}
+
+async function retryLinkAttempt (linkAttempt: () => Promise<void>) {
+  const attempts = 5
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await linkAttempt()
+      return
+    } catch (e) {
+      if (e instanceof LinkAttemptInProgressError) {
+        await sleep(2000)
+        continue
+      } else {
+        throw e
       }
     }
   }

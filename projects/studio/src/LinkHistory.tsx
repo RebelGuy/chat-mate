@@ -1,11 +1,12 @@
-import { GetLinkTokensResponse } from '@rebel/server/controllers/UserController'
+import { GetLinkHistoryResponse } from '@rebel/server/controllers/UserController'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import { sortBy } from '@rebel/server/util/arrays'
-import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import * as React from 'react'
+import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
+import { capitaliseWord } from '@rebel/server/util/text'
 
-export function LinkHistory (props: { data: Extract<GetLinkTokensResponse, { success: true }>['data'] }) {
-  if (props.data.tokens.length === 0) {
+export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { success: true }>['data'] }) {
+  if (props.data.items.length === 0) {
     return <>
       <h3>Link History</h3>
       <div>
@@ -14,7 +15,9 @@ export function LinkHistory (props: { data: Extract<GetLinkTokensResponse, { suc
     </>
   }
 
-  const tokens = sortBy(props.data.tokens, t => t.status === 'processing' ? 0 : t.status === 'waiting' ? 1 : 2)
+  // show unfinished links first, then order completed links in descending order. kinda nasty but it works!
+  const maxDate = Math.max(...props.data.items.filter(item => item.dateCompleted != null).map(item => item.dateCompleted!))
+  const tokens = sortBy(props.data.items, t => t.status === 'processing' || t.status === 'pending' ? 1 : t.status === 'waiting' ? 0 : maxDate + 1 - t.dateCompleted!)
 
   return <>
     <h3>Link History</h3>
@@ -22,26 +25,30 @@ export function LinkHistory (props: { data: Extract<GetLinkTokensResponse, { suc
       <tr>
         <th>Channel name</th>
         <th>Platform</th>
+        <th>Type</th>
         <th>Link status</th>
         <th>Link token</th>
         <th>Message</th>
+        <th>Date</th>
       </tr>
-      {tokens.map(t => <tr>
-        <td>{t.channelUserName}</td>
-        <td>{t.platform === 'youtube' ? 'YouTube' : t.platform === 'twitch' ? 'Twitch' : assertUnreachable(t.platform)}</td>
-        <td>{t.status}</td>
-        <td>{t.token}</td>
-        <td><TokenMessage token={t} /></td>
+      {tokens.map(item => <tr>
+        <td>{item.channelUserName}</td>
+        <td>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</td>
+        <td>{capitaliseWord(item.type)}</td>
+        <td>{item.status}</td>
+        <td>{item.token ?? 'Initiated by admin'}</td>
+        <td><ItemMessage item={item} /></td>
+        <td>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</td>
       </tr>)}
     </table>
   </>
 }
 
 let timeout: number | null = null
-function TokenMessage (props: { token: PublicLinkToken }) {
+function ItemMessage (props: { item: PublicLinkHistoryItem }) {
   const [showCopied, setShowCopied] = React.useState(false)
 
-  const command = `!link ${props.token.token}`
+  const command = `!link ${props.item.token}`
   const onCopy = () => {
     navigator.clipboard.writeText(command)
     setShowCopied(true)
@@ -51,11 +58,11 @@ function TokenMessage (props: { token: PublicLinkToken }) {
     timeout = window.setTimeout(() => setShowCopied(false), 2000)
   }
 
-  if (props.token.message != null) {
-    return <div>{props.token.message}</div>
-  } else if (props.token.status === 'pending' || props.token.status === 'processing') {
+  if (props.item.message != null) {
+    return <div>{props.item.message}</div>
+  } else if (props.item.status === 'pending' || props.item.status === 'processing') {
     return <div>Please wait for the link to complete</div>
-  } else if (props.token.status === 'waiting') {
+  } else if (props.item.status === 'waiting') {
     return <>
       <div style={{ display: 'block' }}>
         <div>To initiate the link, type the following command: </div><code>{command}</code>

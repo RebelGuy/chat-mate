@@ -87,8 +87,11 @@ describe(nameof(LinkDataService, 'getLinkHistory'), () => {
     const defaultUserId4 = 8
     const defaultUserId5 = 9
     const defaultUserId6 = 10
+    const defaultUserId7 = 11
+    const defaultUserId8 = 12
     const endTime1 = new Date()
     const endTime2 = addTime(endTime1, 'seconds', 1)
+    const endTime3 = addTime(endTime2, 'seconds', 1)
 
     mockCommandService.getQueuedCommands.calledWith().mockReturnValue([
       cast<CommandData>({ normalisedName: 'LINK', arguments: [token1], defaultUserId: defaultUserId1 }),
@@ -96,22 +99,28 @@ describe(nameof(LinkDataService, 'getLinkHistory'), () => {
       cast<CommandData>({ normalisedName: 'LINK', arguments: [token2], defaultUserId: defaultUserId2 })
     ])
     mockCommandService.getRunningCommand.calledWith().mockReturnValue(cast<CommandData>({ normalisedName: 'LINK', arguments: [token3], defaultUserId: defaultUserId3 }))
+    mockLinkStore.getAllStandaloneLinkAttempts.calledWith(aggregateUserId).mockResolvedValue([
+      cast<LinkAttempt>({ defaultChatUserId: defaultUserId4, type: 'unlink', endTime: null }),
+      cast<LinkAttempt>({ defaultChatUserId: defaultUserId5, type: 'link', endTime: endTime1 })
+    ])
     mockLinkStore.getAllLinkTokens.calledWith(aggregateUserId).mockResolvedValue([
-      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token4, defaultChatUserId: defaultUserId4, linkAttempt: { errorMessage: 'error', endTime: endTime1 }}),
-      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token5, defaultChatUserId: defaultUserId5, linkAttempt: null}),
-      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token6, defaultChatUserId: defaultUserId6, linkAttempt: { errorMessage: null, endTime: endTime2 }}),
+      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token4, defaultChatUserId: defaultUserId6, linkAttempt: { errorMessage: 'error', endTime: endTime2 }}),
+      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token5, defaultChatUserId: defaultUserId7, linkAttempt: null}),
+      cast<LinkToken & { linkAttempt: LinkAttempt | null }>({ token: token6, defaultChatUserId: defaultUserId8, linkAttempt: { errorMessage: null, endTime: endTime3 }}),
     ])
 
     const result = await linkDataService.getLinkHistory(aggregateUserId)
 
     expect(result.length).toBe(6)
     expect(result).toEqual(expectObject<LinkHistory>([
-      { type: 'pending', defaultUserId: defaultUserId1, maybeToken: token1 },
-      { type: 'pending', defaultUserId: defaultUserId2, maybeToken: token2 },
-      { type: 'running', defaultUserId: defaultUserId3, maybeToken: token3 },
-      { type: 'fail', defaultUserId: defaultUserId4, token: token4, completionTime: endTime1 },
-      { type: 'waiting', defaultUserId: defaultUserId5, token: token5 },
-      { type: 'success', defaultUserId: defaultUserId6, token: token6, completionTime: endTime2 }
+      { type: 'pending', defaultUserId: defaultUserId1, isLink: true, maybeToken: token1 },
+      { type: 'pending', defaultUserId: defaultUserId2, isLink: true, maybeToken: token2 },
+      { type: 'running', defaultUserId: defaultUserId3, isLink: true, maybeToken: token3 },
+      { type: 'running', defaultUserId: defaultUserId4, isLink: false, maybeToken: null },
+      { type: 'success', defaultUserId: defaultUserId5, isLink: true, token: null },
+      { type: 'fail', defaultUserId: defaultUserId6, isLink: true, token: token4, completionTime: endTime2 },
+      { type: 'waiting', defaultUserId: defaultUserId7, isLink: true, token: token5 },
+      { type: 'success', defaultUserId: defaultUserId8, isLink: true, token: token6, completionTime: endTime3 }
     ]))
   })
 })

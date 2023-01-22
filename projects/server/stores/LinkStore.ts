@@ -77,6 +77,16 @@ export default class LinkStore extends ContextClass {
     })
   }
 
+  /** Returns only link attempts that do not have a link token attached to them (i.e. that were not initiated by a command). */
+  public async getAllStandaloneLinkAttempts (aggregateChatUserId: number) {
+    return await this.db.linkAttempt.findMany({
+      where: {
+        aggregateChatUserId: aggregateChatUserId,
+        linkToken: null
+      }
+    })
+  }
+
   /** Links the default user to the aggregate user.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
   */
@@ -119,7 +129,7 @@ export default class LinkStore extends ContextClass {
     })
 
     if (defaultUser.aggregateChatUserId == null) {
-      throw new UserNotLinkedError()
+      throw new UserNotLinkedError('The user is not linked.')
     }
 
     return await this.startLinkOrUnlinkAttempt(defaultUserId, defaultUser.aggregateChatUserId, 'unlink')

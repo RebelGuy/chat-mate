@@ -1,15 +1,23 @@
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import AdminLink from '@rebel/studio/AdminLink'
-import { createLinkToken, getGlobalRanks, getLinkedChannels, getLinkTokens } from '@rebel/studio/api'
+import { addLinkedChannel, createLinkToken, getGlobalRanks, getLinkedChannels, getLinkHistory } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import LinkedChannels from '@rebel/studio/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/LinkHistory'
 import * as React from 'react'
 
-export default function LinkUser (props: { admin_aggregateUserId?: number }) {
+// props are the user details of the currently selected user in the admin context. changed by searching for another user
+export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
   const [updateToken, setUpdateToken] = React.useState(Date.now())
   const [userRanks, setUserRanks] = React.useState<PublicUserRank[]>([])
+
+  // the user to link to
+  const [selectedAggregateUserId, setSelectedAggregateUserId] = React.useState<number | null>()
+
+  React.useEffect(() => {
+    setUpdateToken(Date.now())
+  }, [props.admin_selectedAggregateUserId])
 
   const regenerateUpdateToken = () => setUpdateToken(Date.now())
   const getRanks = async (loginToken: string) => {
@@ -23,8 +31,9 @@ export default function LinkUser (props: { admin_aggregateUserId?: number }) {
   }
 
   // for some reason the output type is not accepted when these are put in-line, but works fine when saved as a variable first
-  const onGetLinkedChannels = (loginToken: string) => getLinkedChannels(loginToken, props.admin_aggregateUserId)
-  const onGetLinkToken = (loginToken: string) => getLinkTokens(loginToken, props.admin_aggregateUserId)
+  const onGetLinkedChannels = (loginToken: string) => getLinkedChannels(loginToken, props.admin_selectedAggregateUserId)
+  const onGetLinkHistory = (loginToken: string) => getLinkHistory(loginToken, props.admin_selectedAggregateUserId)
+  const onAddLinkedChannel = (loginToken: string) => addLinkedChannel(loginToken, selectedAggregateUserId!, props.admin_selectedDefaultUserId!)
 
   const isAdmin = userRanks.find(r => r.rank.name === 'admin') != null
 
@@ -32,28 +41,51 @@ export default function LinkUser (props: { admin_aggregateUserId?: number }) {
     <div>
       <ApiRequest onDemand token={updateToken} onRequest={getRanks} />
       <button style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>Refresh</button>
-      <div style={{ marginBottom: 16 }}>
-        <ApiRequest onDemand token={updateToken} onRequest={onGetLinkedChannels}>
+      
+      {props.admin_selectedDefaultUserId != null && <>
+        <ApiRequestTrigger onRequest={onAddLinkedChannel}>
+          {(onMakeRequest, response, loadingNode, errorNode) => <>
+            <div>Link an aggregate user:</div>
+            <input type="number" onChange={e => setSelectedAggregateUserId(e.target.value === '' ? null : Number(e.target.value))} />
+            <button disabled={loadingNode != null || selectedAggregateUserId == null} onClick={onMakeRequest}>Link</button>
+            {response != null && <div>Success!</div>}
+            {errorNode}
+          </>}
+        </ApiRequestTrigger>
+      </>}
+      
+      {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId != null ?
+        <div>Selected a default user - no linked channels to show.</div>
+        :
+        <div style={{ marginBottom: 16 }}>
+          <ApiRequest onDemand token={updateToken} onRequest={onGetLinkedChannels}>
+            {(response, loadingNode, errorNode) => <>
+              {response && <LinkedChannels channels={response.channels} isAdmin={isAdmin} onChange={regenerateUpdateToken} />}
+              {loadingNode}
+              {errorNode}
+            </>}
+          </ApiRequest>
+        </div>
+      }
+      {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId != null ?
+        <div>Selected a default user - no link history to show.</div>
+        :
+        <ApiRequest onDemand token={updateToken} onRequest={onGetLinkHistory}>
           {(response, loadingNode, errorNode) => <>
-            {response && <LinkedChannels channels={response.channels} isAdmin={isAdmin} onChange={regenerateUpdateToken} />}
+            {response && <>
+              <LinkHistory data={response} />
+              {props.admin_selectedAggregateUserId == null && <CreateLinkToken onCreated={regenerateUpdateToken} />}
+            </>}
             {loadingNode}
             {errorNode}
           </>}
         </ApiRequest>
-      </div>
-      <ApiRequest onDemand token={updateToken} onRequest={onGetLinkToken}>
-        {(response, loadingNode, errorNode) => <>
-          {response && <>
-            <LinkHistory data={response} />
-            {props.admin_aggregateUserId == null && <CreateLinkToken onCreated={regenerateUpdateToken} />}
-          </>}
-          {loadingNode}
-          {errorNode}
-        </>}
-      </ApiRequest>
-      {isAdmin && props.admin_aggregateUserId == null && <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
-        <AdminLink />
-      </div>}
+      }
+      {isAdmin && props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
+        <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
+          <AdminLink />
+        </div>
+      }
     </div>
   )
 }

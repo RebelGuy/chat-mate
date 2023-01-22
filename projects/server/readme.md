@@ -767,7 +767,12 @@ Query parameters:
 - `admin_aggregateUserId` (`number`): *Optional, admin-only.* Gets the list of channels linked to a particular user.
 
 Returns data with the following properties:
+- `registeredUser` (`PublicRegisteredUser`): The registered user to which the channels are attached.
 - `channels` (`PublicChannelInfo[]`): The channels linked to the user.
+
+### `POST /link/channels/:aggregateUserId/:defaultUserId`
+
+Adds a link between the given default user and aggregate user.
 
 ### `DELETE /link/channels/:defaultUserId`
 
@@ -778,7 +783,7 @@ Query parameters:
 - `relinkChatExperience` (`boolean`): *Optional.* Whether to relink back to the default user any chat experience earned by that default user before or during the current link. This will affect the aggregate user's level. Defaults to `true`.
 - `relinkDonations` (`boolean`): *Optional.* Whether to relink back to the default user any donations assigned to that default user before or during the current link. Defaults to `true`.
 
-### `GET /link/token`
+### `GET /link/history`
 
 Get the link history for the logged-in user.
 
@@ -786,7 +791,7 @@ Query parameters:
 - `admin_aggregateUserId` (`number`): *Optional, admin-only.* Gets the link history for a particular user.
 
 Returns data with the following properties:
-- `tokens` (`PublicLinkToken[]`): The array representing the user's link history. The ordering of items is undefined.
+- `items` (`PublicLinkHistoryItem[]`): The array representing the user's link history. The ordering of items is undefined.
 
 ### `POST /link/token`
 

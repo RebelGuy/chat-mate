@@ -270,7 +270,6 @@ export default class ExperienceService extends ContextClass {
       const chatExperienceTxs = await this.experienceStore.getAllUserChatExperience(streamerId, aggregateUserId)
       const chatMessages = await Promise.all(chatExperienceTxs.map(tx => this.chatStore.getChatById(tx.experienceDataChatMessage.chatMessageId)))
 
-      let args: ModifyChatExperienceArgs[] = []
       for (const tx of chatExperienceTxs) {
         const time = tx.time
         const livestreamId = tx.experienceDataChatMessage.chatMessage.livestreamId
@@ -301,7 +300,7 @@ export default class ExperienceService extends ContextClass {
         const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
         const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
 
-        args.push({
+        const args: ModifyChatExperienceArgs = {
           experienceTransactionId: tx.id,
           chatExperienceDataId: tx.experienceDataChatMessage.id,
           delta: xpAmount,
@@ -311,9 +310,9 @@ export default class ExperienceService extends ContextClass {
           spamMultiplier,
           messageQualityMultiplier,
           repetitionPenalty
-        })
+        }
+        await this.experienceStore.modifyChatExperiences(args)
       }
-      await this.experienceStore.modifyChatExperiences(args)
     }
   }
 

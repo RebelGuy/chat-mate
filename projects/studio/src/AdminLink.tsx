@@ -4,15 +4,21 @@ import SearchUser from '@rebel/studio/SearchUser'
 import * as React from 'react'
 
 export default function AdminLink () {
-  const [selectedSearchResult, setSelectedSearchResult] = React.useState<Pick<PublicUserSearchResult, 'user' | 'allChannels'> | null>(null)
+  const [selectedSearchResult, setSelectedSearchResult] = React.useState<PublicUserSearchResult | null>(null)
 
-  const selectedUserId = selectedSearchResult?.user?.primaryUserId
+  const primaryUserId = selectedSearchResult?.user?.primaryUserId
+  const primaryUserType = selectedSearchResult?.user?.registeredUser != null ? 'aggregate' : 'default'
+  const aggregateUserId = primaryUserType === 'aggregate' ? primaryUserId : undefined
+  const defaultUserId = primaryUserType === 'default' ? primaryUserId : selectedSearchResult?.matchedChannel?.defaultUserId
   return <>
     <h3>Admin</h3>
-    <div>Manage links of a user. Currently selected: {selectedUserId ? 'Primary User ' + selectedUserId : 'n/a'}</div>
+    <div>Manage links of a user. Currently selected: {primaryUserId ? `${selectedSearchResult!.matchedChannel.displayName}. Primary User ${primaryUserId} (${primaryUserType})`: 'n/a'}</div>
 
     <SearchUser greyOutDefaultUsers onPickResult={setSelectedSearchResult} />
 
-    {selectedUserId != null && <LinkUser admin_aggregateUserId={selectedUserId} />}
+    {primaryUserId != null && <>
+      <h4>Link Results</h4>
+      <LinkUser admin_selectedAggregateUserId={aggregateUserId} admin_selectedDefaultUserId={defaultUserId} />
+    </>}
   </>
 }

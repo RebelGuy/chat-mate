@@ -11,21 +11,23 @@ import { single } from '@rebel/server/util/arrays'
 import AccountService from '@rebel/server/services/AccountService'
 
 export type LinkHistory = ({
-  type: 'pending' | 'running'
-  // no guarantee that this is a valid token - it is inferred from the command arguments
-  maybeToken: string
+  isLink: boolean
   defaultUserId: number
+} & ({
+  type: 'pending' | 'running'
+  // no guarantee that this is a valid token - it is inferred from the command arguments, if link was initiated by a command.
+  maybeToken: string | null
 } | {
   type: 'fail' | 'success'
-  defaultUserId: number
   completionTime: Date
   message: string
-  token: string
+  // only set if link was initiated by a command
+  token: string | null
 } | {
   type: 'waiting' // waiting for the user to execute the link
-  defaultUserId: number
-  token: string
-})[]
+  // only set if link was initiated by a command
+  token: string | null
+}))[]
 
 type Deps = Dependencies<{
   linkStore: LinkStore
@@ -56,10 +58,10 @@ export default class LinkDataService extends ContextClass {
    * @throws {@link NotFoundError}: When no YouTube or Twitch channel was found with the given external ID.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the specified channel is already linked to the aggregate user.
   */
-  public async getOrCreateLinkToken (aggregateUserId: number, externalChannelId: string) {
-    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(externalChannelId)
+  public async getOrCreateLinkToken (aggregateUserId: number, externalChannelIdOrUserName: string) {
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(externalChannelIdOrUserName)
     if (channel == null) {
-      throw new NotFoundError(`Unable to find a YouTube or Twitch channel with id ${externalChannelId}. Ensure the ID is correct and the channel has sent at least one chat message.`)
+      throw new NotFoundError(`Unable to find a YouTube or Twitch channel with id ${externalChannelIdOrUserName}. Ensure the ID is correct and the channel has sent at least one chat message.`)
     }
 
     const defaultUserId = channel.userId
@@ -67,7 +69,7 @@ export default class LinkDataService extends ContextClass {
     // don't bother going ahead if the users are already linked
     const primaryUserId = single(await this.accountService.getPrimaryUserIdFromAnyUser([defaultUserId]))
     if (primaryUserId === aggregateUserId) {
-      throw new UserAlreadyLinkedToAggregateUserError(`Channel ${externalChannelId} is already linked to user ${aggregateUserId}`, aggregateUserId, defaultUserId)
+      throw new UserAlreadyLinkedToAggregateUserError(`Channel ${externalChannelIdOrUserName} is already linked to user ${aggregateUserId}`, aggregateUserId, defaultUserId)
     }
 
     return await this.linkStore.getOrCreateLinkToken(aggregateUserId, defaultUserId)
@@ -76,25 +78,57 @@ export default class LinkDataService extends ContextClass {
   public async getLinkHistory (aggregateUserId: number): Promise<LinkHistory> {
     let linkHistory: LinkHistory = this.commandService.getQueuedCommands()
       .filter(c => this.linkCommand.normalisedNames.includes(c.normalisedName))
-      .map(c => ({ type: 'pending', defaultUserId: c.defaultUserId, maybeToken: c.arguments[0] ?? '' }))
+      .map(c => ({
+        type: 'pending',
+        defaultUserId: c.defaultUserId,
+        maybeToken: c.arguments[0] ?? '',
+        isLink: true // we don't allow unlinking via commands
+      }))
 
     const runningCommand = this.commandService.getRunningCommand()
     if (runningCommand != null && this.linkCommand.normalisedNames.includes(runningCommand.normalisedName)) {
       linkHistory.push({
         type: 'running',
         defaultUserId: runningCommand.defaultUserId,
-        maybeToken: runningCommand.arguments[0] ?? ''
+        maybeToken: runningCommand.arguments[0] ?? '',
+        isLink: true // we don't allow unlinking via commands
       })
     }
 
-    // add completed links - those that don't have a link attempt, or where the link attempt is not finished yet, will have been collected above.
-    const historicTokens = await this.linkStore.getAllLinkTokens(aggregateUserId)
-    linkHistory.push(...historicTokens.map<Singular<LinkHistory> | null>(t => {
+    // add completed links, or attempts that are not running as part of a command.
+    // tokens that don't have a link attempt, or where the link attempt is not finished yet, will have been collected above.
+
+    // link attempts that don't have a token attached to it have been initiated manually (i.e. not as part of a command)
+    // note that the standalone link attempts, and link attempts attached to link tokens, are mutually exclusive. we don't need to check for duplicates.
+    const linkAttempts = await this.linkStore.getAllStandaloneLinkAttempts(aggregateUserId)
+    linkHistory.push(...linkAttempts.map<Singular<LinkHistory>>(a => {
+      if (a.endTime == null) {
+        return {
+          type: 'running',
+          defaultUserId: a.defaultChatUserId,
+          maybeToken: null,
+          isLink: a.type === 'link'
+        }
+      } else {
+        return {
+          type: a.errorMessage == null ? 'success' : 'fail',
+          completionTime: a.endTime,
+          defaultUserId: a.defaultChatUserId,
+          message: a.errorMessage ?? 'Link succeeded',
+          token: null,
+          isLink: a.type === 'link'
+        }
+      }
+    }))
+
+    const linkTokens = await this.linkStore.getAllLinkTokens(aggregateUserId)
+    linkHistory.push(...linkTokens.map<Singular<LinkHistory> | null>(t => {
       if (t.linkAttempt == null) {
         return {
           type: 'waiting',
           defaultUserId: t.defaultChatUserId,
-          token: t.token
+          token: t.token,
+          isLink: true // we don't allow unlinking via commands
         }
       } else if (t.linkAttempt.endTime == null) {
         return null
@@ -104,7 +138,8 @@ export default class LinkDataService extends ContextClass {
           completionTime: t.linkAttempt.endTime,
           defaultUserId: t.defaultChatUserId,
           message: t.linkAttempt.errorMessage ?? 'Link succeeded',
-          token: t.token
+          token: t.token,
+          isLink: true // we don't allow unlinking via commands
         }
       }
     }).filter(x => x != null) as LinkHistory) // why `filter` doesn't change the type of the array is beyond me

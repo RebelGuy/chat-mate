@@ -116,6 +116,24 @@ export default () => {
     })
   })
 
+  describe(nameof(LinkStore, 'getAllStandaloneLinkAttempts'), () => {
+    test('Returns link attempts that are not attached to a link token', async () =>{
+      await db.chatUser.createMany({ data: [{}, {}, {}, {}, {}]})
+      await db.linkToken.createMany({ data: [
+        { token: 'test1', aggregateChatUserId: 1, defaultChatUserId: 2 },
+      ]})
+      await db.linkAttempt.createMany({ data: [
+        { aggregateChatUserId: 1, defaultChatUserId: 2, linkTokenId: 1, log: '', startTime: new Date(), type: 'link' },
+        { aggregateChatUserId: 1, defaultChatUserId: 3, linkTokenId: null, log: '', startTime: new Date(), type: 'link' },
+        { aggregateChatUserId: 4, defaultChatUserId: 3, linkTokenId: null, log: '', startTime: new Date(), type: 'link' }
+      ]})
+
+      const result = await linkStore.getAllStandaloneLinkAttempts(1)
+
+      expect(result.map(attempt => attempt.id)).toEqual([2])
+    })
+  })
+
   describe(nameof(LinkStore, 'linkUser'), () => {
     test('Links the default user to the aggregate user', async () => {
       // users 1 and 2 are aggregate, users 3 and 4 are default

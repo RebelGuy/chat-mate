@@ -237,30 +237,26 @@ export default class ExperienceStore extends ContextClass {
   }
 
   // uses an array for the input data for efficiency, since we may update thousands of entries in bulk
-  public async modifyChatExperiences (args: ModifyChatExperienceArgs[]) {
-    await this.db.$transaction(args.flatMap(arg => {
-      return [
-        // update the main transaction delta
-        this.db.experienceTransaction.update({
-          where: { id: arg.experienceTransactionId },
-          data: {
-            delta: arg.delta
-          }
-        }),
+  public async modifyChatExperiences (arg: ModifyChatExperienceArgs) {
+    // update the main transaction delta
+    await this.db.experienceTransaction.update({
+      where: { id: arg.experienceTransactionId },
+      data: {
+        delta: arg.delta
+      }
+    })
 
-        // update the chat message experience data
-        this.db.experienceDataChatMessage.update({
-          where: { id: arg.chatExperienceDataId },
-          data: {
-            baseExperience: arg.baseExperience,
-            messageQualityMultiplier: arg.messageQualityMultiplier,
-            participationStreakMultiplier: arg.participationStreakMultiplier,
-            repetitionPenalty: arg.repetitionPenalty,
-            spamMultiplier: arg.spamMultiplier,
-            viewershipStreakMultiplier: arg.viewershipStreakMultiplier
-          }
-        })
-      ]
-    }))
+    // update the chat message experience data
+    await this.db.experienceDataChatMessage.update({
+      where: { id: arg.chatExperienceDataId },
+      data: {
+        baseExperience: arg.baseExperience,
+        messageQualityMultiplier: arg.messageQualityMultiplier,
+        participationStreakMultiplier: arg.participationStreakMultiplier,
+        repetitionPenalty: arg.repetitionPenalty,
+        spamMultiplier: arg.spamMultiplier,
+        viewershipStreakMultiplier: arg.viewershipStreakMultiplier
+      }
+    })
   }
 }

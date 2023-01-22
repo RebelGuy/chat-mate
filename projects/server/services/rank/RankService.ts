@@ -111,7 +111,7 @@ export default class RankService extends ContextClass {
 
       const addArgs: AddUserRankArgs = {
         primaryUserId: toUserId,
-        message: `Added as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}`,
+        message: `${rank.message} [Added as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}]`,
         rank: rank.rank.name,
         assignee: rank.assignedByRegisteredUserId,
         streamerId: rank.streamerId,

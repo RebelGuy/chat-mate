@@ -646,24 +646,19 @@ export default () => {
       await db.experienceTransaction.createMany({ data: [
         { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
         { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 },
-        { streamerId: streamer2, userId: user3, delta: 3, time: data.time1 },
       ]})
       await db.experienceDataChatMessage.createMany({ data: [
         { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
         { baseExperience: 200, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 2, participationStreakMultiplier: 2, spamMultiplier: 2, viewershipStreakMultiplier: 2, repetitionPenalty: 2 },
-        { baseExperience: 300, chatMessageId: 3, experienceTransactionId: 3, messageQualityMultiplier: 3, participationStreakMultiplier: 3, spamMultiplier: 3, viewershipStreakMultiplier: 3, repetitionPenalty: 3 }
       ]})
-      const args: ModifyChatExperienceArgs[] = [
-        { experienceTransactionId: 1, chatExperienceDataId: 1, delta: 10, baseExperience: 1000, messageQualityMultiplier: 10, participationStreakMultiplier: 10, repetitionPenalty: 10, spamMultiplier: 10, viewershipStreakMultiplier: 10 },
-        { experienceTransactionId: 2, chatExperienceDataId: 2, delta: 20, baseExperience: 2000, messageQualityMultiplier: 20, participationStreakMultiplier: 20, repetitionPenalty: 20, spamMultiplier: 20, viewershipStreakMultiplier: 20 }
-      ]
+      const args: ModifyChatExperienceArgs = { experienceTransactionId: 1, chatExperienceDataId: 1, delta: 10, baseExperience: 1, messageQualityMultiplier: 10, participationStreakMultiplier: 10, repetitionPenalty: 10, spamMultiplier: 10, viewershipStreakMultiplier: 10 }
 
       await experienceStore.modifyChatExperiences(args)
 
       const storedTxs = await db.experienceTransaction.findMany()
       const storedData = await db.experienceDataChatMessage.findMany()
-      expect(storedTxs.map(tx => tx.delta)).toEqual([10, 20, 3])
-      expect(storedData.map(d => d.baseExperience)).toEqual([1000, 2000, 300])
+      expect(storedTxs.map(tx => tx.delta)).toEqual([10, 200])
+      expect(storedData.map(d => d.baseExperience)).toEqual([1, 2000])
     })
   })
 }

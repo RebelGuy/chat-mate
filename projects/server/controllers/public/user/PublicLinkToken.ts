@@ -17,4 +17,7 @@ export type PublicLinkToken = PublicObject<1, {
 
   /** A message containing more infor about a `succeeded` or `failed` link token. */
   message: string | null
+
+  /** The timestamp at which this token was used. Only set if the status is `succeeded` or `failed`. */
+  dateCompleted: number | null
 }>

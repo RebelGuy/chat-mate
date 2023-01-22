@@ -7,7 +7,7 @@ import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/Pub
 import { SERVER_URL } from '@rebel/studio/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
-import { GetLinkTokensResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest } from '@rebel/server/controllers/UserController'
+import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -133,13 +133,17 @@ export async function getLinkedChannels (loginToken: string, admin_aggregateUser
   return await GET(constructPath('/user/link/channels', { admin_aggregateUserId: admin_aggregateUserId }), loginToken)
 }
 
+export async function addLinkedChannel (loginToken: string, aggregateUserId: number, defaultUserId: number): Promise<AddLinkedChannelResponse> {
+  return await POST(constructPath(`/user/link/channels/${aggregateUserId}/${defaultUserId}`), null, loginToken)
+}
+
 export async function removeLinkedChannel (loginToken: string, defaultUserId: number, transferRanks: boolean, relinkChatExperience: boolean, relinkDonations: boolean): Promise<RemoveLinkedChannelResponse> {
   const queryParams = { transferRanks: transferRanks, relinkChatExperience: relinkChatExperience, relinkDonations: relinkDonations }
   return await DELETE(constructPath(`/user/link/channels/${defaultUserId}`, queryParams), null, loginToken)
 }
 
-export async function getLinkTokens (loginToken: string, admin_aggregateUserId?: number): Promise<GetLinkTokensResponse> {
-  return await GET(constructPath('/user/link/token', { admin_aggregateUserId: admin_aggregateUserId }), loginToken)
+export async function getLinkHistory (loginToken: string, admin_aggregateUserId?: number): Promise<GetLinkHistoryResponse> {
+  return await GET(constructPath('/user/link/history', { admin_aggregateUserId: admin_aggregateUserId }), loginToken)
 }
 
 export async function createLinkToken (loginToken: string, externalId: string): Promise<CreateLinkTokenResponse> {
@@ -185,7 +189,7 @@ async function request (method: string, path: string, requestData: any | undefin
 function constructPath (path: string, queryParams?: Record<string, string | number | boolean | undefined>) {
   let definedParams: [string, string | number | boolean][] = []
   for (const key in queryParams) {
-    if (typeof queryParams[key] === 'string') {
+    if (['string', 'number', 'boolean'].includes(typeof queryParams[key])) {
       definedParams.push([key, queryParams[key]!])
     }
   }

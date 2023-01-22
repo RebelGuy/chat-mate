@@ -6,6 +6,9 @@ export type PublicChannel = PublicObject<1, {
   /** The internal YoutubeChannel or TwitchChannel id. */
   channelId: number
 
+  /** The default user attached to the channel. */
+  defaultUserId: number
+
   /** The platform that the channel belongs to. */
   platform: 'youtube' | 'twitch'
 

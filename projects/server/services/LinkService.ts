@@ -76,16 +76,19 @@ export default class LinkService extends ContextClass {
   }
 
   /** Links the default user to the aggregate user and performs all required side effects.
+   * LinkToken should be defined when linking as part of a command, and can be null otherwise.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
    * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and its state was not cleaned up. Please wait before creating another attempt, or clean up the state.
   */
-  public async linkUser (defaultUserId: number, aggregateUserId: number, linkToken: string) {
+  public async linkUser (defaultUserId: number, aggregateUserId: number, linkToken: string | null) {
     const linkAttemptId = await this.linkStore.startLinkAttempt(defaultUserId, aggregateUserId)
     let cumWarnings = 0
     let logs: LinkLog[] = [[new Date(), 'Start', cumWarnings]]
 
     try {
-      await this.linkStore.addLinkAttemptToLinkToken(linkToken, linkAttemptId)
+      if (linkToken != null) {
+        await this.linkStore.addLinkAttemptToLinkToken(linkToken, linkAttemptId)
+      }
 
       await this.linkStore.linkUser(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(LinkStore, 'linkUser'), cumWarnings])
@@ -163,7 +166,8 @@ export default class LinkService extends ContextClass {
         logs.push([new Date(), nameof(DonationStore, 'undoDonationRelink'), cumWarnings])
       }
 
-      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
+      // need to check the aggregate user becauuse the default user has already been unlinked
+      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([aggregateUserId])).connectedChatUserIds
       if (connectedUserIds.length === 1) {
         // we unlinked the only user
         if (options.transferRanks) {

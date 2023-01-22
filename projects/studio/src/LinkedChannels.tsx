@@ -46,27 +46,31 @@ function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }
     return result
   }
 
-  return <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
-    <ApiRequestTrigger onRequest={removeLink}>
-      {(onMakeRequest, response, loading, error) => <>
-        <td>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Transfer ranks" checked={transferRanks} onChange={() => setTransferRanks(!transferRanks)} />
-            <label>Transfer ranks</label>
-          </div>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
-            <label>Relink chat experience</label>
-          </div>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Relink donations" checked={relinkDoantions} onChange={() => setRelinkDonations(!relinkDoantions)} />
-            <label>Relink donations</label>
-          </div>
-          <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
-        </td>
-      </>}
-    </ApiRequestTrigger>
-  </div>
+  return <>
+    <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
+      <ApiRequestTrigger onRequest={removeLink}>
+        {(onMakeRequest, response, loading, error) => <>
+          <td>
+            <div style={{ display: 'flex' }}>
+              <input type="checkbox" name="Transfer ranks" checked={transferRanks} onChange={() => setTransferRanks(!transferRanks)} />
+              <label>Transfer ranks</label>
+            </div>
+            <div style={{ display: 'flex' }}>
+              <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
+              <label>Relink chat experience</label>
+            </div>
+            <div style={{ display: 'flex' }}>
+              <input type="checkbox" name="Relink donations" checked={relinkDoantions} onChange={() => setRelinkDonations(!relinkDoantions)} />
+              <label>Relink donations</label>
+            </div>
+            <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
+            {response != null && <div>Success!</div>}
+            {error}
+          </td>
+        </>}
+      </ApiRequestTrigger>
+    </div>
+  </>
 }
 
 function getChannelUrl (channel: PublicChannelInfo) {
