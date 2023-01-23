@@ -17,8 +17,9 @@ import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { EmptyObject } from '@rebel/server/types'
-import { first, single, singleOrNull, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { first, intersection, nonNull, single, singleOrNull, symmetricDifference, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { asGte, asLte } from '@rebel/server/util/math'
 import { sleep } from '@rebel/server/util/node'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { assertUnreachable, firstOrDefault } from '@rebel/server/util/typescript'
@@ -115,6 +116,79 @@ export default class UserController extends ControllerBase {
             platform: match.platformInfo.platform,
             displayName: getUserName(match)
           },
+          allChannels: channels.channels.map(c => ({
+            schema: 1,
+            channelId: c.platformInfo.channel.id,
+            defaultUserId: c.defaultUserId,
+            platform: c.platformInfo.platform,
+            displayName: getUserName(c)
+          }))
+        }
+      })
+
+      return builder.success({ results })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('search/registered')
+  @PreProcessor(requireStreamer) // streamer is required to get channel data
+  @PreProcessor(requireRank('admin'))
+  public async searchRegisteredUsers (request: SearchUserRequest): Promise<SearchUserResponse> {
+    const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search', 4)
+    if (request == null || request.schema !== builder.schema || isNullOrEmpty(request.searchTerm)) {
+      return builder.failure(400, 'Invalid request data.')
+    }
+
+    try {
+      const matches = await this.accountStore.searchByUserName(request.searchTerm)
+      const aggregateUserIds = matches.map(c => c.aggregateChatUserId)
+
+      const userChannels = await this.channelService.getConnectedUserChannels(aggregateUserIds)
+
+      // not all aggregate users will have channels attached to them (or channels that are active for the current streamer)
+      const streamerChannels = await this.channelStore.getAllChannels(this.getStreamerId())
+      const aggregateUserIdsWithChannels = nonNull(intersection(aggregateUserIds, streamerChannels.map(c => c.aggregateUserId)))
+
+      const aggregateUserIdsWithoutChannels = symmetricDifference(aggregateUserIds, aggregateUserIdsWithChannels)
+      const standaloneRegisteredUsers = await this.accountStore.getRegisteredUsers(aggregateUserIdsWithoutChannels)
+
+      const allData = await this.apiService.getAllData(aggregateUserIdsWithChannels)
+      const results = matches.map<PublicUserSearchResult>(match => {
+        const aggregateUserId = match.aggregateChatUserId
+        const channels = userChannels.find(c => c.userId === aggregateUserId)! // userChannels were requested via the aggregate user
+        const data = allData.find(d => d.primaryUserId === aggregateUserId)
+
+        return {
+          schema: 1,
+          user: userDataToPublicUser(data ?? {
+            aggregateUserId,
+            primaryUserId: aggregateUserId,
+            defaultUserId: channels.channels[0]?.defaultUserId ?? -1,
+            level: { level: 0, levelProgress: asLte(asGte(0, 0), 1), totalExperience: 0 },
+            ranks: [],
+            platformInfo: channels.channels[0]?.platformInfo ?? {
+              platform: 'youtube',
+              channel: {
+                id: -1,
+                youtubeId: '',
+                userId: -1,
+                infoHistory: [{
+                  channelId: -1,
+                  id: -1,
+                  imageUrl: '',
+                  isModerator: false,
+                  isOwner: false,
+                  isVerified: false,
+                  name: 'n/a',
+                  time: new Date()
+                }]
+              }},
+            registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser
+          }),
+          matchedChannel: null,
           allChannels: channels.channels.map(c => ({
             schema: 1,
             channelId: c.platformInfo.channel.id,

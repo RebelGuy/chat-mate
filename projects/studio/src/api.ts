@@ -129,6 +129,11 @@ export async function searchUser (loginToken: string, streamer: string, searchTe
   return await POST(`/user/search`, request, loginToken, streamer)
 }
 
+export async function searchRegisteredUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
+  const request: SearchUserRequest = { schema: 4, searchTerm }
+  return await POST(`/user/search/registered`, request, loginToken, streamer)
+}
+
 export async function getLinkedChannels (loginToken: string, admin_aggregateUserId?: number): Promise<GetLinkedChannelsResponse> {
   return await GET(constructPath('/user/link/channels', { admin_aggregateUserId: admin_aggregateUserId }), loginToken)
 }

@@ -180,4 +180,9 @@ export default class AccountStore extends ContextClass {
       where: { aggregateChatUserId }
     })
   }
+
+  /** Returns all registered users whose display names match the given string (not case sensitive). */
+  public async searchByUserName (name: string): Promise<RegisteredUser[]> {
+    return await this.db.registeredUser.findMany({ where: { username: { contains: name.toLowerCase() }}})
+  }
 }

@@ -748,13 +748,25 @@ Path: `/user`.
 ### `POST /search`
 *Current schema: 4.*
 
-Search for a specific user.
+Search for a specific channel name.
 
 Request data (body):
 - `searchTerm` (`string`): *Required.* The string to search in user's channel names.
 
 Returns data with the following properties:
-- `results` (`PublicUserSearchResult[]`): An array containing information about matched channels. If no match was found, the array is empty. Results are sorted in ascending order according to the match quality, with the first result having the best match. It is possible that multiple of the user's channels appear in different results.
+- `results` (`PublicUserSearchResult[]`): An array containing information about matched channels. If no match was found, the array is empty. It is possible that multiple of the user's channels appear in different results.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /search/registered`
+Search for a specific registered user.
+
+Request data (body):
+- `searchTerm` (`string`): *Required.* The string to search in the users' registered usernames.
+
+Returns data with the following properties:
+- `results` (`PublicUserSearchResult[]`): An array containing information about matched registered users. Note that the `matchedChannel` property will always be null.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.

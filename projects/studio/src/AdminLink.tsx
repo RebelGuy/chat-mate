@@ -12,7 +12,7 @@ export default function AdminLink () {
   const defaultUserId = primaryUserType === 'default' ? primaryUserId : selectedSearchResult?.matchedChannel?.defaultUserId
   return <>
     <h3>Admin</h3>
-    <div>Manage links of a user. Currently selected: {primaryUserId ? `${selectedSearchResult!.matchedChannel.displayName}. Primary User ${primaryUserId} (${primaryUserType})`: 'n/a'}</div>
+    <div>Manage links of a user. Currently selected: {primaryUserId ? `${selectedSearchResult!.matchedChannel?.displayName ?? selectedSearchResult!.user.registeredUser?.displayName ?? '<unknown>'}. Primary User ${primaryUserId} (${primaryUserType})`: 'n/a'}</div>
 
     <SearchUser greyOutDefaultUsers onPickResult={setSelectedSearchResult} />
 
