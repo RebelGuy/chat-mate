@@ -543,8 +543,8 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
 
     await experienceService.recalculateChatExperience(aggregateUserId)
 
-    // no modifications
-    expect(mockExperienceStore.modifyChatExperiences.mock.calls.length).toBe(0)
+    const args = mockExperienceStore.modifyChatExperiences.mock.calls.map(single)
+    expect(args.map(x => x.delta)).toEqual([0])
   })
 
   test('Does not count experience for chat experience gained off-livestream', async () => {
@@ -569,7 +569,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
 
     await experienceService.recalculateChatExperience(aggregateUserId)
 
-    // no modifications
-    expect(mockExperienceStore.modifyChatExperiences.mock.calls.length).toBe(0)
+    const args = mockExperienceStore.modifyChatExperiences.mock.calls.map(single)
+    expect(args.map(x => x.delta)).toEqual([0])
   })
 })

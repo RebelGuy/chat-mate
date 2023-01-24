@@ -274,43 +274,50 @@ export default class ExperienceService extends ContextClass {
         const time = tx.time
         const livestreamId = tx.experienceDataChatMessage.chatMessage.livestreamId
         const chatMessage = chatMessages.find(msg => msg.id === tx.experienceDataChatMessage.chatMessageId)!
-
-        if (livestreamId == null) {
-          // todo: 0 xp
-          continue
-        }
-
         const isPunished = punishments.find(p => this.rankHelpers.isRankActive(p, time)) != null
-        if (isPunished) {
-          // todo: 0 xp
-          continue
+
+        let args: ModifyChatExperienceArgs
+        if (livestreamId == null || isPunished) {
+          args = {
+            experienceTransactionId: tx.id,
+            chatExperienceDataId: tx.experienceDataChatMessage.id,
+            delta: 0,
+            baseExperience: 0,
+            viewershipStreakMultiplier: 0,
+            participationStreakMultiplier: 0,
+            spamMultiplier: 0,
+            messageQualityMultiplier: 0,
+            repetitionPenalty: 0
+          }
+
+        } else {
+          const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, connectedUserIds)
+          const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, connectedUserIds)
+          const prevChatExperience = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId, tx.id)
+          const spamMultiplier = this.getSpamMultiplier(livestreamId, prevChatExperience, time.getTime())
+          const messageParts = convertInternalMessagePartsToExternal(chatMessage.chatMessageParts)
+          const messageQualityMultiplier = this.getMessageQualityMultiplier(messageParts)
+          const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
+
+          // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
+          // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
+          // repetitive messages are anything but high quality, and thus receive a bigger punishment.
+          const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
+          const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
+
+          args = {
+            experienceTransactionId: tx.id,
+            chatExperienceDataId: tx.experienceDataChatMessage.id,
+            delta: xpAmount,
+            baseExperience: ExperienceService.CHAT_BASE_XP,
+            viewershipStreakMultiplier,
+            participationStreakMultiplier,
+            spamMultiplier,
+            messageQualityMultiplier,
+            repetitionPenalty
+          }
         }
 
-        const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, connectedUserIds)
-        const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, connectedUserIds)
-        const prevChatExperience = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId, tx.id)
-        const spamMultiplier = this.getSpamMultiplier(livestreamId, prevChatExperience, time.getTime())
-        const messageParts = convertInternalMessagePartsToExternal(chatMessage.chatMessageParts)
-        const messageQualityMultiplier = this.getMessageQualityMultiplier(messageParts)
-        const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
-
-        // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
-        // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
-        // repetitive messages are anything but high quality, and thus receive a bigger punishment.
-        const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
-        const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
-
-        const args: ModifyChatExperienceArgs = {
-          experienceTransactionId: tx.id,
-          chatExperienceDataId: tx.experienceDataChatMessage.id,
-          delta: xpAmount,
-          baseExperience: ExperienceService.CHAT_BASE_XP,
-          viewershipStreakMultiplier,
-          participationStreakMultiplier,
-          spamMultiplier,
-          messageQualityMultiplier,
-          repetitionPenalty
-        }
         await this.experienceStore.modifyChatExperiences(args)
       }
     }
