@@ -657,8 +657,8 @@ export default () => {
 
       const storedTxs = await db.experienceTransaction.findMany()
       const storedData = await db.experienceDataChatMessage.findMany()
-      expect(storedTxs.map(tx => tx.delta)).toEqual([10, 200])
-      expect(storedData.map(d => d.baseExperience)).toEqual([1, 2000])
+      expect(storedTxs.map(tx => tx.delta)).toEqual([10, 2])
+      expect(storedData.map(d => d.baseExperience)).toEqual([1, 200])
     })
   })
 }

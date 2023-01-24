@@ -250,6 +250,7 @@ export default () => {
       await db.chatUser.createMany({ data: [{}, {}, {}, {}] })
       await db.linkAttempt.create({ data: {
         startTime: new Date(),
+        endTime: new Date(),
         aggregateChatUserId: 2,
         defaultChatUserId: 3,
         log: '',

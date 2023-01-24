@@ -261,7 +261,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
-    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
 
     await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })
 
@@ -278,7 +278,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
-    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
 
     await linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false, relinkDonations: false })
 
@@ -296,7 +296,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
-    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
 
     await linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })
 
@@ -313,7 +313,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     const connectedUserIds = [12, 6]
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
-    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
     mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean), expect.anything()).mockRejectedValue(new Error())
 

@@ -111,7 +111,7 @@ describe(nameof(LinkDataService, 'getLinkHistory'), () => {
 
     const result = await linkDataService.getLinkHistory(aggregateUserId)
 
-    expect(result.length).toBe(6)
+    expect(result.length).toBe(8)
     expect(result).toEqual(expectObject<LinkHistory>([
       { type: 'pending', defaultUserId: defaultUserId1, isLink: true, maybeToken: token1 },
       { type: 'pending', defaultUserId: defaultUserId2, isLink: true, maybeToken: token2 },
