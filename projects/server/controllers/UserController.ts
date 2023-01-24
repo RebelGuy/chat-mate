@@ -401,7 +401,7 @@ async function retryLinkAttempt (linkAttempt: () => Promise<void>) {
       await linkAttempt()
       return
     } catch (e) {
-      if (e instanceof LinkAttemptInProgressError) {
+      if (e instanceof LinkAttemptInProgressError && i < attempts - 1) {
         await sleep(2000)
         continue
       } else {

@@ -133,6 +133,13 @@ export default class LinkService extends ContextClass {
         await this.linkStore.deleteLinkAttempt(linkAttemptId)
       } else {
         await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
+
+        try {
+          await this.linkStore.unlinkUser(defaultUserId)
+          this.logService.logInfo(this, `Successfully rolled back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+        } catch (innerErr: any) {
+          this.logService.logInfo(this, `Failed to roll back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+        }
       }
       throw e
     }

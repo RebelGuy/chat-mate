@@ -6,7 +6,7 @@ import Home from '@rebel/studio/Home'
 import HomePageButton from '@rebel/studio/HomePageButton'
 import LinkUser from '@rebel/studio/LinkUser'
 import LoginForm from '@rebel/studio/LoginForm'
-import LoginProvider from '@rebel/studio/LoginProvider'
+import LoginProvider, { LoginContext } from '@rebel/studio/LoginProvider'
 import RegistrationForm from '@rebel/studio/RegistrationForm'
 import { Page } from '@rebel/studio/types'
 import * as React from 'react'
@@ -42,17 +42,21 @@ export default class App extends React.PureComponent<Props, State> {
   override render () {
     return (
       <div className="App">
-        <LoginProvider >
-          <DebugInfo />
-          <h1>ChatMate Studio</h1>
-          {this.state.currentPage !== 'home' && <HomePageButton onHome={this.onSelectHomePage} />}
-          {this.state.currentPage === 'home' && <Home onSelectPage={this.onSelectPage} />}
-          {this.state.currentPage === 'registration' && <RegistrationForm onBack={this.onSelectHomePage} />}
-          {this.state.currentPage === 'login' && <LoginForm onBack={this.onSelectHomePage} onRegister={this.onSelectRegistrationPage} />}
-          {this.state.currentPage === 'chatMate' && <ChatMateManager />}
-          {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
-          {this.state.currentPage === 'applyForStreamer' && <ApplyForStreamer />}
-          {this.state.currentPage === 'linkUser' && <LinkUser />}
+        <LoginProvider>
+          <LoginContext.Consumer>
+            {loginContext => <>
+              {loginContext.isAdmin && <DebugInfo />}
+              <h1>ChatMate Studio</h1>
+              {this.state.currentPage !== 'home' && <HomePageButton onHome={this.onSelectHomePage} />}
+              {this.state.currentPage === 'home' && <Home onSelectPage={this.onSelectPage} />}
+              {this.state.currentPage === 'registration' && <RegistrationForm onBack={this.onSelectHomePage} />}
+              {this.state.currentPage === 'login' && <LoginForm onBack={this.onSelectHomePage} onRegister={this.onSelectRegistrationPage} />}
+              {this.state.currentPage === 'chatMate' && <ChatMateManager />}
+              {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
+              {this.state.currentPage === 'applyForStreamer' && <ApplyForStreamer />}
+              {this.state.currentPage === 'linkUser' && <LinkUser />}
+            </>}
+          </LoginContext.Consumer>
         </LoginProvider>
       </div>
     )

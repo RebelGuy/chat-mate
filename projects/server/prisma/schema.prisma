@@ -132,6 +132,8 @@ model LinkAttempt {
   log          String    @db.VarChar(4096)
   // if you change the length, it must also be updated in the LinkStore.completeLinkAttempt method
   errorMessage String?   @db.VarChar(4096)
+  /// If an error occurred, whether the link attempt has been given the all-clear by an admin so another link attempt can be made.
+  released     Boolean   @default(true)
   type         LinkType
 
   // the user that we are linking

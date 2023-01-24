@@ -1,16 +1,16 @@
-import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import AdminLink from '@rebel/studio/AdminLink'
-import { addLinkedChannel, createLinkToken, getGlobalRanks, getLinkedChannels, getLinkHistory } from '@rebel/studio/api'
+import { addLinkedChannel, createLinkToken, getLinkedChannels, getLinkHistory } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import LinkedChannels from '@rebel/studio/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/LinkHistory'
+import { LoginContext } from '@rebel/studio/LoginProvider'
 import * as React from 'react'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
+  const loginContext = React.useContext(LoginContext)
   const [updateToken, setUpdateToken] = React.useState(Date.now())
-  const [userRanks, setUserRanks] = React.useState<PublicUserRank[]>([])
 
   // the user to link to
   const [selectedAggregateUserId, setSelectedAggregateUserId] = React.useState<number | null>()
@@ -20,26 +20,14 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
   }, [props.admin_selectedAggregateUserId])
 
   const regenerateUpdateToken = () => setUpdateToken(Date.now())
-  const getRanks = async (loginToken: string) => {
-    const response = await getGlobalRanks(loginToken)
-
-    if (response.success) {
-      setUserRanks(response.data.ranks)
-    }
-
-    return response
-  }
 
   // for some reason the output type is not accepted when these are put in-line, but works fine when saved as a variable first
   const onGetLinkedChannels = (loginToken: string) => getLinkedChannels(loginToken, props.admin_selectedAggregateUserId)
   const onGetLinkHistory = (loginToken: string) => getLinkHistory(loginToken, props.admin_selectedAggregateUserId)
   const onAddLinkedChannel = (loginToken: string) => addLinkedChannel(loginToken, selectedAggregateUserId!, props.admin_selectedDefaultUserId!)
 
-  const isAdmin = userRanks.find(r => r.rank.name === 'admin') != null
-
   return (
     <div>
-      <ApiRequest onDemand token={updateToken} onRequest={getRanks} />
       <button style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>Refresh</button>
       
       {props.admin_selectedDefaultUserId != null && <>
@@ -60,7 +48,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         <div style={{ marginBottom: 16 }}>
           <ApiRequest onDemand token={updateToken} onRequest={onGetLinkedChannels}>
             {(response, loadingNode, errorNode) => <>
-              {response && <LinkedChannels channels={response.channels} isAdmin={isAdmin} onChange={regenerateUpdateToken} />}
+              {response && <LinkedChannels channels={response.channels} isAdmin={loginContext.isAdmin} onChange={regenerateUpdateToken} />}
               {loadingNode}
               {errorNode}
             </>}
@@ -81,7 +69,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
           </>}
         </ApiRequest>
       }
-      {isAdmin && props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
+      {loginContext.isAdmin && props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
         <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
           <AdminLink />
         </div>

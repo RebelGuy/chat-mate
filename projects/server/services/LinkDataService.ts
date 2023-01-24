@@ -114,7 +114,7 @@ export default class LinkDataService extends ContextClass {
           type: a.errorMessage == null ? 'success' : 'fail',
           completionTime: a.endTime,
           defaultUserId: a.defaultChatUserId,
-          message: a.errorMessage ?? 'Link succeeded',
+          message: a.errorMessage ?? 'Success',
           token: null,
           isLink: a.type === 'link'
         }
@@ -137,7 +137,7 @@ export default class LinkDataService extends ContextClass {
           type: t.linkAttempt.errorMessage == null ? 'success' : 'fail',
           completionTime: t.linkAttempt.endTime,
           defaultUserId: t.defaultChatUserId,
-          message: t.linkAttempt.errorMessage ?? 'Link succeeded',
+          message: t.linkAttempt.errorMessage ?? 'Success',
           token: t.token,
           isLink: true // we don't allow unlinking via commands
         }

@@ -224,7 +224,8 @@ export default () => {
         defaultChatUserId: 1,
         log: '',
         errorMessage: 'error',
-        type: 'link'
+        type: 'link',
+        released: false
       }})
 
       await expect(() => linkStore.startLinkAttempt(1, 2)).rejects.toThrowError(LinkAttemptInProgressError)
@@ -238,10 +239,28 @@ export default () => {
         defaultChatUserId: 3,
         log: '',
         errorMessage: 'error',
-        type: 'link'
+        type: 'link',
+        released: false
       }})
 
       await expect(() => linkStore.startLinkAttempt(1, 2)).rejects.toThrowError(LinkAttemptInProgressError)
+    })
+
+    test('Does not throw if a previous link attempt had failed but its state has been cleaned up', async () => {
+      await db.chatUser.createMany({ data: [{}, {}, {}, {}] })
+      await db.linkAttempt.create({ data: {
+        startTime: new Date(),
+        aggregateChatUserId: 2,
+        defaultChatUserId: 3,
+        log: '',
+        errorMessage: 'error',
+        type: 'link',
+        released: true
+      }})
+
+      await linkStore.startLinkAttempt(1, 2)
+
+      // does not throw
     })
   })
 

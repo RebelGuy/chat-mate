@@ -97,7 +97,7 @@ export default class LinkStore extends ContextClass {
     })
 
     if (defaultUser.aggregateChatUserId != null) {
-      throw new UserAlreadyLinkedToAggregateUserError(`Cannot link the user because it is already linked to another user.`, defaultUser.aggregateChatUserId, defaultUserId)
+      throw new UserAlreadyLinkedToAggregateUserError(`Cannot link the user because it is already linked to ${defaultUser.aggregateChatUserId === aggregateChatUserId ? 'this' : 'another'} user.`, defaultUser.aggregateChatUserId, defaultUserId)
     }
 
     await this.db.chatUser.update({
@@ -142,7 +142,8 @@ export default class LinkStore extends ContextClass {
       data: {
         endTime: new Date(),
         log: ensureMaxTextWidth(JSON.stringify(logs), 4096), // max length comes directly from the db - do not change this.
-        errorMessage: errorMessage == null ? null : ensureMaxTextWidth(errorMessage, 4096) // max length comes directly from the db - do not change this.
+        errorMessage: errorMessage == null ? null : ensureMaxTextWidth(errorMessage, 4096), // max length comes directly from the db - do not change this.
+        released: errorMessage == null
       }
     })
   }
@@ -187,7 +188,10 @@ export default class LinkStore extends ContextClass {
             { endTime: null },
 
             // safety catch so that we don't half-complete a link, and then start it again. someone needs to look at what went wrong before giving the all-clear to re-attempt the link.
-            { errorMessage: { not: null } }
+            {
+              errorMessage: { not: null },
+              released: false
+            }
           ]
         }]
       }
@@ -198,7 +202,7 @@ export default class LinkStore extends ContextClass {
       if (existingAttempt.errorMessage == null) {
         message = `Cannot ${type} the user. The user is currently being ${existingAttempt.type}ed (attempt id ${existingAttempt.id}). Please wait until this process is complete.`
       } else {
-        message = `Cannot ${type} the user. An attempt was made to ${existingAttempt.type} the user previously, but it failed. Please contact an admin referncing the attempt id ${existingAttempt.id}.`
+        message = `Cannot ${type} the user. An attempt was made to ${existingAttempt.type} the user previously, but it failed. Please contact an admin referencing the attempt id ${existingAttempt.id}.`
       }
       throw new LinkAttemptInProgressError(message)
     }
