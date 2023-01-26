@@ -130,7 +130,12 @@ export default class LinkService extends ContextClass {
       this.logService.logError(this, `[${linkAttemptId}] Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
 
       if (e instanceof UserAlreadyLinkedToAggregateUserError) {
-        await this.linkStore.deleteLinkAttempt(linkAttemptId)
+        if (linkToken == null) {
+          // don't pollute the link history by admin-triggered link attempts failing due to already-linked errors
+          await this.linkStore.deleteLinkAttempt(linkAttemptId)
+        } else {
+          await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
+        }
       } else {
         await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
 
