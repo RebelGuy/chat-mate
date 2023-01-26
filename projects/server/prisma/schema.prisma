@@ -89,7 +89,7 @@ model ChatUser {
   // the time at which the user was linked to an aggregate user, if any
   linkedAt DateTime?
 
-  /// Never defined for aggregate chat users, and possibly defined for normal chat users.
+  /// Never defined for aggregate chat users, and possibly defined for default chat users.
   aggregateChatUserId Int?
   aggregateChatUser   ChatUser? @relation(name: "aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "chat_user_aggregateChatUserId_fkey")
 
@@ -144,7 +144,7 @@ model LinkAttempt {
   aggregateChatUserId Int
   aggregateChatUser   ChatUser @relation(name: "link_attempt_aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "link_attempt_aggregateChatUserId_fkey")
 
-  // the link token will be attached if the link attempt was conducted as part of a command execution
+  // the link token will be attached if the link attempt was conducted as part of a command execution (as opposed to being initiated by an admin)
   linkTokenId Int?
   linkToken   LinkToken? @relation(fields: [linkTokenId], references: [id], map: "link_attempt_linkTokenId_fkey")
 

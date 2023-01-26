@@ -47,6 +47,25 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.22 - The Link Update [26/1/2023]
+- Server
+  - Addition of commands - these are any chat messages starting with `!`
+    - Commands do not count towards experience
+  - Ability for users to link channels to their registered ChatMate account
+    - Users generate a link token on Studio which primes the link between their account and the selected channel
+    - To execute the link, the channel that is to be linked must send the command `!link <link token>`
+    - When linking multiple channels, all experience, ranks, and donations are merged
+    - Only admins can undo links, if required
+  - Overhaul of the internal handling of different user types and consistent annotations/variable names to un-ambiguously indicate intent
+    - Default Users: The Chat Users that are directly attached to YouTube or Twitch channels. They may be linked to zero or one Aggregate User.
+    - Aggregate Users: The Chat Users that are directly attached to Registered Users. There is a one-to-one relationship between Aggregate and Registered Users, and a one-to-many relationship to Default Users.
+    - Primary Users: Refers to the single Aggregate User if the user is linked to one, or the single Default User otherwise.
+    - Experience, ranks, and donations, are consistently linked to Primary Users. This means that no match would be returned for getting a Default User's rank if that user has been linked to an Aggregate User.
+- Studio
+  - Added Link page
+    - Users can create new tokens, view their currently linked channels, and view their link history
+    - Admins can manually link users or remove existing links, as well as view other users' linked channels and histories
+
 ## v1.21 - The Auth Update [20/11/2022]
 - Server
   - Added the ability to register as a user, and for registered users to authenticate themselves. Registered Users may be linked to Chat Users 

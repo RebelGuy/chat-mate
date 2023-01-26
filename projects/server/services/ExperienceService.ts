@@ -353,7 +353,7 @@ export default class ExperienceService extends ContextClass {
     return this.experienceHelpers.calculateParticipationMultiplier(participationScore)
   }
 
-  // uses the primary user id because we only need it to fatch a experience transaction, and experience should be linked to the primary user at the time of calling this function
+  // uses the primary user id because we only need it to fetch a experience transaction, and experience should be linked to the primary user at the time of calling this function
   private getSpamMultiplier (currentLivestreamId: number, prevChatExperience: ChatExperience | null, messageTimestamp: number): SpamMult {
     if (prevChatExperience == null || prevChatExperience.experienceDataChatMessage.chatMessage.livestreamId !== currentLivestreamId) {
       // always start with a multiplier of 1 at the start of the livestream

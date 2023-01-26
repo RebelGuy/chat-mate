@@ -75,6 +75,7 @@ export default class LinkDataService extends ContextClass {
     return await this.linkStore.getOrCreateLinkToken(aggregateUserId, defaultUserId)
   }
 
+  /** Returns all link tokens and link attempts, and groups them where applicable. */
   public async getLinkHistory (aggregateUserId: number): Promise<LinkHistory> {
     let linkHistory: LinkHistory = this.commandService.getQueuedCommands()
       .filter(c => this.linkCommand.normalisedNames.includes(c.normalisedName))

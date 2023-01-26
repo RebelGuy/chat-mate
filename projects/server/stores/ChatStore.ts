@@ -117,7 +117,7 @@ export default class ChatStore extends ContextClass {
     })
 
     return primaryUserIds.map(id => {
-      const message = chatMessagesForDefaultUsers.find(c => c.userId === id)?? chatMessagesForAggregateUsers.find(c => c.user!.aggregateChatUserId === id)
+      const message = chatMessagesForDefaultUsers.find(c => c.userId === id) ?? chatMessagesForAggregateUsers.find(c => c.user!.aggregateChatUserId === id)
       if (message == null) {
         throw new Error(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
       } else {

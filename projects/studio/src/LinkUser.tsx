@@ -78,7 +78,6 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
   )
 }
 
-// todo: should also be searchable by username
 function CreateLinkToken (props: { onCreated: () => void }) {
   const [channelInput, setChannelInput] = React.useState('')
   const { channelId, error: validationError } = validateChannel(channelInput)

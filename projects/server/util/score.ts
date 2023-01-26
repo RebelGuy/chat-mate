@@ -8,7 +8,7 @@ export function calculateWalkingScore<T, Min extends number, Max extends number>
   qualifier: (current: T, prev: T | null, next: T | null) => boolean,
   updater: (currentScore: number, qualified: boolean) => number,
   min: Min,
-  max: Max,
+  max: Max
 ): NumRange<Min, Max> {
   let score = clamp(initialScore, min, max)
 

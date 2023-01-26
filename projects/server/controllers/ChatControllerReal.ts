@@ -4,7 +4,7 @@ import { buildPath, ControllerBase, ControllerDependencies, In, Out } from '@reb
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
-import AccountService from '@rebel/server/services/AccountService'
+import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
@@ -47,7 +47,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     if (!allDefined(users)) {
       throw new Error('Chat items must have a user set')
     }
-    const primaryUserIds = unique(users.map(user => user.aggregateChatUserId ?? user.id))
+    const primaryUserIds = unique(users.map(getPrimaryUserId))
 
     const levels = await this.experienceService.getLevels(streamerId, primaryUserIds)
     const ranks = await this.rankStore.getUserRanks(primaryUserIds, streamerId)
@@ -55,7 +55,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
-      const primaryUserId = chat.user!.aggregateChatUserId ?? chat.user!.id
+      const primaryUserId = getPrimaryUserId(chat.user!)
       const level = levels.find(l => l.primaryUserId === primaryUserId)!.level
       const activeRanks = ranks.find(r => r.primaryUserId === primaryUserId)!.ranks.map(userRankToPublicObject)
       const registeredUser = registeredUsers.find(r => r.primaryUserId === primaryUserId)!.registeredUser

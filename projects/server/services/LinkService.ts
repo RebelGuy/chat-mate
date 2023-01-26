@@ -28,10 +28,6 @@ export type UnlinkUserOptions = {
 
   /** If true, will relink back to this user any donations that the user was originally associated with at the time of linking. */
   relinkDonations: boolean
-
-  // todo:
-  // reEvaluateDonations: boolean
-  // recalculateChatExperience: boolean
 }
 
 type Deps = Dependencies<{
@@ -78,7 +74,7 @@ export default class LinkService extends ContextClass {
   /** Links the default user to the aggregate user and performs all required side effects.
    * LinkToken should be defined when linking as part of a command, and can be null otherwise.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
-   * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and its state was not cleaned up. Please wait before creating another attempt, or clean up the state.
+   * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and was not released. Please wait before creating another attempt, or release the failed attempt.
   */
   public async linkUser (defaultUserId: number, aggregateUserId: number, linkToken: string | null) {
     const linkAttemptId = await this.linkStore.startLinkAttempt(defaultUserId, aggregateUserId)
@@ -137,14 +133,15 @@ export default class LinkService extends ContextClass {
           await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
         }
       } else {
-        await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
-
         try {
           await this.linkStore.unlinkUser(defaultUserId)
+          logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
           this.logService.logInfo(this, `Successfully rolled back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
         } catch (innerErr: any) {
           this.logService.logInfo(this, `Failed to roll back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
         }
+
+        await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
       }
       throw e
     }
@@ -156,7 +153,7 @@ export default class LinkService extends ContextClass {
    * If the default user was the only linked user, we can restore the unlinked state completely. Otherwise, only the state specified in the options will be restored.
    * Does NOT reconciliate external ranks in any way - this is up to the admin to take care of.
    * @throws {@link UserNotLinkedError}: When the user is not linked to an aggregate user.
-   * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and its state was not cleaned up. Please wait before creating another attempt, or clean up the state.
+   * @throws {@link LinkAttemptInProgressError}: When a link for the user is already in progress, or if a previous attempt had failed and was not released. Please wait before creating another attempt, or release the failed attempt
    */
   public async unlinkUser (defaultUserId: number, options: UnlinkUserOptions) {
     const linkAttemptId = await this.linkStore.startUnlinkAttempt(defaultUserId)

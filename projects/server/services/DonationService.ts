@@ -181,7 +181,7 @@ export default class DonationService extends ContextClass {
     }
   }
 
-  /** Re-evaluates and applies eligible donation ranks for connected users across all streamers.
+  /** Re-evaluates and applies eligible donation ranks to the associated primary user, taking into account all connected users across all streamers.
    * Assumes the associated primary user does not currently have any donation ranks.
    * Returns the number of warnings encountered. */
   public async reEvaluateDonationRanks (anyUserId: number, message: string | null, reEvaluationId: string): Promise<number> {
