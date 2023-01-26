@@ -31,10 +31,10 @@ export default () => {
       { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
     ]})
     await db.streamer.create({ data: {
-      registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}
+      registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}
     }})
     await db.streamer.create({ data: {
-      registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}
+      registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}
     }})
 
     customEmojiStore = new CustomEmojiStore(new Dependencies({ dbProvider }))

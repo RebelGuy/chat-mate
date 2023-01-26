@@ -8,17 +8,20 @@ import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicA
 import { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { userDataToPublicUser } from '@rebel/server/models/user'
-import { Level } from '@rebel/server/services/ExperienceService'
+import { Level, UserLevel } from '@rebel/server/services/ExperienceService'
 import { asGte, asLt } from '@rebel/server/util/math'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
-import { promised } from '@rebel/server/_test/utils'
+import { cast, promised } from '@rebel/server/_test/utils'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
+import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import { RegisteredUser } from '@prisma/client'
 
 export default class ChatMateControllerFake extends ControllerBase implements IChatMateController {
   private channelService: ChannelService
   private rankStore: RankStore
+  private accountService: AccountService
 
   private liveId: string | null = 'CkOgjC9wjog'
 
@@ -26,6 +29,7 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
     super(deps, '/chatMate')
     this.channelService = deps.resolve('channelService')
     this.rankStore = deps.resolve('rankStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   public getStatus (args: In<GetStatusEndpoint>): Out<GetStatusEndpoint> {
@@ -64,7 +68,8 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
 
   public async getEvents (args: In<GetEventsEndpoint>): Out<GetEventsEndpoint> {
     const { builder, since } = args
-    const users = await this.channelService.getActiveUserChannels(this.getStreamerId(), 'all')
+    const primaryUserIds = await this.accountService.getStreamerPrimaryUserIds(this.getStreamerId())
+    const users = await this.channelService.getActiveUserChannels(this.getStreamerId(), primaryUserIds)
 
     let events: PublicChatMateEvent[] = []
     const N = Math.sqrt(Math.random() * 100) - 5
@@ -73,14 +78,19 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
       if (r < 0.7) {
         // level up event
         const newLevel = randomInt(0, 101)
-        const level: Level = {
-          level: asGte(newLevel, 0),
-          levelProgress: asLt(asGte(Math.random(), 0), 1),
-          totalExperience: asGte(randomInt(0, 100000), 0)
-        }
         const userChannel = pickRandom(users)
-        const ranks = single(await this.rankStore.getUserRanks([userChannel.userId], this.getStreamerId())).ranks
-        const user: PublicUser = userDataToPublicUser({ ...userChannel, userId: userChannel.userId, level, ranks })
+        const primaryUserId = getPrimaryUserId(userChannel)
+        const ranks = single(await this.rankStore.getUserRanks([primaryUserId], this.getStreamerId()))
+        const level: UserLevel = {
+          primaryUserId: primaryUserId,
+          level: {
+            level: asGte(newLevel, 0),
+            levelProgress: asLt(asGte(Math.random(), 0), 1),
+            totalExperience: asGte(randomInt(0, 100000), 0)
+          }
+        }
+        const registeredUser = userChannel.aggregateUserId == null ? null : cast<RegisteredUser>({ aggregateChatUserId: userChannel.aggregateUserId!, username: 'test username' })
+        const user: PublicUser = userDataToPublicUser({ ...userChannel, ...level, ...ranks, ...{ registeredUser } })
 
         events.push({
           schema: 5,

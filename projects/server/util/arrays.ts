@@ -283,8 +283,12 @@ export function subGroupedSingle<T, G, S> (arr: T[], mainGrouper: (item: T) => G
   return result
 }
 
-export function nonNull<T> (arr: (T | null)[]): T[] {
-  return arr.filter(value => value != null) as T[]
+export function nonNull<T> (arr: (T | null)[]): Exclude<T, null>[] {
+  return arr.filter(value => value != null) as Exclude<T, null>[]
+}
+
+export function allDefined<T> (arr: (T | null)[]): arr is T[] {
+  return arr.find(value => value == null) == null
 }
 
 export function values<T> (map: Map<any, T>): T[] {
@@ -329,6 +333,15 @@ export function intersection<T> (first: T[], second: T[], comparator?: (a: T, b:
   }
 
   return first.filter(x => second.find(y => comparator!(x, y)) != null)
+}
+
+/** Produces the symmetric difference of the two arrays, that is, the set of elements that are mutually exclusive. */
+export function symmetricDifference<T> (first: T[], second: T[], comparator?: (a: T, b: T) => boolean): T[] {
+  if (comparator == null) {
+    comparator = (a: T, b: T) => a === b
+  }
+
+  return [...first.filter(x => second.find(y => comparator!(x, y)) == null), ...second.filter(y => first.find(x => comparator!(y, x)) == null)]
 }
 
 /** A common operation is to filter an array of a union of types by a certain type (or multiple). The vanilla return type of that filter is the same union of types, which is undesirable. */

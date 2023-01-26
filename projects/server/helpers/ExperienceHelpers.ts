@@ -1,5 +1,5 @@
 import ContextClass from '@rebel/server/context/ContextClass'
-import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations, PartialCustomEmojiChatMessage, PARTIAL_MESSAGE_TYPES } from '@rebel/server/models/chat'
+import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations, PartialCustomEmojiChatMessage, PARTIAL_MESSAGE_TYPES, PartialChatMessage } from '@rebel/server/models/chat'
 import { tally, unique } from '@rebel/server/util/arrays'
 import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/server/util/math'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
@@ -80,14 +80,14 @@ export default class ExperienceHelpers extends ContextClass {
   }
 
   // Returns 0 <= x < 1 for low-quality messages, and 1 < x <= 2 for high quality messages. 1 is "normal" quality.
-  public calculateChatMessageQuality (chatItem: ChatItem): NumRange<0, 2> {
-    const text = chatItem.messageParts
+  public calculateChatMessageQuality (messageParts: PartialChatMessage[]): NumRange<0, 2> {
+    const text = messageParts
       .filter(p => p.type === 'text' && p.text.trim().length > 0)
       .map(p => (p as PartialTextChatMessage).text.trim().toLowerCase())
     const msg = text.join()
     const words = msg.split(' ')
 
-    const emojis = chatItem.messageParts.filter(p => p.type === 'emoji' || p.type === 'customEmoji')
+    const emojis = messageParts.filter(p => p.type === 'emoji' || p.type === 'customEmoji')
       .map(part => part.type === 'emoji' ? part.name : part.type === 'customEmoji' ? part.customEmojiId : null)
 
     // immediately we can filter out spammy messages

@@ -1,9 +1,10 @@
-import { Prisma } from '@prisma/client'
+import { ChatMessage, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import { reverse } from '@rebel/server/util/arrays'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 
 export type ChatSave = {
@@ -31,7 +32,7 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Adds the chat item, quietly ignoring duplicates. */
-  public async addChat (chatItem: ChatItem, streamerId: number, userId: number, channelId: string) {
+  public async addChat (chatItem: ChatItem, streamerId: number, defaultUserId: number, channelId: string): Promise<ChatMessage> {
     let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
     const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
@@ -42,14 +43,14 @@ export default class ChatStore extends ContextClass {
 
     // there is a race condition where the client may request messages whose message parts haven't yet been
     // completely written to the DB. bundle everything into a single transaction to solve this.
-    await this.db.$transaction(async (db) => {
+    return await this.db.$transaction(async (db) => {
       const chatMessage = await db.chatMessage.upsert({
         create: {
           time: new Date(chatItem.timestamp),
           streamer: { connect: { id: streamerId }},
           externalId: chatItem.id,
           contextToken: chatItem.platform === 'youtube' ? chatItem.contextToken : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
-          user: { connect: { id: userId }},
+          user: { connect: { id: defaultUserId }},
           youtubeChannel: chatItem.platform === 'youtube' ? { connect: { youtubeId: channelId }} : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
           twitchChannel: chatItem.platform === 'twitch' ? { connect: { twitchId: channelId }} : chatItem.platform === 'youtube' ? undefined : assertUnreachable(chatItem),
           livestream: livestreamPart
@@ -71,6 +72,7 @@ export default class ChatStore extends ContextClass {
       }
 
       await Promise.all(createParts)
+      return chatMessage
     }, {
       timeout: this.dbTransactionTimeout ?? undefined
     })
@@ -87,34 +89,68 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** For each user, returns the last chat item authored by the user, if any, regardless of which channel was used. */
-  public async getLastChatOfUsers (streamerId: number, userIds: number[] | 'all'): Promise<ChatItemWithRelations[]> {
-    const filter = userIds === 'all' ? { NOT: { userId: null }} : { userId: { in: userIds }}
-
-    return await this.db.chatMessage.findMany({
+  /** For each user, returns the last chat item authored by the user or any of its linked users.
+   * Throws if no chat message was found for any of the given user ids. */
+  public async getLastChatOfUsers (streamerId: number, primaryUserIds: number[]): Promise<ChatItemWithRelations[]> {
+    const chatMessagesForDefaultUsers = await this.db.chatMessage.findMany({
       distinct: ['userId'],
       orderBy: {
         time: 'desc'
       },
       include: chatMessageIncludeRelations,
       where: {
-        ...filter,
-        streamerId: streamerId
+        streamerId: streamerId,
+        userId: { in: primaryUserIds }
+      }
+    })
+
+    const chatMessagesForAggregateUsers = await this.db.chatMessage.findMany({
+      distinct: ['userId'],
+      orderBy: {
+        time: 'desc'
+      },
+      include: chatMessageIncludeRelations,
+      where: {
+        streamerId: streamerId,
+        user: { aggregateChatUserId: { in: primaryUserIds } }
+      }
+    })
+
+    return primaryUserIds.map(id => {
+      const message = chatMessagesForDefaultUsers.find(c => c.userId === id) ?? chatMessagesForAggregateUsers.find(c => c.user!.aggregateChatUserId === id)
+      if (message == null) {
+        throw new Error(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
+      } else {
+        return message
       }
     })
   }
 
-  /** Returns ordered chat items that may or may not be from the current livestream. */
-  public async getChatSince (streamerId: number, since: number, limit?: number): Promise<ChatItemWithRelations[]> {
-    return await this.db.chatMessage.findMany({
+  /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream. */
+  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number): Promise<ChatItemWithRelations[]> {
+    const result = await this.db.chatMessage.findMany({
       where: {
         streamerId: streamerId,
-        time: { gt: new Date(since) },
+        time: {
+          gt: new Date(since),
+          lte: beforeOrAt == null ? undefined : new Date(beforeOrAt)
+        },
         donationId: null
       },
-      orderBy: { time: 'asc' },
+      // we want to get the latest results
+      orderBy: { time: 'desc' },
       include: chatMessageIncludeRelations,
       take: limit
+    })
+
+    return reverse(result)
+  }
+
+  public async getChatById (chatMessageId: number): Promise<ChatItemWithRelations> {
+    return await this.db.chatMessage.findUnique({
+      where: { id: chatMessageId },
+      include: chatMessageIncludeRelations,
+      rejectOnNotFound: true
     })
   }
 }
@@ -143,7 +179,9 @@ export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageIn
     },
   },
   youtubeChannel: includeChannelInfo,
-  twitchChannel: includeChannelInfo
+  twitchChannel: includeChannelInfo,
+  chatCommand: true,
+  user: { include: { aggregateChatUser: true } }
 })
 
 export function createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {

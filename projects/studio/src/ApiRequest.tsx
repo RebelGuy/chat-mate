@@ -4,7 +4,7 @@ import * as React from 'react'
 
 type Props<TData extends ResponseData<TData>> = {
   // if providing a function, the children will always be rendered, otherwise they will only be rendered upon a successful response
-  children: ((response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => React.ReactNode) | React.ReactNode
+  children?: ((response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => React.ReactNode) | React.ReactNode
 } & ({
   isAnonymous: true
   requiresStreamer?: false
@@ -174,7 +174,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     const response = this.state.response
     if (response != null) {
       if (response.success && typeof this.props.children !== 'function') {
-        return this.props.children
+        return this.props.children ?? null
       } else if (!response.success) {
         error = response.error.message
       }

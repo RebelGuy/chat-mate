@@ -10,14 +10,14 @@ export type ChatMateEvent = { timestamp: number } & ({
   type: 'levelUp'
   oldLevel: number
   newLevel: number
-  userId: number
+  primaryUserId: number
 } | {
   type: 'newTwitchFollower'
   displayName: string
 } | {
   type: 'donation'
   donation: DonationWithMessage
-  userId: number | null
+  primaryUserId: number | null
 })
 
 type Deps = Dependencies<{
@@ -50,7 +50,7 @@ export default class ChatMateEventService extends ContextClass {
         timestamp: diff.timestamp,
         newLevel: diff.endLevel.level,
         oldLevel: diff.startLevel.level,
-        userId: diff.userId
+        primaryUserId: diff.primaryUserId
       })
     }
 
@@ -71,7 +71,7 @@ export default class ChatMateEventService extends ContextClass {
         type: 'donation',
         timestamp: donation.time.getTime(),
         donation: donation,
-        userId: donation.userId
+        primaryUserId: donation.primaryUserId
       })
     }
 

@@ -1,4 +1,4 @@
-import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel, CustomEmojiVersion } from '@prisma/client'
+import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel, CustomEmojiVersion, ChatCommand, ChatUser, RegisteredUser } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { PublicMessageCheer } from '@rebel/server/controllers/public/chat/PublicMessageCheer'
@@ -10,7 +10,9 @@ import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUser
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
-import { getUserName } from '@rebel/server/services/ChannelService'
+import { registeredUserToPublic } from '@rebel/server/models/user'
+import { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { Singular } from '@rebel/server/types'
@@ -188,6 +190,8 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
 export type ChatItemWithRelations = (ChatMessage & {
   youtubeChannel: YoutubeChannel & { infoHistory: YoutubeChannelInfo[] } | null
   twitchChannel: TwitchChannel & { infoHistory: TwitchChannelInfo[] } | null
+  chatCommand: ChatCommand | null
+  user: (ChatUser & { aggregateChatUser: ChatUser | null }) | null
   chatMessageParts: (ChatMessagePart & {
       emoji: ChatEmoji | null
       text: ChatText | null
@@ -202,6 +206,57 @@ export type ChatItemWithRelations = (ChatMessage & {
       cheer: ChatCheer | null
   })[]
 })
+
+export function convertInternalMessagePartsToExternal (messageParts: ChatItemWithRelations['chatMessageParts']): PartialChatMessage[] {
+  const convertText = (text: ChatText): PartialTextChatMessage => ({
+    type: 'text',
+    text: text.text,
+    isBold: text.isBold,
+    isItalics: text.isItalics
+  })
+
+  const convertEmoji = (emoji: ChatEmoji): PartialEmojiChatMessage => ({
+    type: 'emoji',
+    emojiId: emoji.externalId,
+    image: {
+      url: emoji.imageUrl ?? '',
+      height: emoji.imageHeight ?? 0,
+      width: emoji.imageWidth ?? 0,
+    },
+    label: emoji.label ?? '',
+    name: emoji.name ?? ''
+  })
+
+  let result: PartialChatMessage[] = []
+
+  for (const part of messageParts) {
+    if (part.text != null) {
+      result.push(convertText(part.text))
+    } else if (part.emoji != null) {
+      result.push(convertEmoji(part.emoji))
+    } else if (part.customEmoji != null) {
+      result.push({
+        type: 'customEmoji',
+        customEmojiId: part.customEmoji.id,
+        customEmojiVersion: part.customEmoji.customEmojiVersion.id,
+        emoji: part.customEmoji.emoji == null ? null : convertEmoji(part.customEmoji.emoji),
+        text: part.customEmoji.text == null ? null : convertText(part.customEmoji.text)
+      })
+    } else if (part.cheer != null) {
+      result.push({
+        type: 'cheer',
+        amount: part.cheer.amount,
+        colour: part.cheer.colour,
+        imageUrl: part.cheer.imageUrl,
+        name: part.cheer.name
+      })
+    } else {
+      throw new Error('Chat message part has an invalid type')
+    }
+  }
+
+  return result
+}
 
 export function getUniqueEmojiId (emoji: YTEmoji): string {
   if (emoji.image.thumbnails[0].height && emoji.image.thumbnails[0].width && emoji.emojiId.length > 24) {
@@ -238,21 +293,22 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   }
 }
 
-export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[]): PublicChatItem {
+export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[], registeredUser: RegisteredUser | null): PublicChatItem {
   const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
   if (PLATFORM_TYPES !== 'youtube' && PLATFORM_TYPES !== 'twitch') {
     assertUnreachableCompile(PLATFORM_TYPES)
   }
 
-  if (chat.userId == null) {
+  if (chat.userId == null || chat.user == null) {
     throw new Error('ChatItem is expected to have a userId attached')
   }
 
   let userChannel: UserChannel
   if (chat.youtubeChannel != null) {
     userChannel = {
-      userId: chat.userId,
+      aggregateUserId: chat.user.aggregateChatUserId,
+      defaultUserId: chat.userId,
       platformInfo: {
         platform: 'youtube',
         channel: chat.youtubeChannel
@@ -260,7 +316,8 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     }
   } else if (chat.twitchChannel != null) {
     userChannel = {
-      userId: chat.userId,
+      aggregateUserId: chat.user.aggregateChatUserId,
+      defaultUserId: chat.userId,
       platformInfo: {
         platform: 'twitch',
         channel: chat.twitchChannel
@@ -272,7 +329,10 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
 
   const userInfo: PublicChannelInfo = {
     schema: 1,
-    channelName: getUserName(userChannel)
+    defaultUserId: chat.userId,
+    externalIdOrUserName: getExternalIdOrUserName(userChannel),
+    platform: userChannel.platformInfo.platform,
+    channelName: getUserName(userChannel),
   }
 
   const levelInfo: PublicLevelInfo = {
@@ -286,11 +346,13 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     id: chat.id,
     timestamp: chat.time.getTime(),
     platform: userChannel.platformInfo.platform,
+    isCommand: chat.chatCommand != null,
     messageParts,
     author: {
       schema: 3,
-      id: chat.userId,
-      userInfo,
+      primaryUserId: getPrimaryUserId(chat.user),
+      registeredUser: registeredUserToPublic(registeredUser),
+      channelInfo: userInfo,
       levelInfo,
       activeRanks: activeRanks
     }

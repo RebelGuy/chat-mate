@@ -10,6 +10,7 @@ import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyServic
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import { single } from '@rebel/server/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 
@@ -83,7 +84,7 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
     await this.twurpleApiProxyService.ban(channelName, twitchUserName, reason ?? undefined)
   }
 
@@ -93,7 +94,7 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
     await this.twurpleApiProxyService.mod(channelName, twitchUserName)
   }
 
@@ -113,7 +114,7 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
     await this.twurpleApiProxyService.timeout(channelName, twitchUserName, durationSeconds, reason ?? undefined)
   }
 
@@ -124,7 +125,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     // there is no API for unbanning a user, but the `ban` implementation is essentially just a wrapper around the `say` method, so we can manually use it here
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
     this.twurpleApiProxyService.say(channelName, `/unban ${twitchUserName}`)
   }
 
@@ -134,7 +135,7 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
     await this.twurpleApiProxyService.unmod(channelName, twitchUserName)
   }
 
@@ -145,8 +146,13 @@ export default class TwurpleService extends ContextClass {
     }
 
     // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
-    const twitchUserName = await this.channelStore.getTwitchUserNameFromChannelId(twitchChannelId)
+    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
     await this.twurpleApiProxyService.timeout(channelName, twitchUserName, 1, reason ?? undefined)
+  }
+
+  private async getTwitchUserName (internalTwitchChannelId: number) {
+    const channel = single(await this.channelStore.getTwitchChannelFromChannelId([internalTwitchChannelId]))
+    return channel.platformInfo.channel.infoHistory[0].userName
   }
 
   private async onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
@@ -157,8 +163,8 @@ export default class TwurpleService extends ContextClass {
         throw new Error(`Cannot add Twitch chat message from channel ${_channel} because the message's channelId property was null`)
       }
 
-      const chatUserId = await this.channelStore.getUserId(channelId)
-      const registeredUser = await this.accountStore.getRegisteredUserFromChatUser(chatUserId)
+      const chatUserId = await this.channelStore.getPrimaryUserId(channelId)
+      const registeredUser = await this.accountStore.getRegisteredUserFromAggregateUser(chatUserId)
       if (registeredUser == null) {
         throw new Error(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the chat user ${chatUserId} is not associated with a registered user`)
       }

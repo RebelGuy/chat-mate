@@ -1,9 +1,9 @@
 import { ChatMessage } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ExperienceStore, { UserExperience } from '@rebel/server/stores/ExperienceStore'
+import ExperienceStore, { ModifyChatExperienceArgs, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { deleteProps, nameof } from '@rebel/server/_test/utils'
+import { deleteProps, expectObject, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -19,8 +19,12 @@ export default () => {
   const user2 = 2
   const user3 = 3
   const user4 = 4
+  const user5 = 5
   const streamer1 = 1
   const streamer2 = 2
+  const streamer3 = 3
+  const channelId1 = 1
+  const channelId2 = 2
 
   /** time 1, streamer 1, channel 1 */
   let chatMessage1: ChatMessage
@@ -42,13 +46,12 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.chatUser.createMany({ data: [{}, {}, {}, {}]})
+    await db.chatUser.createMany({ data: [{}, {}, {}, {}, {}]})
 
-    const channelId1 = 1
-    const channelId2 = 2
     await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2}] })
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user3', hashedPassword: 'pass3', aggregateChatUser: { create: {}} }}}})
 
     // the streamerId in these chatMessage is not actually used, as experience transactions have their own streamerId attached to it.
     // some duplication of data is unavoidable, but there is no reason why the ids should ever be inconsistent so I don't think this is an issue.
@@ -122,7 +125,7 @@ export default () => {
     test('correctly adds experience', async () => {
       const streamerId = 2
       const adminRegisteredUserId = 1
-      await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test' }})
+      await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
       await experienceStore.addManualExperience(streamerId, user1, adminRegisteredUserId, -200, 'This is a test')
 
@@ -149,8 +152,8 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: 0
       }))
     })
@@ -165,8 +168,8 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: xp
       }))
     })
@@ -184,8 +187,8 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: xp1 + xp2 + xp3
       }))
     })
@@ -208,13 +211,13 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [user1])
 
-      expect(single(result)).toEqual(expect.objectContaining<UserExperience>({
-        userId: user1,
+      expect(single(result)).toEqual(expectObject<UserExperience>({
+        primaryUserId: user1,
         experience: xpSnap + xp2 + xp3
       }))
     })
 
-    test('returns information for multiple users', async () => {
+    test('Returns information for multiple users', async () => {
       await db.experienceTransaction.createMany({ data: [
         { streamerId: streamer1, userId: user2, delta: 10, time: data.time1 },
         { streamerId: streamer1, userId: user2, delta: 11, time: data.time3 },
@@ -223,7 +226,8 @@ export default () => {
         { streamerId: streamer1, userId: user3, delta: 30, time: data.time3 },
         { streamerId: streamer2, userId: user4, delta: 10, time: data.time1 }, // different streamer
         { streamerId: streamer2, userId: user2, delta: 11, time: data.time3 }, // different streamer
-        { streamerId: streamer2, userId: user3, delta: 10, time: data.time1 } // different streamer
+        { streamerId: streamer2, userId: user3, delta: 10, time: data.time1 }, // different streamer
+        { streamerId: streamer1, userId: user5, delta: 10, time: data.time1 } // different user
       ]})
       await db.experienceSnapshot.createMany({ data: [
         { streamerId: streamer1, userId: user1, experience: 100, time: data.time2 },
@@ -234,11 +238,11 @@ export default () => {
 
       const result = await experienceStore.getExperience(streamer1, [1, 2, 3, 4])
 
-      expect(result).toEqual(expect.arrayContaining<UserExperience>([
-        { userId: 1, experience: 100 },
-        { userId: 2, experience: 200 + 11 },
-        { userId: 3, experience: 10 + 20 + 30 },
-        { userId: 4, experience: 0}
+      expect(result).toEqual(expectObject(result, [
+        { primaryUserId: 2, experience: 200 + 11 },
+        { primaryUserId: 1, experience: 100 },
+        { primaryUserId: 3, experience: 10 + 20 + 30 },
+        { primaryUserId: 4, experience: 0}
       ]))
     })
 
@@ -314,12 +318,12 @@ export default () => {
         }}
       }})
 
-      const result = await experienceStore.getPreviousChatExperience(streamer1, user1)
+      const result = await experienceStore.getPreviousChatExperience(streamer1, user1, null)
 
       expect(result).toBeNull()
     })
 
-    test('gets correct data', async () => {
+    test('Returns the latest chat experience', async () => {
       await db.experienceTransaction.create({ data: {
         streamerId: streamer1,
         userId: user1,
@@ -351,17 +355,57 @@ export default () => {
         }}
       }})
 
-      const result = (await experienceStore.getPreviousChatExperience(streamer1, user1))!
+      const result = (await experienceStore.getPreviousChatExperience(streamer1, user1, null))!
 
       expect(result.user.id).toBe(user1)
       expect(result.delta).toBe(20)
       expect(result.time).toEqual(data.time2)
       expect(result.experienceDataChatMessage).toEqual(expect.objectContaining(chatExperienceData2))
     })
+
+    test('Returns the latest chat experience that is before the given transaction id', async () => {
+      await db.experienceTransaction.create({ data: {
+        streamerId: streamer1,
+        userId: user1,
+        delta: 10,
+        time: data.time1,
+        experienceDataChatMessage: { create: {
+          ...chatExperienceData1,
+          chatMessage: { connect: { externalId: chatMessage1.externalId }}
+        }}
+      }})
+      await db.experienceTransaction.create({ data: {
+        streamerId: streamer1,
+        userId: user1,
+        delta: 20,
+        time: data.time2,
+        experienceDataChatMessage: { create: {
+          ...chatExperienceData2,
+          chatMessage: { connect: { externalId: chatMessage2.externalId }}
+        }}
+      }})
+      await db.experienceTransaction.create({ data: {
+        streamerId: streamer2, // different streamer
+        userId: user1,
+        delta: 30,
+        time: data.time3,
+        experienceDataChatMessage: { create: {
+          ...chatExperienceData1,
+          chatMessage: { connect: { externalId: chatMessage3.externalId }}
+        }}
+      }})
+
+      const result = (await experienceStore.getPreviousChatExperience(streamer1, user1, 2))!
+
+      expect(result.user.id).toBe(user1)
+      expect(result.delta).toBe(10)
+      expect(result.time).toEqual(data.time1)
+      expect(result.experienceDataChatMessage).toEqual(expect.objectContaining(chatExperienceData1))
+    })
   })
 
   describe(nameof(ExperienceStore, 'getAllTransactionsStartingAt'), () => {
-    test('returns empty array if no transactions at/after specified time', async () => {
+    test('Returns empty array if no transactions at/after specified time', async () => {
       await db.experienceTransaction.createMany({ data: [{
         streamerId: streamer1,
         userId: user1,
@@ -372,14 +416,19 @@ export default () => {
         userId: user1,
         delta: 30,
         time: data.time3
+      }, {
+        streamerId: streamer1,
+        userId: user2, // different user
+        delta: 50,
+        time: data.time3
       }]})
 
-      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, data.time2.getTime())
+      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, [1], data.time2.getTime())
 
       expect(result.length).toBe(0)
     })
 
-    test('returns array of correct transactions, including the one starting on the same time', async () => {
+    test('Returns array of correct transactions, including the one starting on the same time', async () => {
       await db.experienceTransaction.createMany({ data: [{
         streamerId: streamer1,
         userId: user1,
@@ -396,15 +445,24 @@ export default () => {
         delta: 30,
         time: data.time3,
       }, {
+        streamerId: streamer1,
+        userId: user3, // different user
+        delta: 40,
+        time: data.time3,
+      }, {
         streamerId: streamer2, // different streamer
         userId: user1,
-        delta: 40,
+        delta: 50,
         time: data.time3,
       }]})
 
-      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, data.time2.getTime())
+      const result = await experienceStore.getAllTransactionsStartingAt(streamer1, [user1, user2], data.time2.getTime())
 
       expect(result.length).toBe(2)
+      expect(result).toEqual(expectObject(result, [
+        { delta: 20 },
+        { delta: 30 }
+      ]))
       expect(result[0].time).toEqual(data.time2)
       expect(result[1].time).toEqual(data.time3)
     })
@@ -455,6 +513,152 @@ export default () => {
       const result = await experienceStore.getTotalDeltaStartingAt(streamer1, user1, data.time2.getTime())
 
       expect(result).toBe(50)
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'getAllUserChatExperience'), () => {
+    test('Returns the chat experience for the user', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer2, userId: user2, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+      ]})
+      await db.experienceDataChatMessage.createMany({ data: [
+        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
+        { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
+      ]})
+
+      const result = await experienceStore.getAllUserChatExperience(streamer2, user2)
+
+      expect(result.length).toBe(2)
+    })
+
+    test('Does not include chat experience of other streamers', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer2, userId: user2, delta: 1, time: data.time1 },
+        { streamerId: streamer1, userId: user2, delta: 2, time: data.time1 }
+      ]})
+      await db.experienceDataChatMessage.createMany({ data: [
+        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
+        { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
+      ]})
+
+      const result = await experienceStore.getAllUserChatExperience(streamer2, user2)
+
+      expect(result.length).toBe(1)
+    })
+
+    test('Does not include chat experience of other users, even if linked', async () => {
+      await db.chatUser.update({
+        where: { id: user1 },
+        data: { aggregateChatUserId: user2 }
+      })
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer2, userId: user1, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+      ]})
+      await db.experienceDataChatMessage.createMany({ data: [
+        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
+        { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
+      ]})
+
+      const result = await experienceStore.getAllUserChatExperience(streamer2, user2)
+
+      // even though user 1 is linked to user 2, it should only search for the exact user id
+      expect(single(result).user.id).toBe(user2)
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'getChatExperienceStreamerIdsForUser'), () => {
+    test('Returns the streamer ids in which the given user has chat experience', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer1, userId: user2, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 },
+        { streamerId: streamer3, userId: user2, delta: 2, time: data.time1 }, // no data attached
+        { streamerId: streamer3, userId: user2, delta: 2, time: data.time1 } // admin data attached
+      ]})
+      await db.experienceDataChatMessage.createMany({ data: [
+        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
+        { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
+      ]})
+      await db.experienceDataAdmin.create({ data: {
+        adminRegisteredUserId: 1, experienceTransactionId: 4
+      }})
+
+      const result = await experienceStore.getChatExperienceStreamerIdsForUser(user2)
+
+      expect(result).toEqual([streamer1, streamer2])
+    })
+
+    test('Does not consider experience for another user, even if linked', async () => {
+      await db.chatUser.update({
+        where: { id: user1 },
+        data: { aggregateChatUserId: user2 }
+      })
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+      ]})
+      await db.experienceDataChatMessage.createMany({ data: [
+        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
+        { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
+      ]})
+
+      const result = await experienceStore.getChatExperienceStreamerIdsForUser(user2)
+
+      expect(single(result)).toBe(streamer2)
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'relinkChatExperience'), () => {
+    test('Updates all transactions across several streamers', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
+        { streamerId: streamer1, userId: user2, delta: 2, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+      ]})
+
+      await experienceStore.relinkChatExperience(user2, user3)
+
+      const stored = await db.experienceTransaction.findMany()
+      expect(stored.map(tx => tx.userId)).toEqual([user1, user3, user3])
+      expect(stored.map(tx => tx.originalUserId)).toEqual([null, user2, user2])
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'undoChatExperienceRelink'), () => {
+    test('Updates all transactions across several streamers', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer1, userId: user1, originalUserId: user3, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, originalUserId: user3, delta: 2, time: data.time1 },
+        { streamerId: streamer2, userId: user2, originalUserId: user1, delta: 3, time: data.time1 }
+      ]})
+
+      await experienceStore.undoChatExperienceRelink(user3)
+
+      const stored = await db.experienceTransaction.findMany()
+      expect(stored.map(tx => tx.userId)).toEqual([user3, user3, user2])
+      expect(stored.map(tx => tx.originalUserId)).toEqual([null, null, user1])
+    })
+  })
+
+  describe(nameof(ExperienceStore, 'modifyChatExperiences'), () => {
+    test('Updates the transaction delta and chat experience', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 },
+      ]})
+      await db.experienceDataChatMessage.createMany({ data: [
+        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
+        { baseExperience: 200, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 2, participationStreakMultiplier: 2, spamMultiplier: 2, viewershipStreakMultiplier: 2, repetitionPenalty: 2 },
+      ]})
+      const args: ModifyChatExperienceArgs = { experienceTransactionId: 1, chatExperienceDataId: 1, delta: 10, baseExperience: 1, messageQualityMultiplier: 10, participationStreakMultiplier: 10, repetitionPenalty: 10, spamMultiplier: 10, viewershipStreakMultiplier: 10 }
+
+      await experienceStore.modifyChatExperiences(args)
+
+      const storedTxs = await db.experienceTransaction.findMany()
+      const storedData = await db.experienceDataChatMessage.findMany()
+      expect(storedTxs.map(tx => tx.delta)).toEqual([10, 2])
+      expect(storedData.map(d => d.baseExperience)).toEqual([1, 200])
     })
   })
 }

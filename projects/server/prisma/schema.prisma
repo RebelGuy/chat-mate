@@ -86,22 +86,97 @@ model LiveViewers {
 model ChatUser {
   id Int @id @default(autoincrement())
 
-  // the channels associated with the user
+  // the time at which the user was linked to an aggregate user, if any
+  linkedAt DateTime?
+
+  /// Never defined for aggregate chat users, and possibly defined for default chat users.
+  aggregateChatUserId Int?
+  aggregateChatUser   ChatUser? @relation(name: "aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "chat_user_aggregateChatUserId_fkey")
+
+  // the channels associated with the user. Empty if this is an aggregate user
   youtubeChannels YoutubeChannel[]
   twitchChannels  TwitchChannel[]
 
-  chatMessages               ChatMessage[]
-  experienceTransactions     ExperienceTransaction[]
-  experienceSnapshots        ExperienceSnapshot[]
-  viewingBlocks              ViewingBlock[]
-  experienceDataAdministered ExperienceDataAdmin[]
-  receivedPunishments        Punishment[]            @relation("punishment_user")
-  administeredPunishments    Punishment[]            @relation("punishment_adminUser")
-  userRanks                  UserRank[]              @relation("user_rank_userId")
-  donationLinks              DonationLink[]
-  registeredUser             RegisteredUser?
+  chatMessages                   ChatMessage[]
+  experienceTransactions         ExperienceTransaction[] @relation("experience_transaction_user")
+  originalExperienceTransactions ExperienceTransaction[] @relation("experience_transaction_originalUser")
+  experienceSnapshots            ExperienceSnapshot[]
+  viewingBlocks                  ViewingBlock[]
+  experienceDataAdministered     ExperienceDataAdmin[]
+  receivedPunishments            Punishment[]            @relation("punishment_user")
+  administeredPunishments        Punishment[]            @relation("punishment_adminUser")
+  userRanks                      UserRank[]              @relation("user_rank_userId")
+  donationLinks                  DonationLink[]          @relation("donation_link_linkedUser")
+  originalDonationLinks          DonationLink[]          @relation("donation_link_originalLinkedUser")
+  registeredUser                 RegisteredUser?
+  linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
+  linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
+
+  // only used if this is an aggregate user
+  linkTokensAggregateUser LinkToken[] @relation("link_token_aggregateChatUser")
+
+  // only used if this is a default user
+  linkTokensDefaultUser LinkToken[] @relation("link_token_defaultChatUser")
+
+  /// The chat users connected to this aggregate user. Empty if this is not an aggregate user.
+  connectedChatUsers ChatUser[] @relation("aggregateChatUser")
 
   @@map("chat_user")
+}
+
+model LinkAttempt {
+  id Int @id @default(autoincrement())
+
+  startTime    DateTime
+  endTime      DateTime?
+  log          String    @db.VarChar(4096)
+  // if you change the length, it must also be updated in the LinkStore.completeLinkAttempt method
+  errorMessage String?   @db.VarChar(4096)
+  /// If an error occurred, whether the link attempt has been given the all-clear by an admin so another link attempt can be made.
+  released     Boolean   @default(true)
+  type         LinkType
+
+  // the user that we are linking
+  defaultChatUserId Int
+  defaultChatUser   ChatUser @relation(name: "link_attempt_defaultChatUser", fields: [defaultChatUserId], references: [id], map: "link_attempt_defaultChatUserId_fkey")
+
+  // the user that we are linking to/unlinking from
+  aggregateChatUserId Int
+  aggregateChatUser   ChatUser @relation(name: "link_attempt_aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "link_attempt_aggregateChatUserId_fkey")
+
+  // the link token will be attached if the link attempt was conducted as part of a command execution (as opposed to being initiated by an admin)
+  linkTokenId Int?
+  linkToken   LinkToken? @relation(fields: [linkTokenId], references: [id], map: "link_attempt_linkTokenId_fkey")
+
+  @@unique([linkTokenId], map: "link_attempt_linkTokenId_fkey")
+  @@index([defaultChatUserId], map: "link_attempt_defaultChatUserId_fkey")
+  @@index([aggregateChatUserId], map: "link_attempt_aggregateChatUserId_fkey")
+  @@map("link_attempt")
+}
+
+enum LinkType {
+  link
+  unlink
+}
+
+model LinkToken {
+  id Int @id @default(autoincrement())
+
+  token String // unique
+
+  aggregateChatUserId Int
+  aggregateChatUser   ChatUser @relation(name: "link_token_aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "link_token_aggregateChatUserId_fkey")
+
+  defaultChatUserId Int
+  defaultChatUser   ChatUser @relation(name: "link_token_defaultChatUser", fields: [defaultChatUserId], references: [id], map: "link_token_defaultChatUserId_fkey")
+
+  // only defined if an attempt to link has already been made via this token
+  linkAttempt LinkAttempt?
+
+  @@unique([token], map: "link_token_token_key")
+  @@index([aggregateChatUserId], map: "link_token_aggregateChatUserId_fkey")
+  @@index([defaultChatUserId], map: "link_token_defaultChatUserId_fkey")
+  @@map("link_token")
 }
 
 model RegisteredUser {
@@ -111,8 +186,8 @@ model RegisteredUser {
   registeredAt   DateTime @default(now())
   hashedPassword String   @db.VarChar(64)
 
-  chatUserId Int? // unique
-  chatUser   ChatUser? @relation(fields: [chatUserId], references: [id], map: "registered_user_chatUserId_fkey")
+  aggregateChatUserId Int // unique
+  aggregateChatUser   ChatUser @relation(fields: [aggregateChatUserId], references: [id], map: "registered_user_aggregateChatUserId_fkey")
 
   loginTokens           LoginToken[]
   streamer              Streamer?
@@ -120,7 +195,7 @@ model RegisteredUser {
   administeredUserRanks UserRank[]            @relation("user_rank_assignedByRegisteredUserId")
   revokedUserRanks      UserRank[]            @relation("user_rank_revokedByRegisteredUserId")
 
-  @@unique([chatUserId], map: "registered_user_chatUserId_fkey")
+  @@unique([aggregateChatUserId], map: "registered_user_aggregateChatUserId_fkey")
   @@unique([username], map: "registered_user_username_key")
   @@map("registered_user")
 }
@@ -334,6 +409,27 @@ model ChatCustomEmoji {
   @@map("chat_custom_emoji")
 }
 
+model ChatCommand {
+  id Int @id @default(autoincrement())
+
+  /// The normalised text part of the chat message after the initial `!`
+  normalisedCommandName String @db.VarChar(64)
+
+  startTime DateTime?
+  endTime   DateTime?
+
+  // Only one of result or error can be set, and they are only set after the command has completed execution.
+  // These text lengths are used in `CommandStore.ts` - don't change them here without also changing them there
+  result String? @db.VarChar(1024)
+  error  String? @db.VarChar(1024)
+
+  chatMessageId Int // unique
+  chatMessage   ChatMessage @relation(fields: [chatMessageId], references: [id], map: "chat_command_chatMessageId_fkey")
+
+  @@unique([chatMessageId], map: "chat_command_chatMessageId_fkey")
+  @@map("chat_command")
+}
+
 /// Has exactly one text, emoji, or cheer component attached, and possibly also a custom emoji in addition to the other three.
 model ChatMessagePart {
   id    Int @id @default(autoincrement())
@@ -401,6 +497,7 @@ model ChatMessage {
 
   chatMessageParts          ChatMessagePart[]
   experienceDataChatMessage ExperienceDataChatMessage?
+  chatCommand               ChatCommand?
 
   @@unique([externalId], map: "chat_message_externalId_key")
   @@unique([donationId], map: "chat_message_donationId_fkey")
@@ -425,13 +522,19 @@ model ExperienceTransaction {
   experienceDataChatMessage ExperienceDataChatMessage?
   experienceDataAdmin       ExperienceDataAdmin?
 
+  /// The user to which the experience is currently linked to
   userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
+  user   ChatUser @relation(name: "experience_transaction_user", fields: [userId], references: [id], map: "experience_transaction_userId_fkey")
+
+  /// The user to which the experience was originally linked to. If null, the experience has not been re-linked and the original user is implied to be identical to the current user.
+  originalUserId Int?
+  originalUser   ChatUser? @relation(name: "experience_transaction_originalUser", fields: [userId], references: [id], map: "experience_transaction_originalUserId_fkey")
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "experience_transaction_streamerId_fkey")
 
   @@index([userId], map: "experience_transaction_userId_fkey")
+  @@index([originalUserId], map: "experience_transaction_originalUserId_fkey")
   @@index([userId, time], map: "experience_transaction_userId_time_key")
   @@index([streamerId], map: "experience_transaction_streamerId_fkey")
   @@map("experience_transaction")
@@ -458,6 +561,7 @@ model ExperienceSnapshot {
 model ExperienceDataChatMessage {
   id Int @id @default(autoincrement())
 
+  // if you add any new fields to this, be sure to update the `ExperienceStore.updateChatExperiences()` method
   baseExperience                Int
   viewershipStreakMultiplier    Float
   participationStreakMultiplier Float
@@ -719,11 +823,17 @@ model DonationLink {
 
   linkedAt DateTime
 
+  /// The user to which the link identifier is currently linked to
   linkedUserId Int
-  linkedUser   ChatUser @relation(fields: [linkedUserId], references: [id], map: "donation_link_linkedUserId_fkey")
+  linkedUser   ChatUser @relation(name: "donation_link_linkedUser", fields: [linkedUserId], references: [id], map: "donation_link_linkedUserId_fkey")
+
+  /// The user to which the link identifier was originally linked to. If null, the link identifier has not been re-linked and the original user is implied to be identical to the current user.
+  originalLinkedUserId Int?
+  originalLinkedUser   ChatUser? @relation(name: "donation_link_originalLinkedUser", fields: [originalLinkedUserId], references: [id], map: "donation_link_originalLinkedUserId_fkey")
 
   @@unique([linkIdentifier], map: "donation_link_linkIdentifier_key")
   // one-to-one mapping
   @@unique([linkIdentifier, linkedUserId], map: "donation_link_linkIdentifier_linkedUserId_key")
+  @@index([originalLinkedUserId], map: "donation_link_originalLinkedUserId_fkey")
   @@map("donation_link")
 }

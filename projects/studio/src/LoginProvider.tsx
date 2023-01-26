@@ -1,5 +1,5 @@
 import { isNullOrEmpty } from '@rebel/server/util/strings'
-import { authenticate } from '@rebel/studio/api'
+import { authenticate, getGlobalRanks } from '@rebel/studio/api'
 import * as React from 'react'
 
 type Props = {
@@ -11,6 +11,7 @@ export default function LoginProvider (props: Props) {
   const [username, setUsername] = React.useState<string | null>(null)
   const [streamer, setStreamer] = React.useState<string | null>(null)
   const [initialised, setInitialised] = React.useState(false)
+  const [isAdmin, setIsAdmin] = React.useState(false)
 
   function onSetLogin (username: string, token: string) {
     try {
@@ -102,6 +103,22 @@ export default function LoginProvider (props: Props) {
     loadContext()
   }, [onLogin])
 
+  React.useEffect(() => {
+    if (loginToken == null) {
+      setIsAdmin(false)
+      return
+    }
+
+    const loadRanks = async () => {
+      const result = await getGlobalRanks(loginToken)
+      
+      if (result.success) {
+        setIsAdmin(result.data.ranks.find(r => r.rank.name === 'admin') != null)
+      }
+    }
+    loadRanks()
+  }, [loginToken])
+
   return (
     <LoginContext.Provider
       value={{
@@ -109,7 +126,7 @@ export default function LoginProvider (props: Props) {
         loginToken,
         username,
         streamer,
-        isAdmin: username == null ? null : username === 'admin',
+        isAdmin: username === 'admin' || isAdmin,
         setLogin: onSetLogin,
         login: onLogin,
         setStreamer: onSetStreamer,
@@ -128,7 +145,7 @@ type LoginContextType = {
   /** The streamer context. */
   streamer: string | null
   username: string | null
-  isAdmin: boolean | null
+  isAdmin: boolean
 
   /** Logs the user in using the saved credentials, if any. Returns true if the login was successful. */
   login: () => Promise<boolean>

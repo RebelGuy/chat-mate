@@ -582,10 +582,10 @@ Note: For punishment-specific functionality, refer to the [punishment endpoints]
 ### `GET`
 *Current schema: 1.*
 
-Gets the list of current or historical user-ranks.
+Gets the list of current or historical user-ranks. If the streamer header is provided, returns ranks for the streamer and global ranks, otherwise returns global ranks only.
 
 Query parameters:
-- `userId` (`number`): *Required.* The ID of the user for which to get the list of ranks.
+- `userId` (`number`): *Optional.* The ID of the user for which to get the list of ranks. Defaults to the logged-in user.
 - `includeInactive` (`boolean`): *Optional.* If true, returns the list of historical ranks (active and inactive) for a user. If false, returns only ranks that are currently active.
 
 Returns data with the following properties:
@@ -748,13 +748,74 @@ Path: `/user`.
 ### `POST /search`
 *Current schema: 4.*
 
-Search for a specific user.
+Search for a specific channel name.
 
 Request data (body):
 - `searchTerm` (`string`): *Required.* The string to search in user's channel names.
 
 Returns data with the following properties:
-- `results` (`PublicUserNames[]`): An array containing the users with matching channel names. If no match was found, the array is empty. Users are sorted in ascending order according to the match quality, with the first user having the best match.
+- `results` (`PublicUserSearchResult[]`): An array containing information about matched channels. If no match was found, the array is empty. It is possible that multiple of the user's channels appear in different results.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `POST /search/registered`
+Search for a specific registered user.
+
+Request data (body):
+- `searchTerm` (`string`): *Required.* The string to search in the users' registered usernames.
+
+Returns data with the following properties:
+- `results` (`PublicUserSearchResult[]`): An array containing information about matched registered users. Note that the `matchedChannel` property will always be null.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `GET /link/channels`
+
+Gets the list of channels linked to the logged-in user.
+
+Query parameters:
+- `admin_aggregateUserId` (`number`): *Optional, admin-only.* Gets the list of channels linked to a particular user.
+
+Returns data with the following properties:
+- `registeredUser` (`PublicRegisteredUser`): The registered user to which the channels are attached.
+- `channels` (`PublicChannelInfo[]`): The channels linked to the user.
+
+### `POST /link/channels/:aggregateUserId/:defaultUserId`
+
+Adds a link between the given default user and aggregate user.
+
+### `DELETE /link/channels/:defaultUserId`
+
+Removes the link between the given default user with its aggregate user.
+
+Query parameters:
+- `transferRanks` (`boolean`): *Optional.* Whether to copy the current aggregate user's ranks to the default user. Does not affect the aggregate user's ranks. Defaults to `true`.
+- `relinkChatExperience` (`boolean`): *Optional.* Whether to relink back to the default user any chat experience earned by that default user before or during the current link. This will affect the aggregate user's level. Defaults to `true`.
+- `relinkDonations` (`boolean`): *Optional.* Whether to relink back to the default user any donations assigned to that default user before or during the current link. Defaults to `true`.
+
+### `GET /link/history`
+
+Get the link history for the logged-in user.
+
+Query parameters:
+- `admin_aggregateUserId` (`number`): *Optional, admin-only.* Gets the link history for a particular user.
+
+Returns data with the following properties:
+- `items` (`PublicLinkHistoryItem[]`): The array representing the user's link history. The ordering of items is undefined.
+
+### `POST /link/token`
+
+Create a link token for a YouTube or Twitch channel that is connected to the logged-in account.
+
+Path parameters:
+- `externalId` (`string`): The YouTube channel ID or Twitch username of the channel.
+
+Returns data with the following properties:
+- `token` (`PublicLinkToken`): The new link token that was created or, if an unused token already existed for the specified channel, an existing token.
+
+Can return the following errors:
+- `400`: When the `externalId` is not sent.
+- `404`: When no channel matching the given `externalId` could be found. The channel in question must have sent at least one chat message in the past so that it is added to our database.
+- `422`: When the specified channel is already linked to a user.

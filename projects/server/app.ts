@@ -79,6 +79,14 @@ import StreamerController from '@rebel/server/controllers/StreamerController'
 import StreamerService from '@rebel/server/services/StreamerService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
+import LinkService from '@rebel/server/services/LinkService'
+import LinkStore from '@rebel/server/stores/LinkStore'
+import CommandService from '@rebel/server/services/command/CommandService'
+import CommandStore from '@rebel/server/stores/CommandStore'
+import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
+import LinkCommand from '@rebel/server/services/command/LinkCommand'
+import LinkDataService from '@rebel/server/services/LinkDataService'
+import AccountService from '@rebel/server/services/AccountService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -126,6 +134,7 @@ const globalContext = ContextProvider.create()
   .withHelpers('rankHelpers', RankHelpers)
   .withHelpers('donationHelpers', DonationHelpers)
   .withHelpers('accountHelpers', AccountHelpers)
+  .withHelpers('commandHelpers', CommandHelpers)
   .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
   .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
   .withFactory('websocketFactory', WebsocketFactory)
@@ -158,6 +167,7 @@ const globalContext = ContextProvider.create()
   .withClass('adminService', AdminService)
   .withClass('experienceStore', ExperienceStore)
   .withClass('chatStore', ChatStore)
+  .withClass('accountService', AccountService)
   .withClass('channelService', ChannelService)
   .withClass('punishmentStore', PunishmentStore)
   .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
@@ -167,17 +177,23 @@ const globalContext = ContextProvider.create()
   .withClass('customEmojiStore', CustomEmojiStore)
   .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
   .withClass('emojiService', EmojiService)
+  .withClass('commandStore', CommandStore)
+  .withClass('linkStore', LinkStore)
+  .withClass('donationStore', DonationStore)
+  .withClass('modService', ModService)
+  .withClass('rankService', RankService)
+  .withClass('donationService', DonationService)
+  .withClass('linkService', LinkService)
+  .withClass('linkCommand', LinkCommand)
+  .withClass('commandService', CommandService)
   .withClass('chatService', ChatService)
   .withClass('chatFetchService', ChatFetchService)
   .withClass('followerStore', FollowerStore)
   .withClass('helixEventService', HelixEventService)
-  .withClass('modService', ModService)
-  .withClass('rankService', RankService)
-  .withClass('donationStore', DonationStore)
-  .withClass('donationService', DonationService)
   .withClass('donationFetchService', DonationFetchService)
   .withClass('chatMateEventService', ChatMateEventService)
   .withClass('streamerService', StreamerService)
+  .withClass('linkDataService', LinkDataService)
   .build()
 
 app.use((req, res, next) => {

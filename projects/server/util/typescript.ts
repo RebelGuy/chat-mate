@@ -3,6 +3,8 @@ import { values } from '@rebel/server/util/arrays'
 
 export const NO_OP = () => { /* Do nothing */ }
 
+export const NO_OP_ASYNC = async () => { /* Do nothing */ }
+
 export function assert (condition: any, msg: string): asserts condition {
   if (!condition) {
     throw new Error(msg)
@@ -12,6 +14,10 @@ export function assert (condition: any, msg: string): asserts condition {
 // returns false for null values
 export function isPrimitive (value: any): value is boolean | number | string | symbol | bigint {
   return (typeof value !== 'object' && typeof value !== 'function') || value == null
+}
+
+export function isNullable (value: any): value is null | undefined {
+  return value === null || value === undefined
 }
 
 // returns false for null values

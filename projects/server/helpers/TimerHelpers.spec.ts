@@ -17,6 +17,21 @@ afterEach(() => {
   timeoutSpy.mockReset()
 })
 
+describe(nameof(TimerHelpers, 'setTimeout'), () => {
+  test('Calls the callback after the specified delay', () => {
+    let calls = 0
+    const cb = () => { calls++ }
+
+    timerHelpers.setTimeout(cb, 1000)
+
+    jest.advanceTimersByTime(999)
+    expect(calls).toBe(0)
+
+    jest.advanceTimersByTime(1)
+    expect(calls).toBe(1)
+  })
+})
+
 describe(nameof(TimerHelpers, 'createRepeatingTimer'), () => {
   test('fixed timer is rescheduled after callback', () => {
     const interval = 300

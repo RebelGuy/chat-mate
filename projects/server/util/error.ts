@@ -5,6 +5,12 @@ abstract class CustomError extends Error {
   }
 }
 
+export class NotFoundError extends CustomError {
+  constructor (message: string) {
+    super(NotFoundError.prototype, message)
+  }
+}
+
 export class TimeoutError extends CustomError {
   public readonly timeout?: number
 
@@ -80,6 +86,41 @@ export class PreProcessorError extends CustomError {
   constructor (statusCode: number, message: string) {
     super(PreProcessorError.prototype, message)
     this.statusCode = statusCode
+  }
+}
+
+export class UserAlreadyLinkedToAggregateUserError extends CustomError {
+  public readonly aggregateUserId: number
+  public readonly defaultUserId: number
+
+  constructor (message: string, aggregateUserId: number, defaultUserId: number) {
+    super(UserAlreadyLinkedToAggregateUserError.prototype, message)
+    this.aggregateUserId = aggregateUserId
+    this.defaultUserId = defaultUserId
+  }
+}
+
+export class LinkAttemptInProgressError extends CustomError {
+  constructor (message: string) {
+    super(LinkAttemptInProgressError.prototype, message)
+  }
+}
+
+export class UserNotLinkedError extends CustomError {
+  constructor (message?: string) {
+    super(UserNotLinkedError.prototype, message)
+  }
+}
+
+export class UnknownCommandError extends CustomError {
+  constructor (normalisedCommandName: string) {
+    super(UnknownCommandError.prototype, `Unknown command '${normalisedCommandName}'`)
+  }
+}
+
+export class InvalidCommandArgumentsError extends CustomError {
+  constructor (message: string) {
+    super(InvalidCommandArgumentsError.prototype, 'Invalid arguments: ' + message)
   }
 }
 

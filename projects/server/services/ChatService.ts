@@ -11,6 +11,10 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import CommandService from '@rebel/server/services/command/CommandService'
+import CommandStore from '@rebel/server/stores/CommandStore'
+import { ChatMessage } from '@prisma/client'
+import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 
 type ChatEvents = {
   newChatItem: {
@@ -27,6 +31,9 @@ type Deps = Dependencies<{
   emojiService: EmojiService,
   eventDispatchService: EventDispatchService
   livestreamStore: LivestreamStore
+  commandService: CommandService
+  commandHelpers: CommandHelpers
+  commandStore: CommandStore
 }>
 
 export default class ChatService extends ContextClass {
@@ -39,6 +46,9 @@ export default class ChatService extends ContextClass {
   private readonly emojiService: EmojiService
   private readonly eventDispatchService: EventDispatchService
   private readonly livestreamStore: LivestreamStore
+  private readonly commandHelpers: CommandHelpers
+  private readonly commandService: CommandService
+  private readonly commandStore: CommandStore
 
   constructor (deps: Deps) {
     super()
@@ -50,6 +60,9 @@ export default class ChatService extends ContextClass {
     this.emojiService = deps.resolve('emojiService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.commandHelpers = deps.resolve('commandHelpers')
+    this.commandService = deps.resolve('commandService')
+    this.commandStore = deps.resolve('commandStore')
   }
 
   public override initialise () {
@@ -58,7 +71,7 @@ export default class ChatService extends ContextClass {
 
   /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
   public async onNewChatItem (item: ChatItem, streamerId: number): Promise<boolean> {
-    let addedChat: boolean = false
+    let message: ChatMessage | null = null
     let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
     let externalId: string
     let platform: ChatPlatform
@@ -105,13 +118,16 @@ export default class ChatService extends ContextClass {
       // experience gained due to the latest chat - see CHAT-166. we could add a flag that indicates that a chat item's side
       // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
       // visual inconsitency. so for now just acknowledge this and leave it.
-      await this.chatStore.addChat(item, streamerId, channel.userId, externalId)
-      addedChat = true
+      message = await this.chatStore.addChat(item, streamerId, channel.userId, externalId)
+
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)
     }
 
-    if (addedChat) {
+    const command = this.commandHelpers.extractNormalisedCommand(item.messageParts)
+
+    // either perform side effects for a normal message, or execute command for a chat command message
+    if (message != null && command == null) {
       try {
         const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
         if (livestream == null) {
@@ -122,8 +138,17 @@ export default class ChatService extends ContextClass {
       } catch (e: any) {
         this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to complete side effects.`, e)
       }
+
+    } else if (message != null && command != null) {
+      try {
+        const id = await this.commandStore.addCommand(message.id, command)
+        this.commandService.queueCommandExecution(id)
+      } catch (e: any) {
+        this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to handle the command represented by the message.`, e)
+      }
     }
 
+    const addedChat = message != null
     return addedChat
   }
 }

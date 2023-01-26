@@ -53,8 +53,8 @@ export default () => {
     user1 = (await db.chatUser.create({ data: {}})).id
     user2 = (await db.chatUser.create({ data: {}})).id
     user3 = (await db.chatUser.create({ data: {}})).id
-    streamer1 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer1Name, hashedPassword: 'pass1' }}}})).id
-    streamer2 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer2Name, hashedPassword: 'pass2' }}}})).id
+    streamer1 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer1Name, hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})).id
+    streamer2 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer2Name, hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})).id
 
     ownerRank = await db.rank.create({ data: { name: 'owner', displayNameNoun: '', displayNameAdjective: '', group: 'administration' }})
     famousRank = await db.rank.create({ data: { name: 'famous', displayNameNoun: '', displayNameAdjective: '', group: 'cosmetic' }})
@@ -74,7 +74,7 @@ export default () => {
     test('Adds rank to user within the streamer context and with no description and expiration time', async () => {
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: streamer1,
         assignee: null,
         rank: 'famous',
@@ -86,7 +86,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(1)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.chatUserId,
+        primaryUserId: args.primaryUserId,
         streamerId: streamer1,
         streamerName: streamer1Name,
         assignedByRegisteredUserId: args.assignee,
@@ -105,7 +105,7 @@ export default () => {
     test('Adds rank to user within the streamer context and with description and expiration time', async () => {
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: streamer1,
         assignee: user2,
         rank: 'mod',
@@ -117,7 +117,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(1)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.chatUserId,
+        primaryUserId: args.primaryUserId,
         streamerId: streamer1,
         streamerName: streamer1Name,
         assignedByRegisteredUserId: args.assignee,
@@ -142,7 +142,7 @@ export default () => {
       }})
 
       const args: AddUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: streamer1,
         rank: ownerRank.name,
         message: null,
@@ -164,7 +164,7 @@ export default () => {
 
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: streamer2,
         assignee: user2,
         rank: modRank.name,
@@ -176,7 +176,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(2)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.chatUserId,
+        primaryUserId: args.primaryUserId,
         streamerId: streamer2,
         streamerName: streamer2Name,
         assignedByRegisteredUserId: args.assignee,
@@ -202,7 +202,7 @@ export default () => {
 
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time1)
       const args: AddUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: null,
         assignee: user2,
         rank: famousRank.name,
@@ -214,7 +214,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(2)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.chatUserId,
+        primaryUserId: args.primaryUserId,
         streamerId: null,
         streamerName: null,
         assignedByRegisteredUserId: args.assignee,
@@ -239,7 +239,7 @@ export default () => {
       })
 
       const args: AddUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: null,
         rank: famousRank.name,
         message: null,
@@ -252,7 +252,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(3)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.chatUserId,
+        primaryUserId: args.primaryUserId,
         streamerId: null,
         streamerName: null,
         assignedByRegisteredUserId: args.assignee,
@@ -270,7 +270,7 @@ export default () => {
 
     test('Throws if attempting to add a global user-rank for a rank that requires a streamer context', async () => {
       const args: AddUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: null,
         rank: modRank.name,
         message: null,
@@ -376,6 +376,40 @@ export default () => {
     })
   })
 
+  describe(nameof(RankStore, 'getAllUserRanks'), () => {
+    test('Returns current ranks across all streamers', async () => {
+      mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
+
+      // user 1: muted, user 2: muted and banned
+      await db.userRank.createMany({
+        data: [
+          { userId: user1, streamerId: streamer2, issuedAt: time1, rankId: famousRank.id }, // other streamer
+          { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: famousRank.id },
+          { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: ownerRank.id },
+          { userId: user1, streamerId: null,      issuedAt: time1, rankId: mutedRank.id }, // global rank should be returned
+          { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: modRank.id, revokedTime: time2 },
+          { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: mutedRank.id, expirationTime: time2 },
+          { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: bannedRank.id, revokedTime: time4 },
+          { userId: user2, streamerId: streamer1, issuedAt: time2, rankId: mutedRank.id },
+          { userId: user2, streamerId: streamer1, issuedAt: time1, rankId: bannedRank.id },
+        ]
+      })
+
+      let result = await rankStore.getAllUserRanks(user1)
+
+      const ranks = sortBy(result.ranks, r => `${r.streamerId}${r.rank}`)
+      expect(ranks.length).toBe(4)
+      expect(ranks[0].streamerId).toBe(streamer1)
+      expect(ranks[0].rank.name).toBe('famous')
+      expect(ranks[1].streamerId).toBe(streamer1)
+      expect(ranks[1].rank.name).toBe('owner')
+      expect(ranks[2].streamerId).toBe(streamer2)
+      expect(ranks[2].rank.name).toBe('famous')
+      expect(ranks[3].streamerId).toBe(null)
+      expect(ranks[3].rank.name).toBe('mute')
+    })
+  })
+
   describe(nameof(RankStore, 'getUserRanksForGroup'), () => {
     test('Returns active user ranks of the specified group', async () => {
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time6)
@@ -397,13 +431,13 @@ export default () => {
 
       let result = await rankStore.getUserRanksForGroup('punishment', streamer1)
 
-      result = sortBy(result, r => `${r.userId}${r.rank}`)
+      result = sortBy(result, r => `${r.primaryUserId}${r.rank}`)
       expect(result.length).toBe(3)
-      expect(result[0].userId).toBe(user1)
+      expect(result[0].primaryUserId).toBe(user1)
       expect(result[0].rank.name).toBe('mute')
-      expect(result[1].userId).toBe(user2)
+      expect(result[1].primaryUserId).toBe(user2)
       expect(result[1].rank.name).toBe('ban')
-      expect(result[2].userId).toBe(user2)
+      expect(result[2].primaryUserId).toBe(user2)
       expect(result[2].rank.name).toBe('mute')
     })
   })
@@ -425,7 +459,7 @@ export default () => {
       const result = await rankStore.getUserRankHistory(user1, streamer1)
 
       expect(result.length).toBe(4)
-      expect(single(unique(result.map(r => r.userId)))).toBe(user1)
+      expect(single(unique(result.map(r => r.primaryUserId)))).toBe(user1)
       expect(result.map(r => r.rank.name)).toEqual(expect.arrayContaining<RankName>(['famous', 'mod', 'mod', 'mute']))
     })
   })
@@ -442,7 +476,7 @@ export default () => {
       })
 
       const args: RemoveUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: streamer1,
         message: 'Test',
         rank: 'famous',
@@ -464,7 +498,7 @@ export default () => {
       })
 
       const args: RemoveUserRankArgs = {
-        chatUserId: user1,
+        primaryUserId: user1,
         streamerId: streamer1,
         message: 'Test',
         rank: 'famous',
@@ -476,7 +510,7 @@ export default () => {
 
       await expectRowCount(db.userRank).toBe(4)
       expect(result).toEqual(expectObject<UserRankWithRelations>({
-        userId: args.chatUserId,
+        primaryUserId: args.primaryUserId,
         streamerId: args.streamerId,
         streamerName: streamer1Name,
         assignedByRegisteredUserId: null,

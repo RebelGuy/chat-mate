@@ -5,11 +5,13 @@ import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { userDataToPublicUser } from '@rebel/server/models/user'
+import AccountService from '@rebel/server/services/AccountService'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
+import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { single, zipOnStrict } from '@rebel/server/util/arrays'
+import { single, zipOnStrict, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<4, {
@@ -37,6 +39,8 @@ type Deps = ControllerDependencies<{
   experienceService: ExperienceService
   punishmentService: PunishmentService
   rankStore: RankStore
+  accountStore: AccountStore
+  accountService: AccountService
 }>
 
 @Path(buildPath('experience'))
@@ -47,6 +51,8 @@ export default class ExperienceController extends ControllerBase {
   private readonly experienceService: ExperienceService
   private readonly punishmentService: PunishmentService
   private readonly rankStore: RankStore
+  private readonly accountStore: AccountStore
+  private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super(deps, 'experience')
@@ -54,6 +60,8 @@ export default class ExperienceController extends ControllerBase {
     this.experienceService = deps.resolve('experienceService')
     this.punishmentService = deps.resolve('punishmentService')
     this.rankStore = deps.resolve('rankStore')
+    this.accountStore = deps.resolve('accountStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   @GET
@@ -62,8 +70,11 @@ export default class ExperienceController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard', 4)
     try {
       const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
-      const activeRanks = await this.rankStore.getUserRanks(leaderboard.map(r => r.userId), this.getStreamerId())
-      const publicLeaderboard = zipOnStrict(leaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
+      const primaryUserIds = leaderboard.map(r => r.primaryUserId)
+      const activeRanks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
+      const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
+      const publicLeaderboard = zipOnStrictMany(leaderboard, 'primaryUserId', activeRanks, registeredUsers)
+        .map(data => rankedEntryToPublic(data))
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
       return builder.failure(e)
@@ -73,21 +84,26 @@ export default class ExperienceController extends ControllerBase {
   @GET
   @Path('rank')
   public async getRank (
-    @QueryParam('id') id: number
+    @QueryParam('id') anyUserId: number
   ): Promise<GetRankResponse> {
     const builder = this.registerResponseBuilder<GetRankResponse>('GET /rank', 4)
-    if (id == null) {
-      return builder.failure(400, `A value for 'name' or 'id' must be provided.`)
+    if (anyUserId == null) {
+      return builder.failure(400, `A value for 'id' must be provided.`)
     }
 
     try {
-      let userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [id])
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
+
+      let userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [primaryUserId])
       if (userChannels.length == 0) {
-        return builder.failure(404, `Could not find an active channel for user ${id}.`)
+        return builder.failure(404, `Could not find an active channel for primary user ${primaryUserId}.`)
       }
 
       const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
-      const match = leaderboard.find(l => l.userId === id)!
+      const match = leaderboard.find(l => l.primaryUserId === primaryUserId)
+      if (match == null) {
+        return builder.failure(404, `Could not find primary user ${primaryUserId} on the streamer's leaderboard.`)
+      }
 
       // always include a total of rankPadding * 2 + 1 entries, with the matched entry being centred where possible
       const rankPadding = 3
@@ -101,8 +117,11 @@ export default class ExperienceController extends ControllerBase {
       }
       const upperRank = lowerRank + rankPadding * 2
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
-      const activeRanks = await this.rankStore.getUserRanks(prunedLeaderboard.map(entry => entry.userId), this.getStreamerId())
-      const publicLeaderboard = zipOnStrict(prunedLeaderboard, activeRanks, 'userId').map(rankedEntryToPublic)
+
+      const primaryUserIds = prunedLeaderboard.map(entry => entry.primaryUserId)
+      const activeRanks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
+      const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
+      const publicLeaderboard = zipOnStrictMany(prunedLeaderboard, 'primaryUserId', activeRanks, registeredUsers).map(rankedEntryToPublic)
 
       return builder.success({
         relevantIndex: prunedLeaderboard.findIndex(l => l === match),
@@ -117,22 +136,15 @@ export default class ExperienceController extends ControllerBase {
   @Path('modify')
   public async modifyExperience (request: ModifyExperienceRequest): Promise<ModifyExperienceResponse> {
     const builder = this.registerResponseBuilder<ModifyExperienceResponse>('POST /modify', 3)
-    if (request == null || request.schema !== builder.schema) {
+    if (request == null || request.userId == null || request.schema !== builder.schema) {
       return builder.failure(400, 'Invalid request data.')
     }
 
     try {
-      const streamerId = this.getStreamerId()
-      const userChannels = await this.channelService.getActiveUserChannels(streamerId, [request.userId])
-      const userChannel = userChannels[0]
-      if (userChannel == null) {
-        return builder.failure(404, `Could not find an active channel for user ${request.userId}.`)
-      }
-
-      const level = await this.experienceService.modifyExperience(request.userId, streamerId, this.getCurrentUser().id, request.deltaLevels, request.message)
-      const activeRanks = single(await this.rankStore.getUserRanks([request.userId], streamerId))
-      const publicUser = userDataToPublicUser({ ...userChannel, ...level, ...activeRanks })
-      return builder.success({ updatedUser: publicUser })
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
+      await this.experienceService.modifyExperience(primaryUserId, this.getStreamerId(), this.getCurrentUser().aggregateChatUserId, request.deltaLevels, request.message)
+      const data = await this.apiService.getAllData([primaryUserId]).then(single)
+      return builder.success({ updatedUser:  userDataToPublicUser(data) })
     } catch (e: any) {
       return builder.failure(e)
     }

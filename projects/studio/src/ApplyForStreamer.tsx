@@ -17,10 +17,10 @@ export default function ApplyForStreamer () {
 
   return (
     <ApiRequest onDemand={true} token={updateToken} onRequest={getStreamerApplications}>
-    {(response, loadingNode, errorNode) => <>
-      <ApplicationForm disabled={response != null && response.streamerApplications.find(app => app.status === 'pending') != null} onApplicationCreated={regenerateUpdateToken} />
-      <ApplicationHistory data={response} loadingNode={loadingNode} errorNode={errorNode} onApplicationUpdated={regenerateUpdateToken} />
-    </>}
+      {(response, loadingNode, errorNode) => <>
+        <ApplicationForm disabled={response != null && response.streamerApplications.find(app => app.status === 'pending') != null} onApplicationCreated={regenerateUpdateToken} />
+        <ApplicationHistory data={response} loadingNode={loadingNode} errorNode={errorNode} onApplicationUpdated={regenerateUpdateToken} />
+      </>}
     </ApiRequest>
   )
 }

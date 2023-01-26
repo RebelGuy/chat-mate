@@ -13,6 +13,8 @@ import { Livestream, LiveViewers } from '@prisma/client'
 const user1 = 1
 /** ext. ids channel2, twitchChannel4 */
 const user2 = 2
+/** not connected to external channel */
+const user3 = 3
 const streamer1 = 1
 const streamer2 = 2
 let inactiveLivestream1: Livestream
@@ -36,8 +38,8 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})
     await db.livestream.createMany({ data: [
       { liveId: 'id1', streamerId: streamer1, continuationToken: null, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' },
       { liveId: 'id2', streamerId: streamer1, continuationToken: null, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' },
@@ -47,14 +49,14 @@ export default () => {
     inactiveLivestream1 = (await db.livestream.findFirst({ where: { id: 1 }}))!
     activeLivestream1 = (await db.livestream.findFirst({ where: { id: 3 }}))!
     activeLivestream2 = (await db.livestream.findFirst({ where: { id: 4 }}))!
-    await db.chatUser.createMany({ data: [{}, {}]})
+    await db.chatUser.createMany({ data: [{}, {}, {}]})
     await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2 }]})
     await db.twitchChannel.createMany({ data: [{ userId: user1, twitchId: data.twitchChannel3 }, { userId: user2, twitchId: data.twitchChannel4 }]})
 
-    // irrelevant data to make for more realistic setup - we only test things relating to channel1/twitchChannel3/user1
+    // irrelevant data to make for more realistic setup - we only test things relating to channel1/twitchChannel3/user1/user2
     await db.viewingBlock.createMany({ data: [
-      { userId: 2, livestreamId: 2, startTime: data.time2, lastUpdate: data.time2 },
-      { userId: 2, livestreamId: 3, startTime: data.time3, lastUpdate: data.time3 },
+      { userId: 3, livestreamId: 2, startTime: data.time2, lastUpdate: data.time2 },
+      { userId: 3, livestreamId: 3, startTime: data.time3, lastUpdate: data.time3 },
     ]})
     await db.chatMessage.createMany({ data: [
       { streamerId: streamer1, userId: 2, livestreamId: 1, time: data.time1, externalId: 'id1.1' },
@@ -245,7 +247,7 @@ export default () => {
         {  streamerId: activeLivestream1.streamerId, userId: user2, livestreamId: activeLivestream1.id, time: data.time1, externalId: 'id2' }, // wrong user, correct streamer
       ]})
 
-      const result = await viewershipStore.getLivestreamParticipation(streamer1, user1)
+      const result = await viewershipStore.getLivestreamParticipation(streamer1, [user1])
 
       expect(result.length).toBe(3)
       expect(result.filter(ls => ls.participated).length).toBe(0)
@@ -257,7 +259,7 @@ export default () => {
         { streamerId: streamer1, userId: user1, livestreamId: null, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' }
       ]})
 
-      const result = await viewershipStore.getLivestreamParticipation(streamer1, user1)
+      const result = await viewershipStore.getLivestreamParticipation(streamer1, [user1])
 
       expect(result.length).toBe(3)
       expect(result[0]).toEqual(expect.objectContaining({ participated: true, id: 1}))
@@ -265,20 +267,20 @@ export default () => {
       expect(result[2]).toEqual(expect.objectContaining({ participated: false, id: 3}))
     })
 
-    test('returns ordered streams where user participated', async () => {
-      // 2 messages in stream 1, 0 messages in stream 2, 1 message in stream 3
+    test('returns ordered streams where users participated', async () => {
+      // in the beforeEach(), we already create chat messages
+      // user1: livestream 1
+      // user2: livestream 2
       await db.chatMessage.createMany({ data: [
-        { streamerId: streamer1, userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
-        { streamerId: streamer1, userId: user1, livestreamId: 1, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' },
-        { streamerId: streamer1, userId: user1, livestreamId: 3, time: data.time3, externalId: 'id3' },
+        { streamerId: streamer1, userId: user3, livestreamId: 3, time: data.time3, externalId: 'id3' },
       ]})
 
-      const result = await viewershipStore.getLivestreamParticipation(streamer1, user1)
+      const result = await viewershipStore.getLivestreamParticipation(streamer1, [user1, user2])
 
       expect(result.length).toBe(3)
       expect(result[0]).toEqual(expect.objectContaining({ participated: true, id: 1}))
-      expect(result[1]).toEqual(expect.objectContaining({ participated: false, id: 2}))
-      expect(result[2]).toEqual(expect.objectContaining({ participated: true, id: 3}))
+      expect(result[1]).toEqual(expect.objectContaining({ participated: true, id: 2}))
+      expect(result[2]).toEqual(expect.objectContaining({ participated: false, id: 3}))
     })
   })
 
@@ -289,29 +291,30 @@ export default () => {
         { userId: user2, livestreamId: activeLivestream1.id, startTime: data.time1, lastUpdate: data.time1 } // wrong user, correct streamer
       ]})
 
-      const result = await viewershipStore.getLivestreamViewership(streamer1, user1)
+      const result = await viewershipStore.getLivestreamViewership(streamer1, [user1])
 
       expect(result.length).toBe(3)
       expect(result.filter(ls => ls.viewed).length).toBe(0)
     })
 
-    test('returns ordered streams where user participated', async () => {
+    test('returns ordered streams where users participated', async () => {
       // 2 viewing blocks in stream 1, 0 blocks in stream 2, 1 block in stream 3
       const time1 = data.time1
       const time2 = addTime(data.time1, 'seconds', 1)
       const time3 = data.time3
       await db.viewingBlock.createMany({ data: [
-        { userId: user1, livestreamId: inactiveLivestream1.id, startTime: time1, lastUpdate: time1 },
-        { userId: user1, livestreamId: inactiveLivestream1.id, startTime: time2, lastUpdate: time2 },
-        { userId: user1, livestreamId: activeLivestream1.id, startTime: time3, lastUpdate: time3 },
+        { userId: user1, livestreamId: inactiveLivestream1.id, startTime: time1, lastUpdate: time1 }, // id 1
+        { userId: user2, livestreamId: activeLivestream1.id, startTime: time2, lastUpdate: time2 }, // id 3
+        { userId: user3, livestreamId: activeLivestream1.id, startTime: time2, lastUpdate: time2 }, // id 3, wrong user
+        { userId: user2, livestreamId: activeLivestream2.id, startTime: time3, lastUpdate: time3 }, // id 4, wrong streamer
       ]})
 
-      const result = await viewershipStore.getLivestreamViewership(streamer1, user1)
+      const result = await viewershipStore.getLivestreamViewership(streamer1, [user1, user2])
 
       expect(result.length).toBe(3)
-      expect(result[0]).toEqual(expect.objectContaining({ viewed: true, id: 1}))
-      expect(result[1]).toEqual(expect.objectContaining({ viewed: false, id: 2}))
-      expect(result[2]).toEqual(expect.objectContaining({ viewed: true, id: 3}))
+      expect(result[0]).toEqual(expect.objectContaining({ viewed: true, id: 1 }))
+      expect(result[1]).toEqual(expect.objectContaining({ viewed: false, id: 2 }))
+      expect(result[2]).toEqual(expect.objectContaining({ viewed: true, id: 3 }))
     })
   })
 }

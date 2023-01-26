@@ -3,6 +3,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { group } from '@rebel/server/util/arrays'
 import { UsernameAlreadyExistsError } from '@rebel/server/util/error'
 import { randomString } from '@rebel/server/util/random'
 import { hashString } from '@rebel/server/util/strings'
@@ -10,6 +11,13 @@ import { hashString } from '@rebel/server/util/strings'
 export type RegisteredUserCreateArgs = {
   username: string
   password: string
+}
+
+export type ConnectedChatUserIds = {
+  queriedAnyUserId: number
+
+  /** The first user id is the primary user. */
+  connectedChatUserIds: number[]
 }
 
 type Deps = Dependencies<{
@@ -33,7 +41,10 @@ export default class AccountStore extends ContextClass {
     try {
       await this.db.registeredUser.create({ data: {
         username: registeredUser.username,
-        hashedPassword: hashedPassword
+        hashedPassword: hashedPassword,
+
+        // create a new aggregate chat user
+        aggregateChatUser: { create: {}}
       }})
     } catch (e: any) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -41,6 +52,46 @@ export default class AccountStore extends ContextClass {
       }
       throw e
     }
+  }
+
+  /** For each of the given chat users, returns the registered user that they belong to. The results are sorted in an undefined order. */
+  public async getRegisteredUsers (anyUserIds: number[]): Promise<{ queriedUserId: number, primaryUserId: number, registeredUser: RegisteredUser | null }[]> {
+    const aggregateChatUsers = await this.db.chatUser.findMany({
+      where: {
+        id: { in: anyUserIds },
+        NOT: { registeredUser: null }
+      },
+      include: { registeredUser: true }
+    })
+    const defaultChatUsers = await this.db.chatUser.findMany({
+      where: {
+        id: { in: anyUserIds },
+        registeredUser: null
+      },
+      include: { aggregateChatUser: { include: { registeredUser: true }}}
+    })
+
+    return anyUserIds.map(id => {
+      const aggregateChatUser = aggregateChatUsers.find(user => user.id === id)
+      if (aggregateChatUser != null) {
+        return {
+          queriedUserId: id,
+          primaryUserId: id,
+          registeredUser: aggregateChatUser.registeredUser!
+        }
+      }
+
+      const defaultChatUser = defaultChatUsers.find(user => user.id === id)
+      if (defaultChatUser != null) {
+        return {
+          queriedUserId: id,
+          primaryUserId: defaultChatUser.aggregateChatUserId ?? id,
+          registeredUser: defaultChatUser.aggregateChatUser?.registeredUser ?? null
+        }
+      }
+
+      throw new Error(`User with anyUserId ${id} was identified as neither an aggregate user nor a default user.`)
+    })
   }
 
   public async checkPassword (username: string, password: string): Promise<boolean> {
@@ -68,6 +119,47 @@ export default class AccountStore extends ContextClass {
     return token
   }
 
+  /** Returns all chat user ids, including the given id, that are connected to the given id. The first id is always the primary id, i.e. aggregate user, if it exists.
+   * Otherwise, the first (and only) item is the user id that is being queried. */
+  public async getConnectedChatUserIds (anyUserIds: number[]): Promise<ConnectedChatUserIds[]> {
+    const chatUsers = await this.db.chatUser.findMany({
+      where: { id: { in: anyUserIds } },
+      include: { registeredUser: true, aggregateChatUser: true }
+    })
+
+    let result: ConnectedChatUserIds[] = []
+
+    // handle aggregate users and their linked users
+    const aggregateUserIds = chatUsers.filter(user => user.registeredUser != null).map(user => user.id)
+    const defaultUsersOfAggregateUsers = await this.db.chatUser.findMany({
+      where: { aggregateChatUserId: { in: aggregateUserIds }}
+    })
+    aggregateUserIds.forEach(aggregateUserId => result.push({
+      queriedAnyUserId: aggregateUserId,
+      connectedChatUserIds: [aggregateUserId, ...defaultUsersOfAggregateUsers.filter(user => user.aggregateChatUserId === aggregateUserId).map(user => user.id)]
+    }))
+
+    // handle default users linked to aggregate users
+    const linkedDefaultUsers = chatUsers.filter(user => user.aggregateChatUserId != null)
+    const siblingDefaultUsers = await this.db.chatUser.findMany({
+      where: { aggregateChatUserId: { in: linkedDefaultUsers.map(user => user.aggregateChatUserId!) }}
+    })
+    linkedDefaultUsers.forEach(defaultUser => result.push({
+      queriedAnyUserId: defaultUser.id,
+      // note that siblings include the default user in question
+      connectedChatUserIds: [defaultUser.aggregateChatUserId!, ...siblingDefaultUsers.filter(user => user.aggregateChatUserId === defaultUser.aggregateChatUserId).map(user => user.id)]
+    }))
+
+    // handle default users not linked to aggregate users
+    const singleDefaultUserIds = chatUsers.filter(user => user.registeredUser == null && user.aggregateChatUserId == null).map(user => user.id)
+    singleDefaultUserIds.forEach(userId => result.push({
+      queriedAnyUserId: userId,
+      connectedChatUserIds: [userId]
+    }))
+
+    return result
+  }
+
   public async getRegisteredUsersFromIds (registeredUserIds: number[]): Promise<RegisteredUser[]> {
     return await this.db.registeredUser.findMany({
       where: { id: { in: registeredUserIds } }
@@ -83,9 +175,14 @@ export default class AccountStore extends ContextClass {
     return result?.registeredUser ?? null
   }
 
-  public async getRegisteredUserFromChatUser (chatUserId: number): Promise<RegisteredUser | null> {
+  public async getRegisteredUserFromAggregateUser (aggregateChatUserId: number): Promise<RegisteredUser | null> {
     return await this.db.registeredUser.findFirst({
-      where: { chatUserId }
+      where: { aggregateChatUserId }
     })
+  }
+
+  /** Returns all registered users whose display names match the given string (not case sensitive). */
+  public async searchByUserName (name: string): Promise<RegisteredUser[]> {
+    return await this.db.registeredUser.findMany({ where: { username: { contains: name.toLowerCase() }}})
   }
 }

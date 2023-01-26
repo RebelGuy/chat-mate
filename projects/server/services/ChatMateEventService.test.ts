@@ -31,8 +31,8 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
   test('returns events after the given timestamp', async () => {
     const streamerId = 5
     const since = data.time1.getTime()
-    const levelDiff1 = cast<LevelDiff>({ timestamp: data.time2.getTime(), userId: 1, startLevel: { level: asGte(0, 0) }, endLevel: { level: asGte(1, 0) } })
-    const levelDiff2 = cast<LevelDiff>({ timestamp: data.time3.getTime(), userId: 2, startLevel: { level: asGte(2, 0) }, endLevel: { level: asGte(3, 0) } })
+    const levelDiff1 = cast<LevelDiff>({ timestamp: data.time2.getTime(), primaryUserId: 1, startLevel: { level: asGte(0, 0) }, endLevel: { level: asGte(1, 0) } })
+    const levelDiff2 = cast<LevelDiff>({ timestamp: data.time3.getTime(), primaryUserId: 2, startLevel: { level: asGte(2, 0) }, endLevel: { level: asGte(3, 0) } })
     const follower1 = cast<TwitchFollower>({ date: data.time2, displayName: 'test1' })
     const follower2 = cast<TwitchFollower>({ date: data.time3, displayName: 'test2' })
     const donation1 = cast<DonationWithUser>({ time: data.time2 })
@@ -45,8 +45,8 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
     const result = await chatMateEventService.getEventsSince(streamerId, since)
 
     expect(result.length).toBe(6)
-    expect(filterTypes(result, 'levelUp')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'levelUp' }>>({ timestamp: data.time2.getTime(), userId: 1, oldLevel: 0, newLevel: 1 }))
-    expect(filterTypes(result, 'levelUp')[1]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'levelUp' }>>({ timestamp: data.time3.getTime(), userId: 2, oldLevel: 2, newLevel: 3 }))
+    expect(filterTypes(result, 'levelUp')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'levelUp' }>>({ timestamp: data.time2.getTime(), primaryUserId: 1, oldLevel: 0, newLevel: 1 }))
+    expect(filterTypes(result, 'levelUp')[1]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'levelUp' }>>({ timestamp: data.time3.getTime(), primaryUserId: 2, oldLevel: 2, newLevel: 3 }))
     expect(filterTypes(result, 'newTwitchFollower')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'newTwitchFollower' }>>({ timestamp: data.time2.getTime(), displayName: 'test1' }))
     expect(filterTypes(result, 'newTwitchFollower')[1]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'newTwitchFollower' }>>({ timestamp: data.time3.getTime(), displayName: 'test2' }))
     expect(filterTypes(result, 'donation')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'donation' }>>({ donation: donation1 }))

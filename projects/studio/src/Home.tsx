@@ -26,6 +26,7 @@ export default function Home (props: Props) {
       <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('customEmoji')} style={{ display: 'block', margin: 'auto' }}>Custom Emoji Manager</button>
       <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('chatMate')} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
       <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('applyForStreamer')} style={{ display: 'block', margin: 'auto' }}>ChatMate Beta Program</button>
+      <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('linkUser')} style={{ display: 'block', margin: 'auto' }}>Link User</button>
       <SelectStreamer />
     </div>
   )

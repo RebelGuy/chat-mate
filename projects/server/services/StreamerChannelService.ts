@@ -1,11 +1,12 @@
 import { Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
+import { getUserName } from '@rebel/server/services/ChannelService'
 import LogService from '@rebel/server/services/LogService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { singleOrNull } from '@rebel/server/util/arrays'
+import { single, singleOrNull } from '@rebel/server/util/arrays'
 
 export type TwitchStreamerChannel = {
   streamerId: number
@@ -68,17 +69,13 @@ export default class StreamerChannelService extends ContextClass {
       return null
     }
 
-    if (registeredUser.chatUserId == null) {
-      this.logService.logWarning(this, `The streamer ${streamer.id} is not linked to a chat user`)
+    const channels = await this.channelStore.getConnectedUserOwnedChannels([registeredUser.aggregateChatUserId]).then(single)
+    if (channels.twitchChannelIds.length === 0) {
       return null
     }
 
-    const channels = await this.channelStore.getUserOwnedChannels(registeredUser.chatUserId)
-    if (channels.twitchChannels.length === 0) {
-      return null
-    }
-
-    const channelId = channels.twitchChannels[0]
-    return await this.channelStore.getTwitchUserNameFromChannelId(channelId)
+    const channelId = channels.twitchChannelIds[0]
+    const channel = await this.channelStore.getTwitchChannelFromChannelId([channelId]).then(single)
+    return getUserName(channel)
   }
 }

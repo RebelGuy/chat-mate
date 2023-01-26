@@ -7,6 +7,7 @@ import { addTime } from '@rebel/server/util/datetime'
 export const time1 = new Date(2022, 0, 3)
 export const time2 = new Date(2022, 0, 4)
 export const time3 = new Date(2022, 0, 5)
+export const time4 = new Date(2022, 0, 6)
 
 export const livestream1: Livestream = {
   id: 1,
@@ -41,10 +42,6 @@ export const livestream3: Livestream = {
   isActive: true,
   type: 'publicLivestream'
 }
-
-export const user1: ChatUser = { id: 1 }
-export const user2: ChatUser = { id: 2 }
-export const user3: ChatUser = { id: 3 }
 
 export const youtubeChannel1 = 'channel1'
 export const author1: Author = {

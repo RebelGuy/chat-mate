@@ -26,8 +26,8 @@ export default () => {
     }))
     db = dbProvider.get()
 
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1' }}}})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2' }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
@@ -99,7 +99,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBeNull()
-      expect(result.userId).toBeNull()
+      expect(result.primaryUserId).toBeNull()
       expect(result.streamerId).toBe(streamer1)
     })
 
@@ -112,7 +112,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBeNull()
-      expect(result.userId).toBe(user2.id)
+      expect(result.primaryUserId).toBe(user2.id)
       expect(result.streamerId).toBe(streamer1)
     })
 
@@ -125,7 +125,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamlabsUserId).toBe(5)
-      expect(result.userId).toBe(user2.id)
+      expect(result.primaryUserId).toBe(user2.id)
       expect(result.streamerId).toBe(streamer1)
     })
 
@@ -156,7 +156,7 @@ export default () => {
 
       expect(result.id).toBe(donation.id)
       expect(result.streamerId).toBe(streamer1)
-      expect(result.userId).toBe(null)
+      expect(result.primaryUserId).toBe(null)
       expect(result.streamlabsUserId).toBe(null)
       expect(result.messageParts.length).toBe(2)
       expect(result.messageParts[0].text!.text).toBe('sample text')
@@ -168,21 +168,22 @@ export default () => {
     })
   })
 
-  describe(nameof(DonationStore, 'getDonationsByUserId'), () => {
-    test('Returns ordered donations linked to the given user', async () => {
+  describe(nameof(DonationStore, 'getDonationsByUserIds'), () => {
+    test('Returns ordered donations linked to the given users', async () => {
       const user1 = await db.chatUser.create({ data: {} })
       const user2 = await db.chatUser.create({ data: {} })
+      const user3 = await db.chatUser.create({ data: {} })
       const donation1 = await createDonation({ time: data.time1, streamerId: streamer1 }, { userId: user2.id, type: 'internal' })
       const donation2 = await createDonation({ time: data.time2, streamerId: streamer1 }, { userId: user1.id, type: 'internal' }) // 2
       const donation3 = await createDonation({ time: data.time2, streamerId: streamer2 }, { userId: user1.id, type: 'internal' }) // wrong streamer
       const donation4 = await createDonation({ time: data.time1, streamerId: streamer1 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 1 }) // 1
       const donation5 = await createDonation({ time: data.time2, streamerId: streamer1 }, { userId: user2.id, type: 'streamlabs', streamlabsUser: 3 })
-      const donation6 = await createDonation({ time: data.time3, streamerId: streamer1 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 2 }) // 3
-      const donation7 = await createDonation({ time: data.time3, streamerId: streamer2 }, { userId: user1.id, type: 'streamlabs', streamlabsUser: 2 }) // wrong streamer
+      const donation6 = await createDonation({ time: data.time3, streamerId: streamer1 }, { userId: user3.id, type: 'streamlabs', streamlabsUser: 2 }) // 3
+      const donation7 = await createDonation({ time: data.time3, streamerId: streamer2 }, { userId: user3.id, type: 'streamlabs', streamlabsUser: 2 }) // wrong streamer
       const donation8 = await createDonation({ time: data.time2, streamerId: streamer1 }, { userId: user2.id, type: 'streamlabs', streamlabsUser: 3 })
       const donation9 = await createDonation({ time: addTime(data.time3, 'seconds', 1) })
 
-      const result = await donationStore.getDonationsByUserId(streamer1, user1.id)
+      const result = await donationStore.getDonationsByUserIds(streamer1, [user1.id, user3.id])
 
       expect(result.length).toBe(3)
       expect(result).toEqual([donation4, donation2, donation6])
@@ -200,8 +201,8 @@ export default () => {
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectArray<DonationWithUser>([
-        { ...donation3, linkIdentifier: 'internal-3', userId: null, linkedAt: null, messageParts: [] },
-        { ...donation2, linkIdentifier: 'internal-2', userId: null, linkedAt: null, messageParts: [] }
+        { ...donation3, linkIdentifier: 'internal-3', primaryUserId: null, linkedAt: null, messageParts: [] },
+        { ...donation2, linkIdentifier: 'internal-2', primaryUserId: null, linkedAt: null, messageParts: [] }
       ]))
     })
   })
@@ -297,6 +298,26 @@ export default () => {
     })
   })
 
+  describe(nameof(DonationStore, 'relinkDonation'), () => {
+    test('Updates all donation links of the given user', async () => {
+      const user1 = await db.chatUser.create({ data: {}})
+      const user2 = await db.chatUser.create({ data: {}})
+      const user3 = await db.chatUser.create({ data: {}})
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user2.id, type: 'internal' })
+
+      await donationStore.relinkDonation(user1.id, user3.id)
+
+      const stored = await db.donationLink.findMany({})
+      expect(stored).toEqual(expectObject(stored, [
+        { linkedUserId: user3.id, originalLinkedUserId: user1.id },
+        { linkedUserId: user3.id, originalLinkedUserId: user1.id },
+        { linkedUserId: user2.id, originalLinkedUserId: null }
+      ]))
+    })
+  })
+
   describe(nameof(DonationStore, 'setStreamlabsSocketToken'), () => {
     const streamer1Token = 'streamer1Token'
     const streamer2Token = 'streamer2Token'
@@ -322,7 +343,7 @@ export default () => {
       expect(store).toEqual(expectObject<StreamlabsSocketToken>({ streamerId: streamer1, token: streamer1Token }))
     })
 
-    test.only('Throws if there is an existing token', async () => {
+    test('Throws if there is an existing token', async () => {
       const updatedToken = 'streame2UpdatedToken'
 
       await expect(() => donationStore.setStreamlabsSocketToken(streamer2, updatedToken)).rejects.toThrow()
@@ -340,6 +361,28 @@ export default () => {
 
       expect(result).toBe(true)
       await expectRowCount(db.streamlabsSocketToken).toBe(0)
+    })
+  })
+
+  describe(nameof(DonationStore, 'undoDonationRelink'), () => {
+    test('Updates all donation links of the given user', async () => {
+      const user1 = await db.chatUser.create({ data: {}})
+      const user2 = await db.chatUser.create({ data: {}})
+      const user3 = await db.chatUser.create({ data: {}})
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user1.id, type: 'internal' })
+      await createDonation({}, { userId: user2.id, type: 'internal' })
+
+      await donationStore.relinkDonation(user1.id, user3.id)
+
+      await donationStore.undoDonationRelink(user1.id)
+
+      const stored = await db.donationLink.findMany({})
+      expect(stored).toEqual(expectObject(stored, [
+        { linkedUserId: user1.id, originalLinkedUserId: null },
+        { linkedUserId: user1.id, originalLinkedUserId: null },
+        { linkedUserId: user2.id, originalLinkedUserId: null }
+      ]))
     })
   })
 
@@ -399,9 +442,9 @@ export default () => {
       await donationStore.addDonation(otherDonation) // other streamlabs user
       const result = await donationStore.getDonation(1)
 
-      expect(result.userId).toBe(user2.id)
+      expect(result.primaryUserId).toBe(user2.id)
 
-      const donationsByUser = await donationStore.getDonationsByUserId(streamer1, 2)
+      const donationsByUser = await donationStore.getDonationsByUserIds(streamer1, [user2.id])
       expect(donationsByUser.length).toBe(2)
     })
   })

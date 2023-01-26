@@ -1,1 +1,1 @@
-export type Page = 'home' | 'customEmoji' | 'chatMate' | 'registration' | 'login' | 'applyForStreamer'
+export type Page = 'home' | 'customEmoji' | 'chatMate' | 'registration' | 'login' | 'applyForStreamer' | 'linkUser'

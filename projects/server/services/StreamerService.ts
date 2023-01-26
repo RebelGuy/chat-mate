@@ -41,19 +41,18 @@ export default class StreamerService extends ContextClass {
     await this.twurpleService.joinChannel(streamer.id)
     await this.helixEventService.subscribeToChannelEvents(streamer.id)
 
-    // add the owner rank. if the streamer doesn't have a linked chat user, we will add the rank later at the time of linking
+    // add the owner rank to the aggregate chat user
     const registeredUser = single(await this.accountStore.getRegisteredUsersFromIds([streamer.registeredUserId]))
-    if (registeredUser.chatUserId != null) {
-      const userRankArgs: AddUserRankArgs = {
-        assignee: loggedInRegisteredUserId,
-        expirationTime: null,
-        message: `Streamer application ${streamerApplicationId} was approved.`,
-        rank: 'owner',
-        streamerId: streamer.id,
-        chatUserId: registeredUser.chatUserId
-      }
-      await this.rankStore.addUserRank(userRankArgs)
+    const userRankArgs: AddUserRankArgs = {
+      assignee: loggedInRegisteredUserId,
+      expirationTime: null,
+      message: `Streamer application ${streamerApplicationId} was approved.`,
+      rank: 'owner',
+      streamerId: streamer.id,
+      primaryUserId: registeredUser.aggregateChatUserId
     }
+    await this.rankStore.addUserRank(userRankArgs)
+
     return updatedApplication
   }
 

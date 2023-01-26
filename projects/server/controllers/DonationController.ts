@@ -9,11 +9,13 @@ import DonationService from '@rebel/server/services/DonationService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { nonNull, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { nonNull, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { single } from '@rebel/server/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import AccountStore from '@rebel/server/stores/AccountStore'
+import AccountService from '@rebel/server/services/AccountService'
 
 type GetDonationsResponse = ApiResponse<1, { donations: Tagged<1, PublicDonation>[] }>
 
@@ -29,9 +31,7 @@ export type GetStreamlabsStatusResponse = ApiResponse<1, { status: 'notListening
 type Deps = ControllerDependencies<{
   donationService: DonationService
   donationStore: DonationStore
-  channelService: ChannelService
-  experienceService: ExperienceService
-  rankStore: RankStore
+  accountService: AccountService
 }>
 
 @Path(buildPath('donation'))
@@ -40,17 +40,13 @@ type Deps = ControllerDependencies<{
 export default class DonationController extends ControllerBase {
   private readonly donationService: DonationService
   private readonly donationStore: DonationStore
-  private readonly channelService: ChannelService
-  private readonly experienceService: ExperienceService
-  private readonly rankStore: RankStore
+  private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super(deps, 'donation')
     this.donationService = deps.resolve('donationService')
     this.donationStore = deps.resolve('donationStore')
-    this.channelService = deps.resolve('channelService')
-    this.experienceService = deps.resolve('experienceService')
-    this.rankStore = deps.resolve('rankStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   @GET
@@ -70,16 +66,17 @@ export default class DonationController extends ControllerBase {
   @Path('link')
   public async linkUser (
     @QueryParam('donationId') donationId: number,
-    @QueryParam('userId') userId: number
+    @QueryParam('userId') anyUserId: number
   ): Promise<LinkUserResponse> {
     const builder = this.registerResponseBuilder<LinkUserResponse>('POST /link', 1)
 
-    if (donationId == null || userId == null) {
+    if (donationId == null || anyUserId == null) {
       builder.failure('A donation ID and user ID must be provided.')
     }
 
     try {
-      await this.donationService.linkUserToDonation(donationId, userId, this.getStreamerId())
+      const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
+      await this.donationService.linkUserToDonation(donationId, primaryUserId, this.getStreamerId())
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -148,17 +145,15 @@ export default class DonationController extends ControllerBase {
 
   private async getPublicDonations (donations: DonationWithUser[]): Promise<PublicDonation[]> {
     const streamerId = this.getStreamerId()
-    const userIds = nonNull(donations.map(d => d.userId))
+    const primaryUserIds = unique(nonNull(donations.map(d => d.primaryUserId)))
     let userData: PublicUser[]
-    if (userIds.length === 0) {
+    if (primaryUserIds.length === 0) {
       userData = []
     } else {
-      const userChannels = await this.channelService.getActiveUserChannels(streamerId, userIds)
-      const levels = await this.experienceService.getLevels(streamerId, userIds)
-      const ranks = await this.rankStore.getUserRanks(userIds, streamerId)
-      userData = zipOnStrictMany(userChannels, 'userId', levels, ranks).map(userDataToPublicUser)
+      const allData = await this.apiService.getAllData(primaryUserIds)
+      userData = allData.map(userDataToPublicUser)
     }
 
-    return donations.map(d => donationToPublicObject(d, d.linkIdentifier, d.linkedAt, userData.find(u => u.id === d.userId) ?? null))
+    return donations.map(d => donationToPublicObject(d, d.linkIdentifier, d.linkedAt, userData.find(u => u.primaryUserId === d.primaryUserId) ?? null))
   }
 }

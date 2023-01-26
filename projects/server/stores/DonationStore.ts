@@ -16,7 +16,7 @@ export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
 export type DonationWithUser = DonationWithMessage & {
   linkIdentifier: string
   linkedAt: Date | null
-  userId: number | null
+  primaryUserId: number | null
 }
 
 export type DonationCreateArgs = {
@@ -76,16 +76,19 @@ export default class DonationStore extends ContextClass {
     })
   }
 
-  /** Returns donations that have been linked to the user, orderd by time in ascending order. */
-  public async getDonationsByUserId (streamerId: number, userId: number): Promise<Donation[]> {
-    const donationLink = await this.db.donationLink.findMany({ where: { linkedUserId: userId }})
-    const linkIdentifiers = donationLink.map(u => u.linkIdentifier)
+  /** Returns donations that have been linked to any of the given exact users, orderd by time in ascending order. Does not take into account the user connections - exact userIds must be provided.
+   * If `streamerId` is `null`, returns donations across all streamers. */
+  public async getDonationsByUserIds (streamerId: number | null, exactUserIds: number[]): Promise<Donation[]> {
+    const donationLinks = await this.db.donationLink.findMany({
+      where: { linkedUserId: { in: exactUserIds }}
+    })
+    const linkIdentifiers = donationLinks.map(u => u.linkIdentifier)
     const donationIds = linkIdentifiers.filter(id => id.startsWith(INTERNAL_USER_PREFIX)).map(id => Number(id.substring(INTERNAL_USER_PREFIX.length)))
     const streamlabsUserIds = linkIdentifiers.filter(id => id.startsWith(EXTERNAL_USER_PREFIX)).map(id => Number(id.substring(EXTERNAL_USER_PREFIX.length)))
 
     return await this.db.donation.findMany({
       where: {
-        streamerId: streamerId,
+        streamerId: streamerId ?? undefined,
         OR: [
           { id: { in: donationIds } },
           { streamlabsUserId: { in: streamlabsUserIds }}
@@ -123,7 +126,7 @@ export default class DonationStore extends ContextClass {
       streamlabsUserId: donation.streamlabsUserId,
       messageParts: donation.chatMessage?.chatMessageParts ?? [],
       linkIdentifier: linkIdentifier,
-      userId: donationLink?.linkedUserId ?? null,
+      primaryUserId: donationLink?.linkedUserId ?? null,
       linkedAt: donationLink?.linkedAt ?? null
     }
   }
@@ -161,7 +164,7 @@ export default class DonationStore extends ContextClass {
         streamlabsUserId: donation.streamlabsUserId,
         messageParts: donation.chatMessage?.chatMessageParts ?? [],
         linkIdentifier: linkIdentifier,
-        userId: donationLink?.linkedUserId ?? null,
+        primaryUserId: donationLink?.linkedUserId ?? null,
         linkedAt: donationLink?.linkedAt ?? null
       }
     })
@@ -185,13 +188,13 @@ export default class DonationStore extends ContextClass {
   // we perform side effects when linking/unlinking, which is why we separated the remove/add functionality into two methods
   // instead of just discarding the existing link.
 
-  // an internal detail is that ChatMate users are no longer matchd to the donations directly, but rather we construct a streamlabs user
+  // an internal detail is that ChatMate users are no longer matched to the donations directly, but rather we construct a link identifier
   // (either using the actual streamlabs user id, or by deterministically constructing a synthetic id that is unique to this donation)
-  // and link the ChatMate user to that streamlabs user instead.
+  // and link the ChatMate user to that link identifier instead.
 
-  /** Links the user to the donation.
+  /** Links the user to the donation. It is the responsibility of the caller to ensure the correct primary user is used.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, userId: number, linkedAt: Date): Promise<void> {
+  public async linkUserToDonation (donationId: number, primaryUserId: number, linkedAt: Date): Promise<void> {
     const linkIdentifier = await this.getLinkIdentifier(donationId)
 
     const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
@@ -201,9 +204,20 @@ export default class DonationStore extends ContextClass {
 
     await this.db.donationLink.create({ data: {
       linkIdentifier: linkIdentifier,
-      linkedUserId: userId,
+      linkedUserId: primaryUserId,
       linkedAt: linkedAt
     }})
+  }
+
+  /** Updates donation links such that donations originally linked to `fromUserId` now point to `toUserId`. */
+  public async relinkDonation (fromUserId: number, toUserId: number) {
+    await this.db.donationLink.updateMany({
+      where: { linkedUserId: fromUserId },
+      data: {
+        linkedUserId: toUserId,
+        originalLinkedUserId: fromUserId
+      }
+    })
   }
 
   /** Returns true if the socket token has been updated, and false if the provided socket token is the same as the existing token. */
@@ -234,7 +248,18 @@ export default class DonationStore extends ContextClass {
     }
   }
 
-  /** Returns the userId that was unlinked.
+  /** Updates donation links that originally pointed to `originalUserId` to now point to that user again. */
+  public async undoDonationRelink (originalUserId: number) {
+    await this.db.donationLink.updateMany({
+      where: { originalLinkedUserId: originalUserId },
+      data: {
+        originalLinkedUserId: null,
+        linkedUserId: originalUserId
+      }
+    })
+  }
+
+  /** Returns the primaryUserId that was unlinked.
    * @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
   public async unlinkUserFromDonation (donationId: number): Promise<number> {
     const linkIdentifier = await this.getLinkIdentifier(donationId)
