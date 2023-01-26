@@ -2,6 +2,7 @@ import { LoginResponse } from '@rebel/server/controllers/AccountController'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { login } from '@rebel/studio/api'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import Form from '@rebel/studio/components/Form'
 import { LoginContext } from '@rebel/studio/LoginProvider'
 import { useContext, useEffect, useState } from 'react'
 
@@ -55,14 +56,14 @@ export default function LoginForm (props: Props) {
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
         <>
           {/* return false to prevent the page from refreshing */}
-          <form onSubmit={() => { onMakeRequest(); return false }}>
+          <Form onSubmit={onMakeRequest}>
             <input type="text" placeholder="Username" value={username} onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null || loggingIn} />
             <input type="password" placeholder="Password" value={password} onChange={e => onSetPassword(e.target.value)} disabled={loadingNode != null || loggingIn} />
             <button type="submit" disabled={disableButton || loadingNode != null || loggingIn} onClick={onMakeRequest}>Login</button>
             {loadingNode}
             {errorNode}
-          </form>
-          <button disabled={loggingIn} onClick={() => { console.log('clicked'); props.onRegister() }}>Register for an account</button>
+          </Form>
+          <button disabled={loggingIn} onClick={props.onRegister}>Register for an account</button>
         </>
       )}
     </ApiRequestTrigger>

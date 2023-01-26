@@ -7,6 +7,7 @@ import { capitaliseWord } from '@rebel/server/util/text'
 import { approveStreamerApplication, createStreamerApplication, getStreamerApplications, rejectStreamerApplication, withdrawStreamerApplication } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import Form from '@rebel/studio/components/Form'
 import { LoginContext } from '@rebel/studio/LoginProvider'
 import * as React from 'react'
 
@@ -46,12 +47,12 @@ function ApplicationForm (props: ApplicationFormProps) {
     <div>Use the form to request participation in the ChatMate Beta Program.</div>
     <ApiRequestTrigger onRequest={onCreateApplication}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
-        <form onSubmit={() => { onMakeRequest(); return false }} style={{ display: 'flex', flexDirection: 'column', maxWidth: 400, margin: 'auto' }}>
+        <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column', maxWidth: 400, margin: 'auto' }}>
           <textarea disabled={props.disabled || loadingNode != null} placeholder="Type your message here" value={message} onChange={e => setMessage(e.target.value)} style={{ width: '100%' }} />
           <button type="submit" disabled={props.disabled || loadingNode != null} onClick={onMakeRequest} style={{ width: '100%' }}>Submit</button>
           {loadingNode}
           {errorNode}
-        </form>
+        </Form>
       )}
     </ApiRequestTrigger>
   </>
