@@ -3,8 +3,9 @@ import { assertUnreachable } from '@rebel/server/util/typescript'
 import { removeLinkedChannel } from '@rebel/studio/api'
 import * as React from 'react'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import RequireRank from '@rebel/studio/components/RequireRank'
 
-export default function LinkedChannels (props: { channels: PublicChannelInfo[], isAdmin: boolean, onChange: () => void }) {
+export default function LinkedChannels (props: { channels: PublicChannelInfo[], onChange: () => void }) {
   if (props.channels.length === 0) {
     return <>
       <h3>Linked Channels</h3>
@@ -20,12 +21,12 @@ export default function LinkedChannels (props: { channels: PublicChannelInfo[], 
       <tr>
         <th>Channel name</th>
         <th>Platform</th>
-        {props.isAdmin && <th>Admin actions</th>}
+        <RequireRank admin><th>Admin actions</th></RequireRank>
       </tr>
       {props.channels.map(c => <tr>
         <td><a href={getChannelUrl(c)}>{c.channelName}</a></td>
         <td>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</td>
-        {props.isAdmin && <UnlinkUser channel={c} onChange={props.onChange} />}
+        <RequireRank admin><UnlinkUser channel={c} onChange={props.onChange} /></RequireRank>
       </tr>)}
     </table>
   </>

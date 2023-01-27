@@ -9,6 +9,7 @@ import { Request, Response } from 'express'
 export function requireAuth (req: Request, res?: Response) {
   return preProcessorWrapper(req, res, async (apiService) => {
     await apiService.authenticateCurrentUser()
+    await apiService.extractStreamerId(true)
     await apiService.hydrateRanks()
   })
 }
@@ -17,7 +18,7 @@ export function requireAuth (req: Request, res?: Response) {
 export function requireStreamer (req: Request, res?: Response) {
   return preProcessorWrapper(req, res, async (apiService) => {
     await requireAuth(req, res)
-    await apiService.extractStreamerId()
+    await apiService.extractStreamerId(false)
   })
 }
 

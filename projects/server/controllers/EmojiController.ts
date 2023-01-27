@@ -19,7 +19,6 @@ type Deps = ControllerDependencies<{
 
 @Path(buildPath('emoji'))
 @PreProcessor(requireStreamer)
-@PreProcessor(requireRank('owner'))
 export default class EmojiController extends ControllerBase {
   private readonly customEmojiStore: CustomEmojiStore
 
@@ -42,6 +41,7 @@ export default class EmojiController extends ControllerBase {
 
   @POST
   @Path('/custom')
+  @PreProcessor(requireRank('owner'))
   public async addCustomEmoji (request: AddCustomEmojiRequest): Promise<AddCustomEmojiResponse> {
     const builder = this.registerResponseBuilder<AddCustomEmojiResponse>('POST /custom', 1)
     if (request == null || request.schema !== builder.schema || request.newEmoji == null) {
@@ -68,6 +68,7 @@ export default class EmojiController extends ControllerBase {
 
   @PATCH
   @Path('/custom')
+  @PreProcessor(requireRank('owner'))
   public async updateCustomEmoji (request: UpdateCustomEmojiRequest): Promise<UpdateCustomEmojiResponse> {
     const builder = this.registerResponseBuilder<UpdateCustomEmojiResponse>('PATCH /custom', 1)
     if (request == null || request.schema !== builder.schema) {

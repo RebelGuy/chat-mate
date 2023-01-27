@@ -30,10 +30,10 @@ export type PublicRank = PublicObject<1, {
   group:
     // Includes the `owner` and `mod` ranks.
     'administration' |
-    
+
     // Includes the `famous` rank.
     'cosmetic' |
-    
+
     // Includes the `ban`, `timeout`, and `mute` ranks.
     'punishment' |
 

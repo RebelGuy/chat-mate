@@ -2,14 +2,13 @@ import AdminLink from '@rebel/studio/AdminLink'
 import { addLinkedChannel, createLinkToken, getLinkedChannels, getLinkHistory } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import RequireRank from '@rebel/studio/components/RequireRank'
 import LinkedChannels from '@rebel/studio/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/LinkHistory'
-import { LoginContext } from '@rebel/studio/LoginProvider'
 import * as React from 'react'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
-  const loginContext = React.useContext(LoginContext)
   const [updateToken, setUpdateToken] = React.useState(Date.now())
 
   // the user to link to
@@ -48,7 +47,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         <div style={{ marginBottom: 16 }}>
           <ApiRequest onDemand token={updateToken} onRequest={onGetLinkedChannels}>
             {(response, loadingNode, errorNode) => <>
-              {response && <LinkedChannels channels={response.channels} isAdmin={loginContext.isAdmin} onChange={regenerateUpdateToken} />}
+              {response && <LinkedChannels channels={response.channels} onChange={regenerateUpdateToken} />}
               {loadingNode}
               {errorNode}
             </>}
@@ -69,10 +68,13 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
           </>}
         </ApiRequest>
       }
-      {loginContext.isAdmin && props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
-        <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
-          <AdminLink />
-        </div>
+      {/* These must be null to avoid infinite recursion */}
+      {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
+        <RequireRank admin>
+          <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
+            <AdminLink />
+          </div>
+        </RequireRank>
       }
     </div>
   )
@@ -98,7 +100,8 @@ function CreateLinkToken (props: { onCreated: () => void }) {
 
   return <div style={{ marginTop: 24 }}>
     <div>You can link a channel to your account to manage your profile and access other exclusive features.</div>
-    <div>If linking multiple channels, all data (experience, ranks, etc.) will be merged as if you were using a single account all along. This cannot be undone.</div>
+    <div>If linking multiple channels, all data (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
+    <div style={{ color: 'orange' }}>Each channel can only be linked to one account. Links cannot be undone.</div>
     <ApiRequestTrigger onRequest={onCreateLinkToken}>
       {(onMakeRequest, response, loadingNode, errorNode) =>
         <>

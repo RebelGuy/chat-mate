@@ -180,6 +180,9 @@ export default class LinkService extends ContextClass {
       if (connectedUserIds.length === 1) {
         // we unlinked the only user
         if (options.transferRanks) {
+          // we do not transfer the owner rank because it would leave the default user with an owner rank and,
+          // if linked to another user, would give them automatic owner rank for the other user.
+          // instead, the owner rank will get terminated and the user will have to re-apply if desired.
           cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, true, ['owner'])
           logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
         }

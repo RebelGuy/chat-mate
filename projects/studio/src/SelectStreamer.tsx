@@ -13,12 +13,24 @@ export default function SelectStreamer (props: Props) {
     return null
   }
 
+  const onGetStreamers = async (loginToken: string) => {
+    const result = await getStreamers(loginToken)
+
+    if (result.success && loginContext.username != null && result.data.streamers.includes(loginContext.username)) {
+      loginContext.setIsStreamer(true)
+    } else {
+      loginContext.setIsStreamer(false)
+    }
+
+    return result
+  }
+
   return (
     <div>
       <div>Select the streamer context under which to make requests.</div>
       <div>Currently selected: <b>{loginContext.streamer ?? 'n/a'}</b></div>
       <div>
-        <ApiRequest onDemand token={1} onRequest={getStreamers}>
+        <ApiRequest onDemand token={1} onRequest={onGetStreamers}>
           {(response, loadingNode, errorNode) => <>
             {response && (
               <select name="streamerSelection" value={loginContext.streamer ?? ''} onChange={e => loginContext.setStreamer(e.target.value)}>

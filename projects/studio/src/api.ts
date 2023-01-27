@@ -65,8 +65,9 @@ export async function getAccessibleRanks (loginToken: string, streamer: string):
   return await GET('/rank/accessible', loginToken, streamer)
 }
 
-export async function getGlobalRanks (loginToken: string): Promise<GetUserRanksResponse> {
-  return await GET('/rank', loginToken)
+/** Gets global ranks if the streamer is not provided. */
+export async function getRanks (loginToken: string, streamer?: string): Promise<GetUserRanksResponse> {
+  return await GET('/rank', loginToken, streamer)
 }
 
 export async function registerAccount (username: string, password: string): Promise<RegisterResponse> {
