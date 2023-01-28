@@ -2,6 +2,7 @@ require('module-alias/register')
 import { DB } from '@rebel/server/scripts/consts'
 
 // run using one of the following:
+// yarn workspace server snapshot:local
 // yarn workspace server snapshot:debug
 // yarn workspace server snapshot:release
 

@@ -214,6 +214,13 @@ export default class ExperienceStore extends ContextClass {
     return transactions.map(tx => tx.streamerId)
   }
 
+  /** Removes all snapshots across all streamers for the given users. */
+  public async invalidateSnapshots (userIds: number[]) {
+    await this.db.experienceSnapshot.deleteMany({
+      where: { userId: { in: userIds } }
+    })
+  }
+
   /** Updates experience transactions (across all streamers) that originally linked to the `fromUserId` to point to the `toUserId`. */
   public async relinkChatExperience (fromUserId: number, toUserId: number) {
     await this.db.experienceTransaction.updateMany({

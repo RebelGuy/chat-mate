@@ -92,6 +92,9 @@ export default class LinkService extends ContextClass {
       await this.linkStore.linkUser(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(LinkStore, 'linkUser'), cumWarnings])
 
+      await this.experienceStore.invalidateSnapshots([defaultUserId, aggregateUserId])
+      logs.push([new Date(), nameof(ExperienceStore, 'invalidateSnapshots'), cumWarnings])
+
       await this.experienceStore.relinkChatExperience(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(ExperienceStore, 'relinkChatExperience'), cumWarnings])
 
@@ -172,6 +175,9 @@ export default class LinkService extends ContextClass {
       logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
 
       if (options.relinkChatExperience) {
+        await this.experienceStore.invalidateSnapshots([defaultUserId, aggregateUserId])
+        logs.push([new Date(), nameof(ExperienceStore, 'invalidateSnapshots'), cumWarnings])
+
         await this.experienceStore.undoChatExperienceRelink(defaultUserId)
         logs.push([new Date(), nameof(ExperienceStore, 'undoChatExperienceRelink'), cumWarnings])
       }

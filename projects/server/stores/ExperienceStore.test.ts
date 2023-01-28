@@ -609,6 +609,22 @@ export default () => {
     })
   })
 
+  describe(nameof(ExperienceStore, 'invalidateSnapshots'), () => {
+    test('Deletes all snapshots for the given user across all streamers', async () => {
+      await db.experienceSnapshot.createMany({ data: [
+        { userId: user1, streamerId: streamer1, experience: 1, time: data.time1 },
+        { userId: user1, streamerId: streamer2, experience: 1, time: data.time1 },
+        { userId: user2, streamerId: streamer1, experience: 1, time: data.time1 },
+        { userId: user2, streamerId: streamer2, experience: 1, time: data.time1 },
+        { userId: user3, streamerId: streamer3, experience: 1, time: data.time1 },
+      ]})
+
+      await experienceStore.invalidateSnapshots([user1, user3])
+
+      await expectRowCount(db.experienceSnapshot).toBe(2)
+    })
+  })
+
   describe(nameof(ExperienceStore, 'relinkChatExperience'), () => {
     test('Updates all transactions across several streamers, including admin modifications', async () => {
       await db.experienceTransaction.createMany({ data: [
