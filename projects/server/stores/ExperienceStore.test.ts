@@ -124,10 +124,10 @@ export default () => {
   describe(nameof(ExperienceStore, 'addManualExperience'), () => {
     test('correctly adds experience', async () => {
       const streamerId = 2
-      const adminRegisteredUserId = 1
+      const adminUserId = 1
       await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
-      await experienceStore.addManualExperience(streamerId, user1, adminRegisteredUserId, -200, 'This is a test')
+      await experienceStore.addManualExperience(streamerId, user1, adminUserId, -200, 'This is a test')
 
       const added = (await db.experienceTransaction.findFirst({ include: {
         experienceDataAdmin: true,
@@ -136,7 +136,7 @@ export default () => {
       expect(added.streamerId).toBe(streamerId)
       expect(added.userId).toBe(user1)
       expect(added.delta).toBe(-200)
-      expect(added.experienceDataAdmin?.adminRegisteredUserId).toBe(adminRegisteredUserId)
+      expect(added.experienceDataAdmin?.adminUserId).toBe(adminUserId)
       expect(added.experienceDataAdmin?.message).toBe('This is a test')
     })
   })
@@ -581,7 +581,7 @@ export default () => {
         { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
       ]})
       await db.experienceDataAdmin.create({ data: {
-        adminRegisteredUserId: 1, experienceTransactionId: 4
+        adminUserId: 1, experienceTransactionId: 4
       }})
 
       const result = await experienceStore.getChatExperienceStreamerIdsForUser(user2)
@@ -610,18 +610,25 @@ export default () => {
   })
 
   describe(nameof(ExperienceStore, 'relinkChatExperience'), () => {
-    test('Updates all transactions across several streamers', async () => {
+    test('Updates all transactions across several streamers, including admin modifications', async () => {
       await db.experienceTransaction.createMany({ data: [
         { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
         { streamerId: streamer1, userId: user2, delta: 2, time: data.time1 },
-        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 },
+        { streamerId: streamer1, userId: user1, delta: 2, time: data.time1 }
       ]})
+      await db.experienceDataAdmin.create({ data: {
+        adminUserId: user2, experienceTransactionId: 4
+      }})
 
       await experienceStore.relinkChatExperience(user2, user3)
 
       const stored = await db.experienceTransaction.findMany()
-      expect(stored.map(tx => tx.userId)).toEqual([user1, user3, user3])
-      expect(stored.map(tx => tx.originalUserId)).toEqual([null, user2, user2])
+      expect(stored.map(tx => tx.userId)).toEqual([user1, user3, user3, user1])
+      expect(stored.map(tx => tx.originalUserId)).toEqual([null, user2, user2, null])
+
+      const adminData = await db.experienceDataAdmin.findMany().then(single)
+      expect(adminData.adminUserId).toBe(user3)
     })
   })
 

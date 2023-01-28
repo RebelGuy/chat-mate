@@ -11,7 +11,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
 import { UserAlreadyLinkedToAggregateUserError, LinkAttemptInProgressError, UserNotLinkedError } from '@rebel/server/util/error'
 import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
@@ -41,6 +41,7 @@ type Deps = Dependencies<{
   experienceService: ExperienceService
   modService: ModService
   donationStore: DonationStore
+  rankStore: RankStore
 }>
 
 export default class LinkService extends ContextClass {
@@ -56,6 +57,7 @@ export default class LinkService extends ContextClass {
   private readonly experienceService: ExperienceService
   private readonly modService: ModService
   private readonly donationStore: DonationStore
+  private readonly rankStore: RankStore
 
   constructor (deps: Deps) {
     super()
@@ -69,6 +71,7 @@ export default class LinkService extends ContextClass {
     this.experienceService = deps.resolve('experienceService')
     this.modService = deps.resolve('modService')
     this.donationStore = deps.resolve('donationStore')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   /** Links the default user to the aggregate user and performs all required side effects.
@@ -94,6 +97,9 @@ export default class LinkService extends ContextClass {
 
       await this.donationStore.relinkDonation(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(DonationStore, 'relinkDonation'), cumWarnings])
+
+      await this.rankStore.relinkAdminUsers(defaultUserId, aggregateUserId)
+      logs.push([new Date(), nameof(RankStore, 'relinkAdminUsers'), cumWarnings])
 
       const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
       if (connectedUserIds.length === 2) {

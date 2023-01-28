@@ -9,7 +9,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/server/util/arrays'
 import { addTime } from '@rebel/server/util/datetime'
 import { LinkAttemptInProgressError } from '@rebel/server/util/error'
@@ -25,6 +25,7 @@ let mockModService: MockProxy<ModService>
 let mockPunishmentService: MockProxy<PunishmentService>
 let mockRankService: MockProxy<RankService>
 let mockDonationStore: MockProxy<DonationStore>
+let mockRankStore: MockProxy<RankStore>
 let linkService: LinkService
 
 beforeEach(() => {
@@ -37,6 +38,7 @@ beforeEach(() => {
   mockPunishmentService = mock()
   mockRankService = mock()
   mockDonationStore = mock()
+  mockRankStore = mock()
 
   linkService = new LinkService(new Dependencies({
     logService: mock(),
@@ -48,7 +50,8 @@ beforeEach(() => {
     modService: mockModService,
     punishmentService: mockPunishmentService,
     rankService: mockRankService,
-    donationStore: mockDonationStore
+    donationStore: mockDonationStore,
+    rankStore: mockRankStore
   }))
 })
 
@@ -69,6 +72,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockDonationStore.relinkDonation.mock.calls)).toEqual([defaultUserId, aggregateUserId])
+    expect(single(mockRankStore.relinkAdminUsers.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true, expect.anything()])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
@@ -88,6 +92,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockExperienceStore.relinkChatExperience.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockDonationStore.relinkDonation.mock.calls)).toEqual([defaultUserId, aggregateUserId])
+    expect(single(mockRankStore.relinkAdminUsers.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankService.mergeRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.anything(), expect.any(String)])
     expect(single(mockDonationService.reEvaluateDonationRanks.mock.calls)).toEqual([aggregateUserId, expect.any(String), expect.any(String)])
     expect(single(mockExperienceService.recalculateChatExperience.mock.calls)).toEqual([aggregateUserId])

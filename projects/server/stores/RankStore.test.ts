@@ -22,6 +22,7 @@ export default () => {
   let user1: number
   let user2: number
   let user3: number
+  let user4: number
   let registeredUser1: number
   let registeredUser2: number
   let streamer1: number
@@ -53,6 +54,7 @@ export default () => {
     user1 = (await db.chatUser.create({ data: {}})).id
     user2 = (await db.chatUser.create({ data: {}})).id
     user3 = (await db.chatUser.create({ data: {}})).id
+    user4 = (await db.chatUser.create({ data: {}})).id
     streamer1 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer1Name, hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})).id
     streamer2 = (await db.streamer.create({ data: { registeredUser: { create: { username: streamer2Name, hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})).id
 
@@ -89,12 +91,12 @@ export default () => {
         primaryUserId: args.primaryUserId,
         streamerId: streamer1,
         streamerName: streamer1Name,
-        assignedByRegisteredUserId: args.assignee,
+        assignedByUserId: args.assignee,
         issuedAt: time1,
         message: null,
         expirationTime: null,
         revokeMessage: null,
-        revokedByRegisteredUserId: null,
+        revokedByUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: famousRank.id
@@ -120,12 +122,12 @@ export default () => {
         primaryUserId: args.primaryUserId,
         streamerId: streamer1,
         streamerName: streamer1Name,
-        assignedByRegisteredUserId: args.assignee,
+        assignedByUserId: args.assignee,
         issuedAt: time1,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByRegisteredUserId: null,
+        revokedByUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: modRank.id
@@ -179,12 +181,12 @@ export default () => {
         primaryUserId: args.primaryUserId,
         streamerId: streamer2,
         streamerName: streamer2Name,
-        assignedByRegisteredUserId: args.assignee,
+        assignedByUserId: args.assignee,
         issuedAt: time1,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByRegisteredUserId: null,
+        revokedByUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: modRank.id
@@ -217,12 +219,12 @@ export default () => {
         primaryUserId: args.primaryUserId,
         streamerId: null,
         streamerName: null,
-        assignedByRegisteredUserId: args.assignee,
+        assignedByUserId: args.assignee,
         issuedAt: time1,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByRegisteredUserId: null,
+        revokedByUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: famousRank.id
@@ -255,12 +257,12 @@ export default () => {
         primaryUserId: args.primaryUserId,
         streamerId: null,
         streamerName: null,
-        assignedByRegisteredUserId: args.assignee,
+        assignedByUserId: args.assignee,
         issuedAt: time5,
         message: args.message,
         expirationTime: args.expirationTime,
         revokeMessage: null,
-        revokedByRegisteredUserId: null,
+        revokedByUserId: null,
         revokedTime: null,
         rank: expectObject<Rank>({
           id: famousRank.id
@@ -464,6 +466,29 @@ export default () => {
     })
   })
 
+  describe(nameof(RankStore, 'relinkAdminUsers'), () => {
+    test('Relinks the correct user ids', async () => {
+      await db.userRank.createMany({ data: [
+        { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: modRank.id },
+        { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: mutedRank.id, assignedByUserId: user2 },
+        { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: famousRank.id, assignedByUserId: user3 },
+        { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: bannedRank.id, revokedByUserId: user2 },
+        { userId: user1, streamerId: streamer1, issuedAt: time1, rankId: donatorRank.id, revokedByUserId: user3 },
+      ]})
+
+      await rankStore.relinkAdminUsers(user2, user4)
+
+      const stored = await db.userRank.findMany()
+      expect(stored).toEqual(expectObject(stored, [
+        { assignedByUserId: null, revokedByUserId: null },
+        { assignedByUserId: user4, revokedByUserId: null },
+        { assignedByUserId: user3, revokedByUserId: null },
+        { assignedByUserId: null, revokedByUserId: user4 },
+        { assignedByUserId: null, revokedByUserId: user3 },
+      ]))
+    })
+  })
+
   describe(nameof(RankStore, 'removeUserRank'), () => {
     test('Throws UserRankNotFoundError if no active rank of the specified type exists for the user', async () => {
       await db.userRank.createMany({
@@ -513,12 +538,12 @@ export default () => {
         primaryUserId: args.primaryUserId,
         streamerId: args.streamerId,
         streamerName: streamer1Name,
-        assignedByRegisteredUserId: null,
+        assignedByUserId: null,
         issuedAt: time5,
         message: null,
         expirationTime: null,
         revokeMessage: args.message,
-        revokedByRegisteredUserId: args.removedBy,
+        revokedByUserId: args.removedBy,
         revokedTime: time6,
         rank: expectObject<Rank>({
           id: famousRank.id

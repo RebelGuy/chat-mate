@@ -108,7 +108,7 @@ export default class ExperienceStore extends ContextClass {
       userId: primaryUserId,
       delta: xp,
       experienceDataAdmin: { create: {
-        adminRegisteredUserId: adminUserId,
+        adminUserId: adminUserId,
         message
       }}
     }})
@@ -222,6 +222,11 @@ export default class ExperienceStore extends ContextClass {
         originalUserId: fromUserId,
         userId: toUserId
       }
+    })
+
+    await this.db.experienceDataAdmin.updateMany({
+      where: { adminUserId: fromUserId },
+      data: { adminUserId: toUserId }
     })
   }
 

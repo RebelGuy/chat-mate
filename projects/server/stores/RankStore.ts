@@ -94,7 +94,7 @@ export default class RankStore extends ContextClass {
           rank: { connect: { name: args.rank }},
           streamer: args.streamerId == null ? undefined : { connect: { id: args.streamerId } },
           issuedAt: args.time ?? this.dateTimeHelpers.now(),
-          assignedByRegisteredUser: args.assignee == null ? undefined : { connect: { id: args.assignee }},
+          assignedByUser: args.assignee == null ? undefined : { connect: { id: args.assignee }},
           message: args.message,
           expirationTime: args.expirationTime
         },
@@ -197,6 +197,18 @@ export default class RankStore extends ContextClass {
     return result.map(rawDataToUserRankWithRelations)
   }
 
+  public async relinkAdminUsers (fromUserId: number, toUserId: number) {
+    await this.db.userRank.updateMany({
+      where: { assignedByUserId: fromUserId },
+      data: { assignedByUserId: toUserId }
+    })
+
+    await this.db.userRank.updateMany({
+      where: { revokedByUserId: fromUserId },
+      data: { revokedByUserId: toUserId }
+    })
+  }
+
   /** Removes the rank from the user in the context of the streamer.
    * @throws {@link UserRankNotFoundError}: When no user-rank of that type is currently active.
   */
@@ -226,7 +238,7 @@ export default class RankStore extends ContextClass {
       data: {
         revokedTime: this.dateTimeHelpers.now(),
         revokeMessage: args.message,
-        revokedByRegisteredUserId: args.removedBy
+        revokedByUserId: args.removedBy
       },
       include: includeUserRankRelations
     })
@@ -295,12 +307,12 @@ type RawResult = UserRank & {
 function rawDataToUserRankWithRelations (data: RawResult): UserRankWithRelations {
   return {
     id: data.id,
-    assignedByRegisteredUserId: data.assignedByRegisteredUserId,
+    assignedByUserId: data.assignedByUserId,
     expirationTime: data.expirationTime,
     issuedAt: data.issuedAt,
     message: data.message,
     rank: data.rank,
-    revokedByRegisteredUserId: data.revokedByRegisteredUserId,
+    revokedByUserId: data.revokedByUserId,
     revokedTime: data.revokedTime,
     revokeMessage: data.revokeMessage,
     primaryUserId: data.userId,

@@ -106,6 +106,8 @@ model ChatUser {
   receivedPunishments            Punishment[]            @relation("punishment_user")
   administeredPunishments        Punishment[]            @relation("punishment_adminUser")
   userRanks                      UserRank[]              @relation("user_rank_userId")
+  administeredUserRanks          UserRank[]              @relation("user_rank_assignedByUserId")
+  revokedUserRanks               UserRank[]              @relation("user_rank_revokedByUserId")
   donationLinks                  DonationLink[]          @relation("donation_link_linkedUser")
   originalDonationLinks          DonationLink[]          @relation("donation_link_originalLinkedUser")
   registeredUser                 RegisteredUser?
@@ -189,11 +191,9 @@ model RegisteredUser {
   aggregateChatUserId Int // unique
   aggregateChatUser   ChatUser @relation(fields: [aggregateChatUserId], references: [id], map: "registered_user_aggregateChatUserId_fkey")
 
-  loginTokens           LoginToken[]
-  streamer              Streamer?
-  streamerApplications  StreamerApplication[]
-  administeredUserRanks UserRank[]            @relation("user_rank_assignedByRegisteredUserId")
-  revokedUserRanks      UserRank[]            @relation("user_rank_revokedByRegisteredUserId")
+  loginTokens          LoginToken[]
+  streamer             Streamer?
+  streamerApplications StreamerApplication[]
 
   @@unique([aggregateChatUserId], map: "registered_user_aggregateChatUserId_fkey")
   @@unique([username], map: "registered_user_username_key")
@@ -586,14 +586,14 @@ model ExperienceDataAdmin {
 
   message String? @db.VarChar(1023)
 
-  adminRegisteredUserId Int
-  adminRegisteredUser   ChatUser @relation(fields: [adminRegisteredUserId], references: [id], map: "experience_data_admin_adminRegisteredUserId_fkey") //
+  adminUserId Int
+  adminUser   ChatUser @relation(fields: [adminUserId], references: [id], map: "experience_data_admin_adminUserId_fkey")
 
   experienceTransactionId Int // unique
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id], map: "experience_data_admin_experienceTransactionId_fkey")
 
   @@unique([experienceTransactionId], map: "experience_data_admin_experienceTransactionId_key")
-  @@index([adminRegisteredUserId], map: "experience_data_admin_adminRegisteredUserId_fkey")
+  @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
   @@map("experience_data_admin")
 }
 
@@ -736,12 +736,12 @@ model UserRank {
   streamer   Streamer? @relation(fields: [streamerId], references: [id], map: "user_rank_streamerId_fkey")
 
   /// if null, was assigned by the system
-  assignedByRegisteredUserId Int?
-  assignedByRegisteredUser   RegisteredUser? @relation("user_rank_assignedByRegisteredUserId", fields: [assignedByRegisteredUserId], references: [id], map: "user_rank_assignedByRegisteredUserId_fkey")
+  assignedByUserId Int?
+  assignedByUser   ChatUser? @relation("user_rank_assignedByUserId", fields: [assignedByUserId], references: [id], map: "user_rank_assignedByUserId_fkey")
 
   /// if null, was revoked by the system. only relevant when `revokedTime` is non-null, or the rank has expired
-  revokedByRegisteredUserId Int?
-  revokedBRegisteredyUser   RegisteredUser? @relation("user_rank_revokedByRegisteredUserId", fields: [revokedByRegisteredUserId], references: [id], map: "user_rank_revokedByRegisteredUserId_fkey")
+  revokedByUserId Int?
+  revokedByUser   ChatUser? @relation("user_rank_revokedByUserId", fields: [revokedByUserId], references: [id], map: "user_rank_revokedByUserId_fkey")
 
   @@index([rankId], map: "user_rank_rankId_fkey")
   @@index([userId], map: "user_rank_userId_fkey")
