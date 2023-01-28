@@ -75,7 +75,7 @@ export default class RankService extends ContextClass {
   }
 
   /** Revokes the ranks of the first user if specified, and re-adds them to the second user.
-   * Assumes the second user has no ranks.
+   * Assumes the second user has no active ranks that would clash with the first user's ranks (if this does occur, these ranks will remain unchanged on the second user).
    * `ignoreRanks` specifies which ranks, if any, should not be transferred (note that they will still be revoked, if specified).
    * Returns the number of warnings.
   */
@@ -134,7 +134,7 @@ export default class RankService extends ContextClass {
   }
 
   /** Merges the ranks from the first user onto the second user.
-   * If the aggregate user has a rank that the default user doesn't have, the default user will inherit that rank.
+   * If the aggregate user has a rank that the default user doesn't have, the aggregate user's rank will remain unchanged.
    * If both users have the same rank, but the default user's expiration is longer, the aggregate user will inherit the expiration.
    * `removeRanks` specifies which ranks should be removed on both users - they must manually be refreshed by the caller.
    * Returns the rank modifications to the aggregate user. */
