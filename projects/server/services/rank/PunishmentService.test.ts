@@ -39,8 +39,8 @@ const expiredTimeout: UserRankWithRelations = {
   message: null,
   revokeMessage: null,
   revokedTime: null,
-  assignedByRegisteredUserId: null,
-  revokedByRegisteredUserId: null
+  assignedByUserId: null,
+  revokedByUserId: null
 }
 const activeTimeout: UserRankWithRelations = {
   id: 2,
@@ -53,8 +53,8 @@ const activeTimeout: UserRankWithRelations = {
   message: null,
   revokeMessage: null,
   revokedTime: null,
-  assignedByRegisteredUserId: null,
-  revokedByRegisteredUserId: null
+  assignedByUserId: null,
+  revokedByUserId: null
 }
 const revokedBan: UserRankWithRelations = {
   id: 3,
@@ -67,8 +67,8 @@ const revokedBan: UserRankWithRelations = {
   message: null,
   revokeMessage: null,
   revokedTime: addTime(data.time1, 'seconds', 1),
-  assignedByRegisteredUserId: null,
-  revokedByRegisteredUserId: null
+  assignedByUserId: null,
+  revokedByUserId: null
 }
 const activeBan: UserRankWithRelations = {
   id: 4,
@@ -81,8 +81,8 @@ const activeBan: UserRankWithRelations = {
   message: null,
   revokeMessage: null,
   revokedTime: null,
-  assignedByRegisteredUserId: null,
-  revokedByRegisteredUserId: null
+  assignedByUserId: null,
+  revokedByUserId: null
 }
 const expiredMute: UserRankWithRelations = {
   id: 5,
@@ -95,8 +95,8 @@ const expiredMute: UserRankWithRelations = {
   message: null,
   revokeMessage: null,
   revokedTime: null,
-  assignedByRegisteredUserId: null,
-  revokedByRegisteredUserId: null
+  assignedByUserId: null,
+  revokedByUserId: null
 }
 const activeMute: UserRankWithRelations = {
   id: 6,
@@ -109,8 +109,8 @@ const activeMute: UserRankWithRelations = {
   message: null,
   revokeMessage: null,
   revokedTime: null,
-  assignedByRegisteredUserId: null,
-  revokedByRegisteredUserId: null
+  assignedByUserId: null,
+  revokedByUserId: null
 }
 const activeModRank: UserRankWithRelations = {
   id: 7,
@@ -123,8 +123,8 @@ const activeModRank: UserRankWithRelations = {
   message: null,
   revokeMessage: null,
   revokedTime: null,
-  assignedByRegisteredUserId: null,
-  revokedByRegisteredUserId: null
+  assignedByUserId: null,
+  revokedByUserId: null
 }
 
 let mockMasterchatProxyService: MockProxy<MasterchatProxyService>

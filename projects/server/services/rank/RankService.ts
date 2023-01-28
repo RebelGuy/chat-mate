@@ -113,7 +113,7 @@ export default class RankService extends ContextClass {
         primaryUserId: toUserId,
         message: `${rank.message} [Added as part of rank transfer ${transferId} from user ${fromUserId} to user ${toUserId}]`,
         rank: rank.rank.name,
-        assignee: rank.assignedByRegisteredUserId,
+        assignee: rank.assignedByUserId,
         streamerId: rank.streamerId,
         expirationTime: rank.expirationTime,
         time: new Date()
@@ -217,7 +217,7 @@ export default class RankService extends ContextClass {
               primaryUserId: aggregateUser,
               message: `Added as part of rank merge ${mergeId} of user ${defaultUser} with user ${aggregateUser}`,
               rank: rankName,
-              assignee: oldRank!.assignedByRegisteredUserId,
+              assignee: oldRank!.assignedByUserId,
               streamerId: streamerId,
               expirationTime: oldRank!.expirationTime,
               time: new Date()

@@ -48,19 +48,19 @@ describe(nameof(RankService, 'transferRanks'), () => {
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
       streamerId: streamer1,
-      assignedByRegisteredUserId: 2,
+      assignedByUserId: 2,
       expirationTime: null
     })
     const rank2 = cast<UserRankWithRelations>({
       rank: modRank,
       streamerId: streamer1,
-      assignedByRegisteredUserId: 3,
+      assignedByUserId: 3,
       expirationTime: new Date()
     })
     const rank3 = cast<UserRankWithRelations>({
       rank: memberRank,
       streamerId: streamer2,
-      assignedByRegisteredUserId: 4,
+      assignedByUserId: 4,
       expirationTime: null
     })
     mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1, rank2, rank3] })
@@ -81,7 +81,7 @@ describe(nameof(RankService, 'transferRanks'), () => {
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
       streamerId: streamer1,
-      assignedByRegisteredUserId: 2,
+      assignedByUserId: 2,
       expirationTime: null
     })
     mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1] })
@@ -102,7 +102,7 @@ describe(nameof(RankService, 'transferRanks'), () => {
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
       streamerId: streamerId,
-      assignedByRegisteredUserId: 2,
+      assignedByUserId: 2,
       expirationTime: null
     })
     mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1] })
@@ -123,13 +123,13 @@ describe(nameof(RankService, 'transferRanks'), () => {
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
       streamerId: streamer1,
-      assignedByRegisteredUserId: 2,
+      assignedByUserId: 2,
       expirationTime: null
     })
     const rank2 = cast<UserRankWithRelations>({
       rank: modRank,
       streamerId: streamer1,
-      assignedByRegisteredUserId: 3,
+      assignedByUserId: 3,
       expirationTime: new Date()
     })
     mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1, rank2] })
