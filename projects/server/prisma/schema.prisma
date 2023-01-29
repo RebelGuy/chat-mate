@@ -103,8 +103,6 @@ model ChatUser {
   experienceSnapshots            ExperienceSnapshot[]
   viewingBlocks                  ViewingBlock[]
   experienceDataAdministered     ExperienceDataAdmin[]
-  receivedPunishments            Punishment[]            @relation("punishment_user")
-  administeredPunishments        Punishment[]            @relation("punishment_adminUser")
   userRanks                      UserRank[]              @relation("user_rank_userId")
   administeredUserRanks          UserRank[]              @relation("user_rank_assignedByUserId")
   revokedUserRanks               UserRank[]              @relation("user_rank_revokedByUserId")
@@ -749,36 +747,6 @@ model UserRank {
   @@index([expirationTime], map: "user_rank_expirationTime_key")
   @@index([revokedTime], map: "user_rank_revokedTime_key")
   @@map("user_rank")
-}
-
-model Punishment {
-  id Int @id @default(autoincrement())
-
-  punishmentType PunishmentType
-  issuedAt       DateTime
-  /// null if punishment never expires
-  expirationTime DateTime?
-  message        String?        @db.VarChar(1024)
-
-  /// only set if the punishments has been revoked
-  revokedTime   DateTime?
-  revokeMessage String?   @db.VarChar(1024)
-
-  userId Int
-  user   ChatUser @relation("punishment_user", fields: [userId], references: [id], map: "punishment_userId_fkey")
-
-  adminUserId Int
-  adminUser   ChatUser @relation("punishment_adminUser", fields: [adminUserId], references: [id], map: "punishment_adminUserId_fkey")
-
-  @@index([userId], map: "punishment_userId_fkey")
-  @@index([adminUserId], map: "punishment_adminUserId_fkey")
-  @@map("punishment")
-}
-
-enum PunishmentType {
-  ban
-  timeout
-  mute
 }
 
 model Donation {

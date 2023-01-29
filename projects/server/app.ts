@@ -41,7 +41,6 @@ import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/Client
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
@@ -169,7 +168,6 @@ const globalContext = ContextProvider.create()
   .withClass('chatStore', ChatStore)
   .withClass('accountService', AccountService)
   .withClass('channelService', ChannelService)
-  .withClass('punishmentStore', PunishmentStore)
   .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
   .withClass('twurpleService', TwurpleService)
   .withClass('punishmentService', PunishmentService)
