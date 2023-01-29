@@ -14,7 +14,9 @@ ALTER TABLE `user_rank` DROP FOREIGN KEY `user_rank_revokedByRegisteredUserId_fk
 -- AlterTable
 ALTER TABLE `user_rank`
     RENAME COLUMN `assignedByRegisteredUserId` TO `assignedByUserId`,
-    RENAME COLUMN `revokedByRegisteredUserId` TO `revokedByUserId`;
+    RENAME COLUMN `revokedByRegisteredUserId` TO `revokedByUserId`,
+    RENAME INDEX `user_rank_assignedByRegisteredUserId_fkey` TO `user_rank_assignedByUserId_fkey`,
+    RENAME INDEX `user_rank_revokedByRegisteredUserId_fkey` TO `user_rank_revokedBydUserId_fkey`;
 
 -- undoing the hardcoded user from `20221119040821_connect_registered_user_to_admin_columns_instead_of_chat_user`
 UPDATE `user_rank` SET `assignedByUserId` = 56 WHERE `assignedByUserId` = 1;
