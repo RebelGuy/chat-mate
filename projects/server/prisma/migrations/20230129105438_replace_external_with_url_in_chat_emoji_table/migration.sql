@@ -6,13 +6,8 @@
 
 */
 
--- deleting the externalId column will also remove the index.
--- in the production database, we had to manually delete the unique index, but in the migration history, it was never deleted.
--- hopefully this deletion will bring the two back into sync.
--- tldr, this DropIndex line is commented out because the index might not exist
-
 -- DropIndex
--- DROP INDEX `chat_emoji_externalId_key` ON `chat_emoji`;
+DROP INDEX `chat_emoji_externalId_key` ON `chat_emoji`;
 
 -- AlterTable
 ALTER TABLE `chat_emoji` DROP COLUMN `externalId`;
