@@ -79,14 +79,12 @@ const text3: PartialTextChatMessage = {
 
 const emoji1Saved: PartialEmojiChatMessage = {
   type: 'emoji',
-  emojiId: 'emoji1.id',
   image: { url: 'emoji1.image' },
   label: 'emoji1.label',
   name: 'emoji1.name'
 }
 const emoji2New: PartialEmojiChatMessage = {
   type: 'emoji',
-  emojiId: 'emoji2.id',
   image: { url: 'emoji2.image' },
   label: 'emoji2.label',
   name: 'emoji2.name'
@@ -183,7 +181,6 @@ export default () => {
     await db.livestream.create({ data: livestream })
     await db.chatEmoji.create({ data: {
       isCustomEmoji: false,
-      externalId: emoji1Saved.emojiId,
       imageUrl: emoji1Saved.image.url,
       label: emoji1Saved.label,
       name: emoji1Saved.name

@@ -338,8 +338,7 @@ model TwitchFollower {
 /// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
   id          Int     @id @default(autoincrement())
-  externalId  String  @db.VarChar(255) // unique
-  imageUrl    String? @db.VarChar(511)
+  imageUrl    String? @db.VarChar(511) // url
   imageWidth  Int?    @db.SmallInt
   imageHeight Int?    @db.SmallInt
   name        String? @db.VarChar(127)
@@ -353,7 +352,7 @@ model ChatEmoji {
   // any custom emojis that have replaced this YouTube emoji within a chat message
   customEmoji ChatCustomEmoji[]
 
-  @@unique([externalId], map: "chat_emoji_externalId_key")
+  @@unique([imageUrl], map: "chat_emoji_imageUrl_key")
   @@map("chat_emoji")
 }
 

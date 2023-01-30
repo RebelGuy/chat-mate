@@ -30,7 +30,6 @@ const textPart: PartialTextChatMessage = {
 const emojiPart: PartialEmojiChatMessage = {
   type: 'emoji',
   name: 'emoji name',
-  emojiId: 'emojiId',
   image: { url: 'url' },
   label: 'emoji label'
 }

@@ -202,7 +202,6 @@ export function createChatMessagePart (part: PartialChatMessage, index: number, 
 function connectOrCreateEmoji (part: PartialEmojiChatMessage) {
   return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
     create: {
-      externalId: part.emojiId,
       imageUrl: part.image.url,
       imageHeight: part.image.height ?? null,
       imageWidth: part.image.width ?? null,
@@ -210,7 +209,7 @@ function connectOrCreateEmoji (part: PartialEmojiChatMessage) {
       name: part.name,
       isCustomEmoji: false
     },
-    where: { externalId: part.emojiId }
+    where: { imageUrl: part.image.url }
   })
 }
 

@@ -315,13 +315,12 @@ function text (txt: string): PartialTextChatMessage {
   }
 }
 
-function emoji (id: string): PartialEmojiChatMessage {
+function emoji (url: string): PartialEmojiChatMessage {
   return {
     type: 'emoji',
-    emojiId: id,
-    image: { url: 'test url' },
-    label: id + '_label',
-    name: id + '_name'
+    image: { url: url },
+    label: url + '_label',
+    name: url + '_name'
   }
 }
 

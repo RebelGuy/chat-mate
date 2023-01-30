@@ -60,7 +60,6 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
   test('non-matching emoji part is passed through', async () => {
     const emojiPart: PartialEmojiChatMessage = {
       type: 'emoji',
-      emojiId: 'id',
       image: { url: 'testUrl' },
       label: ':test:',
       name: 'TestEmoji'
@@ -88,7 +87,6 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
   test('matching emoji part is detected', async () => {
     const emojiPart: PartialEmojiChatMessage = {
       type: 'emoji',
-      emojiId: 'id',
       image: { url: 'testUrl' },
       label: `:${customEmoji1.symbol.toUpperCase()}:`,
       name: 'TestEmoji'

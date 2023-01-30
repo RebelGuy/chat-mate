@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
-import { ChatItem, getEmojiLabel, getUniqueEmojiId, PartialChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, getEmojiLabel, PartialChatMessage } from '@rebel/server/models/chat'
 import { isList, List } from 'immutable'
 import { avg, clamp, clampNormFn, min, sum } from '@rebel/server/util/math'
 import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
@@ -147,7 +147,6 @@ export default class ChatFetchService extends ContextClass {
       } else {
         return {
           type: 'emoji',
-          emojiId: getUniqueEmojiId(run.emoji),
           name: run.emoji.image.accessibility!.accessibilityData.label,
           label: getEmojiLabel(run.emoji),
           image: run.emoji.image.thumbnails[0]!

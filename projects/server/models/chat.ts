@@ -65,9 +65,6 @@ export type PartialTextChatMessage = {
 export type PartialEmojiChatMessage = {
   type: 'emoji',
 
-  // youtube's ID
-  emojiId: string,
-
   // the hover-over name
   name: string,
 
@@ -139,7 +136,6 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
     } else if (p.type === 'emote') {
       const emojiPart: PartialEmojiChatMessage = {
         type: 'emoji',
-        emojiId: p.id,
         name: p.name,
         label: p.displayInfo.code, // symbol
         image: {
@@ -217,7 +213,6 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
 
   const convertEmoji = (emoji: ChatEmoji): PartialEmojiChatMessage => ({
     type: 'emoji',
-    emojiId: emoji.externalId,
     image: {
       url: emoji.imageUrl ?? '',
       height: emoji.imageHeight ?? 0,
@@ -256,26 +251,6 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
   }
 
   return result
-}
-
-export function getUniqueEmojiId (emoji: YTEmoji): string {
-  if (emoji.image.thumbnails[0].height && emoji.image.thumbnails[0].width && emoji.emojiId.length > 24) {
-    // emojis with images already have a unique ids in the form UCkszU2WH9gy1mb0dV-11UJg/xxxxxxxxxxxxxxxxxxxxxx
-    return emoji.emojiId
-  } else {
-    // SVG emojis seem to be those that can be encoding in text directly, and their ID is just the emoji itself.
-    // the problem is that, while technically the ids are unique, MySQL seems to have trouble differentiating some of them.
-    // so we force the string to be unique by combining it with the label.
-
-    // in rare cases (e.g. 🙌🏻) we only have the accessability data, which is the same as the id. here, we just
-    // hope that it can be differentiated by MySQL (another option may be to concatenate the URL, but that might be mutable).
-    const label = getEmojiLabel(emoji)
-    if (emoji.emojiId === label) {
-      return emoji.emojiId
-    } else {
-      return `${emoji.emojiId}-${getEmojiLabel(emoji)}`
-    }
-  }
 }
 
 // this is unique, and usually of the form :emoji_description:. if more than one descriptions are available, uses the shortest one.
