@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/server/context/context'
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { userRankToPublicObject, rankToPublicObject } from '@rebel/server/models/rank'
@@ -19,52 +19,48 @@ import { requireAuth, requireRank, requireStreamer } from '@rebel/server/control
 import AccountService from '@rebel/server/services/AccountService'
 import { getUserName } from '@rebel/server/services/ChannelService'
 
-export type GetUserRanksResponse = ApiResponse<1, { ranks: PublicUserRank[] }>
+export type GetUserRanksResponse = ApiResponse<{ ranks: PublicUserRank[] }>
 
-export type GetAccessibleRanksResponse = ApiResponse<1, { accessibleRanks: PublicRank[] }>
+export type GetAccessibleRanksResponse = ApiResponse<{ accessibleRanks: PublicRank[] }>
 
-type AddUserRankRequest = ApiRequest<1, {
-  schema: 1,
+type AddUserRankRequest = ApiRequest<{
   userId: number,
   message: string | null,
   durationSeconds: number | null,
   rank: 'famous' | 'donator' | 'supporter' | 'member'
 }>
-type AddUserRankResponse = ApiResponse<1, {
-  newRank: Tagged<1, PublicUserRank>
+type AddUserRankResponse = ApiResponse<{
+  newRank: PublicObject<PublicUserRank>
 }>
 
-type RemoveUserRankRequest = ApiRequest<1, {
-  schema: 1,
+type RemoveUserRankRequest = ApiRequest<{
   removedByRegisteredUserId: number
   userId: number,
   message: string | null,
   rank: 'famous' | 'donator' | 'supporter' | 'member'
 }>
-type RemoveUserRankResponse = ApiResponse<1, {
-  removedRank: Tagged<1, PublicUserRank>
+type RemoveUserRankResponse = ApiResponse<{
+  removedRank: PublicObject<PublicUserRank>
 }>
 
-type AddModRankRequest = ApiRequest<1, {
-  schema: 1,
+type AddModRankRequest = ApiRequest<{
   userId: number,
   message: string | null
 }>
-type AddModRankResponse = ApiResponse<1, {
-  newRank: Tagged<1, PublicUserRank> | null
+type AddModRankResponse = ApiResponse<{
+  newRank: PublicObject<PublicUserRank> | null
   newRankError: string | null
-  channelModChanges: Tagged<1, PublicChannelRankChange>[]
+  channelModChanges: PublicObject<PublicChannelRankChange>[]
 }>
 
-type RemoveModRankRequest = ApiRequest<1, {
-  schema: 1,
+type RemoveModRankRequest = ApiRequest<{
   userId: number,
   message: string | null
 }>
-type RemoveModRankResponse = ApiResponse<1, {
-  removedRank: Tagged<1, PublicUserRank> | null
+type RemoveModRankResponse = ApiResponse<{
+  removedRank: PublicObject<PublicUserRank> | null
   removedRankError: string | null
-  channelModChanges: Tagged<1, PublicChannelRankChange>[]
+  channelModChanges: PublicObject<PublicChannelRankChange>[]
 }>
 
 type Deps = ControllerDependencies<{
@@ -99,7 +95,7 @@ export default class RankController extends ControllerBase {
     @QueryParam('userId') anyUserId?: number,
     @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active ranks
   ): Promise<GetUserRanksResponse> {
-    const builder = this.registerResponseBuilder<GetUserRanksResponse>('GET', 1)
+    const builder = this.registerResponseBuilder<GetUserRanksResponse>('GET')
 
     try {
       if (anyUserId == null) {
@@ -125,7 +121,7 @@ export default class RankController extends ControllerBase {
   @Path('/accessible')
   @PreProcessor(requireStreamer)
   public async getAccessibleRanks (): Promise<GetAccessibleRanksResponse> {
-    const builder = this.registerResponseBuilder<GetAccessibleRanksResponse>('GET /accessible', 1)
+    const builder = this.registerResponseBuilder<GetAccessibleRanksResponse>('GET /accessible')
     const accessibleRanks = await this.rankService.getAccessibleRanks()
     try {
       return builder.success({
@@ -140,8 +136,8 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async addUserRank (request: AddUserRankRequest): Promise<AddUserRankResponse> {
-    const builder = this.registerResponseBuilder<AddUserRankResponse>('POST', 1)
-    if (request == null || request.schema !== builder.schema || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
+    const builder = this.registerResponseBuilder<AddUserRankResponse>('POST')
+    if (request == null || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -171,8 +167,8 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async removeUserRank (request: RemoveUserRankRequest): Promise<RemoveUserRankResponse> {
-    const builder = this.registerResponseBuilder<RemoveUserRankResponse>('DELETE', 1)
-    if (request == null || request.schema !== builder.schema || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
+    const builder = this.registerResponseBuilder<RemoveUserRankResponse>('DELETE')
+    if (request == null || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -202,8 +198,8 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async addModRank (request: AddModRankRequest): Promise<AddModRankResponse> {
-    const builder = this.registerResponseBuilder<AddModRankResponse>('POST /mod', 1)
-    if (request == null || request.schema !== builder.schema || request.userId == null) {
+    const builder = this.registerResponseBuilder<AddModRankResponse>('POST /mod')
+    if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -225,8 +221,8 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async removeModRank (request: RemoveModRankRequest): Promise<RemoveModRankResponse> {
-    const builder = this.registerResponseBuilder<RemoveModRankResponse>('DELETE /mod', 1)
-    if (request == null || request.schema !== builder.schema || request.userId == null) {
+    const builder = this.registerResponseBuilder<RemoveModRankResponse>('DELETE /mod')
+    if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -255,7 +251,6 @@ export default class RankController extends ControllerBase {
       }
 
       return {
-        schema: 1,
         channelId: channelId,
         platform: platform,
         error: error,

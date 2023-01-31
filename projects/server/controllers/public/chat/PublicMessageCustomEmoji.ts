@@ -1,17 +1,15 @@
-import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/PublicMessageEmoji'
 import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
 import { PublicCustomEmoji } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 
-export type PublicMessageCustomEmoji = PublicObject<2, {
-  schema: 2
-
+export type PublicMessageCustomEmoji = PublicObject<{
   /** The text content of this part, if applicable, in the form :<custom_emoji_symbol>:. */
-  textData: Tagged<1, PublicMessageText> | null
+  textData: PublicObject<PublicMessageText> | null
 
   /** The emoji content of this part, if applicable. */
-  emojiData: Tagged<1, PublicMessageEmoji> | null
+  emojiData: PublicObject<PublicMessageEmoji> | null
 
   /** The custom emoji that this message part refers to. */
-  customEmoji: Tagged<1, PublicCustomEmoji>
+  customEmoji: PublicObject<PublicCustomEmoji>
 }>

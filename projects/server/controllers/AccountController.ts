@@ -19,15 +19,15 @@ type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
 }>
 
-export type RegisterRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
-export type RegisterResponse = ApiResponse<1, { loginToken: string }>
+export type RegisterRequest = ApiRequest<{ username: string, password: string }>
+export type RegisterResponse = ApiResponse<{ loginToken: string }>
 
-export type LoginRequest = ApiRequest<1, { schema: 1, username: string, password: string }>
-export type LoginResponse = ApiResponse<1, { loginToken: string, isStreamer: boolean }>
+export type LoginRequest = ApiRequest<{ username: string, password: string }>
+export type LoginResponse = ApiResponse<{ loginToken: string, isStreamer: boolean }>
 
-export type LogoutResponse = ApiResponse<1, EmptyObject>
+export type LogoutResponse = ApiResponse<EmptyObject>
 
-export type AuthenticateResponse = ApiResponse<1, { username: string, isStreamer: boolean }>
+export type AuthenticateResponse = ApiResponse<{ username: string, isStreamer: boolean }>
 
 @Path(buildPath('account'))
 export default class AccountController extends ControllerBase {
@@ -45,7 +45,7 @@ export default class AccountController extends ControllerBase {
   @POST
   @Path('register')
   public async register (request: RegisterRequest): Promise<RegisterResponse> {
-    const builder = this.registerResponseBuilder<RegisterResponse>('POST /register', 1)
+    const builder = this.registerResponseBuilder<RegisterResponse>('POST /register')
 
     if (isNullOrEmpty(request.username) || isNullOrEmpty(request.password)) {
       return builder.failure(400, 'Username and password must be provided')
@@ -69,7 +69,7 @@ export default class AccountController extends ControllerBase {
   @POST
   @Path('login')
   public async login (request: LoginRequest): Promise<LoginResponse> {
-    const builder = this.registerResponseBuilder<LoginResponse>('POST /login', 1)
+    const builder = this.registerResponseBuilder<LoginResponse>('POST /login')
 
     if (isNullOrEmpty(request.username) || isNullOrEmpty(request.password)) {
       return builder.failure(400, 'Username and password must be provided')
@@ -109,7 +109,7 @@ export default class AccountController extends ControllerBase {
   @POST
   @Path('logout')
   public async logout (): Promise<LogoutResponse> {
-    const builder = this.registerResponseBuilder<LogoutResponse>('POST /logout', 1)
+    const builder = this.registerResponseBuilder<LogoutResponse>('POST /logout')
 
     try {
       await this.apiService.authenticateCurrentUser()
@@ -128,7 +128,7 @@ export default class AccountController extends ControllerBase {
   @Path('authenticate')
   @PreProcessor(requireAuth)
   public async authenticate (): Promise<AuthenticateResponse> {
-    const builder = this.registerResponseBuilder<AuthenticateResponse>('POST /authenticate', 1)
+    const builder = this.registerResponseBuilder<AuthenticateResponse>('POST /authenticate')
 
     try {
       const user = super.getCurrentUser()

@@ -10,18 +10,15 @@ import { UserRanks } from '@rebel/server/stores/RankStore'
 /** It is expected that the data is for the primary user, thus `userId` is the `primaryUserId`. */
 export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks & { registeredUser: RegisteredUser | null }): PublicUser {
   return {
-    schema: 3,
     primaryUserId: data.primaryUserId,
     registeredUser: registeredUserToPublic(data.registeredUser),
     channelInfo: {
-      schema: 1,
       defaultUserId: data.defaultUserId,
       channelName: getUserName(data),
       externalIdOrUserName: getExternalIdOrUserName(data),
       platform: data.platformInfo.platform
     },
     levelInfo: {
-      schema: 1,
       level: data.level.level,
       levelProgress: data.level.levelProgress
     },
@@ -31,7 +28,6 @@ export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks 
 
 export function registeredUserToPublic (registeredUser: RegisteredUser | null): PublicRegisteredUser | null {
   return registeredUser == null ? null : {
-    schema: 1,
     id: registeredUser.id,
     displayName: registeredUser.username
   }

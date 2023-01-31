@@ -1,10 +1,8 @@
-import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 
-export type PublicUserRank = PublicObject<1, {
-  schema: 1
-
-  rank: Tagged<1, PublicRank>
+export type PublicUserRank = PublicObject<{
+  rank: PublicObject<PublicRank>
 
   /** The id of the user rank object. */
   id: number

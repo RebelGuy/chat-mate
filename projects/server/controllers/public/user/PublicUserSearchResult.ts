@@ -2,9 +2,7 @@ import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import {  PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 
-export type PublicUserSearchResult = PublicObject<1, {
-  schema: 1,
-
+export type PublicUserSearchResult = PublicObject<{
   /** The user associated with the match. May be a default or aggregate user. Always an aggregate user if searching for registered users. */
   user: PublicUser
 

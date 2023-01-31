@@ -8,7 +8,7 @@ import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicA
 import { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { userDataToPublicUser } from '@rebel/server/models/user'
-import { Level, UserLevel } from '@rebel/server/services/ExperienceService'
+import { UserLevel } from '@rebel/server/services/ExperienceService'
 import { asGte, asLt } from '@rebel/server/util/math'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
@@ -37,9 +37,7 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
 
     const status: 'not_started' | 'live' | 'finished' = chooseWeightedRandom(['not_started', 1], ['live', 10], ['finished', 1])
     const livestreamStatus: PublicLivestreamStatus | null = this.liveId == null ? null : {
-      schema: 3,
       livestream: {
-        schema: 1,
         id: 1,
         livestreamLink: getLivestreamLink(this.liveId),
         status,
@@ -51,13 +49,11 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
     }
 
     const youtubeApiStatus: PublicApiStatus = {
-      schema: 1,
       avgRoundtrip: 100,
       lastOk: new Date().getTime(),
       status: chooseWeightedRandom(['ok', 10], ['error', 1])
     }
     const twitchApiStatus: PublicApiStatus = {
-      schema: 1,
       avgRoundtrip: 100,
       lastOk: new Date().getTime(),
       status: chooseWeightedRandom(['ok', 10], ['error', 1])
@@ -93,11 +89,9 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
         const user: PublicUser = userDataToPublicUser({ ...userChannel, ...level, ...ranks, ...{ registeredUser } })
 
         events.push({
-          schema: 5,
           timestamp: new Date().getTime(),
           type: 'levelUp',
           levelUpData: {
-            schema: 3,
             newLevel: newLevel,
             oldLevel: newLevel - 1,
             user
@@ -108,12 +102,10 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
       } else if (r < 0.85) {
         // new follower event
         events.push({
-          schema: 5,
           timestamp: new Date().getTime(),
           type: 'newTwitchFollower',
           levelUpData: null,
           newTwitchFollowerData: {
-            schema: 1,
             displayName: randomString(8)
           },
           donationData: null
@@ -122,22 +114,18 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
         // new donation
         const amount = randomInt(100, 10000) / 100
         events.push({
-          schema: 5,
           timestamp: new Date().getTime(),
           type: 'donation',
           levelUpData: null,
           newTwitchFollowerData: null,
           donationData: {
-            schema: 1,
             amount: amount,
             formattedAmount: `$${amount.toFixed(2)}`,
             currency: 'USD',
             id: 1,
             messageParts: [{
-              schema: 3,
               type: 'text',
               textData: {
-                schema: 1,
                 text: randomString(128),
                 isBold: false,
                 isItalics: false

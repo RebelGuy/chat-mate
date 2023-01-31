@@ -1,5 +1,5 @@
 import { Donation } from '@prisma/client'
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicDonation } from '@rebel/server/controllers/public/donation/PublicDonation'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { donationToPublicObject } from '@rebel/server/models/donation'
@@ -17,16 +17,16 @@ import { requireRank, requireStreamer } from '@rebel/server/controllers/preProce
 import AccountStore from '@rebel/server/stores/AccountStore'
 import AccountService from '@rebel/server/services/AccountService'
 
-type GetDonationsResponse = ApiResponse<1, { donations: Tagged<1, PublicDonation>[] }>
+type GetDonationsResponse = ApiResponse<{ donations: PublicObject<PublicDonation>[] }>
 
-type LinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonation> }>
+type LinkUserResponse = ApiResponse<{ updatedDonation: PublicObject<PublicDonation> }>
 
-type UnlinkUserResponse = ApiResponse<1, { updatedDonation: Tagged<1, PublicDonation> }>
+type UnlinkUserResponse = ApiResponse<{ updatedDonation: PublicObject<PublicDonation> }>
 
-export type SetWebsocketTokenRequest = ApiRequest<1, { schema: 1, websocketToken: string | null }>
-export type SetWebsocketTokenResponse = ApiResponse<1, { result: 'success' | 'noChange' }>
+export type SetWebsocketTokenRequest = ApiRequest<{ websocketToken: string | null }>
+export type SetWebsocketTokenResponse = ApiResponse<{ result: 'success' | 'noChange' }>
 
-export type GetStreamlabsStatusResponse = ApiResponse<1, { status: 'notListening' | 'listening' | 'error' }>
+export type GetStreamlabsStatusResponse = ApiResponse<{ status: 'notListening' | 'listening' | 'error' }>
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -51,7 +51,7 @@ export default class DonationController extends ControllerBase {
 
   @GET
   public async getDonations (): Promise<GetDonationsResponse> {
-    const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /', 1)
+    const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /')
     try {
       const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0)
       return builder.success({
@@ -68,7 +68,7 @@ export default class DonationController extends ControllerBase {
     @QueryParam('donationId') donationId: number,
     @QueryParam('userId') anyUserId: number
   ): Promise<LinkUserResponse> {
-    const builder = this.registerResponseBuilder<LinkUserResponse>('POST /link', 1)
+    const builder = this.registerResponseBuilder<LinkUserResponse>('POST /link')
 
     if (donationId == null || anyUserId == null) {
       builder.failure('A donation ID and user ID must be provided.')
@@ -93,7 +93,7 @@ export default class DonationController extends ControllerBase {
   public async unlinkUser (
     @QueryParam('donationId') donationId: number
   ): Promise<LinkUserResponse> {
-    const builder = this.registerResponseBuilder<UnlinkUserResponse>('DELETE /link', 1)
+    const builder = this.registerResponseBuilder<UnlinkUserResponse>('DELETE /link')
 
     if (donationId == null) {
       builder.failure('A donation ID must be provided.')
@@ -115,7 +115,7 @@ export default class DonationController extends ControllerBase {
   @POST
   @Path('/streamlabs/socketToken')
   public async setWebsocketToken (request: SetWebsocketTokenRequest): Promise<SetWebsocketTokenResponse> {
-    const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /streamlabs/socketToken', 1)
+    const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /streamlabs/socketToken')
 
     try {
       const hasUpdated = await this.donationService.setStreamlabsSocketToken(this.getStreamerId(), request.websocketToken)
@@ -128,7 +128,7 @@ export default class DonationController extends ControllerBase {
   @GET
   @Path('/streamlabs/status')
   public getStreamlabsStatus (): GetStreamlabsStatusResponse {
-    const builder = this.registerResponseBuilder<GetStreamlabsStatusResponse>('POST /streamlabs/status', 1)
+    const builder = this.registerResponseBuilder<GetStreamlabsStatusResponse>('POST /streamlabs/status')
 
     try {
       const status = this.donationService.getStreamlabsStatus(this.getStreamerId())

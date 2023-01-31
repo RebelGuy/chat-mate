@@ -1,11 +1,9 @@
-import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 
 /** Represents an unlinked donation. */
-export type PublicDonationData = PublicObject<1, {
-  schema: 1
-
+export type PublicDonationData = PublicObject<{
   /** The internal ID associated with the underlying donation. */
   id: number
 
@@ -25,8 +23,8 @@ export type PublicDonationData = PublicObject<1, {
   name: string
 
   /** The custom message attached to the donation, if any. */
-  messageParts: Tagged<3, PublicMessagePart>[]
+  messageParts: PublicObject<PublicMessagePart>[]
 
   /** The internal user linked to the donation. Null if the donation has not been linked to any user. */
-  linkedUser: Tagged<3, PublicUser> | null
+  linkedUser: PublicObject<PublicUser> | null
 }>

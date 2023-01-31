@@ -1,12 +1,10 @@
-import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
 
-export type PublicUser = PublicObject<3, {
-  schema: 3
-
+export type PublicUser = PublicObject<{
   /** The internal primary ID of the user. */
   primaryUserId: number
 
@@ -14,10 +12,10 @@ export type PublicUser = PublicObject<3, {
   registeredUser: PublicRegisteredUser | null
 
   /** Current information about the user's active channel. */
-  channelInfo: Tagged<1, PublicChannelInfo>
+  channelInfo: PublicObject<PublicChannelInfo>
 
   /** Current level of the user. */
-  levelInfo: Tagged<1, PublicLevelInfo>
+  levelInfo: PublicObject<PublicLevelInfo>
 
   /** The list of active user-ranks, not sorted in any particular order. */
   activeRanks: PublicUserRank[]

@@ -1,24 +1,22 @@
-import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicMessageCheer } from '@rebel/server/controllers/public/chat/PublicMessageCheer'
 import { PublicMessageCustomEmoji } from '@rebel/server/controllers/public/chat/PublicMessageCustomEmoji'
 import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/PublicMessageEmoji'
 import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
 
-export type PublicMessagePart = PublicObject<3, {
-  schema: 3
-
+export type PublicMessagePart = PublicObject<{
   /** Each part must be of a particular type. */
   type: 'text' | 'emoji' | 'customEmoji' | 'cheer'
 
   /** Only set if `type` is `text`. */
-  textData: Tagged<1, PublicMessageText> | null
+  textData: PublicObject<PublicMessageText> | null
 
   /** Only set if `type` is `emoji`. */
-  emojiData: Tagged<1, PublicMessageEmoji> | null
+  emojiData: PublicObject<PublicMessageEmoji> | null
 
   /** Only set if `type` is `customEmoji`. */
-  customEmojiData: Tagged<2, PublicMessageCustomEmoji> | null
+  customEmojiData: PublicObject<PublicMessageCustomEmoji> | null
 
   /** Only set if `type` is `cheer`. */
-  cheerData: Tagged<1, PublicMessageCheer> | null
+  cheerData: PublicObject<PublicMessageCheer> | null
 }>

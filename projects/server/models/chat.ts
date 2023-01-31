@@ -303,7 +303,6 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   }
 
   const userInfo: PublicChannelInfo = {
-    schema: 1,
     defaultUserId: chat.userId,
     externalIdOrUserName: getExternalIdOrUserName(userChannel),
     platform: userChannel.platformInfo.platform,
@@ -311,20 +310,17 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   }
 
   const levelInfo: PublicLevelInfo = {
-    schema: 1,
     level: levelData.level,
     levelProgress: levelData.levelProgress
   }
 
   const newItem: PublicChatItem = {
-    schema: 4,
     id: chat.id,
     timestamp: chat.time.getTime(),
     platform: userChannel.platformInfo.platform,
     isCommand: chat.chatCommand != null,
     messageParts,
     author: {
-      schema: 3,
       primaryUserId: getPrimaryUserId(chat.user),
       registeredUser: registeredUserToPublic(registeredUser),
       channelInfo: userInfo,
@@ -348,7 +344,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   if (part.text != null && part.emoji == null && part.customEmoji == null && part.cheer == null) {
     type = 'text'
     text = {
-      schema: 1,
       text: part.text.text,
       isBold: part.text.isBold,
       isItalics: part.text.isItalics
@@ -356,12 +351,10 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji != null && part.text == null && part.customEmoji == null && part.cheer == null) {
     type = 'emoji'
     emoji = {
-      schema: 1,
       // so far I am yet to find an instance where either of these are null
       label: part.emoji.label!,
       name: part.emoji.name!,
       image: {
-        schema: 1,
         url: part.emoji.imageUrl!,
         height: part.emoji.imageHeight,
         width: part.emoji.imageWidth
@@ -370,19 +363,15 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji == null && part.text == null && part.customEmoji != null && part.cheer == null) {
     type = 'customEmoji'
     customEmoji = {
-      schema: 2,
       textData: part.customEmoji.text == null ? null : {
-        schema: 1,
         text: part.customEmoji.text.text,
         isBold: part.customEmoji.text.isBold,
         isItalics: part.customEmoji.text.isItalics
       },
       emojiData: part.customEmoji.emoji == null ? null : {
-        schema: 1,
         label: part.customEmoji.emoji.label!,
         name: part.customEmoji.emoji.name!,
         image: {
-          schema: 1,
           url: part.customEmoji.emoji.imageUrl!,
           width: part.customEmoji.emoji.imageWidth,
           height: part.customEmoji.emoji.imageHeight
@@ -390,7 +379,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
       },
       // this is absolute trash
       customEmoji: {
-        schema: 1,
         id: part.customEmoji.id,
         name: part.customEmoji.customEmojiVersion.name,
         symbol: part.customEmoji.customEmojiVersion.customEmoji.symbol,
@@ -405,7 +393,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji == null && part.text == null && part.customEmoji == null && part.cheer != null) {
     type = 'cheer'
     cheer = {
-      schema: 1,
       amount: part.cheer.amount,
       colour: part.cheer.colour,
       imageUrl: part.cheer.imageUrl,
@@ -416,7 +403,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   }
 
   const publicPart: PublicMessagePart = {
-    schema: 3,
     type,
     textData: text,
     emojiData: emoji,

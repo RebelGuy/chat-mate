@@ -3,7 +3,6 @@ import { CustomEmojiCreateData, CustomEmojiUpdateData, CustomEmojiWithRankWhitel
 
 export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist): PublicCustomEmoji {
   return {
-    schema: 1,
     id: emoji.id,
     name: emoji.name,
     symbol: emoji.symbol,

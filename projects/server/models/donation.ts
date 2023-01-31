@@ -6,7 +6,6 @@ import { DonationWithMessage } from '@rebel/server/stores/DonationStore'
 
 export function donationToPublicObject (donation: DonationWithMessage, linkIdentifier: string, linkedAt: Date | null, linkedUser: PublicUser | null): PublicDonation {
   return {
-    schema: 1,
     id: donation.id,
     time: donation.time.getTime(),
     amount: donation.amount,

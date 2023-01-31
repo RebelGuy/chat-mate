@@ -1,18 +1,18 @@
 import ChatControllerReal, { ChatControllerDeps } from '@rebel/server/controllers/ChatControllerReal'
 import ChatControllerFake from '@rebel/server/controllers/ChatControllerFake'
-import { ApiResponse, buildPath, ControllerBase, Endpoint, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiResponse, buildPath, ControllerBase, Endpoint, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import env from '@rebel/server/globals'
 import { GET, Path, PreProcessor, QueryParam } from 'typescript-rest'
-import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
-export type GetChatResponse = ApiResponse<8, {
+export type GetChatResponse = ApiResponse<{
   // include the timestamp so it can easily be used for the next request
   reusableTimestamp: number
-  chat: Tagged<4, PublicChatItem>[]
+  chat: PublicObject<PublicChatItem>[]
 }>
 
-export type GetChatEndpoint = Endpoint<8, { since?: number, limit?: number }, GetChatResponse>
+export type GetChatEndpoint = Endpoint<{ since?: number, limit?: number }, GetChatResponse>
 
 export interface IChatController {
   getChat: GetChatEndpoint
@@ -36,7 +36,7 @@ export default class ChatController extends ControllerBase {
     @QueryParam('since') since?: number,
     @QueryParam('limit') limit?: number
   ): Promise<GetChatResponse> {
-    const builder = this.registerResponseBuilder<GetChatResponse>('GET /', 8)
+    const builder = this.registerResponseBuilder<GetChatResponse>('GET /')
     try {
       return await this.implementation.getChat({ builder, since, limit })
     } catch (e: any) {

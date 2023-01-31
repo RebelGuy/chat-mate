@@ -1,8 +1,6 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicMessageText = PublicObject<1, {
-  schema: 1
-
+export type PublicMessageText = PublicObject<{
   /** The text content of this part. */
   text: string
 

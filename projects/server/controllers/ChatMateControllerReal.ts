@@ -111,20 +111,17 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
       if (event.type === 'levelUp') {
         const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
         levelUpData = {
-          schema: 3,
           newLevel: event.newLevel,
           oldLevel: event.oldLevel,
           user: user
         }
       } else if (event.type === 'newTwitchFollower') {
         newTwitchFollowerData = {
-          schema: 1,
           displayName: event.displayName
         }
       } else if (event.type === 'donation') {
         const user: PublicUser | null = event.primaryUserId == null ? null : userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
         donationData = {
-          schema: 1,
           id: event.donation.id,
           time: event.donation.time.getTime(),
           amount: event.donation.amount,
@@ -139,7 +136,6 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
       }
 
       result.push({
-        schema: 5,
         type: event.type,
         timestamp: event.timestamp,
         levelUpData,
@@ -198,7 +194,6 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     }
 
     return {
-      schema: 3,
       livestream: publicLivestream,
       youtubeLiveViewers: viewers?.viewCount ?? null,
       twitchLiveViewers: viewers?.twitchViewCount ?? null,

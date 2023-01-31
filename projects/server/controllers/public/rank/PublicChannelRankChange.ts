@@ -1,9 +1,7 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
 /** Represents a channel to which a rank change has been made. Note that this does not necessarily mean that the state of the external channel actually changed, just that a change was requested and accepted. */
-export type PublicChannelRankChange = PublicObject<1, {
-  schema: 1,
-
+export type PublicChannelRankChange = PublicObject<{
   /** The internal ID of the YouTube or Twitch channel. */
   channelId: number
 

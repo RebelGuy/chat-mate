@@ -1,9 +1,7 @@
-import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatImage } from '@rebel/server/controllers/public/chat/PublicChatImage'
 
-export type PublicMessageEmoji = PublicObject<1, {
-  schema: 1
-
+export type PublicMessageEmoji = PublicObject<{
   /** The hover-over name of the emoji, or the emoji character itself. */
   name: string
 
@@ -11,5 +9,5 @@ export type PublicMessageEmoji = PublicObject<1, {
   label: string
 
   /** An image to the emoji. */
-  image: Tagged<1, PublicChatImage>
+  image: PublicObject<PublicChatImage>
 }>

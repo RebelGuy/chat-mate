@@ -8,21 +8,21 @@ import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@reb
 import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/server/util/error'
 import { GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
 
-export type GetStreamersResponse = ApiResponse<1, { streamers: string[] }>
+export type GetStreamersResponse = ApiResponse<{ streamers: string[] }>
 
-export type CreateApplicationRequest = ApiRequest<1, { schema: 1, message: string }>
-export type CreateApplicationResponse = ApiResponse<1, { newApplication: PublicStreamerApplication }>
+export type CreateApplicationRequest = ApiRequest<{ message: string }>
+export type CreateApplicationResponse = ApiResponse<{ newApplication: PublicStreamerApplication }>
 
-export type GetApplicationsResponse = ApiResponse<1, { streamerApplications: PublicStreamerApplication[] }>
+export type GetApplicationsResponse = ApiResponse<{ streamerApplications: PublicStreamerApplication[] }>
 
-export type ApproveApplicationRequest = ApiRequest<1, { schema: 1, message: string }>
-export type ApproveApplicationResponse = ApiResponse<1, { updatedApplication: PublicStreamerApplication }>
+export type ApproveApplicationRequest = ApiRequest<{ message: string }>
+export type ApproveApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
 
-export type RejectApplicationRequest = ApiRequest<1, { schema: 1, message: string }>
-export type RejectApplicationResponse = ApiResponse<1, { updatedApplication: PublicStreamerApplication }>
+export type RejectApplicationRequest = ApiRequest<{ message: string }>
+export type RejectApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
 
-export type WithdrawApplicationRequest = ApiRequest<1, { schema: 1, message: string }>
-export type WithdrawApplicationResponse = ApiResponse<1, { updatedApplication: PublicStreamerApplication }>
+export type WithdrawApplicationRequest = ApiRequest<{ message: string }>
+export type WithdrawApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -46,7 +46,7 @@ export default class StreamerController extends ControllerBase {
 
   @GET
   public async getStreamers (): Promise<GetStreamersResponse> {
-    const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /', 1)
+    const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /')
 
     try {
       const streamers = await this.streamerStore.getStreamers()
@@ -60,7 +60,7 @@ export default class StreamerController extends ControllerBase {
   @GET
   @Path('application')
   public async getApplications (): Promise<GetApplicationsResponse> {
-    const builder = this.registerResponseBuilder<GetApplicationsResponse>('GET /application', 1)
+    const builder = this.registerResponseBuilder<GetApplicationsResponse>('GET /application')
 
     try {
       const isAdmin = this.hasRankOrAbove('admin')
@@ -75,7 +75,7 @@ export default class StreamerController extends ControllerBase {
   @POST
   @Path('application')
   public async createApplication (request: CreateApplicationRequest): Promise<CreateApplicationResponse> {
-    const builder = this.registerResponseBuilder<CreateApplicationResponse>('POST /application', 1)
+    const builder = this.registerResponseBuilder<CreateApplicationResponse>('POST /application')
 
     try {
       const registeredUserId = super.getCurrentUser().id
@@ -97,7 +97,7 @@ export default class StreamerController extends ControllerBase {
     @PathParam('streamerApplicationId') streamerApplicationId: number,
       request: ApproveApplicationRequest
   ): Promise<ApproveApplicationResponse> {
-    const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve', 1)
+    const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve')
 
     try {
       const application = await this.streamerService.approveStreamerApplication(streamerApplicationId, request.message, this.getCurrentUser().id)
@@ -118,7 +118,7 @@ export default class StreamerController extends ControllerBase {
     @PathParam('streamerApplicationId') streamerApplicationId: number,
       request: RejectApplicationRequest
   ): Promise<RejectApplicationResponse> {
-    const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/reject', 1)
+    const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/reject')
 
     try {
       const data: CloseApplicationArgs = {
@@ -143,7 +143,7 @@ export default class StreamerController extends ControllerBase {
     @PathParam('streamerApplicationId') streamerApplicationId: number,
       request: WithdrawApplicationRequest
   ): Promise<WithdrawApplicationResponse> {
-    const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/withdraw', 1)
+    const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/withdraw')
 
     const applications = await this.streamerStore.getStreamerApplications(this.getCurrentUser().id)
     if (!applications.map(app => app.id).includes(streamerApplicationId)) {

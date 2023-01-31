@@ -1,4 +1,4 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
@@ -25,29 +25,28 @@ import { isNullOrEmpty } from '@rebel/server/util/strings'
 import { assertUnreachable, firstOrDefault } from '@rebel/server/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
-export type SearchUserRequest = ApiRequest<4, {
-  schema: 4,
+export type SearchUserRequest = ApiRequest<{
   searchTerm: string
 }>
 
-export type SearchUserResponse = ApiResponse<4, {
-  results: Tagged<1, PublicUserSearchResult>[]
+export type SearchUserResponse = ApiResponse<{
+  results: PublicObject<PublicUserSearchResult>[]
 }>
 
-export type GetLinkedChannelsResponse = ApiResponse<1, {
+export type GetLinkedChannelsResponse = ApiResponse<{
   registeredUser: PublicRegisteredUser
   channels: PublicChannelInfo[]
 }>
 
-export type AddLinkedChannelResponse = ApiResponse<1, EmptyObject>
+export type AddLinkedChannelResponse = ApiResponse<EmptyObject>
 
-export type RemoveLinkedChannelResponse = ApiResponse<1, EmptyObject>
+export type RemoveLinkedChannelResponse = ApiResponse<EmptyObject>
 
-export type GetLinkHistoryResponse = ApiResponse<1, {
+export type GetLinkHistoryResponse = ApiResponse<{
   items: PublicLinkHistoryItem[]
 }>
 
-export type CreateLinkTokenResponse = ApiResponse<1, {
+export type CreateLinkTokenResponse = ApiResponse<{
   token: string
 }>
 
@@ -87,8 +86,8 @@ export default class UserController extends ControllerBase {
   @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async search (request: SearchUserRequest): Promise<SearchUserResponse> {
-    const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search', 4)
-    if (request == null || request.schema !== builder.schema || isNullOrEmpty(request.searchTerm)) {
+    const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search')
+    if (request == null || isNullOrEmpty(request.searchTerm)) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -107,17 +106,14 @@ export default class UserController extends ControllerBase {
         const data = allData.find(d => d.primaryUserId === primaryUserId)!
 
         return {
-          schema: 1,
           user: userDataToPublicUser(data),
           matchedChannel: {
-            schema: 1,
             channelId: match.platformInfo.channel.id,
             defaultUserId: match.defaultUserId,
             platform: match.platformInfo.platform,
             displayName: getUserName(match)
           },
           allChannels: channels.channels.map(c => ({
-            schema: 1,
             channelId: c.platformInfo.channel.id,
             defaultUserId: c.defaultUserId,
             platform: c.platformInfo.platform,
@@ -137,8 +133,8 @@ export default class UserController extends ControllerBase {
   @PreProcessor(requireStreamer) // streamer is required to get channel data
   @PreProcessor(requireRank('admin'))
   public async searchRegisteredUsers (request: SearchUserRequest): Promise<SearchUserResponse> {
-    const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search', 4)
-    if (request == null || request.schema !== builder.schema || isNullOrEmpty(request.searchTerm)) {
+    const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search')
+    if (request == null || isNullOrEmpty(request.searchTerm)) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -162,7 +158,6 @@ export default class UserController extends ControllerBase {
         const data = allData.find(d => d.primaryUserId === aggregateUserId)
 
         return {
-          schema: 1,
           user: userDataToPublicUser(data ?? {
             aggregateUserId,
             primaryUserId: aggregateUserId,
@@ -190,7 +185,6 @@ export default class UserController extends ControllerBase {
           }),
           matchedChannel: null,
           allChannels: channels.channels.map(c => ({
-            schema: 1,
             channelId: c.platformInfo.channel.id,
             defaultUserId: c.defaultUserId,
             platform: c.platformInfo.platform,
@@ -211,7 +205,7 @@ export default class UserController extends ControllerBase {
   public async getLinkedChannels (
     @QueryParam('admin_aggregateUserId') admin_aggregateUserId?: number
   ): Promise<GetLinkedChannelsResponse> {
-    const builder = this.registerResponseBuilder<GetLinkedChannelsResponse>('GET /link/channels', 1)
+    const builder = this.registerResponseBuilder<GetLinkedChannelsResponse>('GET /link/channels')
 
     if (!this.hasRankOrAbove('admin') && admin_aggregateUserId != null) {
       builder.failure(403, 'You do not have permission to use the `admin_aggregateUserId` query parameter.')
@@ -228,7 +222,6 @@ export default class UserController extends ControllerBase {
       return builder.success({
         registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
         channels: channels.channels.map<PublicChannelInfo>(channel => ({
-          schema: 1,
           defaultUserId: channel.defaultUserId,
           externalIdOrUserName: getExternalIdOrUserName(channel),
           platform: channel.platformInfo.platform,
@@ -247,7 +240,7 @@ export default class UserController extends ControllerBase {
     @PathParam('aggregateUserId') aggregateUserId: number,
     @PathParam('defaultUserId') defaultUserId: number
   ): Promise<AddLinkedChannelResponse> {
-    const builder = this.registerResponseBuilder<AddLinkedChannelResponse>('POST /link/channels/:aggregateUserId/:defaultUserId', 1)
+    const builder = this.registerResponseBuilder<AddLinkedChannelResponse>('POST /link/channels/:aggregateUserId/:defaultUserId')
 
     if (aggregateUserId == null || defaultUserId == null) {
       return builder.failure(400, 'An aggregate and default user id must be provided.')
@@ -275,7 +268,7 @@ export default class UserController extends ControllerBase {
     @QueryParam('relinkChatExperience') relinkChatExperience?: boolean,
     @QueryParam('relinkDonations') relinkDonations?: boolean
   ): Promise<RemoveLinkedChannelResponse> {
-    const builder = this.registerResponseBuilder<RemoveLinkedChannelResponse>('DELETE /link/channels/:defaultUserId', 1)
+    const builder = this.registerResponseBuilder<RemoveLinkedChannelResponse>('DELETE /link/channels/:defaultUserId')
 
     if (defaultUserId == null) {
       return builder.failure(400, 'Default user id must be provided.')
@@ -300,7 +293,7 @@ export default class UserController extends ControllerBase {
   public async getLinkHistory (
     @QueryParam('admin_aggregateUserId') admin_aggregateUserId?: number
   ): Promise<GetLinkHistoryResponse> {
-    const builder = this.registerResponseBuilder<GetLinkHistoryResponse>('GET /link/token', 1)
+    const builder = this.registerResponseBuilder<GetLinkHistoryResponse>('GET /link/token')
 
     if (!this.hasRankOrAbove('admin') && admin_aggregateUserId != null) {
       builder.failure(403, 'You do not have permission to use the `admin_aggregateUserId` query parameter.')
@@ -325,7 +318,6 @@ export default class UserController extends ControllerBase {
 
           if (h.type === 'pending' || h.type ===  'running') {
             return {
-              schema: 1,
               status: h.type === 'pending' ? 'pending' : 'processing',
               token: h.maybeToken,
               channelUserName: getUserName(channel),
@@ -336,7 +328,6 @@ export default class UserController extends ControllerBase {
             }
           } else if (h.type === 'success' || h.type === 'fail') {
             return {
-              schema: 1,
               status: h.type === 'success' ? 'succeeded' : 'failed',
               token: h.token,
               channelUserName: getUserName(channel),
@@ -347,7 +338,6 @@ export default class UserController extends ControllerBase {
             }
           } else if (h.type === 'waiting') {
             return {
-              schema: 1,
               status: 'waiting',
               token: h.token,
               channelUserName: getUserName(channel),
@@ -372,7 +362,7 @@ export default class UserController extends ControllerBase {
   public async createLinkToken (
     @QueryParam('externalId') externalId: string
   ): Promise<CreateLinkTokenResponse> {
-    const builder = this.registerResponseBuilder<CreateLinkTokenResponse>('POST /link/token', 1)
+    const builder = this.registerResponseBuilder<CreateLinkTokenResponse>('POST /link/token')
 
     if (externalId == null || externalId.length === 0) {
       return builder.failure(400, 'ExternalId must be provided')

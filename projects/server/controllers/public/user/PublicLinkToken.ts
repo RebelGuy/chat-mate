@@ -1,8 +1,6 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicLinkToken = PublicObject<1, {
-  schema: 1
-
+export type PublicLinkToken = PublicObject<{
   /** The link token. */
   token: string
 

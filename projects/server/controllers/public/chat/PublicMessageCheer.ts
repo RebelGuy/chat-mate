@@ -1,8 +1,6 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicMessageCheer = PublicObject<1, {
-  schema: 1
-
+export type PublicMessageCheer = PublicObject<{
   /** The name of the cheerer (?). */
   name: string
 

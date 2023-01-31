@@ -217,7 +217,7 @@ app.use((req, res, next) => {
       return res
     }
 
-    let responseBody: ApiResponse<any, any> | null
+    let responseBody: ApiResponse<any> | null
     if (body == null) {
       responseBody = null
     } else {
@@ -230,7 +230,6 @@ app.use((req, res, next) => {
         }
 
         responseBody = {
-          schema: 1,
           timestamp: new Date().getTime(),
           success: false,
           error: {

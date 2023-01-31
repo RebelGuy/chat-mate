@@ -1,4 +1,3 @@
-import { StreamerApplication } from '@prisma/client'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
 
@@ -13,7 +12,6 @@ export function streamerApplicationToPublicObject (application: StreamerApplicat
   }
 
   return {
-    schema: 1,
     id: application.id,
     username: application.registeredUser.username,
     message: application.message,

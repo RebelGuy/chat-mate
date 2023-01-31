@@ -1,8 +1,6 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicLivestream = PublicObject<1, {
-  schema: 1
-
+export type PublicLivestream = PublicObject<{
   /** The internal ID of the livestream. */
   id: number
 
