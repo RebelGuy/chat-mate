@@ -43,13 +43,6 @@ When deployed, we use Application Insights to track all error and warning messag
 
 At all times, we are logging all messages to the file system. On Azure, the data folder lives under `/site/data` and can be accessed via FileZilla.
 
-The retrieval of logs from Application Insights is achieved automatically (and exposed via the LogsController) using Azure's Log Analytics Workspaces and the [`monitor-query` package](https://docs.microsoft.com/en-us/javascript/api/overview/azure/monitor-query-readme?view=azure-node-latest). Note that we use the pay-as-you go pricing tier ($3.22 per GB) with a free 5 GB per month. It works by telling Application Insights to feed its data to the workspace (done via Monitoring -> Diagnostic Settings), which can then be queried via the API.
-
-**[Authentication](https://github.com/Azure/azure-sdk-for-js/blob/@azure/monitor-query_1.0.2/sdk/identity/identity/README.md#defaultazurecredential) of the `monitor-query` package**
-When developing locally, we [authenticate](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/identity/identity/README.md#authenticate-via-visual-studio-code) via the Azure Account extension (**version 0.9.10**). Run the `sign in` VSCode command to commence the session. When generating the client during runtime, the `DefaultAzureCredential` will automatically read this sign-in session from VSCode.
-
-When deployed to Azure, the `MANAGED_IDENTITY_CLIENT_ID` points the credential handler to the managed identity that we want to use, and no further authentication should be required to get things working.
-
 # .env
 Define `local.env`, `debug.env` and `release.env` files that set the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
 
@@ -66,8 +59,6 @@ The following environment variables must be set in the `.env` file:
 - `DB_SEMAPHORE_CONCURRENT`: [Optional, defaults to `1000`] How many concurrent database requests to allow, before queuing any new requests. Note that operations on the Prisma Client generate many direct database requests, so this number shouldn't be too low (> 50).
 - `DB_SEMAPHORE_TIMEOUT`: [Optional, defaults to `null`] The maximum number of milliseconds that a database request can be queued before timing it out. If null, does not timeout requests in the queue.
 - `DB_TRANSACTION_TIMEOUT`: [Optional, defaults to `5000`] The maximum number of milliseconds a Prisma transaction can run before being cancelled and rolled back.
-- `MANAGED_IDENTITY_CLIENT_ID`: The Client ID of the Managed Identity that is used to access the Log Analytics workspace for querying logs.
-- `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
 The following set of environment variables is available only for **local development** (that is, where `NODE_ENV`=`local`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `fa
@@ -428,17 +419,6 @@ Gets the list of all livestreams with any status.
 
 Returns data with the following properties:
 - `livestreams` (`PublicLivestream[]`): The list of livestreams, sorted by start time in ascending order. Livestreams that haven't started yet are placed at the end of the array.
-
-## Log Endpoints
-Path: `/log`.
-
-### `GET /timestamps`
-*Current schema: 1.*
-
-Gets timestamps of warnings and errors encountered within the last 24 hours.
-
-Returns data with the following properties:
-- `timestamps` (`PublicLogTimestamps`): The timestamps of warnings and errors.
 
 ## Punishment Endpoints
 Path: `/punishment`.

@@ -4,7 +4,6 @@ import { ILoggable } from '@rebel/server/interfaces'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import FileService from '@rebel/server/services/FileService'
-import LogQueryService from '@rebel/server/services/LogQueryService'
 import { formatDate, formatTime } from '@rebel/server/util/datetime'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import { LogLevel } from '@twurple/chat'
@@ -15,23 +14,18 @@ type Deps = Dependencies<{
   fileService: FileService
   applicationInsightsService: ApplicationInsightsService
   enableDbLogging: boolean
-
-  // temporary dependency on LogQueryService until we get the analytics workspace queries to work
-  logQueryService: LogQueryService
 }>
 
 export default class LogService extends ContextClass {
   private readonly fileService: FileService
   private readonly applicationInsightsService: ApplicationInsightsService
   private readonly enableDbLogging: boolean
-  private readonly logQueryService: LogQueryService
 
   constructor (deps: Deps) {
     super()
     this.fileService = deps.resolve('fileService')
     this.applicationInsightsService = deps.resolve('applicationInsightsService')
     this.enableDbLogging = deps.resolve('enableDbLogging')
-    this.logQueryService = deps.resolve('logQueryService')
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
@@ -53,12 +47,10 @@ export default class LogService extends ContextClass {
 
   public logWarning (logger: ILoggable, ...args: any[]) {
     this.log(logger, 'warning', args)
-    this.logQueryService.onWarning()
   }
 
   public logError (logger: ILoggable, ...args: any[]) {
     this.log(logger, 'error', args)
-    this.logQueryService.onError()
   }
 
   private log (logger: ILoggable, logType: LogType, args: any[]) {

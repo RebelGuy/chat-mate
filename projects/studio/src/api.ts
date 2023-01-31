@@ -1,6 +1,5 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/server/controllers/EmojiController'
 import { GetMasterchatAuthenticationResponse, GetStatusResponse, PingResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
-import { GetTimestampsResponse } from '@rebel/server/controllers/LogController'
 import { GetAccessibleRanksResponse, GetUserRanksResponse } from '@rebel/server/controllers/RankController'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetStreamersResponse, RejectApplicationRequest, RejectApplicationResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
 import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
@@ -46,10 +45,6 @@ export async function getMasterchatAuthentication (loginToken: string): Promise<
 
 export async function getStatus (loginToken: string, streamer: string): Promise<GetStatusResponse> {
   return await GET('/chatMate/status', loginToken, streamer)
-}
-
-export async function getLogTimestamps (loginToken: string): Promise<GetTimestampsResponse> {
-  return await GET('/log/timestamps', loginToken)
 }
 
 export async function getAccessibleRanks (loginToken: string, streamer: string): Promise<GetAccessibleRanksResponse> {

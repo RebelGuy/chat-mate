@@ -48,9 +48,6 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
-import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProvider'
-import LogQueryService from '@rebel/server/services/LogQueryService'
-import LogController from '@rebel/server/controllers/LogController'
 import { TimeoutError } from '@rebel/server/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
@@ -101,8 +98,6 @@ const twitchClientSecret = env('twitchClientSecret')
 const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
 const enableDbLogging = env('enableDbLogging')
 const hostName = env('websiteHostname')
-const managedIdentityClientId = env('managedIdentityClientId')
-const logAnalyticsWorkspaceId = env('logAnalyticsWorkspaceId')
 const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
 const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
 const dbTransactionTimeout = env('dbTransactionTimeout')
@@ -124,8 +119,6 @@ const globalContext = ContextProvider.create()
   .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
   .withProperty('dbTransactionTimeout', dbTransactionTimeout)
   .withProperty('hostName', hostName)
-  .withProperty('managedIdentityClientId', managedIdentityClientId)
-  .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withProperty('streamlabsAccessToken', streamlabsAccessToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
@@ -140,8 +133,6 @@ const globalContext = ContextProvider.create()
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('applicationInsightsService', ApplicationInsightsService)
-  .withClass('logsQueryClientProvider', LogsQueryClientProvider)
-  .withClass('logQueryService', LogQueryService)
   .withClass('logService', LogService)
   .withClass('dbProvider', DbProvider)
   .withClass('authStore', AuthStore)
@@ -272,7 +263,6 @@ app.use(async (req, res, next) => {
     .withClass('experienceController', ExperienceController)
     .withClass('userController', UserController)
     .withClass('punishmentController', PunishmentController)
-    .withClass('logController', LogController)
     .withClass('rankController', RankController)
     .withClass('donationController', DonationController)
     .withClass('livestreamController', LivestreamController)
@@ -302,7 +292,6 @@ Server.buildServices(app,
   ExperienceController,
   UserController,
   PunishmentController,
-  LogController,
   RankController,
   DonationController,
   LivestreamController,
