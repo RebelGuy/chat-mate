@@ -3,20 +3,22 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItem, convertInternalMessagePartsToExternal, getExternalId, PartialChatMessage } from '@rebel/server/models/chat'
-import ChannelService, { getUserName } from '@rebel/server/services/ChannelService'
+import ChannelService from '@rebel/server/services/ChannelService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore, { ChatExperience, ChatExperienceData, ModifyChatExperienceArgs } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { sortBy, zip, zipOnStrict } from '@rebel/server/util/arrays'
-import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, positiveInfinity, sum } from '@rebel/server/util/math'
+import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, sum } from '@rebel/server/util/math'
 import { calculateWalkingScore } from '@rebel/server/util/score'
 import { single } from '@rebel/server/util/arrays'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
+
+/** This is a legacy multiplier that we used to have. We can't simply remove it because, when linking channels experience would otherwise be gained/lost.
+ * Modifying the baseExperiences was an option, but I couldn't work it out due to the comlex nature of the xp equation. */
+const VIEWERSHIP_STREAK_MULTIPLIER = 1
 
 export type Level = {
   level: GreaterThanOrEqual<0>,
@@ -47,7 +49,6 @@ type Deps = Dependencies<{
   livestreamStore: LivestreamStore
   experienceStore: ExperienceStore
   experienceHelpers: ExperienceHelpers
-  viewershipStore: ViewershipStore
   channelStore: ChannelStore
   chatStore: ChatStore
   channelService: ChannelService
@@ -61,7 +62,6 @@ export default class ExperienceService extends ContextClass {
   private readonly livestreamStore: LivestreamStore
   private readonly experienceStore: ExperienceStore
   private readonly experienceHelpers: ExperienceHelpers
-  private readonly viewershipStore: ViewershipStore
   private readonly channelStore: ChannelStore
   private readonly chatStore: ChatStore
   private readonly channelService: ChannelService
@@ -77,7 +77,6 @@ export default class ExperienceService extends ContextClass {
     this.livestreamStore = deps.resolve('livestreamStore')
     this.experienceStore = deps.resolve('experienceStore')
     this.experienceHelpers = deps.resolve('experienceHelpers')
-    this.viewershipStore = deps.resolve('viewershipStore')
     this.channelStore = deps.resolve('channelStore')
     this.chatStore = deps.resolve('chatStore')
     this.channelService = deps.resolve('channelService')
@@ -110,14 +109,13 @@ export default class ExperienceService extends ContextClass {
       return
     }
 
-    const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, connectedUserIds)
     const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, connectedUserIds)
     const prevChatExperience = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId, null)
     const spamMultiplier = this.getSpamMultiplier(livestream.id, prevChatExperience, chatItem.timestamp)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem.messageParts)
     const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
     const data: ChatExperienceData = {
-      viewershipStreakMultiplier,
+      viewershipStreakMultiplier: VIEWERSHIP_STREAK_MULTIPLIER,
       participationStreakMultiplier,
       spamMultiplier,
       messageQualityMultiplier,
@@ -129,7 +127,7 @@ export default class ExperienceService extends ContextClass {
     // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
     // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
     // repetitive messages are anything but high quality, and thus receive a bigger punishment.
-    const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
+    const totalMultiplier = (VIEWERSHIP_STREAK_MULTIPLIER * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
     const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
     await this.experienceStore.addChatExperience(streamerId, primaryUserId, chatItem.timestamp, xpAmount, data)
   }
@@ -291,7 +289,6 @@ export default class ExperienceService extends ContextClass {
           }
 
         } else {
-          const viewershipStreakMultiplier = await this.getViewershipMultiplier(streamerId, connectedUserIds)
           const participationStreakMultiplier = await this.getParticipationMultiplier(streamerId, connectedUserIds)
           const prevChatExperience = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId, tx.id)
           const spamMultiplier = this.getSpamMultiplier(livestreamId, prevChatExperience, time.getTime())
@@ -302,15 +299,15 @@ export default class ExperienceService extends ContextClass {
           // the message quality multiplier is applied to the end so that it amplifies any negative multiplier.
           // this is because multipliers can only be negative if there is a repetition penalty, but "high quality"
           // repetitive messages are anything but high quality, and thus receive a bigger punishment.
-          const totalMultiplier = (viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
-          const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
+          const totalMultiplier = (tx.experienceDataChatMessage.viewershipStreakMultiplier * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
+          const xpAmount = Math.round(tx.experienceDataChatMessage.baseExperience * totalMultiplier)
 
           args = {
             experienceTransactionId: tx.id,
             chatExperienceDataId: tx.experienceDataChatMessage.id,
             delta: xpAmount,
-            baseExperience: ExperienceService.CHAT_BASE_XP,
-            viewershipStreakMultiplier,
+            baseExperience: tx.experienceDataChatMessage.baseExperience,
+            viewershipStreakMultiplier: tx.experienceDataChatMessage.viewershipStreakMultiplier,
             participationStreakMultiplier,
             spamMultiplier,
             messageQualityMultiplier,
@@ -323,23 +320,8 @@ export default class ExperienceService extends ContextClass {
     }
   }
 
-  private async getViewershipMultiplier (streamerId: number, anyUserIds: number[]): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamViewership(streamerId, anyUserIds)
-
-    const viewershipScore = calculateWalkingScore(
-      streams,
-      0,
-      stream => stream.viewed,
-      (score, viewed) => viewed ? score + 1 : score - 1,
-      0,
-      10
-    )
-
-    return this.experienceHelpers.calculateViewershipMultiplier(viewershipScore)
-  }
-
   private async getParticipationMultiplier (streamerId: number, anyUserIds: number[]): Promise<GreaterThanOrEqual<1>> {
-    const streams = await this.viewershipStore.getLivestreamParticipation(streamerId, anyUserIds)
+    const streams = await this.livestreamStore.getLivestreamParticipation(streamerId, anyUserIds)
 
     const participationScore = calculateWalkingScore(
       streams,

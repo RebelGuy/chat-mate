@@ -2,6 +2,10 @@ import { Livestream, LivestreamType } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
+import { assertUnreachableCompile, reminder } from '@rebel/server/util/typescript'
+
+export type LivestreamParticipation = Livestream & { participated: boolean }
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -92,5 +96,61 @@ export default class LivestreamStore extends ContextClass {
       where: { liveId },
       data: { ...updatedTimes }
     })
+  }
+
+  public async addLiveViewCount (livestreamId: number, youtubeCount: number, twitchCount: number): Promise<void> {
+    await this.db.liveViewers.create({ data: {
+      livestream: { connect: { id: livestreamId }},
+      youtubeViewCount: youtubeCount,
+      twitchViewCount: twitchCount
+    }})
+  }
+
+  public async getLatestLiveCount (livestreamId: number): Promise<{ time: Date, viewCount: number, twitchViewCount: number } | null> {
+    const result = await this.db.liveViewers.findFirst({
+      where: { livestreamId: livestreamId },
+      orderBy: { time: 'desc' }
+    })
+
+    if (result) {
+      return {
+        time: result.time,
+        viewCount: result.youtubeViewCount,
+        twitchViewCount: result.twitchViewCount
+      }
+    } else {
+      return null
+    }
+  }
+
+  /** Returns streams in ascending order where any of the given user ids have participated in the livestream.
+ * The following actions are considered participation:
+ * - sending a message in chat */
+  public async getLivestreamParticipation (streamerId: number, anyUserIds: number[]): Promise<LivestreamParticipation[]> {
+    if (LIVESTREAM_PARTICIPATION_TYPES !== 'chatParticipation') {
+      assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
+    }
+
+    // please add a test to ensure we don't add participation for chat messages in unlisted streams
+    reminder<LivestreamType>({ publicLivestream: true })
+
+    const livestreams = await this.db.livestream.findMany({
+      where: { streamerId },
+      include: {
+        chatMessages: {
+          where: {
+            user: { id: { in: anyUserIds } },
+            livestream: { type: 'publicLivestream', streamerId }
+          },
+          take: 1 // order doesn't matter
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    })
+
+    return livestreams.map(l => ({
+      ...l,
+      participated: l.chatMessages.length > 0
+    }))
   }
 }

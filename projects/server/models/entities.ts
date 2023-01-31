@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import { EmptyObject, MakeRequired, NullableToOptional } from '@rebel/server/types'
+import { MakeRequired, NullableToOptional } from '@rebel/server/types'
 
 // type extraction based on https://stackoverflow.com/a/69943634
 // get the typed model for each table, including its relations.
@@ -40,7 +40,6 @@ export namespace Entity {
   export type ExperienceTransaction = FullPayload<'ExperienceTransaction'>
   export type ExperienceSnapshot = FullPayload<'ExperienceSnapshot'>
   export type ExperienceDataChatMessage = FullPayload<'ExperienceDataChatMessage'>
-  export type ViewingBlock = FullPayload<'ViewingBlock'>
 
   export type CustomEmoji = Omit<FullPayload<'CustomEmoji'>, 'chatCustomEmoji' | 'customEmojiRankWhitelist'>
 }
@@ -58,7 +57,7 @@ export type WithChildren<M extends Models, C extends keyof Omit<Includes[M], '_c
 type Models = 'Livestream' |
   'ChatUser' | 'YoutubeChannel' | 'YoutubeChannelInfo' | 'TwitchChannel' | 'TwitchChannelInfo' |
   'ChatMessage' | 'ChatMessagePart' | 'ChatEmoji' | 'ChatText' | 'ChatCheer' |
-  'ExperienceTransaction' | 'ExperienceSnapshot' | 'ExperienceDataChatMessage' | 'ViewingBlock' |
+  'ExperienceTransaction' | 'ExperienceSnapshot' | 'ExperienceDataChatMessage' |
   'CustomEmoji'
 
 type Includes = DbDefine<{
@@ -76,7 +75,6 @@ type Includes = DbDefine<{
   ExperienceTransaction: Prisma.ExperienceTransactionInclude,
   ExperienceSnapshot: Prisma.ExperienceSnapshotInclude,
   ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageInclude,
-  ViewingBlock: Prisma.ViewingBlockInclude,
   CustomEmoji: Prisma.CustomEmojiInclude
 }>
 
@@ -96,7 +94,6 @@ type GetPayloads<T> = DbDefine<{
   ExperienceTransaction: Prisma.ExperienceTransactionGetPayload<T>,
   ExperienceSnapshot: Prisma.ExperienceSnapshotGetPayload<T>,
   ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageGetPayload<T>,
-  ViewingBlock: Prisma.ViewingBlockGetPayload<T>,
   CustomEmoji: Prisma.CustomEmojiGetPayload<T>
 }>
 
@@ -115,7 +112,6 @@ type Selects = DbDefine<{
   ExperienceTransaction: Prisma.ExperienceTransactionSelect,
   ExperienceSnapshot: Prisma.ExperienceSnapshotSelect,
   ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageSelect,
-  ViewingBlock: Prisma.ViewingBlockSelect,
   CustomEmoji: Prisma.CustomEmojiSelect
 }>
 

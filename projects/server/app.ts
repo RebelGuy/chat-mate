@@ -16,7 +16,6 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import ChatMateController from '@rebel/server/controllers/ChatMateController'
@@ -147,7 +146,6 @@ const globalContext = ContextProvider.create()
   .withClass('twurpleApiProxyService', TwurpleApiProxyService)
   .withClass('streamlabsProxyService', StreamlabsProxyService)
   .withClass('livestreamStore', LivestreamStore)
-  .withClass('viewershipStore', ViewershipStore)
   .withClass('accountStore', AccountStore)
   .withClass('streamerStore', StreamerStore)
   .withClass('channelStore', ChannelStore)

@@ -1,4 +1,4 @@
-import { ChatMessage, ExperienceDataChatMessage, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
+import { ChatMessage, ChatUser, ExperienceDataChatMessage, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
@@ -7,7 +7,7 @@ import { NoNulls } from '@rebel/server/types'
 
 export type ChatExperience =
   NoNulls<Pick<Entity.ExperienceTransaction, 'id' | 'time' | 'delta' | 'user' | 'experienceDataChatMessage'>>
-  & { experienceDataChatMessage: { chatMessage: ChatMessage} }
+  & { experienceDataChatMessage: { chatMessage: ChatMessage}, user: ChatUser }
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
   'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier' | 'repetitionPenalty'>
@@ -195,7 +195,10 @@ export default class ExperienceStore extends ContextClass {
         experienceDataChatMessage: { isNot: null }
       },
       orderBy: { time: 'desc' },
-      include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
+      include: {
+        experienceDataChatMessage: { include: { chatMessage: true }},
+        user: true
+      }
     })
 
     return transactions.map(tx => ({ ...tx, experienceDataChatMessage: tx.experienceDataChatMessage! }))

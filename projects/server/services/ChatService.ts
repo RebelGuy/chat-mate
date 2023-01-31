@@ -4,7 +4,6 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import { ChatItem, ChatPlatform } from '@rebel/server/models/chat'
 import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import ContextClass from '@rebel/server/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import EmojiService from '@rebel/server/services/EmojiService'
@@ -26,7 +25,6 @@ type Deps = Dependencies<{
   chatStore: ChatStore,
   logService: LogService,
   experienceService: ExperienceService,
-  viewershipStore: ViewershipStore,
   channelStore: ChannelStore,
   emojiService: EmojiService,
   eventDispatchService: EventDispatchService
@@ -41,7 +39,6 @@ export default class ChatService extends ContextClass {
   private readonly chatStore: ChatStore
   private readonly logService: LogService
   private readonly experienceService: ExperienceService
-  private readonly viewershipStore: ViewershipStore
   private readonly channelStore: ChannelStore
   private readonly emojiService: EmojiService
   private readonly eventDispatchService: EventDispatchService
@@ -55,7 +52,6 @@ export default class ChatService extends ContextClass {
     this.chatStore = deps.resolve('chatStore')
     this.logService = deps.resolve('logService')
     this.experienceService = deps.resolve('experienceService')
-    this.viewershipStore = deps.resolve('viewershipStore')
     this.channelStore = deps.resolve('channelStore')
     this.emojiService = deps.resolve('emojiService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
@@ -133,7 +129,6 @@ export default class ChatService extends ContextClass {
         if (livestream == null) {
           throw new Error(`No livestream is active for streamer ${streamerId}`)
         }
-        await this.viewershipStore.addViewershipForChatParticipation(livestream, channel!.userId, item.timestamp)
         await this.experienceService.addExperienceForChat(item, streamerId)
       } catch (e: any) {
         this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to complete side effects.`, e)

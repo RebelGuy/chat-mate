@@ -2,12 +2,11 @@ import { Dependencies } from '@rebel/server/context/context'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceService, { RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, ModifyChatExperienceArgs, UserExperience } from '@rebel/server/stores/ExperienceStore'
-import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import LivestreamStore, { LivestreamParticipation } from '@rebel/server/stores/LivestreamStore'
 import { getGetterMock, cast, nameof, expectObject, expectArray } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
-import ViewershipStore, { LivestreamParticipation, LivestreamViewership } from '@rebel/server/stores/ViewershipStore'
 import { asGte, asLt, asRange, GreaterThanOrEqual, NumRange } from '@rebel/server/util/math'
 import { ChatMessage, ExperienceTransaction } from '@prisma/client'
 import { addTime } from '@rebel/server/util/datetime'
@@ -25,7 +24,6 @@ import AccountService from '@rebel/server/services/AccountService'
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
 let mockLivestreamStore: MockProxy<LivestreamStore>
-let mockViewershipStore: MockProxy<ViewershipStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let mockChannelService: MockProxy<ChannelService>
@@ -39,7 +37,6 @@ beforeEach(() => {
   mockExperienceHelpers = mock<ExperienceHelpers>()
   mockExperienceStore = mock<ExperienceStore>()
   mockLivestreamStore = mock<LivestreamStore>()
-  mockViewershipStore = mock<ViewershipStore>()
   mockChannelStore = mock<ChannelStore>()
   mockChatStore = mock<ChatStore>()
   mockChannelService = mock<ChannelService>()
@@ -52,7 +49,6 @@ beforeEach(() => {
     experienceHelpers: mockExperienceHelpers,
     experienceStore: mockExperienceStore,
     livestreamStore: mockLivestreamStore,
-    viewershipStore: mockViewershipStore,
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
     channelService: mockChannelService,
@@ -130,7 +126,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       externalId: chatItem.id,
       messageQualityMultiplier: 1.1,
       participationStreakMultiplier: 1,
-      viewershipStreakMultiplier: 1.5,
+      viewershipStreakMultiplier: 1,
       spamMultiplier: 0.8,
       repetitionPenalty: -0.2
     }
@@ -161,14 +157,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ queriedAnyUserId: primaryUserId, connectedChatUserIds: connectedUserIds }])
     mockPunishmentService.isUserPunished.calledWith(primaryUserId, streamerId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(streamerId, primaryUserId, null).mockResolvedValue(prevData)
-    mockViewershipStore.getLivestreamViewership.calledWith(streamerId, connectedUserIds).mockResolvedValue([
-      { ...data.livestream1, viewed: true },
-      { ...data.livestream2, viewed: false },
-      { ...data.livestream2, viewed: false },
-      { ...data.livestream2, viewed: true },
-      { ...data.livestream3, viewed: true }
-    ]) // -> walking viewership score: 2
-    mockViewershipStore.getLivestreamParticipation.calledWith(streamerId, connectedUserIds).mockResolvedValue([
+    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerId, connectedUserIds).mockResolvedValue([
       { ...data.livestream1, participated: true },
       { ...data.livestream2, participated: true },
       { ...data.livestream2, participated: false },
@@ -177,7 +166,6 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     ]) // -> walking participation score: 1
     mockExperienceHelpers.calculateChatMessageQuality.calledWith(chatItem.messageParts).mockReturnValue(msgQuality)
     mockExperienceHelpers.calculateParticipationMultiplier.calledWith(asGte(1, 0)).mockReturnValue(asGte(experienceData.participationStreakMultiplier, 1))
-    mockExperienceHelpers.calculateViewershipMultiplier.calledWith(asGte(2, 0)).mockReturnValue(asGte(experienceData.viewershipStreakMultiplier, 1))
     mockExperienceHelpers.calculateQualityMultiplier.calledWith(msgQuality).mockReturnValue(asRange(experienceData.messageQualityMultiplier, 0, 2))
     mockExperienceHelpers.calculateSpamMultiplier
       .calledWith(chatItem.timestamp, prevData.time.getTime(), asRange(prevData.experienceDataChatMessage.spamMultiplier, 0.1, 1.5))
@@ -196,7 +184,6 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(storeData[2]).toEqual(expectedStoreData[2])
     expect(storeData[3]).toBeCloseTo(expectedStoreData[3]) // floating point error!
     expect(storeData[4]).toEqual(expectedStoreData[4])
-    expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toEqual(0)
   })
 })
 
@@ -389,16 +376,20 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     const aggregateUserId = 4
     const connectedUserIds = [4, 1, 6]
     const streamerIds = [7, 8]
+    const baseExperience = 1000
 
     const chatMessageId1 = 125
     const chatExperience1SpamMultiplier = 1.7522
+    const chatExperience1ViewershipMultiplier = 1.5
     const chatExperience1 = cast<ChatExperience>({
       id: 100,
       experienceDataChatMessage: {
         id: 1253,
         chatMessageId: chatMessageId1,
         chatMessage: { livestreamId: 1 },
-        spamMultiplier: chatExperience1SpamMultiplier
+        baseExperience: baseExperience,
+        spamMultiplier: chatExperience1SpamMultiplier,
+        viewershipStreakMultiplier: chatExperience1ViewershipMultiplier
       },
       time: data.time1
     })
@@ -406,33 +397,34 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
 
     const chatMessageId2 = 126
     const chatExperience2SpamMultiplier = 1.835
+    const chatExperience2ViewershipMultiplier = 1.6
     const chatExperience2 = cast<ChatExperience>({
       id: 101,
       experienceDataChatMessage: {
         id: 1254,
         chatMessageId: chatMessageId2,
-        chatMessage: { livestreamId: 1 }
+        chatMessage: { livestreamId: 1 },
+        baseExperience: baseExperience,
+        viewershipStreakMultiplier: chatExperience2ViewershipMultiplier
       },
       time: data.time2
     })
     const chatMessage2 = cast<ChatItemWithRelations>({ id: chatMessageId2, chatMessageParts: [] })
 
     const chatMessageId3 = 127
+    const chatExperience3ViewershipMultiplier = 1.7
     const chatExperience3 = cast<ChatExperience>({
       id: 102,
       experienceDataChatMessage: {
         id: 1255,
         chatMessageId: chatMessageId3,
-        chatMessage: { livestreamId: 4 }
+        chatMessage: { livestreamId: 4 },
+        baseExperience: baseExperience,
+        viewershipStreakMultiplier: chatExperience3ViewershipMultiplier
       },
       time: data.time3
     })
     const chatMessage3 = cast<ChatItemWithRelations>({ id: chatMessageId3, chatMessageParts: [] })
-
-    const livestreamViewershipStreamer1 = cast<LivestreamViewership[]>([{ viewed: true }, { viewed: true }, { viewed: false }, { viewed: true }])
-    const livestreamViewershipStreamer2 = cast<LivestreamViewership[]>([{ viewed: false }, { viewed: true }, { viewed: true }, { viewed: true }])
-    const livestreamViewershipStreamer1Score = 2
-    const livestreamViewershipStreamer2Score = 3
 
     const livestreamParticipationStreamer1 = cast<LivestreamParticipation[]>([{ participated: false }, { participated: true }, { participated: true }, { participated: true }])
     const livestreamParticipationStreamer2 = cast<LivestreamParticipation[]>([{ participated: true }, { participated: true }, { participated: false }, { participated: true }])
@@ -451,12 +443,8 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     mockChatStore.getChatById.calledWith(chatMessageId2).mockResolvedValue(chatMessage2)
     mockChatStore.getChatById.calledWith(chatMessageId3).mockResolvedValue(chatMessage3)
 
-    mockViewershipStore.getLivestreamViewership.calledWith(streamerIds[0], connectedUserIds).mockResolvedValue(livestreamViewershipStreamer1)
-    mockViewershipStore.getLivestreamViewership.calledWith(streamerIds[1], connectedUserIds).mockResolvedValue(livestreamViewershipStreamer2)
-    mockExperienceHelpers.calculateViewershipMultiplier.mockImplementation(score => score + 1 as GreaterThanOrEqual<1>)
-
-    mockViewershipStore.getLivestreamParticipation.calledWith(streamerIds[0], connectedUserIds).mockResolvedValue(livestreamParticipationStreamer1)
-    mockViewershipStore.getLivestreamParticipation.calledWith(streamerIds[1], connectedUserIds).mockResolvedValue(livestreamParticipationStreamer2)
+    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[0], connectedUserIds).mockResolvedValue(livestreamParticipationStreamer1)
+    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[1], connectedUserIds).mockResolvedValue(livestreamParticipationStreamer2)
     mockExperienceHelpers.calculateParticipationMultiplier.mockImplementation(score => score + 1 as GreaterThanOrEqual<1>)
 
     mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[0], aggregateUserId, chatExperience1.id).mockResolvedValue(null)
@@ -486,7 +474,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       repetitionPenalty: repetitionPenalty,
       spamMultiplier: 1,
       participationStreakMultiplier: livestreamParticipationStreamer1Score + 1,
-      viewershipStreakMultiplier: livestreamViewershipStreamer1Score + 1,
+      viewershipStreakMultiplier: chatExperience1ViewershipMultiplier,
       messageQualityMultiplier: 1,
       delta: expect.any(Number),
       baseExperience: expect.any(Number)
@@ -497,7 +485,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       repetitionPenalty: repetitionPenalty,
       spamMultiplier: chatExperience2SpamMultiplier,
       participationStreakMultiplier: livestreamParticipationStreamer1Score + 1,
-      viewershipStreakMultiplier: livestreamViewershipStreamer1Score + 1,
+      viewershipStreakMultiplier: chatExperience2ViewershipMultiplier,
       messageQualityMultiplier: 1,
       delta: expect.any(Number),
       baseExperience: expect.any(Number)
@@ -508,7 +496,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       repetitionPenalty: repetitionPenalty,
       spamMultiplier: 1,
       participationStreakMultiplier: livestreamParticipationStreamer2Score + 1,
-      viewershipStreakMultiplier: livestreamViewershipStreamer2Score + 1,
+      viewershipStreakMultiplier: chatExperience3ViewershipMultiplier,
       messageQualityMultiplier: 1,
       delta: expect.any(Number),
       baseExperience: expect.any(Number)

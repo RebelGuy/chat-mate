@@ -5,7 +5,6 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { cast, expectArray, expectObject, nameof, promised } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
@@ -72,7 +71,6 @@ const twitchChannel1: TwitchChannelWithLatestInfo = {
 let mockChatStore: MockProxy<ChatStore>
 let mockLogService: MockProxy<LogService>
 let mockExperienceService: MockProxy<ExperienceService>
-let mockViewershipStore: MockProxy<ViewershipStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockEmojiService: MockProxy<EmojiService>
 let mockEventDispatchService: MockProxy<EventDispatchService>
@@ -86,7 +84,6 @@ beforeEach(() => {
   mockChatStore = mock<ChatStore>()
   mockLogService = mock<LogService>()
   mockExperienceService = mock<ExperienceService>()
-  mockViewershipStore = mock<ViewershipStore>()
   mockChannelStore = mock<ChannelStore>()
   mockEmojiService = mock<EmojiService>()
   mockEventDispatchService = mock<EventDispatchService>()
@@ -99,7 +96,6 @@ beforeEach(() => {
     chatStore: mockChatStore,
     logService: mockLogService,
     experienceService: mockExperienceService,
-    viewershipStore: mockViewershipStore,
     channelStore: mockChannelStore,
     emojiService: mockEmojiService,
     eventDispatchService: mockEventDispatchService,
@@ -141,11 +137,6 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedLivestream, passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
-    expect(passedLivestream).toBe(livestream)
-    expect(passedUserId_).toBe(youtubeChannel1.userId)
-    expect(passedTimestamp).toBe(chatItem1.timestamp)
-
     const [passedChatItem_, passedStreamerId_] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(passedChatItem_).toBe(chatItem1)
     expect(passedStreamerId_).toBe(streamerId)
@@ -171,11 +162,6 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedLivestream, passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
-    expect(passedLivestream).toBe(livestream)
-    expect(passedUserId_).toBe(twitchChannel1.userId)
-    expect(passedTimestamp).toBe(chatItem2.timestamp)
-
     const [passedChatItem_, passedStreamerId_] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(passedChatItem_).toBe(chatItem2)
     expect(passedStreamerId_).toBe(streamerId)
@@ -198,7 +184,6 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     expect(addedChat).toBe(true)
 
     expect(single(mockCommandService.queueCommandExecution.mock.calls)).toEqual([commandId])
-    expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toBe(0)
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
   })
 
@@ -212,7 +197,6 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(false)
 
-    expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toBe(0)
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
   })
 })

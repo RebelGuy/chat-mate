@@ -7,7 +7,8 @@ import { expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
-import { Livestream } from '@prisma/client'
+import { Livestream, LiveViewers } from '@prisma/client'
+import { addTime } from '@rebel/server/util/datetime'
 
 export default () => {
   const liveId1 = 'id1'
@@ -173,6 +174,150 @@ export default () => {
 
     test('throws if livestream not yet created', async () => {
       await expect(livestreamStore.setTimes(liveId1, { start: null, end: null })).rejects.toThrow()
+    })
+  })
+
+  describe(nameof(LivestreamStore, 'addLiveViewCount'), () => {
+    test('correctly adds live viewer count', async () => {
+      const inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' } })
+      const inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' } })
+      const activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' } })
+      const activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true, type: 'publicLivestream' } })
+      const youtubeViews = 5
+      const twitchViews = 2
+
+      await livestreamStore.addLiveViewCount(activeLivestream1.id, youtubeViews, twitchViews)
+
+      const dbContents = await db.liveViewers.findFirst()
+      expect(dbContents).toEqual(expectObject<LiveViewers>({
+        livestreamId: activeLivestream1.id,
+        youtubeViewCount: youtubeViews,
+        twitchViewCount: twitchViews
+      }))
+    })
+  })
+
+  describe(nameof(LivestreamStore, 'getLatestLiveCount'), () => {
+    let inactiveLivestream1: Livestream
+    let inactiveLivestream2: Livestream
+    let activeLivestream1: Livestream
+    let activeLivestream2: Livestream
+
+    beforeEach(async () => {
+      inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' } })
+      inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' } })
+      activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' } })
+      activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true, type: 'publicLivestream' } })
+    })
+
+    test('returns null if no data exists for active livestream', async () => {
+      await db.liveViewers.createMany({ data: [
+        { livestreamId: inactiveLivestream1.id, youtubeViewCount: 2, twitchViewCount: 5 },
+        { livestreamId: activeLivestream2.id, youtubeViewCount: 2, twitchViewCount: 5 }
+      ]})
+
+      const result = await livestreamStore.getLatestLiveCount(activeLivestream1.id)
+
+      expect(result).toBeNull()
+    })
+
+    test('returns null if there is no active livestream', async () => {
+      // todo: this will probably fail, but honestly it should be the caller's responsibility to only
+      // provide the id of an active livestream. maybe make a note in the method summary and check the callers?
+      const result = await livestreamStore.getLatestLiveCount(inactiveLivestream1.id)
+
+      expect(result).toBeNull()
+    })
+
+    test('returns correct count and time for active livestream', async () => {
+      const data1 = { time: data.time1, viewCount: 1, twitchViewCount: 3 }
+      const data2 = { time: data.time2, viewCount: 2, twitchViewCount: 4 }
+      await db.liveViewers.create({ data: {
+        livestreamId: activeLivestream1.id,
+        youtubeViewCount: data1.viewCount,
+        twitchViewCount: data1.twitchViewCount,
+        time: data1.time
+      }})
+      await db.liveViewers.create({ data: {
+        livestreamId: activeLivestream1.id,
+        youtubeViewCount: data2.viewCount,
+        twitchViewCount: data2.twitchViewCount,
+        time: data2.time
+      }})
+
+      const result = await livestreamStore.getLatestLiveCount(activeLivestream1.id)
+
+      expect(result).toEqual(data2)
+    })
+  })
+
+  describe(nameof(LivestreamStore, 'getLivestreamParticipation'), () => {
+    const user1 = 1
+    const user2 = 2
+    const user3 = 3
+    let inactiveLivestream1: Livestream
+    let inactiveLivestream2: Livestream
+    let activeLivestream1: Livestream
+    let activeLivestream2: Livestream
+
+    beforeEach(async () => {
+      inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' } })
+      inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' } })
+      activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' } })
+      activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true, type: 'publicLivestream' } })
+      await db.chatUser.createMany({ data: [{}, {}, {}]})
+
+      await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2 }]})
+      await db.twitchChannel.createMany({ data: [{ userId: user1, twitchId: data.twitchChannel3 }, { userId: user2, twitchId: data.twitchChannel4 }]})
+
+      // irrelevant data to make for more realistic setup - we only test things relating to channel1/twitchChannel3/user1/user2
+      await db.chatMessage.createMany({ data: [
+        { streamerId: streamer1, userId: 2, livestreamId: 1, time: data.time1, externalId: 'id1.1' },
+        { streamerId: streamer1, userId: 2, livestreamId: 2, time: data.time2, externalId: 'id2.1' },
+        { streamerId: streamer1, userId: 2, livestreamId: 2, time: addTime(data.time2, 'seconds', 1), externalId: 'id3.1' },
+      ]})
+    })
+
+    test('no participation', async () => {
+      await db.chatMessage.createMany({ data: [
+        {  streamerId: activeLivestream2.streamerId, userId: user1, livestreamId: activeLivestream2.id, time: data.time1, externalId: 'id1' }, // correct user, wrong streamer
+        {  streamerId: activeLivestream1.streamerId, userId: user2, livestreamId: activeLivestream1.id, time: data.time1, externalId: 'id2' }, // wrong user, correct streamer
+      ]})
+
+      const result = await livestreamStore.getLivestreamParticipation(streamer1, [user1])
+
+      expect(result.length).toBe(3)
+      expect(result.filter(ls => ls.participated).length).toBe(0)
+    })
+
+    test('does not include chat messages not attached to a public livestream', async () => {
+      await db.chatMessage.createMany({ data: [
+        { streamerId: streamer1, userId: user1, livestreamId: 1, time: data.time1, externalId: 'id1' },
+        { streamerId: streamer1, userId: user1, livestreamId: null, time: addTime(data.time1, 'seconds', 1), externalId: 'id2' }
+      ]})
+
+      const result = await livestreamStore.getLivestreamParticipation(streamer1, [user1])
+
+      expect(result.length).toBe(3)
+      expect(result[0]).toEqual(expect.objectContaining({ participated: true, id: 1}))
+      expect(result[1]).toEqual(expect.objectContaining({ participated: false, id: 2}))
+      expect(result[2]).toEqual(expect.objectContaining({ participated: false, id: 3}))
+    })
+
+    test('returns ordered streams where users participated', async () => {
+      // in the beforeEach(), we already create chat messages
+      // user1: livestream 1
+      // user2: livestream 2
+      await db.chatMessage.createMany({ data: [
+        { streamerId: streamer1, userId: user3, livestreamId: activeLivestream1.id, time: data.time3, externalId: 'id3' },
+      ]})
+
+      const result = await livestreamStore.getLivestreamParticipation(streamer1, [user1, user2])
+
+      expect(result.length).toBe(3)
+      expect(result[0]).toEqual(expect.objectContaining({ participated: true, id: 1}))
+      expect(result[1]).toEqual(expect.objectContaining({ participated: true, id: 2}))
+      expect(result[2]).toEqual(expect.objectContaining({ participated: false, id: 3}))
     })
   })
 }

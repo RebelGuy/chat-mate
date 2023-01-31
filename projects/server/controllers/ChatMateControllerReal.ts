@@ -5,7 +5,6 @@ import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import StatusService from '@rebel/server/services/StatusService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { getLiveId, getLivestreamLink } from '@rebel/server/util/text'
 import { filterTypes, nonNull, unique, zipOnStrictMany } from '@rebel/server/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
@@ -31,7 +30,6 @@ import AccountService from '@rebel/server/services/AccountService'
 
 export type ChatMateControllerDeps = ControllerDependencies<{
   livestreamStore: LivestreamStore
-  viewershipStore: ViewershipStore
   masterchatStatusService: StatusService
   twurpleStatusService: StatusService
   experienceService: ExperienceService
@@ -49,7 +47,6 @@ export type ChatMateControllerDeps = ControllerDependencies<{
 
 export default class ChatMateControllerReal extends ControllerBase implements IChatMateController {
   readonly livestreamStore: LivestreamStore
-  readonly viewershipStore: ViewershipStore
   readonly masterchatStatusService: StatusService
   readonly twurpleStatusService: StatusService
   readonly experienceService: ExperienceService
@@ -67,7 +64,6 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
   constructor (deps: ChatMateControllerDeps) {
     super(deps, '/chatMate')
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.viewershipStore = deps.resolve('viewershipStore')
     this.masterchatStatusService = deps.resolve('masterchatStatusService')
     this.twurpleStatusService = deps.resolve('twurpleStatusService')
     this.experienceService = deps.resolve('experienceService')
@@ -190,7 +186,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     const publicLivestream = livestreamToPublic(activeLivestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
     if (publicLivestream.status === 'live') {
-      viewers = await this.viewershipStore.getLatestLiveCount(streamerId)
+      viewers = await this.livestreamStore.getLatestLiveCount(streamerId)
     }
 
     return {

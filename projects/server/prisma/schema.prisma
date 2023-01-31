@@ -55,9 +55,8 @@ model Livestream {
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "livestream_streamerId_fkey")
 
-  liveViewers   LiveViewers[]
-  chatMessages  ChatMessage[]
-  viewingBlocks ViewingBlock[]
+  liveViewers  LiveViewers[]
+  chatMessages ChatMessage[]
 
   @@unique([liveId], map: "livestream_liveId_key")
   @@index([streamerId], map: "livestream_streamerId_fkey")
@@ -101,7 +100,6 @@ model ChatUser {
   experienceTransactions         ExperienceTransaction[] @relation("experience_transaction_user")
   originalExperienceTransactions ExperienceTransaction[] @relation("experience_transaction_originalUser")
   experienceSnapshots            ExperienceSnapshot[]
-  viewingBlocks                  ViewingBlock[]
   experienceDataAdministered     ExperienceDataAdmin[]
   userRanks                      UserRank[]              @relation("user_rank_userId")
   administeredUserRanks          UserRank[]              @relation("user_rank_assignedByUserId")
@@ -560,6 +558,7 @@ model ExperienceDataChatMessage {
 
   // if you add any new fields to this, be sure to update the `ExperienceStore.updateChatExperiences()` method
   baseExperience                Int
+  /// Deprecated - only used before v1.23
   viewershipStreakMultiplier    Float
   participationStreakMultiplier Float
   spamMultiplier                Float
@@ -592,24 +591,6 @@ model ExperienceDataAdmin {
   @@unique([experienceTransactionId], map: "experience_data_admin_experienceTransactionId_key")
   @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
   @@map("experience_data_admin")
-}
-
-/// Represents a continuous period of time in which a user has been viewing a livestream.
-model ViewingBlock {
-  id Int @id @default(autoincrement())
-
-  startTime  DateTime
-  lastUpdate DateTime
-
-  livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "viewing_block_livestreamId_fkey")
-
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "viewing_block_userId_fkey")
-
-  @@index([livestreamId], map: "viewing_block_livestreamId_fkey")
-  @@index([userId], map: "viewing_block_userId_fkey")
-  @@map("viewing_block")
 }
 
 model CustomEmoji {

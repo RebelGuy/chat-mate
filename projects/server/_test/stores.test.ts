@@ -3,7 +3,6 @@ import ChatStoreSuite from '@rebel/server/stores/ChatStore.test'
 import CommandStoreSuite from '@rebel/server/stores/CommandStore.test'
 import LivestreamStoreSuite from '@rebel/server/stores/LivestreamStore.test'
 import ExperienceStoreSuite from '@rebel/server/stores/ExperienceStore.test'
-import ViewershipStoreSuite from '@rebel/server/stores/ViewershipStore.test'
 import CustomEmojiStoreSuite from '@rebel/server/stores/CustomEmojiStore.test'
 import FollowerStoreSuite from '@rebel/server/stores/FollowerStore.test'
 import RankStoreSuite from '@rebel/server/stores/RankStore.test'
@@ -41,5 +40,3 @@ describeFn('LinkStore Suite', LinkStoreSuite)
 describeFn('RankStore Suite', RankStoreSuite)
 
 describeFn('StreamerStore Suite', StreamerStoreSuite)
-
-describeFn('ViewershipStore Suite', ViewershipStoreSuite)
