@@ -255,8 +255,8 @@ export default class ChannelStore extends ContextClass {
         registeredUser: null
       },
       include: {
-        youtubeChannels: { select: { id: true }},
-        twitchChannels: { select: { id: true }}
+        youtubeChannel: { select: { id: true }},
+        twitchChannel: { select: { id: true }}
       },
     })
 
@@ -269,8 +269,8 @@ export default class ChannelStore extends ContextClass {
       return {
         userId: id,
         aggregateUserId: result.aggregateChatUserId,
-        youtubeChannelIds: result.youtubeChannels.map(c => c.id),
-        twitchChannelIds: result.twitchChannels.map(c => c.id)
+        youtubeChannelIds: nonNull([result.youtubeChannel?.id ?? null]),
+        twitchChannelIds: nonNull([result.twitchChannel?.id ?? null])
       }
     })
   }
@@ -317,16 +317,16 @@ export default class ChannelStore extends ContextClass {
     const defaultUsers = await this.db.chatUser.findMany({
       where: { aggregateChatUserId: { in: aggregateChatUserIds } },
       include: {
-        youtubeChannels: { select: { id: true }},
-        twitchChannels: { select: { id: true }}
+        youtubeChannel: { select: { id: true }},
+        twitchChannel: { select: { id: true }}
       },
     })
 
     return aggregateChatUserIds.map<UserOwnedChannels>(aggregateChatUserId => ({
       userId: aggregateChatUserId,
       aggregateUserId: aggregateChatUserId,
-      youtubeChannelIds: defaultUsers.filter(u => u.aggregateChatUserId === aggregateChatUserId).flatMap(u => u.youtubeChannels.map(c => c.id)),
-      twitchChannelIds: defaultUsers.filter(u => u.aggregateChatUserId === aggregateChatUserId).flatMap(u => u.twitchChannels.map(c => c.id))
+      youtubeChannelIds: nonNull(defaultUsers.filter(u => u.aggregateChatUserId === aggregateChatUserId).map(u => u.youtubeChannel?.id ?? null)),
+      twitchChannelIds: nonNull(defaultUsers.filter(u => u.aggregateChatUserId === aggregateChatUserId).map(u => u.twitchChannel?.id ?? null))
     }))
   }
 

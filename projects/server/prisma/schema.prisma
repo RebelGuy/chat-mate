@@ -93,8 +93,8 @@ model ChatUser {
   aggregateChatUser   ChatUser? @relation(name: "aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "chat_user_aggregateChatUserId_fkey")
 
   // the channels associated with the user. Empty if this is an aggregate user
-  youtubeChannels YoutubeChannel[]
-  twitchChannels  TwitchChannel[]
+  youtubeChannel YoutubeChannel?
+  twitchChannel  TwitchChannel?
 
   chatMessages                   ChatMessage[]
   experienceTransactions         ExperienceTransaction[] @relation("experience_transaction_user")
@@ -275,7 +275,7 @@ model YoutubeChannel {
   chatMessages ChatMessage[]
 
   @@unique([youtubeId], map: "youtube_channel_youtubeId_key")
-  @@index([userId], map: "youtube_channel_userId_fkey")
+  @@unique([userId], map: "youtube_channel_userId_fkey")
   @@map("youtube_channel")
 }
 
@@ -312,7 +312,7 @@ model TwitchChannel {
   chatMessages ChatMessage[]
 
   @@unique([twitchId], map: "twitch_channel_twitchId_key")
-  @@index([userId], map: "twitch_channel_userId_fkey")
+  @@unique([userId], map: "twitch_channel_userId_fkey")
   @@map("twitch_channel")
 }
 

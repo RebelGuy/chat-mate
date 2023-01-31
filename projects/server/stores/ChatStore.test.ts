@@ -24,10 +24,12 @@ const livestream: Livestream = {
 
 const youtube1UserId = 1
 const extYoutubeChannel1 = 'channel1'
-const youtube2UserId = 1
+const youtube2UserId = 2
 const extYoutubeChannel2 = 'channel_2'
-const twitchUserId = 2
+const twitchUserId = 3
 const extTwitchChannel = 'channel2'
+const aggregateUserId1 = 4
+const aggregateUserId2 = 5
 
 const streamer1 = 1
 const streamer2 = 2
@@ -172,12 +174,12 @@ export default () => {
       infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
     }})
     await db.youtubeChannel.create({ data: {
-      user: { connect: { id: youtube1UserId }},
+      user: { create: {}},
       youtubeId: ytAuthor2.channelId,
       infoHistory: { create: authorToChannelInfo(ytAuthor2)}
     }})
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 3
-    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 4
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 4
+    await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 5
     await db.livestream.create({ data: livestream })
     await db.chatEmoji.create({ data: {
       isCustomEmoji: false,
@@ -234,7 +236,7 @@ export default () => {
 
       // check author links
       const chatMessage = await db.chatMessage.findFirst()
-      expect(chatMessage!.userId).toBe(2)
+      expect(chatMessage!.userId).toBe(twitchUserId)
       expect(chatMessage!.youtubeChannelId).toBeNull()
       expect(chatMessage!.twitchChannelId).toBe(1)
       expect(result).toEqual(expectObject(chatMessage!))
@@ -446,41 +448,38 @@ export default () => {
   })
 
   describe(nameof(ChatStore, 'getLastChatOfUsers'), () => {
+    // link all users to the first aggregateUser
     let user3: number
     beforeEach(async () => {
-      // user 3 has no chat messages
-      user3 = (await db.chatUser.create({ data: {}})).id
+      // user 3 has no chat messages in streamer 1
+      user3 = (await db.chatUser.create({ data: { aggregateChatUserId: aggregateUserId1 }})).id
+      await db.chatUser.update({ where: { id: youtube1UserId }, data: { aggregateChatUserId: aggregateUserId1 }})
+      await db.chatUser.update({ where: { id: youtube2UserId }, data: { aggregateChatUserId: aggregateUserId1 }})
+      await db.chatUser.update({ where: { id: twitchUserId }, data: { aggregateChatUserId: aggregateUserId1 }})
     })
 
     const setupMessages = async () => {
-      // user 1 now has a youtube and twitch channel
-      const newExtTwitchId = 'second channel'
-      await db.twitchChannel.create({ data: {
-        user: { connect: { id: 1 }},
-        twitchId: newExtTwitchId,
-        infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
-      }})
       await db.chatMessage.createMany({ data: [
         // user 1:
         {
           livestreamId: 1,
-          streamerId: 1,
+          streamerId: streamer1,
           time: data.time1,
-          userId: 1,
+          userId: youtube1UserId,
           externalId: 'user 1 msg 1',
           youtubeChannelId: 1
         }, {
           livestreamId: 1,
-          streamerId: 1,
+          streamerId: streamer1,
           time: data.time3,
-          userId: 1,
+          userId: youtube1UserId,
           externalId: 'user 1 msg 3',
           twitchChannelId: 1
         }, {
           livestreamId: 1,
-          streamerId: 1,
+          streamerId: streamer1,
           time: data.time2,
-          userId: 1,
+          userId: youtube1UserId,
           externalId: 'user 1 msg 2',
           youtubeChannelId: 2
         },
@@ -488,14 +487,14 @@ export default () => {
         // user 2:
         {
           livestreamId: 1,
-          streamerId: 1,
+          streamerId: streamer1,
           time: data.time2,
           userId: twitchUserId,
           externalId: 'user 2 msg 1',
           twitchChannelId: 1
         }, {
           livestreamId: 1,
-          streamerId: 1,
+          streamerId: streamer1,
           time: data.time4,
           userId: twitchUserId,
           externalId: 'user 2 msg 2',
@@ -505,9 +504,9 @@ export default () => {
         // user 3:
         {
           livestreamId: 1,
-          streamerId: 2, // different streamer
+          streamerId: streamer2, // different streamer
           time: data.time2,
-          userId: 3,
+          userId: user3,
           externalId: 'user 3 msg 1',
           youtubeChannelId: 1
         }
@@ -523,11 +522,11 @@ export default () => {
     test('returns the latest chat item of all default users in the streamer context', async () => {
       await setupMessages()
 
-      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [1, 2])
+      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [youtube1UserId, twitchUserId])
 
       expect(lastMessages.length).toBe(2)
 
-      const lastMessageUser1 = lastMessages.find(msg => msg.userId === 1)!
+      const lastMessageUser1 = lastMessages.find(msg => msg.userId === youtube1UserId)!
       expect(lastMessageUser1.externalId).toBe('user 1 msg 3')
 
       const lastMessageUser2 = lastMessages.find(msg => msg.userId === twitchUserId)!
@@ -545,14 +544,14 @@ export default () => {
 
     test('returns the latest chat item out of all channels attached to an aggregate user', async () => {
       await setupMessages()
-      await db.chatUser.update({ where: { id: 1 }, data: { aggregateChatUserId: 3 }})
-      await db.chatUser.update({ where: { id: 2 }, data: { aggregateChatUserId: 3 }})
+      await db.chatUser.update({ where: { id: 1 }, data: { aggregateChatUserId: aggregateUserId1 }})
+      await db.chatUser.update({ where: { id: 2 }, data: { aggregateChatUserId: aggregateUserId1 }})
 
-      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [3])
+      const lastMessages = await chatStore.getLastChatOfUsers(streamer1, [aggregateUserId1])
 
       expect(lastMessages.length).toBe(1)
-      expect(lastMessages[0].user!.aggregateChatUserId).toBe(3)
-      expect(lastMessages[0].userId).toBe(2)
+      expect(lastMessages[0].user!.aggregateChatUserId).toBe(aggregateUserId1)
+      expect(lastMessages[0].userId).toBe(twitchUserId)
       expect(lastMessages[0].externalId).toBe('user 2 msg 2')
     })
 
