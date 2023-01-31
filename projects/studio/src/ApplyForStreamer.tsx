@@ -123,7 +123,7 @@ function ApplicationActions (props: ApplicationActionProps) {
     return null
   }
 
-  const onRequestDone = <T extends ApiResponse<any, any>>(response: T) => {
+  const onRequestDone = <T extends ApiResponse<any>>(response: T) => {
     if (response.success) {
       props.onApplicationUpdated()
     }

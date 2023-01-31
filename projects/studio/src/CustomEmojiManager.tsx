@@ -35,7 +35,6 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
       accessibleRanks: [],
       editingEmoji: null,
       newEmoji: {
-        schema: 1,
         name: '',
         symbol: '',
         levelRequirement: 0,
@@ -81,7 +80,6 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     if (result.success) {
       this.setState({
         newEmoji: {
-          schema: 1,
           name: '',
           symbol: '',
           levelRequirement: 0,

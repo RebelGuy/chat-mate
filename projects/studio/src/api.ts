@@ -19,28 +19,19 @@ export async function getAllCustomEmojis (loginToken: string, streamer: string):
 }
 
 export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest['updatedEmoji'], loginToken: string, streamer: string): Promise<UpdateCustomEmojiResponse> {
-  const request: UpdateCustomEmojiRequest = {
-    schema: 1,
-    updatedEmoji
-  }
+  const request: UpdateCustomEmojiRequest = { updatedEmoji }
 
   return await PATCH('/emoji/custom', request, loginToken, streamer)
 }
 
 export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew, loginToken: string, streamer: string): Promise<AddCustomEmojiResponse> {
-  const request: AddCustomEmojiRequest = {
-    schema: 1,
-    newEmoji
-  }
+  const request: AddCustomEmojiRequest = { newEmoji }
 
   return await POST('/emoji/custom', request, loginToken, streamer)
 }
 
 export async function setActiveLivestream (newLivestream: string | null, loginToken: string, streamer: string): Promise<SetActiveLivestreamResponse> {
-  const request: SetActiveLivestreamRequest = {
-    schema: 2,
-    livestream: newLivestream
-  }
+  const request: SetActiveLivestreamRequest = { livestream: newLivestream }
 
   return await PATCH('/chatMate/livestream', request, loginToken, streamer)
 }
@@ -71,12 +62,12 @@ export async function getRanks (loginToken: string, streamer?: string): Promise<
 }
 
 export async function registerAccount (username: string, password: string): Promise<RegisterResponse> {
-  const request: RegisterRequest = { schema: 1, username, password }
+  const request: RegisterRequest = { username, password }
   return await POST('/account/register', request)
 }
 
 export async function login (username: string, password: string): Promise<LoginResponse> {
-  const request: LoginRequest = { schema: 1, username, password }
+  const request: LoginRequest = { username, password }
   return await POST('/account/login', request)
 }
 
@@ -97,27 +88,27 @@ export async function getStreamerApplications (loginToken: string): Promise<GetA
 }
 
 export async function createStreamerApplication (loginToken: string, message: string): Promise<CreateApplicationResponse> {
-  const request: CreateApplicationRequest = { schema: 1, message }
+  const request: CreateApplicationRequest = { message }
   return await POST('/streamer/application', request, loginToken)
 }
 
 export async function approveStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<ApproveApplicationResponse> {
-  const request: ApproveApplicationRequest = { schema: 1, message }
+  const request: ApproveApplicationRequest = { message }
   return await POST(`/streamer/application/${applicationId}/approve`, request, loginToken)
 }
 
 export async function rejectStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<RejectApplicationResponse> {
-  const request: RejectApplicationRequest = { schema: 1, message }
+  const request: RejectApplicationRequest = { message }
   return await POST(`/streamer/application/${applicationId}/reject`, request, loginToken)
 }
 
 export async function withdrawStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<WithdrawApplicationResponse> {
-  const request: WithdrawApplicationRequest = { schema: 1, message }
+  const request: WithdrawApplicationRequest = { message }
   return await POST(`/streamer/application/${applicationId}/withdraw`, request, loginToken)
 }
 
 export async function setStreamlabsSocketToken (loginToken: string, streamer: string, socketToken: string | null): Promise<SetWebsocketTokenResponse> {
-  const request: SetWebsocketTokenRequest = { schema: 1, websocketToken: socketToken }
+  const request: SetWebsocketTokenRequest = { websocketToken: socketToken }
   return await POST(`/donation/streamlabs/socketToken`, request, loginToken, streamer)
 }
 
@@ -126,12 +117,12 @@ export async function getStreamlabsStatus (loginToken: string, streamer: string)
 }
 
 export async function searchUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
-  const request: SearchUserRequest = { schema: 4, searchTerm }
+  const request: SearchUserRequest = { searchTerm }
   return await POST(`/user/search`, request, loginToken, streamer)
 }
 
 export async function searchRegisteredUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
-  const request: SearchUserRequest = { schema: 4, searchTerm }
+  const request: SearchUserRequest = { searchTerm }
   return await POST(`/user/search/registered`, request, loginToken, streamer)
 }
 
