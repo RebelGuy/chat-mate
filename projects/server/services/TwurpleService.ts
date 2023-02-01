@@ -1,9 +1,9 @@
-import { Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
-import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import { getUserName } from '@rebel/server/services/ChannelService'
+import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
 import LogService from '@rebel/server/services/LogService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
@@ -76,6 +76,9 @@ export default class TwurpleService extends ContextClass {
     this.chatClient.onNotice((target, user, msg, notice) => this.logService.logInfo(this, 'chatClient.onNotice', target, user, msg, notice))
 
     await this.joinStreamerChannels()
+
+    this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
+    this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
   }
 
   public async banChannel (streamerId: number, twitchChannelId: number, reason: string | null) {
@@ -148,6 +151,22 @@ export default class TwurpleService extends ContextClass {
     // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
     const twitchUserName = await this.getTwitchUserName(twitchChannelId)
     await this.twurpleApiProxyService.timeout(channelName, twitchUserName, 1, reason ?? undefined)
+  }
+
+  private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {
+    if (data.userChannel.platformInfo.platform !== 'twitch') {
+      return
+    }
+
+    await this.chatClient.join(getUserName(data.userChannel))
+  }
+
+  private onPrimaryChannelRemoved (data: EventData['removePrimaryChannel']) {
+    if (data.userChannel.platformInfo.platform !== 'twitch') {
+      return
+    }
+
+    this.chatClient.part(getUserName(data.userChannel))
   }
 
   private async getTwitchUserName (internalTwitchChannelId: number) {

@@ -11,6 +11,12 @@ export class NotFoundError extends CustomError {
   }
 }
 
+export class ForbiddenError extends CustomError {
+  constructor (message: string) {
+    super(ForbiddenError.prototype, message)
+  }
+}
+
 export class TimeoutError extends CustomError {
   public readonly timeout?: number
 

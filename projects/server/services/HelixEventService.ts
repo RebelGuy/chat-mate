@@ -2,10 +2,10 @@ import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { NgrokAdapter } from '@twurple/eventsub-ngrok'
-import { ConnectionAdapter, DirectConnectionAdapter, EventSubChannelFollowEvent, EventSubListener, EventSubMiddleware } from '@twurple/eventsub'
+import { ConnectionAdapter, DirectConnectionAdapter, EventSubListener, EventSubMiddleware, EventSubSubscription } from '@twurple/eventsub'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
-import { HelixEventSubApi, HelixUser } from '@twurple/api/lib'
+import { HelixEventSubApi } from '@twurple/api/lib'
 import { disconnect, kill } from 'ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
@@ -13,6 +13,8 @@ import { Express } from 'express-serve-static-core'
 import { EventSubBase } from '@twurple/eventsub/lib/EventSubBase'
 import { NodeEnv } from '@rebel/server/globals'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
+import { getUserName } from '@rebel/server/services/ChannelService'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -30,6 +32,7 @@ type Deps = Dependencies<{
   fileService: FileService
   app: Express
   streamerChannelService: StreamerChannelService
+  eventDispatchService: EventDispatchService
 }>
 
 // this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
@@ -49,10 +52,12 @@ export default class HelixEventService extends ContextClass {
   private readonly fileService: FileService
   private readonly app: Express
   private readonly streamerChannelService: StreamerChannelService
+  private readonly eventDispatchService: EventDispatchService
 
   private listener: EventSubListener | null
   private eventSubBase!: EventSubBase
   private eventSubApi!: HelixEventSubApi
+  private streamerSubscriptions: Map<number, EventSubSubscription[]> = new Map()
 
   constructor (deps: Deps) {
     super()
@@ -67,6 +72,7 @@ export default class HelixEventService extends ContextClass {
     this.fileService = deps.resolve('fileService')
     this.app = deps.resolve('app')
     this.streamerChannelService = deps.resolve('streamerChannelService')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
 
     this.listener = null
   }
@@ -126,15 +132,25 @@ export default class HelixEventService extends ContextClass {
       }, 5000)
       this.logService.logInfo(this, 'Subscription to Helix events via the EventSub API has been set up and will be initialised in 5 seconds')
     }
+
+    this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
+    this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
   }
 
-  public async subscribeToChannelEvents (streamerId: number): Promise<void> {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+  private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {
+    if (data.userChannel.platformInfo.platform !== 'twitch') {
       return
     }
 
-    await this.subscribeToChannelEventsByChannelName(streamerId, channelName)
+    await this.subscribeToChannelEventsByChannelName(data.streamerId, getUserName(data.userChannel))
+  }
+
+  private async onPrimaryChannelRemoved (data: EventData['removePrimaryChannel']) {
+    if (data.userChannel.platformInfo.platform !== 'twitch') {
+      return
+    }
+
+    await this.unsubscribeFromChannelEvents(data.streamerId)
   }
 
   private async refreshNgrok () {
@@ -168,7 +184,25 @@ export default class HelixEventService extends ContextClass {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
+    const subscription = await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
+    this.onSubscriptionAdded(streamerId, subscription)
+  }
+
+  private async unsubscribeFromChannelEvents (streamerId: number) {
+    if (!this.streamerSubscriptions.has(streamerId)) {
+      return
+    }
+
+    await Promise.all(this.streamerSubscriptions.get(streamerId)!.map(sub => sub.stop()))
+    this.streamerSubscriptions.delete(streamerId)
+  }
+
+  private onSubscriptionAdded (streamerId: number, subscription: EventSubSubscription) {
+    if (!this.streamerSubscriptions.has(streamerId)) {
+      this.streamerSubscriptions.set(streamerId, [])
+    }
+
+    this.streamerSubscriptions.get(streamerId)!.push(subscription)
   }
 
   private createNewListener () {

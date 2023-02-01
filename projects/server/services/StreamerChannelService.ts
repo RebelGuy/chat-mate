@@ -1,12 +1,14 @@
-import { Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { getUserName } from '@rebel/server/services/ChannelService'
-import LogService from '@rebel/server/services/LogService'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { single, singleOrNull } from '@rebel/server/util/arrays'
+import { nonNull, single } from '@rebel/server/util/arrays'
+import { ForbiddenError } from '@rebel/server/util/error'
+import { assertUnreachable } from '@rebel/server/util/typescript'
 
 export type TwitchStreamerChannel = {
   streamerId: number
@@ -15,67 +17,81 @@ export type TwitchStreamerChannel = {
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore
+  streamerChannelStore: StreamerChannelStore
+  eventDispatchService: EventDispatchService
   accountStore: AccountStore
   channelStore: ChannelStore
-  logService: LogService
 }>
 
 export default class StreamerChannelService extends ContextClass {
-  public readonly name = StreamerChannelService.name
   private readonly streamerStore: StreamerStore
-  private readonly accountStore: AccountStore
+  private readonly streamerChannelStore: StreamerChannelStore
+  private readonly eventDispatchService: EventDispatchService
   private readonly channelStore: ChannelStore
-  private readonly logService: LogService
+  private readonly accountStore: AccountStore
 
   constructor (deps: Deps) {
     super()
     this.streamerStore = deps.resolve('streamerStore')
-    this.accountStore = deps.resolve('accountStore')
+    this.streamerChannelStore = deps.resolve('streamerChannelStore')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
     this.channelStore = deps.resolve('channelStore')
-    this.logService = deps.resolve('logService')
+    this.accountStore = deps.resolve('accountStore')
   }
 
+  /** Gets the list of all streamers and their primary Twitch channel's name, for those that have a primary Twitch channel set.  */
   public async getAllTwitchStreamerChannels (): Promise<TwitchStreamerChannel[]> {
     const streamers = await this.streamerStore.getStreamers()
-    // todo: this is not very scalable
-    const channelResults = await Promise.allSettled(streamers.map(s => this.getTwitchChannelNameFromStreamer(s)))
-
-    let streamerChannels: TwitchStreamerChannel[] = []
-    for (let i = 0; i < channelResults.length; i++) {
-      const result = channelResults[i]
-      if (result.status === 'fulfilled' && result.value != null) {
-        streamerChannels.push({ streamerId: streamers[i].id, twitchChannelName: result.value })
-      }
-    }
-
-    return streamerChannels
+    const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(s => s.id))
+    return nonNull(primaryChannels.map(c => c.twitchChannel != null ? { streamerId: c.streamerId, twitchChannelName: getUserName(c.twitchChannel) } : null))
   }
 
-  /** Returns null when the associated chat user does not have a linked Twitch channel, or if any intermediate db object cannot be found. */
+  /** Returns null when the streamer does not have a primary twitch channel. */
   public async getTwitchChannelName (streamerId: number): Promise<string | null> {
-    const streamer = await this.streamerStore.getStreamerById(streamerId)
-    if (streamer == null) {
-      this.logService.logWarning(this, `Invalid streamer id ${streamerId}`)
-      return null
-    }
-
-    return await this.getTwitchChannelNameFromStreamer(streamer)
+    const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamerId]).then(single)
+    return primaryChannels?.twitchChannel != null ? getUserName(primaryChannels.twitchChannel) : null
   }
 
-  private async getTwitchChannelNameFromStreamer (streamer: Streamer): Promise<string | null> {
-    const registeredUser = singleOrNull(await this.accountStore.getRegisteredUsersFromIds([streamer.registeredUserId]))
-    if (registeredUser == null) {
-      this.logService.logWarning(this, `Invalid registered user id ${streamer.registeredUserId} for streamer ${streamer.id}`)
-      return null
+  /** Sets the provided channel to be the streamer's primary youtube or twitch channel.
+   * @throws {@link ForbiddenError}: When the streamer is not linked to the youtube or twitch channel.
+  */
+  public async setPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch', youtubeOrTwitchChannelId: number) {
+    const streamer = await this.streamerStore.getStreamerById(streamerId)
+    const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer!.registeredUserId]).then(single)
+    const userOwnedChannels = await this.channelStore.getConnectedUserOwnedChannels([registeredUser.aggregateChatUserId]).then(single)
+
+    let userChannel: UserChannel
+    if (platform === 'youtube') {
+      if (!userOwnedChannels.youtubeChannelIds.includes(youtubeOrTwitchChannelId)) {
+        throw new ForbiddenError(`Streamer ${streamerId} does not have access to YouTube channel ${youtubeOrTwitchChannelId}.`)
+      }
+      userChannel = await this.streamerChannelStore.setStreamerYoutubeChannelLink(streamerId, youtubeOrTwitchChannelId)
+
+    } else if (platform === 'twitch') {
+      if (!userOwnedChannels.twitchChannelIds.includes(youtubeOrTwitchChannelId)) {
+        throw new ForbiddenError(`Streamer ${streamerId} does not have access to Twitch channel ${youtubeOrTwitchChannelId}.`)
+      }
+      userChannel = await this.streamerChannelStore.setStreamerTwitchChannelLink(streamerId, youtubeOrTwitchChannelId)
+
+    } else {
+      assertUnreachable(platform)
     }
 
-    const channels = await this.channelStore.getConnectedUserOwnedChannels([registeredUser.aggregateChatUserId]).then(single)
-    if (channels.twitchChannelIds.length === 0) {
-      return null
+    await this.eventDispatchService.addData('addPrimaryChannel', { streamerId, userChannel })
+  }
+
+  public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
+    let userChannel: UserChannel | null
+    if (platform === 'youtube') {
+      userChannel = await this.streamerChannelStore.deleteStreamerYoutubeChannelLink(streamerId)
+    } else if (platform === 'twitch') {
+      userChannel = await this.streamerChannelStore.deleteStreamerTwitchChannelLink(streamerId)
+    } else {
+      assertUnreachable(platform)
     }
 
-    const channelId = channels.twitchChannelIds[0]
-    const channel = await this.channelStore.getTwitchChannelFromChannelId([channelId]).then(single)
-    return getUserName(channel)
+    if (userChannel != null) {
+      await this.eventDispatchService.addData('removePrimaryChannel', { streamerId, userChannel })
+    }
   }
 }

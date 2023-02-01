@@ -12,8 +12,10 @@ import DonationStore from '@rebel/server/stores/DonationStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
-import { UserAlreadyLinkedToAggregateUserError, LinkAttemptInProgressError, UserNotLinkedError } from '@rebel/server/util/error'
+import { UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/server/util/error'
 import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
 import { nameof } from '@rebel/server/_test/utils'
 
@@ -42,6 +44,8 @@ type Deps = Dependencies<{
   modService: ModService
   donationStore: DonationStore
   rankStore: RankStore
+  streamerChannelStore: StreamerChannelStore
+  streamerStore: StreamerStore
 }>
 
 export default class LinkService extends ContextClass {
@@ -58,6 +62,8 @@ export default class LinkService extends ContextClass {
   private readonly modService: ModService
   private readonly donationStore: DonationStore
   private readonly rankStore: RankStore
+  private readonly streamerChannelStore: StreamerChannelStore
+  private readonly streamerStore: StreamerStore
 
   constructor (deps: Deps) {
     super()
@@ -72,6 +78,8 @@ export default class LinkService extends ContextClass {
     this.modService = deps.resolve('modService')
     this.donationStore = deps.resolve('donationStore')
     this.rankStore = deps.resolve('rankStore')
+    this.streamerChannelStore = deps.resolve('streamerChannelStore')
+    this.streamerStore = deps.resolve('streamerStore')
   }
 
   /** Links the default user to the aggregate user and performs all required side effects.
@@ -171,6 +179,19 @@ export default class LinkService extends ContextClass {
     let aggregateUserId: number
 
     try {
+      const registeredUserResult = await this.accountStore.getRegisteredUsers([defaultUserId]).then(single)
+      if (registeredUserResult.registeredUser != null) {
+        const streamer = await this.streamerStore.getStreamerByRegisteredUserId(registeredUserResult.registeredUser.id)
+        if (streamer != null) {
+          const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamer!.id]).then(single)
+          if (primaryChannels.twitchChannel?.defaultUserId === defaultUserId || primaryChannels.youtubeChannel?.defaultUserId === defaultUserId) {
+            throw new Error(`Cannot unlink default channel ${defaultUserId} because it is a primary channel for streamer ${streamer.id}.`)
+          } else {
+            logs.push([new Date(), 'Ensured channel is not a primary channel for the streamer', cumWarnings])
+          }
+        }
+      }
+
       aggregateUserId = await this.linkStore.unlinkUser(defaultUserId)
       logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
 

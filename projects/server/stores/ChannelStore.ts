@@ -1,19 +1,18 @@
 import { YoutubeChannelInfo, Prisma, TwitchChannelInfo, TwitchChannel, YoutubeChannel } from '@prisma/client'
-import { group, nonNull } from '@rebel/server/util/arrays'
+import { nonNull } from '@rebel/server/util/arrays'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatPlatform } from '@rebel/server/models/chat'
 import { New, Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ObjectComparator } from '@rebel/server/types'
-import { subGroupedSingle, zipOn } from '@rebel/server/util/arrays'
 import { assertUnreachable, compare } from '@rebel/server/util/typescript'
 
 export type CreateOrUpdateYoutubeChannelArgs = Omit<New<YoutubeChannelInfo>, 'channelId'>
 export type CreateOrUpdateTwitchChannelArgs = Omit<New<TwitchChannelInfo>, 'channelId'>
 
-export type YoutubeChannelWithLatestInfo = Omit<Entity.YoutubeChannel, 'chatMessages' | 'user'>
-export type TwitchChannelWithLatestInfo = Omit<Entity.TwitchChannel, 'chatMessages' | 'user'>
+export type YoutubeChannelWithLatestInfo = Omit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLink'>
+export type TwitchChannelWithLatestInfo = Omit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLink'>
 
 /** Contains all channels on all platforms owned by the user. */
 export type UserOwnedChannels = {
@@ -364,7 +363,7 @@ export default class ChannelStore extends ContextClass {
   }
 }
 
-const channelQuery_includeLatestChannelInfo = Prisma.validator<Prisma.YoutubeChannelInclude>()({
+export const channelQuery_includeLatestChannelInfo = Prisma.validator<Prisma.YoutubeChannelInclude>()({
   infoHistory: {
     orderBy: { time: 'desc' },
     take: 1

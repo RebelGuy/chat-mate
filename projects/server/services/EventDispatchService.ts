@@ -1,20 +1,24 @@
-import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem } from '@rebel/server/models/chat'
+import { UserChannel } from '@rebel/server/stores/ChannelStore'
 
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
 
-type DataType = { chatItem: ChatItem & { streamerId: number } }
+export type EventData = {
+  chatItem: ChatItem & { streamerId: number },
+  addPrimaryChannel: { streamerId: number, userChannel: UserChannel },
+  removePrimaryChannel: { streamerId: number, userChannel: UserChannel }
+}
 
-export type DataPair<T extends keyof DataType> = [T, DataType[T]]
+export type DataPair<T extends keyof EventData> = [T, EventData[T]]
 
-type Listener<T extends keyof DataType = any> = (data: DataType[T]) => any | Promise<any>
+type Listener<T extends keyof EventData = any> = (data: EventData[T]) => any | Promise<any>
 
 export default class EventDispatchService extends ContextClass {
   private isReady: boolean
   private tempStore: DataPair<any>[]
-  private listeners: Map<keyof DataType, Listener[]>
+  private listeners: Map<keyof EventData, Listener[]>
 
   constructor () {
     super()
@@ -37,7 +41,7 @@ export default class EventDispatchService extends ContextClass {
   }
 
   /** Notifies subscribers of the new data. */
-  public async addData<T extends keyof DataType> (type: T, data: DataType[T]) {
+  public async addData<T extends keyof EventData> (type: T, data: EventData[T]) {
     if (!this.isReady) {
       const pair: DataPair<T> = [type, data]
       this.tempStore.push(pair)
@@ -50,7 +54,7 @@ export default class EventDispatchService extends ContextClass {
   }
 
   /** Starts listening to data. The listener is responsible for catching all errors. */
-  public onData<T extends keyof DataType> (type: T, listener: Listener<T>) {
+  public onData<T extends keyof EventData> (type: T, listener: Listener<T>) {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, [])
     }
