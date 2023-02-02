@@ -82,6 +82,7 @@ import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import AccountService from '@rebel/server/services/AccountService'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -149,6 +150,7 @@ const globalContext = ContextProvider.create()
   .withClass('accountStore', AccountStore)
   .withClass('streamerStore', StreamerStore)
   .withClass('channelStore', ChannelStore)
+  .withClass('streamerChannelStore', StreamerChannelStore)
   .withClass('streamerChannelService', StreamerChannelService)
   .withClass('livestreamService', LivestreamService)
   .withClass('rankStore', RankStore)

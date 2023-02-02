@@ -13,6 +13,7 @@ export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks 
     primaryUserId: data.primaryUserId,
     registeredUser: registeredUserToPublic(data.registeredUser),
     channelInfo: {
+      channelId: data.platformInfo.channel.id,
       defaultUserId: data.defaultUserId,
       channelName: getUserName(data),
       externalIdOrUserName: getExternalIdOrUserName(data),

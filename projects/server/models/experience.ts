@@ -13,6 +13,7 @@ export function rankedEntryToPublic (data: RankedEntry & UserRanks & { registere
       primaryUserId: data.primaryUserId,
       registeredUser: registeredUserToPublic(data.registeredUser),
       channelInfo: {
+        channelId: data.channel.platformInfo.channel.id,
         defaultUserId: data.channel.defaultUserId,
         channelName: getUserName(data.channel),
         externalIdOrUserName: getExternalIdOrUserName(data.channel),

@@ -1,5 +1,5 @@
 import AdminLink from '@rebel/studio/AdminLink'
-import { addLinkedChannel, createLinkToken, getLinkedChannels, getLinkHistory } from '@rebel/studio/api'
+import { addLinkedChannel, createLinkToken, getLinkedChannels, getLinkHistory, getPrimaryChannels } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
@@ -46,10 +46,14 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         :
         <div style={{ marginBottom: 16 }}>
           <ApiRequest onDemand token={updateToken} onRequest={onGetLinkedChannels}>
-            {(response, loadingNode, errorNode) => <>
-              {response && <LinkedChannels channels={response.channels} onChange={regenerateUpdateToken} />}
-              {loadingNode}
-              {errorNode}
+            {(response1, loadingNode1, errorNode1) => <>
+              <ApiRequest onDemand token={updateToken} onRequest={getPrimaryChannels}>
+                {(response2, loadingNode2, errorNode2) => <>
+                  {response1 && <LinkedChannels channels={response1.channels} primaryChannels={response2 ?? { youtubeChannelId: null, twitchChannelId: null }} onChange={regenerateUpdateToken} />}
+                  {loadingNode1 || loadingNode2}
+                  {errorNode1}
+                </>}
+              </ApiRequest>
             </>}
           </ApiRequest>
         </div>

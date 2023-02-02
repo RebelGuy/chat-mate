@@ -721,6 +721,36 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the streamer application status was not `pending`, that is, it was already closed.
 
+### `GET /primaryChannels`
+Gets the logged-in streamer's primary channels, that is, the channels that they have selected to stream on.
+
+Returns data with the following properties:
+- `youtubeChannel` (`number | null`): The internal id of the streamer's primary YouTube channel, if set.
+- `twitchChannel` (`number | null`): The internal id of the streamer's primary Twitch channel, if set.
+
+### `POST /primaryChannels/:platform/:channelId`
+Sets the streamer's primary channel for the specified platform. Note that this request will fail if a primary channel already exists.
+
+Path parameters:
+- `platform` (`string`): The platform for which to set the primary channel. Must be either `youtube` or `twitch`.
+- `channelId` (`number`): The internal id of the YouTube or Twitch channel to set as the streamer's primary channel.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `403`: When the channel ID refers to a channel that the user is not linked to.
+
+### `DELETE /primaryChannels/:platform`
+Removes the streamer's primary channel for the specified platform. The request will succeed even if no primary channel is set for the platform.
+
+Path parameters:
+- `platform` (`string`): The platform from which to remove the primary channel. Must be either `youtube` or `twitch`.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
 
 ## User Endpoints
 Path: `/user`.

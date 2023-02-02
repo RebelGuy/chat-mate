@@ -303,6 +303,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   }
 
   const userInfo: PublicChannelInfo = {
+    channelId: userChannel.platformInfo.channel.id,
     defaultUserId: chat.userId,
     externalIdOrUserName: getExternalIdOrUserName(userChannel),
     platform: userChannel.platformInfo.platform,

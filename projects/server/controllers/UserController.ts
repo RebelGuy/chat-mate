@@ -222,6 +222,7 @@ export default class UserController extends ControllerBase {
       return builder.success({
         registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
         channels: channels.channels.map<PublicChannelInfo>(channel => ({
+          channelId: channel.platformInfo.channel.id,
           defaultUserId: channel.defaultUserId,
           externalIdOrUserName: getExternalIdOrUserName(channel),
           platform: channel.platformInfo.platform,

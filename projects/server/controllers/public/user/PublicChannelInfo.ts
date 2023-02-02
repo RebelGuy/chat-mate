@@ -1,6 +1,9 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
 export type PublicChannelInfo = PublicObject<{
+  /** The internal YoutubeChannel or TwitchChannel id. */
+  channelId: number
+
   /** The internal default user ID attached to the channel. */
   defaultUserId: number
 

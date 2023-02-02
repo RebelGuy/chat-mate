@@ -46,6 +46,7 @@ function ApplicationForm (props: ApplicationFormProps) {
 
   return <>
     <div>Use the form to request participation in the ChatMate Beta Program.</div>
+    <div>Once accepted, you will be able to indicate the channel(s) you will be streaming on, on Twitch and/or YouTube.</div>
     <ApiRequestTrigger onRequest={onCreateApplication}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
         <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column', maxWidth: 400, margin: 'auto' }}>

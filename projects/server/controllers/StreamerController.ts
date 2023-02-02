@@ -1,12 +1,16 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth, requireRank } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
+import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import StreamerService from '@rebel/server/services/StreamerService'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
-import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/server/util/error'
-import { GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
+import { EmptyObject } from '@rebel/server/types'
+import { single } from '@rebel/server/util/arrays'
+import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/server/util/error'
+import { DELETE, GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
 
 export type GetStreamersResponse = ApiResponse<{ streamers: string[] }>
 
@@ -24,10 +28,18 @@ export type RejectApplicationResponse = ApiResponse<{ updatedApplication: Public
 export type WithdrawApplicationRequest = ApiRequest<{ message: string }>
 export type WithdrawApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
 
+export type GetPrimaryChannelsResponse = ApiResponse<{ youtubeChannelId: number | null, twitchChannelId: number | null }>
+
+export type SetPrimaryChannelResponse = ApiResponse<EmptyObject>
+
+export type UnsetPrimaryChannelResponse = ApiResponse<EmptyObject>
+
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
   streamerService: StreamerService
   accountStore: AccountStore
+  streamerChannelStore: StreamerChannelStore
+  streamerChannelService: StreamerChannelService
 }>
 
 @Path(buildPath('streamer'))
@@ -36,12 +48,16 @@ export default class StreamerController extends ControllerBase {
   private readonly streamerStore: StreamerStore
   private readonly streamerService: StreamerService
   private readonly accountStore: AccountStore
+  private readonly streamerChannelStore: StreamerChannelStore
+  private readonly streamerChannelService: StreamerChannelService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
     this.streamerStore = deps.resolve('streamerStore')
     this.streamerService = deps.resolve('streamerService')
     this.accountStore = deps.resolve('accountStore')
+    this.streamerChannelStore = deps.resolve('streamerChannelStore')
+    this.streamerChannelService = deps.resolve('streamerChannelService')
   }
 
   @GET
@@ -163,6 +179,78 @@ export default class StreamerController extends ControllerBase {
       if (e instanceof StreamerApplicationAlreadyClosedError) {
         return builder.failure(400, e)
       }
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/primaryChannels')
+  @PreProcessor(requireStreamer)
+  public async getPrimaryChannels (): Promise<GetPrimaryChannelsResponse> {
+    const builder = this.registerResponseBuilder<GetPrimaryChannelsResponse>('POST /primaryChannels')
+
+    try {
+      const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([this.getStreamerId()]).then(single)
+      return builder.success({
+        youtubeChannelId: primaryChannels.youtubeChannel?.platformInfo.channel.id ?? null,
+        twitchChannelId: primaryChannels.twitchChannel?.platformInfo.channel.id ?? null
+      })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/primaryChannels/:platform/:channelId')
+  @PreProcessor(requireStreamer)
+  public async setPrimaryChannel (
+    @PathParam('platform') platform: string,
+    @PathParam('channelId') channelId: number
+  ): Promise<SetPrimaryChannelResponse> {
+    const builder = this.registerResponseBuilder<SetPrimaryChannelResponse>('POST /primaryChannels/:platform/:channelId')
+
+    if (platform == null || channelId == null) {
+      return builder.failure(400, 'Platform and ChannelId must be provided.')
+    }
+
+    platform = platform.toLowerCase()
+    if (platform !== 'youtube' && platform !== 'twitch') {
+      return builder.failure(400, 'Platform must be either `youtube` or `twitch`')
+    }
+
+    try {
+      await this.streamerChannelService.setPrimaryChannel(this.getStreamerId(), platform as 'youtube' | 'twitch', channelId)
+      return builder.success({})
+    } catch (e: any) {
+      if (e instanceof ForbiddenError) {
+        return builder.failure(403, e.message)
+      } else {
+        return builder.failure(e)
+      }
+    }
+  }
+
+  @DELETE
+  @Path('/primaryChannels/:platform')
+  @PreProcessor(requireStreamer)
+  public async unsetPrimaryChannel (
+    @PathParam('platform') platform: string
+  ): Promise<UnsetPrimaryChannelResponse> {
+    const builder = this.registerResponseBuilder<UnsetPrimaryChannelResponse>('DELETE /primaryChannels/:platform')
+
+    if (platform == null) {
+      return builder.failure(400, 'Platform must be provided.')
+    }
+
+    platform = platform.toLowerCase()
+    if (platform !== 'youtube' && platform !== 'twitch') {
+      return builder.failure(400, 'Platform must be either `youtube` or `twitch`')
+    }
+
+    try {
+      await this.streamerChannelService.unsetPrimaryChannel(this.getStreamerId(), platform as 'youtube' | 'twitch')
+      return builder.success({})
+    } catch (e: any) {
       return builder.failure(e)
     }
   }
