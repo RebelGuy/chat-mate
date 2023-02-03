@@ -1,4 +1,5 @@
 import { ChatUser, StreamerTwitchChannelLink, StreamerYoutubeChannelLink } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
@@ -23,21 +24,37 @@ export default class StreamerChannelStore extends ContextClass {
   }
 
   public async deleteStreamerYoutubeChannelLink (streamerId: number): Promise<UserChannel<'youtube'> | null> {
-    const removedLink = await this.db.streamerYoutubeChannelLink.delete({
-      where: { streamerId },
-      include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
-    })
+    try {
+      const removedLink = await this.db.streamerYoutubeChannelLink.delete({
+        where: { streamerId },
+        include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
+      })
+      return youtubeLinkToUserChannel(removedLink)
 
-    return removedLink != null ? youtubeLinkToUserChannel(removedLink) : null
+    } catch (e: any) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+        return null
+      } else {
+        throw e
+      }
+    }
   }
 
   public async deleteStreamerTwitchChannelLink (streamerId: number): Promise<UserChannel<'twitch'> | null> {
-    const removedLink = await this.db.streamerTwitchChannelLink.delete({
-      where: { streamerId },
-      include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
-    })
+    try {
+      const removedLink = await this.db.streamerTwitchChannelLink.delete({
+        where: { streamerId },
+        include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
+      })
+      return twitchLinkToUserChannel(removedLink)
 
-    return removedLink != null ? twitchLinkToUserChannel(removedLink) : null
+    } catch (e: any) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+        return null
+      } else {
+        throw e
+      }
+    }
   }
 
   /** Returns the streamers' primary channels - the channels that were selected to be streamed on. */
@@ -63,6 +80,7 @@ export default class StreamerChannelStore extends ContextClass {
     })
   }
 
+  /** Throws if a primary youtube channel already exists. */
   public async setStreamerYoutubeChannelLink (streamerId: number, youtubeChannelId: number): Promise<UserChannel<'youtube'>> {
     const addedLink = await this.db.streamerYoutubeChannelLink.create({
       data: { streamerId, youtubeChannelId },
@@ -72,6 +90,7 @@ export default class StreamerChannelStore extends ContextClass {
     return youtubeLinkToUserChannel(addedLink)
   }
 
+  /** Throws if a primary twitch channel already exists. */
   public async setStreamerTwitchChannelLink (streamerId: number, twitchChannelId: number): Promise<UserChannel<'twitch'>> {
     const addedLink = await this.db.streamerTwitchChannelLink.create({
       data: { streamerId, twitchChannelId },

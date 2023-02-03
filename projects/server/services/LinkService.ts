@@ -208,21 +208,20 @@ export default class LinkService extends ContextClass {
         logs.push([new Date(), nameof(DonationStore, 'undoDonationRelink'), cumWarnings])
       }
 
-      // need to check the aggregate user becauuse the default user has already been unlinked
-      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([aggregateUserId])).connectedChatUserIds
-      if (connectedUserIds.length === 1) {
-        // we unlinked the only user
-        if (options.transferRanks) {
+      if (options.transferRanks) {
+        // need to check the aggregate user becauuse the default user has already been unlinked
+        const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([aggregateUserId])).connectedChatUserIds
+
+        if (connectedUserIds.length === 1) {
+          // we unlinked the only user.
           // we do not transfer the owner rank because it would leave the default user with an owner rank and,
           // if linked to another user, would give them automatic owner rank for the other user.
           // instead, the owner rank will get terminated and the user will have to re-apply if desired.
           cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, true, ['owner'])
           logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
-        }
 
-      } else {
-        // at least one other default chat user is still connected to the aggregate user
-        if (options.transferRanks) {
+        } else {
+          // at least one other default chat user is still connected to the aggregate user.
           // importantly, leave the existing aggregate user's ranks intact
           cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, false, ['owner'])
           logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])

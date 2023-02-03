@@ -1,3 +1,4 @@
+import { Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import DonationService from '@rebel/server/services/DonationService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -5,15 +6,17 @@ import LinkService from '@rebel/server/services/LinkService'
 import ModService from '@rebel/server/services/rank/ModService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import RankService, { MergeResult } from '@rebel/server/services/rank/RankService'
-import AccountStore from '@rebel/server/stores/AccountStore'
+import AccountStore, { RegisteredUserResult } from '@rebel/server/stores/AccountStore'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single, single2 } from '@rebel/server/util/arrays'
 import { addTime } from '@rebel/server/util/datetime'
 import { LinkAttemptInProgressError } from '@rebel/server/util/error'
-import { cast, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockAccountStore: MockProxy<AccountStore>
@@ -26,6 +29,8 @@ let mockPunishmentService: MockProxy<PunishmentService>
 let mockRankService: MockProxy<RankService>
 let mockDonationStore: MockProxy<DonationStore>
 let mockRankStore: MockProxy<RankStore>
+let mockStreamerChannelStore: MockProxy<StreamerChannelStore>
+let mockStreamerStore: MockProxy<StreamerStore>
 let linkService: LinkService
 
 beforeEach(() => {
@@ -39,6 +44,8 @@ beforeEach(() => {
   mockRankService = mock()
   mockDonationStore = mock()
   mockRankStore = mock()
+  mockStreamerChannelStore = mock()
+  mockStreamerStore = mock()
 
   linkService = new LinkService(new Dependencies({
     logService: mock(),
@@ -51,7 +58,9 @@ beforeEach(() => {
     punishmentService: mockPunishmentService,
     rankService: mockRankService,
     donationStore: mockDonationStore,
-    rankStore: mockRankStore
+    rankStore: mockRankStore,
+    streamerChannelStore: mockStreamerChannelStore,
+    streamerStore: mockStreamerStore
   }))
 })
 
@@ -267,6 +276,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     const linkAttemptId = 2
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+    mockAccountStore.getRegisteredUsers.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue(cast<RegisteredUserResult[]>([{ registeredUser: null }]))
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
 
@@ -285,6 +295,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     const linkAttemptId = 2
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+    mockAccountStore.getRegisteredUsers.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue(cast<RegisteredUserResult[]>([{ registeredUser: null }]))
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: [defaultUserId] }])
 
@@ -304,6 +315,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     const connectedUserIds = [12, 6]
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+    mockAccountStore.getRegisteredUsers.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue(cast<RegisteredUserResult[]>([{ registeredUser: null }]))
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
 
@@ -323,6 +335,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     const connectedUserIds = [12, 6]
 
     mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+    mockAccountStore.getRegisteredUsers.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue(cast<RegisteredUserResult[]>([{ registeredUser: null }]))
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
     mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean), expect.anything()).mockRejectedValue(new Error())
@@ -330,6 +343,42 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })).rejects.toThrow()
 
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), expect.any(String)])
+  })
+
+  test('Completes the link attempt if the unlinked channel is not a primary channel of the streamer', async () => {
+    const defaultUserId = 5
+    const linkAttemptId = 2
+    const registeredUserId = 15
+    const streamerId = 51
+    const primaryChannels = cast<PrimaryChannels>({ youtubeChannel: { defaultUserId: defaultUserId + 1 }})
+
+    mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+    mockAccountStore.getRegisteredUsers.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue(cast<RegisteredUserResult[]>([{ registeredUser: { id: registeredUserId }}]))
+    mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue(cast<Streamer>({ id: streamerId }))
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expect.arrayContaining([streamerId])).mockResolvedValue([primaryChannels])
+
+    await linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false, relinkDonations: false })
+
+    expect(single2(mockLinkStore.unlinkUser.mock.calls)).toEqual(defaultUserId)
+    expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), null])
+  })
+
+  test('Throws if the unlinked channel is a primary channel of the streamer', async () => {
+    const defaultUserId = 5
+    const linkAttemptId = 2
+    const registeredUserId = 15
+    const streamerId = 51
+    const primaryChannels = cast<PrimaryChannels>({ youtubeChannel: { defaultUserId: defaultUserId }})
+
+    mockLinkStore.startUnlinkAttempt.calledWith(defaultUserId).mockResolvedValue(linkAttemptId)
+    mockAccountStore.getRegisteredUsers.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue(cast<RegisteredUserResult[]>([{ registeredUser: { id: registeredUserId }}]))
+    mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue(cast<Streamer>({ id: streamerId }))
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expect.arrayContaining([streamerId])).mockResolvedValue([primaryChannels])
+
+    await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false, relinkDonations: false })).rejects.toThrow()
+
+    expect(mockLinkStore.unlinkUser.mock.calls.length).toBe(0)
+    expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), expect.any(String)])
   })
 
   test('Throws if a link attempt fails to be created', async () => {

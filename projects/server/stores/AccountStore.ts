@@ -20,6 +20,12 @@ export type ConnectedChatUserIds = {
   connectedChatUserIds: number[]
 }
 
+export type RegisteredUserResult = {
+  queriedUserId: number,
+  primaryUserId: number,
+  registeredUser: RegisteredUser | null
+}
+
 type Deps = Dependencies<{
   dbProvider: DbProvider
 }>
@@ -55,7 +61,7 @@ export default class AccountStore extends ContextClass {
   }
 
   /** For each of the given chat users, returns the registered user that they belong to. The results are sorted in an undefined order. */
-  public async getRegisteredUsers (anyUserIds: number[]): Promise<{ queriedUserId: number, primaryUserId: number, registeredUser: RegisteredUser | null }[]> {
+  public async getRegisteredUsers (anyUserIds: number[]): Promise<RegisteredUserResult[]> {
     const aggregateChatUsers = await this.db.chatUser.findMany({
       where: {
         id: { in: anyUserIds },

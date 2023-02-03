@@ -9,6 +9,7 @@ import RankStoreSuite from '@rebel/server/stores/RankStore.test'
 import DonationStoreSuite from '@rebel/server/stores/DonationStore.test'
 import AccountStoreSuite from '@rebel/server/stores/AccountStore.test'
 import StreamerStoreSuite from '@rebel/server/stores/StreamerStore.test'
+import StreamerChannelStoreSuite from '@rebel/server/stores/StreamerChannelStore.test'
 import LinkStoreSuite from '@rebel/server/stores/LinkStore.test'
 
 // keep an eye on this one: https://github.com/prisma/prisma/issues/732
@@ -38,5 +39,7 @@ describeFn('LivestreamStore Suite', LivestreamStoreSuite)
 describeFn('LinkStore Suite', LinkStoreSuite)
 
 describeFn('RankStore Suite', RankStoreSuite)
+
+describeFn('StreamerChannelStore Suite', StreamerChannelStoreSuite)
 
 describeFn('StreamerStore Suite', StreamerStoreSuite)
