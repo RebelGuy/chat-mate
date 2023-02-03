@@ -64,6 +64,7 @@ export default class TwurpleService extends ContextClass {
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onJoinFailure((channel, reason) => this.logService.logError(this, 'chatClient.onJoinFailure', channel, reason))
     this.chatClient.onJoin((channel, user) => this.logService.logInfo(this, 'chatClient.onJoin', channel, user))
+    this.chatClient.onPart((channel, user) => this.logService.logInfo(this, 'chatClient.onPart', channel, user))
     this.chatClient.onMessageFailed((channel, reason) => this.logService.logError(this, 'chatClient.onMessageFailed', channel, reason))
     this.chatClient.onMessageRatelimit((channel, msg) => this.logService.logError(this, 'chatClient.onMessageRatelimit', channel, msg))
     this.chatClient.onNoPermission((channel, msg) => this.logService.logError(this, 'chatClient.onNoPermission', channel, msg))

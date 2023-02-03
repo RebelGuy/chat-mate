@@ -1,6 +1,6 @@
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
-import { authenticate, getRanks } from '@rebel/studio/api'
+import { authenticate, getRanks, getStreamers } from '@rebel/studio/api'
 import * as React from 'react'
 
 export type RankName = PublicRank['name']
@@ -15,7 +15,7 @@ export default function LoginProvider (props: Props) {
   const [streamer, setStreamer] = React.useState<string | null>(null)
   const [initialised, setInitialised] = React.useState(false)
   const [ranks, setRanks] = React.useState<RankName[]>([])
-  const [isStreamer, setIsStreamer] = React.useState(false)
+  const [allStreamers, setAllStreamers] = React.useState<string[]>([])
 
   function onSetLogin (username: string, token: string) {
     try {
@@ -102,10 +102,25 @@ export default function LoginProvider (props: Props) {
       }
 
       setStreamer(streamer)
+
       setInitialised(true)
     }
     loadContext()
   }, [onLogin])
+
+  React.useEffect(() => {
+    if (loginToken == null) {
+      return
+    }
+    
+    const hydrateStreamers = async () => {
+      const response = await getStreamers(loginToken)
+      if (response.success) {
+        setAllStreamers(response.data.streamers)
+      }
+    }
+    hydrateStreamers()
+  }, [loginToken])
 
   React.useEffect(() => {
     if (loginToken == null) {
@@ -130,11 +145,11 @@ export default function LoginProvider (props: Props) {
         loginToken,
         username,
         streamer,
-        isStreamer,
+        allStreamers,
+        isStreamer: allStreamers.includes(username ?? ''),
         setLogin: onSetLogin,
         login: onLogin,
         setStreamer: onSetStreamer,
-        setIsStreamer: setIsStreamer,
         logout: onClearAuthInfo,
         hasRank: rankName => ranks.find(r => r === rankName) != null,
       }}
@@ -150,6 +165,7 @@ type LoginContextType = {
 
   /** Is streamer anywhere, regardless of the current streamer context. */
   isStreamer: boolean
+  allStreamers: string[]
 
   /** The streamer context. */
   streamer: string | null
@@ -159,7 +175,6 @@ type LoginContextType = {
   login: () => Promise<boolean>
   setLogin: (username: string, token: string) => void
   setStreamer: (streamer: string | null) => void
-  setIsStreamer: (isStreamer: boolean) => void
   logout: () => void
   hasRank: (rankName: RankName) => boolean
 }

@@ -1,9 +1,10 @@
-import { ChatUser, RegisteredUser, Streamer } from '@prisma/client'
+import { ChatUser, Livestream, RegisteredUser, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
@@ -16,6 +17,7 @@ let mockStreamerChannelStore: MockProxy<StreamerChannelStore>
 let mockEventDispatchService: MockProxy<EventDispatchService>
 let mockAccountStore: MockProxy<AccountStore>
 let mockChannelStore: MockProxy<ChannelStore>
+let mockLivestreamStore: MockProxy<LivestreamStore>
 let streamerChannelService: StreamerChannelService
 
 beforeEach(() => {
@@ -24,6 +26,7 @@ beforeEach(() => {
   mockEventDispatchService = mock()
   mockAccountStore = mock()
   mockChannelStore = mock()
+  mockLivestreamStore = mock()
 
   streamerChannelService = new StreamerChannelService(new Dependencies({
     streamerStore: mockStreamerStore,
@@ -31,6 +34,7 @@ beforeEach(() => {
     eventDispatchService: mockEventDispatchService,
     accountStore: mockAccountStore,
     channelStore: mockChannelStore,
+    livestreamStore: mockLivestreamStore
   }))
 })
 
@@ -133,6 +137,14 @@ describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
 
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
+
+  test('Throws if a livestream is currently in progress', async () => {
+    const streamerId = 3
+    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(cast<Livestream>({}))
+
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'youtube', 1)).rejects.toThrowError()
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'twitch', 1)).rejects.toThrowError()
+  })
 })
 
 describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
@@ -154,5 +166,13 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
     await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
 
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
+  })
+
+  test('Throws if a livestream is currently in progress', async () => {
+    const streamerId = 3
+    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(cast<Livestream>({}))
+
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')).rejects.toThrowError()
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'twitch')).rejects.toThrowError()
   })
 })

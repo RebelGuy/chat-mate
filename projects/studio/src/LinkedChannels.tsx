@@ -28,11 +28,19 @@ export default function LinkedChannels (props: { channels: PublicChannelInfo[], 
         <RequireRank anyOwner><th>Streamer actions</th></RequireRank>
         <RequireRank admin><th>Admin actions</th></RequireRank>
       </tr>
-      {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map(c => <tr>
-        <td style={{ fontWeight: isPrimaryChannel(c) ? 800 : undefined }}><a href={getChannelUrl(c)}>{c.channelName}</a></td>
+      {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map(c => <tr style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
+        <td><a href={getChannelUrl(c)}>{c.channelName}</a></td>
         <td>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</td>
-        <RequireRank anyOwner><ChangePrimaryChannel channel={c} isPrimaryChannel={isPrimaryChannel(c)} canAddPrimary={canAddPrimaryChannel(c)} onChange={props.onChange} /></RequireRank>
-        <RequireRank admin><UnlinkUser channel={c} onChange={props.onChange} /></RequireRank>
+        <RequireRank anyOwner>
+          <td>
+            <ChangePrimaryChannel channel={c} isPrimaryChannel={isPrimaryChannel(c)} canAddPrimary={canAddPrimaryChannel(c)} onChange={props.onChange} />
+          </td>
+        </RequireRank>
+        <RequireRank admin>
+          <td>
+            <UnlinkUser channel={c} onChange={props.onChange} />
+          </td>
+        </RequireRank>
       </tr>)}
     </table>
   </>
@@ -44,6 +52,10 @@ function ChangePrimaryChannel (props: { channel: PublicChannelInfo, isPrimaryCha
   }
 
   const onChangePrimaryChannel = async (loginToken: string) => {
+    if (!window.confirm(`Are you sure you want to ${props.isPrimaryChannel ? 'unset' : 'set'} the current primary channel?`)) {
+      throw new Error('Aborted')
+    }
+
     const result = props.isPrimaryChannel ? await unsetPrimaryChannel(loginToken, props.channel.platform) : await setPrimaryChannel(loginToken, props.channel.platform, props.channel.channelId)
 
     if (result.success) {
@@ -59,6 +71,7 @@ function ChangePrimaryChannel (props: { channel: PublicChannelInfo, isPrimaryCha
     <ApiRequestTrigger onRequest={onChangePrimaryChannel}>
       {(onMakeRequest, response, loading, error) => <>
         <button style={{ color: props.isPrimaryChannel ? 'red' : undefined }} disabled={loading != null} onClick={onMakeRequest}>{props.isPrimaryChannel ? `Unset primary channel for ${platform}` : `Set primary channel for ${platform}`}</button>
+        {error}
       </>}
     </ApiRequestTrigger>
   </>
@@ -70,6 +83,10 @@ function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }
   const [relinkDoantions, setRelinkDonations] = React.useState(true)
 
   const removeLink = async (loginToken: string) => {
+    if (!window.confirm('Are you sure you wish to unlink the user?')) {
+      throw new Error('Aborted')
+    }
+
     const result = await removeLinkedChannel(loginToken, props.channel.defaultUserId, transferRanks, relinkChatExperience, relinkDoantions)
 
     if (result.success) {
@@ -83,23 +100,21 @@ function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }
     <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
       <ApiRequestTrigger onRequest={removeLink}>
         {(onMakeRequest, response, loading, error) => <>
-          <td>
-            <div style={{ display: 'flex' }}>
-              <input type="checkbox" name="Transfer ranks" checked={transferRanks} onChange={() => setTransferRanks(!transferRanks)} />
-              <label>Transfer ranks</label>
-            </div>
-            <div style={{ display: 'flex' }}>
-              <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
-              <label>Relink chat experience</label>
-            </div>
-            <div style={{ display: 'flex' }}>
-              <input type="checkbox" name="Relink donations" checked={relinkDoantions} onChange={() => setRelinkDonations(!relinkDoantions)} />
-              <label>Relink donations</label>
-            </div>
-            <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
-            {response != null && <div>Success!</div>}
-            {error}
-          </td>
+          <div style={{ display: 'flex' }}>
+            <input type="checkbox" name="Transfer ranks" checked={transferRanks} onChange={() => setTransferRanks(!transferRanks)} />
+            <label>Transfer ranks</label>
+          </div>
+          <div style={{ display: 'flex' }}>
+            <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
+            <label>Relink chat experience</label>
+          </div>
+          <div style={{ display: 'flex' }}>
+            <input type="checkbox" name="Relink donations" checked={relinkDoantions} onChange={() => setRelinkDonations(!relinkDoantions)} />
+            <label>Relink donations</label>
+          </div>
+          <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
+          {response != null && <div>Success!</div>}
+          {error}
         </>}
       </ApiRequestTrigger>
     </div>

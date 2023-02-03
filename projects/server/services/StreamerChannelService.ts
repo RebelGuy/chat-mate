@@ -4,6 +4,7 @@ import { getUserName } from '@rebel/server/services/ChannelService'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { nonNull, single } from '@rebel/server/util/arrays'
@@ -21,6 +22,7 @@ type Deps = Dependencies<{
   eventDispatchService: EventDispatchService
   accountStore: AccountStore
   channelStore: ChannelStore
+  livestreamStore: LivestreamStore
 }>
 
 export default class StreamerChannelService extends ContextClass {
@@ -29,6 +31,7 @@ export default class StreamerChannelService extends ContextClass {
   private readonly eventDispatchService: EventDispatchService
   private readonly channelStore: ChannelStore
   private readonly accountStore: AccountStore
+  private readonly livestreamStore: LivestreamStore
 
   constructor (deps: Deps) {
     super()
@@ -37,6 +40,7 @@ export default class StreamerChannelService extends ContextClass {
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.channelStore = deps.resolve('channelStore')
     this.accountStore = deps.resolve('accountStore')
+    this.livestreamStore = deps.resolve('livestreamStore')
   }
 
   /** Gets the list of all streamers and their primary Twitch channel's name, for those that have a primary Twitch channel set.  */
@@ -56,6 +60,11 @@ export default class StreamerChannelService extends ContextClass {
    * @throws {@link ForbiddenError}: When the streamer is not linked to the youtube or twitch channel.
   */
   public async setPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch', youtubeOrTwitchChannelId: number) {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    if (activeLivestream != null) {
+      throw new Error('Cannot set the primary channel because a livestream is currently in progress. Please try again later.')
+    }
+
     const streamer = await this.streamerStore.getStreamerById(streamerId)
     const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer!.registeredUserId]).then(single)
     const userOwnedChannels = await this.channelStore.getConnectedUserOwnedChannels([registeredUser.aggregateChatUserId]).then(single)
@@ -81,6 +90,11 @@ export default class StreamerChannelService extends ContextClass {
   }
 
   public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    if (activeLivestream != null) {
+      throw new Error('Cannot unset the primary channel because a livestream is currently in progress. Please try again later.')
+    }
+
     let userChannel: UserChannel | null
     if (platform === 'youtube') {
       userChannel = await this.streamerChannelStore.deleteStreamerYoutubeChannelLink(streamerId)

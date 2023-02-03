@@ -185,12 +185,16 @@ export default class StreamerController extends ControllerBase {
 
   @GET
   @Path('/primaryChannels')
-  @PreProcessor(requireStreamer)
   public async getPrimaryChannels (): Promise<GetPrimaryChannelsResponse> {
     const builder = this.registerResponseBuilder<GetPrimaryChannelsResponse>('POST /primaryChannels')
 
     try {
-      const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([this.getStreamerId()]).then(single)
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamer.id]).then(single)
       return builder.success({
         youtubeChannelId: primaryChannels.youtubeChannel?.platformInfo.channel.id ?? null,
         twitchChannelId: primaryChannels.twitchChannel?.platformInfo.channel.id ?? null
@@ -202,7 +206,6 @@ export default class StreamerController extends ControllerBase {
 
   @POST
   @Path('/primaryChannels/:platform/:channelId')
-  @PreProcessor(requireStreamer)
   public async setPrimaryChannel (
     @PathParam('platform') platform: string,
     @PathParam('channelId') channelId: number
@@ -215,11 +218,16 @@ export default class StreamerController extends ControllerBase {
 
     platform = platform.toLowerCase()
     if (platform !== 'youtube' && platform !== 'twitch') {
-      return builder.failure(400, 'Platform must be either `youtube` or `twitch`')
+      return builder.failure(400, 'Platform must be either `youtube` or `twitch`.')
     }
 
     try {
-      await this.streamerChannelService.setPrimaryChannel(this.getStreamerId(), platform as 'youtube' | 'twitch', channelId)
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      await this.streamerChannelService.setPrimaryChannel(streamer.id, platform as 'youtube' | 'twitch', channelId)
       return builder.success({})
     } catch (e: any) {
       if (e instanceof ForbiddenError) {
@@ -232,7 +240,6 @@ export default class StreamerController extends ControllerBase {
 
   @DELETE
   @Path('/primaryChannels/:platform')
-  @PreProcessor(requireStreamer)
   public async unsetPrimaryChannel (
     @PathParam('platform') platform: string
   ): Promise<UnsetPrimaryChannelResponse> {
@@ -244,11 +251,16 @@ export default class StreamerController extends ControllerBase {
 
     platform = platform.toLowerCase()
     if (platform !== 'youtube' && platform !== 'twitch') {
-      return builder.failure(400, 'Platform must be either `youtube` or `twitch`')
+      return builder.failure(400, 'Platform must be either `youtube` or `twitch`.')
     }
 
     try {
-      await this.streamerChannelService.unsetPrimaryChannel(this.getStreamerId(), platform as 'youtube' | 'twitch')
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      await this.streamerChannelService.unsetPrimaryChannel(streamer.id, platform as 'youtube' | 'twitch')
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

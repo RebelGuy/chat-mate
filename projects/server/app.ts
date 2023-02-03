@@ -302,7 +302,7 @@ Server.buildServices(app,
 // error handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   // any errors reaching here are unhandled - just return a 500
-  logContext.logError('Express encountered error for the request at ' + req.url + ':', err)
+  logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
 
   if (!res.headersSent) {
     res.sendStatus(500)

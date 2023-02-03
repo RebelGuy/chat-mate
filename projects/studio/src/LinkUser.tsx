@@ -23,7 +23,13 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
   // for some reason the output type is not accepted when these are put in-line, but works fine when saved as a variable first
   const onGetLinkedChannels = (loginToken: string) => getLinkedChannels(loginToken, props.admin_selectedAggregateUserId)
   const onGetLinkHistory = (loginToken: string) => getLinkHistory(loginToken, props.admin_selectedAggregateUserId)
-  const onAddLinkedChannel = (loginToken: string) => addLinkedChannel(loginToken, selectedAggregateUserId!, props.admin_selectedDefaultUserId!)
+  const onAddLinkedChannel = (loginToken: string) => {
+    if (!window.confirm('Are you sure you wish to link the user?')) {
+      throw new Error('Aborted')
+    }
+
+    return addLinkedChannel(loginToken, selectedAggregateUserId!, props.admin_selectedDefaultUserId!)
+  }
 
   return (
     <div>

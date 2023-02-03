@@ -7,6 +7,7 @@ import { SERVER_URL } from '@rebel/studio/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
+import { GenericObject } from '@rebel/server/types'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -107,11 +108,11 @@ export async function getPrimaryChannels (loginToken: string): Promise<GetPrimar
 }
 
 export async function setPrimaryChannel (loginToken: string, platform: 'youtube' | 'twitch', channelId: number): Promise<SetPrimaryChannelResponse> {
-  return await POST(`/streamer/primaryChannels/${platform}/${channelId}`, loginToken)
+  return await POST(`/streamer/primaryChannels/${platform}/${channelId}`, null, loginToken)
 }
 
 export async function unsetPrimaryChannel (loginToken: string, platform: 'youtube' | 'twitch'): Promise<UnsetPrimaryChannelResponse> {
-  return await DELETE(`/streamer/primaryChannels/${platform}`, loginToken)
+  return await DELETE(`/streamer/primaryChannels/${platform}`, null, loginToken)
 }
 
 export async function setStreamlabsSocketToken (loginToken: string, streamer: string, socketToken: string | null): Promise<SetWebsocketTokenResponse> {
@@ -151,26 +152,26 @@ export async function getLinkHistory (loginToken: string, admin_aggregateUserId?
 }
 
 export async function createLinkToken (loginToken: string, externalId: string): Promise<CreateLinkTokenResponse> {
-  return await POST(`/user/link/token?externalId=${externalId}`, undefined, loginToken)
+  return await POST(`/user/link/token?externalId=${externalId}`, null, loginToken)
 }
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
-  return await request('GET', path, undefined, loginToken, streamer)
+  return await request('GET', path, null, loginToken, streamer)
 }
 
-async function POST (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+async function POST (path: string, requestData: GenericObject | null, loginToken?: string, streamer?: string): Promise<any> {
   return await request('POST', path, requestData, loginToken, streamer)
 }
 
-async function PATCH (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+async function PATCH (path: string, requestData: GenericObject | null, loginToken?: string, streamer?: string): Promise<any> {
   return await request('PATCH', path, requestData, loginToken, streamer)
 }
 
-async function DELETE (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+async function DELETE (path: string, requestData: GenericObject | null, loginToken?: string, streamer?: string): Promise<any> {
   return await request('DELETE', path, requestData, loginToken, streamer)
 }
 
-async function request (method: string, path: string, requestData: any | undefined, loginToken: string | undefined, streamer: string | undefined) {
+async function request (method: string, path: string, requestData: GenericObject | null, loginToken: string | undefined, streamer: string | undefined) {
   let headers: HeadersInit = {
     'Content-Type': 'application/json'
   }
