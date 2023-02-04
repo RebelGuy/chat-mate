@@ -1,12 +1,12 @@
-import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { assertUnreachable } from '@rebel/server/util/typescript'
 import { removeLinkedChannel, setPrimaryChannel, unsetPrimaryChannel } from '@rebel/studio/api'
 import * as React from 'react'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/server/util/arrays'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 
-export default function LinkedChannels (props: { channels: PublicChannelInfo[], primaryChannels: { youtubeChannelId: number | null, twitchChannelId: number | null }, onChange: () => void }) {
+export default function LinkedChannels (props: { channels: PublicChannel[], primaryChannels: { youtubeChannelId: number | null, twitchChannelId: number | null }, onChange: () => void }) {
   if (props.channels.length === 0) {
     return <>
       <h3>Linked Channels</h3>
@@ -16,8 +16,8 @@ export default function LinkedChannels (props: { channels: PublicChannelInfo[], 
     </>
   }
 
-  const isPrimaryChannel = (channel: PublicChannelInfo) => (channel.platform === 'youtube' && channel.channelId === props.primaryChannels.youtubeChannelId) || (channel.platform === 'twitch' && channel.channelId === props.primaryChannels.twitchChannelId)
-  const canAddPrimaryChannel = (channel: PublicChannelInfo) => (channel.platform === 'youtube' && props.primaryChannels.youtubeChannelId == null) || (channel.platform === 'twitch' && props.primaryChannels.twitchChannelId == null)
+  const isPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && channel.channelId === props.primaryChannels.youtubeChannelId) || (channel.platform === 'twitch' && channel.channelId === props.primaryChannels.twitchChannelId)
+  const canAddPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && props.primaryChannels.youtubeChannelId == null) || (channel.platform === 'twitch' && props.primaryChannels.twitchChannelId == null)
   
   return <>
     <h3>Linked Channels</h3>
@@ -29,7 +29,7 @@ export default function LinkedChannels (props: { channels: PublicChannelInfo[], 
         <RequireRank admin><th>Admin actions</th></RequireRank>
       </tr>
       {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map(c => <tr style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
-        <td><a href={getChannelUrl(c)}>{c.channelName}</a></td>
+        <td><a href={getChannelUrl(c)}>{c.displayName}</a></td>
         <td>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</td>
         <RequireRank anyOwner>
           <td>
@@ -46,7 +46,7 @@ export default function LinkedChannels (props: { channels: PublicChannelInfo[], 
   </>
 }
 
-function ChangePrimaryChannel (props: { channel: PublicChannelInfo, isPrimaryChannel: boolean, canAddPrimary: boolean, onChange: () => void }) {
+function ChangePrimaryChannel (props: { channel: PublicChannel, isPrimaryChannel: boolean, canAddPrimary: boolean, onChange: () => void }) {
   if (!props.isPrimaryChannel && !props.canAddPrimary) {
     return null
   }
@@ -77,7 +77,7 @@ function ChangePrimaryChannel (props: { channel: PublicChannelInfo, isPrimaryCha
   </>
 }
 
-function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }) {
+function UnlinkUser (props: { channel: PublicChannel, onChange: () => void }) {
   const [transferRanks, setTransferRanks] = React.useState(true)
   const [relinkChatExperience, setRelinkChatExperience] = React.useState(true)
   const [relinkDoantions, setRelinkDonations] = React.useState(true)
@@ -121,7 +121,7 @@ function UnlinkUser (props: { channel: PublicChannelInfo, onChange: () => void }
   </>
 }
 
-function getChannelUrl (channel: PublicChannelInfo) {
+function getChannelUrl (channel: PublicChannel) {
   if (channel.platform === 'youtube') {
     return `https://www.youtube.com/channel/${channel.externalIdOrUserName}`
   } else if (channel.platform === 'twitch') {
