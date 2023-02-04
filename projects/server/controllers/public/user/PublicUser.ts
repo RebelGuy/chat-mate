@@ -1,6 +1,6 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
-import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
 
@@ -12,7 +12,7 @@ export type PublicUser = PublicObject<{
   registeredUser: PublicRegisteredUser | null
 
   /** Current information about the user's active channel. */
-  channelInfo: PublicObject<PublicChannelInfo>
+  channel: PublicObject<PublicChannel>
 
   /** Current level of the user. */
   levelInfo: PublicObject<PublicLevelInfo>

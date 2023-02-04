@@ -17,7 +17,7 @@ import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/
 import { addTime } from '@rebel/server/util/datetime'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { getUserName } from '@rebel/server/services/ChannelService'
+import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 
 export type GetUserRanksResponse = ApiResponse<{ ranks: PublicUserRank[] }>
 
@@ -251,10 +251,14 @@ export default class RankController extends ControllerBase {
       }
 
       return {
-        channelId: channelId,
-        platform: platform,
+        channel: {
+          channelId: channelId,
+          defaultUserId: channel.defaultUserId,
+          externalIdOrUserName: getExternalIdOrUserName(channel),
+          platform: platform,
+          displayName: getUserName(channel)
+        },
         error: error,
-        channelName: getUserName(channel)
       }
     }
 

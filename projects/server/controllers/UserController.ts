@@ -1,7 +1,6 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
-import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
@@ -35,7 +34,7 @@ export type SearchUserResponse = ApiResponse<{
 
 export type GetLinkedChannelsResponse = ApiResponse<{
   registeredUser: PublicRegisteredUser
-  channels: PublicChannelInfo[]
+  channels: PublicChannel[]
 }>
 
 export type AddLinkedChannelResponse = ApiResponse<EmptyObject>
@@ -110,12 +109,14 @@ export default class UserController extends ControllerBase {
           matchedChannel: {
             channelId: match.platformInfo.channel.id,
             defaultUserId: match.defaultUserId,
+            externalIdOrUserName: getExternalIdOrUserName(match),
             platform: match.platformInfo.platform,
             displayName: getUserName(match)
           },
           allChannels: channels.channels.map(c => ({
             channelId: c.platformInfo.channel.id,
             defaultUserId: c.defaultUserId,
+            externalIdOrUserName: getExternalIdOrUserName(match),
             platform: c.platformInfo.platform,
             displayName: getUserName(c)
           }))
@@ -188,7 +189,8 @@ export default class UserController extends ControllerBase {
             channelId: c.platformInfo.channel.id,
             defaultUserId: c.defaultUserId,
             platform: c.platformInfo.platform,
-            displayName: getUserName(c)
+            displayName: getUserName(c),
+            externalIdOrUserName: getExternalIdOrUserName(c)
           }))
         }
       })
@@ -221,12 +223,12 @@ export default class UserController extends ControllerBase {
 
       return builder.success({
         registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
-        channels: channels.channels.map<PublicChannelInfo>(channel => ({
+        channels: channels.channels.map<PublicChannel>(channel => ({
           channelId: channel.platformInfo.channel.id,
           defaultUserId: channel.defaultUserId,
           externalIdOrUserName: getExternalIdOrUserName(channel),
           platform: channel.platformInfo.platform,
-          channelName: getUserName(channel)
+          displayName: getUserName(channel)
         }))
       })
     } catch (e: any) {

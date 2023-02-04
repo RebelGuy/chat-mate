@@ -13,7 +13,7 @@ import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { getUserName } from '@rebel/server/services/ChannelService'
+import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 
 export type GetSinglePunishment = ApiResponse<{ punishment: PublicObject<PublicUserRank> }>
 
@@ -267,10 +267,14 @@ export default class PunishmentController extends ControllerBase {
       }
 
       return {
-        channelId: channelId,
-        platform: platform,
+        channel: {
+          channelId: channelId,
+          defaultUserId: channel.defaultUserId,
+          externalIdOrUserName: getExternalIdOrUserName(channel),
+          platform: platform,
+          displayName: getUserName(channel)
+        },
         error: error,
-        channelName: getUserName(channel)
       }
     }
 

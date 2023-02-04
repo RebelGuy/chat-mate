@@ -7,7 +7,7 @@ import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/Public
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
-import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { registeredUserToPublic } from '@rebel/server/models/user'
@@ -302,12 +302,12 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     throw new Error(`Cannot determine platform of chat item ${chat.id} because both the channel and twitchChannel are null`)
   }
 
-  const userInfo: PublicChannelInfo = {
+  const channel: PublicChannel = {
     channelId: userChannel.platformInfo.channel.id,
     defaultUserId: chat.userId,
     externalIdOrUserName: getExternalIdOrUserName(userChannel),
     platform: userChannel.platformInfo.platform,
-    channelName: getUserName(userChannel),
+    displayName: getUserName(userChannel),
   }
 
   const levelInfo: PublicLevelInfo = {
@@ -324,7 +324,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     author: {
       primaryUserId: getPrimaryUserId(chat.user),
       registeredUser: registeredUserToPublic(registeredUser),
-      channelInfo: userInfo,
+      channel: channel,
       levelInfo,
       activeRanks: activeRanks
     }
