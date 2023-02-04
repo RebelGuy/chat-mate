@@ -19,6 +19,8 @@ import { UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebe
 import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
 import { nameof } from '@rebel/server/_test/utils'
 
+const MAX_CHANNEL_LINKS_ALLOWED = 10
+
 export type LinkLog = [time: Date, step: string, warnings: number]
 
 export type UnlinkUserOptions = {
@@ -91,6 +93,7 @@ export default class LinkService extends ContextClass {
     const linkAttemptId = await this.linkStore.startLinkAttempt(defaultUserId, aggregateUserId)
     let cumWarnings = 0
     let logs: LinkLog[] = [[new Date(), 'Start', cumWarnings]]
+    let hasLinkedUser = false
 
     try {
       if (linkToken != null) {
@@ -99,6 +102,13 @@ export default class LinkService extends ContextClass {
 
       await this.linkStore.linkUser(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(LinkStore, 'linkUser'), cumWarnings])
+      hasLinkedUser = true
+
+      // note that the first user represents the aggregate user.
+      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
+      if (connectedUserIds.length > MAX_CHANNEL_LINKS_ALLOWED + 1) {
+        throw new Error(`Only a maximum of ${MAX_CHANNEL_LINKS_ALLOWED} channels can be linked to an account.`)
+      }
 
       await this.experienceStore.invalidateSnapshots([defaultUserId, aggregateUserId])
       logs.push([new Date(), nameof(ExperienceStore, 'invalidateSnapshots'), cumWarnings])
@@ -112,7 +122,6 @@ export default class LinkService extends ContextClass {
       await this.rankStore.relinkAdminUsers(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(RankStore, 'relinkAdminUsers'), cumWarnings])
 
-      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
       if (connectedUserIds.length === 2) {
         // this is a new link - life will be simple
         // don't need to re-apply external punishments, re-apply donations, or re-calculate chat experience data
@@ -142,20 +151,18 @@ export default class LinkService extends ContextClass {
     } catch (e: any) {
       this.logService.logError(this, `[${linkAttemptId}] Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
 
-      if (e instanceof UserAlreadyLinkedToAggregateUserError) {
-        if (linkToken == null) {
-          // don't pollute the link history by admin-triggered link attempts failing due to already-linked errors
-          await this.linkStore.deleteLinkAttempt(linkAttemptId)
-        } else {
-          await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
-        }
+      if (e instanceof UserAlreadyLinkedToAggregateUserError && linkToken == null) {
+        // don't pollute the link history by admin-triggered link attempts failing due to already-linked errors
+        await this.linkStore.deleteLinkAttempt(linkAttemptId)
       } else {
-        try {
-          await this.linkStore.unlinkUser(defaultUserId)
-          logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
-          this.logService.logInfo(this, `Successfully rolled back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
-        } catch (innerErr: any) {
-          this.logService.logInfo(this, `Failed to roll back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+        if (hasLinkedUser) {
+          try {
+            await this.linkStore.unlinkUser(defaultUserId)
+            logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
+            this.logService.logInfo(this, `Successfully rolled back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+          } catch (innerErr: any) {
+            this.logService.logInfo(this, `Failed to roll back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+          }
         }
 
         await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)

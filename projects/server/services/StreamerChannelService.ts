@@ -62,7 +62,7 @@ export default class StreamerChannelService extends ContextClass {
   public async setPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch', youtubeOrTwitchChannelId: number) {
     const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream != null) {
-      throw new Error('Cannot set the primary channel because a livestream is currently in progress. Please try again later.')
+      throw new Error('Cannot set the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
     const streamer = await this.streamerStore.getStreamerById(streamerId)

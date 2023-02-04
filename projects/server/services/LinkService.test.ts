@@ -110,6 +110,22 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
 
+  test('Fails if the maximum number of channels have been linked', async () => {
+    const defaultUserId = 50
+    const aggregateUserId = 12
+    const linkAttemptId = 2
+    const connectedUserIds = [aggregateUserId, defaultUserId, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    mockLinkStore.startLinkAttempt.calledWith(defaultUserId, aggregateUserId).mockResolvedValue(linkAttemptId)
+    mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
+
+    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId, 'token')).rejects.toThrow()
+
+    expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
+    expect(single2(mockLinkStore.unlinkUser.mock.calls)).toEqual(defaultUserId)
+    expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), expect.any(String)])
+  })
+
   test('Mod rank external reconciliation', async () => {
     const defaultUserId1 = 5
     const defaultUserId2 = 6

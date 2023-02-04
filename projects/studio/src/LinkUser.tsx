@@ -10,6 +10,7 @@ import * as React from 'react'
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
   const [updateToken, setUpdateToken] = React.useState(Date.now())
+  const [linkedCount, setLinkedCount] = React.useState(0)
 
   // the user to link to
   const [selectedAggregateUserId, setSelectedAggregateUserId] = React.useState<number | null>()
@@ -21,8 +22,16 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
   const regenerateUpdateToken = () => setUpdateToken(Date.now())
 
   // for some reason the output type is not accepted when these are put in-line, but works fine when saved as a variable first
-  const onGetLinkedChannels = (loginToken: string) => getLinkedChannels(loginToken, props.admin_selectedAggregateUserId)
   const onGetLinkHistory = (loginToken: string) => getLinkHistory(loginToken, props.admin_selectedAggregateUserId)
+  const onGetLinkedChannels = async (loginToken: string) => {
+    const response = await getLinkedChannels(loginToken, props.admin_selectedAggregateUserId)
+
+    if (response.success) {
+      setLinkedCount(10)
+    }
+    
+    return response
+  }
   const onAddLinkedChannel = (loginToken: string) => {
     if (!window.confirm('Are you sure you wish to link the user?')) {
       throw new Error('Aborted')
@@ -71,7 +80,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
           {(response, loadingNode, errorNode) => <>
             {response && <>
               <LinkHistory data={response} />
-              {props.admin_selectedAggregateUserId == null && <CreateLinkToken onCreated={regenerateUpdateToken} />}
+              {props.admin_selectedAggregateUserId == null && <CreateLinkToken linkedCount={linkedCount} onCreated={regenerateUpdateToken} />}
             </>}
             {loadingNode}
             {errorNode}
@@ -90,7 +99,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
   )
 }
 
-function CreateLinkToken (props: { onCreated: () => void }) {
+function CreateLinkToken (props: { linkedCount: number, onCreated: () => void }) {
   const [channelInput, setChannelInput] = React.useState('')
   const { channelId, error: validationError } = validateChannel(channelInput)
   const showError = channelInput.length > 0 && validationError != null
@@ -110,8 +119,10 @@ function CreateLinkToken (props: { onCreated: () => void }) {
 
   return <div style={{ marginTop: 24 }}>
     <div>You can link a channel to your account to manage your profile and access other exclusive features.</div>
-    <div>If linking multiple channels, all data (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
-    <div style={{ color: 'orange' }}>Each channel can only be linked to one account. Links cannot be undone.</div>
+    <div>If linking multiple channels, all existing data you have acquired on those channels (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
+    <div>You can link a maximum of 10 channels across YouTube and Twitch.</div>
+    <div style={{ color: 'red' }}>Each channel can only be linked once - make sure this is the account you want to link to. Links cannot be undone.</div>
+    {props.linkedCount >= 10 && <div style={{ color: 'red', fontWeight: 700 }}>You have linked the maximum allowd number of channels.</div>}
     <ApiRequestTrigger onRequest={onCreateLinkToken}>
       {(onMakeRequest, response, loadingNode, errorNode) =>
         <>
@@ -119,7 +130,7 @@ function CreateLinkToken (props: { onCreated: () => void }) {
           {showError && <div color="red">{validationError}</div>}
           {loadingNode}
           {errorNode}
-          <button type="button" disabled={loadingNode != null || showError} onClick={onMakeRequest}>Submit</button>
+          <button type="button" disabled={loadingNode != null || showError || props.linkedCount >= 10} onClick={onMakeRequest}>Submit</button>
         </>
       }
     </ApiRequestTrigger>
