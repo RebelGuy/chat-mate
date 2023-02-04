@@ -65,7 +65,7 @@ export default class ChatService extends ContextClass {
     this.eventDispatchService.onData('chatItem', data => this.onNewChatItem(data, data.streamerId))
   }
 
-  /** Returns true if the chat item was successfully added (regardless of whether side effects completed successfully or not). */
+  /** Returns true if the chat item was new and added to the DB, and false if it wasn't because it already existed. Throws if something went wrong while adding the chat item. */
   public async onNewChatItem (item: ChatItem, streamerId: number): Promise<boolean> {
     let message: ChatMessage | null = null
     let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
@@ -118,6 +118,7 @@ export default class ChatService extends ContextClass {
 
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)
+      throw e
     }
 
     const command = this.commandHelpers.extractNormalisedCommand(item.messageParts)

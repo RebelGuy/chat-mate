@@ -242,7 +242,7 @@ export default () => {
       expect(result).toEqual(expectObject(chatMessage!))
     })
 
-    test('duplicate chat id ignored', async () => {
+    test('returns null if the chat message already exists', async () => {
       const chatItem = makeYtChatItem(text1)
       await db.chatMessage.create({ data: {
         streamer: { connect: { id: streamer1, }},
@@ -256,8 +256,7 @@ export default () => {
       const result = await chatStore.addChat(chatItem, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       await expectRowCount(db.chatMessage).toBe(1)
-      const savedChatMessage = await db.chatMessage.findFirst()
-      expect(result).toEqual(expectObject(savedChatMessage!))
+      expect(result).toBe(null)
     })
 
     test('adds chat without connecting to livestream if no active livestream', async () => {

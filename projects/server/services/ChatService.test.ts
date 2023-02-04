@@ -187,11 +187,11 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
   })
 
-  test('returns false if unable to add chat item, and does not attempt to call services', async () => {
+  test('returns false if chat item already exists, and does not attempt to call services', async () => {
     const streamerId = 2;
     (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
-    mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockRejectedValue(new Error('Test'))
+    mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(null)
 
     const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
 

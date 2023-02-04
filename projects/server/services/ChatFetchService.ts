@@ -107,10 +107,12 @@ export default class ChatFetchService extends ContextClass {
 
         let anyFailed = false
         for (const item of chatItems) {
-          const success = await this.chatService.onNewChatItem(item, livestream.streamerId)
-          if (success) {
-            hasNewChat = true
-          } else {
+          try {
+            const addedNewChat = await this.chatService.onNewChatItem(item, livestream.streamerId)
+            if (addedNewChat) {
+              hasNewChat = true
+            }
+          } catch (e: any) {
             anyFailed = true
           }
         }
