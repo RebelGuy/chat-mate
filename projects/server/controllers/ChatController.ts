@@ -38,7 +38,11 @@ export default class ChatController extends ControllerBase {
   ): Promise<GetChatResponse> {
     const builder = this.registerResponseBuilder<GetChatResponse>('GET /')
     try {
-      return await this.implementation.getChat({ builder, since, limit })
+      return await this.implementation.getChat({
+        builder,
+        since,
+        limit: limit == null || limit > 100 ? 100 : limit
+      })
     } catch (e: any) {
       return builder.failure(e)
     }
