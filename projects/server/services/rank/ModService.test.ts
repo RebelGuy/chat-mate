@@ -12,12 +12,14 @@ import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server
 import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
+import UserService from '@rebel/server/services/UserService'
 
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
 let mockRankStore: MockProxy<RankStore>
 let mockTwurpleService: MockProxy<TwurpleService>
+let mockUserService: MockProxy<UserService>
 let modService: ModService
 
 beforeEach(() => {
@@ -26,6 +28,7 @@ beforeEach(() => {
   mockMasterchatProxyService = mock()
   mockRankStore = mock()
   mockTwurpleService = mock()
+  mockUserService = mock()
 
   modService = new ModService(new Dependencies({
     channelStore: mockChannelStore,
@@ -33,7 +36,8 @@ beforeEach(() => {
     logService: mock(),
     masterchatProxyService: mockMasterchatProxyService,
     rankStore: mockRankStore,
-    twurpleService: mockTwurpleService
+    twurpleService: mockTwurpleService,
+    userService: mockUserService
   }))
 })
 
@@ -136,6 +140,12 @@ describe(nameof(ModService, 'setModRank'), () => {
     const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, false, null)
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: expect.anything() }))
+  })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => modService.setModRank(primaryUserId, streamerId1, 1, true, '')).rejects.toThrow()
   })
 })
 

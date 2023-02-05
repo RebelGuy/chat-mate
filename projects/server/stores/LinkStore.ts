@@ -87,6 +87,17 @@ export default class LinkStore extends ContextClass {
     })
   }
 
+  public async isLinkInProgress (anyUserId: number): Promise<boolean> {
+    const linkAttempt = await this.db.linkAttempt.findFirst({ where: {
+      OR: [
+        { aggregateChatUserId: anyUserId, endTime: null },
+        { defaultChatUserId: anyUserId, endTime: null }
+      ]
+    }})
+
+    return linkAttempt != null
+  }
+
   /** Links the default user to the aggregate user.
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
   */

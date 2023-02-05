@@ -83,6 +83,7 @@ import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import AccountService from '@rebel/server/services/AccountService'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
+import UserService from '@rebel/server/services/UserService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -161,13 +162,14 @@ const globalContext = ContextProvider.create()
   .withClass('channelService', ChannelService)
   .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
   .withClass('twurpleService', TwurpleService)
+  .withClass('linkStore', LinkStore)
+  .withClass('userService', UserService)
   .withClass('punishmentService', PunishmentService)
   .withClass('experienceService', ExperienceService)
   .withClass('customEmojiStore', CustomEmojiStore)
   .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
   .withClass('emojiService', EmojiService)
   .withClass('commandStore', CommandStore)
-  .withClass('linkStore', LinkStore)
   .withClass('donationStore', DonationStore)
   .withClass('modService', ModService)
   .withClass('rankService', RankService)

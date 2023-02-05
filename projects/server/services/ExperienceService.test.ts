@@ -20,6 +20,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import AccountService from '@rebel/server/services/AccountService'
+import UserService from '@rebel/server/services/UserService'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -31,6 +32,7 @@ let mockPunishmentService: MockProxy<PunishmentService>
 let mockAccountStore: MockProxy<AccountStore>
 let mockRankHelpers: MockProxy<RankHelpers>
 let mockAccountService: MockProxy<AccountService>
+let mockUserService: MockProxy<UserService>
 let experienceService: ExperienceService
 
 beforeEach(() => {
@@ -44,6 +46,7 @@ beforeEach(() => {
   mockAccountStore = mock<AccountStore>()
   mockRankHelpers = mock<RankHelpers>()
   mockAccountService = mock<AccountService>()
+  mockUserService = mock<UserService>()
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -55,7 +58,8 @@ beforeEach(() => {
     punishmentService: mockPunishmentService,
     accountStore: mockAccountStore,
     rankHelpers: mockRankHelpers,
-    accountService: mockAccountService
+    accountService: mockAccountService,
+    userService: mockUserService
   }))
 })
 
@@ -367,6 +371,13 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
     expect(call).toEqual<typeof call>([streamerId, primaryUserId, loggedInRegisteredUserId, -100, 'Test'])
     expect(result).toEqual<UserLevel>({ primaryUserId: primaryUserId, level: { level: 0, levelProgress: 0 as any, totalExperience: 0 }})
+  })
+
+  test('Throws if the user is currently busy', async () => {
+    const primaryUserId = 5
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => experienceService.modifyExperience(primaryUserId, 1, 1, 1, '')).rejects.toThrow()
   })
 })
 

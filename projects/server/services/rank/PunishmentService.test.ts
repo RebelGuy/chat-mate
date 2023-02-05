@@ -16,6 +16,7 @@ import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations }
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import UserService from '@rebel/server/services/UserService'
 
 const primaryUserId = 2
 const streamerId1 = 3
@@ -134,6 +135,7 @@ let mockChatStore: MockProxy<ChatStore>
 let mockTwurpleService: MockProxy<TwurpleService>
 let mockYoutubeTimeoutRefreshService: MockProxy<YoutubeTimeoutRefreshService>
 let mockStreamerStore: MockProxy<StreamerStore>
+let mockUserService: MockProxy<UserService>
 let punishmentService: PunishmentService
 
 beforeEach(() => {
@@ -144,6 +146,7 @@ beforeEach(() => {
   mockTwurpleService = mock()
   mockYoutubeTimeoutRefreshService = mock()
   mockStreamerStore = mock()
+  mockUserService = mock()
 
   punishmentService = new PunishmentService(new Dependencies({
     logService: mock(),
@@ -153,7 +156,8 @@ beforeEach(() => {
     chatStore: mockChatStore,
     twurpleService: mockTwurpleService,
     youtubeTimeoutRefreshService: mockYoutubeTimeoutRefreshService,
-    streamerStore: mockStreamerStore
+    streamerStore: mockStreamerStore,
+    userService: mockUserService
   }))
 })
 
@@ -262,6 +266,12 @@ describe(nameof(PunishmentService, 'banUser'), () => {
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => punishmentService.banUser(primaryUserId, streamerId1, 1, '')).rejects.toThrow()
+  })
 })
 
 describe(nameof(PunishmentService, 'banUserExternal'), () => {
@@ -343,6 +353,12 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
 
     await expect(() => punishmentService.muteUser(1, streamerId1,loggedInRegisteredUserId,  null, null)).rejects.toThrowError(error)
   })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => punishmentService.muteUser(primaryUserId, streamerId1, 1, '', 1)).rejects.toThrow()
+  })
 })
 
 describe(nameof(PunishmentService, 'timeoutUser'), () => {
@@ -412,6 +428,12 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     const result = await punishmentService.timeoutUser(1, streamerId1, loggedInRegisteredUserId, null, 1)
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
+  })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => punishmentService.timeoutUser(primaryUserId, streamerId1, 1, '', 1)).rejects.toThrow()
   })
 })
 
@@ -518,6 +540,12 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
   })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => punishmentService.unbanUser(primaryUserId, streamerId1, 1, '')).rejects.toThrow()
+  })
 })
 
 
@@ -536,6 +564,12 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
     mockRankStore.removeUserRank.calledWith(expect.anything()).mockRejectedValue(error)
 
     await expect(() => punishmentService.unmuteUser(1, streamerId1, loggedInRegisteredUserId, null)).rejects.toThrowError(error)
+  })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => punishmentService.unmuteUser(primaryUserId, streamerId1, 1, '')).rejects.toThrow()
   })
 })
 
@@ -581,6 +615,12 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     const result = await punishmentService.untimeoutUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: error }))
+  })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => punishmentService.untimeoutUser(primaryUserId, streamerId1, 1, '')).rejects.toThrow()
   })
 })
 

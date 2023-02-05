@@ -4,6 +4,7 @@ import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
+import UserService from '@rebel/server/services/UserService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
@@ -16,6 +17,7 @@ type Deps = Dependencies<{
   twurpleService: TwurpleService
   chatStore: ChatStore
   logService: LogService
+  userService: UserService
 }>
 
 export default class ModService extends ContextClass {
@@ -27,6 +29,7 @@ export default class ModService extends ContextClass {
   private readonly twurpleService: TwurpleService
   private readonly chatStore: ChatStore
   private readonly logService: LogService
+  private readonly userService: UserService
 
   constructor (deps: Deps) {
     super()
@@ -37,6 +40,7 @@ export default class ModService extends ContextClass {
     this.twurpleService = deps.resolve('twurpleService')
     this.chatStore = deps.resolve('chatStore')
     this.logService = deps.resolve('logService')
+    this.userService = deps.resolve('userService')
   }
 
   // todo: currently, ChatMate is assumed to be the source of truth of rank data.
@@ -44,6 +48,10 @@ export default class ModService extends ContextClass {
 
   /** Add or remove the mod user-rank and notify the external platforms. Doesn't throw. */
   public async setModRank (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, isMod: boolean, message: string | null): Promise<SetActionRankResult> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error(`Cannot ${isMod ? 'mod' : 'unmod'} the user at this time. Please try again later.`)
+    }
+
     const internalRankResult = await this.setInternalModRank(primaryUserId, streamerId, loggedInRegisteredUserId, isMod, message)
 
     // we have no way of knowing the _current_ external state (only from the previous message sent from that channel), so, to be safe, apply the rank

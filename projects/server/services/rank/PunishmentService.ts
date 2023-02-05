@@ -14,6 +14,7 @@ import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import UserService from '@rebel/server/services/UserService'
 
 // It is not an issue on Twitch, but on Youtube we come across the interesting problem of being unable to check
 // the current list of on-platform punishments. This means that, when a punishment occurrs, the platform data
@@ -37,6 +38,7 @@ type Deps = Dependencies<{
   chatStore: ChatStore
   youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
   streamerStore: StreamerStore
+  userService: UserService
 }>
 
 export default class PunishmentService extends ContextClass {
@@ -50,6 +52,7 @@ export default class PunishmentService extends ContextClass {
   private readonly chatStore: ChatStore
   private readonly youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
   private readonly streamerStore: StreamerStore
+  private readonly userService: UserService
 
   constructor (deps: Deps) {
     super()
@@ -62,6 +65,7 @@ export default class PunishmentService extends ContextClass {
     this.chatStore = deps.resolve('chatStore')
     this.youtubeTimeoutRefreshService = deps.resolve('youtubeTimeoutRefreshService')
     this.streamerStore = deps.resolve('streamerStore')
+    this.userService = deps.resolve('userService')
   }
 
   public override async initialise () {
@@ -89,6 +93,10 @@ export default class PunishmentService extends ContextClass {
   }
 
   public async banUser (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null): Promise<SetActionRankResult> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot ban the user at this time. Please try again later.')
+    }
+
     const args: AddUserRankArgs = {
       rank: 'ban',
       message: message,
@@ -123,6 +131,10 @@ export default class PunishmentService extends ContextClass {
   /** Mutes are used only in ChatMate and not relayed to Youtube or Twitch.
    * @throws {@link UserRankAlreadyExistsError}: When a user-rank of that type is already active. */
   public async muteUser (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot mute the user at this time. Please try again later.')
+    }
+
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'mute',
@@ -137,6 +149,10 @@ export default class PunishmentService extends ContextClass {
 
   /** Applies an actual timeout that is relayed to Youtube or Twitch. */
   public async timeoutUser (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, message: string | null, durationSeconds: number): Promise<SetActionRankResult> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot timeout the user at this time. Please try again later.')
+    }
+
     const now = new Date()
     const args: AddUserRankArgs = {
       rank: 'timeout',
@@ -173,6 +189,10 @@ export default class PunishmentService extends ContextClass {
 
   /** Returns the updated punishment, if there was one. */
   public async unbanUser (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, unbanMessage: string | null): Promise<SetActionRankResult> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot unban the user at this time. Please try again later.')
+    }
+
     const args: RemoveUserRankArgs = {
       rank: 'ban',
       primaryUserId: primaryUserId,
@@ -190,6 +210,10 @@ export default class PunishmentService extends ContextClass {
   }
 
   public async unmuteUser (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<UserRankWithRelations> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot unmute the user at this time. Please try again later.')
+    }
+
     const args: RemoveUserRankArgs = {
       rank: 'mute',
       primaryUserId: primaryUserId,
@@ -201,6 +225,10 @@ export default class PunishmentService extends ContextClass {
   }
 
   public async untimeoutUser (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number, revokeMessage: string | null): Promise<SetActionRankResult> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot un-timeout the user at this time. Please try again later.')
+    }
+
     const args: RemoveUserRankArgs = {
       rank: 'timeout',
       primaryUserId: primaryUserId,

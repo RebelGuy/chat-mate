@@ -15,6 +15,7 @@ import { single } from '@rebel/server/util/arrays'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import UserService from '@rebel/server/services/UserService'
 
 /** This is a legacy multiplier that we used to have. We can't simply remove it because, when linking channels experience would otherwise be gained/lost.
  * Modifying the baseExperiences was an option, but I couldn't work it out due to the comlex nature of the xp equation. */
@@ -56,6 +57,7 @@ type Deps = Dependencies<{
   accountStore: AccountStore
   rankHelpers: RankHelpers
   accountService: AccountService
+  userService: UserService
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -69,6 +71,7 @@ export default class ExperienceService extends ContextClass {
   private readonly accountStore: AccountStore
   private readonly rankHelpers: RankHelpers
   private readonly accountService: AccountService
+  private readonly userService: UserService
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -84,6 +87,7 @@ export default class ExperienceService extends ContextClass {
     this.accountStore = deps.resolve('accountStore')
     this.rankHelpers = deps.resolve('rankHelpers')
     this.accountService = deps.resolve('accountService')
+    this.userService = deps.resolve('userService')
   }
 
   /** Adds experience only for chat messages sent during the livestream for unpunished users.
@@ -234,6 +238,10 @@ export default class ExperienceService extends ContextClass {
   }
 
   public async modifyExperience (primaryUserId: number, streamerId: number, adminUserId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error(`Cannot modify the user's experience at this time. Please try again later.`)
+    }
+
     const currentExperiences = await this.experienceStore.getExperience(streamerId, [primaryUserId])
 
     // current experience may be negative - this is intentional

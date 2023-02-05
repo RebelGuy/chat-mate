@@ -8,6 +8,7 @@ import AccountService from '@rebel/server/services/AccountService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import LogService from '@rebel/server/services/LogService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
+import UserService from '@rebel/server/services/UserService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
@@ -26,6 +27,7 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   logService: LogService
   accountService: AccountService
+  userService: UserService
 }>
 
 export default class DonationService extends ContextClass {
@@ -40,6 +42,7 @@ export default class DonationService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly logService: LogService
   private readonly accountService: AccountService
+  private readonly userService: UserService
 
   constructor (deps: Deps) {
     super()
@@ -53,6 +56,7 @@ export default class DonationService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.logService = deps.resolve('logService')
     this.accountService = deps.resolve('accountService')
+    this.userService = deps.resolve('userService')
   }
 
   public override async initialise () {
@@ -93,6 +97,10 @@ export default class DonationService extends ContextClass {
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (donationId: number, primaryUserId: number, streamerId: number): Promise<void> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot link the user at this time. Please try again later.')
+    }
+
     const time = this.dateTimeHelpers.now()
     await this.donationStore.linkUserToDonation(donationId, primaryUserId, time)
 
@@ -272,6 +280,11 @@ export default class DonationService extends ContextClass {
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the primary user is no longer eligible for.
   /* @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
   public async unlinkUserFromDonation (donationId: number, streamerId: number): Promise<void> {
+    const donation = await this.donationStore.getDonation(donationId)
+    if (donation.primaryUserId != null && await this.userService.isUserBusy(donation.primaryUserId)) {
+      throw new Error('Cannot unlink the user at this time. Please try again later.')
+    }
+
     const primaryUserId = await this.donationStore.unlinkUserFromDonation(donationId)
 
     const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId])

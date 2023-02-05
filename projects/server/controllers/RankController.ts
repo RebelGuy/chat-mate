@@ -18,6 +18,7 @@ import { addTime } from '@rebel/server/util/datetime'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
 import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
+import UserService from '@rebel/server/services/UserService'
 
 export type GetUserRanksResponse = ApiResponse<{ ranks: PublicUserRank[] }>
 
@@ -70,6 +71,7 @@ type Deps = ControllerDependencies<{
   rankStore: RankStore
   rankService: RankService
   accountService: AccountService
+  userService: UserService
 }>
 
 @Path(buildPath('rank'))
@@ -79,6 +81,7 @@ export default class RankController extends ControllerBase {
   private readonly rankStore: RankStore
   private readonly rankService: RankService
   private readonly accountService: AccountService
+  private readonly userService: UserService
 
   constructor (deps: Deps) {
     super(deps, 'rank')
@@ -87,6 +90,7 @@ export default class RankController extends ControllerBase {
     this.rankStore = deps.resolve('rankStore')
     this.rankService = deps.resolve('rankService')
     this.accountService = deps.resolve('accountService')
+    this.userService = deps.resolve('userService')
   }
 
   @GET
@@ -143,6 +147,10 @@ export default class RankController extends ControllerBase {
 
     try {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
+      if (await this.userService.isUserBusy(primaryUserId)) {
+        throw new Error('Cannot add the user rank at this time. Please try again later.')
+      }
+
       const args: AddUserRankArgs = {
         rank: request.rank,
         primaryUserId: primaryUserId,
@@ -174,6 +182,10 @@ export default class RankController extends ControllerBase {
 
     try {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
+      if (await this.userService.isUserBusy(primaryUserId)) {
+        throw new Error('Cannot renove the user rank at this time. Please try again later.')
+      }
+
       const args: RemoveUserRankArgs = {
         rank: request.rank,
         primaryUserId: primaryUserId,
