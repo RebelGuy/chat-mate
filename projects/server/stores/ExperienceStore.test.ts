@@ -1,9 +1,9 @@
 import { ChatMessage } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ExperienceStore, { ModifyChatExperienceArgs, UserExperience } from '@rebel/server/stores/ExperienceStore'
+import ExperienceStore, { UserExperience } from '@rebel/server/stores/ExperienceStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { deleteProps, expectObject, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
+import { deleteProps, expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -661,27 +661,6 @@ export default () => {
       const stored = await db.experienceTransaction.findMany()
       expect(stored.map(tx => tx.userId)).toEqual([user3, user3, user2])
       expect(stored.map(tx => tx.originalUserId)).toEqual([null, null, user1])
-    })
-  })
-
-  describe(nameof(ExperienceStore, 'modifyChatExperiences'), () => {
-    test('Updates the transaction delta and chat experience', async () => {
-      await db.experienceTransaction.createMany({ data: [
-        { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
-        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 },
-      ]})
-      await db.experienceDataChatMessage.createMany({ data: [
-        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
-        { baseExperience: 200, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 2, participationStreakMultiplier: 2, spamMultiplier: 2, viewershipStreakMultiplier: 2, repetitionPenalty: 2 },
-      ]})
-      const args: ModifyChatExperienceArgs = { experienceTransactionId: 1, chatExperienceDataId: 1, delta: 10, baseExperience: 1, messageQualityMultiplier: 10, participationStreakMultiplier: 10, repetitionPenalty: 10, spamMultiplier: 10, viewershipStreakMultiplier: 10 }
-
-      await experienceStore.modifyChatExperiences(args)
-
-      const storedTxs = await db.experienceTransaction.findMany()
-      const storedData = await db.experienceDataChatMessage.findMany()
-      expect(storedTxs.map(tx => tx.delta)).toEqual([10, 2])
-      expect(storedData.map(d => d.baseExperience)).toEqual([1, 200])
     })
   })
 }

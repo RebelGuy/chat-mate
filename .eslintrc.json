@@ -59,6 +59,7 @@
     "@typescript-eslint/semi": ["warn", "never"],
     "@typescript-eslint/quotes": ["warn", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
     "@typescript-eslint/no-inferrable-types": "off",
-    "@typescript-eslint/no-namespace": "off"
+    "@typescript-eslint/no-namespace": "off",
+    "@typescript-eslint/ban-ts-comment": "off"
   }
 }

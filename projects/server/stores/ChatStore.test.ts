@@ -329,6 +329,23 @@ export default () => {
       expect(result.map(r => r.externalId)).toEqual([chatItem3.id, chatItem4.id])
     })
 
+    test('only returns messages for the specified users, if set', async () => {
+      const chatItem1: ChatItem = { author: ytAuthor1, id: 'id1', platform: 'youtube', contextToken: 'params1', timestamp: new Date(2021, 5, 1).getTime(), messageParts: [text1] }
+      const chatItem2: ChatItem = { author: ytAuthor2, id: 'id2', platform: 'youtube', contextToken: 'params2', timestamp: new Date(2021, 5, 2).getTime(), messageParts: [text2] }
+      const chatItem3: ChatItem = { author: ytAuthor1, id: 'id3', platform: 'youtube', contextToken: 'params3', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
+      const chatItem4: ChatItem = { author: twitchAuthor, id: 'id4', platform: 'twitch', timestamp: new Date(2021, 5, 3).getTime(), messageParts: [text3] }
+
+      // cheating a little here - shouldn't be using the chatStore to initialise db, but it's too much of a maintenance debt to replicate the logic here
+      await chatStore.addChat(chatItem1, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem2, streamer1, youtube2UserId, extYoutubeChannel2)
+      await chatStore.addChat(chatItem3, streamer1, youtube1UserId, extYoutubeChannel1)
+      await chatStore.addChat(chatItem4, streamer1, twitchUserId, extTwitchChannel)
+
+      const result = await chatStore.getChatSince(streamer1, 0, undefined, undefined, [youtube1UserId, twitchUserId])
+
+      expect(result.map(r => r.externalId).sort()).toEqual([chatItem1.id, chatItem3.id, chatItem4.id])
+    })
+
     test('attaches custom emoji rank whitelist', async () => {
       const customEmojiMessage: PartialCustomEmojiChatMessage = {
         customEmojiId: 1,

@@ -1,4 +1,4 @@
-import { ChatMessage, ChatUser, ExperienceDataChatMessage, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
+import { ChatMessage, ChatUser, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
@@ -14,18 +14,6 @@ export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
   & { externalId: string }
 
 export type UserExperience = { primaryUserId: number, experience: number }
-
-export type ModifyChatExperienceArgs = {
-  experienceTransactionId: number
-  chatExperienceDataId: number
-  delta: number
-  baseExperience: number
-  viewershipStreakMultiplier: number
-  participationStreakMultiplier: number
-  spamMultiplier: number
-  messageQualityMultiplier: number
-  repetitionPenalty: number | null
-}
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -247,30 +235,6 @@ export default class ExperienceStore extends ContextClass {
       data: {
         originalUserId: null,
         userId: originalUserId
-      }
-    })
-  }
-
-  // uses an array for the input data for efficiency, since we may update thousands of entries in bulk
-  public async modifyChatExperiences (arg: ModifyChatExperienceArgs) {
-    // update the main transaction delta
-    await this.db.experienceTransaction.update({
-      where: { id: arg.experienceTransactionId },
-      data: {
-        delta: arg.delta
-      }
-    })
-
-    // update the chat message experience data
-    await this.db.experienceDataChatMessage.update({
-      where: { id: arg.chatExperienceDataId },
-      data: {
-        baseExperience: arg.baseExperience,
-        messageQualityMultiplier: arg.messageQualityMultiplier,
-        participationStreakMultiplier: arg.participationStreakMultiplier,
-        repetitionPenalty: arg.repetitionPenalty,
-        spamMultiplier: arg.spamMultiplier,
-        viewershipStreakMultiplier: arg.viewershipStreakMultiplier
       }
     })
   }

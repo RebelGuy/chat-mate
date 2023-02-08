@@ -1,26 +1,26 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceService, { RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
-import ExperienceStore, { ChatExperience, ChatExperienceData, ModifyChatExperienceArgs, UserExperience } from '@rebel/server/stores/ExperienceStore'
+import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore, { LivestreamParticipation } from '@rebel/server/stores/LivestreamStore'
-import { getGetterMock, cast, nameof, expectObject, expectArray } from '@rebel/server/_test/utils'
+import { cast, nameof, expectObject, expectArray } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { asGte, asLt, asRange, GreaterThanOrEqual, NumRange } from '@rebel/server/util/math'
 import { ChatMessage, ExperienceTransaction } from '@prisma/client'
 import { addTime } from '@rebel/server/util/datetime'
-import { ChatItem, ChatItemWithRelations, convertInternalMessagePartsToExternal } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ChannelService from '@rebel/server/services/ChannelService'
-import { DeepPartial } from '@rebel/server/types'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
+import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -33,6 +33,7 @@ let mockAccountStore: MockProxy<AccountStore>
 let mockRankHelpers: MockProxy<RankHelpers>
 let mockAccountService: MockProxy<AccountService>
 let mockUserService: MockProxy<UserService>
+let mockGenericStore: MockProxy<GenericStore>
 let experienceService: ExperienceService
 
 beforeEach(() => {
@@ -47,6 +48,8 @@ beforeEach(() => {
   mockRankHelpers = mock<RankHelpers>()
   mockAccountService = mock<AccountService>()
   mockUserService = mock<UserService>()
+  // @ts-ignore
+  mockGenericStore = mock<GenericStore>()
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -59,7 +62,8 @@ beforeEach(() => {
     accountStore: mockAccountStore,
     rankHelpers: mockRankHelpers,
     accountService: mockAccountService,
-    userService: mockUserService
+    userService: mockUserService,
+    genericStore: mockGenericStore
   }))
 })
 
@@ -397,14 +401,15 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       experienceDataChatMessage: {
         id: 1253,
         chatMessageId: chatMessageId1,
-        chatMessage: { livestreamId: 1 },
+        chatMessage: { livestreamId: 2 },
         baseExperience: baseExperience,
         spamMultiplier: chatExperience1SpamMultiplier,
         viewershipStreakMultiplier: chatExperience1ViewershipMultiplier
       },
-      time: data.time1
+      time: data.time1,
+      user: { id: aggregateUserId }
     })
-    const chatMessage1 = cast<ChatItemWithRelations>({ id: chatMessageId1, chatMessageParts: [] })
+    const chatMessage1 = cast<ChatItemWithRelations>({ id: chatMessageId1, time: data.time1, chatMessageParts: [] })
 
     const chatMessageId2 = 126
     const chatExperience2SpamMultiplier = 1.835
@@ -414,13 +419,14 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       experienceDataChatMessage: {
         id: 1254,
         chatMessageId: chatMessageId2,
-        chatMessage: { livestreamId: 1 },
+        chatMessage: { livestreamId: 2 },
         baseExperience: baseExperience,
         viewershipStreakMultiplier: chatExperience2ViewershipMultiplier
       },
-      time: data.time2
+      time: data.time2,
+      user: { id: aggregateUserId }
     })
-    const chatMessage2 = cast<ChatItemWithRelations>({ id: chatMessageId2, chatMessageParts: [] })
+    const chatMessage2 = cast<ChatItemWithRelations>({ id: chatMessageId2, time: data.time2, chatMessageParts: [] })
 
     const chatMessageId3 = 127
     const chatExperience3ViewershipMultiplier = 1.7
@@ -433,14 +439,16 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
         baseExperience: baseExperience,
         viewershipStreakMultiplier: chatExperience3ViewershipMultiplier
       },
-      time: data.time3
+      time: data.time3,
+      user: { id: aggregateUserId }
     })
-    const chatMessage3 = cast<ChatItemWithRelations>({ id: chatMessageId3, chatMessageParts: [] })
+    const chatMessage3 = cast<ChatItemWithRelations>({ id: chatMessageId3, time: data.time3, chatMessageParts: [] })
 
-    const livestreamParticipationStreamer1 = cast<LivestreamParticipation[]>([{ participated: false }, { participated: true }, { participated: true }, { participated: true }])
-    const livestreamParticipationStreamer2 = cast<LivestreamParticipation[]>([{ participated: true }, { participated: true }, { participated: false }, { participated: true }])
-    const livestreamParticipationStreamer1Score = 3
-    const livestreamParticipationStreamer2Score = 2
+    const livestreamParticipationStreamer1 = cast<LivestreamParticipation[]>([{ id: 1, participated: false }, { id: 2, participated: true }, { id: 3, participated: true }, { id: 4, participated: true }])
+    const livestreamParticipationStreamer2 = cast<LivestreamParticipation[]>([{ id: 1, participated: true }, { id: 2, participated: true }, { id: 3, participated: false }, { id: 4, participated: true }])
+    const livestreamParticipationStreamerChat1Score = 1 // livestream 2
+    const livestreamParticipationStreamerChat2Score = 1 // livestream 2
+    const livestreamParticipationStreamerChat3Score = 2 // livestream 4
 
     const messageQuality = 2
     const repetitionPenalty = -1 as RepetitionPenalty
@@ -450,25 +458,19 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     streamerIds.forEach(sid => connectedUserIds.forEach(uid => mockPunishmentService.getPunishmentHistory.calledWith(uid, sid).mockResolvedValue([])))
     mockExperienceStore.getAllUserChatExperience.calledWith(streamerIds[0], aggregateUserId).mockResolvedValue([chatExperience1, chatExperience2])
     mockExperienceStore.getAllUserChatExperience.calledWith(streamerIds[1], aggregateUserId).mockResolvedValue([chatExperience3])
-    mockChatStore.getChatById.calledWith(chatMessageId1).mockResolvedValue(chatMessage1)
-    mockChatStore.getChatById.calledWith(chatMessageId2).mockResolvedValue(chatMessage2)
-    mockChatStore.getChatById.calledWith(chatMessageId3).mockResolvedValue(chatMessage3)
+    mockChatStore.getChatSince.calledWith(streamerIds[0], 0, undefined, undefined, expectArray<number>(connectedUserIds)).mockResolvedValue([chatMessage1, chatMessage2])
+    mockChatStore.getChatSince.calledWith(streamerIds[1], 0, undefined, undefined, expectArray<number>(connectedUserIds)).mockResolvedValue([chatMessage3])
 
-    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[0], connectedUserIds).mockResolvedValue(livestreamParticipationStreamer1)
-    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[1], connectedUserIds).mockResolvedValue(livestreamParticipationStreamer2)
+    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[0], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer1)
+    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[1], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer2)
     mockExperienceHelpers.calculateParticipationMultiplier.mockImplementation(score => score + 1 as GreaterThanOrEqual<1>)
 
-    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[0], aggregateUserId, chatExperience1.id).mockResolvedValue(null)
-    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[0], aggregateUserId, chatExperience2.id).mockResolvedValue(chatExperience1)
-    mockExperienceStore.getPreviousChatExperience.calledWith(streamerIds[1], aggregateUserId, chatExperience3.id).mockResolvedValue(null)
-    mockExperienceHelpers.calculateSpamMultiplier.calledWith(chatExperience2.time.getTime(), chatExperience1.time.getTime(), chatExperience1.experienceDataChatMessage.spamMultiplier as SpamMult).mockReturnValue(chatExperience2SpamMultiplier as SpamMult)
+    // expect 1 as a SpamMult because chatExperience1 will have its spam multiplier overwritten
+    mockExperienceHelpers.calculateSpamMultiplier.calledWith(chatExperience2.time.getTime(), chatExperience1.time.getTime(), 1 as SpamMult).mockReturnValue(chatExperience2SpamMultiplier as SpamMult)
 
     mockExperienceHelpers.calculateChatMessageQuality.calledWith(expect.anything()).mockReturnValue(messageQuality as NumRange<0, 2>)
     mockExperienceHelpers.calculateQualityMultiplier.calledWith(expect.anything()).mockReturnValue(1 as NumRange<0, 2>)
 
-    mockChatStore.getChatSince.calledWith(streamerIds[0], chatExperience1.time.getTime() - 60000, chatExperience1.time.getTime()).mockResolvedValue([])
-    mockChatStore.getChatSince.calledWith(streamerIds[0], chatExperience2.time.getTime() - 60000, chatExperience2.time.getTime()).mockResolvedValue([])
-    mockChatStore.getChatSince.calledWith(streamerIds[1], chatExperience3.time.getTime() - 60000, chatExperience3.time.getTime()).mockResolvedValue([])
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatExperience1.time.getTime(), expect.anything()).mockReturnValue(repetitionPenalty)
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatExperience2.time.getTime(), expect.anything()).mockReturnValue(repetitionPenalty)
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatExperience3.time.getTime(), expect.anything()).mockReturnValue(repetitionPenalty)
@@ -477,41 +479,50 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     await experienceService.recalculateChatExperience(aggregateUserId)
 
     // assert
-    expect(mockExperienceStore.modifyChatExperiences.mock.calls.length).toBe(3)
-    const [args1, args2, args3] = mockExperienceStore.modifyChatExperiences.mock.calls.map(a => single(a))
-    expect(args1).toEqual(expectObject<ModifyChatExperienceArgs>({
+    expect(mockGenericStore.replaceMany.mock.calls.length).toBe(4)
+    const [txArgsStreamer1, dataArgsStreamer1, txArgsStreamer2, dataArgsStreamer2] = mockGenericStore.replaceMany.mock.calls
+
+    expect(txArgsStreamer1).toEqual(['experienceTransaction', expectObject<ReplacementData<'experienceTransaction'>[]>([{
+      id: chatExperience1.id,
+      delta: expect.any(Number)
+    }, {
+      id: chatExperience2.id,
+      delta: expect.any(Number),
+    }])])
+    expect(dataArgsStreamer1).toEqual(['experienceDataChatMessage', expectObject<ReplacementData<'experienceDataChatMessage'>[]>([{
+      id: chatExperience1.experienceDataChatMessage.id,
       experienceTransactionId: chatExperience1.id,
-      chatExperienceDataId: chatExperience1.experienceDataChatMessage.id,
       repetitionPenalty: repetitionPenalty,
-      spamMultiplier: 1,
-      participationStreakMultiplier: livestreamParticipationStreamer1Score + 1,
+      spamMultiplier: 1, // 1 since there is no previous message
+      participationStreakMultiplier: livestreamParticipationStreamerChat1Score + 1,
       viewershipStreakMultiplier: chatExperience1ViewershipMultiplier,
       messageQualityMultiplier: 1,
-      delta: expect.any(Number),
       baseExperience: expect.any(Number)
-    }))
-    expect(args2).toEqual(expectObject<ModifyChatExperienceArgs>({
+    }, {
+      id: chatExperience2.experienceDataChatMessage.id,
       experienceTransactionId: chatExperience2.id,
-      chatExperienceDataId: chatExperience2.experienceDataChatMessage.id,
       repetitionPenalty: repetitionPenalty,
       spamMultiplier: chatExperience2SpamMultiplier,
-      participationStreakMultiplier: livestreamParticipationStreamer1Score + 1,
+      participationStreakMultiplier: livestreamParticipationStreamerChat2Score + 1,
       viewershipStreakMultiplier: chatExperience2ViewershipMultiplier,
       messageQualityMultiplier: 1,
-      delta: expect.any(Number),
       baseExperience: expect.any(Number)
-    }))
-    expect(args3).toEqual(expectObject<ModifyChatExperienceArgs>({
+    }])])
+
+    expect(txArgsStreamer2).toEqual(['experienceTransaction', expectObject<ReplacementData<'experienceTransaction'>[]>([{
+      id: chatExperience3.id,
+      delta: expect.any(Number)
+    }])])
+    expect(dataArgsStreamer2).toEqual(['experienceDataChatMessage', expectObject<ReplacementData<'experienceDataChatMessage'>[]>([{
+      id: chatExperience3.experienceDataChatMessage.id,
       experienceTransactionId: chatExperience3.id,
-      chatExperienceDataId: chatExperience3.experienceDataChatMessage.id,
       repetitionPenalty: repetitionPenalty,
       spamMultiplier: 1,
-      participationStreakMultiplier: livestreamParticipationStreamer2Score + 1,
+      participationStreakMultiplier: livestreamParticipationStreamerChat3Score + 1,
       viewershipStreakMultiplier: chatExperience3ViewershipMultiplier,
       messageQualityMultiplier: 1,
-      delta: expect.any(Number),
       baseExperience: expect.any(Number)
-    }))
+    }])])
   })
 
   test('Does not count experience for a chat message if a different, but connected, user was punished at the time', async () => {
@@ -521,54 +532,52 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     const punishment1 = cast<UserRankWithRelations>({})
     const punishment2 = cast<UserRankWithRelations>({})
 
-    const chatMessageId = 125
     const chatExperience = cast<ChatExperience>({
       experienceDataChatMessage: {
-        chatMessageId: chatMessageId,
         chatMessage: { livestreamId: 2 }
       },
-      time: data.time1
+      time: data.time1,
+      user: { id: aggregateUserId }
     })
-    const chatMessage = cast<ChatItemWithRelations>({ id: chatMessageId })
 
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: aggregateUserId, connectedChatUserIds: connectedUserIds }])
     mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(aggregateUserId).mockResolvedValue([streamerId])
     mockPunishmentService.getPunishmentHistory.calledWith(aggregateUserId, streamerId).mockResolvedValue([punishment1])
     mockPunishmentService.getPunishmentHistory.calledWith(connectedUserIds[1], streamerId).mockResolvedValue([punishment2])
     mockExperienceStore.getAllUserChatExperience.calledWith(streamerId, aggregateUserId).mockResolvedValue([chatExperience])
-    mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chatMessage)
     mockRankHelpers.isRankActive.calledWith(punishment1, chatExperience.time).mockReturnValue(false)
     mockRankHelpers.isRankActive.calledWith(punishment2, chatExperience.time).mockReturnValue(true)
 
     await experienceService.recalculateChatExperience(aggregateUserId)
 
-    const args = mockExperienceStore.modifyChatExperiences.mock.calls.map(single)
-    expect(args.map(x => x.delta)).toEqual([0])
+    const calls = mockGenericStore.replaceMany.mock.calls
+    expect(calls.length).toBe(2)
+    expect(calls[0]).toEqual(['experienceTransaction', expectObject([{ delta: 0 }])])
+    expect(calls[1]).toEqual(['experienceDataChatMessage', expectObject([{ baseExperience: 0 }])])
   })
 
   test('Does not count experience for chat experience gained off-livestream', async () => {
     const aggregateUserId = 4
     const streamerId = 8
 
-    const chatMessageId = 125
     const chatExperience = cast<ChatExperience>({
       experienceDataChatMessage: {
-        chatMessageId: chatMessageId,
         chatMessage: { livestreamId: null }
       },
-      time: data.time1
+      time: data.time1,
+      user: { id: aggregateUserId }
     })
-    const chatMessage = cast<ChatItemWithRelations>({ id: chatMessageId })
 
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: aggregateUserId, connectedChatUserIds: [aggregateUserId] }])
     mockExperienceStore.getChatExperienceStreamerIdsForUser.calledWith(aggregateUserId).mockResolvedValue([streamerId])
     mockPunishmentService.getPunishmentHistory.calledWith(aggregateUserId, streamerId).mockResolvedValue([])
     mockExperienceStore.getAllUserChatExperience.calledWith(streamerId, aggregateUserId).mockResolvedValue([chatExperience])
-    mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chatMessage)
 
     await experienceService.recalculateChatExperience(aggregateUserId)
 
-    const args = mockExperienceStore.modifyChatExperiences.mock.calls.map(single)
-    expect(args.map(x => x.delta)).toEqual([0])
+    const calls = mockGenericStore.replaceMany.mock.calls
+    expect(calls.length).toBe(2)
+    expect(calls[0]).toEqual(['experienceTransaction', expectObject([{ delta: 0 }])])
+    expect(calls[1]).toEqual(['experienceDataChatMessage', expectObject([{ baseExperience: 0 }])])
   })
 })

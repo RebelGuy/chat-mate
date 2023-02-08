@@ -84,6 +84,7 @@ import LinkDataService from '@rebel/server/services/LinkDataService'
 import AccountService from '@rebel/server/services/AccountService'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import UserService from '@rebel/server/services/UserService'
+import GenericStore from '@rebel/server/stores/GenericStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -165,6 +166,7 @@ const globalContext = ContextProvider.create()
   .withClass('linkStore', LinkStore)
   .withClass('userService', UserService)
   .withClass('punishmentService', PunishmentService)
+  .withClass('genericStore', GenericStore)
   .withClass('experienceService', ExperienceService)
   .withClass('customEmojiStore', CustomEmojiStore)
   .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)

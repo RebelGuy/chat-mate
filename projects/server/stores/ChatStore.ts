@@ -135,10 +135,11 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream. */
-  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number): Promise<ChatItemWithRelations[]> {
+  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[]): Promise<ChatItemWithRelations[]> {
     const result = await this.db.chatMessage.findMany({
       where: {
         streamerId: streamerId,
+        userId: userIds == null ? undefined : { in: userIds },
         time: {
           gt: new Date(since),
           lte: beforeOrAt == null ? undefined : new Date(beforeOrAt)
