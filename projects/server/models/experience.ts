@@ -8,21 +8,18 @@ import { UserRanks } from '@rebel/server/stores/RankStore'
 
 export function rankedEntryToPublic (data: RankedEntry & UserRanks & { registeredUser: RegisteredUser | null }): PublicRankedUser {
   return {
-    schema: 3,
     rank: data.rank,
     user: {
-      schema: 3,
       primaryUserId: data.primaryUserId,
       registeredUser: registeredUserToPublic(data.registeredUser),
-      channelInfo: {
-        schema: 1,
+      channel: {
+        channelId: data.channel.platformInfo.channel.id,
         defaultUserId: data.channel.defaultUserId,
-        channelName: getUserName(data.channel),
+        displayName: getUserName(data.channel),
         externalIdOrUserName: getExternalIdOrUserName(data.channel),
         platform: data.channel.platformInfo.platform
       },
       levelInfo: {
-        schema: 1,
         level: data.level,
         levelProgress: data.levelProgress
       },

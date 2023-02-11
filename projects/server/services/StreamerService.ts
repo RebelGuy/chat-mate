@@ -1,48 +1,38 @@
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
-import HelixEventService from '@rebel/server/services/HelixEventService'
-import TwurpleService from '@rebel/server/services/TwurpleService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore, { AddUserRankArgs } from '@rebel/server/stores/RankStore'
 import StreamerStore, { CreateApplicationArgs, StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
-import { UserAlreadyStreamerError, StreamerApplicationAlreadyClosedError } from '@rebel/server/util/error'
+import { UserAlreadyStreamerError } from '@rebel/server/util/error'
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore
-  twurpleService: TwurpleService
-  helixEventService: HelixEventService
   rankStore: RankStore
   accountStore: AccountStore
 }>
 
 export default class StreamerService extends ContextClass {
   private readonly streamerStore: StreamerStore
-  private readonly twurpleService: TwurpleService
-  private readonly helixEventService: HelixEventService
   private readonly rankStore: RankStore
   private readonly accountStore: AccountStore
 
   constructor (deps: Deps) {
     super()
     this.streamerStore = deps.resolve('streamerStore')
-    this.twurpleService = deps.resolve('twurpleService')
-    this.helixEventService = deps.resolve('helixEventService')
     this.rankStore = deps.resolve('rankStore')
     this.accountStore = deps.resolve('accountStore')
   }
 
-  /**
+  /** Note that new streamers do not have primary channels by default.
    * @throws {@link UserAlreadyStreamerError}: When the user whose application is to be approved is already a streamer.
    * @throws {@link StreamerApplicationAlreadyClosedError}: When attempting to close an application that has already been closed. */
   public async approveStreamerApplication (streamerApplicationId: number, message: string, loggedInRegisteredUserId: number): Promise<StreamerApplicationWithUser> {
     const updatedApplication = await this.streamerStore.closeStreamerApplication({ id: streamerApplicationId, message, approved: true })
     const streamer = await this.streamerStore.addStreamer(updatedApplication.registeredUserId)
-    await this.twurpleService.joinChannel(streamer.id)
-    await this.helixEventService.subscribeToChannelEvents(streamer.id)
 
     // add the owner rank to the aggregate chat user
-    const registeredUser = single(await this.accountStore.getRegisteredUsersFromIds([streamer.registeredUserId]))
+    const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer.registeredUserId]).then(single)
     const userRankArgs: AddUserRankArgs = {
       assignee: loggedInRegisteredUserId,
       expirationTime: null,

@@ -7,7 +7,7 @@ import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/Public
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
-import { PublicChannelInfo } from '@rebel/server/controllers/public/user/PublicChannelInfo'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { registeredUserToPublic } from '@rebel/server/models/user'
@@ -64,9 +64,6 @@ export type PartialTextChatMessage = {
 
 export type PartialEmojiChatMessage = {
   type: 'emoji',
-
-  // youtube's ID
-  emojiId: string,
 
   // the hover-over name
   name: string,
@@ -139,7 +136,6 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
     } else if (p.type === 'emote') {
       const emojiPart: PartialEmojiChatMessage = {
         type: 'emoji',
-        emojiId: p.id,
         name: p.name,
         label: p.displayInfo.code, // symbol
         image: {
@@ -217,7 +213,6 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
 
   const convertEmoji = (emoji: ChatEmoji): PartialEmojiChatMessage => ({
     type: 'emoji',
-    emojiId: emoji.externalId,
     image: {
       url: emoji.imageUrl ?? '',
       height: emoji.imageHeight ?? 0,
@@ -256,26 +251,6 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
   }
 
   return result
-}
-
-export function getUniqueEmojiId (emoji: YTEmoji): string {
-  if (emoji.image.thumbnails[0].height && emoji.image.thumbnails[0].width && emoji.emojiId.length > 24) {
-    // emojis with images already have a unique ids in the form UCkszU2WH9gy1mb0dV-11UJg/xxxxxxxxxxxxxxxxxxxxxx
-    return emoji.emojiId
-  } else {
-    // SVG emojis seem to be those that can be encoding in text directly, and their ID is just the emoji itself.
-    // the problem is that, while technically the ids are unique, MySQL seems to have trouble differentiating some of them.
-    // so we force the string to be unique by combining it with the label.
-
-    // in rare cases (e.g. 🙌🏻) we only have the accessability data, which is the same as the id. here, we just
-    // hope that it can be differentiated by MySQL (another option may be to concatenate the URL, but that might be mutable).
-    const label = getEmojiLabel(emoji)
-    if (emoji.emojiId === label) {
-      return emoji.emojiId
-    } else {
-      return `${emoji.emojiId}-${getEmojiLabel(emoji)}`
-    }
-  }
 }
 
 // this is unique, and usually of the form :emoji_description:. if more than one descriptions are available, uses the shortest one.
@@ -327,32 +302,29 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     throw new Error(`Cannot determine platform of chat item ${chat.id} because both the channel and twitchChannel are null`)
   }
 
-  const userInfo: PublicChannelInfo = {
-    schema: 1,
+  const channel: PublicChannel = {
+    channelId: userChannel.platformInfo.channel.id,
     defaultUserId: chat.userId,
     externalIdOrUserName: getExternalIdOrUserName(userChannel),
     platform: userChannel.platformInfo.platform,
-    channelName: getUserName(userChannel),
+    displayName: getUserName(userChannel),
   }
 
   const levelInfo: PublicLevelInfo = {
-    schema: 1,
     level: levelData.level,
     levelProgress: levelData.levelProgress
   }
 
   const newItem: PublicChatItem = {
-    schema: 4,
     id: chat.id,
     timestamp: chat.time.getTime(),
     platform: userChannel.platformInfo.platform,
     isCommand: chat.chatCommand != null,
     messageParts,
     author: {
-      schema: 3,
       primaryUserId: getPrimaryUserId(chat.user),
       registeredUser: registeredUserToPublic(registeredUser),
-      channelInfo: userInfo,
+      channel: channel,
       levelInfo,
       activeRanks: activeRanks
     }
@@ -373,7 +345,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   if (part.text != null && part.emoji == null && part.customEmoji == null && part.cheer == null) {
     type = 'text'
     text = {
-      schema: 1,
       text: part.text.text,
       isBold: part.text.isBold,
       isItalics: part.text.isItalics
@@ -381,12 +352,10 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji != null && part.text == null && part.customEmoji == null && part.cheer == null) {
     type = 'emoji'
     emoji = {
-      schema: 1,
       // so far I am yet to find an instance where either of these are null
       label: part.emoji.label!,
       name: part.emoji.name!,
       image: {
-        schema: 1,
         url: part.emoji.imageUrl!,
         height: part.emoji.imageHeight,
         width: part.emoji.imageWidth
@@ -395,19 +364,15 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji == null && part.text == null && part.customEmoji != null && part.cheer == null) {
     type = 'customEmoji'
     customEmoji = {
-      schema: 2,
       textData: part.customEmoji.text == null ? null : {
-        schema: 1,
         text: part.customEmoji.text.text,
         isBold: part.customEmoji.text.isBold,
         isItalics: part.customEmoji.text.isItalics
       },
       emojiData: part.customEmoji.emoji == null ? null : {
-        schema: 1,
         label: part.customEmoji.emoji.label!,
         name: part.customEmoji.emoji.name!,
         image: {
-          schema: 1,
           url: part.customEmoji.emoji.imageUrl!,
           width: part.customEmoji.emoji.imageWidth,
           height: part.customEmoji.emoji.imageHeight
@@ -415,7 +380,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
       },
       // this is absolute trash
       customEmoji: {
-        schema: 1,
         id: part.customEmoji.id,
         name: part.customEmoji.customEmojiVersion.name,
         symbol: part.customEmoji.customEmojiVersion.customEmoji.symbol,
@@ -430,7 +394,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji == null && part.text == null && part.customEmoji == null && part.cheer != null) {
     type = 'cheer'
     cheer = {
-      schema: 1,
       amount: part.cheer.amount,
       colour: part.cheer.colour,
       imageUrl: part.cheer.imageUrl,
@@ -441,7 +404,6 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   }
 
   const publicPart: PublicMessagePart = {
-    schema: 3,
     type,
     textData: text,
     emojiData: emoji,

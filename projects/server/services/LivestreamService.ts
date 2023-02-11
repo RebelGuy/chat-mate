@@ -10,7 +10,6 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { addTime } from '@rebel/server/util/datetime'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
@@ -21,7 +20,6 @@ type Deps = Dependencies<{
   twurpleApiProxyService: TwurpleApiProxyService
   logService: LogService
   timerHelpers: TimerHelpers
-  viewershipStore: ViewershipStore
   disableExternalApis: boolean
   dateTimeHelpers: DateTimeHelpers
   streamerChannelService: StreamerChannelService
@@ -35,7 +33,6 @@ export default class LivestreamService extends ContextClass {
   private readonly twurpleApiProxyService: ITwurpleApi
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
-  private readonly viewershipStore: ViewershipStore
   private readonly disableExternalApis: boolean
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly streamerChannelService: StreamerChannelService
@@ -47,7 +44,6 @@ export default class LivestreamService extends ContextClass {
     this.twurpleApiProxyService = deps.resolve('twurpleApiProxyService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
-    this.viewershipStore = deps.resolve('viewershipStore')
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.streamerChannelService = deps.resolve('streamerChannelService')
@@ -144,7 +140,7 @@ export default class LivestreamService extends ContextClass {
       }
 
       if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {
-        await this.viewershipStore.addLiveViewCount(livestream.id, youtubeMetadata.viewerCount, twitchMetadata?.viewerCount ?? 0)
+        await this.livestreamStore.addLiveViewCount(livestream.id, youtubeMetadata.viewerCount, twitchMetadata?.viewerCount ?? 0)
       }
     } catch (e: any) {
       this.logService.logError(this, `Encountered error while syncing metadata for livestream ${livestream.liveId}.`, e)

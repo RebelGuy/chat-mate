@@ -134,6 +134,64 @@ export default () => {
     })
   })
 
+  describe(nameof(LinkStore, 'isLinkInProgress'), () => {
+    test('Returns true if the aggregate user is involved in an active link attempt', async () => {
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.linkAttempt.create({ data: {
+        aggregateChatUserId: 1,
+        defaultChatUserId: 2,
+        startTime: new Date(),
+        endTime: null,
+        log: '',
+        type: 'link'
+      }})
+
+      const result = await linkStore.isLinkInProgress(1)
+
+      expect(result).toBe(true)
+    })
+
+    test('Returns true if the default user is involved in an active link attempt', async () => {
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.linkAttempt.create({ data: {
+        aggregateChatUserId: 1,
+        defaultChatUserId: 2,
+        startTime: new Date(),
+        endTime: null,
+        log: '',
+        type: 'link'
+      }})
+
+      const result = await linkStore.isLinkInProgress(2)
+
+      expect(result).toBe(true)
+    })
+
+    test('Returns false if the user is not involved in an active link attempt', async () => {
+      await db.chatUser.createMany({ data: [{}, {}, {}]})
+      await db.linkAttempt.create({ data: {
+        aggregateChatUserId: 1,
+        defaultChatUserId: 2,
+        startTime: new Date(),
+        endTime: new Date(), // finished
+        log: '',
+        type: 'link'
+      }})
+      await db.linkAttempt.create({ data: {
+        aggregateChatUserId: 3,
+        defaultChatUserId: 2,
+        startTime: new Date(),
+        endTime: null, // in progress
+        log: '',
+        type: 'link'
+      }})
+
+      const result = await linkStore.isLinkInProgress(1)
+
+      expect(result).toBe(false)
+    })
+  })
+
   describe(nameof(LinkStore, 'linkUser'), () => {
     test('Links the default user to the aggregate user', async () => {
       // users 1 and 2 are aggregate, users 3 and 4 are default

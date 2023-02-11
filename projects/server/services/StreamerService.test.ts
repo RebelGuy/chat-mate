@@ -12,23 +12,17 @@ import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockStreamerStore: MockProxy<StreamerStore>
-let mockTwurpleService: MockProxy<TwurpleService>
-let mockHelixEventService: MockProxy<HelixEventService>
 let mockRankStore: MockProxy<RankStore>
 let mockAccountStore: MockProxy<AccountStore>
 let streamerService: StreamerService
 
 beforeEach(() => {
   mockStreamerStore = mock()
-  mockTwurpleService = mock()
-  mockHelixEventService = mock()
   mockRankStore = mock()
   mockAccountStore = mock()
 
   streamerService = new StreamerService(new Dependencies({
     streamerStore: mockStreamerStore,
-    twurpleService: mockTwurpleService,
-    helixEventService: mockHelixEventService,
     rankStore: mockRankStore,
     accountStore: mockAccountStore
   }))
@@ -51,8 +45,6 @@ describe(nameof(StreamerService, 'approveStreamerApplication'), () => {
     const result = await streamerService.approveStreamerApplication(streamerApplicationId, message, loggedInRegisteredUserId)
 
     expect(result).toBe(closedApplication)
-    expect(mockTwurpleService.joinChannel).toHaveBeenCalledWith(streamer.id)
-    expect(mockHelixEventService.subscribeToChannelEvents).toHaveBeenCalledWith(streamer.id)
     expect(single2(mockRankStore.addUserRank.mock.calls)).toEqual(expect.objectContaining({ rank: 'owner', assignee: loggedInRegisteredUserId, primaryUserId: chatUserId, streamerId: streamer.id }))
   })
 })

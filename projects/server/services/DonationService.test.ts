@@ -2,7 +2,7 @@ import { Donation, Streamer, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationHelpers'
 import DonationService from '@rebel/server/services/DonationService'
-import DonationStore from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { any, mock, MockProxy } from 'jest-mock-extended'
@@ -16,6 +16,7 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { UserRankAlreadyExistsError } from '@rebel/server/util/error'
 import AccountService from '@rebel/server/services/AccountService'
+import UserService from '@rebel/server/services/UserService'
 
 const streamerId = 3
 
@@ -27,6 +28,7 @@ let mockEmojiService: MockProxy<EmojiService>
 let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockAccountService: MockProxy<AccountService>
+let mockUserService: MockProxy<UserService>
 let donationService: DonationService
 
 beforeEach(() => {
@@ -38,6 +40,7 @@ beforeEach(() => {
   mockStreamlabsProxyService = mock()
   mockStreamerStore = mock()
   mockAccountService = mock()
+  mockUserService = mock()
 
   donationService = new DonationService(new Dependencies({
     donationStore: mockDonationStore,
@@ -48,6 +51,7 @@ beforeEach(() => {
     streamlabsProxyService: mockStreamlabsProxyService,
     streamerStore: mockStreamerStore,
     accountService: mockAccountService,
+    userService: mockUserService,
     logService: mock()
   }))
 })
@@ -155,6 +159,13 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
     expect(providedCreateArgs).toEqual(expectObject<AddUserRankArgs>({ rank: 'supporter', time: time, primaryUserId: primaryUserId }))
     expect(mockRankStore.removeUserRank).not.toHaveBeenCalled()
   })
+
+  test('Throws if the user is currently busy', async () => {
+    const primaryUserId = 5
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => donationService.linkUserToDonation(1, primaryUserId, 1)).rejects.toThrow()
+  })
 })
 
 describe(nameof(DonationService, 'setStreamlabsSocketToken'), () => {
@@ -257,6 +268,7 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
       { id: 20, rank: { name: 'donator' } },
       { id: 21, rank: { name: 'supporter' } }
     ])
+    mockDonationStore.getDonation.calledWith(donationId).mockResolvedValue(cast<DonationWithUser>({ primaryUserId }))
     mockDonationStore.unlinkUserFromDonation.calledWith(donationId).mockResolvedValue(primaryUserId)
     mockDonationStore.getDonationsByUserIds.calledWith(streamerId, expectArray<number>([primaryUserId])).mockResolvedValue(allDonations)
     mockRankStore.getUserRanks.calledWith(expectArray<number>([primaryUserId]), streamerId).mockResolvedValue([{ primaryUserId: primaryUserId, ranks }])
@@ -277,5 +289,14 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
     expect(providedRemoveArgs).toEqual(expectObject<RemoveUserRankArgs>({ rank: 'supporter', primaryUserId: primaryUserId }))
     expect(mockRankStore.addUserRank).not.toHaveBeenCalled()
     expect(mockRankStore.updateRankExpiration).not.toHaveBeenCalled()
+  })
+
+  test('Throws if the user is currently busy', async () => {
+    const primaryUserId = 5
+    const donationId = 2
+    mockDonationStore.getDonation.calledWith(donationId).mockResolvedValue(cast<DonationWithUser>({ primaryUserId }))
+    mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
+
+    await expect(() => donationService.unlinkUserFromDonation(donationId, 1)).rejects.toThrow()
   })
 })

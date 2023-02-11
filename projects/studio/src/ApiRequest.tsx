@@ -8,15 +8,15 @@ type Props<TData extends ResponseData<TData>> = {
 } & ({
   isAnonymous: true
   requiresStreamer?: false
-  onRequest: () => Promise<ApiResponse<any, TData>>
+  onRequest: () => Promise<ApiResponse<TData>>
 } | {
   isAnonymous?: false
   requiresStreamer?: false
-  onRequest: (loginToken: string) => Promise<ApiResponse<any, TData>>
+  onRequest: (loginToken: string) => Promise<ApiResponse<TData>>
 } | {
   isAnonymous?: false
   requiresStreamer: true
-  onRequest: (loginToken: string, streamer: string) => Promise<ApiResponse<any, TData>>
+  onRequest: (loginToken: string, streamer: string) => Promise<ApiResponse<TData>>
 }) & ({
   onDemand: true
   token: string | number | null // when changing this token, a new request will automatically be made. if null, will not make a request
@@ -27,7 +27,7 @@ type Props<TData extends ResponseData<TData>> = {
 
 type State<TData extends ResponseData<TData>> = {
   isLoading: boolean
-  response: ApiResponse<any, TData> | null
+  response: ApiResponse<TData> | null
   error: string | null
 }
 
@@ -95,7 +95,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     }
   }
 
-  private onResponse (data: ApiResponse<any, TData>, token: string | number | null) {
+  private onResponse (data: ApiResponse<TData>, token: string | number | null) {
     if (!this.mounted || this.currentToken !== token) {
       return
     }

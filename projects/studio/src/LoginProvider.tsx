@@ -1,6 +1,9 @@
+import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/server/util/strings'
-import { authenticate, getGlobalRanks } from '@rebel/studio/api'
+import { authenticate, getRanks, getStreamers } from '@rebel/studio/api'
 import * as React from 'react'
+
+export type RankName = PublicRank['name']
 
 type Props = {
   children: React.ReactNode
@@ -11,7 +14,8 @@ export default function LoginProvider (props: Props) {
   const [username, setUsername] = React.useState<string | null>(null)
   const [streamer, setStreamer] = React.useState<string | null>(null)
   const [initialised, setInitialised] = React.useState(false)
-  const [isAdmin, setIsAdmin] = React.useState(false)
+  const [ranks, setRanks] = React.useState<RankName[]>([])
+  const [allStreamers, setAllStreamers] = React.useState<string[]>([])
 
   function onSetLogin (username: string, token: string) {
     try {
@@ -98,6 +102,7 @@ export default function LoginProvider (props: Props) {
       }
 
       setStreamer(streamer)
+
       setInitialised(true)
     }
     loadContext()
@@ -105,19 +110,33 @@ export default function LoginProvider (props: Props) {
 
   React.useEffect(() => {
     if (loginToken == null) {
-      setIsAdmin(false)
+      return
+    }
+    
+    const hydrateStreamers = async () => {
+      const response = await getStreamers(loginToken)
+      if (response.success) {
+        setAllStreamers(response.data.streamers)
+      }
+    }
+    hydrateStreamers()
+  }, [loginToken])
+
+  React.useEffect(() => {
+    if (loginToken == null) {
+      setRanks([])
       return
     }
 
     const loadRanks = async () => {
-      const result = await getGlobalRanks(loginToken)
+      const result = await getRanks(loginToken, streamer ?? undefined)
       
       if (result.success) {
-        setIsAdmin(result.data.ranks.find(r => r.rank.name === 'admin') != null)
+        setRanks(result.data.ranks.map(r => r.rank.name))
       }
     }
     loadRanks()
-  }, [loginToken])
+  }, [loginToken, streamer])
 
   return (
     <LoginContext.Provider
@@ -126,11 +145,13 @@ export default function LoginProvider (props: Props) {
         loginToken,
         username,
         streamer,
-        isAdmin: username === 'admin' || isAdmin,
+        allStreamers,
+        isStreamer: allStreamers.includes(username ?? ''),
         setLogin: onSetLogin,
         login: onLogin,
         setStreamer: onSetStreamer,
-        logout: onClearAuthInfo
+        logout: onClearAuthInfo,
+        hasRank: rankName => ranks.find(r => r === rankName) != null,
       }}
     >
       {props.children}
@@ -142,16 +163,20 @@ type LoginContextType = {
   initialised: boolean
   loginToken: string | null
 
+  /** Is streamer anywhere, regardless of the current streamer context. */
+  isStreamer: boolean
+  allStreamers: string[]
+
   /** The streamer context. */
   streamer: string | null
   username: string | null
-  isAdmin: boolean
 
   /** Logs the user in using the saved credentials, if any. Returns true if the login was successful. */
   login: () => Promise<boolean>
   setLogin: (username: string, token: string) => void
   setStreamer: (streamer: string | null) => void
   logout: () => void
+  hasRank: (rankName: RankName) => boolean
 }
 
 export const LoginContext = React.createContext<LoginContextType>(null!)

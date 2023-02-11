@@ -1,13 +1,13 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/server/controllers/EmojiController'
 import { GetMasterchatAuthenticationResponse, GetStatusResponse, PingResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
-import { GetTimestampsResponse } from '@rebel/server/controllers/LogController'
 import { GetAccessibleRanksResponse, GetUserRanksResponse } from '@rebel/server/controllers/RankController'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetStreamersResponse, RejectApplicationRequest, RejectApplicationResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStreamersResponse, RejectApplicationRequest, RejectApplicationResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
 import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
+import { GenericObject } from '@rebel/server/types'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -19,28 +19,19 @@ export async function getAllCustomEmojis (loginToken: string, streamer: string):
 }
 
 export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest['updatedEmoji'], loginToken: string, streamer: string): Promise<UpdateCustomEmojiResponse> {
-  const request: UpdateCustomEmojiRequest = {
-    schema: 1,
-    updatedEmoji
-  }
+  const request: UpdateCustomEmojiRequest = { updatedEmoji }
 
   return await PATCH('/emoji/custom', request, loginToken, streamer)
 }
 
 export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew, loginToken: string, streamer: string): Promise<AddCustomEmojiResponse> {
-  const request: AddCustomEmojiRequest = {
-    schema: 1,
-    newEmoji
-  }
+  const request: AddCustomEmojiRequest = { newEmoji }
 
   return await POST('/emoji/custom', request, loginToken, streamer)
 }
 
 export async function setActiveLivestream (newLivestream: string | null, loginToken: string, streamer: string): Promise<SetActiveLivestreamResponse> {
-  const request: SetActiveLivestreamRequest = {
-    schema: 2,
-    livestream: newLivestream
-  }
+  const request: SetActiveLivestreamRequest = { livestream: newLivestream }
 
   return await PATCH('/chatMate/livestream', request, loginToken, streamer)
 }
@@ -57,25 +48,22 @@ export async function getStatus (loginToken: string, streamer: string): Promise<
   return await GET('/chatMate/status', loginToken, streamer)
 }
 
-export async function getLogTimestamps (loginToken: string): Promise<GetTimestampsResponse> {
-  return await GET('/log/timestamps', loginToken)
-}
-
 export async function getAccessibleRanks (loginToken: string, streamer: string): Promise<GetAccessibleRanksResponse> {
   return await GET('/rank/accessible', loginToken, streamer)
 }
 
-export async function getGlobalRanks (loginToken: string): Promise<GetUserRanksResponse> {
-  return await GET('/rank', loginToken)
+/** Gets global ranks if the streamer is not provided. */
+export async function getRanks (loginToken: string, streamer?: string): Promise<GetUserRanksResponse> {
+  return await GET('/rank', loginToken, streamer)
 }
 
 export async function registerAccount (username: string, password: string): Promise<RegisterResponse> {
-  const request: RegisterRequest = { schema: 1, username, password }
+  const request: RegisterRequest = { username, password }
   return await POST('/account/register', request)
 }
 
 export async function login (username: string, password: string): Promise<LoginResponse> {
-  const request: LoginRequest = { schema: 1, username, password }
+  const request: LoginRequest = { username, password }
   return await POST('/account/login', request)
 }
 
@@ -96,27 +84,39 @@ export async function getStreamerApplications (loginToken: string): Promise<GetA
 }
 
 export async function createStreamerApplication (loginToken: string, message: string): Promise<CreateApplicationResponse> {
-  const request: CreateApplicationRequest = { schema: 1, message }
+  const request: CreateApplicationRequest = { message }
   return await POST('/streamer/application', request, loginToken)
 }
 
 export async function approveStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<ApproveApplicationResponse> {
-  const request: ApproveApplicationRequest = { schema: 1, message }
+  const request: ApproveApplicationRequest = { message }
   return await POST(`/streamer/application/${applicationId}/approve`, request, loginToken)
 }
 
 export async function rejectStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<RejectApplicationResponse> {
-  const request: RejectApplicationRequest = { schema: 1, message }
+  const request: RejectApplicationRequest = { message }
   return await POST(`/streamer/application/${applicationId}/reject`, request, loginToken)
 }
 
 export async function withdrawStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<WithdrawApplicationResponse> {
-  const request: WithdrawApplicationRequest = { schema: 1, message }
+  const request: WithdrawApplicationRequest = { message }
   return await POST(`/streamer/application/${applicationId}/withdraw`, request, loginToken)
 }
 
+export async function getPrimaryChannels (loginToken: string): Promise<GetPrimaryChannelsResponse> {
+  return await GET(`/streamer/primaryChannels`, loginToken)
+}
+
+export async function setPrimaryChannel (loginToken: string, platform: 'youtube' | 'twitch', channelId: number): Promise<SetPrimaryChannelResponse> {
+  return await POST(`/streamer/primaryChannels/${platform}/${channelId}`, null, loginToken)
+}
+
+export async function unsetPrimaryChannel (loginToken: string, platform: 'youtube' | 'twitch'): Promise<UnsetPrimaryChannelResponse> {
+  return await DELETE(`/streamer/primaryChannels/${platform}`, null, loginToken)
+}
+
 export async function setStreamlabsSocketToken (loginToken: string, streamer: string, socketToken: string | null): Promise<SetWebsocketTokenResponse> {
-  const request: SetWebsocketTokenRequest = { schema: 1, websocketToken: socketToken }
+  const request: SetWebsocketTokenRequest = { websocketToken: socketToken }
   return await POST(`/donation/streamlabs/socketToken`, request, loginToken, streamer)
 }
 
@@ -125,12 +125,12 @@ export async function getStreamlabsStatus (loginToken: string, streamer: string)
 }
 
 export async function searchUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
-  const request: SearchUserRequest = { schema: 4, searchTerm }
+  const request: SearchUserRequest = { searchTerm }
   return await POST(`/user/search`, request, loginToken, streamer)
 }
 
 export async function searchRegisteredUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
-  const request: SearchUserRequest = { schema: 4, searchTerm }
+  const request: SearchUserRequest = { searchTerm }
   return await POST(`/user/search/registered`, request, loginToken, streamer)
 }
 
@@ -152,26 +152,26 @@ export async function getLinkHistory (loginToken: string, admin_aggregateUserId?
 }
 
 export async function createLinkToken (loginToken: string, externalId: string): Promise<CreateLinkTokenResponse> {
-  return await POST(`/user/link/token?externalId=${externalId}`, undefined, loginToken)
+  return await POST(`/user/link/token?externalId=${externalId}`, null, loginToken)
 }
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
-  return await request('GET', path, undefined, loginToken, streamer)
+  return await request('GET', path, null, loginToken, streamer)
 }
 
-async function POST (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+async function POST (path: string, requestData: GenericObject | null, loginToken?: string, streamer?: string): Promise<any> {
   return await request('POST', path, requestData, loginToken, streamer)
 }
 
-async function PATCH (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+async function PATCH (path: string, requestData: GenericObject | null, loginToken?: string, streamer?: string): Promise<any> {
   return await request('PATCH', path, requestData, loginToken, streamer)
 }
 
-async function DELETE (path: string, requestData: any, loginToken?: string, streamer?: string): Promise<any> {
+async function DELETE (path: string, requestData: GenericObject | null, loginToken?: string, streamer?: string): Promise<any> {
   return await request('DELETE', path, requestData, loginToken, streamer)
 }
 
-async function request (method: string, path: string, requestData: any | undefined, loginToken: string | undefined, streamer: string | undefined) {
+async function request (method: string, path: string, requestData: GenericObject | null, loginToken: string | undefined, streamer: string | undefined) {
   let headers: HeadersInit = {
     'Content-Type': 'application/json'
   }

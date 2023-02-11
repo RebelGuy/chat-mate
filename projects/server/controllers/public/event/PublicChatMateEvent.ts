@@ -1,11 +1,9 @@
-import { PublicObject, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
 import { PublicLevelUpData } from '@rebel/server/controllers/public/event/PublicLevelUpData'
 import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/event/PublicNewTwitchFollowerData'
 
-export type PublicChatMateEvent = PublicObject<5, {
-  schema: 5
-
+export type PublicChatMateEvent = PublicObject<{
   /** The type of event that has occurred. */
   type: 'levelUp' | 'newTwitchFollower' | 'donation'
 
@@ -13,11 +11,11 @@ export type PublicChatMateEvent = PublicObject<5, {
   timestamp: number
 
   /** Only set if `type` is `levelUp`. */
-  levelUpData: Tagged<3, PublicLevelUpData> | null
+  levelUpData: PublicObject<PublicLevelUpData> | null
 
   /** Only set if `type` is `newTwitchFollower`. */
-  newTwitchFollowerData: Tagged<1, PublicNewTwitchFollowerData> | null
+  newTwitchFollowerData: PublicObject<PublicNewTwitchFollowerData> | null
 
   /** Only set if `type` is `donation`. */
-  donationData: Tagged<1, PublicDonationData> | null
+  donationData: PublicObject<PublicDonationData> | null
 }>

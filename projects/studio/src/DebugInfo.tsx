@@ -1,6 +1,5 @@
 import AuthenticationStatus from '@rebel/studio/AuthenticationStatus'
 import { SERVER_URL } from '@rebel/studio/global'
-import LogSummary from '@rebel/studio/LogSummary'
 import ServerStatus from '@rebel/studio/ServerStatus'
 import * as React from 'react'
 
@@ -22,7 +21,6 @@ export default function DebugInfo () {
       </div>
       {visible && <>
         <a href={SERVER_URL}>Server</a>
-        <LogSummary />
         <ServerStatus />
         <AuthenticationStatus />
       </>}

@@ -1,6 +1,7 @@
 import { LogoutResponse } from '@rebel/server/controllers/AccountController'
 import { logout } from '@rebel/studio/api'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import RequireRank from '@rebel/studio/components/RequireRank'
 import { LoginContext } from '@rebel/studio/LoginProvider'
 import SelectStreamer from '@rebel/studio/SelectStreamer'
 import { Page } from '@rebel/studio/types'
@@ -23,11 +24,18 @@ export default function Home (props: Props) {
         <LogoutButton />
       </>}
       {!isLoggedIn && <button disabled={!loginContext.initialised} onClick={() => props.onSelectPage('login')} style={{ display: 'block', margin: 'auto' }}>Login</button>}
-      <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('customEmoji')} style={{ display: 'block', margin: 'auto' }}>Custom Emoji Manager</button>
-      <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('chatMate')} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
-      <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('applyForStreamer')} style={{ display: 'block', margin: 'auto' }}>ChatMate Beta Program</button>
+      <button disabled={loginContext.loginToken == null || loginContext.streamer == null} onClick={() => props.onSelectPage('customEmoji')} style={{ display: 'block', margin: 'auto' }}>Custom Emoji Manager</button>
+      <RequireRank owner>
+        <button disabled={loginContext.loginToken == null || loginContext.streamer == null} onClick={() => props.onSelectPage('chatMate')} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
+      </RequireRank>
+      <RequireRank admin>
+        <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('applyForStreamer')} style={{ display: 'block', margin: 'auto' }}>ChatMate Beta Program</button>
+      </RequireRank>
       <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('linkUser')} style={{ display: 'block', margin: 'auto' }}>Link User</button>
       <SelectStreamer />
+      <div style={{ position: 'absolute', bottom: 0, width: '100%', marginBottom: 8 }}>
+        <em style={{ fontSize: 14 }}>This is a work in progress...</em>
+      </div>
     </div>
   )
 }

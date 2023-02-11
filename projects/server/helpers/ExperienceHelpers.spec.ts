@@ -283,17 +283,6 @@ describe(nameof(ExperienceHelpers, 'calculateSpamMultiplier'), () => {
   })
 })
 
-describe(nameof(ExperienceHelpers, 'calculateViewershipMultiplier'), () => {
-  test('higher viewership streaks lead to higher multipliers', () => {
-    const m0 = experienceHelpers.calculateViewershipMultiplier(asGte(1, 0))
-    const m1 = experienceHelpers.calculateViewershipMultiplier(asGte(2, 0))
-    const m2 = experienceHelpers.calculateViewershipMultiplier(asGte(3, 0))
-    const m3 = experienceHelpers.calculateViewershipMultiplier(asGte(4, 0))
-
-    expectStrictIncreasing(m0, m1, m2, m3)
-  })
-})
-
 describe(nameof(ExperienceHelpers, 'calculateExperience'), () => {
   test('higher levels lead to higher experiences', () => {
     const xp1 = experienceHelpers.calculateExperience({ level: 0, levelProgress: asLt(0, 1) })
@@ -315,13 +304,12 @@ function text (txt: string): PartialTextChatMessage {
   }
 }
 
-function emoji (id: string): PartialEmojiChatMessage {
+function emoji (url: string): PartialEmojiChatMessage {
   return {
     type: 'emoji',
-    emojiId: id,
-    image: { url: 'test url' },
-    label: id + '_label',
-    name: id + '_name'
+    image: { url: url },
+    label: url + '_label',
+    name: url + '_name'
   }
 }
 

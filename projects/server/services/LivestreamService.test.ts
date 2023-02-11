@@ -9,7 +9,6 @@ import * as data from '@rebel/server/_test/testData'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
 import { Livestream } from '@prisma/client'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { TwitchMetadata } from '@rebel/server/interfaces'
@@ -55,7 +54,6 @@ let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
 let mockTwurpleApiProxyService: MockProxy<TwurpleApiProxyService>
 let mockLogService: MockProxy<LogService>
 let mockTimerHelpers: MockProxy<TimerHelpers>
-let mockViewershipStore: MockProxy<ViewershipStore>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let mockStreamerChannelService: MockProxy<StreamerChannelService>
 let livestreamService: LivestreamService
@@ -66,7 +64,6 @@ beforeEach(() => {
   mockTwurpleApiProxyService = mock()
   mockLogService = mock()
   mockTimerHelpers = mock()
-  mockViewershipStore = mock()
   mockDateTimeHelpers = mock()
   mockStreamerChannelService = mock()
 
@@ -85,7 +82,6 @@ beforeEach(() => {
     masterchatProxyService: mockMasterchatProxyService,
     twurpleApiProxyService: mockTwurpleApiProxyService,
     timerHelpers: mockTimerHelpers,
-    viewershipStore: mockViewershipStore,
     disableExternalApis: false,
     dateTimeHelpers: mockDateTimeHelpers,
     streamerChannelService: mockStreamerChannelService
@@ -100,7 +96,6 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       masterchatProxyService: mockMasterchatProxyService,
       twurpleApiProxyService: mockTwurpleApiProxyService,
       timerHelpers: mockTimerHelpers,
-      viewershipStore: mockViewershipStore,
       disableExternalApis: true,
       dateTimeHelpers: mockDateTimeHelpers,
       streamerChannelService: mockStreamerChannelService
@@ -214,7 +209,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockLivestreamStore.addLiveViewCount.mock.calls)
     expect(receivedLivestreamId).toBe(livestream.id)
     expect(receivedYoutubeCount).toBe(metadata.viewerCount)
     expect(receivedTwitchCount).toBe(5)
@@ -231,7 +226,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockLivestreamStore.addLiveViewCount.mock.calls)
     expect(receivedLivestreamId).toBe(data.livestream1.id)
     expect(receivedYoutubeCount).toBe(metadata.viewerCount)
     expect(receivedTwitchCount).toBe(0)
@@ -248,7 +243,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockViewershipStore.addLiveViewCount.mock.calls)
+    const [receivedLivestreamId, receivedYoutubeCount, receivedTwitchCount] = single(mockLivestreamStore.addLiveViewCount.mock.calls)
     expect(receivedLivestreamId).toBe(livestream.id)
     expect(receivedYoutubeCount).toBe(metadata.viewerCount)
     expect(receivedTwitchCount).toBe(0)
@@ -265,7 +260,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     await livestreamService.initialise()
 
     expect(mockMasterchatProxyService.fetchMetadata.mock.calls.length).toBe(1)
-    expect(mockViewershipStore.addLiveViewCount.mock.calls.length).toBe(0)
+    expect(mockLivestreamStore.addLiveViewCount.mock.calls.length).toBe(0)
   })
 })
 

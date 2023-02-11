@@ -1,4 +1,4 @@
-import { ChatMessage, ExperienceDataChatMessage, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
+import { ChatMessage, ChatUser, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
@@ -7,25 +7,13 @@ import { NoNulls } from '@rebel/server/types'
 
 export type ChatExperience =
   NoNulls<Pick<Entity.ExperienceTransaction, 'id' | 'time' | 'delta' | 'user' | 'experienceDataChatMessage'>>
-  & { experienceDataChatMessage: { chatMessage: ChatMessage} }
+  & { experienceDataChatMessage: { chatMessage: ChatMessage}, user: ChatUser }
 
 export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
   'baseExperience' | 'viewershipStreakMultiplier' | 'participationStreakMultiplier' | 'spamMultiplier' | 'messageQualityMultiplier' | 'repetitionPenalty'>
   & { externalId: string }
 
 export type UserExperience = { primaryUserId: number, experience: number }
-
-export type ModifyChatExperienceArgs = {
-  experienceTransactionId: number
-  chatExperienceDataId: number
-  delta: number
-  baseExperience: number
-  viewershipStreakMultiplier: number
-  participationStreakMultiplier: number
-  spamMultiplier: number
-  messageQualityMultiplier: number
-  repetitionPenalty: number | null
-}
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -108,7 +96,7 @@ export default class ExperienceStore extends ContextClass {
       userId: primaryUserId,
       delta: xp,
       experienceDataAdmin: { create: {
-        adminRegisteredUserId: adminUserId,
+        adminUserId: adminUserId,
         message
       }}
     }})
@@ -195,7 +183,10 @@ export default class ExperienceStore extends ContextClass {
         experienceDataChatMessage: { isNot: null }
       },
       orderBy: { time: 'desc' },
-      include: { experienceDataChatMessage: { include: { chatMessage: true }}, user: true }
+      include: {
+        experienceDataChatMessage: { include: { chatMessage: true }},
+        user: true
+      }
     })
 
     return transactions.map(tx => ({ ...tx, experienceDataChatMessage: tx.experienceDataChatMessage! }))
@@ -214,6 +205,13 @@ export default class ExperienceStore extends ContextClass {
     return transactions.map(tx => tx.streamerId)
   }
 
+  /** Removes all snapshots across all streamers for the given users. */
+  public async invalidateSnapshots (userIds: number[]) {
+    await this.db.experienceSnapshot.deleteMany({
+      where: { userId: { in: userIds } }
+    })
+  }
+
   /** Updates experience transactions (across all streamers) that originally linked to the `fromUserId` to point to the `toUserId`. */
   public async relinkChatExperience (fromUserId: number, toUserId: number) {
     await this.db.experienceTransaction.updateMany({
@@ -222,6 +220,11 @@ export default class ExperienceStore extends ContextClass {
         originalUserId: fromUserId,
         userId: toUserId
       }
+    })
+
+    await this.db.experienceDataAdmin.updateMany({
+      where: { adminUserId: fromUserId },
+      data: { adminUserId: toUserId }
     })
   }
 
@@ -232,30 +235,6 @@ export default class ExperienceStore extends ContextClass {
       data: {
         originalUserId: null,
         userId: originalUserId
-      }
-    })
-  }
-
-  // uses an array for the input data for efficiency, since we may update thousands of entries in bulk
-  public async modifyChatExperiences (arg: ModifyChatExperienceArgs) {
-    // update the main transaction delta
-    await this.db.experienceTransaction.update({
-      where: { id: arg.experienceTransactionId },
-      data: {
-        delta: arg.delta
-      }
-    })
-
-    // update the chat message experience data
-    await this.db.experienceDataChatMessage.update({
-      where: { id: arg.chatExperienceDataId },
-      data: {
-        baseExperience: arg.baseExperience,
-        messageQualityMultiplier: arg.messageQualityMultiplier,
-        participationStreakMultiplier: arg.participationStreakMultiplier,
-        repetitionPenalty: arg.repetitionPenalty,
-        spamMultiplier: arg.spamMultiplier,
-        viewershipStreakMultiplier: arg.viewershipStreakMultiplier
       }
     })
   }

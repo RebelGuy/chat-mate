@@ -1,6 +1,6 @@
 At the moment, the main project in `chat-mate` is `./projects/server`. It communicates with YouTube, the Minecraft client, and the database.
 
-A work-in-progress is the `./projects/studio` project. It is a (for now) private web interface to manage some data within the database. It communicates with the server endpoints.
+A work-in-progress is the `./projects/studio` project. It is a web interface to manage some data within the database and view account information. It communicates with the server endpoints.
 
 To get things running, ensure Node 18 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
 
@@ -9,7 +9,6 @@ Recommended VSCode extensions:
 - `GitLens`
 - `Prisma`
 - `GitHub Actions`
-- `Azure Account`
 - `Thunder Client`
 
 ## CI and deployment
@@ -47,6 +46,18 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.23 - The Cleanup Update [11/2/2023]
+- Server
+  - Streamers must now select a primary channel (at most one per platform) to stream on
+  - Optimised channel linking and improved scalability of some streamer-specific functionality
+  - Removed viewership tracking and removed old punishment table
+  - Removed server log tracking
+  - Removed API schema
+  - External chat emojis are now keyed against the URL instead of some inconsistently constructed string
+- Studio
+  - Added UI for setting a linked channel to be primary or unsetting it as primary
+  - Some sections are now rank-gated
+
 ## v1.22 - The Link Update [26/1/2023]
 - Server
   - Addition of commands - these are any chat messages starting with `!`

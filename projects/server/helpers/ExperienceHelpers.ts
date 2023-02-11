@@ -128,11 +128,6 @@ export default class ExperienceHelpers extends ContextClass {
     return clamp(theoreticalMultiplier, 1, 2)
   }
 
-  public calculateViewershipMultiplier (viewershipWalkingScore: GreaterThanOrEqual<0>): GreaterThanOrEqual<1> {
-    const theoreticalMultiplier = 1 + 0.05 * Math.max(0, viewershipWalkingScore - 1)
-    return clamp(theoreticalMultiplier, 1, 2)
-  }
-
   public calculateQualityMultiplier (messageQuality: NumRange<0, 2>): NumRange<0, 2> {
     return messageQuality
   }

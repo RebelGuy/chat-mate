@@ -1,9 +1,9 @@
 import { ChatMessage } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ExperienceStore, { ModifyChatExperienceArgs, UserExperience } from '@rebel/server/stores/ExperienceStore'
+import ExperienceStore, { UserExperience } from '@rebel/server/stores/ExperienceStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { deleteProps, expectObject, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
+import { deleteProps, expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -124,10 +124,10 @@ export default () => {
   describe(nameof(ExperienceStore, 'addManualExperience'), () => {
     test('correctly adds experience', async () => {
       const streamerId = 2
-      const adminRegisteredUserId = 1
+      const adminUserId = 1
       await db.registeredUser.create({ data: { username: 'test', hashedPassword: 'test', aggregateChatUser: { create: {}} }})
 
-      await experienceStore.addManualExperience(streamerId, user1, adminRegisteredUserId, -200, 'This is a test')
+      await experienceStore.addManualExperience(streamerId, user1, adminUserId, -200, 'This is a test')
 
       const added = (await db.experienceTransaction.findFirst({ include: {
         experienceDataAdmin: true,
@@ -136,7 +136,7 @@ export default () => {
       expect(added.streamerId).toBe(streamerId)
       expect(added.userId).toBe(user1)
       expect(added.delta).toBe(-200)
-      expect(added.experienceDataAdmin?.adminRegisteredUserId).toBe(adminRegisteredUserId)
+      expect(added.experienceDataAdmin?.adminUserId).toBe(adminUserId)
       expect(added.experienceDataAdmin?.message).toBe('This is a test')
     })
   })
@@ -581,7 +581,7 @@ export default () => {
         { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
       ]})
       await db.experienceDataAdmin.create({ data: {
-        adminRegisteredUserId: 1, experienceTransactionId: 4
+        adminUserId: 1, experienceTransactionId: 4
       }})
 
       const result = await experienceStore.getChatExperienceStreamerIdsForUser(user2)
@@ -609,19 +609,42 @@ export default () => {
     })
   })
 
+  describe(nameof(ExperienceStore, 'invalidateSnapshots'), () => {
+    test('Deletes all snapshots for the given user across all streamers', async () => {
+      await db.experienceSnapshot.createMany({ data: [
+        { userId: user1, streamerId: streamer1, experience: 1, time: data.time1 },
+        { userId: user1, streamerId: streamer2, experience: 1, time: data.time1 },
+        { userId: user2, streamerId: streamer1, experience: 1, time: data.time1 },
+        { userId: user2, streamerId: streamer2, experience: 1, time: data.time1 },
+        { userId: user3, streamerId: streamer3, experience: 1, time: data.time1 },
+      ]})
+
+      await experienceStore.invalidateSnapshots([user1, user3])
+
+      await expectRowCount(db.experienceSnapshot).toBe(2)
+    })
+  })
+
   describe(nameof(ExperienceStore, 'relinkChatExperience'), () => {
-    test('Updates all transactions across several streamers', async () => {
+    test('Updates all transactions across several streamers, including admin modifications', async () => {
       await db.experienceTransaction.createMany({ data: [
         { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
         { streamerId: streamer1, userId: user2, delta: 2, time: data.time1 },
-        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 },
+        { streamerId: streamer1, userId: user1, delta: 2, time: data.time1 }
       ]})
+      await db.experienceDataAdmin.create({ data: {
+        adminUserId: user2, experienceTransactionId: 4
+      }})
 
       await experienceStore.relinkChatExperience(user2, user3)
 
       const stored = await db.experienceTransaction.findMany()
-      expect(stored.map(tx => tx.userId)).toEqual([user1, user3, user3])
-      expect(stored.map(tx => tx.originalUserId)).toEqual([null, user2, user2])
+      expect(stored.map(tx => tx.userId)).toEqual([user1, user3, user3, user1])
+      expect(stored.map(tx => tx.originalUserId)).toEqual([null, user2, user2, null])
+
+      const adminData = await db.experienceDataAdmin.findMany().then(single)
+      expect(adminData.adminUserId).toBe(user3)
     })
   })
 
@@ -638,27 +661,6 @@ export default () => {
       const stored = await db.experienceTransaction.findMany()
       expect(stored.map(tx => tx.userId)).toEqual([user3, user3, user2])
       expect(stored.map(tx => tx.originalUserId)).toEqual([null, null, user1])
-    })
-  })
-
-  describe(nameof(ExperienceStore, 'modifyChatExperiences'), () => {
-    test('Updates the transaction delta and chat experience', async () => {
-      await db.experienceTransaction.createMany({ data: [
-        { streamerId: streamer1, userId: user1, delta: 1, time: data.time1 },
-        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 },
-      ]})
-      await db.experienceDataChatMessage.createMany({ data: [
-        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
-        { baseExperience: 200, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 2, participationStreakMultiplier: 2, spamMultiplier: 2, viewershipStreakMultiplier: 2, repetitionPenalty: 2 },
-      ]})
-      const args: ModifyChatExperienceArgs = { experienceTransactionId: 1, chatExperienceDataId: 1, delta: 10, baseExperience: 1, messageQualityMultiplier: 10, participationStreakMultiplier: 10, repetitionPenalty: 10, spamMultiplier: 10, viewershipStreakMultiplier: 10 }
-
-      await experienceStore.modifyChatExperiences(args)
-
-      const storedTxs = await db.experienceTransaction.findMany()
-      const storedData = await db.experienceDataChatMessage.findMany()
-      expect(storedTxs.map(tx => tx.delta)).toEqual([10, 2])
-      expect(storedData.map(d => d.baseExperience)).toEqual([1, 200])
     })
   })
 }

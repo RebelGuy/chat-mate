@@ -1,4 +1,4 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, Endpoint, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, Endpoint, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
@@ -9,32 +9,32 @@ import ChatMateControllerFake from '@rebel/server/controllers/ChatMateController
 import { EmptyObject } from '@rebel/server/types'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
-export type PingResponse = ApiResponse<1, EmptyObject>
+export type PingResponse = ApiResponse<EmptyObject>
 
-export type GetStatusResponse = ApiResponse<3, {
-  livestreamStatus: Tagged<3, PublicLivestreamStatus> | null
-  youtubeApiStatus: Tagged<1, PublicApiStatus>
-  twitchApiStatus: Tagged<1, PublicApiStatus>
+export type GetStatusResponse = ApiResponse<{
+  livestreamStatus: PublicObject<PublicLivestreamStatus> | null
+  youtubeApiStatus: PublicObject<PublicApiStatus>
+  twitchApiStatus: PublicObject<PublicApiStatus>
 }>
 
-type GetEventsResponse = ApiResponse<6, {
+type GetEventsResponse = ApiResponse<{
   // include the timestamp so it can easily be used for the next request
   reusableTimestamp: number
-  events: Tagged<5, PublicChatMateEvent>[]
+  events: PublicObject<PublicChatMateEvent>[]
 }>
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type GetStatusEndpoint = Endpoint<3, {}, GetStatusResponse>
+export type GetStatusEndpoint = Endpoint<{}, GetStatusResponse>
 
-export type GetEventsEndpoint = Endpoint<6, { since: number }, GetEventsResponse>
+export type GetEventsEndpoint = Endpoint<{ since: number }, GetEventsResponse>
 
-export type SetActiveLivestreamRequest = ApiRequest<2, { schema: 2, livestream: string | null }>
-export type SetActiveLivestreamResponse = ApiResponse<2, { livestreamLink: string | null }>
-export type SetActiveLivestreamEndpoint = Endpoint<2, Omit<SetActiveLivestreamRequest, 'schema'>, SetActiveLivestreamResponse>
+export type SetActiveLivestreamRequest = ApiRequest<{ livestream: string | null }>
+export type SetActiveLivestreamResponse = ApiResponse<{ livestreamLink: string | null }>
+export type SetActiveLivestreamEndpoint = Endpoint<SetActiveLivestreamRequest, SetActiveLivestreamResponse>
 
-export type GetMasterchatAuthenticationResponse = ApiResponse<1, { authenticated: boolean | null }>
+export type GetMasterchatAuthenticationResponse = ApiResponse<{ authenticated: boolean | null }>
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type GetMasterchatAuthenticationEndpoint = Endpoint<1, {}, GetMasterchatAuthenticationResponse>
+export type GetMasterchatAuthenticationEndpoint = Endpoint<{}, GetMasterchatAuthenticationResponse>
 
 export interface IChatMateController {
   getStatus: GetStatusEndpoint
@@ -56,7 +56,7 @@ export default class ChatMateController extends ControllerBase {
   @GET
   @Path('ping')
   public ping (): PingResponse {
-    const builder = this.registerResponseBuilder<PingResponse>('GET /ping', 1)
+    const builder = this.registerResponseBuilder<PingResponse>('GET /ping')
     return builder.success({})
   }
 
@@ -64,7 +64,7 @@ export default class ChatMateController extends ControllerBase {
   @Path('status')
   @PreProcessor(requireStreamer)
   public async getStatus (): Promise<GetStatusResponse> {
-    const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status', 3)
+    const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status')
     try {
       return await this.implementation.getStatus({ builder })
     } catch (e: any) {
@@ -79,7 +79,7 @@ export default class ChatMateController extends ControllerBase {
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
-    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events', 6)
+    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events')
     if (since == null) {
       return builder.failure(400, `A value for 'since' must be provided.`)
     }
@@ -96,7 +96,7 @@ export default class ChatMateController extends ControllerBase {
   @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
   public async setActiveLivestream (request: SetActiveLivestreamRequest): Promise<SetActiveLivestreamResponse> {
-    const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream', 2)
+    const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream')
     if (request == null || request.livestream === undefined) {
       return builder.failure(400, `A value for 'livestream' must be provided or set to null.`)
     }
@@ -112,7 +112,7 @@ export default class ChatMateController extends ControllerBase {
   @Path('masterchat/authentication')
   @PreProcessor(requireRank('admin'))
   public async getMasterchatAuthentication (): Promise<GetMasterchatAuthenticationResponse> {
-    const builder = this.registerResponseBuilder<GetMasterchatAuthenticationResponse>('GET /masterchat/authentication', 1)
+    const builder = this.registerResponseBuilder<GetMasterchatAuthenticationResponse>('GET /masterchat/authentication')
     try {
       return await this.implementation.getMasterchatAuthentication({ builder })
     } catch (e: any) {

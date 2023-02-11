@@ -16,7 +16,6 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import ChatMateController from '@rebel/server/controllers/ChatMateController'
@@ -41,7 +40,6 @@ import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/Client
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import PunishmentStore from '@rebel/server/stores/PunishmentStore'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
@@ -49,9 +47,6 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
-import LogsQueryClientProvider from '@rebel/server/providers/LogsQueryClientProvider'
-import LogQueryService from '@rebel/server/services/LogQueryService'
-import LogController from '@rebel/server/controllers/LogController'
 import { TimeoutError } from '@rebel/server/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
@@ -87,6 +82,9 @@ import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import AccountService from '@rebel/server/services/AccountService'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
+import UserService from '@rebel/server/services/UserService'
+import GenericStore from '@rebel/server/stores/GenericStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -102,8 +100,6 @@ const twitchClientSecret = env('twitchClientSecret')
 const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
 const enableDbLogging = env('enableDbLogging')
 const hostName = env('websiteHostname')
-const managedIdentityClientId = env('managedIdentityClientId')
-const logAnalyticsWorkspaceId = env('logAnalyticsWorkspaceId')
 const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
 const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
 const dbTransactionTimeout = env('dbTransactionTimeout')
@@ -125,8 +121,6 @@ const globalContext = ContextProvider.create()
   .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
   .withProperty('dbTransactionTimeout', dbTransactionTimeout)
   .withProperty('hostName', hostName)
-  .withProperty('managedIdentityClientId', managedIdentityClientId)
-  .withProperty('logAnalyticsWorkspaceId', logAnalyticsWorkspaceId)
   .withProperty('streamlabsAccessToken', streamlabsAccessToken)
   .withHelpers('experienceHelpers', ExperienceHelpers)
   .withHelpers('timerHelpers', TimerHelpers)
@@ -141,8 +135,6 @@ const globalContext = ContextProvider.create()
   .withClass('eventDispatchService', EventDispatchService)
   .withClass('fileService', FileService)
   .withClass('applicationInsightsService', ApplicationInsightsService)
-  .withClass('logsQueryClientProvider', LogsQueryClientProvider)
-  .withClass('logQueryService', LogQueryService)
   .withClass('logService', LogService)
   .withClass('dbProvider', DbProvider)
   .withClass('authStore', AuthStore)
@@ -157,10 +149,10 @@ const globalContext = ContextProvider.create()
   .withClass('twurpleApiProxyService', TwurpleApiProxyService)
   .withClass('streamlabsProxyService', StreamlabsProxyService)
   .withClass('livestreamStore', LivestreamStore)
-  .withClass('viewershipStore', ViewershipStore)
   .withClass('accountStore', AccountStore)
   .withClass('streamerStore', StreamerStore)
   .withClass('channelStore', ChannelStore)
+  .withClass('streamerChannelStore', StreamerChannelStore)
   .withClass('streamerChannelService', StreamerChannelService)
   .withClass('livestreamService', LivestreamService)
   .withClass('rankStore', RankStore)
@@ -169,16 +161,17 @@ const globalContext = ContextProvider.create()
   .withClass('chatStore', ChatStore)
   .withClass('accountService', AccountService)
   .withClass('channelService', ChannelService)
-  .withClass('punishmentStore', PunishmentStore)
   .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
   .withClass('twurpleService', TwurpleService)
+  .withClass('linkStore', LinkStore)
+  .withClass('userService', UserService)
   .withClass('punishmentService', PunishmentService)
+  .withClass('genericStore', GenericStore)
   .withClass('experienceService', ExperienceService)
   .withClass('customEmojiStore', CustomEmojiStore)
   .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
   .withClass('emojiService', EmojiService)
   .withClass('commandStore', CommandStore)
-  .withClass('linkStore', LinkStore)
   .withClass('donationStore', DonationStore)
   .withClass('modService', ModService)
   .withClass('rankService', RankService)
@@ -219,7 +212,7 @@ app.use((req, res, next) => {
       return res
     }
 
-    let responseBody: ApiResponse<any, any> | null
+    let responseBody: ApiResponse<any> | null
     if (body == null) {
       responseBody = null
     } else {
@@ -232,7 +225,6 @@ app.use((req, res, next) => {
         }
 
         responseBody = {
-          schema: 1,
           timestamp: new Date().getTime(),
           success: false,
           error: {
@@ -275,7 +267,6 @@ app.use(async (req, res, next) => {
     .withClass('experienceController', ExperienceController)
     .withClass('userController', UserController)
     .withClass('punishmentController', PunishmentController)
-    .withClass('logController', LogController)
     .withClass('rankController', RankController)
     .withClass('donationController', DonationController)
     .withClass('livestreamController', LivestreamController)
@@ -305,7 +296,6 @@ Server.buildServices(app,
   ExperienceController,
   UserController,
   PunishmentController,
-  LogController,
   RankController,
   DonationController,
   LivestreamController,
@@ -316,7 +306,7 @@ Server.buildServices(app,
 // error handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   // any errors reaching here are unhandled - just return a 500
-  logContext.logError('Express encountered error for the request at ' + req.url + ':', err)
+  logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
 
   if (!res.headersSent) {
     res.sendStatus(500)

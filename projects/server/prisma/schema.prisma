@@ -55,9 +55,8 @@ model Livestream {
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "livestream_streamerId_fkey")
 
-  liveViewers   LiveViewers[]
-  chatMessages  ChatMessage[]
-  viewingBlocks ViewingBlock[]
+  liveViewers  LiveViewers[]
+  chatMessages ChatMessage[]
 
   @@unique([liveId], map: "livestream_liveId_key")
   @@index([streamerId], map: "livestream_streamerId_fkey")
@@ -94,18 +93,17 @@ model ChatUser {
   aggregateChatUser   ChatUser? @relation(name: "aggregateChatUser", fields: [aggregateChatUserId], references: [id], map: "chat_user_aggregateChatUserId_fkey")
 
   // the channels associated with the user. Empty if this is an aggregate user
-  youtubeChannels YoutubeChannel[]
-  twitchChannels  TwitchChannel[]
+  youtubeChannel YoutubeChannel?
+  twitchChannel  TwitchChannel?
 
   chatMessages                   ChatMessage[]
   experienceTransactions         ExperienceTransaction[] @relation("experience_transaction_user")
   originalExperienceTransactions ExperienceTransaction[] @relation("experience_transaction_originalUser")
   experienceSnapshots            ExperienceSnapshot[]
-  viewingBlocks                  ViewingBlock[]
   experienceDataAdministered     ExperienceDataAdmin[]
-  receivedPunishments            Punishment[]            @relation("punishment_user")
-  administeredPunishments        Punishment[]            @relation("punishment_adminUser")
   userRanks                      UserRank[]              @relation("user_rank_userId")
+  administeredUserRanks          UserRank[]              @relation("user_rank_assignedByUserId")
+  revokedUserRanks               UserRank[]              @relation("user_rank_revokedByUserId")
   donationLinks                  DonationLink[]          @relation("donation_link_linkedUser")
   originalDonationLinks          DonationLink[]          @relation("donation_link_originalLinkedUser")
   registeredUser                 RegisteredUser?
@@ -189,11 +187,9 @@ model RegisteredUser {
   aggregateChatUserId Int // unique
   aggregateChatUser   ChatUser @relation(fields: [aggregateChatUserId], references: [id], map: "registered_user_aggregateChatUserId_fkey")
 
-  loginTokens           LoginToken[]
-  streamer              Streamer?
-  streamerApplications  StreamerApplication[]
-  administeredUserRanks UserRank[]            @relation("user_rank_assignedByRegisteredUserId")
-  revokedUserRanks      UserRank[]            @relation("user_rank_revokedByRegisteredUserId")
+  loginTokens          LoginToken[]
+  streamer             Streamer?
+  streamerApplications StreamerApplication[]
 
   @@unique([aggregateChatUserId], map: "registered_user_aggregateChatUserId_fkey")
   @@unique([username], map: "registered_user_username_key")
@@ -219,15 +215,17 @@ model Streamer {
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
-  userRanks              UserRank[]
-  livestreams            Livestream[]
-  customEmojis           CustomEmoji[]
-  donations              Donation[]
-  streamlabsSocketToken  StreamlabsSocketToken?
-  experienceTransactions ExperienceTransaction[]
-  experienceSnapshots    ExperienceSnapshot[]
-  twitchFollowers        TwitchFollower[]
-  chatMessages           ChatMessage[]
+  userRanks                  UserRank[]
+  livestreams                Livestream[]
+  customEmojis               CustomEmoji[]
+  donations                  Donation[]
+  streamlabsSocketToken      StreamlabsSocketToken?
+  experienceTransactions     ExperienceTransaction[]
+  experienceSnapshots        ExperienceSnapshot[]
+  twitchFollowers            TwitchFollower[]
+  chatMessages               ChatMessage[]
+  streamerYoutubeChannelLink StreamerYoutubeChannelLink?
+  streamerTwitchChannelLink  StreamerTwitchChannelLink?
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -275,11 +273,12 @@ model YoutubeChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "youtube_channel_userId_fkey")
 
-  infoHistory  YoutubeChannelInfo[]
-  chatMessages ChatMessage[]
+  infoHistory                YoutubeChannelInfo[]
+  chatMessages               ChatMessage[]
+  streamerYoutubeChannelLink StreamerYoutubeChannelLink?
 
   @@unique([youtubeId], map: "youtube_channel_youtubeId_key")
-  @@index([userId], map: "youtube_channel_userId_fkey")
+  @@unique([userId], map: "youtube_channel_userId_fkey")
   @@map("youtube_channel")
 }
 
@@ -312,12 +311,41 @@ model TwitchChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channel_userId_fkey")
 
-  infoHistory  TwitchChannelInfo[]
-  chatMessages ChatMessage[]
+  infoHistory               TwitchChannelInfo[]
+  chatMessages              ChatMessage[]
+  streamerTwitchChannelLink StreamerTwitchChannelLink?
 
   @@unique([twitchId], map: "twitch_channel_twitchId_key")
-  @@index([userId], map: "twitch_channel_userId_fkey")
+  @@unique([userId], map: "twitch_channel_userId_fkey")
   @@map("twitch_channel")
+}
+
+model StreamerYoutubeChannelLink {
+  id Int @id @default(autoincrement())
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "streamer_youtube_channel_link_streamerId_fkey")
+
+  youtubeChannelId Int
+  youtubeChannel   YoutubeChannel @relation(fields: [youtubeChannelId], references: [id], map: "streamer_youtube_channel_link_youtubeChannelId_fkey")
+
+  @@unique([streamerId], map: "streamer_youtube_channel_link_streamerId_fkey")
+  @@unique([youtubeChannelId], map: "streamer_youtube_channel_link_youtubeChannelId_fkey")
+  @@map("streamer_youtube_channel_link")
+}
+
+model StreamerTwitchChannelLink {
+  id Int @id @default(autoincrement())
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "streamer_twitch_channel_link_streamerId_fkey")
+
+  twitchChannelId Int
+  twitchChannel   TwitchChannel @relation(fields: [twitchChannelId], references: [id], map: "streamer_twitch_channel_link_twitchChannelId_fkey")
+
+  @@unique([streamerId], map: "streamer_twitch_channel_link_streamerId_fkey")
+  @@unique([twitchChannelId], map: "streamer_twitch_channel_link_twitchChannelId_fkey")
+  @@map("streamer_twitch_channel_link")
 }
 
 model TwitchFollower {
@@ -340,8 +368,7 @@ model TwitchFollower {
 /// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
   id          Int     @id @default(autoincrement())
-  externalId  String  @db.VarChar(255) // unique
-  imageUrl    String? @db.VarChar(511)
+  imageUrl    String? @db.VarChar(511) // url
   imageWidth  Int?    @db.SmallInt
   imageHeight Int?    @db.SmallInt
   name        String? @db.VarChar(127)
@@ -355,7 +382,7 @@ model ChatEmoji {
   // any custom emojis that have replaced this YouTube emoji within a chat message
   customEmoji ChatCustomEmoji[]
 
-  @@unique([externalId], map: "chat_emoji_externalId_key")
+  @@unique([imageUrl], map: "chat_emoji_imageUrl_key")
   @@map("chat_emoji")
 }
 
@@ -563,6 +590,7 @@ model ExperienceDataChatMessage {
 
   // if you add any new fields to this, be sure to update the `ExperienceStore.updateChatExperiences()` method
   baseExperience                Int
+  /// Deprecated - only used before v1.23
   viewershipStreakMultiplier    Float
   participationStreakMultiplier Float
   spamMultiplier                Float
@@ -586,33 +614,15 @@ model ExperienceDataAdmin {
 
   message String? @db.VarChar(1023)
 
-  adminRegisteredUserId Int
-  adminRegisteredUser   ChatUser @relation(fields: [adminRegisteredUserId], references: [id], map: "experience_data_admin_adminRegisteredUserId_fkey") //
+  adminUserId Int
+  adminUser   ChatUser @relation(fields: [adminUserId], references: [id], map: "experience_data_admin_adminUserId_fkey")
 
   experienceTransactionId Int // unique
   experienceTransaction   ExperienceTransaction @relation(fields: [experienceTransactionId], references: [id], map: "experience_data_admin_experienceTransactionId_fkey")
 
   @@unique([experienceTransactionId], map: "experience_data_admin_experienceTransactionId_key")
-  @@index([adminRegisteredUserId], map: "experience_data_admin_adminRegisteredUserId_fkey")
+  @@index([adminUserId], map: "experience_data_admin_adminUserId_fkey")
   @@map("experience_data_admin")
-}
-
-/// Represents a continuous period of time in which a user has been viewing a livestream.
-model ViewingBlock {
-  id Int @id @default(autoincrement())
-
-  startTime  DateTime
-  lastUpdate DateTime
-
-  livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "viewing_block_livestreamId_fkey")
-
-  userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "viewing_block_userId_fkey")
-
-  @@index([livestreamId], map: "viewing_block_livestreamId_fkey")
-  @@index([userId], map: "viewing_block_userId_fkey")
-  @@map("viewing_block")
 }
 
 model CustomEmoji {
@@ -736,12 +746,12 @@ model UserRank {
   streamer   Streamer? @relation(fields: [streamerId], references: [id], map: "user_rank_streamerId_fkey")
 
   /// if null, was assigned by the system
-  assignedByRegisteredUserId Int?
-  assignedByRegisteredUser   RegisteredUser? @relation("user_rank_assignedByRegisteredUserId", fields: [assignedByRegisteredUserId], references: [id], map: "user_rank_assignedByRegisteredUserId_fkey")
+  assignedByUserId Int?
+  assignedByUser   ChatUser? @relation("user_rank_assignedByUserId", fields: [assignedByUserId], references: [id], map: "user_rank_assignedByUserId_fkey")
 
   /// if null, was revoked by the system. only relevant when `revokedTime` is non-null, or the rank has expired
-  revokedByRegisteredUserId Int?
-  revokedBRegisteredyUser   RegisteredUser? @relation("user_rank_revokedByRegisteredUserId", fields: [revokedByRegisteredUserId], references: [id], map: "user_rank_revokedByRegisteredUserId_fkey")
+  revokedByUserId Int?
+  revokedByUser   ChatUser? @relation("user_rank_revokedByUserId", fields: [revokedByUserId], references: [id], map: "user_rank_revokedByUserId_fkey")
 
   @@index([rankId], map: "user_rank_rankId_fkey")
   @@index([userId], map: "user_rank_userId_fkey")
@@ -749,36 +759,6 @@ model UserRank {
   @@index([expirationTime], map: "user_rank_expirationTime_key")
   @@index([revokedTime], map: "user_rank_revokedTime_key")
   @@map("user_rank")
-}
-
-model Punishment {
-  id Int @id @default(autoincrement())
-
-  punishmentType PunishmentType
-  issuedAt       DateTime
-  /// null if punishment never expires
-  expirationTime DateTime?
-  message        String?        @db.VarChar(1024)
-
-  /// only set if the punishments has been revoked
-  revokedTime   DateTime?
-  revokeMessage String?   @db.VarChar(1024)
-
-  userId Int
-  user   ChatUser @relation("punishment_user", fields: [userId], references: [id], map: "punishment_userId_fkey")
-
-  adminUserId Int
-  adminUser   ChatUser @relation("punishment_adminUser", fields: [adminUserId], references: [id], map: "punishment_adminUserId_fkey")
-
-  @@index([userId], map: "punishment_userId_fkey")
-  @@index([adminUserId], map: "punishment_adminUserId_fkey")
-  @@map("punishment")
-}
-
-enum PunishmentType {
-  ban
-  timeout
-  mute
 }
 
 model Donation {

@@ -43,13 +43,6 @@ When deployed, we use Application Insights to track all error and warning messag
 
 At all times, we are logging all messages to the file system. On Azure, the data folder lives under `/site/data` and can be accessed via FileZilla.
 
-The retrieval of logs from Application Insights is achieved automatically (and exposed via the LogsController) using Azure's Log Analytics Workspaces and the [`monitor-query` package](https://docs.microsoft.com/en-us/javascript/api/overview/azure/monitor-query-readme?view=azure-node-latest). Note that we use the pay-as-you go pricing tier ($3.22 per GB) with a free 5 GB per month. It works by telling Application Insights to feed its data to the workspace (done via Monitoring -> Diagnostic Settings), which can then be queried via the API.
-
-**[Authentication](https://github.com/Azure/azure-sdk-for-js/blob/@azure/monitor-query_1.0.2/sdk/identity/identity/README.md#defaultazurecredential) of the `monitor-query` package**
-When developing locally, we [authenticate](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/identity/identity/README.md#authenticate-via-visual-studio-code) via the Azure Account extension (**version 0.9.10**). Run the `sign in` VSCode command to commence the session. When generating the client during runtime, the `DefaultAzureCredential` will automatically read this sign-in session from VSCode.
-
-When deployed to Azure, the `MANAGED_IDENTITY_CLIENT_ID` points the credential handler to the managed identity that we want to use, and no further authentication should be required to get things working.
-
 # .env
 Define `local.env`, `debug.env` and `release.env` files that set the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
 
@@ -66,8 +59,6 @@ The following environment variables must be set in the `.env` file:
 - `DB_SEMAPHORE_CONCURRENT`: [Optional, defaults to `1000`] How many concurrent database requests to allow, before queuing any new requests. Note that operations on the Prisma Client generate many direct database requests, so this number shouldn't be too low (> 50).
 - `DB_SEMAPHORE_TIMEOUT`: [Optional, defaults to `null`] The maximum number of milliseconds that a database request can be queued before timing it out. If null, does not timeout requests in the queue.
 - `DB_TRANSACTION_TIMEOUT`: [Optional, defaults to `5000`] The maximum number of milliseconds a Prisma transaction can run before being cancelled and rolled back.
-- `MANAGED_IDENTITY_CLIENT_ID`: The Client ID of the Managed Identity that is used to access the Log Analytics workspace for querying logs.
-- `LOG_ANALYTICS_WORKSPACE_ID`: The Client ID of the Log Analytics Workspace that is attached to the Application Insights for the current server App Service instance.
 
 The following set of environment variables is available only for **local development** (that is, where `NODE_ENV`=`local`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `fa
@@ -125,7 +116,6 @@ Due to concurrency issues, all tests using the test database will need to be run
 Use the API endpoints to communicate with the server while it is running. The API base URL is `http://localhost:3010/api`.
 
 A response contains the following properties:
-- `schema` (`number`): The current schema of the return object. Every time there is a change, this will be bumped up by one to avoid inconsistencies between the server and client.
 - `timestamp` (`number`): The unix timestamp (in ms) at which the response was generated.
 - `success` (`boolean`): True if the request was processed correctly, and false otherwise.
 - `data` (`object`): Only included if `success` is `true`. Contains the response data, outlined for each endpoint below.
@@ -136,9 +126,7 @@ A response contains the following properties:
 
 Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
 
-All non-primitive properties of `data` are of type `PublicObject`, which are reusable, schema-tagged objects which themselves contain either primitive types or other `PublicObject`s. The schema definitions for these can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times. The schema of an object should be bumped whenever a property of this object, or one of its children changes. That is, schema changes should cascade upwards until reaching the controller levels.
-
-Any data in the request body should also have a schema. This is always in sync with the schema version of the response object.
+All non-primitive properties of `data` are of type `PublicObject`, which are reusable objects which themselves contain either primitive types or other `PublicObject`s. The definitions for these objects can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times.
 
 Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-Login-Token` header.
 
@@ -146,8 +134,6 @@ Authentication is required for most endpoints. To authenticate a request, provid
 Path: `/account`.
 
 ### `POST /register` [anonymous]
-*Current schema: 1.*
-
 Registers a new user.
 
 Request data (body):
@@ -161,8 +147,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /login` [anonymous]
-*Current schema: 1.*
-
 Logs the user into their account.
 
 Request data (body):
@@ -177,15 +161,11 @@ Can return the following errors:
 - `401`: When the credentials are incorrect.
 
 ### `POST /logout`
-*Current schema: 1.*
-
 Logs the user out of their account by invalidating all login tokens. To authenticate, the user must call `/login` again.
 
 Returns an empty response body.
 
 ### `POST /authenticate`
-*Current schema: 1.*
-
 Authenticates the login token contained in the header. If successful, the login token can be used to authenticate other API requests.
 
 Returns data with the following properties:
@@ -198,13 +178,12 @@ Can return the following errors:
 Path: `/chat`.
 
 ### `GET`
-*Current schema: 8.*
 
 Retrieves the latest chat items.
 
 Query parameters:
 - `since` (`number`): *Optional.* Gets only chat items **after** the given time (unix ms).
-- `limit` (`number`): *Optional.* Limits the number of returned chat items. Defaults to 100.
+- `limit` (`number`): *Optional.* Limits the number of returned chat items. Defaults to the maximum value of 100.
 
 Returns data with the following properties:
 - `reusableTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
@@ -214,15 +193,11 @@ Returns data with the following properties:
 Path: `/chatMate`.
 
 ### `GET /ping` [anonymous]
-*Current schema: 1.*
-
 Pings the server.
 
 Returns data with no properties.
 
 ### `GET /status`
-*Current schema: 4.*
-
 Gets the latest status information.
 
 Returns data with the following properties:
@@ -231,8 +206,6 @@ Returns data with the following properties:
 - `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
 
 ### `GET /events`
-*Current schema: 5.*
-
 Gets the events that have occurred since the specified time.
 
 Query parameters:
@@ -246,8 +219,6 @@ Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
 ### `PATCH /livestream`
-*Current schema: 2.*
-
 Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
 
 Request data (body):
@@ -261,8 +232,6 @@ Can return the following errors:
 - `422`: When an active livestream already exists.
 
 ### `GET /masterchat/authentication`
-*Current schema: 1.*
-
 Check whether the currently active Masterchat instance is authenticated.
 
 Returns data with the following properties:
@@ -275,16 +244,12 @@ Returns data with the following properties:
 Path: `/donation`.
 
 ### `GET /`
-*Current schema: 1.*
-
 Gets all donations.
 
 Returns data with the following properties:
 - `donations` (`PublicDonation[]`): The list of all donations.
 
 ### `POST /link`
-*Current schema: 1.*
-
 Links a user to a donation.
 
 Query parameters:
@@ -298,8 +263,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or when a user is already linked to the given donation.
 
 ### `DELETE /link`
-*Current schema: 1.*
-
 Unlinks a user to a donation.
 
 Query parameters:
@@ -312,8 +275,6 @@ Can return the following errors:
 - `404`: When the request data is not sent, or when no user was linked to the given donation.
 
 ### `POST /streamlabs/socketToken`
-*Current schema: 1.*
-
 Sets the streamlab socket token for listening to the current streamer's donations. The server is unable to get donations if the token is not set, or is invalid.
 
 Request data (body):
@@ -325,8 +286,6 @@ Returns data with the following properties:
   - Set to `noChange` if the operation was successful, but the provided token was the same as the existing token and thus no state change occurred.
 
 ### `GET /streamlabs/status`
-*Current schema: 1.*
-
 Gets the Streamlabs donation WebSocket status.
 
 Returns data with the following properties:
@@ -339,16 +298,12 @@ Returns data with the following properties:
 Path: `/emoji`.
 
 ### `GET /custom`
-*Current schema: 1.*
-
 Gets all custom emojis.
 
 Returns data with the following properties:
 - `emojis` (`PublicCustomEmoji[]`): The list of all custom emojis.
 
 ### `POST /custom`
-*Current schema: 1.*
-
 Add a new custom emoji.
 
 Request data (body):
@@ -361,8 +316,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `PATCH /custom`
-*Current schema: 1.*
-
 Update an existing custom emoji.
 
 Request data (body):
@@ -378,16 +331,12 @@ Can return the following errors:
 Path: `/experience`.
 
 ### `GET /leaderboard`
-*Current schema: 4.*
-
 Gets the ranked experience list of all users.
 
 Returns data with the following properties:
 - `rankedUsers` (`PublicRankedUser[]`): The array of every user's rank, sorted in ascending order.
 
 ### `GET /rank`
-*Current schema: 4.*
-
 Gets the rank of a specific user, as well as some context. Essentially, it returns a sub-section of the data from `GET /leaderboard`.
 
 Query parameters:
@@ -402,8 +351,6 @@ Can return the following errors:
 - `404`: When no channel could be matched against the search query.
 
 ### `POST /modify`
-*Current schema: 3.*
-
 Modifies a player's experience by adding a special admin transaction.
 
 Request data (body):
@@ -422,30 +369,15 @@ Can return the following errors:
 Path: `/livestream`.
 
 ### `GET /`
-*Current schema: 1.*
-
 Gets the list of all livestreams with any status.
 
 Returns data with the following properties:
 - `livestreams` (`PublicLivestream[]`): The list of livestreams, sorted by start time in ascending order. Livestreams that haven't started yet are placed at the end of the array.
 
-## Log Endpoints
-Path: `/log`.
-
-### `GET /timestamps`
-*Current schema: 1.*
-
-Gets timestamps of warnings and errors encountered within the last 24 hours.
-
-Returns data with the following properties:
-- `timestamps` (`PublicLogTimestamps`): The timestamps of warnings and errors.
-
 ## Punishment Endpoints
 Path: `/punishment`.
 
 ### `GET /:id`
-*Current schema: 2.*
-
 Gets a punishment by id.
 
 Path parameters:
@@ -458,8 +390,6 @@ Can return the following errors:
 - `404`: When a punishment with the specifed id could not be found.
 
 ### `GET`
-*Current schema: 2.*
-
 Gets the list of current or historical punishments.
 
 Query parameters:
@@ -473,8 +403,6 @@ Can return the following errors:
 - `400`: When the required query parameters have not been provided, or the query parameters are incompatible.
 
 ### `POST /ban`
-*Current schema: 4.*
-
 Applies a punishment of type `ban` to the user, which is essentially a permanent `timeout`. This endpoint may also be used to apply bans to any channels which may not currently be banned.
 
 Request data (body):
@@ -490,8 +418,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /unban`
-*Current schema: 4.*
-
 Revokes an existing `ban` punishment from the user. This may also be used to remove any residual bans on the external platforms.
 
 Request data (body):
@@ -507,8 +433,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /timeout`
-*Current schema: 4.*
-
 Applies a punishment of type `timeout` to the user, which is essentially a temporary `ban`. This endpoint may also be used to apply timeouts to any channels which may not currently be timed out.
 
 Request data (body):
@@ -525,8 +449,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /revokeTimeout`
-*Current schema: 3.*
-
 Revokes an existing `timeout` punishment from the user. This may also be used to remove any residual timeouts on the external platforms.
 
 Request data (body):
@@ -542,8 +464,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `POST /mute`
-*Current schema: 2.*
-
 Applies a punishment of type `mute` to the user.
 
 Request data (body):
@@ -558,8 +478,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly. This error is also returned when a mute is already active for the given user.
 
 ### `POST /unmute`
-*Current schema: 3.*
-
 Revokes an existing `mute` punishment from the user.
 
 Request data (body):
@@ -580,8 +498,6 @@ Path: `/rank`.
 Note: For punishment-specific functionality, refer to the [punishment endpoints](#punishment-endpoints).
 
 ### `GET`
-*Current schema: 1.*
-
 Gets the list of current or historical user-ranks. If the streamer header is provided, returns ranks for the streamer and global ranks, otherwise returns global ranks only.
 
 Query parameters:
@@ -596,16 +512,12 @@ Can return the following errors:
 
 
 ### `GET /accessible`
-*Current schema: 1.*
-
 Gets the ranks accessible to the current user. At the moment, it returns all Regular ranks and Punishment ranks.
 
 Returns data with the following properties:
 - `accessibleRanks` (`PublicRank[]`): The list of ranks accessible to the user.
 
 ### `POST`
-*Current schema: 1.*
-
 Adds a Regular rank to the specified user.
 
 Request data (body):
@@ -621,8 +533,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly. This error is also returned when a rank of the specified type is already active for the given user.
 
 ### `DELETE`
-*Current schema: 1.*
-
 Removes a regular rank from the specified user.
 
 Request data (body):
@@ -638,8 +548,6 @@ Can return the following errors:
 - `404`: When an active rank of the specified type was not found for the given user.
 
 ### `POST /mod`
-*Current schema: 1.*
-
 Add the `mod` rank to the specified user.
 
 Request data (body):
@@ -655,8 +563,6 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
 ### `DELETE /mod`
-*Current schema: 1.*
-
 Remove the `mod` rank from the specified user.
 
 Request data (body):
@@ -741,13 +647,41 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the streamer application status was not `pending`, that is, it was already closed.
 
+### `GET /primaryChannels`
+Gets the logged-in streamer's primary channels, that is, the channels that they have selected to stream on.
+
+Returns data with the following properties:
+- `youtubeChannel` (`number | null`): The internal id of the streamer's primary YouTube channel, if set.
+- `twitchChannel` (`number | null`): The internal id of the streamer's primary Twitch channel, if set.
+
+### `POST /primaryChannels/:platform/:channelId`
+Sets the streamer's primary channel for the specified platform. Note that this request will fail if a primary channel already exists.
+
+Path parameters:
+- `platform` (`string`): The platform for which to set the primary channel. Must be either `youtube` or `twitch`.
+- `channelId` (`number`): The internal id of the YouTube or Twitch channel to set as the streamer's primary channel.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `403`: When the channel ID refers to a channel that the user is not linked to.
+
+### `DELETE /primaryChannels/:platform`
+Removes the streamer's primary channel for the specified platform. The request will succeed even if no primary channel is set for the platform.
+
+Path parameters:
+- `platform` (`string`): The platform from which to remove the primary channel. Must be either `youtube` or `twitch`.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
 
 ## User Endpoints
 Path: `/user`.
 
 ### `POST /search`
-*Current schema: 4.*
-
 Search for a specific channel name.
 
 Request data (body):

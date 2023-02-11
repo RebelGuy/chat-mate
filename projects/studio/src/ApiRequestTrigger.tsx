@@ -8,15 +8,15 @@ type Props<TData extends ResponseData<TData>> = {
 } & ({
   isAnonymous: true
   requiresStreamer?: false
-  onRequest: () => Promise<ApiResponse<any, TData>>
+  onRequest: () => Promise<ApiResponse<TData>>
 } | {
   isAnonymous?: false
   requiresStreamer?: false
-  onRequest: (loginToken: string) => Promise<ApiResponse<any, TData>>
+  onRequest: (loginToken: string) => Promise<ApiResponse<TData>>
 } | {
   isAnonymous?: false
   requiresStreamer: true
-  onRequest: (loginToken: string, streamer: string) => Promise<ApiResponse<any, TData>>
+  onRequest: (loginToken: string, streamer: string) => Promise<ApiResponse<TData>>
 })
 
 type State<TData extends ResponseData<TData>> = {

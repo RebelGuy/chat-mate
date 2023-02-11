@@ -1,13 +1,14 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicChannel = PublicObject<1, {
-  schema: 1
-
+export type PublicChannel = PublicObject<{
   /** The internal YoutubeChannel or TwitchChannel id. */
   channelId: number
 
-  /** The default user attached to the channel. */
+  /** The internal default user ID attached to the channel. */
   defaultUserId: number
+
+  /** The YouTube channel ID or Twitch user name of the channel. */
+  externalIdOrUserName: string
 
   /** The platform that the channel belongs to. */
   platform: 'youtube' | 'twitch'

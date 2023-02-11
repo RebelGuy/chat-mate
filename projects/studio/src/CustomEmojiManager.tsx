@@ -8,6 +8,7 @@ import ApiRequest from '@rebel/studio/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import ReactDOM from 'react-dom'
 import { sortBy } from '@rebel/server/util/arrays'
+import RequireRank from '@rebel/studio/components/RequireRank'
 
 // this code is yuckyu and needs cleaning up, but it works!
 
@@ -34,7 +35,6 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
       accessibleRanks: [],
       editingEmoji: null,
       newEmoji: {
-        schema: 1,
         name: '',
         symbol: '',
         levelRequirement: 0,
@@ -80,7 +80,6 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     if (result.success) {
       this.setState({
         newEmoji: {
-          schema: 1,
           name: '',
           symbol: '',
           levelRequirement: 0,
@@ -131,7 +130,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                     <td><span title="Emoji can be used in donation messages">$</span></td>
                     <td><span title="If there is no selection, all ranks will be able to use the emoji">Rank Whitelist</span></td>
                     <td>Image</td>
-                    <td>Action</td>
+                    <RequireRank owner><td>Action</td></RequireRank>
                   </tr>
                 </thead>
 
@@ -157,19 +156,21 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                         )
                       })}
 
-                      <ApiRequestTrigger requiresStreamer onRequest={this.onAdd}>
-                        {(onDoAdd, response, loadingNodeForAdd, errorNodeForAdd) => <>
-                          <CustomEmojiRow
-                            data={{ id: -1, ...this.state.newEmoji }}
-                            actionCell={<button onClick={onDoAdd}>Add</button>}
-                            accessibleRanks={this.state.accessibleRanks}
-                            isNew={true}
-                            onChange={this.onChange}
-                          />
-                          {ReactDOM.createPortal(loadingNodeForAdd, this.loadingRef.current!)}
-                          {ReactDOM.createPortal(errorNodeForAdd, this.errorRef.current!)}
-                        </>}
-                      </ApiRequestTrigger>
+                      <RequireRank owner>
+                        <ApiRequestTrigger requiresStreamer onRequest={this.onAdd}>
+                          {(onDoAdd, response, loadingNodeForAdd, errorNodeForAdd) => <>
+                            <CustomEmojiRow
+                              data={{ id: -1, ...this.state.newEmoji }}
+                              actionCell={<button onClick={onDoAdd}>Add</button>}
+                              accessibleRanks={this.state.accessibleRanks}
+                              isNew={true}
+                              onChange={this.onChange}
+                            />
+                            {ReactDOM.createPortal(loadingNodeForAdd, this.loadingRef.current!)}
+                            {ReactDOM.createPortal(errorNodeForAdd, this.errorRef.current!)}
+                          </>}
+                        </ApiRequestTrigger>
+                      </RequireRank>
                     </tbody>
                     {ReactDOM.createPortal(loadingNodeForUpdate, this.loadingRef.current!)}
                     {ReactDOM.createPortal(errorNodeForUpdate, this.errorRef.current!)}
@@ -203,7 +204,7 @@ function CustomEmojiRow (props: { data: EmojiData, actionCell: React.ReactNode, 
     <td><input type="checkbox" disabled={disabled} checked={props.data.canUseInDonationMessage} onChange={onChangeCanUseInDonationMessage} /></td>
     <td><RanksSelector disabled={disabled} ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} onChange={onChangeWhitelistedRanks} /></td>
     <td><RenderedImage disabled={disabled} imageData={props.data.imageData} onSetImage={onChangeImageData} /></td>
-    <td>{props.actionCell}</td>
+    <RequireRank owner ><td>{props.actionCell}</td></RequireRank>
   </tr>
   )
 }

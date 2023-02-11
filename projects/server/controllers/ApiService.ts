@@ -79,9 +79,13 @@ export default class ApiService extends ContextClass {
     }
   }
 
-  /** If this method runs to completion, `getStreamerId()` will return a valid streamer ID of which the current user is a Viewer.
+  /** If this method runs to completion, `getStreamerId()` will return a valid streamer ID, or, if optional=true, the id may be null.
  * @throws {@link PreProcessorError}: When the streamer ID could not be extracted. */
-  public async extractStreamerId (): Promise<void> {
+  public async extractStreamerId (optional: boolean): Promise<void> {
+    if (this.streamerId != null) {
+      return
+    }
+
     const user = this.registeredUser
     if (user == null) {
       throw new Error('Context user must be set')
@@ -89,7 +93,11 @@ export default class ApiService extends ContextClass {
 
     const streamerHeader = this.request.headers[STREAMER_HEADER.toLowerCase()]
     if (streamerHeader == null) {
-      throw new PreProcessorError(401, `The ${STREAMER_HEADER} header is required for this endpoint.`)
+      if (optional) {
+        return
+      } else {
+        throw new PreProcessorError(401, `The ${STREAMER_HEADER} header is required for this endpoint.`)
+      }
     } else if (Array.isArray(streamerHeader)) {
       throw new PreProcessorError(400, `The ${STREAMER_HEADER} header was malformed.`)
     }

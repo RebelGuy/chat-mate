@@ -1,4 +1,4 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import { single, sortBy } from '@rebel/server/util/arrays'
 import { Path, GET, QueryParam, POST, PathParam, PreProcessor } from 'typescript-rest'
@@ -13,45 +13,45 @@ import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { getUserName } from '@rebel/server/services/ChannelService'
+import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 
-export type GetSinglePunishment = ApiResponse<2, { punishment: Tagged<1, PublicUserRank> }>
+export type GetSinglePunishment = ApiResponse<{ punishment: PublicObject<PublicUserRank> }>
 
-export type GetUserPunishments = ApiResponse<2, { punishments: Tagged<1, PublicUserRank>[] }>
+export type GetUserPunishments = ApiResponse<{ punishments: PublicObject<PublicUserRank>[] }>
 
-export type BanUserRequest = ApiRequest<4, { schema: 4, userId: number, message: string | null }>
-export type BanUserResponse = ApiResponse<4, {
-  newPunishment: Tagged<1, PublicUserRank> | null
+export type BanUserRequest = ApiRequest<{ userId: number, message: string | null }>
+export type BanUserResponse = ApiResponse<{
+  newPunishment: PublicObject<PublicUserRank> | null
   newPunishmentError: string | null
-  channelPunishments: Tagged<1, PublicChannelRankChange>[]
+  channelPunishments: PublicObject<PublicChannelRankChange>[]
 }>
 
-export type UnbanUserRequest = ApiRequest<4, { schema: 4, userId: number, message: string | null }>
-export type UnbanUserResponse = ApiResponse<4, {
-  removedPunishment: Tagged<1, PublicUserRank> | null
+export type UnbanUserRequest = ApiRequest<{ userId: number, message: string | null }>
+export type UnbanUserResponse = ApiResponse<{
+  removedPunishment: PublicObject<PublicUserRank> | null
   removedPunishmentError: string | null
-  channelPunishments: Tagged<1, PublicChannelRankChange>[]
+  channelPunishments: PublicObject<PublicChannelRankChange>[]
 }>
 
-export type TimeoutUserRequest = ApiRequest<4, { schema: 4, userId: number, message: string | null, durationSeconds: number }>
-export type TimeoutUserResponse = ApiResponse<4, {
-  newPunishment: Tagged<1, PublicUserRank> | null
+export type TimeoutUserRequest = ApiRequest<{ userId: number, message: string | null, durationSeconds: number }>
+export type TimeoutUserResponse = ApiResponse<{
+  newPunishment: PublicObject<PublicUserRank> | null
   newPunishmentError: string | null
-  channelPunishments: Tagged<1, PublicChannelRankChange>[]
+  channelPunishments: PublicObject<PublicChannelRankChange>[]
 }>
 
-export type RevokeTimeoutRequest = ApiRequest<4, { schema: 4, userId: number, message: string | null }>
-export type RevokeTimeoutResponse = ApiResponse<4, {
-  removedPunishment: Tagged<1, PublicUserRank> | null
+export type RevokeTimeoutRequest = ApiRequest<{ userId: number, message: string | null }>
+export type RevokeTimeoutResponse = ApiResponse<{
+  removedPunishment: PublicObject<PublicUserRank> | null
   removedPunishmentError: string | null
-  channelPunishments: Tagged<1, PublicChannelRankChange>[]
+  channelPunishments: PublicObject<PublicChannelRankChange>[]
 }>
 
-export type MuteUserRequest = ApiRequest<2, { schema: 2, userId: number, message: string | null, durationSeconds: number | null }>
-export type MuteUserResponse = ApiResponse<2, { newPunishment: Tagged<1, PublicUserRank> }>
+export type MuteUserRequest = ApiRequest<{ userId: number, message: string | null, durationSeconds: number | null }>
+export type MuteUserResponse = ApiResponse<{ newPunishment: PublicObject<PublicUserRank> }>
 
-export type UnmuteUserRequest = ApiRequest<3, { schema: 3, userId: number, message: string | null }>
-export type UnmuteUserResponse = ApiResponse<3, { removedPunishment: Tagged<1, PublicUserRank> }>
+export type UnmuteUserRequest = ApiRequest<{ userId: number, message: string | null }>
+export type UnmuteUserResponse = ApiResponse<{ removedPunishment: PublicObject<PublicUserRank> }>
 
 type Deps = ControllerDependencies<{
   rankStore: RankStore
@@ -82,7 +82,7 @@ export default class PunishmentController extends ControllerBase {
   public async getSinglePunishment (
     @PathParam('id') id: number
   ): Promise<GetSinglePunishment> {
-    const builder = this.registerResponseBuilder<GetSinglePunishment>('GET /:id', 2)
+    const builder = this.registerResponseBuilder<GetSinglePunishment>('GET /:id')
     try {
       const punishment = await this.rankStore.getUserRankById(id)
       if (punishment == null || punishment.streamerId !== this.getStreamerId()) {
@@ -100,7 +100,7 @@ export default class PunishmentController extends ControllerBase {
     @QueryParam('userId') anyUserId?: number, // if not provided, returns punishments of all users
     @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active punishments
   ): Promise<GetUserPunishments> {
-    const builder = this.registerResponseBuilder<GetUserPunishments>('GET', 2)
+    const builder = this.registerResponseBuilder<GetUserPunishments>('GET')
     try {
       const primaryUserId = anyUserId == null ? null : await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
 
@@ -128,8 +128,8 @@ export default class PunishmentController extends ControllerBase {
   @POST
   @Path('/ban')
   public async banUser (request: BanUserRequest): Promise<BanUserResponse> {
-    const builder = this.registerResponseBuilder<BanUserResponse>('POST /ban', 4)
-    if (request == null || request.schema !== builder.schema || request.userId == null) {
+    const builder = this.registerResponseBuilder<BanUserResponse>('POST /ban')
+    if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -149,8 +149,8 @@ export default class PunishmentController extends ControllerBase {
   @POST
   @Path('/unban')
   public async unbanUser (request: UnbanUserRequest): Promise<UnbanUserResponse> {
-    const builder = this.registerResponseBuilder<UnbanUserResponse>('POST /unban', 4)
-    if (request == null || request.schema !== builder.schema || request.userId == null) {
+    const builder = this.registerResponseBuilder<UnbanUserResponse>('POST /unban')
+    if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -170,9 +170,9 @@ export default class PunishmentController extends ControllerBase {
   @POST
   @Path('/timeout')
   public async timeoutUser (request: TimeoutUserRequest): Promise<TimeoutUserResponse> {
-    const builder = this.registerResponseBuilder<TimeoutUserResponse>('POST /timeout', 4)
+    const builder = this.registerResponseBuilder<TimeoutUserResponse>('POST /timeout')
     const minDuration = YOUTUBE_TIMEOUT_DURATION / 1000
-    if (request == null || request.schema !== builder.schema || request.userId == null) {
+    if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
     } else if (request.durationSeconds == null || request.durationSeconds < minDuration) {
       return builder.failure(400, `Duration must be at least ${minDuration} seconds.`)
@@ -194,8 +194,8 @@ export default class PunishmentController extends ControllerBase {
   @POST
   @Path('/revokeTimeout')
   public async revokeTimeout (request: RevokeTimeoutRequest): Promise<RevokeTimeoutResponse> {
-    const builder = this.registerResponseBuilder<RevokeTimeoutResponse>('POST /revokeTimeout', 4)
-    if (request == null || request.schema !== builder.schema || request.userId == null) {
+    const builder = this.registerResponseBuilder<RevokeTimeoutResponse>('POST /revokeTimeout')
+    if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -215,8 +215,8 @@ export default class PunishmentController extends ControllerBase {
   @POST
   @Path('/mute')
   public async muteUser (request: MuteUserRequest): Promise<MuteUserResponse> {
-    const builder = this.registerResponseBuilder<MuteUserResponse>('POST /mute', 2)
-    if (request == null || request.schema !== builder.schema || request.userId == null || (request.durationSeconds != null && request.durationSeconds < 0)) {
+    const builder = this.registerResponseBuilder<MuteUserResponse>('POST /mute')
+    if (request == null || request.userId == null || (request.durationSeconds != null && request.durationSeconds < 0)) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -237,8 +237,8 @@ export default class PunishmentController extends ControllerBase {
   @POST
   @Path('/unmute')
   public async unmuteUser (request: UnmuteUserRequest): Promise<UnmuteUserResponse> {
-    const builder = this.registerResponseBuilder<UnmuteUserResponse>('POST /unmute', 3)
-    if (request == null || request.schema !== builder.schema || request.userId == null) {
+    const builder = this.registerResponseBuilder<UnmuteUserResponse>('POST /unmute')
+    if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -267,11 +267,14 @@ export default class PunishmentController extends ControllerBase {
       }
 
       return {
-        schema: 1,
-        channelId: channelId,
-        platform: platform,
+        channel: {
+          channelId: channelId,
+          defaultUserId: channel.defaultUserId,
+          externalIdOrUserName: getExternalIdOrUserName(channel),
+          platform: platform,
+          displayName: getUserName(channel)
+        },
         error: error,
-        channelName: getUserName(channel)
       }
     }
 

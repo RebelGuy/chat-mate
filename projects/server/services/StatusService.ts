@@ -20,7 +20,6 @@ export default class StatusService extends ContextClass {
 
   public getApiStatus (): PublicApiStatus {
     return {
-      schema: 1,
       status: this.lastStatus,
       lastOk: this.lastOk,
       avgRoundtrip: avg(...this.responseTimes)

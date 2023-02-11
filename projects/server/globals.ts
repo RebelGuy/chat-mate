@@ -41,9 +41,6 @@ type EnvironmentVariables = {
   dbSemaphoreConcurrent: OptionalVariable<number, 1000>
   dbSemaphoreTimeout: OptionalVariable<number | null, null>
   dbTransactionTimeout: OptionalVariable<number, 5000>
-
-  managedIdentityClientId: DeploymentVariable<string>
-  logAnalyticsWorkspaceId: string
 }
 
 function getAllKeys () {
@@ -62,8 +59,6 @@ function getAllKeys () {
     'twitchClientId': true,
     'twitchClientSecret': true,
     'useFakeControllers': true,
-    'managedIdentityClientId': true,
-    'logAnalyticsWorkspaceId': true,
     'streamlabsAccessToken': true
   }
   return Object.keys(allEnvVariables) as (keyof EnvironmentVariables)[]
@@ -92,7 +87,6 @@ const localVariables: Record<VariablesOfType<'local'>, true> = {
 const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
   applicationinsightsConnectionString: true,
   websiteHostname: true,
-  managedIdentityClientId: true
 }
 
 // optional variables resolve to the default value if they are not included in the environment definition.

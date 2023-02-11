@@ -1,17 +1,17 @@
-import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest, Tagged } from '@rebel/server/controllers/ControllerBase'
+import { ControllerDependencies, buildPath, ControllerBase, ApiResponse, ApiRequest, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import { Path, GET, POST, PATCH, PreProcessor } from 'typescript-rest'
 
-export type GetCustomEmojisResponse = ApiResponse<1, { emojis: Tagged<1, PublicCustomEmoji>[] }>
+export type GetCustomEmojisResponse = ApiResponse<{ emojis: PublicObject<PublicCustomEmoji>[] }>
 
-export type AddCustomEmojiRequest = ApiRequest<1, { schema: 1, newEmoji: Tagged<1, PublicCustomEmojiNew> }>
-export type AddCustomEmojiResponse = ApiResponse<1, { newEmoji: Tagged<1, PublicCustomEmoji> }>
+export type AddCustomEmojiRequest = ApiRequest<{ newEmoji: PublicObject<PublicCustomEmojiNew> }>
+export type AddCustomEmojiResponse = ApiResponse<{ newEmoji: PublicObject<PublicCustomEmoji> }>
 
-export type UpdateCustomEmojiRequest = ApiRequest<1, { schema: 1, updatedEmoji: Tagged<1, PublicCustomEmojiUpdate> }>
-export type UpdateCustomEmojiResponse = ApiResponse<1, { updatedEmoji: Tagged<1, PublicCustomEmoji> }>
+export type UpdateCustomEmojiRequest = ApiRequest<{ updatedEmoji: PublicObject<PublicCustomEmojiUpdate> }>
+export type UpdateCustomEmojiResponse = ApiResponse<{ updatedEmoji: PublicObject<PublicCustomEmoji> }>
 
 type Deps = ControllerDependencies<{
   customEmojiStore: CustomEmojiStore
@@ -19,7 +19,6 @@ type Deps = ControllerDependencies<{
 
 @Path(buildPath('emoji'))
 @PreProcessor(requireStreamer)
-@PreProcessor(requireRank('owner'))
 export default class EmojiController extends ControllerBase {
   private readonly customEmojiStore: CustomEmojiStore
 
@@ -31,7 +30,7 @@ export default class EmojiController extends ControllerBase {
   @GET
   @Path('/custom')
   public async getCustomEmojis (): Promise<GetCustomEmojisResponse> {
-    const builder = this.registerResponseBuilder<GetCustomEmojisResponse>('GET /custom', 1)
+    const builder = this.registerResponseBuilder<GetCustomEmojisResponse>('GET /custom')
     try {
       const emojis = await this.customEmojiStore.getAllCustomEmojis(this.getStreamerId())
       return builder.success({ emojis: emojis.map(e => customEmojiToPublicObject(e)) })
@@ -42,9 +41,10 @@ export default class EmojiController extends ControllerBase {
 
   @POST
   @Path('/custom')
+  @PreProcessor(requireRank('owner'))
   public async addCustomEmoji (request: AddCustomEmojiRequest): Promise<AddCustomEmojiResponse> {
-    const builder = this.registerResponseBuilder<AddCustomEmojiResponse>('POST /custom', 1)
-    if (request == null || request.schema !== builder.schema || request.newEmoji == null) {
+    const builder = this.registerResponseBuilder<AddCustomEmojiResponse>('POST /custom')
+    if (request == null || request.newEmoji == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 
@@ -68,9 +68,10 @@ export default class EmojiController extends ControllerBase {
 
   @PATCH
   @Path('/custom')
+  @PreProcessor(requireRank('owner'))
   public async updateCustomEmoji (request: UpdateCustomEmojiRequest): Promise<UpdateCustomEmojiResponse> {
-    const builder = this.registerResponseBuilder<UpdateCustomEmojiResponse>('PATCH /custom', 1)
-    if (request == null || request.schema !== builder.schema) {
+    const builder = this.registerResponseBuilder<UpdateCustomEmojiResponse>('PATCH /custom')
+    if (request == null) {
       return builder.failure(400, 'Invalid request data.')
     }
 

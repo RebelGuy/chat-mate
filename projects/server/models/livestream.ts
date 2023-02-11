@@ -16,7 +16,6 @@ export function livestreamToPublic (livestream: Livestream): PublicLivestream {
   }
 
   return {
-    schema: 1,
     id: livestream.id,
     livestreamLink: link,
     status,

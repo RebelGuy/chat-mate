@@ -11,11 +11,15 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
-import { UserAlreadyLinkedToAggregateUserError, LinkAttemptInProgressError, UserNotLinkedError } from '@rebel/server/util/error'
+import { UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/server/util/error'
 import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
 import { nameof } from '@rebel/server/_test/utils'
+
+const MAX_CHANNEL_LINKS_ALLOWED = 10
 
 export type LinkLog = [time: Date, step: string, warnings: number]
 
@@ -41,6 +45,9 @@ type Deps = Dependencies<{
   experienceService: ExperienceService
   modService: ModService
   donationStore: DonationStore
+  rankStore: RankStore
+  streamerChannelStore: StreamerChannelStore
+  streamerStore: StreamerStore
 }>
 
 export default class LinkService extends ContextClass {
@@ -56,6 +63,9 @@ export default class LinkService extends ContextClass {
   private readonly experienceService: ExperienceService
   private readonly modService: ModService
   private readonly donationStore: DonationStore
+  private readonly rankStore: RankStore
+  private readonly streamerChannelStore: StreamerChannelStore
+  private readonly streamerStore: StreamerStore
 
   constructor (deps: Deps) {
     super()
@@ -69,6 +79,9 @@ export default class LinkService extends ContextClass {
     this.experienceService = deps.resolve('experienceService')
     this.modService = deps.resolve('modService')
     this.donationStore = deps.resolve('donationStore')
+    this.rankStore = deps.resolve('rankStore')
+    this.streamerChannelStore = deps.resolve('streamerChannelStore')
+    this.streamerStore = deps.resolve('streamerStore')
   }
 
   /** Links the default user to the aggregate user and performs all required side effects.
@@ -80,6 +93,7 @@ export default class LinkService extends ContextClass {
     const linkAttemptId = await this.linkStore.startLinkAttempt(defaultUserId, aggregateUserId)
     let cumWarnings = 0
     let logs: LinkLog[] = [[new Date(), 'Start', cumWarnings]]
+    let hasLinkedUser = false
 
     try {
       if (linkToken != null) {
@@ -88,6 +102,16 @@ export default class LinkService extends ContextClass {
 
       await this.linkStore.linkUser(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(LinkStore, 'linkUser'), cumWarnings])
+      hasLinkedUser = true
+
+      // note that the first user represents the aggregate user.
+      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
+      if (connectedUserIds.length > MAX_CHANNEL_LINKS_ALLOWED + 1) {
+        throw new Error(`Only a maximum of ${MAX_CHANNEL_LINKS_ALLOWED} channels can be linked to an account.`)
+      }
+
+      await this.experienceStore.invalidateSnapshots([defaultUserId, aggregateUserId])
+      logs.push([new Date(), nameof(ExperienceStore, 'invalidateSnapshots'), cumWarnings])
 
       await this.experienceStore.relinkChatExperience(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(ExperienceStore, 'relinkChatExperience'), cumWarnings])
@@ -95,7 +119,9 @@ export default class LinkService extends ContextClass {
       await this.donationStore.relinkDonation(defaultUserId, aggregateUserId)
       logs.push([new Date(), nameof(DonationStore, 'relinkDonation'), cumWarnings])
 
-      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
+      await this.rankStore.relinkAdminUsers(defaultUserId, aggregateUserId)
+      logs.push([new Date(), nameof(RankStore, 'relinkAdminUsers'), cumWarnings])
+
       if (connectedUserIds.length === 2) {
         // this is a new link - life will be simple
         // don't need to re-apply external punishments, re-apply donations, or re-calculate chat experience data
@@ -125,20 +151,18 @@ export default class LinkService extends ContextClass {
     } catch (e: any) {
       this.logService.logError(this, `[${linkAttemptId}] Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
 
-      if (e instanceof UserAlreadyLinkedToAggregateUserError) {
-        if (linkToken == null) {
-          // don't pollute the link history by admin-triggered link attempts failing due to already-linked errors
-          await this.linkStore.deleteLinkAttempt(linkAttemptId)
-        } else {
-          await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
-        }
+      if (e instanceof UserAlreadyLinkedToAggregateUserError && linkToken == null) {
+        // don't pollute the link history by admin-triggered link attempts failing due to already-linked errors
+        await this.linkStore.deleteLinkAttempt(linkAttemptId)
       } else {
-        try {
-          await this.linkStore.unlinkUser(defaultUserId)
-          logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
-          this.logService.logInfo(this, `Successfully rolled back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
-        } catch (innerErr: any) {
-          this.logService.logInfo(this, `Failed to roll back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+        if (hasLinkedUser) {
+          try {
+            await this.linkStore.unlinkUser(defaultUserId)
+            logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
+            this.logService.logInfo(this, `Successfully rolled back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+          } catch (innerErr: any) {
+            this.logService.logInfo(this, `Failed to roll back link between default user ${defaultUserId} to aggregate user ${aggregateUserId}`)
+          }
         }
 
         await this.linkStore.completeLinkAttempt(linkAttemptId, logs, e.message)
@@ -162,10 +186,26 @@ export default class LinkService extends ContextClass {
     let aggregateUserId: number
 
     try {
+      const registeredUserResult = await this.accountStore.getRegisteredUsers([defaultUserId]).then(single)
+      if (registeredUserResult.registeredUser != null) {
+        const streamer = await this.streamerStore.getStreamerByRegisteredUserId(registeredUserResult.registeredUser.id)
+        if (streamer != null) {
+          const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamer!.id]).then(single)
+          if (primaryChannels.twitchChannel?.defaultUserId === defaultUserId || primaryChannels.youtubeChannel?.defaultUserId === defaultUserId) {
+            throw new Error(`Cannot unlink default channel ${defaultUserId} because it is a primary channel for streamer ${streamer.id}.`)
+          } else {
+            logs.push([new Date(), 'Ensured channel is not a primary channel for the streamer', cumWarnings])
+          }
+        }
+      }
+
       aggregateUserId = await this.linkStore.unlinkUser(defaultUserId)
       logs.push([new Date(), nameof(LinkStore, 'unlinkUser'), cumWarnings])
 
       if (options.relinkChatExperience) {
+        await this.experienceStore.invalidateSnapshots([defaultUserId, aggregateUserId])
+        logs.push([new Date(), nameof(ExperienceStore, 'invalidateSnapshots'), cumWarnings])
+
         await this.experienceStore.undoChatExperienceRelink(defaultUserId)
         logs.push([new Date(), nameof(ExperienceStore, 'undoChatExperienceRelink'), cumWarnings])
       }
@@ -175,18 +215,20 @@ export default class LinkService extends ContextClass {
         logs.push([new Date(), nameof(DonationStore, 'undoDonationRelink'), cumWarnings])
       }
 
-      // need to check the aggregate user becauuse the default user has already been unlinked
-      const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([aggregateUserId])).connectedChatUserIds
-      if (connectedUserIds.length === 1) {
-        // we unlinked the only user
-        if (options.transferRanks) {
+      if (options.transferRanks) {
+        // need to check the aggregate user becauuse the default user has already been unlinked
+        const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([aggregateUserId])).connectedChatUserIds
+
+        if (connectedUserIds.length === 1) {
+          // we unlinked the only user.
+          // we do not transfer the owner rank because it would leave the default user with an owner rank and,
+          // if linked to another user, would give them automatic owner rank for the other user.
+          // instead, the owner rank will get terminated and the user will have to re-apply if desired.
           cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, true, ['owner'])
           logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])
-        }
 
-      } else {
-        // at least one other default chat user is still connected to the aggregate user
-        if (options.transferRanks) {
+        } else {
+          // at least one other default chat user is still connected to the aggregate user.
           // importantly, leave the existing aggregate user's ranks intact
           cumWarnings += await this.rankService.transferRanks(aggregateUserId, defaultUserId, `link attempt ${linkAttemptId}`, false, ['owner'])
           logs.push([new Date(), nameof(RankService, 'transferRanks'), cumWarnings])

@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
@@ -32,8 +32,6 @@
     "snapshot:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/RefreshSnapshots.js"
   },
   "dependencies": {
-    "@azure/identity": "^2.0.5",
-    "@azure/monitor-query": "^1.0.2",
     "@prisma/client": "3.15.2",
     "@twurple/api": "^5.0.18",
     "@twurple/auth": "^5.0.18",
@@ -62,7 +60,6 @@
     "webpack-shell-plugin-next": "^2.2.2"
   },
   "devDependencies": {
-    "@azure/identity-vscode": "^1.0.0",
     "@swc/core": "^1.2.213",
     "@types/cors": "^2.8.12",
     "@types/express": "^4.17.13",

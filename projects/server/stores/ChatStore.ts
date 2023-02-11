@@ -1,4 +1,5 @@
-import { ChatMessage, Prisma } from '@prisma/client'
+import { ChatMessage, ChatMessagePart, Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/server/context/context'
 import ContextClass from '@rebel/server/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -31,8 +32,8 @@ export default class ChatStore extends ContextClass {
     this.dbTransactionTimeout = deps.resolve('dbTransactionTimeout')
   }
 
-  /** Adds the chat item, quietly ignoring duplicates. */
-  public async addChat (chatItem: ChatItem, streamerId: number, defaultUserId: number, channelId: string): Promise<ChatMessage> {
+  /** Adds the chat item and returns it when done. Returns null if the chat item already exists. */
+  public async addChat (chatItem: ChatItem, streamerId: number, defaultUserId: number, channelId: string): Promise<ChatMessage | null> {
     let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
     const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream == null) {
@@ -44,21 +45,28 @@ export default class ChatStore extends ContextClass {
     // there is a race condition where the client may request messages whose message parts haven't yet been
     // completely written to the DB. bundle everything into a single transaction to solve this.
     return await this.db.$transaction(async (db) => {
-      const chatMessage = await db.chatMessage.upsert({
-        create: {
-          time: new Date(chatItem.timestamp),
-          streamer: { connect: { id: streamerId }},
-          externalId: chatItem.id,
-          contextToken: chatItem.platform === 'youtube' ? chatItem.contextToken : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
-          user: { connect: { id: defaultUserId }},
-          youtubeChannel: chatItem.platform === 'youtube' ? { connect: { youtubeId: channelId }} : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
-          twitchChannel: chatItem.platform === 'twitch' ? { connect: { twitchId: channelId }} : chatItem.platform === 'youtube' ? undefined : assertUnreachable(chatItem),
-          livestream: livestreamPart
-        },
-        update: {},
-        where: { externalId: chatItem.id },
-        include: { chatMessageParts: true }
-      })
+      let chatMessage: ChatMessage & { chatMessageParts: ChatMessagePart[] }
+      try {
+        chatMessage = await db.chatMessage.create({
+          data: {
+            time: new Date(chatItem.timestamp),
+            streamer: { connect: { id: streamerId }},
+            externalId: chatItem.id,
+            contextToken: chatItem.platform === 'youtube' ? chatItem.contextToken : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
+            user: { connect: { id: defaultUserId }},
+            youtubeChannel: chatItem.platform === 'youtube' ? { connect: { youtubeId: channelId }} : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
+            twitchChannel: chatItem.platform === 'twitch' ? { connect: { twitchId: channelId }} : chatItem.platform === 'youtube' ? undefined : assertUnreachable(chatItem),
+            livestream: livestreamPart
+          },
+          include: { chatMessageParts: true }
+        })
+      } catch (e: any) {
+        if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+          return null
+        } else {
+          throw e
+        }
+      }
 
       // add the records individually because we can't access relations (emoji/text) in a createMany() query
       let createParts = []
@@ -127,10 +135,11 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream. */
-  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number): Promise<ChatItemWithRelations[]> {
+  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[]): Promise<ChatItemWithRelations[]> {
     const result = await this.db.chatMessage.findMany({
       where: {
         streamerId: streamerId,
+        userId: userIds == null ? undefined : { in: userIds },
         time: {
           gt: new Date(since),
           lte: beforeOrAt == null ? undefined : new Date(beforeOrAt)
@@ -202,7 +211,6 @@ export function createChatMessagePart (part: PartialChatMessage, index: number, 
 function connectOrCreateEmoji (part: PartialEmojiChatMessage) {
   return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
     create: {
-      externalId: part.emojiId,
       imageUrl: part.image.url,
       imageHeight: part.image.height ?? null,
       imageWidth: part.image.width ?? null,
@@ -210,7 +218,7 @@ function connectOrCreateEmoji (part: PartialEmojiChatMessage) {
       name: part.name,
       isCustomEmoji: false
     },
-    where: { externalId: part.emojiId }
+    where: { imageUrl: part.image.url }
   })
 }
 

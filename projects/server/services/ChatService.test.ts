@@ -5,7 +5,6 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import ViewershipStore from '@rebel/server/stores/ViewershipStore'
 import { cast, expectArray, expectObject, nameof, promised } from '@rebel/server/_test/utils'
 import { single } from '@rebel/server/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
@@ -30,7 +29,6 @@ const textPart: PartialTextChatMessage = {
 const emojiPart: PartialEmojiChatMessage = {
   type: 'emoji',
   name: 'emoji name',
-  emojiId: 'emojiId',
   image: { url: 'url' },
   label: 'emoji label'
 }
@@ -73,7 +71,6 @@ const twitchChannel1: TwitchChannelWithLatestInfo = {
 let mockChatStore: MockProxy<ChatStore>
 let mockLogService: MockProxy<LogService>
 let mockExperienceService: MockProxy<ExperienceService>
-let mockViewershipStore: MockProxy<ViewershipStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockEmojiService: MockProxy<EmojiService>
 let mockEventDispatchService: MockProxy<EventDispatchService>
@@ -87,7 +84,6 @@ beforeEach(() => {
   mockChatStore = mock<ChatStore>()
   mockLogService = mock<LogService>()
   mockExperienceService = mock<ExperienceService>()
-  mockViewershipStore = mock<ViewershipStore>()
   mockChannelStore = mock<ChannelStore>()
   mockEmojiService = mock<EmojiService>()
   mockEventDispatchService = mock<EventDispatchService>()
@@ -100,7 +96,6 @@ beforeEach(() => {
     chatStore: mockChatStore,
     logService: mockLogService,
     experienceService: mockExperienceService,
-    viewershipStore: mockViewershipStore,
     channelStore: mockChannelStore,
     emojiService: mockEmojiService,
     eventDispatchService: mockEventDispatchService,
@@ -142,11 +137,6 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedLivestream, passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
-    expect(passedLivestream).toBe(livestream)
-    expect(passedUserId_).toBe(youtubeChannel1.userId)
-    expect(passedTimestamp).toBe(chatItem1.timestamp)
-
     const [passedChatItem_, passedStreamerId_] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(passedChatItem_).toBe(chatItem1)
     expect(passedStreamerId_).toBe(streamerId)
@@ -172,11 +162,6 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     expect(addedChat).toBe(true)
 
-    const [passedLivestream, passedUserId_, passedTimestamp] = single(mockViewershipStore.addViewershipForChatParticipation.mock.calls)
-    expect(passedLivestream).toBe(livestream)
-    expect(passedUserId_).toBe(twitchChannel1.userId)
-    expect(passedTimestamp).toBe(chatItem2.timestamp)
-
     const [passedChatItem_, passedStreamerId_] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(passedChatItem_).toBe(chatItem2)
     expect(passedStreamerId_).toBe(streamerId)
@@ -199,21 +184,19 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     expect(addedChat).toBe(true)
 
     expect(single(mockCommandService.queueCommandExecution.mock.calls)).toEqual([commandId])
-    expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toBe(0)
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
   })
 
-  test('returns false if unable to add chat item, and does not attempt to call services', async () => {
+  test('returns false if chat item already exists, and does not attempt to call services', async () => {
     const streamerId = 2;
     (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
-    mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockRejectedValue(new Error('Test'))
+    mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(null)
 
     const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
 
     expect(addedChat).toBe(false)
 
-    expect(mockViewershipStore.addViewershipForChatParticipation.mock.calls.length).toBe(0)
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
   })
 })

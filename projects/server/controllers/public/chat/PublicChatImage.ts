@@ -1,8 +1,6 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicChatImage = PublicObject<1, {
-  schema: 1
-
+export type PublicChatImage = PublicObject<{
   /** The image url for the emoji. May be an SVG. */
   url: string
 

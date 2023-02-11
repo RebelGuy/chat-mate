@@ -12,7 +12,7 @@ jobs:
     with:
       NODE_ENV: 'debug'
       deploy: ${{ github.ref_name == 'develop' && !contains(github.event.head_commit.message, '--skip-deploy') }}
-      STUDIO_URL: 'https://nice-coast-05a39c31e.1.azurestaticapps.net'
+      STUDIO_URL: 'https://www.chat-mate-sandbox.com'
       SERVER_URL: 'https://chat-mate-sandbox.azurewebsites.net'
     secrets:
       publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9BBD3D4C46274FCD94006579EB592F31 }}

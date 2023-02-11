@@ -1,8 +1,6 @@
 import { PublicObject } from '@rebel/server/controllers/ControllerBase'
 
-export type PublicRank = PublicObject<1, {
-  schema: 1
-
+export type PublicRank = PublicObject<{
   /** The internal id of the rank. */
   id: number
 
@@ -30,10 +28,10 @@ export type PublicRank = PublicObject<1, {
   group:
     // Includes the `owner` and `mod` ranks.
     'administration' |
-    
+
     // Includes the `famous` rank.
     'cosmetic' |
-    
+
     // Includes the `ban`, `timeout`, and `mute` ranks.
     'punishment' |
 

@@ -6,7 +6,6 @@ import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
 export function userRankToPublicObject (userRank: UserRankWithRelations): PublicUserRank {
   return {
-    schema: 1,
     rank: rankToPublicObject(userRank.rank),
     id: userRank.id,
     streamer: userRank.streamerName,
@@ -21,7 +20,6 @@ export function userRankToPublicObject (userRank: UserRankWithRelations): Public
 
 export function rankToPublicObject (rank: Rank): PublicRank {
   return {
-    schema: 1,
     id: rank.id,
     name: rank.name,
     group: rank.group,

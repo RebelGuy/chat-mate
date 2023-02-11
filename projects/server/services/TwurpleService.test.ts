@@ -10,7 +10,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import * as chat from '@rebel/server/models/chat'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel } from '@rebel/server/stores/ChannelStore'
-import EventDispatchService, { DataPair } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { DataPair, EventData } from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { RegisteredUser, Streamer } from '@prisma/client'
@@ -106,9 +106,37 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     expect(providedTwitchMessage).toBe(twitchMessage)
 
     // check that the evaluated message is passed to the EventDispatchService
-    const data: DataPair<'chatItem'> = single(mockEventDispatchService.addData.mock.calls)
+    const data = single(mockEventDispatchService.addData.mock.calls) as DataPair<'chatItem'>
     expect(data[0]).toBe(`chatItem`)
     expect(data[1]).toEqual({ ...chatItem, streamerId })
+  })
+
+  test(`Joins the streamer's chat when a primary Twitch channel has been set`, async () => {
+    const channelName = 'test'
+    const addPrimaryChannelData = cast<EventData['addPrimaryChannel']>({ userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName }]}}} })
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([])
+
+    await twurpleService.initialise()
+
+    const cb = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'addPrimaryChannel')![1]
+
+    await cb(addPrimaryChannelData)
+
+    expect(single2(mockChatClient.join.mock.calls)).toBe(channelName)
+  })
+
+  test(`Leaves the streamer's chat when a primary Twitch channel has been unset`, async () => {
+    const channelName = 'test'
+    const removePrimaryChannelData = cast<EventData['removePrimaryChannel']>({ userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName }]}}} })
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([])
+
+    await twurpleService.initialise()
+
+    const cb = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'removePrimaryChannel')![1]
+
+    await cb(removePrimaryChannelData)
+
+    expect(single2(mockChatClient.part.mock.calls)).toBe(channelName)
   })
 })
 

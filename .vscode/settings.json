@@ -22,4 +22,5 @@
   "thunder-client.htmlView": "Preview",
   "thunder-client.showActivityFromCollection": true,
   "thunder-client.workspaceRelativePath": "projects/server",
+  "emmet.showExpandedAbbreviation": "never" // useless and annoying
 }

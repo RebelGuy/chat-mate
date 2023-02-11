@@ -183,10 +183,10 @@ describe(nameof(ChatFetchService, 'initialise'), () => {
     ]))
   })
 
-  test('does not update continuation token if chat service reports error', async () => {
+  test('does not update continuation token if chat service throws error', async () => {
     mockMasterchatProxyService.fetch.calledWith(currentLivestreams[0].liveId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction1]))
     mockMasterchatProxyService.fetch.calledWith(currentLivestreams[1].liveId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
-    mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction1.id }), streamer1).mockResolvedValue(false)
+    mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction1.id }), streamer1).mockRejectedValue(new Error())
     mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction3.id }), streamer2).mockResolvedValue(true)
 
     await chatFetchService.initialise()

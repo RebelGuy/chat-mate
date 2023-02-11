@@ -1,108 +1,178 @@
-import { ChatUser, RegisteredUser, Streamer } from '@prisma/client'
+import { ChatUser, Livestream, RegisteredUser, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/server/context/context'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/server/util/arrays'
-import { cast, expectArray, nameof } from '@rebel/server/_test/utils'
+import { ForbiddenError } from '@rebel/server/util/error'
+import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
+let mockStreamerStore: MockProxy<StreamerStore>
+let mockStreamerChannelStore: MockProxy<StreamerChannelStore>
+let mockEventDispatchService: MockProxy<EventDispatchService>
 let mockAccountStore: MockProxy<AccountStore>
 let mockChannelStore: MockProxy<ChannelStore>
-let mockStreamerStore: MockProxy<StreamerStore>
+let mockLivestreamStore: MockProxy<LivestreamStore>
 let streamerChannelService: StreamerChannelService
 
 beforeEach(() => {
+  mockStreamerStore = mock()
+  mockStreamerChannelStore = mock()
+  mockEventDispatchService = mock()
   mockAccountStore = mock()
   mockChannelStore = mock()
-  mockStreamerStore = mock()
+  mockLivestreamStore = mock()
 
   streamerChannelService = new StreamerChannelService(new Dependencies({
+    streamerStore: mockStreamerStore,
+    streamerChannelStore: mockStreamerChannelStore,
+    eventDispatchService: mockEventDispatchService,
     accountStore: mockAccountStore,
     channelStore: mockChannelStore,
-    logService: mock(),
-    streamerStore: mockStreamerStore
+    livestreamStore: mockLivestreamStore
   }))
 })
 
 describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
-  test('Returns the Twitch channel names of all streamers', async () => {
-    const chatUser1 = cast<ChatUser>({ id: 2 })
-    const registeredUser1 = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser1.id })
-    const streamer1 = cast<Streamer>({ id: 4, registeredUserId: registeredUser1.id })
-    const twitchChannel = 5
-    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [twitchChannel] })
-    const channelName = 'test'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
+  test('Returns the primary Twitch channel names of all streamers', async () => {
+    const streamerId1 = 1
+    const streamerId2 = 2
+    const streamerId3 = 3
+    const twitchName1 = 'name1'
+    const twitchName2 = 'name2'
 
-    mockStreamerStore.getStreamers.calledWith().mockResolvedValue([streamer1])
-    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser1.id])).mockResolvedValue([registeredUser1])
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([chatUser1.id])).mockResolvedValue([channels])
-    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expect.arrayContaining([twitchChannel])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
+    mockStreamerStore.getStreamers.calledWith().mockResolvedValue([cast<Streamer>({ id: streamerId1 }), cast<Streamer>({ id: streamerId2 }), cast<Streamer>({ id: streamerId3 })])
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId1, streamerId2, streamerId3])).mockResolvedValue(cast<PrimaryChannels[]>([
+      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName1 }]}}} },
+      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName2 }]}}} },
+      { streamerId: streamerId3, twitchChannel: null }
+    ]))
 
     const result = await streamerChannelService.getAllTwitchStreamerChannels()
 
-    expect(result).toEqual<TwitchStreamerChannel[]>([{ streamerId: streamer1.id, twitchChannelName: channelName }])
+    expect(result).toEqual<TwitchStreamerChannel[]>([
+      {streamerId: streamerId1, twitchChannelName: twitchName1 },
+      {streamerId: streamerId2, twitchChannelName: twitchName2 }
+    ])
   })
 })
 
 describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
   test(`Returns the streamer's linked Twitch channel`, async () => {
-    const streamerId = 50
-    const chatUser = cast<ChatUser>({ id: 2 })
-    const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
-    const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
-    const twitchChannel = 5
-    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [twitchChannel] })
-    const channelName = 'test'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
-
-    mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
-    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([chatUser.id])).mockResolvedValue([channels])
-    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expect.arrayContaining([twitchChannel])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
+    const streamerId = 1
+    const twitchName = 'name'
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId])).mockResolvedValue(cast<PrimaryChannels[]>([
+      { twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName }]}}} }
+    ]))
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
 
-    expect(result).toEqual(channelName)
-
+    expect(result).toBe(twitchName)
   })
 
-  test('Returns the first channel if a streamer has multiple linked Twitch channels', async () => {
-    const streamerId = 50
-    const chatUser = cast<ChatUser>({ id: 2 })
-    const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
-    const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
-    const twitchChannel1 = 5
-    const twitchChannel2 = 6
-    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [twitchChannel1, twitchChannel2] })
-    const channelName = 'test'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ displayName: channelName }] })
-
-    mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
-    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([chatUser.id])).mockResolvedValue([channels])
-    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expect.arrayContaining([twitchChannel1])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
-
-    const result = await streamerChannelService.getTwitchChannelName(streamerId)
-
-    expect(result).toEqual(channelName)
-  })
-
-  test('Returns null if the streamer does not have a linked Twitch channel', async () => {
-    const streamerId = 50
-    const chatUser = cast<ChatUser>({ id: 2 })
-    const registeredUser = cast<RegisteredUser>({ id: 3, aggregateChatUserId: chatUser.id })
-    const streamer = cast<Streamer>({ id: streamerId, registeredUserId: registeredUser.id })
-    const channels = cast<UserOwnedChannels>({ twitchChannelIds: [] })
-
-    mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(streamer)
-    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUser.id])).mockResolvedValue([registeredUser])
-    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([chatUser.id])).mockResolvedValue([channels])
+  test('Returns null if the streamer does not have a primary Twitch channel selected', async () => {
+    const streamerId = 1
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId])).mockResolvedValue(cast<PrimaryChannels[]>([
+      { twitchChannel: null }
+    ]))
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
 
     expect(result).toBeNull()
+  })
+})
+
+describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
+  test('Sets the primary youtube channel and dispatches an event', async () => {
+    const streamerId = 4
+    const registeredUserId = 91
+    const aggregateChatUserId = 58
+    const youtubeChannelId = 581
+    const userChannel = cast<UserChannel>({})
+
+    mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(cast<Streamer>({ registeredUserId }))
+    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUserId])).mockResolvedValue([cast<RegisteredUser>({ aggregateChatUserId })])
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expectArray<number>([aggregateChatUserId])).mockResolvedValue([cast<UserOwnedChannels>({ youtubeChannelIds: [youtubeChannelId] })])
+    mockStreamerChannelStore.setStreamerYoutubeChannelLink.calledWith(streamerId, youtubeChannelId).mockResolvedValue(userChannel)
+
+    await streamerChannelService.setPrimaryChannel(streamerId, 'youtube', youtubeChannelId)
+
+    const eventArgs = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventArgs).toEqual(expectObjectDeep(eventArgs, ['addPrimaryChannel', { streamerId, userChannel }]))
+  })
+
+  test(`Throws ${ForbiddenError.name} if the user does not have access to the channel`, async () => {
+    const streamerId = 4
+    const registeredUserId = 91
+    const aggregateChatUserId = 58
+    const youtubeChannelId = 581
+
+    mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(cast<Streamer>({ registeredUserId }))
+    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUserId])).mockResolvedValue([cast<RegisteredUser>({ aggregateChatUserId })])
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expectArray<number>([aggregateChatUserId])).mockResolvedValue([cast<UserOwnedChannels>({ youtubeChannelIds: [youtubeChannelId + 1] })])
+
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'youtube', youtubeChannelId)).rejects.toThrowError(ForbiddenError)
+
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
+  })
+
+  test('Throws if the primary user is already set', async () => {
+    const streamerId = 4
+    const registeredUserId = 91
+    const aggregateChatUserId = 58
+    const youtubeChannelId = 581
+    const err = new Error()
+
+    mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(cast<Streamer>({ registeredUserId }))
+    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUserId])).mockResolvedValue([cast<RegisteredUser>({ aggregateChatUserId })])
+    mockChannelStore.getConnectedUserOwnedChannels.calledWith(expectArray<number>([aggregateChatUserId])).mockResolvedValue([cast<UserOwnedChannels>({ youtubeChannelIds: [youtubeChannelId] })])
+    mockStreamerChannelStore.setStreamerYoutubeChannelLink.calledWith(streamerId, youtubeChannelId).mockRejectedValue(err)
+
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'youtube', youtubeChannelId)).rejects.toThrowError(err)
+
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
+  })
+
+  test('Throws if a livestream is currently in progress', async () => {
+    const streamerId = 3
+    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(cast<Livestream>({}))
+
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'youtube', 1)).rejects.toThrowError()
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'twitch', 1)).rejects.toThrowError()
+  })
+})
+
+describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
+  test('Unsets primary channel and dispatches data', async () => {
+    const streamerId = 3
+    const userChannel = cast<UserChannel>({})
+    mockStreamerChannelStore.deleteStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(userChannel)
+
+    await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
+
+    const eventArgs = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventArgs).toEqual(expectObjectDeep(eventArgs, ['removePrimaryChannel', { streamerId, userChannel }]))
+  })
+
+  test('Does not dispatch data if no primary channel was unset', async () => {
+    const streamerId = 3
+    mockStreamerChannelStore.deleteStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(null)
+
+    await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
+
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
+  })
+
+  test('Throws if a livestream is currently in progress', async () => {
+    const streamerId = 3
+    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(cast<Livestream>({}))
+
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')).rejects.toThrowError()
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'twitch')).rejects.toThrowError()
   })
 })
