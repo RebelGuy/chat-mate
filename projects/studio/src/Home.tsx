@@ -33,6 +33,9 @@ export default function Home (props: Props) {
       </RequireRank>
       <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('linkUser')} style={{ display: 'block', margin: 'auto' }}>Link User</button>
       <SelectStreamer />
+      <div style={{ position: 'absolute', bottom: 0, width: '100%', marginBottom: 8 }}>
+        <em style={{ fontSize: 14 }}>This is a work in progress...</em>
+      </div>
     </div>
   )
 }

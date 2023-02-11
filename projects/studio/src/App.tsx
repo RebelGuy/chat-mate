@@ -47,7 +47,7 @@ export default class App extends React.PureComponent<Props, State> {
           <RequireRank admin>
             <DebugInfo />
           </RequireRank>
-          <h1>ChatMate Studio</h1>
+          <h1>ChatMate</h1>
           {this.state.currentPage !== 'home' && <HomePageButton onHome={this.onSelectHomePage} />}
           {this.state.currentPage === 'home' && <Home onSelectPage={this.onSelectPage} />}
           {this.state.currentPage === 'registration' && <RegistrationForm onBack={this.onSelectHomePage} />}
