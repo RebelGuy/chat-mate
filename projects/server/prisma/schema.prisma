@@ -331,6 +331,7 @@ model StreamerYoutubeChannelLink {
 
   @@unique([streamerId], map: "streamer_youtube_channel_link_streamerId_fkey")
   @@unique([youtubeChannelId], map: "streamer_youtube_channel_link_youtubeChannelId_fkey")
+  @@map("streamer_youtube_channel_link")
 }
 
 model StreamerTwitchChannelLink {
@@ -344,6 +345,7 @@ model StreamerTwitchChannelLink {
 
   @@unique([streamerId], map: "streamer_twitch_channel_link_streamerId_fkey")
   @@unique([twitchChannelId], map: "streamer_twitch_channel_link_twitchChannelId_fkey")
+  @@map("streamer_twitch_channel_link")
 }
 
 model TwitchFollower {

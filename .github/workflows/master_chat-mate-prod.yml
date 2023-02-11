@@ -12,7 +12,7 @@ jobs:
     with:
       NODE_ENV: 'release'
       deploy: ${{ !contains(github.event.head_commit.message, '--skip-deploy') }}
-      STUDIO_URL: 'https://kind-rock-0d2509e10.1.azurestaticapps.net'
+      STUDIO_URL: 'https://www.chat-mate.com'
       SERVER_URL: 'https://chat-mate-prod.azurewebsites.net'
     secrets:
       publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8650F90DDD1E477C9336809BAAEEE87F }}

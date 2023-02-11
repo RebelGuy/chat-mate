@@ -18,8 +18,8 @@ import AccountService, { getPrimaryUserId } from '@rebel/server/services/Account
 import UserService from '@rebel/server/services/UserService'
 import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'
 
-/** This is a legacy multiplier that we used to have. We can't simply remove it because, when linking channels experience would otherwise be gained/lost.
- * Modifying the baseExperiences was an option, but I couldn't work it out due to the comlex nature of the xp equation. */
+/** This is a legacy multiplier that we used to have. We can't simply remove it because, when linking channels, experience would otherwise be gained/lost.
+ * Modifying the baseExperiences was an option, but I couldn't work it out due to the complex nature of the xp equation. */
 const VIEWERSHIP_STREAK_MULTIPLIER = 1
 
 export type Level = {

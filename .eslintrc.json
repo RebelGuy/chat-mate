@@ -38,6 +38,7 @@
     "prefer-const": "off",
     "no-empty-function": "warn",
     "no-trailing-spaces": "warn",
+    "eol-last": "warn",
     
     // see https://typescript-eslint.io/rules
     "@typescript-eslint/unbound-method": "error",
