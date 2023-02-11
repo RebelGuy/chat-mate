@@ -28,7 +28,9 @@ export default function Home (props: Props) {
       <RequireRank owner>
         <button disabled={loginContext.loginToken == null || loginContext.streamer == null} onClick={() => props.onSelectPage('chatMate')} style={{ display: 'block', margin: 'auto' }}>ChatMate Manager</button>
       </RequireRank>
-      <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('applyForStreamer')} style={{ display: 'block', margin: 'auto' }}>ChatMate Beta Program</button>
+      <RequireRank admin>
+        <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('applyForStreamer')} style={{ display: 'block', margin: 'auto' }}>ChatMate Beta Program</button>
+      </RequireRank>
       <button disabled={loginContext.loginToken == null} onClick={() => props.onSelectPage('linkUser')} style={{ display: 'block', margin: 'auto' }}>Link User</button>
       <SelectStreamer />
     </div>

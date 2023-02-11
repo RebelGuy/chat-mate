@@ -54,7 +54,11 @@ export default class App extends React.PureComponent<Props, State> {
           {this.state.currentPage === 'login' && <LoginForm onBack={this.onSelectHomePage} onRegister={this.onSelectRegistrationPage} />}
           {this.state.currentPage === 'chatMate' && <ChatMateManager />}
           {this.state.currentPage === 'customEmoji' && <CustomEmojiManager />}
-          {this.state.currentPage === 'applyForStreamer' && <ApplyForStreamer />}
+          {this.state.currentPage === 'applyForStreamer' && <>
+            <RequireRank admin>
+              <ApplyForStreamer />
+            </RequireRank>
+          </>}
           {this.state.currentPage === 'linkUser' && <LinkUser />}
         </LoginProvider>
       </div>

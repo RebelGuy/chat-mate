@@ -27,7 +27,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
     const response = await getLinkedChannels(loginToken, props.admin_selectedAggregateUserId)
 
     if (response.success) {
-      setLinkedCount(10)
+      setLinkedCount(response.data.channels.length)
     }
     
     return response
@@ -130,7 +130,7 @@ function CreateLinkToken (props: { linkedCount: number, onCreated: () => void })
           {showError && <div color="red">{validationError}</div>}
           {loadingNode}
           {errorNode}
-          <button type="button" disabled={loadingNode != null || showError || props.linkedCount >= 10} onClick={onMakeRequest}>Submit</button>
+          <button type="button" disabled={loadingNode != null || showError || props.linkedCount >= 10} onClick={onMakeRequest}>Start the link process</button>
         </>
       }
     </ApiRequestTrigger>

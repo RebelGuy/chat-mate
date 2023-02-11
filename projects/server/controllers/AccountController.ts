@@ -12,6 +12,7 @@ import { Path, POST, PreProcessor } from 'typescript-rest'
 
 // prevent brute-force login attacks by limiting the number of concurrent requests
 const loginSemaphore = new Semaphore(3, 10000)
+const registerSemaphore = new Semaphore(3, 10000)
 
 type Deps = ControllerDependencies<{
   accountStore: AccountStore
@@ -49,6 +50,19 @@ export default class AccountController extends ControllerBase {
 
     if (isNullOrEmpty(request.username) || isNullOrEmpty(request.password)) {
       return builder.failure(400, 'Username and password must be provided')
+    }
+
+    try {
+      await registerSemaphore.enter()
+      await sleep(2000)
+    } catch (e: any) {
+      if (e instanceof TimeoutError)
+        return builder.failure(500, new Error('Timed out. Please try again later.'))
+      else {
+        return builder.failure(e)
+      }
+    } finally {
+      registerSemaphore.exit()
     }
 
     try {
