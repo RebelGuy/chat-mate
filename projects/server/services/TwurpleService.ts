@@ -1,5 +1,5 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import { getUserName } from '@rebel/server/services/ChannelService'
@@ -10,7 +10,7 @@ import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyServic
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { single } from '@rebel/server/util/arrays'
+import { single } from '@rebel/shared/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 

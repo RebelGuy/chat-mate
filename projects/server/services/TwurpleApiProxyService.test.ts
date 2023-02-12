@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { TwitchMetadata } from '@rebel/server/interfaces'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import LogService from '@rebel/server/services/LogService'

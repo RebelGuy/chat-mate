@@ -9,11 +9,8 @@ module.exports = {
   moduleNameMapper: {
     // tell ts-jest how to resolve the path alias
     // https://github.com/kulshekhar/ts-jest/issues/2709
-    '@rebel/server/(.*)$': '<rootDir>/$1',
-    '@rebel/shared/(.*)$': '<rootDir>/../shared/$1',
+    '@rebel/shared/(.*)$': '<rootDir>/$1'
   },
-  // store tests are run concurrently in `stores.test.ts` instead
-  testPathIgnorePatterns: ['<rootDir>/stores/*'],
   globals: {
     'ts-jest': {
       diagnostics: false,

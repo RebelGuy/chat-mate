@@ -1,12 +1,12 @@
 import { Rank, RankName } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { singleOrNull, unique } from '@rebel/server/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
-import { randomString } from '@rebel/server/util/random'
-import { isOneOf } from '@rebel/server/util/validation'
+import { singleOrNull, unique } from '@rebel/shared/util/arrays'
+import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import { randomString } from '@rebel/shared/util/random'
+import { isOneOf } from '@rebel/shared/util/validation'
 
 /** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
 export type RegularRank = Extract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>

@@ -1,4 +1,4 @@
-import { sum } from '@rebel/server/util/math'
+import { sum } from '@rebel/shared/util/math'
 
 export function chooseRandom<T> (...args: T[]): T {
   return chooseWeightedRandom(...args.map(a => [a, 1] as [T, number]))

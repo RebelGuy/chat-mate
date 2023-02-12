@@ -1,5 +1,5 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
@@ -7,9 +7,9 @@ import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { nonNull, single } from '@rebel/server/util/arrays'
-import { ForbiddenError } from '@rebel/server/util/error'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { nonNull, single } from '@rebel/shared/util/arrays'
+import { ForbiddenError } from '@rebel/shared/util/error'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type TwitchStreamerChannel = {
   streamerId: number

@@ -1,11 +1,11 @@
 import { CustomEmoji } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
 import AccountService from '@rebel/server/services/AccountService'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
-import { single } from '@rebel/server/util/arrays'
+import { single } from '@rebel/shared/util/arrays'
 
 type SearchResult = {
   searchTerm: string,

@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import { MakeRequired, NullableToOptional } from '@rebel/server/types'
+import { MakeRequired, NullableToOptional } from '@rebel/shared/types'
 
 // type extraction based on https://stackoverflow.com/a/69943634
 // get the typed model for each table, including its relations.

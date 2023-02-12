@@ -1,7 +1,7 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
 import { Masterchat } from '@rebel/masterchat'
-import Factory from '@rebel/server/factories/Factory'
+import Factory from '@rebel/shared/Factory'
 import AuthStore from '@rebel/server/stores/AuthStore'
 
 type Deps = Dependencies<{

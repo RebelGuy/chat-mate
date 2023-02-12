@@ -1,6 +1,6 @@
 import { RankName } from '@prisma/client'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { sum } from '@rebel/server/util/math'
+import ContextClass from '@rebel/shared/context/ContextClass'
+import { sum } from '@rebel/shared/util/math'
 
 export type DonationAmount = [date: Date, amount: number]
 

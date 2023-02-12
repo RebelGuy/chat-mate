@@ -1,4 +1,4 @@
-import { TimeoutError } from '@rebel/server/util/error'
+import { TimeoutError } from '@rebel/shared/util/error'
 
 export default class Semaphore {
   private readonly maxParallel: number

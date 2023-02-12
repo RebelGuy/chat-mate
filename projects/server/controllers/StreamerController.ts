@@ -7,9 +7,9 @@ import StreamerService from '@rebel/server/services/StreamerService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
-import { EmptyObject } from '@rebel/server/types'
-import { single } from '@rebel/server/util/arrays'
-import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/server/util/error'
+import { EmptyObject } from '@rebel/shared/types'
+import { single } from '@rebel/shared/util/arrays'
+import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
 
 export type GetStreamersResponse = ApiResponse<{ streamers: string[] }>

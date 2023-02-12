@@ -1,11 +1,11 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { Singular } from '@rebel/server/types'
-import { compareArrays } from '@rebel/server/util/arrays'
-import { formatDate, formatTime } from '@rebel/server/util/datetime'
-import { toConstCase } from '@rebel/server/util/text'
-import { isNullable, isPrimitive } from '@rebel/server/util/typescript'
+import { Singular } from '@rebel/shared/types'
+import { compareArrays } from '@rebel/shared/util/arrays'
+import { formatDate, formatTime } from '@rebel/shared/util/datetime'
+import { toConstCase } from '@rebel/shared/util/text'
+import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
 
 // for some reason this unions all tables instead of creating a type whose properties are the tables.
 // probably it's got to do with the `readonly` modifies of the tables.

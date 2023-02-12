@@ -10,7 +10,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { single, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { single, zipOnStrictMany } from '@rebel/shared/util/arrays'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<{

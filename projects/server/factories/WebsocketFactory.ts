@@ -1,4 +1,4 @@
-import Factory from '@rebel/server/factories/Factory'
+import Factory from '@rebel/shared/Factory'
 
 // we have to use this ancient version thanks to the fantastic work of the streamlabs devs!
 // https://stackoverflow.com/a/67447804

@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import UserService from '@rebel/server/services/UserService'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { nameof } from '@rebel/server/_test/utils'

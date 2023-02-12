@@ -1,6 +1,6 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 import * as AI from 'applicationinsights'
 import { SeverityLevel } from 'applicationinsights/out/Declarations/Contracts'
 

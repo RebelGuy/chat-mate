@@ -1,13 +1,13 @@
 import { ChatCustomEmoji, ChatMessage, ChatMessagePart, ChatText, CustomEmojiVersion, Donation, StreamlabsSocketToken } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import ChatStore, { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/server/stores/ChatStore'
-import { Singular } from '@rebel/server/types'
-import { single } from '@rebel/server/util/arrays'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { Singular } from '@rebel/shared/types'
+import { single } from '@rebel/shared/util/arrays'
+import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
   messageParts: ChatItemWithRelations['chatMessageParts']

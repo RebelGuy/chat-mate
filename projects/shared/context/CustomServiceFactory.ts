@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { ServiceContext, ServiceFactory } from 'typescript-rest'
-import { getContextProvider } from '@rebel/server/context/context'
-import { toCamelCase } from '@rebel/server/util/text'
+import { getContextProvider } from '@rebel/shared/context/context'
+import { toCamelCase } from '@rebel/shared/util/text'
 
 export default class CustomServiceFactory implements ServiceFactory {
   // Create a new service object. Called before each request handling, for each registered Controller.

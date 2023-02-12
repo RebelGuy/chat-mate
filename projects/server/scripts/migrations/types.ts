@@ -1,4 +1,4 @@
-import ConsoleOutput from '../../util/ConsoleOutput'
+import ConsoleOutput from '../../../shared/util/ConsoleOutput'
 
 export type MigrationFile = {
   type: 'schema' | 'data'

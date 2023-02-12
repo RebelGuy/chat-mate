@@ -1,8 +1,8 @@
 import { ChatCommand, ChatMessage } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import CommandStore from '@rebel/server/stores/CommandStore'
-import { randomString } from '@rebel/server/util/random'
+import { randomString } from '@rebel/shared/util/random'
 import { DB_TEST_TIMEOUT, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { expectObject, nameof } from '@rebel/server/_test/utils'
 

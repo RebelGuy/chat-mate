@@ -1,14 +1,14 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { expectObject, nameof } from '@rebel/server/_test/utils'
-import { single } from '@rebel/server/util/arrays'
+import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { Livestream, LiveViewers } from '@prisma/client'
-import { addTime } from '@rebel/server/util/datetime'
+import { addTime } from '@rebel/shared/util/datetime'
 
 export default () => {
   const liveId1 = 'id1'

@@ -1,5 +1,5 @@
 import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
-import { group, sortBy } from '@rebel/server/util/arrays'
+import { group, sortBy } from '@rebel/shared/util/arrays'
 import { searchRegisteredUser, searchUser } from '@rebel/studio/api'
 import ApiRequest from '@rebel/studio/ApiRequest'
 import * as React from 'react'

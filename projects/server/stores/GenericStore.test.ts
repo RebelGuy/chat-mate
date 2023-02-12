@@ -1,5 +1,5 @@
 import { ChatUser } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'

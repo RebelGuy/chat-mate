@@ -2,7 +2,7 @@ import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import { cast, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { addTime } from '@rebel/server/util/datetime'
+import { addTime } from '@rebel/shared/util/datetime'
 
 let rankHelpers: RankHelpers
 beforeEach(() => {

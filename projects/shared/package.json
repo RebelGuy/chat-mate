@@ -1,0 +1,16 @@
+{
+  "name": "shared",
+  "version": "1.23.0",
+  "files": [
+    "../../dist/shared"
+  ],
+  "scripts": {
+    "test": "jest --detectOpenHandles=true --verbose=true"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.0.3",
+    "jest": "^27.4.5",
+    "jest-mock-extended": "^2.0.4",
+    "ts-jest": "^27.1.2"
+  }
+}

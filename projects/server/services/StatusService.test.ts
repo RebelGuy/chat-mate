@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import StatusService from '@rebel/server/services/StatusService'
 import { nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'

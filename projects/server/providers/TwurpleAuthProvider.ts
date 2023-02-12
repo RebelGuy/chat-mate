@@ -1,11 +1,11 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import { NodeEnv } from '@rebel/server/globals'
 import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import { compareArrays } from '@rebel/server/util/arrays'
+import { compareArrays } from '@rebel/shared/util/arrays'
 import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 // see https://dev.twitch.tv/docs/authentication/scopes

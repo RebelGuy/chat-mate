@@ -1,9 +1,9 @@
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { removeLinkedChannel, setPrimaryChannel, unsetPrimaryChannel } from '@rebel/studio/api'
 import * as React from 'react'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
-import { sortBy } from '@rebel/server/util/arrays'
+import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 
 export default function LinkedChannels (props: { channels: PublicChannel[], primaryChannels: { youtubeChannelId: number | null, twitchChannelId: number | null }, onChange: () => void }) {

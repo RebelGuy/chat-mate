@@ -1,5 +1,5 @@
 import { ChatUser, Livestream, RegisteredUser, Streamer } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore from '@rebel/server/stores/AccountStore'
@@ -7,8 +7,8 @@ import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, UserOwnedChanne
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { single } from '@rebel/server/util/arrays'
-import { ForbiddenError } from '@rebel/server/util/error'
+import { single } from '@rebel/shared/util/arrays'
+import { ForbiddenError } from '@rebel/shared/util/error'
 import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 

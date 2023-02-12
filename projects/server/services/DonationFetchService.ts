@@ -1,9 +1,9 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DonationService from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import DonationStore from '@rebel/server/stores/DonationStore'
-import { eps } from '@rebel/server/util/math'
+import { eps } from '@rebel/shared/util/math'
 
 type Deps = Dependencies<{
   streamlabsProxyService: StreamlabsProxyService

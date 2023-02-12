@@ -1,6 +1,6 @@
 import { ChatResponse, FetchChatOptions, Masterchat, Metadata } from '@rebel/masterchat'
 import { YTAction } from '@rebel/masterchat/interfaces/yt/chat'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'

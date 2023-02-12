@@ -1,12 +1,12 @@
 import { ChatMessage, ChatMessagePart, Prisma } from '@prisma/client'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { reverse } from '@rebel/server/util/arrays'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { reverse } from '@rebel/shared/util/arrays'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type ChatSave = {
   continuationToken: string | null

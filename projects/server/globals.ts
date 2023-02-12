@@ -1,6 +1,6 @@
-import { NoNever, OptionalKeys, Primitive } from '@rebel/server/types'
+import { NoNever, OptionalKeys, Primitive } from '@rebel/shared/types'
 import dotenv from 'dotenv'
-import { toConstCase } from '@rebel/server/util/text'
+import { toConstCase } from '@rebel/shared/util/text'
 import assert from 'node:assert'
 
 /** Always returns T if running the server locally, otherwise null. */

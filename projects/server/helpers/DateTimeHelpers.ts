@@ -1,4 +1,4 @@
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 
 // used for testing
 

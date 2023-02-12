@@ -1,9 +1,9 @@
 import { Livestream, LivestreamType } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
-import { assertUnreachableCompile, reminder } from '@rebel/server/util/typescript'
+import { assertUnreachableCompile, reminder } from '@rebel/shared/util/typescript'
 
 export type LivestreamParticipation = Livestream & { participated: boolean }
 

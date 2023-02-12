@@ -1,10 +1,10 @@
 import { ChatCommand, ChatMessage } from '@prisma/client'
 import { Command } from '@rebel/masterchat/interfaces/yt/context'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { NormalisedCommand } from '@rebel/server/services/command/CommandService'
-import { ensureMaxTextWidth } from '@rebel/server/util/text'
+import { ensureMaxTextWidth } from '@rebel/shared/util/text'
 
 export type CommandWithMessage = ChatCommand & {
   chatMessage: ChatMessage

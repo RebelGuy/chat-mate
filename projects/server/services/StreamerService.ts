@@ -1,10 +1,10 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore, { AddUserRankArgs } from '@rebel/server/stores/RankStore'
 import StreamerStore, { CreateApplicationArgs, StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
-import { single } from '@rebel/server/util/arrays'
-import { UserAlreadyStreamerError } from '@rebel/server/util/error'
+import { single } from '@rebel/shared/util/arrays'
+import { UserAlreadyStreamerError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore

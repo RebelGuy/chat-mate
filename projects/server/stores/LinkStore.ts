@@ -1,12 +1,12 @@
 import { LinkAttempt, LinkToken, LinkType } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LinkLog } from '@rebel/server/services/LinkService'
-import { addTime } from '@rebel/server/util/datetime'
-import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/server/util/error'
-import { randomString } from '@rebel/server/util/random'
-import { ensureMaxTextWidth } from '@rebel/server/util/text'
+import { addTime } from '@rebel/shared/util/datetime'
+import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/shared/util/error'
+import { randomString } from '@rebel/shared/util/random'
+import { ensureMaxTextWidth } from '@rebel/shared/util/text'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider

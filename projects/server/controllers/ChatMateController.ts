@@ -6,7 +6,7 @@ import { GET, PATCH, Path, POST, PreProcessor, QueryParam } from 'typescript-res
 import env from '@rebel/server/globals'
 import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
-import { EmptyObject } from '@rebel/server/types'
+import { EmptyObject } from '@rebel/shared/types'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 
 export type PingResponse = ApiResponse<EmptyObject>

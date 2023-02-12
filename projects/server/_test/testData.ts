@@ -2,7 +2,7 @@ import { YoutubeChannelInfo, ChatMessage, ChatUser, Livestream, TwitchChannelInf
 import { Author, ChatItem, TwitchAuthor } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
-import { addTime } from '@rebel/server/util/datetime'
+import { addTime } from '@rebel/shared/util/datetime'
 
 export const time1 = new Date(2022, 0, 3)
 export const time2 = new Date(2022, 0, 4)

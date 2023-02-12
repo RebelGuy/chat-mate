@@ -1,5 +1,5 @@
-import { DeepPartial, GenericObject, Singular } from '@rebel/server/types'
-import { isNullable, isPrimitive } from '@rebel/server/util/typescript'
+import { DeepPartial, GenericObject, Singular } from '@rebel/shared/types'
+import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
 import { Matcher, MatcherCreator, MockProxy } from 'jest-mock-extended'
 
 type Class = new (...args: any[]) => any

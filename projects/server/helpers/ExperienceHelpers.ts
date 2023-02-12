@@ -1,8 +1,8 @@
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWithRelations, PartialCustomEmojiChatMessage, PARTIAL_MESSAGE_TYPES, PartialChatMessage } from '@rebel/server/models/chat'
-import { tally, unique } from '@rebel/server/util/arrays'
-import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/server/util/math'
-import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
+import { tally, unique } from '@rebel/shared/util/arrays'
+import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/shared/util/math'
+import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.

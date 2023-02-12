@@ -9,7 +9,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { allDefined, unique } from '@rebel/server/util/arrays'
+import { allDefined, unique } from '@rebel/shared/util/arrays'
 import { Path } from 'typescript-rest'
 
 export type ChatControllerDeps = ControllerDependencies<{

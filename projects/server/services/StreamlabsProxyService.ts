@@ -1,11 +1,11 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import WebsocketFactory, { DisconnectReason, WebsocketAdapter } from '@rebel/server/factories/WebsocketFactory'
 import { NodeEnv } from '@rebel/server/globals'
 import ApiService from '@rebel/server/services/abstract/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
-import { single } from '@rebel/server/util/arrays'
-import { ApiResponseError } from '@rebel/server/util/error'
+import { single } from '@rebel/shared/util/arrays'
+import { ApiResponseError } from '@rebel/shared/util/error'
 import { throws } from 'node:assert'
 
 

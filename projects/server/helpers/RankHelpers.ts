@@ -1,4 +1,4 @@
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
 export default class RankHelpers extends ContextClass {

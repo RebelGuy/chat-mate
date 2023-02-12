@@ -1,13 +1,13 @@
 import { Rank, UserRank } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import RankService from '@rebel/server/services/rank/RankService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { single } from '@rebel/server/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/server/util/error'
+import { single } from '@rebel/shared/util/arrays'
+import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
-import { Singular } from '@rebel/server/types'
+import { Singular } from '@rebel/shared/types'
 
 const ownerRank = cast<Rank>({ name: 'owner', group: 'administration' })
 const famousRank = cast<Rank>({ name: 'famous', group: 'cosmetic' })

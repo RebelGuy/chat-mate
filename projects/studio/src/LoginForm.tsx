@@ -1,5 +1,5 @@
 import { LoginResponse } from '@rebel/server/controllers/AccountController'
-import { isNullOrEmpty } from '@rebel/server/util/strings'
+import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { login } from '@rebel/studio/api'
 import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'

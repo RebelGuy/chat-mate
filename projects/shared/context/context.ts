@@ -1,7 +1,7 @@
-import ContextClass from '@rebel/server/context/ContextClass'
-import Factory from '@rebel/server/factories/Factory'
-import { Branded, GenericObject } from '@rebel/server/types'
-import { reverse } from '@rebel/server/util/arrays'
+import ContextClass from '@rebel/shared/context/ContextClass'
+import Factory from '@rebel/shared/Factory'
+import { Branded, GenericObject } from '@rebel/shared/types'
+import { reverse } from '@rebel/shared/util/arrays'
 
 // make sure we don't accidentally override non-context-related properties when assigning the context to an object
 const CONTEXT_SYMBOL = Symbol('context')

@@ -1,8 +1,8 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
-import { GenericObject } from '@rebel/server/types'
-import { avg } from '@rebel/server/util/math'
+import { GenericObject } from '@rebel/shared/types'
+import { avg } from '@rebel/shared/util/math'
 
 type Deps = Dependencies<GenericObject>
 

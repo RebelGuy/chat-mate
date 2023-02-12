@@ -1,6 +1,6 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { GenericObject } from '@rebel/server/types'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
+import { GenericObject } from '@rebel/shared/types'
 import * as fs from 'fs'
 import path from 'node:path'
 
