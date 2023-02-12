@@ -186,7 +186,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     const publicLivestream = livestreamToPublic(activeLivestream)
     let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
     if (publicLivestream.status === 'live') {
-      viewers = await this.livestreamStore.getLatestLiveCount(streamerId)
+      viewers = await this.livestreamStore.getLatestLiveCount(publicLivestream.id)
     }
 
     return {
