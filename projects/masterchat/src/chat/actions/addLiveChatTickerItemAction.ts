@@ -1,3 +1,4 @@
+import { LogContext } from '@rebel/shared/ILogService'
 import {
   AddMembershipTickerAction,
   AddSuperChatTickerAction,
@@ -10,7 +11,7 @@ import {
   YTLiveChatTickerPaidStickerItemRenderer,
   YTLiveChatTickerSponsorItemRenderer,
 } from "../../interfaces/yt/chat";
-import { debugLog, stringify } from "../../utils";
+import { stringify } from "../../utils";
 import { parseColorCode, pickThumbUrl } from "../utils";
 import {
   parseLiveChatMembershipItemRenderer,
@@ -20,6 +21,7 @@ import {
 } from "./addChatItemAction";
 
 export function parseAddLiveChatTickerItemAction(
+  logContext: LogContext,
   payload: YTAddLiveChatTickerItemAction
 ) {
   const { item, durationSec } = payload;
@@ -30,14 +32,14 @@ export function parseAddLiveChatTickerItemAction(
     // SuperChat Ticker
     case "liveChatTickerPaidMessageItemRenderer": {
       const renderer = item[rendererType]!;
-      return parseLiveChatTickerPaidMessageItemRenderer(renderer, durationSec);
+      return parseLiveChatTickerPaidMessageItemRenderer(logContext, renderer, durationSec);
     }
 
     case "liveChatTickerPaidStickerItemRenderer": {
       // Super Sticker
       const renderer = item[rendererType]!;
       const parsed: AddSuperStickerTickerAction =
-        parseLiveChatTickerPaidStickerItemRenderer(renderer, durationSec);
+        parseLiveChatTickerPaidStickerItemRenderer(logContext, renderer, durationSec);
       return parsed;
     }
 
@@ -45,12 +47,12 @@ export function parseAddLiveChatTickerItemAction(
       // Membership
       const renderer = item[rendererType]!;
       const parsed: AddMembershipTickerAction =
-        parseLiveChatTickerSponsorItemRenderer(renderer, durationSec);
+        parseLiveChatTickerSponsorItemRenderer(logContext, renderer, durationSec);
       return parsed;
     }
 
     default:
-      debugLog(
+      logContext.logError(
         "[action required] Unrecognized renderer type (addLiveChatTickerItemAction):",
         rendererType,
         JSON.stringify(item)
@@ -62,10 +64,12 @@ export function parseAddLiveChatTickerItemAction(
 }
 
 function parseLiveChatTickerPaidMessageItemRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatTickerPaidMessageItemRenderer,
   durationSec: string
 ) {
   const contents = parseLiveChatPaidMessageRenderer(
+    logContext,
     renderer.showItemEndpoint.showLiveChatItemEndpoint.renderer
       .liveChatPaidMessageRenderer
   );
@@ -89,10 +93,12 @@ function parseLiveChatTickerPaidMessageItemRenderer(
 }
 
 function parseLiveChatTickerPaidStickerItemRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatTickerPaidStickerItemRenderer,
   durationSec: string
 ): AddSuperStickerTickerAction {
   const contents = parseLiveChatPaidStickerRenderer(
+    logContext,
     renderer.showItemEndpoint.showLiveChatItemEndpoint.renderer
       .liveChatPaidStickerRenderer
   );
@@ -102,7 +108,7 @@ function parseLiveChatTickerPaidStickerItemRenderer(
   const authorPhoto = pickThumbUrl(renderer.authorPhoto);
 
   if (!authorName) {
-    debugLog(
+    logContext.logError(
       "[action required] empty authorName (parseLiveChatTickerPaidStickerItemRenderer):",
       JSON.stringify(renderer.authorPhoto)
     );
@@ -130,6 +136,7 @@ function parseLiveChatTickerPaidStickerItemRenderer(
 }
 
 function parseLiveChatTickerSponsorItemRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatTickerSponsorItemRenderer,
   durationSec: string
 ): AddMembershipTickerAction {
@@ -157,11 +164,12 @@ function parseLiveChatTickerSponsorItemRenderer(
     );
   } else if ("liveChatSponsorshipsGiftPurchaseAnnouncementRenderer" in rdr) {
     contents = parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(
+      logContext,
       rdr.liveChatSponsorshipsGiftPurchaseAnnouncementRenderer
     );
   } else {
     const key = Object.keys(rdr)[0];
-    debugLog(
+    logContext.logError(
       `[action required] Unrecognized renderer '${key}' (parseLiveChatTickerSponsorItemRenderer):`,
       JSON.stringify(renderer)
     );

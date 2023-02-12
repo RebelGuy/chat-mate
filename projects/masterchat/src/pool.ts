@@ -1,3 +1,4 @@
+import { LogContext } from '@rebel/shared/ILogService'
 import { EventEmitter } from "events";
 import { EndReason, MasterchatError } from "./errors";
 import { ChatResponse, Credentials } from "./interfaces";
@@ -106,13 +107,14 @@ export class StreamPool extends EventEmitter {
    * always guarantees single instance for each stream.
    */
   subscribe(
+    logContext: LogContext,
     videoId: string,
     channelId: string,
     iterateOptions?: IterateChatOptions
   ): Masterchat {
     if (this.has(videoId)) return this.pool.get(videoId)!;
 
-    const mc = new Masterchat(videoId, channelId, this.options);
+    const mc = new Masterchat(logContext, videoId, channelId, this.options);
 
     mc.on("end", (reason) => this._handleEnd(mc, reason));
     mc.on("error", (err) => this._handleError(mc, err));

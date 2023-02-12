@@ -2,7 +2,8 @@ import { RankName, RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ApiService from '@rebel/server/controllers/ApiService'
-import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
+import LogService from '@rebel/server/services/LogService'
+import { LogContext, createLogContext } from '@rebel/shared/ILogService'
 
 export const BASE_PATH = '/api'
 

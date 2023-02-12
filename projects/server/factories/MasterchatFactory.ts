@@ -3,6 +3,7 @@ import LogService from '@rebel/server/services/LogService'
 import { Masterchat } from '@rebel/masterchat'
 import Factory from '@rebel/shared/Factory'
 import AuthStore from '@rebel/server/stores/AuthStore'
+import { createLogContext } from '@rebel/shared/ILogService'
 
 type Deps = Dependencies<{
   channelId: string
@@ -40,6 +41,7 @@ export default class MasterchatFactory extends Factory<Masterchat> {
 
   public override create (liveId: string): Masterchat {
     this.logService.logDebug(this, 'Created new', this.accessToken ? 'authenticated' : 'unauthenticated', 'masterchat instance for liveId', liveId)
-    return new Masterchat(liveId, this.channelId, { mode: 'live', credentials: this.accessToken ?? undefined })
+    const logContext = createLogContext(this.logService, { name: `masterchat[${liveId}]`})
+    return new Masterchat(logContext, liveId, this.channelId, { mode: 'live', credentials: this.accessToken ?? undefined })
   }
 }

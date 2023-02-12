@@ -30,7 +30,6 @@ import {
 } from "./interfaces/yt/chat";
 import { b64tou8, lrc, rmp, rtc, smp } from "./protobuf";
 import {
-  debugLog,
   delay,
   getTimedContinuation,
   stringify,
@@ -38,6 +37,7 @@ import {
   unwrapReplayActions,
   withContext,
 } from "./utils";
+import { createEmptyLogContext, LogContext } from '@rebel/shared/ILogService'
 
 export type RetryOptions = {
   retry?: number;
@@ -118,6 +118,7 @@ export class Masterchat extends EventEmitter {
   /** If true, either the credentials have not been set or have expired. Some actions require masterchat to be authenticated and will fail. */
   public isLoggedOut: boolean = true;
 
+  private readonly logContext: LogContext;
   private axiosInstance: AxiosInstance;
   private credentials?: Credentials;
   private listener: ChatListener | null = null;
@@ -134,7 +135,7 @@ export class Masterchat extends EventEmitter {
       );
     }
     // set channelId "" as populateMetadata will fill out it anyways
-    const mc = new Masterchat(videoId, "", {
+    const mc = new Masterchat(createEmptyLogContext(), videoId, "", {
       ...options,
     });
     await mc.populateMetadata();
@@ -145,11 +146,13 @@ export class Masterchat extends EventEmitter {
    * Much faster than Masterchat.init
    */
   constructor(
+    logContext: LogContext,
     videoId: string,
     channelId: string,
     { mode, credentials, axiosInstance }: MasterchatOptions = {}
   ) {
     super();
+    this.logContext = logContext;
     this.videoId = videoId;
     this.channelId = channelId;
     this.isLive =
@@ -162,6 +165,8 @@ export class Masterchat extends EventEmitter {
       });
 
     this.setCredentials(credentials);
+
+    this.logContext.logInfo('Created masterchat instance for channel', channelId, 'and video', videoId)
   }
 
   get stopped() {
@@ -525,7 +530,7 @@ export class Masterchat extends EventEmitter {
       let actions: Action[] = []
       for (const action of rawActions) {
         try {
-          const parsed = parseAction(action)
+          const parsed = parseAction(this.logContext, action)
           if (parsed != null && parsed.type !== 'unknown') {
             actions.push(parsed)
           }
@@ -882,7 +887,7 @@ export class Masterchat extends EventEmitter {
           if (remaining > 0) {
             await delay(retryInterval);
             remaining -= 1;
-            debugLog(
+            this.logContext.logDebug(
               `Retrying(postJson) remaining=${remaining} after=${retryInterval}`
             );
             continue;
@@ -945,7 +950,7 @@ export class Masterchat extends EventEmitter {
   }
 
   private log(label: string, ...obj: any) {
-    debugLog(`${label}(${this.videoId}):`, ...obj);
+    this.logContext.logDebug(`${label}(${this.videoId}):`, ...obj);
   }
 
   private cvPair() {

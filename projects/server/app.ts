@@ -9,7 +9,7 @@ import ServiceFactory from '@rebel/shared/context/CustomServiceFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import path from 'node:path'
 import FileService from '@rebel/server/services/FileService'
-import LogService, { createLogContext } from '@rebel/server/services/LogService'
+import LogService from '@rebel/server/services/LogService'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -85,6 +85,7 @@ import AccountService from '@rebel/server/services/AccountService'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import UserService from '@rebel/server/services/UserService'
 import GenericStore from '@rebel/server/stores/GenericStore'
+import { createLogContext } from '@rebel/shared/ILogService'
 
 //
 // "Over-engineering is the best thing since sliced bread."

@@ -1,12 +1,13 @@
+import { LogContext } from '@rebel/shared/ILogService'
 import { ShowPanelAction, ShowPollPanelAction } from "../../interfaces/actions";
 import {
   YTLiveChatPollRenderer,
   YTShowLiveChatActionPanelAction,
 } from "../../interfaces/yt/chat";
-import { debugLog } from "../../utils";
 import { pickThumbUrl } from "../utils";
 
 export function parseShowLiveChatActionPanelAction(
+  logContext: LogContext,
   payload: YTShowLiveChatActionPanelAction
 ) {
   const panelRdr = payload.panelToShow.liveChatActionPanelRenderer;
@@ -31,7 +32,7 @@ export function parseShowLiveChatActionPanelAction(
       return parsed;
     }
     default: {
-      debugLog(
+      logContext.logError(
         "[action required] unrecognized rendererType (parseShowLiveChatActionPanelAction):",
         JSON.stringify(payload)
       );

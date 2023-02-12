@@ -1,3 +1,4 @@
+import { LogContext } from '@rebel/shared/ILogService'
 import {
   AddChatItemAction,
   AddMembershipItemAction,
@@ -29,7 +30,6 @@ import {
   YTTextRun,
 } from "../../interfaces/yt/chat";
 import {
-  debugLog,
   durationToSeconds,
   splitRunsByNewLines,
   stringify,
@@ -39,21 +39,21 @@ import { parseBadges, parseMembership } from "../badge";
 import { parseAmountText, parseSuperChat } from "../superchat";
 import { parseColorCode, pickThumbUrl } from "../utils";
 
-export function parseAddChatItemAction(payload: YTAddChatItemAction) {
+export function parseAddChatItemAction(logContext: LogContext, payload: YTAddChatItemAction) {
   const { item } = payload;
 
   if ("liveChatTextMessageRenderer" in item) {
     // Chat
     const renderer = item["liveChatTextMessageRenderer"]!;
-    return parseLiveChatTextMessageRenderer(renderer);
+    return parseLiveChatTextMessageRenderer(logContext, renderer);
   } else if ("liveChatPaidMessageRenderer" in item) {
     // Super Chat
     const renderer = item["liveChatPaidMessageRenderer"]!;
-    return parseLiveChatPaidMessageRenderer(renderer);
+    return parseLiveChatPaidMessageRenderer(logContext, renderer);
   } else if ("liveChatPaidStickerRenderer" in item) {
     // Super Sticker
     const renderer = item["liveChatPaidStickerRenderer"]!;
-    return parseLiveChatPaidStickerRenderer(renderer);
+    return parseLiveChatPaidStickerRenderer(logContext, renderer);
   } else if ("liveChatMembershipItemRenderer" in item) {
     // Membership updates
     const renderer = item["liveChatMembershipItemRenderer"]!;
@@ -61,7 +61,7 @@ export function parseAddChatItemAction(payload: YTAddChatItemAction) {
   } else if ("liveChatViewerEngagementMessageRenderer" in item) {
     // Engagement message
     const renderer = item["liveChatViewerEngagementMessageRenderer"]!;
-    return parseLiveChatViewerEngagementMessageRenderer(renderer);
+    return parseLiveChatViewerEngagementMessageRenderer(logContext, renderer);
   } else if ("liveChatPlaceholderItemRenderer" in item) {
     // Placeholder chat
     const renderer = item["liveChatPlaceholderItemRenderer"]!;
@@ -69,12 +69,13 @@ export function parseAddChatItemAction(payload: YTAddChatItemAction) {
   } else if ("liveChatModeChangeMessageRenderer" in item) {
     // Mode change message (e.g. toggle members-only)
     const renderer = item["liveChatModeChangeMessageRenderer"]!;
-    return parseLiveChatModeChangeMessageRenderer(renderer);
+    return parseLiveChatModeChangeMessageRenderer(logContext, renderer);
   } else if ("liveChatSponsorshipsGiftPurchaseAnnouncementRenderer" in item) {
     // Sponsorships gift purchase announcement
     const renderer =
       item["liveChatSponsorshipsGiftPurchaseAnnouncementRenderer"];
     return parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(
+      logContext,
       renderer
     ) as MembershipGiftPurchaseAction;
   } else if ("liveChatSponsorshipsGiftRedemptionAnnouncementRenderer" in item) {
@@ -82,11 +83,12 @@ export function parseAddChatItemAction(payload: YTAddChatItemAction) {
     const renderer =
       item["liveChatSponsorshipsGiftRedemptionAnnouncementRenderer"];
     return parseLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer(
+      logContext,
       renderer
     );
   }
 
-  debugLog(
+  logContext.logError(
     "[action required] Unrecognized chat item renderer type:",
     JSON.stringify(item)
   );
@@ -94,6 +96,7 @@ export function parseAddChatItemAction(payload: YTAddChatItemAction) {
 
 // Chat
 export function parseLiveChatTextMessageRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatTextMessageRenderer
 ) {
   const {
@@ -112,13 +115,13 @@ export function parseLiveChatTextMessageRenderer(
       .url;
 
   const { isVerified, isOwner, isModerator, membership } =
-    parseBadges(renderer);
+    parseBadges(logContext, renderer);
 
   const contextMenuEndpointParams =
     renderer.contextMenuEndpoint!.liveChatItemContextMenuEndpoint.params;
 
   if (renderer.authorName && !("simpleText" in renderer.authorName)) {
-    debugLog(
+    logContext.logError(
       "[action required] non-simple authorName (live chat):",
       JSON.stringify(renderer.authorName)
     );
@@ -149,6 +152,7 @@ export function parseLiveChatTextMessageRenderer(
 
 // Super Chat
 export function parseLiveChatPaidMessageRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatPaidMessageRenderer
 ) {
   const { timestampUsec, authorExternalChannelId: authorChannelId } = renderer;
@@ -159,7 +163,7 @@ export function parseLiveChatPaidMessageRenderer(
   const authorPhoto = pickThumbUrl(renderer.authorPhoto);
 
   if (renderer.authorName && !("simpleText" in renderer.authorName)) {
-    debugLog(
+    logContext.logError(
       "[action required] non-simple authorName (super chat):",
       JSON.stringify(renderer.authorName)
     );
@@ -186,6 +190,7 @@ export function parseLiveChatPaidMessageRenderer(
 
 // Super Sticker
 export function parseLiveChatPaidStickerRenderer(
+  logContext: LogContext,
   rdr: YTLiveChatPaidStickerRenderer
 ): AddSuperStickerItemAction {
   const { timestampUsec, authorExternalChannelId: authorChannelId } = rdr;
@@ -196,7 +201,7 @@ export function parseLiveChatPaidStickerRenderer(
   const authorPhoto = pickThumbUrl(rdr.authorPhoto);
 
   if (!authorName) {
-    debugLog(
+    logContext.logError(
       "[action required] empty authorName (super sticker)",
       JSON.stringify(rdr)
     );
@@ -311,6 +316,7 @@ export function parseLiveChatMembershipItemRenderer(
 
 // Engagement message
 export function parseLiveChatViewerEngagementMessageRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatViewerEngagementMessageRenderer
 ) {
   /**
@@ -324,7 +330,7 @@ export function parseLiveChatViewerEngagementMessageRenderer(
     icon: { iconType },
   } = renderer;
   if ("simpleText" in renderer.message) {
-    debugLog(
+    logContext.logError(
       "[action required] message is simpleText (engagement):",
       JSON.stringify(renderer)
     );
@@ -388,7 +394,7 @@ export function parseLiveChatViewerEngagementMessageRenderer(
       return parsed;
     }
     default:
-      debugLog(
+      logContext.logError(
         "[action required] unknown icon type (engagement message):",
         JSON.stringify(renderer)
       );
@@ -414,6 +420,7 @@ export function parseLiveChatPlaceholderItemRenderer(
 
 // Mode change message
 export function parseLiveChatModeChangeMessageRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatModeChangeMessageRenderer
 ) {
   const text = stringify(renderer.text);
@@ -427,7 +434,7 @@ export function parseLiveChatModeChangeMessageRenderer(
   } else if (/subscribers-only/.test(text)) {
     mode = LiveChatMode.SubscribersOnly;
   } else {
-    debugLog(
+    logContext.logError(
       "[action required] Unrecognized mode (modeChangeAction):",
       JSON.stringify(renderer)
     );
@@ -446,6 +453,7 @@ export function parseLiveChatModeChangeMessageRenderer(
 
 // Sponsorships gift purchase announcement
 export function parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer
 ): MembershipGiftPurchaseAction | MembershipGiftPurchaseTickerContent {
   const id = renderer.id;
@@ -462,7 +470,7 @@ export function parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(
   const image = header.image.thumbnails[0].url;
 
   if (!authorName) {
-    debugLog(
+    logContext.logError(
       "[action required] empty authorName (gift purchase)",
       JSON.stringify(renderer)
     );
@@ -473,7 +481,7 @@ export function parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(
   )!;
 
   if (!membership) {
-    debugLog(
+    logContext.logError(
       "[action required] empty membership (gift purchase)",
       JSON.stringify(renderer)
     );
@@ -511,6 +519,7 @@ export function parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(
 
 // Sponsorships gift redemption announcement
 export function parseLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer(
+  logContext: LogContext,
   renderer: YTLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer
 ) {
   const id = renderer.id;
@@ -523,7 +532,7 @@ export function parseLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer(
   const senderName = renderer.message.runs[1].text;
 
   if (!authorName) {
-    debugLog(
+    logContext.logError(
       "[action required] empty authorName (gift redemption)",
       JSON.stringify(renderer)
     );
