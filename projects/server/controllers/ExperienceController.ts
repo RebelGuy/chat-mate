@@ -69,8 +69,10 @@ export default class ExperienceController extends ControllerBase {
     try {
       const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
       const primaryUserIds = leaderboard.map(r => r.primaryUserId)
-      const activeRanks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
-      const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
+      const [activeRanks, registeredUsers] = await Promise.all([
+        this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
+        this.accountStore.getRegisteredUsers(primaryUserIds)
+      ])
       const publicLeaderboard = zipOnStrictMany(leaderboard, 'primaryUserId', activeRanks, registeredUsers)
         .map(data => rankedEntryToPublic(data))
       return builder.success({ rankedUsers: publicLeaderboard })
