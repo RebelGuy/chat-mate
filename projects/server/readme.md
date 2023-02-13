@@ -189,6 +189,25 @@ Returns data with the following properties:
 - `reusableTimestamp` (`number`): The timestamp of the latest chat item. Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
 - `chat` (`PublicChatItem[]`): The chat data that satisfy the request filter, sorted in ascending order by time.
 
+### `GET /command/:commandId`
+
+Gets the current status of the specified command.
+
+Path parameters:
+- `commandId` (`number`): The ID of the command for which to get the status.
+
+Returns data with the following properties:
+- `status` (`string`): The current status of the command.
+  - `'success'`: The command executed successfully.
+  - `'error'`: The command encountered an error during execution.
+  - `'pending'`: The command has not yet finished executing.
+- `message` (`string | null`): The success or error message of the executed command. Only set if `status` is `'success'` or `'error'`.
+- `durationMs` (`number | null`): The number of milliseconds taken to execute the command. Only set if `status` is `'success'` or `'error'`.
+
+Can return the following errors:
+- `400`: When the required parameters have not been provided.
+- `404`: When the specified command was not found.
+
 ## ChatMate Endpoints
 Path: `/chatMate`.
 
