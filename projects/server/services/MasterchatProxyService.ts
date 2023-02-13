@@ -41,6 +41,11 @@ export default class MasterchatProxyService extends ApiService {
   }
 
   public removeMasterchat (liveId: string) {
+    const masterchat = this.wrappedMasterchats.get(liveId)
+    if (masterchat != null) {
+      masterchat.masterchat.stop()
+    }
+
     this.wrappedMasterchats.delete(liveId)
   }
 
@@ -78,7 +83,7 @@ export default class MasterchatProxyService extends ApiService {
   }
 
   /** Times out the channel by 5 minutes. This cannot be undone.
-   * 
+   *
    * Returns true if the channel was banned. False indicates that the 'timeout channel'
    * option was not included in the latest chat item's context menu. */
   public async timeout (contextMenuEndpointParams: string): Promise<boolean> {
