@@ -319,7 +319,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     id: chat.id,
     timestamp: chat.time.getTime(),
     platform: userChannel.platformInfo.platform,
-    isCommand: chat.chatCommand != null,
+    commandId: chat.chatCommand?.id ?? null,
     messageParts,
     author: {
       primaryUserId: getPrimaryUserId(chat.user),

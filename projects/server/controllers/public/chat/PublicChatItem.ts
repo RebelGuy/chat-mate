@@ -12,8 +12,8 @@ export type PublicChatItem = PublicObject<{
   /** The platform on which the message was sent. */
   platform: 'youtube' | 'twitch'
 
-  /** Whether the message has been identified as a chat command. */
-  isCommand: boolean
+  /** The command ID associated with this message. Null if the message has not been identified as a chat command. */
+  commandId: number | null
 
   /** The message parts that make up the contents of the message, ordered from left to right. */
   messageParts: PublicObject<PublicMessagePart>[]
