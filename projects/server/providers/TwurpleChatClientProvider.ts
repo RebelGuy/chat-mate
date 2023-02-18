@@ -35,6 +35,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     }
 
     this.chatClient = new ChatClient({
+      channels: ['rebel_guymc'],
       authProvider: this.twurkpleAuthProvider.get(),
       isAlwaysMod: false, // can't guarantee that streamers will mod the client, so err on the safe side
       readOnly: false,
