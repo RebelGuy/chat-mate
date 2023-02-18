@@ -6,6 +6,7 @@ import RequireRank from '@rebel/studio/components/RequireRank'
 import LinkedChannels from '@rebel/studio/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/LinkHistory'
 import * as React from 'react'
+import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
@@ -120,9 +121,9 @@ function CreateLinkToken (props: { linkedCount: number, onCreated: () => void })
   return <div style={{ marginTop: 24 }}>
     <div>You can link a channel to your account to manage your profile and access other exclusive features.</div>
     <div>If linking multiple channels, all existing data you have acquired on those channels (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
-    <div>You can link a maximum of 10 channels across YouTube and Twitch.</div>
+    <div>You can link a maximum of {MAX_CHANNEL_LINKS_ALLOWED} channels across YouTube and Twitch.</div>
     <div style={{ color: 'red' }}>Each channel can only be linked once - make sure this is the account you want to link to. Links cannot be undone.</div>
-    {props.linkedCount >= 10 && <div style={{ color: 'red', fontWeight: 700 }}>You have linked the maximum allowd number of channels.</div>}
+    {props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED && <div style={{ color: 'red', fontWeight: 700 }}>You have linked the maximum allowd number of channels.</div>}
     <ApiRequestTrigger onRequest={onCreateLinkToken}>
       {(onMakeRequest, response, loadingNode, errorNode) =>
         <>
@@ -130,7 +131,7 @@ function CreateLinkToken (props: { linkedCount: number, onCreated: () => void })
           {showError && <div color="red">{validationError}</div>}
           {loadingNode}
           {errorNode}
-          <button type="button" disabled={loadingNode != null || showError || props.linkedCount >= 10} onClick={onMakeRequest}>Start the link process</button>
+          <button type="button" disabled={loadingNode != null || showError || props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED} onClick={onMakeRequest}>Start the link process</button>
         </>
       }
     </ApiRequestTrigger>

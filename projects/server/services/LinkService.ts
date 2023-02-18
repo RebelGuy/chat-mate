@@ -18,8 +18,7 @@ import { single } from '@rebel/shared/util/arrays'
 import { UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/shared/util/error'
 import { NO_OP_ASYNC } from '@rebel/shared/util/typescript'
 import { nameof } from '@rebel/server/_test/utils'
-
-const MAX_CHANNEL_LINKS_ALLOWED = 10
+import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
 
 export type LinkLog = [time: Date, step: string, warnings: number]
 

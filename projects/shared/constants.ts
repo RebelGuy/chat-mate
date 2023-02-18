@@ -1,0 +1,1 @@
+export const MAX_CHANNEL_LINKS_ALLOWED = 3
