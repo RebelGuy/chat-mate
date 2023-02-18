@@ -1,9 +1,9 @@
-import { debugLog } from "../utils";
 import {
   YTAuthorBadge,
   YTLiveChatTextMessageRenderer,
 } from "../interfaces/yt/chat";
 import { Membership } from "../interfaces/misc";
+import { LogContext } from '@rebel/shared/ILogService'
 
 export function parseMembership(badge: YTAuthorBadge): Membership | undefined {
   const renderer = badge.liveChatAuthorBadgeRenderer;
@@ -24,7 +24,7 @@ export function parseMembership(badge: YTAuthorBadge): Membership | undefined {
   }
 }
 
-export function parseBadges(renderer: YTLiveChatTextMessageRenderer) {
+export function parseBadges(logContext: LogContext, renderer: YTLiveChatTextMessageRenderer) {
   let isVerified = false,
     isOwner = false,
     isModerator = false,
@@ -49,7 +49,7 @@ export function parseBadges(renderer: YTLiveChatTextMessageRenderer) {
           membership = parseMembership(badge);
           break;
         default:
-          debugLog(
+          logContext.logError(
             `[action required] Unrecognized iconType:`,
             iconType,
             JSON.stringify(renderer)

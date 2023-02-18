@@ -1,4 +1,4 @@
-import { Branded } from '@rebel/server/types'
+import { Branded } from '@rebel/shared/types'
 import { List, isList } from 'immutable'
 
 // hack: https://github.com/microsoft/TypeScript/issues/31752

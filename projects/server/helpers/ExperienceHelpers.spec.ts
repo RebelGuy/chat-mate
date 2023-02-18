@@ -2,8 +2,8 @@ import ExperienceHelpers, { MULTIPLIER_CHANGE_AT_MAX, MULTIPLIER_CHANGE_AT_MIN, 
 import { expectStrictIncreasing, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
-import { asGte, asLt, asLte, asRange, eps } from '@rebel/server/util/math'
-import { addTime } from '@rebel/server/util/datetime'
+import { asGte, asLt, asLte, asRange, eps } from '@rebel/shared/util/math'
+import { addTime } from '@rebel/shared/util/datetime'
 
 const experienceHelpers = new ExperienceHelpers()
 

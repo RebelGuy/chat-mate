@@ -1,4 +1,3 @@
-import debug from "debug";
 import { DC, DO } from "./constants";
 import { AbortError } from "./errors";
 import { Color, TimedContinuation } from "./interfaces/misc";
@@ -60,8 +59,6 @@ export function formatColor(color: Color, format: ColorFormat = "hex"): string {
       )}${color.opacity.toString(16)}`;
   }
 }
-
-export const debugLog = debug("masterchat");
 
 export function toVideoId(idOrUrl: string) {
   const match = /(?:[&=/]|^)([A-Za-z0-9_-]{11})(?=(?:[^A-Za-z0-9_-]|$))/.exec(

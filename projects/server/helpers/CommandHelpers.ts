@@ -1,7 +1,7 @@
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import { NormalisedCommand } from '@rebel/server/services/command/CommandService'
-import { InvalidCommandArgumentsError } from '@rebel/server/util/error'
+import { InvalidCommandArgumentsError } from '@rebel/shared/util/error'
 
 export default class CommandHelpers extends ContextClass {
   /** Returns null if the chat message is not command. */

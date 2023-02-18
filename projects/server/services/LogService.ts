@@ -1,12 +1,12 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
-import { ILoggable } from '@rebel/server/interfaces'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import FileService from '@rebel/server/services/FileService'
-import { formatDate, formatTime } from '@rebel/server/util/datetime'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { formatDate, formatTime } from '@rebel/shared/util/datetime'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { LogLevel } from '@twurple/chat'
+import ILogService, { ILoggable, LogContext } from '@rebel/shared/ILogService'
 
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
@@ -16,7 +16,7 @@ type Deps = Dependencies<{
   enableDbLogging: boolean
 }>
 
-export default class LogService extends ContextClass {
+export default class LogService extends ContextClass implements ILogService {
   private readonly fileService: FileService
   private readonly applicationInsightsService: ApplicationInsightsService
   private readonly enableDbLogging: boolean
@@ -103,26 +103,6 @@ export default class LogService extends ContextClass {
   // automatically write to a new file every day so they don't get too large
   private getLogFile () {
     return this.fileService.getDataFilePath(`log_${formatDate()}.txt`)
-  }
-}
-
-export type LogContext = {
-  logDebug: (...args: any[]) => void
-  logInfo: (...args: any[]) => void
-  logApiRequest: (requestId: number, request: string, params: Record<string, any> | null) => void
-  logApiResponse: (requestId: number, error: boolean, response: any) => void
-  logWarning: (...args: any[]) => void
-  logError: (...args: any[]) => void
-}
-
-export function createLogContext (logService: LogService, logger: ILoggable): LogContext {
-  return {
-    logDebug: (...args: any[]) => logService.logDebug(logger, ...args),
-    logInfo: (...args: any[]) => logService.logInfo(logger, ...args),
-    logApiRequest: (requestId: number, request: string, params: Record<string, any> | null) => logService.logApiRequest(logger, requestId, request, params),
-    logApiResponse: (requestId: number, error: boolean, response: any) => logService.logApiResponse(logger, requestId, error, response),
-    logWarning: (...args: any[]) => logService.logWarning(logger, ...args),
-    logError: (...args: any[]) => logService.logError(logger, ...args)
   }
 }
 

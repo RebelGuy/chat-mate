@@ -15,9 +15,9 @@ import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
-import { Singular } from '@rebel/server/types'
-import { sortByLength } from '@rebel/server/util/arrays'
-import { assertUnreachable, assertUnreachableCompile } from '@rebel/server/util/typescript'
+import { Singular } from '@rebel/shared/types'
+import { sortByLength } from '@rebel/shared/util/arrays'
+import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 
 export type ChatPlatform = 'youtube' | 'twitch'
@@ -319,7 +319,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     id: chat.id,
     timestamp: chat.time.getTime(),
     platform: userChannel.platformInfo.platform,
-    isCommand: chat.chatCommand != null,
+    commandId: chat.chatCommand?.id ?? null,
     messageParts,
     author: {
       primaryUserId: getPrimaryUserId(chat.user),

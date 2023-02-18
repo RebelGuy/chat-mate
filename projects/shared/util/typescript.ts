@@ -1,5 +1,5 @@
-import { ObjectComparator, ValueComparator } from '@rebel/server/types'
-import { values } from '@rebel/server/util/arrays'
+import { ObjectComparator, ValueComparator } from '@rebel/shared/types'
+import { values } from '@rebel/shared/util/arrays'
 
 export const NO_OP = () => { /* Do nothing */ }
 

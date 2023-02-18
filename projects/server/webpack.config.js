@@ -145,7 +145,9 @@ module.exports = (env) => {
       extensions: ['.js', '.ts'],
       alias: {
         "@rebel/server": path.resolve(__dirname, '../../projects/server'),
-        "@rebel/masterchat": path.resolve(__dirname, '../../projects/masterchat/src')
+        "@rebel/masterchat": path.resolve(__dirname, '../../projects/masterchat/src'),
+        "@rebel/studio": path.resolve(__dirname, '../../projects/studio'),
+        "@rebel/shared": path.resolve(__dirname, '../../projects/shared'),
       }
     },
 

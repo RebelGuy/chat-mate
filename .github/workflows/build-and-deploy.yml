@@ -101,7 +101,9 @@ jobs:
 
       - name: Run tests
         timeout-minutes: 10
-        run: yarn workspace server test
+        run: |
+          yarn workspace server test
+          yarn workspace shared test
 
   build-studio:
     name: Build Studio

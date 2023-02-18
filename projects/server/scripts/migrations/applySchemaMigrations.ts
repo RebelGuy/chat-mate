@@ -1,5 +1,5 @@
-import { execAsync } from '@rebel/server/util/node'
-import { promptInput } from '@rebel/server/util/input'
+import { execAsync } from '@rebel/shared/util/node'
+import { promptInput } from '@rebel/shared/util/input'
 import { getOutstandingMigrationNames } from './util'
 import env from '@rebel/server/globals'
 

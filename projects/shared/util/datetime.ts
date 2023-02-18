@@ -1,5 +1,5 @@
-import { sortBy } from '@rebel/server/util/arrays'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { sortBy } from '@rebel/shared/util/arrays'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export const MAX_DATE = new Date(8640000000000000)
 

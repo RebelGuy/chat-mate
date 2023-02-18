@@ -1,4 +1,4 @@
-import { addTime, formatDate, formatTime } from '@rebel/server/util/datetime'
+import { addTime, formatDate, formatTime } from '@rebel/shared/util/datetime'
 
 describe(addTime, () => {
   const t = new Date(2022, 1, 1, 12)

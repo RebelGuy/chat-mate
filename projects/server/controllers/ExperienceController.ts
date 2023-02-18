@@ -10,7 +10,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { single, zipOnStrictMany } from '@rebel/server/util/arrays'
+import { single, zipOnStrictMany } from '@rebel/shared/util/arrays'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 type GetLeaderboardResponse = ApiResponse<{
@@ -69,8 +69,10 @@ export default class ExperienceController extends ControllerBase {
     try {
       const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
       const primaryUserIds = leaderboard.map(r => r.primaryUserId)
-      const activeRanks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
-      const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
+      const [activeRanks, registeredUsers] = await Promise.all([
+        this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
+        this.accountStore.getRegisteredUsers(primaryUserIds)
+      ])
       const publicLeaderboard = zipOnStrictMany(leaderboard, 'primaryUserId', activeRanks, registeredUsers)
         .map(data => rankedEntryToPublic(data))
       return builder.success({ rankedUsers: publicLeaderboard })

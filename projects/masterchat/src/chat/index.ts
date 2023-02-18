@@ -1,6 +1,7 @@
+import { LogContext } from '@rebel/shared/ILogService'
 import { Action, UnknownAction } from "../interfaces/actions";
 import { YTAction } from "../interfaces/yt/chat";
-import { debugLog, omitTrackingParams } from "../utils";
+import { omitTrackingParams } from "../utils";
 import { parseAddBannerToLiveChatCommand } from "./actions/addBannerToLiveChatCommand";
 import { parseAddChatItemAction } from "./actions/addChatItemAction";
 import { parseAddLiveChatTickerItemAction } from "./actions/addLiveChatTickerItemAction";
@@ -16,13 +17,13 @@ import { parseUpdateLiveChatPollAction } from "./actions/updateLiveChatPollActio
 /**
  * Parse raw action object and returns Action
  */
-export function parseAction(action: YTAction): Action | UnknownAction {
+export function parseAction(logContext: LogContext, action: YTAction): Action | UnknownAction {
   const filteredActions = omitTrackingParams(action);
   const type = Object.keys(filteredActions)[0] as keyof typeof filteredActions;
 
   switch (type) {
     case "addChatItemAction": {
-      const parsed = parseAddChatItemAction(action[type]!);
+      const parsed = parseAddChatItemAction(logContext, action[type]!);
       if (parsed) return parsed;
       break;
     }
@@ -31,17 +32,17 @@ export function parseAction(action: YTAction): Action | UnknownAction {
       return parseMarkChatItemsByAuthorAsDeletedAction(action[type]!);
 
     case "markChatItemAsDeletedAction":
-      return parseMarkChatItemAsDeletedAction(action[type]!);
+      return parseMarkChatItemAsDeletedAction(logContext, action[type]!);
 
     case "addLiveChatTickerItemAction": {
-      const parsed = parseAddLiveChatTickerItemAction(action[type]!);
+      const parsed = parseAddLiveChatTickerItemAction(logContext, action[type]!);
       if (parsed) return parsed;
       break;
     }
 
     case "replaceChatItemAction":
       return (
-        parseReplaceChatItemAction(action[type]!) ??
+        parseReplaceChatItemAction(logContext, action[type]!) ??
         ({
           type: "unknown",
           payload: "parseReplaceChatItemAction returned null",
@@ -50,7 +51,7 @@ export function parseAction(action: YTAction): Action | UnknownAction {
 
     case "addBannerToLiveChatCommand":
       return (
-        parseAddBannerToLiveChatCommand(action[type]!) ??
+        parseAddBannerToLiveChatCommand(logContext, action[type]!) ??
         ({
           type: "unknown",
           payload: "addBannerToLiveChatCommand is broken at the moment",
@@ -64,7 +65,7 @@ export function parseAction(action: YTAction): Action | UnknownAction {
       return parseShowLiveChatTooltipCommand(action[type]!);
 
     case "showLiveChatActionPanelAction":
-      const parsed = parseShowLiveChatActionPanelAction(action[type]!);
+      const parsed = parseShowLiveChatActionPanelAction(logContext, action[type]!);
       return parsed;
 
     case "updateLiveChatPollAction":
@@ -75,7 +76,7 @@ export function parseAction(action: YTAction): Action | UnknownAction {
 
     default: {
       const _: never = type;
-      debugLog(
+      logContext.logError(
         "[action required] Unrecognized action type:",
         JSON.stringify(action)
       );

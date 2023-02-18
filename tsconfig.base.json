@@ -5,6 +5,7 @@
     { "path": "./projects/server" },
     { "path": "./projects/masterchat" },
     { "path": "./projects/studio" },
+    { "path": "./projects/shared" },
   ],
   "compilerOptions": {
     "experimentalDecorators": true,
@@ -33,6 +34,7 @@
       "@rebel/masterchat": ["./projects/masterchat/src/index.ts"],
       "@rebel/masterchat/*": ["./projects/masterchat/src/*"],
       "@rebel/studio/*": ["./projects/studio/src/*"],
+      "@rebel/shared/*": ["./projects/shared/*"],
     }
   }
 }

@@ -1,11 +1,11 @@
 import { ChatUser } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
-import { first, unique } from '@rebel/server/util/arrays'
-import { assertUnreachableCompile } from '@rebel/server/util/typescript'
+import { first, unique } from '@rebel/shared/util/arrays'
+import { assertUnreachableCompile } from '@rebel/shared/util/typescript'
 
 type Deps = Dependencies<{
   accountStore: AccountStore

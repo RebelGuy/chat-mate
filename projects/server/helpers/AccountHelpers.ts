@@ -1,6 +1,6 @@
-import ContextClass from '@rebel/server/context/ContextClass'
-import { unique } from '@rebel/server/util/arrays'
-import { InvalidUsernameError } from '@rebel/server/util/error'
+import ContextClass from '@rebel/shared/context/ContextClass'
+import { unique } from '@rebel/shared/util/arrays'
+import { InvalidUsernameError } from '@rebel/shared/util/error'
 
 const allowedCharacters = 'abcdefghijklmnopqrstuvwxyz1234567890-_.'
 

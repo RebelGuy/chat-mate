@@ -1,5 +1,5 @@
-import { Dependencies, ContextProvider } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies, ContextProvider } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 
 class TestA extends ContextClass {
   constructor () {

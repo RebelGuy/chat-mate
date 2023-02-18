@@ -1,5 +1,5 @@
-import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys, UnionToIntersection } from '@rebel/server/types'
-import { assertUnreachable } from '@rebel/server/util/typescript'
+import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { Key } from 'readline'
 
 // uses default equality comparison

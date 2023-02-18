@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import CommandService, { CommandData } from '@rebel/server/services/command/CommandService'
@@ -10,7 +10,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import { cast, expectArray, expectObject } from '@rebel/server/_test/utils'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import { ChatCommand, ChatMessage } from '@prisma/client'
-import { sleep } from '@rebel/server/util/node'
+import { sleep } from '@rebel/shared/util/node'
 
 let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockCommandStore: MockProxy<CommandStore>

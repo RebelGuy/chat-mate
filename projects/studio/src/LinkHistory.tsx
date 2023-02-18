@@ -1,9 +1,9 @@
 import { GetLinkHistoryResponse } from '@rebel/server/controllers/UserController'
-import { assertUnreachable } from '@rebel/server/util/typescript'
-import { sortBy } from '@rebel/server/util/arrays'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
+import { sortBy } from '@rebel/shared/util/arrays'
 import * as React from 'react'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
-import { capitaliseWord } from '@rebel/server/util/text'
+import { capitaliseWord } from '@rebel/shared/util/text'
 
 export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { success: true }>['data'] }) {
   if (props.data.items.length === 0) {

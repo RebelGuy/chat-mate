@@ -1,4 +1,4 @@
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem } from '@rebel/server/models/chat'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 

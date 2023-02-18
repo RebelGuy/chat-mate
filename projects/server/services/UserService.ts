@@ -1,5 +1,5 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import LinkStore from '@rebel/server/stores/LinkStore'
 
 type Deps = Dependencies<{

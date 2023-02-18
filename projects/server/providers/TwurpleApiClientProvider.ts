@@ -1,10 +1,11 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import IProvider from '@rebel/server/providers/IProvider'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
-import LogService, { createLogContext, LogContext, onTwurpleClientLog } from '@rebel/server/services/LogService'
+import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { ApiClient } from '@twurple/api'
 import { LogLevel } from '@twurple/chat'
+import { LogContext, createLogContext } from '@rebel/shared/ILogService'
 
 type Deps = Dependencies<{
   disableExternalApis: boolean

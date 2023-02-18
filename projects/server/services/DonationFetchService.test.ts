@@ -1,8 +1,8 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
 import DonationService from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
-import { single } from '@rebel/server/util/arrays'
+import { single } from '@rebel/shared/util/arrays'
 import { cast, expectArray, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 

@@ -6,7 +6,7 @@ import { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
 import { DB, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import DbProvider from '@rebel/server/providers/DbProvider'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { AccessToken } from '@twurple/auth/lib'
 
 

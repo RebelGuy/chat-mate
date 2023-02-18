@@ -1,9 +1,9 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { ICommand } from '@rebel/server/services/command/CommandService'
 import LinkService from '@rebel/server/services/LinkService'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { InvalidCommandArgumentsError } from '@rebel/server/util/error'
+import { InvalidCommandArgumentsError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   linkService: LinkService

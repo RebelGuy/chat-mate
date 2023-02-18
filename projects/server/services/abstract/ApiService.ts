@@ -1,7 +1,7 @@
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
-import { NO_OP } from '@rebel/server/util/typescript'
+import { NO_OP } from '@rebel/shared/util/typescript'
 
 export default abstract class ApiService extends ContextClass {
   public readonly name: string

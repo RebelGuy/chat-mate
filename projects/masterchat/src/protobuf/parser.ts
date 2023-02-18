@@ -2,6 +2,7 @@ import debug from "debug";
 import { ProtoBufReader } from "./reader";
 import { PBToken, PBType, PBValue } from "./token";
 
+// don't use the ChatMate logger because the type of things logged here are not very useful to us
 const debugLog = debug("masterchat:pb");
 
 export function parsePb(input: Uint8Array, depth: number = 0): PBValue {

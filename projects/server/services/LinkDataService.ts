@@ -1,13 +1,13 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import CommandService from '@rebel/server/services/command/CommandService'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { Singular } from '@rebel/server/types'
+import { Singular } from '@rebel/shared/types'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
-import { single } from '@rebel/server/util/arrays'
+import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
+import { single } from '@rebel/shared/util/arrays'
 import AccountService from '@rebel/server/services/AccountService'
 
 export type LinkHistory = ({

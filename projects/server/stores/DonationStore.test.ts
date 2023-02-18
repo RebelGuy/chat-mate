@@ -1,5 +1,5 @@
 import { Donation, StreamlabsSocketToken } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
 import DonationStore, { DonationCreateArgs, DonationWithUser } from '@rebel/server/stores/DonationStore'
@@ -7,9 +7,9 @@ import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel
 import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import * as data from '@rebel/server/_test/testData'
 import { randomInt } from 'crypto'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/server/util/error'
-import { addTime } from '@rebel/server/util/datetime'
-import { single } from '@rebel/server/util/arrays'
+import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
+import { addTime } from '@rebel/shared/util/datetime'
+import { single } from '@rebel/shared/util/arrays'
 import { PartialCustomEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 
 const streamer1 = 1

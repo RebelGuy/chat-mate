@@ -1,4 +1,4 @@
-import * as text from '@rebel/server/util/text'
+import * as text from '@rebel/shared/util/text'
 
 describe(text.getLiveId, () => {
   const testId = 'VTriRgpNd-s'

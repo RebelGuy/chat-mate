@@ -1,8 +1,8 @@
 import { CustomEmoji } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { group } from '@rebel/server/util/arrays'
+import { group } from '@rebel/shared/util/arrays'
 
 export type CustomEmojiWithRankWhitelist = {
   id: number

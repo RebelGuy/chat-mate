@@ -2,7 +2,7 @@ require('module-alias/register') // don't use _config so this works on NODE_ENV=
 import * as fs from 'fs'
 import env from '@rebel/server/globals'
 import path from 'node:path'
-import { ContextProvider } from '@rebel/server/context/context'
+import { ContextProvider } from '@rebel/shared/context/context'
 import FileService from '@rebel/server/services/FileService'
 import LogService, { createLogContext } from '@rebel/server/services/LogService'
 import DbProvider from '@rebel/server/providers/DbProvider'

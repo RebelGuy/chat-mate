@@ -1,10 +1,10 @@
 import { Donation } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithMessage } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import { sortBy } from '@rebel/server/util/arrays'
+import { sortBy } from '@rebel/shared/util/arrays'
 
 export type ChatMateEvent = { timestamp: number } & ({
   type: 'levelUp'

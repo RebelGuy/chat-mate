@@ -1,11 +1,11 @@
 import { Prisma, Rank, RankGroup, RankName, RegisteredUser, Streamer, UserRank } from '@prisma/client'
 import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { group, unique } from '@rebel/server/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/server/util/error'
+import { group, unique } from '@rebel/shared/util/arrays'
+import { UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 
 export type UserRanks = {
   primaryUserId: number

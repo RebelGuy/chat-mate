@@ -1,7 +1,7 @@
 require('module-alias/register')
 import { Livestream, PrismaClient } from '@prisma/client'
 import { ChatResponse, Metadata } from '@rebel/masterchat'
-import { ContextProvider } from '@rebel/server/context/context'
+import { ContextProvider } from '@rebel/shared/context/context'
 import env from '@rebel/server/globals'
 import ExperienceHelpers from '@rebel/server/helpers/ExperienceHelpers'
 import { IMasterchat } from '@rebel/server/interfaces'
@@ -18,7 +18,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ViewershipStore from '@rebel/server/stores/ViewershipStore'
-import { addTime } from '@rebel/server/util/datetime'
+import { addTime } from '@rebel/shared/util/datetime'
 
 // ************************************
 // ************ DEPRECATED ************

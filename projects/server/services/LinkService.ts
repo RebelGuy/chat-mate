@@ -1,6 +1,6 @@
 import { RankName } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DonationService from '@rebel/server/services/DonationService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
@@ -14,12 +14,11 @@ import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { single } from '@rebel/server/util/arrays'
-import { UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/server/util/error'
-import { NO_OP_ASYNC } from '@rebel/server/util/typescript'
+import { single } from '@rebel/shared/util/arrays'
+import { UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/shared/util/error'
+import { NO_OP_ASYNC } from '@rebel/shared/util/typescript'
 import { nameof } from '@rebel/server/_test/utils'
-
-const MAX_CHANNEL_LINKS_ALLOWED = 10
+import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
 
 export type LinkLog = [time: Date, step: string, warnings: number]
 

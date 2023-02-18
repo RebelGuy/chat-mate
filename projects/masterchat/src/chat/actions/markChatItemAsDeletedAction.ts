@@ -1,8 +1,9 @@
+import { LogContext } from '@rebel/shared/ILogService'
 import { MarkChatItemAsDeletedAction } from "../../interfaces/actions";
 import { YTMarkChatItemAsDeletedAction } from "../../interfaces/yt/chat";
-import { debugLog } from "../../utils";
 
 export function parseMarkChatItemAsDeletedAction(
+  logContext: LogContext,
   payload: YTMarkChatItemAsDeletedAction
 ) {
   const statusText = payload.deletedStateMessage.runs[0].text;
@@ -11,7 +12,7 @@ export function parseMarkChatItemAsDeletedAction(
     case "[message deleted]":
       break;
     default:
-      debugLog(
+      logContext.logError(
         "[action required] Unrecognized deletion status:",
         statusText,
         JSON.stringify(payload)

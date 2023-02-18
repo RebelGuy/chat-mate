@@ -23,7 +23,3 @@ export interface ITwurpleApi {
   /** The channel is the owner's channel, NOT the channel of the user that is to be timed out. */
   timeout (channel: string, twitchUserName: string, durationSeconds: number, reason: string): Promise<void>
 }
-
-export interface ILoggable {
-  readonly name: string
-}

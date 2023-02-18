@@ -1,5 +1,5 @@
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
-import { isNullOrEmpty } from '@rebel/server/util/strings'
+import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { authenticate, getRanks, getStreamers } from '@rebel/studio/api'
 import * as React from 'react'
 

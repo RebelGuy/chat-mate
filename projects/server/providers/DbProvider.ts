@@ -1,9 +1,9 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
-import ContextClass from '@rebel/server/context/ContextClass'
-import Semaphore from '@rebel/server/util/Semaphore'
+import ContextClass from '@rebel/shared/context/ContextClass'
+import Semaphore from '@rebel/shared/util/Semaphore'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'

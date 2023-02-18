@@ -1,4 +1,4 @@
-import { NumRange, clamp } from '@rebel/server/util/math'
+import { NumRange, clamp } from '@rebel/shared/util/math'
 
 // Calculates the score given a list of ordered items. The qualifier function is
 // called for each item, and the running score will update according to the `updater` method.

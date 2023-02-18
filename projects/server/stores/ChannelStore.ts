@@ -1,12 +1,12 @@
 import { YoutubeChannelInfo, Prisma, TwitchChannelInfo, TwitchChannel, YoutubeChannel } from '@prisma/client'
-import { nonNull } from '@rebel/server/util/arrays'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { nonNull } from '@rebel/shared/util/arrays'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatPlatform } from '@rebel/server/models/chat'
 import { New, Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { ObjectComparator } from '@rebel/server/types'
-import { assertUnreachable, compare } from '@rebel/server/util/typescript'
+import { ObjectComparator } from '@rebel/shared/types'
+import { assertUnreachable, compare } from '@rebel/shared/util/typescript'
 
 export type CreateOrUpdateYoutubeChannelArgs = Omit<New<YoutubeChannelInfo>, 'channelId'>
 export type CreateOrUpdateTwitchChannelArgs = Omit<New<TwitchChannelInfo>, 'channelId'>

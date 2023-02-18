@@ -1,5 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
+  "references": [
+    { "path": "../shared" },
+  ],
   "exclude": ["**/__tests__", "**/*.test.ts", "tools", "lib"],
   "compilerOptions": {
     "composite": true,
@@ -10,7 +13,5 @@
     // the second is required for the actual compilation
     "rootDirs": ["./", "./src"]
   },
-  "include": [
-    "./**/*"
-  ]
+  "include": ["./**/*"]
 }

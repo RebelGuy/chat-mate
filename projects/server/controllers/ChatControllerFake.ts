@@ -1,5 +1,5 @@
 import { RegisteredUser } from '@prisma/client'
-import { GetChatEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
+import { GetChatEndpoint, GetCommandStatusEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
 import { ChatControllerDeps } from '@rebel/server/controllers/ChatControllerReal'
 import { buildPath, ControllerBase, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
@@ -9,9 +9,9 @@ import { userRankToPublicObject } from '@rebel/server/models/rank'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { single } from '@rebel/server/util/arrays'
-import { asGte, asLt } from '@rebel/server/util/math'
-import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/server/util/random'
+import { single } from '@rebel/shared/util/arrays'
+import { asGte, asLt } from '@rebel/shared/util/math'
+import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/shared/util/random'
 import { cast } from '@rebel/server/_test/utils'
 import { Path } from 'typescript-rest'
 
@@ -53,5 +53,14 @@ export default class ChatControllerFake extends ControllerBase implements IChatC
     }
 
     return builder.success({ reusableTimestamp: since, chat: items })
+  }
+
+  public getCommandStatus (args: In<GetCommandStatusEndpoint>): Out<GetCommandStatusEndpoint> {
+    const { builder } = args
+    return Promise.resolve(builder.success({
+      status: pickRandom(['success', 'error', 'pending']),
+      durationMs: randomInt(100, 5000),
+      message: 'Sample message'
+    }))
   }
 }

@@ -1,14 +1,14 @@
+import { LogContext } from '@rebel/shared/ILogService'
 import { ReplaceChatItemAction } from "../../interfaces/actions";
 import { YTReplaceChatItemAction } from "../../interfaces/yt/chat";
-import { debugLog } from "../../utils";
 import {
   parseLiveChatPaidMessageRenderer,
   parseLiveChatPlaceholderItemRenderer,
   parseLiveChatTextMessageRenderer,
 } from "./addChatItemAction";
 
-export function parseReplaceChatItemAction(payload: YTReplaceChatItemAction) {
-  const parsedItem = parseReplacementItem(payload.replacementItem);
+export function parseReplaceChatItemAction(logContext: LogContext, payload: YTReplaceChatItemAction) {
+  const parsedItem = parseReplacementItem(logContext, payload.replacementItem);
   if (parsedItem == null) {
     return null
   }
@@ -22,6 +22,7 @@ export function parseReplaceChatItemAction(payload: YTReplaceChatItemAction) {
 }
 
 function parseReplacementItem(
+  logContext: LogContext,
   item: YTReplaceChatItemAction["replacementItem"]
 ) {
   if ("liveChatPlaceholderItemRenderer" in item) {
@@ -29,15 +30,15 @@ function parseReplacementItem(
       item.liveChatPlaceholderItemRenderer
     );
   } else if ("liveChatTextMessageRenderer" in item) {
-    return parseLiveChatTextMessageRenderer(item.liveChatTextMessageRenderer!);
+    return parseLiveChatTextMessageRenderer(logContext, item.liveChatTextMessageRenderer!);
   } else if ("liveChatPaidMessageRenderer" in item) {
     // TODO: check if YTLiveChatPaidMessageRendererContainer will actually appear
-    debugLog(
+    logContext.logError(
       "[action required] observed liveChatPaidMessageRenderer as a replacementItem"
     );
-    return parseLiveChatPaidMessageRenderer(item.liveChatPaidMessageRenderer);
+    return parseLiveChatPaidMessageRenderer(logContext, item.liveChatPaidMessageRenderer);
   } else {
-    debugLog(
+    logContext.logError(
       "[action required] unrecognized replacementItem type:",
       JSON.stringify(item)
     );

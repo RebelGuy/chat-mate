@@ -3,8 +3,9 @@ import ChatControllerFake from '@rebel/server/controllers/ChatControllerFake'
 import { ApiResponse, buildPath, ControllerBase, Endpoint, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import env from '@rebel/server/globals'
-import { GET, Path, PreProcessor, QueryParam } from 'typescript-rest'
+import { GET, Path, PathParam, PreProcessor, QueryParam } from 'typescript-rest'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 
 export type GetChatResponse = ApiResponse<{
   // include the timestamp so it can easily be used for the next request
@@ -12,10 +13,19 @@ export type GetChatResponse = ApiResponse<{
   chat: PublicObject<PublicChatItem>[]
 }>
 
+export type GetCommandStatusResponse = ApiResponse<{
+  status: 'success' | 'error' | 'pending'
+  message: string | null
+  durationMs: number | null
+}>
+
 export type GetChatEndpoint = Endpoint<{ since?: number, limit?: number }, GetChatResponse>
+
+export type GetCommandStatusEndpoint = Endpoint<{ commandId: number }, GetCommandStatusResponse>
 
 export interface IChatController {
   getChat: GetChatEndpoint
+  getCommandStatus: GetCommandStatusEndpoint
 }
 
 @Path(buildPath('chat'))
@@ -45,6 +55,28 @@ export default class ChatController extends ControllerBase {
       })
     } catch (e: any) {
       return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/command/:commandId')
+  public async getCommandStatus (
+    @PathParam('commandId') commandId: number
+  ): Promise<GetCommandStatusResponse> {
+    const builder = this.registerResponseBuilder<GetCommandStatusResponse>('GET /command/:commandId')
+
+    if (commandId == null) {
+      return builder.failure(400, 'CommandId must be provided.')
+    }
+
+    try {
+      return await this.implementation.getCommandStatus({ builder, commandId })
+    } catch (e: any) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+        return builder.failure(404, 'Command not found.')
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 }

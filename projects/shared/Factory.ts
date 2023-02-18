@@ -1,4 +1,4 @@
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 
 type Constructor = new (...args: any[]) => any
 type Type = Record<any, any>

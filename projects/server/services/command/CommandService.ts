@@ -1,13 +1,13 @@
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LogService from '@rebel/server/services/LogService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import CommandStore from '@rebel/server/stores/CommandStore'
-import { InvalidCommandArgumentsError, UnknownCommandError } from '@rebel/server/util/error'
-import Semaphore from '@rebel/server/util/Semaphore'
+import { InvalidCommandArgumentsError, UnknownCommandError } from '@rebel/shared/util/error'
+import Semaphore from '@rebel/shared/util/Semaphore'
 
 export type NormalisedCommand = {
   normalisedName: string

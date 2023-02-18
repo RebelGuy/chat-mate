@@ -1,5 +1,5 @@
 // https://www.electronjs.org/docs/api/session
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { DB } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'

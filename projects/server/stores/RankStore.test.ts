@@ -1,15 +1,15 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import { Db } from '@rebel/server/providers/DbProvider'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
-import { addTime } from '@rebel/server/util/datetime'
+import { addTime } from '@rebel/shared/util/datetime'
 import { Rank, RankName, UserRank } from '@prisma/client'
 import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
-import { single, sortBy, unique } from '@rebel/server/util/arrays'
-import { UserRankNotFoundError, UserRankAlreadyExistsError, UserRankRequiresStreamerError } from '@rebel/server/util/error'
+import { single, sortBy, unique } from '@rebel/shared/util/arrays'
+import { UserRankNotFoundError, UserRankAlreadyExistsError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 
 
 export default () => {

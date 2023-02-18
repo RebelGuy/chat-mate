@@ -1,9 +1,9 @@
 import { ChatMessage, ChatUser, ExperienceSnapshot, ExperienceTransaction, Prisma } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { NoNulls } from '@rebel/server/types'
+import { NoNulls } from '@rebel/shared/types'
 
 export type ChatExperience =
   NoNulls<Pick<Entity.ExperienceTransaction, 'id' | 'time' | 'delta' | 'user' | 'experienceDataChatMessage'>>

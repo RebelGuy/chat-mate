@@ -1,6 +1,6 @@
 import { ChatUser } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import RankStore from '@rebel/server/stores/RankStore'
 
 type Deps = Dependencies<{

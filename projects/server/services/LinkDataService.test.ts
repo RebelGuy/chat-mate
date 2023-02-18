@@ -1,5 +1,5 @@
 import { LinkAttempt, LinkToken, YoutubeChannel } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import AccountService from '@rebel/server/services/AccountService'
 import CommandService, { CommandData } from '@rebel/server/services/command/CommandService'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
@@ -7,8 +7,8 @@ import LinkDataService, { LinkHistory } from '@rebel/server/services/LinkDataSer
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { addTime } from '@rebel/server/util/datetime'
-import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/server/util/error'
+import { addTime } from '@rebel/shared/util/datetime'
+import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
 import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 

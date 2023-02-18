@@ -1,4 +1,4 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
 import StatusService from '@rebel/server/services/StatusService'
 import StreamlabsProxyService, { DonationCallback, StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'

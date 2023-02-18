@@ -1,8 +1,8 @@
 import { RankName } from '@prisma/client'
-import { getContextProvider } from '@rebel/server/context/context'
+import { getContextProvider } from '@rebel/shared/context/context'
 import ApiService from '@rebel/server/controllers/ApiService'
-import { PreProcessorError } from '@rebel/server/util/error'
-import { toCamelCase } from '@rebel/server/util/text'
+import { PreProcessorError } from '@rebel/shared/util/error'
+import { toCamelCase } from '@rebel/shared/util/text'
 import { Request, Response } from 'express'
 
 /** User must have a valid login token attached to the request. The `registeredUser` context variable will be available during the request. */

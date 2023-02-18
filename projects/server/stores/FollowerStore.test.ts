@@ -1,14 +1,14 @@
 import { TwitchFollower } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { nameof } from '@rebel/server/_test/utils'
-import { single } from '@rebel/server/util/arrays'
+import { single } from '@rebel/shared/util/arrays'
 import { mock } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
-import { addTime } from '@rebel/server/util/datetime'
+import { addTime } from '@rebel/shared/util/datetime'
 
 const streamer1 = 1
 const streamer2 = 2

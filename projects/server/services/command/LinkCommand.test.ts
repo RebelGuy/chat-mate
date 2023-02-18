@@ -1,10 +1,10 @@
 import { LinkToken } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LinkService from '@rebel/server/services/LinkService'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { single } from '@rebel/server/util/arrays'
-import { InvalidCommandArgumentsError } from '@rebel/server/util/error'
+import { single } from '@rebel/shared/util/arrays'
+import { InvalidCommandArgumentsError } from '@rebel/shared/util/error'
 import { cast, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 

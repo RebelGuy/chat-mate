@@ -1,9 +1,9 @@
 import { PrismaClient, PrismaPromise } from '@prisma/client'
 import { mockDeep } from 'jest-mock-extended'
 import DbProvider from '@rebel/server/providers/DbProvider'
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
-import Semaphore from '@rebel/server/util/Semaphore'
+import Semaphore from '@rebel/shared/util/Semaphore'
 
 /** Use this in the `beforeEach` of store tests when setting up the database.
  * This timeout helps prevent the "Exceeded timeout of 5000 ms for a hook." error. */

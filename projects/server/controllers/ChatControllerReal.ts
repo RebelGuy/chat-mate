@@ -1,5 +1,5 @@
 import ApiService from '@rebel/server/controllers/ApiService'
-import { GetChatEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
+import { GetChatEndpoint, GetCommandStatusEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
 import { buildPath, ControllerBase, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
@@ -8,8 +8,9 @@ import AccountService, { getPrimaryUserId } from '@rebel/server/services/Account
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
+import CommandStore from '@rebel/server/stores/CommandStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { allDefined, unique } from '@rebel/server/util/arrays'
+import { allDefined, unique } from '@rebel/shared/util/arrays'
 import { Path } from 'typescript-rest'
 
 export type ChatControllerDeps = ControllerDependencies<{
@@ -18,6 +19,7 @@ export type ChatControllerDeps = ControllerDependencies<{
   rankStore: RankStore
   accountStore: AccountStore
   accountService: AccountService
+  commandStore: CommandStore
 }>
 
 @Path(buildPath('chat'))
@@ -27,6 +29,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
   readonly rankStore: RankStore
   readonly accountStore: AccountStore
   readonly accountService: AccountService
+  readonly commandStore: CommandStore
 
   constructor (deps: ChatControllerDeps) {
     super(deps, '/chat')
@@ -35,6 +38,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     this.rankStore = deps.resolve('rankStore')
     this.accountStore = deps.resolve('accountStore')
     this.accountService = deps.resolve('accountService')
+    this.commandStore = deps.resolve('commandStore')
   }
 
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
@@ -65,6 +69,18 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     return builder.success({
       reusableTimestamp: items.at(-1)?.time.getTime() ?? since,
       chat: chatItems
+    })
+  }
+
+  public async getCommandStatus (args: In<GetCommandStatusEndpoint>): Out<GetCommandStatusEndpoint> {
+    const { builder, commandId } = args
+
+    const command = await this.commandStore.getCommand(commandId)
+
+    return builder.success({
+      status: command.result != null ? 'success' : command.error != null ? 'error' : 'pending',
+      message: command.result ?? command.error ?? null,
+      durationMs: command.endTime != null && command.startTime != null ? command.endTime.getTime() - command.startTime.getTime() : null
     })
   }
 }

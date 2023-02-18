@@ -1,6 +1,6 @@
 import { Donation } from '@prisma/client'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
 import { PartialChatMessage } from '@rebel/server/models/chat'
@@ -13,9 +13,9 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { first, group, single } from '@rebel/server/util/arrays'
-import { addTime, maxTime } from '@rebel/server/util/datetime'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, UserRankAlreadyExistsError } from '@rebel/server/util/error'
+import { first, group, single } from '@rebel/shared/util/arrays'
+import { addTime, maxTime } from '@rebel/shared/util/datetime'
+import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   donationStore: DonationStore

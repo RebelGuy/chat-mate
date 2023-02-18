@@ -1,7 +1,7 @@
 import { Livestream } from '@prisma/client'
 import { LiveStatus, Metadata } from '@rebel/masterchat'
-import { Dependencies } from '@rebel/server/context/context'
-import ContextClass from '@rebel/server/context/ContextClass'
+import { Dependencies } from '@rebel/shared/context/context'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { IMasterchat, ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
@@ -10,7 +10,7 @@ import MasterchatProxyService from '@rebel/server/services/MasterchatProxyServic
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { addTime } from '@rebel/server/util/datetime'
+import { addTime } from '@rebel/shared/util/datetime'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 

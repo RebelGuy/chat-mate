@@ -2,7 +2,7 @@
 // use `start` for a constant period.
 // use `end` for constant padding between callbacks.
 
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 
 // use `dynamicEnd` for variable padding between callbacks.
 export type RescheduleBehaviour = 'start' | 'end' | 'dynamicEnd'

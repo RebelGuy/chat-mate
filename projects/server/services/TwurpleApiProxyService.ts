@@ -1,12 +1,12 @@
 
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import { ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import ApiService from '@rebel/server/services/abstract/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
-import { DeepPartial } from '@rebel/server/types'
+import { DeepPartial } from '@rebel/shared/types'
 import { ApiClient } from '@twurple/api'
 import { ChatClient, ChatSayMessageAttributes } from '@twurple/chat/lib'
 

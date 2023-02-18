@@ -1,16 +1,17 @@
-import { Dependencies } from '@rebel/server/context/context'
+import { Dependencies } from '@rebel/shared/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItem, getEmojiLabel, PartialChatMessage } from '@rebel/server/models/chat'
 import { isList, List } from 'immutable'
-import { avg, clamp, clampNormFn, min, sum } from '@rebel/server/util/math'
-import LogService, { createLogContext, LogContext } from '@rebel/server/services/LogService'
+import { clamp, clampNormFn, min, sum } from '@rebel/shared/util/math'
+import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
-import ContextClass from '@rebel/server/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
 import { Livestream } from '@prisma/client'
+import { createLogContext, LogContext } from '@rebel/shared/ILogService'
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 3_000

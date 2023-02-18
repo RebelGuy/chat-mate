@@ -1,5 +1,5 @@
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
-import { InvalidUsernameError } from '@rebel/server/util/error'
+import { InvalidUsernameError } from '@rebel/shared/util/error'
 import { nameof } from '@rebel/server/_test/utils'
 
 let accountHelpers: AccountHelpers
