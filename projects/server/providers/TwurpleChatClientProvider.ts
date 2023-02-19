@@ -5,6 +5,7 @@ import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { ChatClient, LogLevel } from '@twurple/chat'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
+import { waitUntil } from '@rebel/shared/util/typescript'
 
 type Deps = Dependencies<{
   twurpleAuthProvider: TwurpleAuthProvider
@@ -35,7 +36,6 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     }
 
     this.chatClient = new ChatClient({
-      channels: ['rebel_guymc'],
       authProvider: this.twurkpleAuthProvider.get(),
       isAlwaysMod: false, // can't guarantee that streamers will mod the client, so err on the safe side
       readOnly: false,
@@ -49,7 +49,14 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     })
 
     await this.chatClient.connect()
-    this.logService.logInfo(this, 'Connected to the Twurple chat client')
+
+    // the previous await is for the connection only and resolves before authentication occurs.
+    // since there is no event provided by Twurple, we manually poll the authenticated username -
+    // this is initially an empty string, and set once authentication succeeds.
+    // authentication is required before we proceed so that we can start ChatClient actions which
+    // would be rejected without authentication being completed.
+    await waitUntil(() => this.chatClient.currentNick !== '', 100, 5000)
+    this.logService.logInfo(this, 'Connected to the Twurple chat client as user', this.chatClient.currentNick)
   }
 
   override async dispose (): Promise<void> {

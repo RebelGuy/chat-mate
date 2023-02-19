@@ -76,7 +76,7 @@ export default class TwurpleService extends ContextClass {
     // represents an info message in chat, e.g. confirmation that an action was successful
     this.chatClient.onNotice((target, user, msg, notice) => this.logService.logInfo(this, 'chatClient.onNotice', target, user, msg, notice))
 
-    //await this.joinStreamerChannels()
+    await this.joinStreamerChannels()
 
     this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
     this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))

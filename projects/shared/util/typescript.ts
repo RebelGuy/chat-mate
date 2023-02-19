@@ -96,3 +96,21 @@ export function firstOrDefault<T, Default> (map: Map<any, T>, def: Default): T |
   const v = values(map ?? new Map())
   return v.length === 0 ? def : v[0]
 }
+
+export function waitUntil (predicate: () => boolean, pollInterval: number, timeout: number): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const start = new Date().getTime()
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime()
+
+      if (now - start > timeout) {
+        clearInterval(interval)
+        reject(`Waiting for predicated timed out after ${timeout} ms.`)
+      } else if (predicate()) {
+        clearInterval(interval)
+        resolve()
+      }
+    }, pollInterval)
+  })
+}
