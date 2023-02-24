@@ -1,6 +1,6 @@
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
-import { getStatus, ping } from '@rebel/studio/api'
-import ApiRequest from '@rebel/studio/ApiRequest'
+import { getStatus, ping } from '@rebel/studio/utility/api'
+import ApiRequest from '@rebel/studio/components/ApiRequest'
 import * as React from 'react'
 
 export default function ServerStatus () {

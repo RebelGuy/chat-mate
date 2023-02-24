@@ -1,5 +1,5 @@
 import { ResponseData, ApiResponse } from '@rebel/server/controllers/ControllerBase'
-import ApiRequest from '@rebel/studio/ApiRequest'
+import ApiRequest from '@rebel/studio/components/ApiRequest'
 import * as React from 'react'
 
 type Props<TData extends ResponseData<TData>> = {

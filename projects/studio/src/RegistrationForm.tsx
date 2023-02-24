@@ -1,26 +1,24 @@
 import { RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
-import { registerAccount } from '@rebel/studio/api'
-import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import { registerAccount } from '@rebel/studio/utility/api'
+import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'
-import { LoginContext } from '@rebel/studio/LoginProvider'
+import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 import { useContext, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-type Props = {
-  onBack: () => void
-}
-
-export default function RegistrationForm (props: Props) {
+export default function RegistrationForm () {
   const [username, onSetUsername] = useState('')
   const [password, onSetPassword] = useState('')
   const [confirmedPassword, onSetConfirmedPassword] = useState('')
   const loginContext = useContext(LoginContext)
+  const navigate = useNavigate()
 
   const disableButton = isNullOrEmpty(username) || isNullOrEmpty(password) || password !== confirmedPassword
 
   const onSuccess = (loginToken: string) => {
     loginContext.setLogin(username, loginToken)
-    props.onBack()
+    navigate('/')
   }
 
   return (

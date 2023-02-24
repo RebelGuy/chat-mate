@@ -1,6 +1,6 @@
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
-import { authenticate, getRanks, getStreamers } from '@rebel/studio/api'
+import { authenticate, getRanks, getStreamers } from '@rebel/studio/utility/api'
 import * as React from 'react'
 
 export type RankName = PublicRank['name']
@@ -12,6 +12,7 @@ type Props = {
 export default function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
+  const [isLoggingIn, setIsLoggingIn] = React.useState(false)
   const [streamer, setStreamer] = React.useState<string | null>(null)
   const [initialised, setInitialised] = React.useState(false)
   const [ranks, setRanks] = React.useState<RankName[]>([])
@@ -56,6 +57,7 @@ export default function LoginProvider (props: Props) {
 
     setLoginToken(null)
     setUsername(null)
+    setIsLoggingIn(false)
     setStreamer(null)
   }
 
@@ -66,6 +68,7 @@ export default function LoginProvider (props: Props) {
         return false
       }
 
+      setIsLoggingIn(true)
       const response = await authenticate(loginToken)
 
       if (response.success) {
@@ -82,6 +85,8 @@ export default function LoginProvider (props: Props) {
       }
     } catch (e: any) {
       console.error('Unable to login:', e)
+    } finally {
+      setIsLoggingIn(false)
     }
 
     return false
@@ -144,6 +149,7 @@ export default function LoginProvider (props: Props) {
         initialised,
         loginToken,
         username,
+        isLoggingIn,
         streamer,
         allStreamers,
         isStreamer: allStreamers.includes(username ?? ''),
@@ -170,6 +176,7 @@ type LoginContextType = {
   /** The streamer context. */
   streamer: string | null
   username: string | null
+  isLoggingIn: boolean
 
   /** Logs the user in using the saved credentials, if any. Returns true if the login was successful. */
   login: () => Promise<boolean>

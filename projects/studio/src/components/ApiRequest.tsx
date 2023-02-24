@@ -1,5 +1,6 @@
 import { ApiResponse, ResponseData } from '@rebel/server/controllers/ControllerBase'
-import { LoginContext } from '@rebel/studio/LoginProvider'
+import { waitUntil } from '@rebel/shared/util/typescript'
+import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 import * as React from 'react'
 
 type Props<TData extends ResponseData<TData>> = {
@@ -71,27 +72,29 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
         .catch(e => this.onError(e.message, token))
         .then(() => this.onDone())
     } else {
-      if (this.context.loginToken == null) {
-        this.onError('You must be logged in to do that', token)
-        return
-      }
-
-      if (this.props.requiresStreamer) {
-        if (this.context.streamer == null) {
-          this.onError('You must select a streamer context', token)
+      waitUntil(() => !this.context.isLoggingIn, 50, 10000).then(() => {
+        if (this.context.username == null || this.context.loginToken == null) {
+          this.onError('You must be logged in to do that', token)
           return
         }
 
-        this.props.onRequest(this.context.loginToken, this.context.streamer)
-          .then(res => this.onResponse(res, token))
-          .catch(e => this.onError(e.message, token))
-          .then(() => this.onDone())
-      } else {
-        this.props.onRequest(this.context.loginToken)
-          .then(res => this.onResponse(res, token))
-          .catch(e => this.onError(e.message, token))
-          .then(() => this.onDone())
-      }
+        if (this.props.requiresStreamer) {
+          if (this.context.streamer == null) {
+            this.onError('You must select a streamer context', token)
+            return
+          }
+
+          this.props.onRequest(this.context.loginToken, this.context.streamer)
+            .then(res => this.onResponse(res, token))
+            .catch(e => this.onError(e.message, token))
+            .then(() => this.onDone())
+        } else {
+          this.props.onRequest(this.context.loginToken)
+            .then(res => this.onResponse(res, token))
+            .catch(e => this.onError(e.message, token))
+            .then(() => this.onDone())
+        }
+      })
     }
   }
 
@@ -159,14 +162,14 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
   }
 
   override render () {
-    if (this.props.isAnonymous !== true && this.context.loginToken == null) {
+    if (this.props.isAnonymous !== true && (this.context.username == null && !this.context.isLoggingIn)) {
       return <div style={{ color: 'red', padding: 12 }}>You must be logged in to do that.</div>
     }
 
     let loadingNode: React.ReactNode = null
     let errorNode: React.ReactNode = null
 
-    if (this.state.isLoading) {
+    if (this.state.isLoading || this.context.isLoggingIn) {
       loadingNode = <div>Loading...</div>
     }
     

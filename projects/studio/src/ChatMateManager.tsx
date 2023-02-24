@@ -1,7 +1,7 @@
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import { getStatus, getStreamlabsStatus, setActiveLivestream, setStreamlabsSocketToken } from '@rebel/studio/api'
-import ApiRequest from '@rebel/studio/ApiRequest'
-import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import { getStatus, getStreamlabsStatus, setActiveLivestream, setStreamlabsSocketToken } from '@rebel/studio/utility/api'
+import ApiRequest from '@rebel/studio/components/ApiRequest'
+import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import * as React from 'react'
 
 type Props = { }

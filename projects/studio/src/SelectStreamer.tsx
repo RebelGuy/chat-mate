@@ -1,4 +1,4 @@
-import { LoginContext } from '@rebel/studio/LoginProvider'
+import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 import { useContext } from 'react'
 
 type Props = {

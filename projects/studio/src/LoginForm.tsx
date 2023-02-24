@@ -1,41 +1,36 @@
 import { LoginResponse } from '@rebel/server/controllers/AccountController'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
-import { login } from '@rebel/studio/api'
-import ApiRequestTrigger from '@rebel/studio/ApiRequestTrigger'
+import { login } from '@rebel/studio/utility/api'
+import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'
-import { LoginContext } from '@rebel/studio/LoginProvider'
+import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 import { useContext, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-type Props = {
-  onBack: () => void
-  onRegister: () => void
-}
-
-export default function LoginForm (props: Props) {
+export default function LoginForm () {
   const loginContext = useContext(LoginContext)
   const [username, onSetUsername] = useState('')
   const [password, onSetPassword] = useState('')
   const [loggingIn, setLoggingIn] = useState(true)
+  const navigate = useNavigate()
 
   const disableButton = isNullOrEmpty(username) || isNullOrEmpty(password)
 
   const onSuccess = (loginToken: string) => {
     loginContext.setLogin(username, loginToken)
-    props.onBack()
   }
 
-  const onBack = props.onBack // just making eslint happy :/
   useEffect(() => {
     const tryLogin = async () => {
       setLoggingIn(true)
       const result = await loginContext.login()
       if (result) {
-        onBack()
+        navigate('/')
       }
       setLoggingIn(false)
     }
     tryLogin()
-  }, [loginContext, onBack])
+  }, [loginContext, navigate])
 
   const onLogin = async (username: string, password: string, onSuccess: (loginToken: string) => void): Promise<LoginResponse> => {
     const result = await login(username, password)
@@ -63,7 +58,7 @@ export default function LoginForm (props: Props) {
             {loadingNode}
             {errorNode}
           </Form>
-          <button disabled={loggingIn} onClick={props.onRegister}>Register for an account</button>
+          <button disabled={loggingIn} onClick={() => navigate('/register')}>Register for an account</button>
         </>
       )}
     </ApiRequestTrigger>

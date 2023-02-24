@@ -1,5 +1,5 @@
-import { getMasterchatAuthentication } from '@rebel/studio/api'
-import ApiRequest from '@rebel/studio/ApiRequest'
+import { getMasterchatAuthentication } from '@rebel/studio/utility/api'
+import ApiRequest from '@rebel/studio/components/ApiRequest'
 
 export default function AuthenticationStatus () {
   return <ApiRequest onDemand={false} repeatInterval={5000} onRequest={getMasterchatAuthentication}>
