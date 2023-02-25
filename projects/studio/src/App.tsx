@@ -1,6 +1,6 @@
-import LoginProvider from '@rebel/studio/contexts/LoginProvider'
+import { LoginProvider } from '@rebel/studio/contexts/LoginContext'
 import { Route, Routes } from 'react-router-dom'
-import MainView from '@rebel/studio/MainView'
+import MainView from '@rebel/studio/pages/main/MainView'
 import { pages } from '@rebel/studio/pages/navigation'
 
 export default function App () {

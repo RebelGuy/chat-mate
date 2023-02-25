@@ -1,5 +1,5 @@
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
-import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
+import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { pages } from '@rebel/studio/pages/navigation'
 import { useContext, useEffect } from 'react'
 import { generatePath, matchPath, useLocation, useNavigate, useParams } from 'react-router-dom'

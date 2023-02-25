@@ -3,7 +3,7 @@ import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { registerAccount } from '@rebel/studio/utility/api'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'
-import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
+import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { useContext, useState } from 'react'
 import { generatePath, useNavigate } from 'react-router-dom'
 

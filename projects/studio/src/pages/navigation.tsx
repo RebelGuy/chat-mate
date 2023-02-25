@@ -1,9 +1,9 @@
-import ApplyForStreamer from '@rebel/studio/ApplyForStreamer'
-import ChatMateManager from '@rebel/studio/ChatMateManager'
-import CustomEmojiManager from '@rebel/studio/CustomEmojiManager'
-import LinkUser from '@rebel/studio/LinkUser'
-import LoginForm from '@rebel/studio/LoginForm'
-import RegistrationForm from '@rebel/studio/RegistrationForm'
+import ApplyForStreamer from '@rebel/studio/pages/apply/ApplyForStreamer'
+import ChatMateManager from '@rebel/studio/pages/manager/ChatMateManager'
+import CustomEmojiManager from '@rebel/studio/pages/emojis/CustomEmojiManager'
+import LinkUser from '@rebel/studio/pages/link/LinkUser'
+import LoginForm from '@rebel/studio/pages/login/LoginForm'
+import RegistrationForm from '@rebel/studio/pages/register/RegistrationForm'
 import React from 'react'
 
 type Page = {
@@ -49,11 +49,11 @@ export const PageLink = {
   path: '/link'
 } as const
 
-export const PageChatMateManager = {
+export const PageManager = {
   id: 'manager',
   title: 'ChatMate Manager',
   element: <ChatMateManager />,
   path: '/manager'
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageEmojis, PageApply, PageRegister, PageLogin, PageLink, PageChatMateManager]
+export const pages: ReadonlyArray<Page> = [PageEmojis, PageApply, PageRegister, PageLogin, PageLink, PageManager]

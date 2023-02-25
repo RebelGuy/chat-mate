@@ -1,10 +1,10 @@
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import RouteParamsObserver from '@rebel/studio/components/RouteParamsObserver'
-import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
-import DebugInfo from '@rebel/studio/DebugInfo'
-import { PageApply, PageChatMateManager, PageEmojis, PageLink, PageLogin } from '@rebel/studio/pages/navigation'
-import SelectStreamer from '@rebel/studio/SelectStreamer'
+import LoginContext from '@rebel/studio/contexts/LoginContext'
+import DebugInfo from '@rebel/studio/pages/main/DebugInfo'
+import { PageApply, PageManager, PageEmojis, PageLink, PageLogin } from '@rebel/studio/pages/navigation'
+import SelectStreamer from '@rebel/studio/pages/main/SelectStreamer'
 import { logout } from '@rebel/studio/utility/api'
 import React, { useContext } from 'react'
 import { generatePath, Link, Outlet, useNavigate, useParams } from 'react-router-dom'
@@ -35,7 +35,7 @@ export default function MainView () {
         {!isLoggedIn && <li><Link to={PageLogin.path}>{PageLogin.title}</Link></li>}
         {isLoggedIn && loginContext.streamer != null && <li><Link to={generatePath(PageEmojis.path, { streamer: loginContext.streamer })}>Emoji Manager</Link></li>}
         <RequireRank owner>
-          <li><Link to={PageChatMateManager.path}>{PageChatMateManager.title}</Link></li>
+          <li><Link to={PageManager.path}>{PageManager.title}</Link></li>
         </RequireRank>
         <RequireRank admin>
           <li><Link to={PageApply.path}>{PageApply.title}</Link></li>

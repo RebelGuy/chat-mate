@@ -2,14 +2,14 @@ import React from 'react'
 import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { addCustomEmoji, getAccessibleRanks, getAllCustomEmojis, updateCustomEmoji } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
-import RanksSelector from '@rebel/studio/RanksSelector'
+import RanksSelector from '@rebel/studio/pages/emojis/RanksSelector'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import ApiRequest from '@rebel/studio/components/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import ReactDOM from 'react-dom'
 import { sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
-import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
+import LoginContext from '@rebel/studio/contexts/LoginContext'
 
 // this code is yuckyu and needs cleaning up, but it works!
 

@@ -10,7 +10,7 @@ type Props = {
   children: React.ReactNode
 }
 
-export default function LoginProvider (props: Props) {
+export function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
   const [loadingCount, setLoadingCount] = React.useState(0)
@@ -201,4 +201,5 @@ type LoginContextType = {
   hasRank: (rankName: RankName) => boolean
 }
 
-export const LoginContext = React.createContext<LoginContextType>(null!)
+const LoginContext = React.createContext<LoginContextType>(null!)
+export default LoginContext

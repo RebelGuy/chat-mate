@@ -1,6 +1,6 @@
 import { ApiResponse, ResponseData } from '@rebel/server/controllers/ControllerBase'
 import { waitUntil } from '@rebel/shared/util/typescript'
-import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
+import LoginContext from '@rebel/studio/contexts/LoginContext'
 import * as React from 'react'
 
 type Props<TData extends ResponseData<TData>> = {

@@ -1,10 +1,10 @@
-import AdminLink from '@rebel/studio/AdminLink'
+import AdminLink from '@rebel/studio/pages/link/AdminLink'
 import { addLinkedChannel, createLinkToken, getLinkedChannels, getLinkHistory, getPrimaryChannels } from '@rebel/studio/utility/api'
 import ApiRequest from '@rebel/studio/components/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
-import LinkedChannels from '@rebel/studio/LinkedChannels'
-import { LinkHistory } from '@rebel/studio/LinkHistory'
+import LinkedChannels from '@rebel/studio/pages/link/LinkedChannels'
+import { LinkHistory } from '@rebel/studio/pages/link/LinkHistory'
 import * as React from 'react'
 import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
 

@@ -1,6 +1,6 @@
-import AuthenticationStatus from '@rebel/studio/AuthenticationStatus'
+import AuthenticationStatus from '@rebel/studio/pages/main/AuthenticationStatus'
 import { SERVER_URL } from '@rebel/studio/utility/global'
-import ServerStatus from '@rebel/studio/ServerStatus'
+import ServerStatus from '@rebel/studio/pages/main/ServerStatus'
 import * as React from 'react'
 
 export default function DebugInfo () {

@@ -1,6 +1,6 @@
 import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
-import LinkUser from '@rebel/studio/LinkUser'
-import SearchUser from '@rebel/studio/SearchUser'
+import LinkUser from '@rebel/studio/pages/link/LinkUser'
+import SearchUser from '@rebel/studio/components/SearchUser'
 import * as React from 'react'
 
 export default function AdminLink () {
