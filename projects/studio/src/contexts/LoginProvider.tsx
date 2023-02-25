@@ -1,5 +1,6 @@
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
 import { authenticate, getRanks, getStreamers } from '@rebel/studio/utility/api'
 import * as React from 'react'
 
@@ -12,7 +13,7 @@ type Props = {
 export default function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
-  const [isLoggingIn, setIsLoggingIn] = React.useState(false)
+  const [loadingCount, setLoadingCount] = React.useState(0)
   const [streamer, setStreamer] = React.useState<string | null>(null)
   const [initialised, setInitialised] = React.useState(false)
   const [ranks, setRanks] = React.useState<RankName[]>([])
@@ -29,7 +30,7 @@ export default function LoginProvider (props: Props) {
     setUsername(username)
   }
 
-  function onSetStreamer (streamer: string | null) {
+  function onPersistStreamer (streamer: string | null) {
     if (isNullOrEmpty(streamer)) {
       streamer = null
     }
@@ -57,7 +58,6 @@ export default function LoginProvider (props: Props) {
 
     setLoginToken(null)
     setUsername(null)
-    setIsLoggingIn(false)
     setStreamer(null)
   }
 
@@ -68,15 +68,16 @@ export default function LoginProvider (props: Props) {
         return false
       }
 
-      setIsLoggingIn(true)
+      setLoadingCount(c => c + 1)
       const response = await authenticate(loginToken)
+        .finally(() => setLoadingCount(c => c - 1))
 
       if (response.success) {
         setLoginToken(loginToken)
         setUsername(response.data.username)
 
         if (response.data.isStreamer && streamer == null) {
-          onSetStreamer(response.data.username)
+          onPersistStreamer(response.data.username)
         }
         return true
       } else if (response.error.errorCode === 401) {
@@ -85,8 +86,6 @@ export default function LoginProvider (props: Props) {
       }
     } catch (e: any) {
       console.error('Unable to login:', e)
-    } finally {
-      setIsLoggingIn(false)
     }
 
     return false
@@ -100,14 +99,25 @@ export default function LoginProvider (props: Props) {
       await onLogin()
 
       let streamer: string | null = null
-      try {
-        streamer = window.localStorage.getItem('streamer')
-      } catch (e: any) {
-        console.error('Unable to initialise streamer:', e)
+      if (routeParams.streamer != null) {
+        // override the stored streamer if the streamer selection is made within the URL.
+        // this happens only on initial page load - any other streamer modifications must
+        // be made by calling `loginContext.setStreamer`.
+
+        // note that, since we are not a child of the <Route /> component, we won't have
+        // access to the `useParams` hook. to work around that, we grab the current params
+        // from the `<RouteParamsObserver />` component which _is_ a child of the <Route />
+        // component.
+        streamer = routeParams.streamer
+      } else {
+        try {
+          streamer = window.localStorage.getItem('streamer')
+        } catch (e: any) {
+          console.error('Unable to initialise streamer:', e)
+        }
       }
 
-      setStreamer(streamer)
-
+      onPersistStreamer(streamer)
       setInitialised(true)
     }
     loadContext()
@@ -119,7 +129,10 @@ export default function LoginProvider (props: Props) {
     }
     
     const hydrateStreamers = async () => {
+      setLoadingCount(c => c + 1)
       const response = await getStreamers(loginToken)
+        .finally(() => setLoadingCount(c => c - 1))
+
       if (response.success) {
         setAllStreamers(response.data.streamers)
       }
@@ -134,7 +147,9 @@ export default function LoginProvider (props: Props) {
     }
 
     const loadRanks = async () => {
+      setLoadingCount(c => c + 1)
       const result = await getRanks(loginToken, streamer ?? undefined)
+        .finally(() => setLoadingCount(c => c - 1))
       
       if (result.success) {
         setRanks(result.data.ranks.map(r => r.rank.name))
@@ -149,13 +164,13 @@ export default function LoginProvider (props: Props) {
         initialised,
         loginToken,
         username,
-        isLoggingIn,
+        isLoading: loadingCount > 0,
         streamer,
         allStreamers,
         isStreamer: allStreamers.includes(username ?? ''),
         setLogin: onSetLogin,
         login: onLogin,
-        setStreamer: onSetStreamer,
+        setStreamer: onPersistStreamer,
         logout: onClearAuthInfo,
         hasRank: rankName => ranks.find(r => r === rankName) != null,
       }}
@@ -176,7 +191,7 @@ type LoginContextType = {
   /** The streamer context. */
   streamer: string | null
   username: string | null
-  isLoggingIn: boolean
+  isLoading: boolean
 
   /** Logs the user in using the saved credentials, if any. Returns true if the login was successful. */
   login: () => Promise<boolean>

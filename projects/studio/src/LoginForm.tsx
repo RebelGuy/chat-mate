@@ -5,7 +5,8 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'
 import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 import { useContext, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { generatePath, useNavigate } from 'react-router-dom'
+import { PageRegister } from '@rebel/studio/pages/navigation'
 
 export default function LoginForm () {
   const loginContext = useContext(LoginContext)
@@ -25,7 +26,7 @@ export default function LoginForm () {
       setLoggingIn(true)
       const result = await loginContext.login()
       if (result) {
-        navigate('/')
+        navigate(generatePath('/'))
       }
       setLoggingIn(false)
     }
@@ -58,7 +59,7 @@ export default function LoginForm () {
             {loadingNode}
             {errorNode}
           </Form>
-          <button disabled={loggingIn} onClick={() => navigate('/register')}>Register for an account</button>
+          <button disabled={loggingIn} onClick={() => navigate(generatePath(PageRegister.path))}>Register for an account</button>
         </>
       )}
     </ApiRequestTrigger>

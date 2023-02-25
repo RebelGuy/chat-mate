@@ -9,6 +9,7 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import ReactDOM from 'react-dom'
 import { sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
+import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 
 // this code is yuckyu and needs cleaning up, but it works!
 
@@ -24,6 +25,9 @@ type State = {
 }
 
 export default class CustomEmojiManager extends React.PureComponent<Props, State> {
+  static override contextType = LoginContext
+  override context!: React.ContextType<typeof LoginContext>
+
   private loadingRef = React.createRef<HTMLDivElement>()
   private errorRef = React.createRef<HTMLDivElement>()
 
@@ -118,7 +122,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
       <>
         <div ref={this.loadingRef} />
         <div ref={this.errorRef} />
-        <ApiRequest onDemand token={1} requiresStreamer onRequest={this.getEmojis}>
+        <ApiRequest onDemand token={this.context.streamer} requiresStreamer onRequest={this.getEmojis}>
           {(response, loadingNode, errorNode) => <>
             {response && <ApiRequest onDemand token={1} requiresStreamer onRequest={this.getAccessibleRanks}>
               <table style={{ width: '90%', padding: '5%' }}>

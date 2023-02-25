@@ -5,7 +5,7 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'
 import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 import { useContext, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { generatePath, useNavigate } from 'react-router-dom'
 
 export default function RegistrationForm () {
   const [username, onSetUsername] = useState('')
@@ -18,7 +18,7 @@ export default function RegistrationForm () {
 
   const onSuccess = (loginToken: string) => {
     loginContext.setLogin(username, loginToken)
-    navigate('/')
+    navigate(generatePath('/'))
   }
 
   return (

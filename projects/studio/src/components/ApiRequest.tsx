@@ -72,7 +72,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
         .catch(e => this.onError(e.message, token))
         .then(() => this.onDone())
     } else {
-      waitUntil(() => !this.context.isLoggingIn, 50, 10000).then(() => {
+      waitUntil(() => !this.context.isLoading, 50, 10000).then(() => {
         if (this.context.username == null || this.context.loginToken == null) {
           this.onError('You must be logged in to do that', token)
           return
@@ -162,14 +162,14 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
   }
 
   override render () {
-    if (this.props.isAnonymous !== true && (this.context.username == null && !this.context.isLoggingIn)) {
+    if (this.props.isAnonymous !== true && (this.context.username == null && !this.context.isLoading)) {
       return <div style={{ color: 'red', padding: 12 }}>You must be logged in to do that.</div>
     }
 
     let loadingNode: React.ReactNode = null
     let errorNode: React.ReactNode = null
 
-    if (this.state.isLoading || this.context.isLoggingIn) {
+    if (this.state.isLoading || this.context.isLoading) {
       loadingNode = <div>Loading...</div>
     }
     

@@ -1,15 +1,19 @@
-import { LogoutResponse } from '@rebel/server/controllers/AccountController'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
+import RouteParamsObserver from '@rebel/studio/components/RouteParamsObserver'
 import { LoginContext } from '@rebel/studio/contexts/LoginProvider'
 import DebugInfo from '@rebel/studio/DebugInfo'
+import { PageApply, PageChatMateManager, PageEmojis, PageLink, PageLogin } from '@rebel/studio/pages/navigation'
 import SelectStreamer from '@rebel/studio/SelectStreamer'
 import { logout } from '@rebel/studio/utility/api'
 import React, { useContext } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { generatePath, Link, Outlet, useNavigate, useParams } from 'react-router-dom'
 
 export default function MainView () {
   const loginContext = useContext(LoginContext)
+  const { streamer: streamerParam } = useParams()
+
+  const isInvalidStreamer = streamerParam != null && !loginContext.allStreamers.includes(streamerParam)
   const isLoggedIn = loginContext.loginToken != null
 
   return <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -28,24 +32,29 @@ export default function MainView () {
     <nav>
       <ul>
         {/* todo: instead of hiding navigation items when not logged in/not selected a streamer, gray them out. need to make custom component and do some css magic */}
-        {!isLoggedIn && <li><Link to="/login">Login</Link></li>}
-        {loginContext.streamer != null && <li><Link to="/emojis">Emoji Manager</Link></li>}
+        {!isLoggedIn && <li><Link to={PageLogin.path}>{PageLogin.title}</Link></li>}
+        {isLoggedIn && loginContext.streamer != null && <li><Link to={generatePath(PageEmojis.path, { streamer: loginContext.streamer })}>Emoji Manager</Link></li>}
         <RequireRank owner>
-          <li><Link to="/manager">ChatMate Manager</Link></li>
+          <li><Link to={PageChatMateManager.path}>{PageChatMateManager.title}</Link></li>
         </RequireRank>
         <RequireRank admin>
-          <li><Link to="/apply">ChatMate Beta Program</Link></li>
+          <li><Link to={PageApply.path}>{PageApply.title}</Link></li>
         </RequireRank>
-        {isLoggedIn && <li><Link to="/link">Link Channels</Link></li>}
+        {isLoggedIn && <li><Link to={PageLink.path}>{PageLink.title}</Link></li>}
       </ul>
     </nav>
 
     <SelectStreamer />
+    <RouteParamsObserver />
 
     {/* content should fill the vertical space if less than 1 page */}
     <div style={{ flex: 1 }}>
-      {/* placeholder component for the page that is currently selected */}
-      <Outlet />
+      {streamerParam != null && isInvalidStreamer ?
+        <InvalidStreamer streamerName={streamerParam} />
+        :
+        // placeholder component for the page that is currently selected
+        <Outlet />
+      }
     </div>
 
     <div style={{ width: '100%', bottom: 8 }}>
@@ -56,9 +65,17 @@ export default function MainView () {
 
 function LogoutButton () {
   const loginContext = React.useContext(LoginContext)
+  const navigate = useNavigate()
+
+  const onLogout = async (loginToken: string) => {
+    const result = await logout(loginToken)
+    loginContext.logout()
+    navigate(generatePath('/'))
+    return result
+  }
 
   return (
-    <ApiRequestTrigger onRequest={(loginToken: string) => doLogout(loginToken, () => loginContext.logout())}>
+    <ApiRequestTrigger onRequest={onLogout}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
         <>
           <button disabled={loadingNode != null} onClick={onMakeRequest} style={{ display: 'block', margin: 'auto' }}>Logout</button>
@@ -69,10 +86,10 @@ function LogoutButton () {
   )
 }
 
-async function doLogout (loginToken: string, onLogout: () => void): Promise<LogoutResponse> {
-  const result = await logout(loginToken)
-  onLogout()
-  return result
+function InvalidStreamer ({ streamerName }: { streamerName: string }) {
+  return <>
+    Unknown streamer <b>{streamerName}</b>.
+  </>
 }
 
 // todo: auth flow: https://github.com/remix-run/react-router/blob/dev/examples/auth/src/App.tsx
