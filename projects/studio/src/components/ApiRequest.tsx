@@ -1,3 +1,4 @@
+import { Alert, Button } from '@mui/material'
 import { ApiResponse, ResponseData } from '@rebel/server/controllers/ControllerBase'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
@@ -163,7 +164,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
 
   override render () {
     if (this.props.isAnonymous !== true && (this.context.username == null && !this.context.isLoading)) {
-      return <div style={{ color: 'red', padding: 12 }}>You must be logged in to do that.</div>
+      return <Alert severity='error'>You must be logged in to do that.</Alert>
     }
 
     let loadingNode: React.ReactNode = null
@@ -185,10 +186,9 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     
     if (error != null) {
       errorNode = (
-        <>
-          <div style={{ color: 'red', padding: 12 }}>Error: {error}</div>
-          {this.props.onDemand && <button onClick={this.onRetry}>Try again</button>}
-        </>
+        <Alert severity='error' action={this.props.onDemand && <Button onClick={this.onRetry}>Retry</Button>}>
+          Error: {error}
+        </Alert>
       )
     }
 

@@ -2,17 +2,34 @@ import { LoginProvider } from '@rebel/studio/contexts/LoginContext'
 import { Route, Routes } from 'react-router-dom'
 import MainView from '@rebel/studio/pages/main/MainView'
 import { pages } from '@rebel/studio/pages/navigation'
+import { createTheme, ThemeProvider } from '@mui/material/styles'
+import { GlobalStyles } from '@mui/material'
+
+// https://mui.com/material-ui/customization/theme-components/
+// https://zenoo.github.io/mui-theme-creator/#BottomNavigation
+const theme = createTheme({
+  components: {
+
+  }
+})
+
+const globalStyles = <GlobalStyles styles={{
+  // override html styles here, e.g. { h1: { color: 'grey' }}
+}} />
 
 export default function App () {
   return (
-    <LoginProvider>
-      <Routes>
-        <Route path="/" element={<MainView />}>
-          {pages.map(page => 
-            <Route key={page.id} path={page.path} element={page.element} />
-          )}
-        </Route>
-      </Routes>
-    </LoginProvider>
+    <ThemeProvider theme={theme}>
+      {globalStyles}
+      <LoginProvider>
+        <Routes>
+          <Route path="/" element={<MainView />}>
+            {pages.map(page => 
+              <Route key={page.id} path={page.path} element={page.element} />
+            )}
+          </Route>
+        </Routes>
+      </LoginProvider>
+    </ThemeProvider>
   )
 }

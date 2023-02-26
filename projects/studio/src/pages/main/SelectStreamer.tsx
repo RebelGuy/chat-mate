@@ -1,3 +1,5 @@
+import { Help } from '@mui/icons-material'
+import { Alert, FormControl, Icon, InputLabel, MenuItem, Select, Tooltip } from '@mui/material'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { pages } from '@rebel/studio/pages/navigation'
@@ -9,6 +11,8 @@ export default function SelectStreamer () {
   const { pathname: currentPath } = useLocation()
   const navigate = useNavigate()
   const { streamer: streamerParam } = useParams()
+
+  const isUnknownStreamer = streamerParam != null && loginContext.initialised && !loginContext.isLoading && !loginContext.allStreamers.includes(streamerParam)
 
   useEffect(() => {
     const streamer = loginContext.streamer
@@ -38,14 +42,29 @@ export default function SelectStreamer () {
 
   return (
     <div>
-      <div>Select the streamer context under which to make requests.</div>
-      <div>Currently selected: <b>{loginContext.streamer ?? 'n/a'}</b></div>
-      <div>
-        <select name="streamerSelection" value={loginContext.streamer ?? ''} onChange={e => loginContext.setStreamer(e.target.value)}>
-          <option value=""></option>
-          {loginContext.allStreamers.map(streamer => <option key={streamer} value={streamer}>{streamer}</option>)}
-        </select>
+      {isUnknownStreamer && <InvalidStreamer streamerName={streamerParam} />}
+      <div style={{ display: 'flex', flexDirection: 'row' }}>
+        <FormControl fullWidth>
+          <InputLabel>Streamer</InputLabel>
+          <Select error={isUnknownStreamer} value={loginContext.streamer ?? ''} onChange={e => loginContext.setStreamer(e.target.value)} label="Streamer">
+            <MenuItem value=""><em>None</em></MenuItem>
+            {loginContext.allStreamers.map(streamer => <MenuItem key={streamer} value={streamer}>{streamer}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <div style={{ padding: 8, paddingTop: 16, margin: 'auto' }}>
+          <Tooltip title='Select the streamer context under which to make requests.'>
+            <Icon color='info'>
+              <Help />
+            </Icon>
+          </Tooltip>
+        </div>
       </div>
     </div>
   )
+}
+
+function InvalidStreamer ({ streamerName }: { streamerName: string }) {
+  return <Alert severity='warning' sx={{ marginBottom: 2 }} >
+    Unknown streamer <b>{streamerName}</b>.
+  </Alert>
 }
