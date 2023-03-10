@@ -2,7 +2,7 @@ At the moment, the main project in `chat-mate` is `./projects/server`. It commun
 
 A work-in-progress is the `./projects/studio` project. It is a web interface to manage some data within the database and view account information. It communicates with the server endpoints.
 
-To get things running, ensure Node 18 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
+To get things running, ensure Node 18 is installed (recommend [nvm](https://github.com/nvm-sh/nvm), and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
 
 Recommended VSCode extensions:
 - `ESLint`
