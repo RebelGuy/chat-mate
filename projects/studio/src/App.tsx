@@ -9,7 +9,16 @@ import { GlobalStyles } from '@mui/material'
 // https://zenoo.github.io/mui-theme-creator/#BottomNavigation
 const theme = createTheme({
   components: {
-
+    MuiTextField: {
+      defaultProps: {
+        variant: 'outlined'
+      }
+    },
+    MuiButton: {
+      defaultProps: {
+        variant: 'outlined'
+      }
+    }
   }
 })
 

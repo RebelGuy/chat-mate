@@ -3,7 +3,6 @@ import ChatMateManager from '@rebel/studio/pages/manager/ChatMateManager'
 import CustomEmojiManager from '@rebel/studio/pages/emojis/CustomEmojiManager'
 import LinkUser from '@rebel/studio/pages/link/LinkUser'
 import LoginForm from '@rebel/studio/pages/login/LoginForm'
-import RegistrationForm from '@rebel/studio/pages/register/RegistrationForm'
 import React from 'react'
 
 type Page = {
@@ -28,13 +27,6 @@ export const PageApply = {
   path: '/apply'
 } as const
 
-export const PageRegister = {
-  id: 'register',
-  title: 'Register',
-  element: <RegistrationForm />,
-  path: '/register'
-} as const
-
 export const PageLogin = {
   id: 'login',
   title: 'Login',
@@ -56,4 +48,4 @@ export const PageManager = {
   path: '/manager'
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageEmojis, PageApply, PageRegister, PageLogin, PageLink, PageManager]
+export const pages: ReadonlyArray<Page> = [PageEmojis, PageApply, PageLogin, PageLink, PageManager]

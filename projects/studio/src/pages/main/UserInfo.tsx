@@ -1,6 +1,7 @@
-import { Avatar, Button, Typography } from '@mui/material'
+import { Alert, Avatar, Button, Typography } from '@mui/material'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
+import { PageLogin } from '@rebel/studio/pages/navigation'
 import { logout } from '@rebel/studio/utility/api'
 import React from 'react'
 import { useContext } from 'react'
@@ -8,10 +9,16 @@ import { useNavigate, generatePath } from 'react-router-dom'
 
 export default function UserInfo () {
   const loginContext = useContext(LoginContext)
+  const navigate = useNavigate()
 
   const isLoggedIn = loginContext.username != null
   if (!isLoggedIn) {
-    return null
+    return <>
+      <Alert severity="info">
+        You are not currently logged in.
+      </Alert>
+      <Button onClick={() => navigate(generatePath(PageLogin.path))} fullWidth sx={{ marginTop: 1, marginBottom: 1}}>Login</Button>
+    </>
   }
 
   return <>

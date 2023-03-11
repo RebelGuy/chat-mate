@@ -1,11 +1,18 @@
 import RequireRank from '@rebel/studio/components/RequireRank'
 import RouteParamsObserver from '@rebel/studio/components/RouteParamsObserver'
 import DebugInfo from '@rebel/studio/pages/main/DebugInfo'
-import SelectStreamer from '@rebel/studio/pages/main/SelectStreamer'
 import { Outlet } from 'react-router-dom'
 import { Container, Typography } from '@mui/material'
-import Navigation from '@rebel/studio/pages/main/Navigation'
-import UserInfo from '@rebel/studio/pages/main/UserInfo'
+import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
+import UserPanel from '@rebel/studio/pages/main/UserPanel'
+import styled from '@emotion/styled'
+
+const Panel = styled('div')({
+  border: '1px solid rgba(0, 0, 0, 0.1)',
+  borderRadius: 12,
+  padding: 4,
+  boxShadow: '3px 3px 5px rgba(0, 0, 0, 0.1)'
+})
 
 export default function MainView () {
   return (
@@ -16,22 +23,24 @@ export default function MainView () {
       {/* body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
         <Container sx={{ flex: 1, minWidth: 250 }}>
-          <Navigation />
+          <Panel style={{ height: 'calc(50% - 20px)', marginBottom: 20 }}>
+            <NavigationPanel />
+          </Panel>
+          <Panel style={{ height: 'calc(50% - 20px)' }}>
+            <UserPanel />
+          </Panel>
         </Container>
 
         <Container sx={{ minWidth: 300 }}>
-          {/* placeholder component for the page that is currently selected */}
-          <Outlet />
-        </Container>
-
-        <Container sx={{ flex: 1, minWidth: 250 }}>
-          <UserInfo />
-          <SelectStreamer />
+          <Panel>
+            {/* placeholder component for the page that is currently selected */}
+            <Outlet />
+          </Panel>
         </Container>
       </div>
 
       {/* footer */}
-      <div style={{ width: '100%', bottom: 8 }}>
+      <div style={{ width: '100%', bottom: 8, textAlign: 'center' }}>
         <em style={{ fontSize: 14 }}>This is a work in progress...</em>
       </div>
 

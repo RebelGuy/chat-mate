@@ -1,4 +1,4 @@
-import { Alert, Button } from '@mui/material'
+import { Alert, Button, Typography } from '@mui/material'
 import { ApiResponse, ResponseData } from '@rebel/server/controllers/ControllerBase'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
@@ -7,6 +7,7 @@ import * as React from 'react'
 type Props<TData extends ResponseData<TData>> = {
   // if providing a function, the children will always be rendered, otherwise they will only be rendered upon a successful response
   children?: ((response: TData | null, loadingNode: React.ReactNode | null, errorNode: React.ReactNode) => React.ReactNode) | React.ReactNode
+  hideRetryOnError?: boolean
 } & ({
   isAnonymous: true
   requiresStreamer?: false
@@ -171,7 +172,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     let errorNode: React.ReactNode = null
 
     if (this.state.isLoading || this.context.isLoading) {
-      loadingNode = <div>Loading...</div>
+      loadingNode = <Typography>Loading...</Typography>
     }
     
     let error = this.state.error
@@ -186,7 +187,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     
     if (error != null) {
       errorNode = (
-        <Alert severity='error' action={this.props.onDemand && <Button onClick={this.onRetry}>Retry</Button>}>
+        <Alert severity='error' action={this.props.onDemand && !this.props.hideRetryOnError && <Button onClick={this.onRetry}>Retry</Button>}>
           Error: {error}
         </Alert>
       )
