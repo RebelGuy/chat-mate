@@ -8,6 +8,10 @@ import { useContext, useEffect, useState } from 'react'
 import { generatePath, useNavigate } from 'react-router-dom'
 import TextField from '@mui/material/TextField'
 import { Button, Checkbox, FormControlLabel } from '@mui/material'
+import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import { InvalidUsernameError } from '@rebel/shared/util/error'
+
+const accountHelpers = new AccountHelpers()
 
 // by combining the login/registration form into a single component, we can easily handle redirects after the user logs in/registers
 export default function LoginForm () {
@@ -18,8 +22,6 @@ export default function LoginForm () {
   const [loggingIn, setLoggingIn] = useState(true)
   const [isNewUser, setIsNewUser] = useState(false)
   const navigate = useNavigate()
-
-  const disableButton = isNullOrEmpty(username) || isNullOrEmpty(password) || (isNewUser && password !== confirmedPassword)
 
   const onSuccess = (loginToken: string) => {
     loginContext.setLogin(username, loginToken)
@@ -64,12 +66,27 @@ export default function LoginForm () {
     }
   }
 
+  let userNameError: string | null = null
+  if (!isNullOrEmpty(username)) {
+    try {
+      accountHelpers.validateAndFormatUsername(username)
+    } catch (e) {
+      if (e instanceof InvalidUsernameError) {
+        userNameError = e.message
+      } else {
+        throw e
+      }
+    }
+  }
+
+  const disableButton = isNullOrEmpty(username) || isNullOrEmpty(password) || (isNewUser && password !== confirmedPassword) || userNameError != null
+
   return (
     <div style={{ width: 'fit-content', margin: 'auto' }}>
       <ApiRequestTrigger isAnonymous hideRetryOnError onRequest={() => onSubmitForm(isNewUser, username, password, onSuccess)}>
         {(onMakeRequest, responseData, loadingNode, errorNode) => (
           <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column' }}>
-            <TextField label="Username" onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} />
+            <TextField label="Username" onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} error={userNameError != null} helperText={userNameError} />
             <TextField label="Password" onChange={e => onSetPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} type="password" />
             {isNewUser && <TextField label="Confirm password" onChange={e => onSetConfirmedPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ maxWidth: 350, mt: 2 }} type="password" value={confirmedPassword} />}
             <FormControlLabel control={<Checkbox checked={isNewUser} onChange={() => setIsNewUser(!isNewUser)} disabled={loadingNode != null || loggingIn} />} label="I am a new user" />
