@@ -1,4 +1,4 @@
-import { Alert, Avatar, Button, Typography } from '@mui/material'
+import { Alert, Avatar, Box, Button } from '@mui/material'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { PageLogin } from '@rebel/studio/pages/navigation'
@@ -23,7 +23,7 @@ export default function UserInfo () {
 
   return <>
     <Avatar sx={{ margin: 'auto' }} />
-    <Typography sx={{ textAlign: 'center' }}> Hi, <b>{loginContext.username}</b>! </Typography>
+    <Box sx={{ textAlign: 'center' }}> Hi, <b>{loginContext.username}</b>! </Box>
     <LogoutButton />
   </>
 }

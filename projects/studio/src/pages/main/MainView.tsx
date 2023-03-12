@@ -2,7 +2,7 @@ import RequireRank from '@rebel/studio/components/RequireRank'
 import RouteParamsObserver from '@rebel/studio/components/RouteParamsObserver'
 import DebugInfo from '@rebel/studio/pages/main/DebugInfo'
 import { Outlet } from 'react-router-dom'
-import { Container, Typography } from '@mui/material'
+import { Box, Container, Typography } from '@mui/material'
 import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
 import UserPanel from '@rebel/studio/pages/main/UserPanel'
 import styled from '@emotion/styled'
@@ -16,7 +16,7 @@ const Panel = styled('div')({
 
 export default function MainView () {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', typography: 'body1' }}>
       {/* header */}
       <Typography variant='h2' style={{ fontWeight: 500, margin: 'auto' }}>ChatMate</Typography>
 
@@ -49,7 +49,7 @@ export default function MainView () {
       <RequireRank admin>
         <DebugInfo />
       </RequireRank>
-    </div>
+    </Box>
   )
 }
 

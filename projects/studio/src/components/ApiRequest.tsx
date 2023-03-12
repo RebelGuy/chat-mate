@@ -1,4 +1,4 @@
-import { Alert, Button, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress } from '@mui/material'
 import { ApiResponse, ResponseData } from '@rebel/server/controllers/ControllerBase'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
@@ -172,7 +172,12 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     let errorNode: React.ReactNode = null
 
     if (this.state.isLoading || this.context.isLoading) {
-      loadingNode = <Typography>Loading...</Typography>
+      loadingNode = (
+        <Box sx={{ m: 1, display: 'flex', alignItems: 'center' }}>
+          <CircularProgress size="1rem" />
+          <Box sx={{ display: 'inline', pl: 1 }}>Loading...</Box>
+        </Box>
+      )
     }
     
     let error = this.state.error

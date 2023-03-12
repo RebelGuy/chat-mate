@@ -1,8 +1,9 @@
+import { Box } from '@mui/material'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { PageEmojis, PageManager, PageApply, PageLink } from '@rebel/studio/pages/navigation'
+import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page } from '@rebel/studio/pages/navigation'
 import { useContext } from 'react'
-import { Link, generatePath } from 'react-router-dom'
+import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
 
 export default function Navigation () {
   const loginContext = useContext(LoginContext)
@@ -11,18 +12,53 @@ export default function Navigation () {
 
   return (
     <nav>
-      <ul>
-        {/* todo: instead of hiding navigation items when not logged in/not selected a streamer, gray them out. need to make custom component and do some css magic */}
-        <li><Link to={generatePath('/')}>Home</Link></li>
-        {isLoggedIn && loginContext.streamer != null && <li><Link to={generatePath(PageEmojis.path, { streamer: loginContext.streamer })}>{PageEmojis.title}</Link></li>}
-        <RequireRank owner>
-          <li><Link to={PageManager.path}>{PageManager.title}</Link></li>
-        </RequireRank>
-        <RequireRank admin>
-          <li><Link to={PageApply.path}>{PageApply.title}</Link></li>
-        </RequireRank>
-        {isLoggedIn && <li><Link to={PageLink.path}>{PageLink.title}</Link></li>}
-      </ul>
+      {/* todo: instead of hiding navigation items when not logged in/not selected a streamer, gray them out. need to make custom component and do some css magic */}
+      <NavItem page={PageHome} />
+      {isLoggedIn && loginContext.streamer != null && <NavItem page={PageEmojis} streamer={loginContext.streamer} />}
+      <RequireRank owner>
+        <NavItem page={PageManager} />
+      </RequireRank>
+      <RequireRank admin>
+        <NavItem page={PageApply} />
+      </RequireRank>
+      {isLoggedIn && <NavItem page={PageLink} />}
     </nav>
+  )
+}
+
+// stolen from the `generatePath` signature
+type _PathParam<Path extends string> = Path extends `${infer L}/${infer R}` ? _PathParam<L> | _PathParam<R> : Path extends `:${infer Param}` ? Param extends `${infer Optional}?` ? Optional : Param : never
+type PathParam<Path extends string> = Path extends "*" ? "*" : Path extends `${infer Rest}/*` ? "*" | _PathParam<Rest> : _PathParam<Path>
+
+type NavItemProps<P extends Page> = {
+  page: P
+} & {
+  // path params are dynamically calculated and required as separate props to the component
+  //   :    -------      ))
+  [key in PathParam<P['path']>]: string | null
+}
+
+function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
+  const { pathname: currentPath } = useLocation()
+  const isSelected = matchPath({ path: page.path }, currentPath)
+
+  const path = generatePath(page.path, params)
+
+  return (
+    <Box sx={{ m: 0.5 }}>
+      <Link to={path} style={{ color: 'black', textDecoration: 'none' }}>
+        <Box sx={{
+          padding: 1,
+          backgroundColor: 'rgba(0, 0, 255, 0.1)',
+          borderRadius: 2,
+          border: `1px ${isSelected != null ? 'red' : 'transparent'} solid`,
+          ':hover': {
+            backgroundColor: 'rgba(0, 0, 255, 0.05)'
+          }
+        }}>
+          {page.title}
+        </Box>
+      </Link>
+    </Box>
   )
 }
