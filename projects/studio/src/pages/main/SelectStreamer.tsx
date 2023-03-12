@@ -1,5 +1,5 @@
 import { Help } from '@mui/icons-material'
-import { Alert, FormControl, Icon, InputLabel, MenuItem, Select, Tooltip } from '@mui/material'
+import { Alert, Box, FormControl, Icon, InputLabel, MenuItem, Select, Tooltip } from '@mui/material'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { pages } from '@rebel/studio/pages/navigation'
@@ -41,7 +41,7 @@ export default function SelectStreamer () {
   }
 
   return (
-    <div>
+    <Box sx={{ mt: 2 }}>
       {isUnknownStreamer && <InvalidStreamer streamerName={streamerParam} />}
       <div style={{ display: 'flex', flexDirection: 'row' }}>
         <FormControl fullWidth>
@@ -59,7 +59,7 @@ export default function SelectStreamer () {
           </Tooltip>
         </div>
       </div>
-    </div>
+    </Box>
   )
 }
 

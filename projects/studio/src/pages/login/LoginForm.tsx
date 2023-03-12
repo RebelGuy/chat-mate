@@ -69,11 +69,11 @@ export default function LoginForm () {
       <ApiRequestTrigger isAnonymous hideRetryOnError onRequest={() => onSubmitForm(isNewUser, username, password, onSuccess)}>
         {(onMakeRequest, responseData, loadingNode, errorNode) => (
           <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column' }}>
-            <TextField label="Username" onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, marginTop: 2 }} />
-            <TextField label="Password" onChange={e => onSetPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, marginTop: 2 }} type="password" />
-            {isNewUser && <TextField label="Confirm password" onChange={e => onSetConfirmedPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ maxWidth: 350, marginTop: 2 }} type="password" value={confirmedPassword} />}
+            <TextField label="Username" onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} />
+            <TextField label="Password" onChange={e => onSetPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} type="password" />
+            {isNewUser && <TextField label="Confirm password" onChange={e => onSetConfirmedPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ maxWidth: 350, mt: 2 }} type="password" value={confirmedPassword} />}
             <FormControlLabel control={<Checkbox checked={isNewUser} onChange={() => setIsNewUser(!isNewUser)} disabled={loadingNode != null || loggingIn} />} label="I am a new user" />
-            <Button onClick={onMakeRequest} disabled={disableButton || loadingNode != null || loggingIn} type="submit" sx={{ marginTop: 2, marginBottom: 2 }}>{isNewUser ? 'Create account' : 'Login'}</Button>
+            <Button onClick={onMakeRequest} disabled={disableButton || loadingNode != null || loggingIn} type="submit" sx={{ mt: 2, mb: 2 }}>{isNewUser ? 'Create account' : 'Login'}</Button>
             {loadingNode}
             {errorNode}
           </Form>

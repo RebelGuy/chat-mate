@@ -2,7 +2,7 @@ import { Box } from '@mui/material'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page } from '@rebel/studio/pages/navigation'
-import { useContext } from 'react'
+import { cloneElement, useContext } from 'react'
 import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
 
 export default function Navigation () {
@@ -52,11 +52,15 @@ function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
           backgroundColor: 'rgba(0, 0, 255, 0.1)',
           borderRadius: 2,
           border: `1px ${isSelected != null ? 'red' : 'transparent'} solid`,
+          display: 'flex',
+          flexDirection: 'row',
+          verticalAlign: 'middle',
           ':hover': {
             backgroundColor: 'rgba(0, 0, 255, 0.05)'
           }
         }}>
-          {page.title}
+          {cloneElement(page.icon, { sx: { pr: 0.5 }})}
+          <div style={{ marginTop: 1 }}>{page.title}</div>
         </Box>
       </Link>
     </Box>
