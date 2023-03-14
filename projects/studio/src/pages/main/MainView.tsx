@@ -6,6 +6,7 @@ import { Box, Container, Typography } from '@mui/material'
 import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
 import UserPanel from '@rebel/studio/pages/main/UserPanel'
 import styled from '@emotion/styled'
+import { useState } from 'react'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -15,10 +16,12 @@ const Panel = styled('div')({
 })
 
 export default function MainView () {
+  const [headerHeight, setHeaderHeight] = useState(0)
+
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', typography: 'body1' }}>
+    <Box sx={{ overflow: 'hidden', height: '100vh', display: 'flex', flexDirection: 'column', typography: 'body1' }}>
       {/* header */}
-      <Typography variant='h2' style={{ fontWeight: 500, margin: 'auto' }}>ChatMate</Typography>
+      <Typography variant='h2' style={{ fontWeight: 500, margin: 'auto' }} ref={node => setHeaderHeight(node?.clientHeight ?? 0)}>ChatMate</Typography>
 
       {/* body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
@@ -26,13 +29,13 @@ export default function MainView () {
           <Panel style={{ height: 'calc(50% - 20px)', marginBottom: 20 }}>
             <NavigationPanel />
           </Panel>
-          <Panel style={{ height: 'calc(50% - 20px)' }}>
+          <Panel style={{ height: 'calc(50% - 15px)' }}>
             <UserPanel />
           </Panel>
         </Container>
 
-        <Container sx={{ minWidth: 300 }}>
-          <Panel>
+        <Container sx={{ minWidth: 300, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
+          <Panel style={{ height: '100%', overflow: 'auto' }}>
             {/* placeholder component for the page that is currently selected */}
             <Outlet />
           </Panel>
