@@ -1,3 +1,4 @@
+import { Clear } from '@mui/icons-material'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { toSentenceCase } from '@rebel/shared/util/text'
 
@@ -9,10 +10,17 @@ type Props = {
 export default function RanksDisplay (props: Props) {
   const whitelistedRanks = props.accessibleRanks.filter(r => props.ranks.includes(r.id))
   const inaccessibleRankCount = props.ranks.filter(id => !props.accessibleRanks.map(r => r.id).includes(id)).length
-  const inaccessibleRankString = inaccessibleRankCount === 0 ? '' : ` (and ${inaccessibleRankCount} inaccessible ranks)`
-  
+  let inaccessibleRankString: string
+  if (inaccessibleRankCount === 0) {
+    inaccessibleRankString = ''
+  } else if (inaccessibleRankCount === whitelistedRanks.length) {
+    inaccessibleRankString = `(and ${inaccessibleRankCount} inaccessible ranks)`
+  } else {
+    inaccessibleRankString = `(${inaccessibleRankCount} inaccessible ranks)`
+  }
+
   if (props.ranks.length === 0) {
-    return <div>--</div>
+    return <Clear />
   } else {
     return <div>{whitelistedRanks.map(r => toSentenceCase(r.displayNameNoun)).join(', ')}{inaccessibleRankString}</div>
   }

@@ -15,6 +15,7 @@ import { GetCustomEmojisResponse } from '@rebel/server/controllers/EmojiControll
 import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
 import { Close, Done, Edit } from '@mui/icons-material'
 import { EmptyObject } from '@rebel/shared/types'
+import { waitUntil } from '@rebel/shared/util/typescript'
 
 export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -46,7 +47,8 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     }
   }
 
-  override async componentDidMount() {
+  override async componentDidMount () {
+    await waitUntil(() => this.context.initialised && !this.context.isLoading, 100, 5000)
     const accessibleRanks = await getAccessibleRanks(this.context.loginToken!, this.context.streamer!)
     if (accessibleRanks.success) {
       this.setState({
@@ -100,10 +102,22 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     })
 
     let response: ApiResponse<any>
-    if (this.state.editingEmoji?.id === data.id) {
-      response = await this.onUpdate(this.context.loginToken!, this.context.streamer!, data)
-    } else {
-      response = await this.onAdd(this.context.loginToken!, this.context.streamer!, data)
+    try {
+      if (this.state.editingEmoji?.id === data.id) {
+        response = await this.onUpdate(this.context.loginToken!, this.context.streamer!, data)
+      } else {
+        response = await this.onAdd(this.context.loginToken!, this.context.streamer!, data)
+      }
+    } catch (e: any) {
+      response = {
+        success: false,
+        timestamp: Date.now(),
+        error: {
+          errorCode: 500,
+          errorType: 'Unknown',
+          message: e.message
+        }
+      }
     }
 
     this.setState({
@@ -169,7 +183,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {data.emojis.map(emoji =>
+                    {this.state.emojis.map(emoji =>
                       <CustomEmojiRow
                         data={emoji}
                         accessibleRanks={this.state.accessibleRanks}

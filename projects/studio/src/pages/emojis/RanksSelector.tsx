@@ -10,8 +10,16 @@ type Props = {
 }
 
 export default function RanksSelector (props: Props) {
+  const whitelistedRanks = props.accessibleRanks.filter(r => props.ranks.includes(r.id))
   const inaccessibleRankCount = props.ranks.filter(id => !props.accessibleRanks.map(r => r.id).includes(id)).length
-  const inaccessibleRankString = inaccessibleRankCount === 0 ? '' : ` (and ${inaccessibleRankCount} inaccessible ranks)`
+  let inaccessibleRankString: string
+  if (inaccessibleRankCount === 0) {
+    inaccessibleRankString = ''
+  } else if (inaccessibleRankCount === whitelistedRanks.length) {
+    inaccessibleRankString = `(and ${inaccessibleRankCount} inaccessible ranks)`
+  } else {
+    inaccessibleRankString = `(${inaccessibleRankCount} inaccessible ranks)`
+  }
 
   const toggleCheckbox = (rankId: number) => {
     let ranks = props.ranks
@@ -41,6 +49,7 @@ export default function RanksSelector (props: Props) {
               <Checkbox
                 checked={props.ranks.includes(r.id)}
                 disabled={props.disabled}
+                defaultChecked={false}
                 onChange={() => toggleCheckbox(r.id)}
                 sx={{ p: 0 }}
               />

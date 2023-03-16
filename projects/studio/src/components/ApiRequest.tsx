@@ -165,7 +165,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
 
   override render () {
     if (this.props.isAnonymous !== true && (this.context.username == null && !this.context.isLoading)) {
-      return <Alert severity='error'>You must be logged in to do that.</Alert>
+      return <Alert severity="error">You must be logged in to do that.</Alert>
     }
 
     let loadingNode: React.ReactNode = null
@@ -179,7 +179,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
         </Box>
       )
     }
-    
+
     let error = this.state.error
     const response = this.state.response
     if (response != null) {
@@ -189,7 +189,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
         error = response.error.message
       }
     }
-    
+
     if (error != null) {
       errorNode = (
         <Alert severity='error' action={this.props.onDemand && !this.props.hideRetryOnError && <Button onClick={this.onRetry}>Retry</Button>}>
@@ -202,7 +202,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
     if (typeof this.props.children === 'function') {
       returnNode = this.props.children(response?.success ? response.data : null, loadingNode, errorNode)
     }
-    
+
     return returnNode ?? loadingNode ?? errorNode
   }
 }

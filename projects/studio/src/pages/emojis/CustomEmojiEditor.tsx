@@ -1,4 +1,4 @@
-import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { EmojiData } from '@rebel/studio/pages/emojis/CustomEmojiManager'
@@ -100,7 +100,7 @@ export default function CustomEmojiEditor (props: Props) {
 
   return (
     <Dialog open={props.open} fullWidth sx={{ typography: 'body1' }}>
-      <DialogTitle>Edit Emoji</DialogTitle>
+      <DialogTitle>{props.data == null ? 'Create Emoji' : 'Edit Emoji'}</DialogTitle>
       <DialogContent>
         <Box>
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -110,15 +110,17 @@ export default function CustomEmojiEditor (props: Props) {
               disabled={props.isLoading}
               onChange={e => setEditingData({ ...editingData, name: e.target.value })}
             />
-            <TextField
-              label="Symbol"
-              value={editingData.symbol}
-              disabled={props.isLoading}
-              onChange={e => setSymbol(e.target.value)}
-              error={symbolValidation != null}
-              helperText={symbolValidation}
-              sx={{ mt: 3 }}
-            />
+            {props.data == null &&
+              <TextField
+                label="Symbol"
+                value={editingData.symbol}
+                disabled={props.isLoading}
+                onChange={e => setSymbol(e.target.value)}
+                error={symbolValidation != null}
+                helperText={symbolValidation}
+                sx={{ mt: 3 }}
+              />
+            }
             <TextField
               label="Level Requirement"
               inputMode="numeric"
@@ -162,7 +164,7 @@ export default function CustomEmojiEditor (props: Props) {
                     ranks={editingData.whitelistedRanks}
                     onChange={ranks => setEditingData({ ...editingData, whitelistedRanks: ranks })}
                   />
-                  {editingData.whitelistedRanks.length === 0 &&
+                  {enableWhitelist && editingData.whitelistedRanks.length === 0 &&
                     <InputLabel sx={{ display: 'contents' }} error>Must select at least 1 rank to whitelist.</InputLabel>
                   }
                 </AccordionDetails>
@@ -179,6 +181,9 @@ export default function CustomEmojiEditor (props: Props) {
             </FormControl>
           </Box>
         </Box>
+        {props.error &&
+          <Alert severity="error" sx={{ mt: 2 }}>{props.error}</Alert>
+        }
       </DialogContent>
       <DialogActions>
         <Button disabled={!isValid || props.isLoading} onClick={() => props.onSave(editingData)}>
