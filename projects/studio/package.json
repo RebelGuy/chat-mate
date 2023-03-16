@@ -35,11 +35,6 @@
     "url-polyfill": "^1.1.12",
     "web-vitals": "^2.1.0"
   },
-  "eslintConfig": {
-    "extends": [
-      "./../../.eslintrc.json"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",
