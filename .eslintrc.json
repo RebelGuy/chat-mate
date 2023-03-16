@@ -13,7 +13,7 @@
     // see https://github.com/typescript-eslint/typescript-eslint/issues/967
     // and https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/parser/README.md#configuration
     "project": [
-      "./tsconfig.eslint.json"
+      "tsconfig.eslint.json"
     ],
     "sourceType": "module"
   },
