@@ -1,9 +1,9 @@
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, TextField } from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { EmojiData } from '@rebel/studio/pages/emojis/CustomEmojiManager'
 import RanksSelector from '@rebel/studio/pages/emojis/RanksSelector'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type Props = {
   open: boolean
@@ -28,10 +28,15 @@ const DEFAULT_DATA: EmojiData = {
 
 export default function CustomEmojiEditor (props: Props) {
   const [editingData, setEditingData] = useState<EmojiData>(props.data ?? DEFAULT_DATA)
+  const [enableWhitelist, setEnableWhitelist] = useState(false)
   const [symbolValidation, setSymbolValidation] = useState<string | null>(null)
   const [levelRequirementValidation, setLevelRequirementValidation] = useState<string | null>(null)
 
-  const isValid = symbolValidation == null && levelRequirementValidation == null && !isNullOrEmpty(editingData.imageData)
+  const isValid =
+    symbolValidation == null &&
+    levelRequirementValidation == null &&
+    !isNullOrEmpty(editingData.imageData) &&
+    (!enableWhitelist || enableWhitelist && editingData.whitelistedRanks.length > 0)
 
   const setSymbol = (symbol: string) => {
     symbol = symbol.trim()
@@ -43,6 +48,8 @@ export default function CustomEmojiEditor (props: Props) {
       setSymbolValidation(`Cannot include the character ':'.`)
     } else if (symbol.length < 1 || symbol.length > 32) {
       setSymbolValidation('Must be between 1 and 32 characters.')
+    } else {
+      setSymbolValidation(null)
     }
   }
 
@@ -54,10 +61,12 @@ export default function CustomEmojiEditor (props: Props) {
       setLevelRequirementValidation('Must be between 0 and 100')
     } else if (!Number.isInteger(num)) {
       setLevelRequirementValidation('Must be a whole number.')
+    } else {
+      setLevelRequirementValidation(null)
     }
   }
 
-  const onSelectImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onSelectImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.currentTarget.files
     if (files == null || files.length === 0) {
       return
@@ -65,7 +74,7 @@ export default function CustomEmojiEditor (props: Props) {
 
     // https://developer.mozilla.org/en-US/docs/Web/API/FileReader/readAsDataURL
     // reads as base64 encoding, including the `data:` prefix
-    const fr = new FileReader();
+    const fr = new FileReader()
     fr.onload = () => {
       const data = fr.result as string
       const prefix = 'data:image/png;base64,'
@@ -75,6 +84,19 @@ export default function CustomEmojiEditor (props: Props) {
     fr.onerror = () => { throw new Error() }
     fr.readAsDataURL(files[0])
   }
+
+  const onToggleWhitelist = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // disabling the whitelist means an empty whitelist array
+    if (!e.target.checked) {
+      setEditingData({ ...editingData, whitelistedRanks: [] })
+    }
+
+    setEnableWhitelist(e.target.checked)
+  }
+
+  useEffect(() => {
+    setEditingData(props.data ?? DEFAULT_DATA)
+  }, [props.data])
 
   return (
     <Dialog open={props.open} fullWidth sx={{ typography: 'body1' }}>
@@ -119,20 +141,38 @@ export default function CustomEmojiEditor (props: Props) {
               }
             />
             <FormControl>
-              Whitelist ranks
-              <RanksSelector
-                disabled={props.isLoading}
-                accessibleRanks={props.accessibleRanks}
-                ranks={editingData.whitelistedRanks}
-                onChange={ranks => setEditingData({ ...editingData, whitelistedRanks: ranks })}
+              <FormControlLabel
+                label="Whitelist ranks"
+                sx={{ mt: 2 }}
+                control={
+                  <Switch
+                    disabled={props.isLoading}
+                    checked={enableWhitelist}
+                    onChange={onToggleWhitelist}
+                  />
+                }
               />
+              <Accordion elevation={0} expanded={enableWhitelist}>
+                {/* summary is required, otherwise it breaks the accordion */}
+                <AccordionSummary style={{ minHeight: 0, maxHeight: 0, visibility: 'hidden' }} />
+                <AccordionDetails>
+                  <RanksSelector
+                    disabled={props.isLoading}
+                    accessibleRanks={props.accessibleRanks}
+                    ranks={editingData.whitelistedRanks}
+                    onChange={ranks => setEditingData({ ...editingData, whitelistedRanks: ranks })}
+                  />
+                  {editingData.whitelistedRanks.length === 0 &&
+                    <InputLabel sx={{ display: 'contents' }} error>Must select at least 1 rank to whitelist.</InputLabel>
+                  }
+                </AccordionDetails>
+              </Accordion>
             </FormControl>
-            <FormControl>
-              Image
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <FormControl sx={{ mt: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 {!isNullOrEmpty(editingData.imageData) && <img src={`data:image/png;base64,${editingData.imageData}`} style={{ maxHeight: 32 }} alt="" />}
-              </div>
-              <Button disabled={props.isLoading} component="label">
+              </Box>
+              <Button disabled={props.isLoading} component="label" sx={{ mt: 1 }}>
                 <input type="file" hidden accept="image/png" disabled={props.isLoading} onChange={onSelectImage} />
                 Select image
               </Button>

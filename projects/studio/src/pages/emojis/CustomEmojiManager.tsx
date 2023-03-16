@@ -7,17 +7,18 @@ import ApiRequest from '@rebel/studio/components/ApiRequest'
 import { sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { Box, Button, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
+import { Box, Button, IconButton, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 import { GetCustomEmojisResponse } from '@rebel/server/controllers/EmojiController'
 import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
-import { Edit } from '@mui/icons-material'
+import { Close, Done, Edit } from '@mui/icons-material'
+import { EmptyObject } from '@rebel/shared/types'
 
 export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
 
-type Props = {}
+type Props = EmptyObject
 
 type State = {
   emojis: PublicCustomEmoji[]
@@ -119,7 +120,9 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
   }
 
   onCheckDupliateSymbol = (symbol: string) => {
-    return this.state.emojis.find(emoji => emoji.symbol === symbol) != null
+    return this.state.emojis.find(emoji => {
+      return emoji.id !== this.state.editingEmoji?.id && emoji.symbol === symbol
+    }) != null
   }
 
   getEmojis = async (loginToken: string, streamer: string): Promise<GetCustomEmojisResponse> => {
@@ -170,7 +173,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                       <CustomEmojiRow
                         data={emoji}
                         accessibleRanks={this.state.accessibleRanks}
-                        onEdit={this.onEdit}
+                        onEdit={() => this.onEdit(emoji.id)}
                       />)
                     }
                   </TableBody>
@@ -200,17 +203,23 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
 function CustomEmojiRow (props: { data: EmojiData, accessibleRanks: PublicRank[], onEdit: (id: number) => void }) {
   return (
     <tr>
-    <TableCell>{props.data.name}</TableCell>
-    <TableCell>{props.data.symbol}</TableCell>
-    <TableCell>{props.data.levelRequirement}</TableCell>
-    <TableCell>{props.data.canUseInDonationMessage ? 'Yes' : 'No'}</TableCell>
-    <TableCell><RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} /></TableCell>
-    <TableCell>
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        {!isNullOrEmpty(props.data.imageData) && <img src={`data:image/png;base64,${props.data.imageData}`} style={{ maxHeight: 32 }} alt="" />}
-      </div>
-    </TableCell>
-    <RequireRank owner ><TableCell><Edit onClick={() => props.onEdit(props.data.id)}/></TableCell></RequireRank>
-  </tr>
+      <TableCell>{props.data.name}</TableCell>
+      <TableCell>{props.data.symbol}</TableCell>
+      <TableCell>{props.data.levelRequirement}</TableCell>
+      <TableCell>{props.data.canUseInDonationMessage ? <Done /> : <Close />}</TableCell>
+      <TableCell><RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} /></TableCell>
+      <TableCell>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          {!isNullOrEmpty(props.data.imageData) && <img src={`data:image/png;base64,${props.data.imageData}`} style={{ maxHeight: 32 }} alt="" />}
+        </div>
+      </TableCell>
+      <RequireRank owner>
+        <TableCell>
+          <IconButton onClick={() => props.onEdit(props.data.id)}>
+            <Edit />
+          </IconButton>
+        </TableCell>
+      </RequireRank>
+    </tr>
   )
 }

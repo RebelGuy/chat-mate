@@ -25,6 +25,7 @@ export default function LoginForm () {
 
   const onSuccess = (loginToken: string) => {
     loginContext.setLogin(username, loginToken)
+    navigate(generatePath('/'))
   }
 
   useEffect(() => {
@@ -36,11 +37,11 @@ export default function LoginForm () {
       }
       setLoggingIn(false)
     }
-    tryLogin()
+    void tryLogin()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const onSubmitForm = async (isNewUser: boolean, username: string, password: string, onSuccess: (loginToken: string) => void): Promise<LoginResponse | RegisterResponse> => {
+  const onSubmitForm = async (): Promise<LoginResponse | RegisterResponse> => {
     if (isNewUser) {
       // registration
       const result = await registerAccount(username, password)
@@ -48,13 +49,13 @@ export default function LoginForm () {
       if (result.success) {
         onSuccess(result.data.loginToken)
       }
-      
+
       return result
 
     } else {
       // login
       const result = await login(username, password)
-    
+
       if (result.success) {
         onSuccess(result.data.loginToken)
 
@@ -62,7 +63,7 @@ export default function LoginForm () {
           loginContext.setStreamer(loginContext.username)
         }
       }
-    
+
       return result
     }
   }
@@ -84,7 +85,7 @@ export default function LoginForm () {
 
   return (
     <div style={{ width: 'fit-content', margin: 'auto' }}>
-      <ApiRequestTrigger isAnonymous hideRetryOnError onRequest={() => onSubmitForm(isNewUser, username, password, onSuccess)}>
+      <ApiRequestTrigger isAnonymous hideRetryOnError onRequest={() => onSubmitForm()}>
         {(onMakeRequest, responseData, loadingNode, errorNode) => (
           <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column' }}>
             <TextField label="Username" onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} error={userNameError != null} helperText={userNameError} />
