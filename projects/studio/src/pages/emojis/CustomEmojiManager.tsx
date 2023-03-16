@@ -156,12 +156,14 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
           {(data, loadingNode, errorNode) => <>
             {data != null &&
               <Box>
-                <Button
-                  onClick={() => this.onEdit(null)}
-                  sx={{ m: 1 }}
-                >
-                  Create new emoji
-                </Button>
+                <RequireRank owner>
+                  <Button
+                    onClick={() => this.onEdit(null)}
+                    sx={{ m: 1 }}
+                  >
+                    Create new emoji
+                  </Button>
+                </RequireRank>
 
                 <Table
                   stickyHeader
