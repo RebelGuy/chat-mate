@@ -3,5 +3,6 @@
   "include": [
     "./projects/**/*.ts",
     "./projects/**/*.tsx",
+    "./projects/**/*.js",
   ]
 }
