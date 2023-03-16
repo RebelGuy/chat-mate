@@ -1,19 +1,21 @@
-import React from 'react'
-import { PublicCustomEmoji, PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
+import React, { ReactNode } from 'react'
+import { PublicCustomEmoji } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { addCustomEmoji, getAccessibleRanks, getAllCustomEmojis, updateCustomEmoji } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
-import RanksSelector from '@rebel/studio/pages/emojis/RanksSelector'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import ApiRequest from '@rebel/studio/components/ApiRequest'
-import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
-import ReactDOM from 'react-dom'
 import { sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
+import { Box, Button, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
+import TextWithHelp from '@rebel/studio/components/TextWithHelp'
+import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
+import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
+import { GetCustomEmojisResponse } from '@rebel/server/controllers/EmojiController'
+import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
+import { Edit } from '@mui/icons-material'
 
-// this code is yuckyu and needs cleaning up, but it works!
-
-type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
+export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
 
 type Props = {}
 
@@ -21,15 +23,14 @@ type State = {
   emojis: PublicCustomEmoji[]
   accessibleRanks: PublicRank[]
   editingEmoji: EmojiData | null
-  newEmoji: PublicCustomEmojiNew
+  editingError: ReactNode
+  isLoadingEdit: boolean
+  openEditor: boolean
 }
 
 export default class CustomEmojiManager extends React.PureComponent<Props, State> {
   static override contextType = LoginContext
   override context!: React.ContextType<typeof LoginContext>
-
-  private loadingRef = React.createRef<HTMLDivElement>()
-  private errorRef = React.createRef<HTMLDivElement>()
 
   constructor (props: Props) {
     super(props)
@@ -38,29 +39,39 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
       emojis: [],
       accessibleRanks: [],
       editingEmoji: null,
-      newEmoji: {
-        name: '',
-        symbol: '',
-        levelRequirement: 0,
-        canUseInDonationMessage: true,
-        imageData: '',
-        whitelistedRanks: []
-      }
+      editingError: null,
+      isLoadingEdit: false,
+      openEditor: false
     }
   }
 
-  onEdit = (e: React.MouseEvent<HTMLElement>) => {
-    const id = Number(e.currentTarget.dataset.id)!
-    const editingEmoji = this.state.emojis.find(emoji => emoji.id === id)!
-    this.setState({ editingEmoji })
+  override async componentDidMount() {
+    const accessibleRanks = await getAccessibleRanks(this.context.loginToken!, this.context.streamer!)
+    if (accessibleRanks.success) {
+      this.setState({
+        accessibleRanks: accessibleRanks.data.accessibleRanks
+      })
+    }
   }
 
-  onCancelEdit = (e: React.MouseEvent<HTMLElement>) => {
-    this.setState({ editingEmoji: null })
+  onEdit = (id: number | null) => {
+    this.setState({
+      editingEmoji: this.state.emojis.find(emoji => emoji.id === id) ?? null,
+      openEditor: true
+    })
   }
 
-  onUpdate = async (loginToken: string, streamer: string) => {
-    const result = await updateCustomEmoji(this.state.editingEmoji!, loginToken, streamer)
+  onCancelEdit = () => {
+    this.setState({
+      openEditor: false,
+      editingEmoji: null,
+      editingError: null,
+      isLoadingEdit: false
+    })
+  }
+
+  onUpdate = async (loginToken: string, streamer: string, updatedData: EmojiData) => {
+    const result = await updateCustomEmoji(updatedData, loginToken, streamer)
     if (result.success) {
       const updatedEmoji = result.data.updatedEmoji
       this.setState({
@@ -71,43 +82,47 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
     return result
   }
 
-  onChange = (updatedData: EmojiData) => {
-    if (this.state.editingEmoji?.id === updatedData.id) {
-      this.setState({ editingEmoji: updatedData })
-    } else {
-      this.setState({ newEmoji: updatedData })
-    }
-  }
-
-  onAdd = async (loginToken: string, streamer: string) => {
-    const result = await addCustomEmoji(this.state.newEmoji, loginToken, streamer)
+  onAdd = async (loginToken: string, streamer: string, data: EmojiData) => {
+    const result = await addCustomEmoji(data, loginToken, streamer)
     if (result.success) {
       this.setState({
-        newEmoji: {
-          name: '',
-          symbol: '',
-          levelRequirement: 0,
-          canUseInDonationMessage: true,
-          imageData: '',
-          whitelistedRanks: []
-        },
         emojis: [...this.state.emojis, result.data.newEmoji]
       })
     }
     return result
   }
 
-  getAccessibleRanks = async (loginToken: string, streamer: string) => {
-    const accessibleRanks = await getAccessibleRanks(loginToken, streamer)
-    if (accessibleRanks.success) {
+  onSave = async (data: EmojiData) => {
+    this.setState({
+      isLoadingEdit: true,
+      editingError: null
+    })
+
+    let response: ApiResponse<any>
+    if (this.state.editingEmoji?.id === data.id) {
+      response = await this.onUpdate(this.context.loginToken!, this.context.streamer!, data)
+    } else {
+      response = await this.onAdd(this.context.loginToken!, this.context.streamer!, data)
+    }
+
+    this.setState({
+      isLoadingEdit: false,
+      editingError: response.success ? null : response.error.message
+    })
+
+    if (response.success) {
       this.setState({
-        accessibleRanks: accessibleRanks.data.accessibleRanks
+        openEditor: false,
+        editingEmoji: null
       })
     }
-    return accessibleRanks
   }
 
-  getEmojis = async (loginToken: string, streamer: string) => {
+  onCheckDupliateSymbol = (symbol: string) => {
+    return this.state.emojis.find(emoji => emoji.symbol === symbol) != null
+  }
+
+  getEmojis = async (loginToken: string, streamer: string): Promise<GetCustomEmojisResponse> => {
     const emojis = await getAllCustomEmojis(loginToken, streamer)
     if (emojis.success) {
       this.setState({
@@ -120,127 +135,82 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
   override render (): React.ReactNode {
     return (
       <>
-        <div ref={this.loadingRef} />
-        <div ref={this.errorRef} />
         <ApiRequest onDemand token={this.context.streamer} requiresStreamer onRequest={this.getEmojis}>
-          {(response, loadingNode, errorNode) => <>
-            {response && <ApiRequest onDemand token={1} requiresStreamer onRequest={this.getAccessibleRanks}>
-              <table style={{ width: '90%', padding: '5%' }}>
-                <thead>
-                  <tr>
-                    <td>Name</td>
-                    <td>Symbol</td>
-                    <td>Level Req.</td>
-                    <td><span title="Emoji can be used in donation messages">$</span></td>
-                    <td><span title="If there is no selection, all ranks will be able to use the emoji">Rank Whitelist</span></td>
-                    <td>Image</td>
-                    <RequireRank owner><td>Action</td></RequireRank>
-                  </tr>
-                </thead>
+          {(data, loadingNode, errorNode) => <>
+            {data != null &&
+              <Box>
+                <Button
+                  onClick={() => this.onEdit(null)}
+                  sx={{ m: 1 }}
+                >
+                  Create new emoji
+                </Button>
 
-                <ApiRequestTrigger requiresStreamer onRequest={this.onUpdate}>
-                  {(onDoUpdate, responseForUpdate, loadingNodeForUpdate, errorNodeForUpdate) => <>
-                    <tbody>
-                      {this.state.emojis.map(emoji => {
-                        const isEditing = this.state.editingEmoji?.id === emoji.id
-                        const actionCell = <>
-                          {!isEditing && <button data-id={emoji.id} onClick={this.onEdit}>Edit</button>}
-                          {isEditing && <button onClick={onDoUpdate}>Submit</button>}
-                          {isEditing && <button onClick={this.onCancelEdit}>Cancel</button>}
-                        </>
-                        return (
-                          <CustomEmojiRow
-                            key={emoji.symbol}
-                            data={isEditing ? this.state.editingEmoji! : emoji}
-                            actionCell={actionCell}
-                            accessibleRanks={this.state.accessibleRanks}
-                            isNew={false}
-                            onChange={isEditing ? this.onChange : null}
-                          />
-                        )
-                      })}
-
-                      <RequireRank owner>
-                        <ApiRequestTrigger requiresStreamer onRequest={this.onAdd}>
-                          {(onDoAdd, response, loadingNodeForAdd, errorNodeForAdd) => <>
-                            <CustomEmojiRow
-                              data={{ id: -1, ...this.state.newEmoji }}
-                              actionCell={<button onClick={onDoAdd}>Add</button>}
-                              accessibleRanks={this.state.accessibleRanks}
-                              isNew={true}
-                              onChange={this.onChange}
-                            />
-                            {ReactDOM.createPortal(loadingNodeForAdd, this.loadingRef.current!)}
-                            {ReactDOM.createPortal(errorNodeForAdd, this.errorRef.current!)}
-                          </>}
-                        </ApiRequestTrigger>
-                      </RequireRank>
-                    </tbody>
-                    {ReactDOM.createPortal(loadingNodeForUpdate, this.loadingRef.current!)}
-                    {ReactDOM.createPortal(errorNodeForUpdate, this.errorRef.current!)}
-                  </>}
-                </ApiRequestTrigger>
-              </table>
-            </ApiRequest>}
+                <Table
+                  stickyHeader
+                  sx={{
+                    width: '100%',
+                    padding: 1,
+                    transform: 'translateY(-5px)'
+                  }}
+                >
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Symbol</TableCell>
+                      <TableCell>Level Req.</TableCell>
+                      <TableCell><TextWithHelp text="$" help="Emoji can be used in donation messages" /></TableCell>
+                      <TableCell><TextWithHelp text="Rank Whitelist" help="If there is no selection, all ranks will be able to use the emoji" /></TableCell>
+                      <TableCell>Image</TableCell>
+                      <RequireRank owner><TableCell>Action</TableCell></RequireRank>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {data.emojis.map(emoji =>
+                      <CustomEmojiRow
+                        data={emoji}
+                        accessibleRanks={this.state.accessibleRanks}
+                        onEdit={this.onEdit}
+                      />)
+                    }
+                  </TableBody>
+                </Table>
+              </Box>
+            }
             {loadingNode}
             {errorNode}
           </>}
         </ApiRequest>
+
+        <CustomEmojiEditor
+          open={this.state.openEditor}
+          accessibleRanks={this.state.accessibleRanks}
+          data={this.state.editingEmoji}
+          error={this.state.editingError}
+          isLoading={this.state.isLoadingEdit}
+          onCancel={this.onCancelEdit}
+          onSave={this.onSave}
+          onCheckDuplicateSymbol={this.onCheckDupliateSymbol}
+        />
       </>
     )
   }
 }
 
-function CustomEmojiRow (props: { data: EmojiData, actionCell: React.ReactNode, accessibleRanks: PublicRank[], isNew: boolean, onChange: ((updatedData: EmojiData) => void) | null }) {
-  const onChangeName = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, name: e.currentTarget.value })
-  const onChangeSymbol = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, symbol: e.currentTarget.value })
-  const onChangeLevelReq = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, levelRequirement: Number(e.currentTarget.value) })
-  const onChangeCanUseInDonationMessage = (e: React.ChangeEvent<HTMLInputElement>) => props.onChange!({ ...props.data, canUseInDonationMessage: e.currentTarget.checked })
-  const onChangeImageData = (imageData: string | null) => props.onChange!({ ...props.data, imageData: imageData ?? '' })
-  const onChangeWhitelistedRanks = (newRanks: number[]) => props.onChange!({ ...props.data, whitelistedRanks: newRanks })
-  
-  const disabled = props.onChange == null
+function CustomEmojiRow (props: { data: EmojiData, accessibleRanks: PublicRank[], onEdit: (id: number) => void }) {
   return (
     <tr>
-    <td><input type="text" disabled={disabled} value={props.data.name} onChange={onChangeName} /></td>
-    <td><input type="text" disabled={!props.isNew} value={props.data.symbol} onChange={onChangeSymbol} /></td>
-    <td><input type="number" disabled={disabled} value={props.data.levelRequirement} onChange={onChangeLevelReq} /></td>
-    <td><input type="checkbox" disabled={disabled} checked={props.data.canUseInDonationMessage} onChange={onChangeCanUseInDonationMessage} /></td>
-    <td><RanksSelector disabled={disabled} ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} onChange={onChangeWhitelistedRanks} /></td>
-    <td><RenderedImage disabled={disabled} imageData={props.data.imageData} onSetImage={onChangeImageData} /></td>
-    <RequireRank owner ><td>{props.actionCell}</td></RequireRank>
+    <TableCell>{props.data.name}</TableCell>
+    <TableCell>{props.data.symbol}</TableCell>
+    <TableCell>{props.data.levelRequirement}</TableCell>
+    <TableCell>{props.data.canUseInDonationMessage ? 'Yes' : 'No'}</TableCell>
+    <TableCell><RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} /></TableCell>
+    <TableCell>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {!isNullOrEmpty(props.data.imageData) && <img src={`data:image/png;base64,${props.data.imageData}`} style={{ maxHeight: 32 }} alt="" />}
+      </div>
+    </TableCell>
+    <RequireRank owner ><TableCell><Edit onClick={() => props.onEdit(props.data.id)}/></TableCell></RequireRank>
   </tr>
   )
-}
-
-function RenderedImage (props: { imageData: string, disabled: boolean, onSetImage: (imageData: string | null) => void }) {
-  if (isNullOrEmpty(props.imageData)) {
-    const onSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.currentTarget.files
-      if (files == null || files.length === 0) {
-        props.onSetImage(null)
-      } else {
-        // https://developer.mozilla.org/en-US/docs/Web/API/FileReader/readAsDataURL
-        // reads as base64 encoding, including the data: tag
-        const fr = new FileReader();
-        fr.onload = () => {
-          const data = fr.result as string
-          const tag = 'data:image/png;base64,'
-          props.onSetImage(data.substring(tag.length))
-        }
-        fr.onerror = () => { throw new Error() }
-        fr.readAsDataURL(files[0])
-      }
-    }
-    return <input type="file" accept="image/png" disabled={props.disabled} onChange={onSelect} />
-  } else {
-    const onClear = () => props.onSetImage(null)
-
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <img src={`data:image/png;base64,${props.imageData}`} style={{ maxHeight: 32 }} alt="" />
-        {!props.disabled && <div style={{ paddingLeft: 4, cursor: 'pointer' }} onClick={onClear}>x</div>}
-      </div>
-    )
-  }
 }

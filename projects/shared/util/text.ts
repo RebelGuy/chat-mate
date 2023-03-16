@@ -118,3 +118,7 @@ export function capitaliseWord (word: string): string {
 export function ensureMaxTextWidth (text: string, maxLength: number): string {
   return text.length > maxLength ? text.substring(0, maxLength) : text
 }
+
+export function toSentenceCase (text: string) {
+  return text[0].toUpperCase() + text.substring(1)
+}

@@ -37,7 +37,8 @@ export default function LoginForm () {
       setLoggingIn(false)
     }
     tryLogin()
-  }, [loginContext, navigate])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const onSubmitForm = async (isNewUser: boolean, username: string, password: string, onSuccess: (loginToken: string) => void): Promise<LoginResponse | RegisterResponse> => {
     if (isNewUser) {

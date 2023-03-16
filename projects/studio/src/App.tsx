@@ -12,6 +12,12 @@ const theme = createTheme({
     MuiTextField: {
       defaultProps: {
         variant: 'outlined'
+      },
+      styleOverrides: {
+        root: {
+          // so that the title doesn't get cut off
+          marginTop: 8
+        }
       }
     },
     MuiButton: {
