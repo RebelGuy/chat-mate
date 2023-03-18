@@ -36,8 +36,10 @@ export default function MainView () {
 
         <Container sx={{ minWidth: 300, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
           <Panel style={{ height: '100%', overflow: 'auto' }}>
-            {/* placeholder component for the page that is currently selected */}
-            <Outlet />
+            <Box sx={{ m: 1 }}>
+              {/* placeholder component for the page that is currently selected */}
+              <Outlet />
+            </Box>
           </Panel>
         </Container>
       </div>

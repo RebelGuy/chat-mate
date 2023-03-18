@@ -4,6 +4,9 @@ import { sortBy } from '@rebel/shared/util/arrays'
 import * as React from 'react'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { capitaliseWord } from '@rebel/shared/util/text'
+import { IconButton, Table, TableCell, TableHead, TableRow } from '@mui/material'
+import { ContentCopy } from '@mui/icons-material'
+import { Box } from '@mui/system'
 
 export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { success: true }>['data'] }) {
   if (props.data.items.length === 0) {
@@ -21,26 +24,30 @@ export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { su
 
   return <>
     <h3>Link History</h3>
-    <table style={{ margin: 'auto' }}>
-      <tr>
-        <th>Channel name</th>
-        <th>Platform</th>
-        <th>Type</th>
-        <th>Link status</th>
-        <th>Link token</th>
-        <th>Message</th>
-        <th>Date</th>
-      </tr>
-      {tokens.map(item => <tr>
-        <td>{item.channelUserName}</td>
-        <td>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</td>
-        <td>{capitaliseWord(item.type)}</td>
-        <td>{item.status}</td>
-        <td>{item.token ?? 'Initiated by admin'}</td>
-        <td><ItemMessage item={item} /></td>
-        <td>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</td>
-      </tr>)}
-    </table>
+    <Table style={{ margin: 'auto' }}>
+      <TableHead>
+        <TableRow>
+          <TableCell>Channel name</TableCell>
+          <TableCell>Platform</TableCell>
+          <TableCell>Type</TableCell>
+          <TableCell>Link status</TableCell>
+          <TableCell>Link token</TableCell>
+          <TableCell>Message</TableCell>
+          <TableCell>Date</TableCell>
+        </TableRow>
+      </TableHead>
+      {tokens.map(item => (
+        <TableRow>
+          <TableCell>{item.channelUserName}</TableCell>
+          <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
+          <TableCell>{capitaliseWord(item.type)}</TableCell>
+          <TableCell>{item.status}</TableCell>
+          <TableCell>{item.token ?? 'Initiated by admin'}</TableCell>
+          <TableCell><ItemMessage item={item} /></TableCell>
+          <TableCell>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</TableCell>
+        </TableRow>
+      ))}
+    </Table>
   </>
 }
 
@@ -50,7 +57,7 @@ function ItemMessage (props: { item: PublicLinkHistoryItem }) {
 
   const command = `!link ${props.item.token}`
   const onCopy = () => {
-    navigator.clipboard.writeText(command)
+    void navigator.clipboard.writeText(command)
     setShowCopied(true)
     if (timeout != null) {
       clearTimeout(timeout)
@@ -65,9 +72,14 @@ function ItemMessage (props: { item: PublicLinkHistoryItem }) {
   } else if (props.item.status === 'waiting') {
     return <>
       <div style={{ display: 'block' }}>
-        <div>To initiate the link, type the following command: </div><code>{command}</code>
+        <div>Initiate the link using the command</div>
+        <code>{command}</code>
+        <span title="Copy command to clipboard">
+          <IconButton onClick={onCopy}>
+            <ContentCopy />
+          </IconButton>
+        </span>
       </div>
-      <button onClick={onCopy}>Copy command</button>
       {showCopied && <div>Copied!</div>}
     </>
   } else {

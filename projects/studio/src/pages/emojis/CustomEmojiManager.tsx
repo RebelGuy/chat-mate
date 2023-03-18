@@ -159,7 +159,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                 <RequireRank owner>
                   <Button
                     onClick={() => this.onEdit(null)}
-                    sx={{ m: 1 }}
+                    sx={{ mb: 1 }}
                   >
                     Create new emoji
                   </Button>
@@ -167,11 +167,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
 
                 <Table
                   stickyHeader
-                  sx={{
-                    width: '100%',
-                    padding: 1,
-                    transform: 'translateY(-5px)'
-                  }}
+                  sx={{ width: '100%', transform: 'translateY(-5px)' }}
                 >
                   <TableHead>
                     <TableRow>

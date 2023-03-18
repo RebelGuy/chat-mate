@@ -5,6 +5,8 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
+import { Button, Checkbox, FormControlLabel, Table, TableCell, TableHead, TableRow } from '@mui/material'
+import { Box } from '@mui/system'
 
 export default function LinkedChannels (props: { channels: PublicChannel[], primaryChannels: { youtubeChannelId: number | null, twitchChannelId: number | null }, onChange: () => void }) {
   if (props.channels.length === 0) {
@@ -18,31 +20,38 @@ export default function LinkedChannels (props: { channels: PublicChannel[], prim
 
   const isPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && channel.channelId === props.primaryChannels.youtubeChannelId) || (channel.platform === 'twitch' && channel.channelId === props.primaryChannels.twitchChannelId)
   const canAddPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && props.primaryChannels.youtubeChannelId == null) || (channel.platform === 'twitch' && props.primaryChannels.twitchChannelId == null)
-  
+
   return <>
     <h3>Linked Channels</h3>
-    <table style={{ margin: 'auto' }}>
-      <tr>
-        <th>Channel name</th>
-        <th>Platform</th>
-        <RequireRank anyOwner><th>Streamer actions</th></RequireRank>
-        <RequireRank admin><th>Admin actions</th></RequireRank>
-      </tr>
-      {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map(c => <tr style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
-        <td><a href={getChannelUrl(c)}>{c.displayName}</a></td>
-        <td>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</td>
+    <RequireRank owner>
+      <Box>
+        Primary linked channels are the channels that you will stream on. You can select at most one primary channel on YouTube, and one on Twitch.
+      </Box>
+    </RequireRank>
+    <Table style={{ margin: 'auto' }}>
+      <TableHead>
+        <TableRow>
+          <TableCell>Channel name</TableCell>
+          <TableCell>Platform</TableCell>
+          <RequireRank anyOwner><TableCell>Streamer actions</TableCell></RequireRank>
+          <RequireRank admin><TableCell>Admin actions</TableCell></RequireRank>
+        </TableRow>
+      </TableHead>
+      {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map(c => <TableRow style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
+        <TableCell><a href={getChannelUrl(c)}>{c.displayName}</a></TableCell>
+        <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
         <RequireRank anyOwner>
-          <td>
+          <TableCell>
             <ChangePrimaryChannel channel={c} isPrimaryChannel={isPrimaryChannel(c)} canAddPrimary={canAddPrimaryChannel(c)} onChange={props.onChange} />
-          </td>
+          </TableCell>
         </RequireRank>
         <RequireRank admin>
-          <td>
+          <TableCell>
             <UnlinkUser channel={c} onChange={props.onChange} />
-          </td>
+          </TableCell>
         </RequireRank>
-      </tr>)}
-    </table>
+      </TableRow>)}
+    </Table>
   </>
 }
 
@@ -70,8 +79,18 @@ function ChangePrimaryChannel (props: { channel: PublicChannel, isPrimaryChannel
   return <>
     <ApiRequestTrigger onRequest={onChangePrimaryChannel}>
       {(onMakeRequest, response, loading, error) => <>
-        <button style={{ color: props.isPrimaryChannel ? 'red' : undefined }} disabled={loading != null} onClick={onMakeRequest}>{props.isPrimaryChannel ? `Unset primary channel for ${platform}` : `Set primary channel for ${platform}`}</button>
-        {error}
+        <Button
+          style={{ color: props.isPrimaryChannel ? 'red' : undefined }}
+          disabled={loading != null}
+          onClick={onMakeRequest}
+        >
+          {props.isPrimaryChannel ? `Unset primary channel for ${platform}` : `Set primary channel for ${platform}`}
+        </Button>
+        {error != null && (
+          <Box sx={{ mt: 1 }}>
+            {error}
+          </Box>
+        )}
       </>}
     </ApiRequestTrigger>
   </>
@@ -97,27 +116,55 @@ function UnlinkUser (props: { channel: PublicChannel, onChange: () => void }) {
   }
 
   return <>
-    <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
+    <Box style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
       <ApiRequestTrigger onRequest={removeLink}>
-        {(onMakeRequest, response, loading, error) => <>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Transfer ranks" checked={transferRanks} onChange={() => setTransferRanks(!transferRanks)} />
-            <label>Transfer ranks</label>
-          </div>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Relink chat experience" checked={relinkChatExperience} onChange={() => setRelinkChatExperience(!relinkChatExperience)} />
-            <label>Relink chat experience</label>
-          </div>
-          <div style={{ display: 'flex' }}>
-            <input type="checkbox" name="Relink donations" checked={relinkDoantions} onChange={() => setRelinkDonations(!relinkDoantions)} />
-            <label>Relink donations</label>
-          </div>
-          <button disabled={loading != null} onClick={onMakeRequest}>Remove link</button>
-          {response != null && <div>Success!</div>}
-          {error}
-        </>}
+        {(onMakeRequest, response, loading, error) => (
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <FormControlLabel
+              label="Transfer ranks"
+              control={
+                <Checkbox
+                  checked={transferRanks}
+                  onChange={() => setTransferRanks(!transferRanks)}
+                  sx={{ pt: 0, pb: 0, ml: 2 }}
+                />
+              }
+            />
+            <FormControlLabel
+              label="Relink chat experience"
+              control={
+                <Checkbox
+                  checked={relinkChatExperience}
+                  onChange={() => setRelinkChatExperience(!relinkChatExperience)}
+                  sx={{ pt: 0, pb: 0, ml: 2 }}
+                />
+              }
+            />
+            <FormControlLabel
+              label="Relink donations"
+              control={
+                <Checkbox
+                  checked={relinkDoantions}
+                  onChange={() => setRelinkDonations(!relinkDoantions)}
+                  sx={{ pt: 0, pb: 0, ml: 2 }}
+                />
+              }
+            />
+            <Button
+              disabled={loading != null}
+              sx={{ m: 2 }}
+              onClick={onMakeRequest}
+            >
+              Remove link
+            </Button>
+            <Box>
+              {response != null && <div>Success!</div>}
+              {error}
+            </Box>
+          </Box>
+        )}
       </ApiRequestTrigger>
-    </div>
+    </Box>
   </>
 }
 

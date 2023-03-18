@@ -7,9 +7,13 @@ import LinkedChannels from '@rebel/studio/pages/link/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/pages/link/LinkHistory'
 import * as React from 'react'
 import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, IconButton } from '@mui/material'
+import LoginContext from '@rebel/studio/contexts/LoginContext'
+import { Refresh } from '@mui/icons-material'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
+  const loginContext = React.useContext(LoginContext)
   const [updateToken, setUpdateToken] = React.useState(Date.now())
   const [linkedCount, setLinkedCount] = React.useState(0)
 
@@ -30,7 +34,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
     if (response.success) {
       setLinkedCount(response.data.channels.length)
     }
-    
+
     return response
   }
   const onAddLinkedChannel = (loginToken: string) => {
@@ -43,8 +47,35 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
 
   return (
     <div>
-      <button style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>Refresh</button>
-      
+      <h3>How does this work?</h3>
+      <div>You can link a YouTube or Twitch channel to your ChatMate account to manage your profile and access other exclusive features.</div>
+      <div>Linking multiple channels is supported. All existing data you have acquired on those channels (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
+      <div>You can link a maximum of {MAX_CHANNEL_LINKS_ALLOWED} channels across YouTube and Twitch.</div>
+
+      <Alert sx={{ mt: 1, mb: 1 }} severity="warning">
+            Each channel can only be linked to one ChatMate account - make sure <b>{loginContext.username}</b> is the account you want to link to, as it cannot be undone.
+      </Alert>
+
+          How to link a channel:
+      <ol>
+        <li>
+          <b>Specify the channel. </b>
+              In the below input field, enter either the YouTube channel ID or Twitch channel name.
+        </li>
+        <li>
+          <b>Prove channel ownership. </b>
+              Paste the provided command in the YouTube/Twitch chat (corresponding to the platform of the channel you want to link).
+        </li>
+        <li>
+          <b>Wait for a few seconds. </b>
+              The link process has been initiated and should complete soon. Its status can be checked below.
+        </li>
+      </ol>
+
+      <IconButton style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>
+        <Refresh />
+      </IconButton>
+
       {props.admin_selectedDefaultUserId != null && <>
         <ApiRequestTrigger onRequest={onAddLinkedChannel}>
           {(onMakeRequest, response, loadingNode, errorNode) => <>
@@ -56,7 +87,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
           </>}
         </ApiRequestTrigger>
       </>}
-      
+
       {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId != null ?
         <div>Selected a default user - no linked channels to show.</div>
         :
@@ -104,7 +135,7 @@ function CreateLinkToken (props: { linkedCount: number, onCreated: () => void })
   const [channelInput, setChannelInput] = React.useState('')
   const { channelId, error: validationError } = validateChannel(channelInput)
   const showError = channelInput.length > 0 && validationError != null
-  
+
   const onCreateLinkToken = async (loginToken: string) => {
     if (channelId == null) {
       throw new Error('Channel ID is null')
@@ -119,11 +150,7 @@ function CreateLinkToken (props: { linkedCount: number, onCreated: () => void })
   }
 
   return <div style={{ marginTop: 24 }}>
-    <div>You can link a channel to your account to manage your profile and access other exclusive features.</div>
-    <div>If linking multiple channels, all existing data you have acquired on those channels (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
-    <div>You can link a maximum of {MAX_CHANNEL_LINKS_ALLOWED} channels across YouTube and Twitch.</div>
-    <div style={{ color: 'red' }}>Each channel can only be linked once - make sure this is the account you want to link to. Links cannot be undone.</div>
-    {props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED && <div style={{ color: 'red', fontWeight: 700 }}>You have linked the maximum allowd number of channels.</div>}
+    {props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED && <div style={{ color: 'red', fontWeight: 700 }}>You have linked the maximum allowed number of channels.</div>}
     <ApiRequestTrigger onRequest={onCreateLinkToken}>
       {(onMakeRequest, response, loadingNode, errorNode) =>
         <>
