@@ -4,6 +4,8 @@ A work-in-progress is the `./projects/studio` project. It is a web interface to 
 
 To get things running, ensure Node 18 is installed (recommend [nvm](https://github.com/nvm-sh/nvm), and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
 
+Ensure the VSCode Typescript version is the same as the one used in the workspace to avoid getting "Type instantiation is excessively deep and possibly infinite" errors all over the place.
+
 Recommended VSCode extensions:
 - `ESLint`
 - `GitLens`

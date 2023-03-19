@@ -10,6 +10,7 @@ import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, IconButton } from '@mui/material'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { Refresh } from '@mui/icons-material'
+import { CreateLinkToken } from '@rebel/studio/pages/link/CreateLinkToken'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
@@ -72,10 +73,6 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         </li>
       </ol>
 
-      <IconButton style={{ display: 'block', margin: 'auto', marginBottom: 32 }} onClick={regenerateUpdateToken}>
-        <Refresh />
-      </IconButton>
-
       {props.admin_selectedDefaultUserId != null && <>
         <ApiRequestTrigger onRequest={onAddLinkedChannel}>
           {(onMakeRequest, response, loadingNode, errorNode) => <>
@@ -96,7 +93,9 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
             {(response1, loadingNode1, errorNode1) => <>
               <ApiRequest onDemand token={updateToken} onRequest={getPrimaryChannels}>
                 {(response2, loadingNode2, errorNode2) => <>
-                  {response1 && <LinkedChannels channels={response1.channels} primaryChannels={response2 ?? { youtubeChannelId: null, twitchChannelId: null }} onChange={regenerateUpdateToken} />}
+                  {response1 && (
+                    <LinkedChannels channels={response1.channels} primaryChannels={response2 ?? { youtubeChannelId: null, twitchChannelId: null }} onChange={regenerateUpdateToken} onRefresh={regenerateUpdateToken} />
+                  )}
                   {loadingNode1 || loadingNode2}
                   {errorNode1}
                 </>}
@@ -111,7 +110,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         <ApiRequest onDemand token={updateToken} onRequest={onGetLinkHistory}>
           {(response, loadingNode, errorNode) => <>
             {response && <>
-              <LinkHistory data={response} />
+              <LinkHistory data={response} onRefresh={regenerateUpdateToken} />
               {props.admin_selectedAggregateUserId == null && <CreateLinkToken linkedCount={linkedCount} onCreated={regenerateUpdateToken} />}
             </>}
             {loadingNode}
@@ -129,60 +128,4 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
       }
     </div>
   )
-}
-
-function CreateLinkToken (props: { linkedCount: number, onCreated: () => void }) {
-  const [channelInput, setChannelInput] = React.useState('')
-  const { channelId, error: validationError } = validateChannel(channelInput)
-  const showError = channelInput.length > 0 && validationError != null
-
-  const onCreateLinkToken = async (loginToken: string) => {
-    if (channelId == null) {
-      throw new Error('Channel ID is null')
-    }
-    const result = await createLinkToken(loginToken, channelId)
-
-    if (result.success) {
-      props.onCreated()
-    }
-
-    return result
-  }
-
-  return <div style={{ marginTop: 24 }}>
-    {props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED && <div style={{ color: 'red', fontWeight: 700 }}>You have linked the maximum allowed number of channels.</div>}
-    <ApiRequestTrigger onRequest={onCreateLinkToken}>
-      {(onMakeRequest, response, loadingNode, errorNode) =>
-        <>
-          <input type="text" disabled={loadingNode != null} placeholder="Enter channel URL or ID" value={channelInput} onChange={e => setChannelInput(e.target.value)} />
-          {showError && <div color="red">{validationError}</div>}
-          {loadingNode}
-          {errorNode}
-          <button type="button" disabled={loadingNode != null || showError || props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED} onClick={onMakeRequest}>Start the link process</button>
-        </>
-      }
-    </ApiRequestTrigger>
-  </div>
-}
-
-function validateChannel (channel: string): { channelId: string | null, error: string | null } {
-  if (channel.includes('/channel/')) {
-    channel = channel.substring(channel.indexOf('/channel/') + '/channel/'.length)
-  } else if (channel.includes('twitch.tv/')) {
-    channel = channel.substring(channel.indexOf('twitch.tv/') + 'twitch.tv/'.length)
-  }
-
-  if (channel.startsWith('UC')) {
-    if (channel.length === 24) {
-      return { channelId: channel, error: null }
-    } else {
-      return { channelId: null, error: 'Invalid YouTube channel ID - expected 24 characters' }
-    }
-  }
-
-  if (channel.includes('!@#$%^&*(){}|;:\'"`~?/>.<,=+[]\\')) {
-    return { channelId: null, error: 'Invalid channel ID - includes special characters' }
-  }
-
-  return { channelId: channel, error: null }
 }

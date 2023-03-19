@@ -61,7 +61,7 @@ export default class LinkDataService extends ContextClass {
   public async getOrCreateLinkToken (aggregateUserId: number, externalChannelIdOrUserName: string) {
     const channel = await this.channelStore.getChannelFromUserNameOrExternalId(externalChannelIdOrUserName)
     if (channel == null) {
-      throw new NotFoundError(`Unable to find a YouTube or Twitch channel with id ${externalChannelIdOrUserName}. Ensure the ID is correct and the channel has sent at least one chat message.`)
+      throw new NotFoundError(`Unable to find a YouTube or Twitch channel with ID ${externalChannelIdOrUserName}. Ensure the ID is correct and the channel has sent at least one chat message.`)
     }
 
     const defaultUserId = channel.userId

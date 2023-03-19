@@ -5,13 +5,19 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
-import { Button, Checkbox, FormControlLabel, Table, TableCell, TableHead, TableRow } from '@mui/material'
+import { Button, Checkbox, FormControlLabel, IconButton, Table, TableCell, TableHead, TableRow } from '@mui/material'
 import { Box } from '@mui/system'
+import { Refresh } from '@mui/icons-material'
+import { getChannelUrl } from '@rebel/studio/utility/misc'
 
-export default function LinkedChannels (props: { channels: PublicChannel[], primaryChannels: { youtubeChannelId: number | null, twitchChannelId: number | null }, onChange: () => void }) {
+export default function LinkedChannels (props: { channels: PublicChannel[], primaryChannels: { youtubeChannelId: number | null, twitchChannelId: number | null }, onChange: () => void, onRefresh: () => void }) {
+  const header = (
+    <h3>Linked Channels {<IconButton onClick={props.onRefresh}><Refresh /></IconButton>}</h3>
+  )
+
   if (props.channels.length === 0) {
     return <>
-      <h3>Linked Channels</h3>
+      {header}
       <div>
         No YouTube or Twitch channels are linked. Create a new link using the below input field.
       </div>
@@ -22,7 +28,7 @@ export default function LinkedChannels (props: { channels: PublicChannel[], prim
   const canAddPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && props.primaryChannels.youtubeChannelId == null) || (channel.platform === 'twitch' && props.primaryChannels.twitchChannelId == null)
 
   return <>
-    <h3>Linked Channels</h3>
+    {header}
     <RequireRank owner>
       <Box>
         Primary linked channels are the channels that you will stream on. You can select at most one primary channel on YouTube, and one on Twitch.
@@ -31,7 +37,7 @@ export default function LinkedChannels (props: { channels: PublicChannel[], prim
     <Table style={{ margin: 'auto' }}>
       <TableHead>
         <TableRow>
-          <TableCell>Channel name</TableCell>
+          <TableCell>Channel</TableCell>
           <TableCell>Platform</TableCell>
           <RequireRank anyOwner><TableCell>Streamer actions</TableCell></RequireRank>
           <RequireRank admin><TableCell>Admin actions</TableCell></RequireRank>
@@ -166,14 +172,4 @@ function UnlinkUser (props: { channel: PublicChannel, onChange: () => void }) {
       </ApiRequestTrigger>
     </Box>
   </>
-}
-
-function getChannelUrl (channel: PublicChannel) {
-  if (channel.platform === 'youtube') {
-    return `https://www.youtube.com/channel/${channel.externalIdOrUserName}`
-  } else if (channel.platform === 'twitch') {
-    return `https://www.twitch.tv/${channel.externalIdOrUserName}`
-  } else {
-    assertUnreachable(channel.platform)
-  }
 }

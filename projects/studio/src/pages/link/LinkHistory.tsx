@@ -5,13 +5,18 @@ import * as React from 'react'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { capitaliseWord } from '@rebel/shared/util/text'
 import { IconButton, Table, TableCell, TableHead, TableRow } from '@mui/material'
-import { ContentCopy } from '@mui/icons-material'
+import { ContentCopy, Refresh } from '@mui/icons-material'
 import { Box } from '@mui/system'
+import { getChannelUrl } from '@rebel/studio/utility/misc'
 
-export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { success: true }>['data'] }) {
+export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { success: true }>['data'], onRefresh: () => void }) {
+  const header = (
+    <h3>Link History {<IconButton onClick={props.onRefresh}><Refresh /></IconButton>}</h3>
+  )
+
   if (props.data.items.length === 0) {
     return <>
-      <h3>Link History</h3>
+      {header}
       <div>
         No existing link attempts to show. Create a new link using the below input field.
       </div>
@@ -23,11 +28,11 @@ export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { su
   const tokens = sortBy(props.data.items, t => t.status === 'processing' || t.status === 'pending' ? 1 : t.status === 'waiting' ? 0 : maxDate + 1 - t.dateCompleted!)
 
   return <>
-    <h3>Link History</h3>
+    {header}
     <Table style={{ margin: 'auto' }}>
       <TableHead>
         <TableRow>
-          <TableCell>Channel name</TableCell>
+          <TableCell>Channel</TableCell>
           <TableCell>Platform</TableCell>
           <TableCell>Type</TableCell>
           <TableCell>Link status</TableCell>
@@ -38,7 +43,7 @@ export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { su
       </TableHead>
       {tokens.map(item => (
         <TableRow>
-          <TableCell>{item.channelUserName}</TableCell>
+          <TableCell><a href={getChannelUrl(item)}>{item.displayName}</a></TableCell>
           <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
           <TableCell>{capitaliseWord(item.type)}</TableCell>
           <TableCell>{item.status}</TableCell>
