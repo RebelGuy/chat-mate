@@ -42,6 +42,7 @@
     "eol-last": "warn",
     "no-mixed-operators": "off",
     "array-callback-return": "off",
+    "jsx-quotes": ["warn", "prefer-double"],
     
     // see https://typescript-eslint.io/rules
     "@typescript-eslint/unbound-method": "error",

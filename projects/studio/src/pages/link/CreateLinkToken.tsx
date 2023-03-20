@@ -3,6 +3,7 @@ import { Box } from '@mui/system'
 import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
+import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
 import { createLinkToken } from '@rebel/studio/utility/api'
 import React from 'react'
 
@@ -43,13 +44,9 @@ export function CreateLinkToken (props: { linkedCount: number, onCreated: () => 
           />
           {channelId != null && platform != null && <Box sx={{ mt: 2 }}>
             Please confirm you wish to link&nbsp;
-            <a
-              href={getChannelUrl(channelId, platform)}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
+            <LinkInNewTab href={getChannelUrl(channelId, platform)}>
               this {platform === 'youtube' ? 'YouTube' : 'Twitch'} channel
-            </a>.
+            </LinkInNewTab>.
           </Box>}
           <Button
             disabled={loadingNode != null || showError || channelId == null || props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED}

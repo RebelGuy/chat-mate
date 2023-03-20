@@ -3,11 +3,18 @@ import { getStatus, getStreamlabsStatus, setActiveLivestream, setStreamlabsSocke
 import ApiRequest from '@rebel/studio/components/ApiRequest'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import * as React from 'react'
+import { EmptyObject } from '@rebel/shared/types'
+import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
+import { Button, TextField } from '@mui/material'
+import { Box } from '@mui/system'
+import { getLiveId } from '@rebel/shared/util/text'
+import CopyText from '@rebel/studio/components/CopyText'
 
-type Props = { }
+type Props = EmptyObject
 
 type State = {
   currentLivestreamInput: string
+  lastLivestreamResponse: string
   currentSocketInput: string
   socketMessage: string | null
 }
@@ -18,6 +25,7 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
 
     this.state = {
       currentLivestreamInput: '',
+      lastLivestreamResponse: '',
       currentSocketInput: '',
       socketMessage: null
     }
@@ -31,15 +39,26 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
     this.setState({ currentSocketInput: e.target.value })
   }
 
-  setStatus = (loginToken: string, streamer: string) => {
+  setStatus = async (loginToken: string, streamer: string) => {
     const livestream = this.state.currentLivestreamInput.trim()
-    return setActiveLivestream(livestream === '' ? null : livestream, loginToken, streamer)
+    const response = await setActiveLivestream(livestream === '' ? null : livestream, loginToken, streamer)
+
+    if (response.success) {
+      this.setState({
+        lastLivestreamResponse: this.state.currentLivestreamInput
+      })
+    }
+
+    return response
   }
 
   getStatus = async (loginToken: string, streamer: string) => {
     const response = await getStatus(loginToken, streamer)
     if (response.success) {
-      this.setState({ currentLivestreamInput: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : this.state.currentLivestreamInput })
+      this.setState({
+        currentLivestreamInput: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : this.state.currentLivestreamInput,
+        lastLivestreamResponse: response.success ? response.data.livestreamStatus?.livestream.livestreamLink ?? '' : ''
+      })
     }
     return response
   }
@@ -73,15 +92,48 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
     return response
   }
 
-  override render() {
+  override render () {
+    let livestreamIdError: string | null = null
+    if (this.state.currentLivestreamInput.length > 0) {
+      try {
+        getLiveId(this.state.currentLivestreamInput)
+      } catch (e: any) {
+        livestreamIdError = 'Invalid livestream ID or URL'
+      }
+    }
+
     return <div style={{ display: 'block' }}>
       <h3>Active Livestream</h3>
       <div>Set the active YouTube livestream that ChatMate should listen to.</div>
       <ApiRequest onDemand token={1} requiresStreamer onRequest={this.getStatus}>
         <ApiRequestTrigger requiresStreamer onRequest={this.setStatus}>
           {(onSetStatus, status, loading, error) => <>
-            <input onChange={this.onChangeLivestreamInput} disabled={loading != null} placeholder='No active livestream' value={this.state.currentLivestreamInput} />
-            <button onClick={onSetStatus} disabled={loading != null}>Set active livestream</button>
+            <Box style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+              <TextField
+                value={this.state.currentLivestreamInput}
+                label="YouTube livestream ID or URL"
+                disabled={loading != null}
+                style={{ width: 400 }}
+                helperText={livestreamIdError}
+                error={livestreamIdError != null}
+                onChange={this.onChangeLivestreamInput}
+              />
+              {this.state.currentLivestreamInput.length > 0 && livestreamIdError == null && (
+                <CopyText
+                  text={this.state.currentLivestreamInput}
+                  tooltip="Copy livestream URL"
+                  sx={{ ml: 1 }}
+                />
+              )}
+            </Box>
+            <Button
+              disabled={loading != null || livestreamIdError != null || this.state.lastLivestreamResponse === this.state.currentLivestreamInput}
+              sx={{ display: 'block', mt: 1 }}
+              onClick={onSetStatus}
+            >
+              {this.state.currentLivestreamInput.length === 0 ? 'Clear' : 'Set'} active livestream
+            </Button>
+            {loading}
             {error}
           </>}
         </ApiRequestTrigger>
@@ -113,12 +165,24 @@ export default class ChatMateManager extends React.PureComponent<Props, State> {
 
       <div>
         Set the StreamLabs socket token to listen for donations. If the token field is left blank, ChatMate will stop listening to donations.<br />
-        You can get your StreamLabs socket token by going to {<a href="https://streamlabs.com/dashboard#/settings/api-settings">your dashboard</a>} -&gt; API Tokens tab -&gt; copying the Socket API Token.
+        You can get your StreamLabs socket token by going to {<LinkInNewTab href="https://streamlabs.com/dashboard#/settings/api-settings">your dashboard</LinkInNewTab>} -&gt; API Tokens tab -&gt; copying the Socket API Token.
       </div>
       <ApiRequestTrigger requiresStreamer onRequest={this.setToken}>
         {(onSetToken, status, loading, error) => <>
-          <input onChange={this.onChangeSocketInput} disabled={loading != null} value={this.state.currentSocketInput} />
-          <button onClick={onSetToken} disabled={loading != null}>Set token</button>
+          <TextField
+            value={this.state.currentSocketInput}
+            label="Socket token"
+            disabled={loading != null}
+            style={{ width: 400 }}
+            onChange={this.onChangeSocketInput}
+          />
+          <Button
+            disabled={loading != null}
+            sx={{ display: 'block', mt: 1 }}
+            onClick={onSetToken}
+          >
+            {this.state.currentSocketInput.length === 0 ? 'Clear' : 'Set'} token
+          </Button>
           {error}
         </>}
       </ApiRequestTrigger>
