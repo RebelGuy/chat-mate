@@ -10,6 +10,7 @@ import TextField from '@mui/material/TextField'
 import { Button, Checkbox, FormControlLabel } from '@mui/material'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import { InvalidUsernameError } from '@rebel/shared/util/error'
+import AutoFocus from '@rebel/studio/components/Autofocus'
 
 const accountHelpers = new AccountHelpers()
 
@@ -88,11 +89,53 @@ export default function LoginForm () {
       <ApiRequestTrigger isAnonymous hideRetryOnError onRequest={() => onSubmitForm()}>
         {(onMakeRequest, responseData, loadingNode, errorNode) => (
           <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column' }}>
-            <TextField label="Username" onChange={e => onSetUsername(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} error={userNameError != null} helperText={userNameError} />
-            <TextField label="Password" onChange={e => onSetPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ width: 350, mt: 2 }} type="password" />
-            {isNewUser && <TextField label="Confirm password" onChange={e => onSetConfirmedPassword(e.target.value)} disabled={loadingNode != null || loggingIn} sx={{ maxWidth: 350, mt: 2 }} type="password" value={confirmedPassword} />}
-            <FormControlLabel control={<Checkbox checked={isNewUser} onChange={() => setIsNewUser(!isNewUser)} disabled={loadingNode != null || loggingIn} />} label="I am a new user" />
-            <Button onClick={onMakeRequest} disabled={disableButton || loadingNode != null || loggingIn} type="submit" sx={{ mt: 2, mb: 2 }}>{isNewUser ? 'Create account' : 'Login'}</Button>
+            <AutoFocus>
+              {(onRef) => (
+                <TextField
+                  label="Username"
+                  disabled={loadingNode != null || loggingIn}
+                  error={userNameError != null}
+                  helperText={userNameError}
+                  sx={{ width: 350, mt: 2 }}
+                  inputRef={onRef}
+                  onChange={e => onSetUsername(e.target.value)}
+                />
+              )}
+            </AutoFocus>
+            <TextField
+              label="Password"
+              type="password"
+              disabled={loadingNode != null || loggingIn}
+              sx={{ width: 350, mt: 2 }}
+              onChange={e => onSetPassword(e.target.value)}
+            />
+            {isNewUser && (
+              <TextField
+                label="Confirm password"
+                onChange={e => onSetConfirmedPassword(e.target.value)}
+                disabled={loadingNode != null || loggingIn}
+                sx={{ maxWidth: 350, mt: 2 }}
+                type="password"
+              />
+            )}
+            <FormControlLabel
+              label="I am a new user"
+              control={
+                <Checkbox
+                  checked={isNewUser}
+                  onChange={() => setIsNewUser(!isNewUser)}
+                  disabled={loadingNode != null || loggingIn}
+                />
+              }
+            />
+            <Button
+              type="submit"
+              disabled={disableButton || loadingNode != null || loggingIn}
+              sx={{ mt: 2, mb: 2 }}
+              onClick={onMakeRequest}
+            >
+              {isNewUser ? 'Create account' : 'Login'}
+            </Button>
             {loadingNode}
             {errorNode}
           </Form>

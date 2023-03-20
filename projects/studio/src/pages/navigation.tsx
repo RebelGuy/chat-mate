@@ -26,7 +26,7 @@ export const PageHome = {
 
 export const PageEmojis = {
   id: 'emojis',
-  title: 'Emoji Manager',
+  title: 'Emojis',
   element: <CustomEmojiManager />,
   icon: <Mood />,
   path: '/:streamer/emojis'

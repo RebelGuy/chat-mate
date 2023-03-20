@@ -54,7 +54,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         <div>Linking multiple channels is supported. All existing data you have acquired on those channels (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
         <div>You can link a maximum of {MAX_CHANNEL_LINKS_ALLOWED} channels across YouTube and Twitch.</div>
 
-        <Alert sx={{ mt: 1, mb: 1 }} severity="warning">
+        <Alert sx={{ mt: 1, mb: 1, width: 'fit-content' }} severity="warning">
           Each channel can only be linked to one ChatMate account - make sure <b>{loginContext.username}</b> is the account you want to link to, as it cannot be undone.
         </Alert>
 
