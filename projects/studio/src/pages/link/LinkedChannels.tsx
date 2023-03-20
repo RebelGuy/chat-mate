@@ -122,54 +122,52 @@ function UnlinkUser (props: { channel: PublicChannel, onChange: () => void }) {
   }
 
   return <>
-    <Box style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
-      <ApiRequestTrigger onRequest={removeLink}>
-        {(onMakeRequest, response, loading, error) => (
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <FormControlLabel
-              label="Transfer ranks"
-              control={
-                <Checkbox
-                  checked={transferRanks}
-                  onChange={() => setTransferRanks(!transferRanks)}
-                  sx={{ pt: 0, pb: 0, ml: 2 }}
-                />
-              }
-            />
-            <FormControlLabel
-              label="Relink chat experience"
-              control={
-                <Checkbox
-                  checked={relinkChatExperience}
-                  onChange={() => setRelinkChatExperience(!relinkChatExperience)}
-                  sx={{ pt: 0, pb: 0, ml: 2 }}
-                />
-              }
-            />
-            <FormControlLabel
-              label="Relink donations"
-              control={
-                <Checkbox
-                  checked={relinkDoantions}
-                  onChange={() => setRelinkDonations(!relinkDoantions)}
-                  sx={{ pt: 0, pb: 0, ml: 2 }}
-                />
-              }
-            />
-            <Button
-              disabled={loading != null}
-              sx={{ m: 2 }}
-              onClick={onMakeRequest}
-            >
-              Remove link
-            </Button>
-            <Box>
-              {response != null && <div>Success!</div>}
-              {error}
-            </Box>
+    <ApiRequestTrigger onRequest={removeLink}>
+      {(onMakeRequest, response, loading, error) => (
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <FormControlLabel
+            label="Transfer ranks"
+            control={
+              <Checkbox
+                checked={transferRanks}
+                onChange={() => setTransferRanks(!transferRanks)}
+                sx={{ pt: 0, pb: 0, ml: 2 }}
+              />
+            }
+          />
+          <FormControlLabel
+            label="Relink chat experience"
+            control={
+              <Checkbox
+                checked={relinkChatExperience}
+                onChange={() => setRelinkChatExperience(!relinkChatExperience)}
+                sx={{ pt: 0, pb: 0, ml: 2 }}
+              />
+            }
+          />
+          <FormControlLabel
+            label="Relink donations"
+            control={
+              <Checkbox
+                checked={relinkDoantions}
+                onChange={() => setRelinkDonations(!relinkDoantions)}
+                sx={{ pt: 0, pb: 0, ml: 2 }}
+              />
+            }
+          />
+          <Button
+            disabled={loading != null}
+            sx={{ m: 2 }}
+            onClick={onMakeRequest}
+          >
+            Remove link
+          </Button>
+          <Box>
+            {response != null && <div>Success!</div>}
+            {error}
           </Box>
-        )}
-      </ApiRequestTrigger>
-    </Box>
+        </Box>
+      )}
+    </ApiRequestTrigger>
   </>
 }

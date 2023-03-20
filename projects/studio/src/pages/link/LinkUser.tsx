@@ -7,7 +7,7 @@ import LinkedChannels from '@rebel/studio/pages/link/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/pages/link/LinkHistory'
 import * as React from 'react'
 import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
-import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, IconButton } from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, IconButton, TextField } from '@mui/material'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { Refresh } from '@mui/icons-material'
 import { CreateLinkToken } from '@rebel/studio/pages/link/CreateLinkToken'
@@ -48,37 +48,50 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
 
   return (
     <div>
-      <h3>How does this work?</h3>
-      <div>You can link a YouTube or Twitch channel to your ChatMate account to manage your profile and access other exclusive features.</div>
-      <div>Linking multiple channels is supported. All existing data you have acquired on those channels (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
-      <div>You can link a maximum of {MAX_CHANNEL_LINKS_ALLOWED} channels across YouTube and Twitch.</div>
+      {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null && <>
+        <h3>How does this work?</h3>
+        <div>You can link a YouTube or Twitch channel to your ChatMate account to manage your profile and access other exclusive features.</div>
+        <div>Linking multiple channels is supported. All existing data you have acquired on those channels (experience, ranks, etc.) will be merged as if you were using a single channel all along.</div>
+        <div>You can link a maximum of {MAX_CHANNEL_LINKS_ALLOWED} channels across YouTube and Twitch.</div>
 
-      <Alert sx={{ mt: 1, mb: 1 }} severity="warning">
-            Each channel can only be linked to one ChatMate account - make sure <b>{loginContext.username}</b> is the account you want to link to, as it cannot be undone.
-      </Alert>
+        <Alert sx={{ mt: 1, mb: 1 }} severity="warning">
+          Each channel can only be linked to one ChatMate account - make sure <b>{loginContext.username}</b> is the account you want to link to, as it cannot be undone.
+        </Alert>
 
-          How to link a channel:
-      <ol>
-        <li>
-          <b>Specify the channel. </b>
+        How to link a channel:
+        <ol>
+          <li>
+            <b>Specify the channel. </b>
               In the below input field, enter either the YouTube channel ID or Twitch channel name.
-        </li>
-        <li>
-          <b>Prove channel ownership. </b>
+          </li>
+          <li>
+            <b>Prove channel ownership. </b>
               Paste the provided command in the YouTube/Twitch chat (corresponding to the platform of the channel you want to link).
-        </li>
-        <li>
-          <b>Wait for a few seconds. </b>
+          </li>
+          <li>
+            <b>Wait for a few seconds. </b>
               The link process has been initiated and should complete soon. Its status can be checked below.
-        </li>
-      </ol>
+          </li>
+        </ol>
+      </>}
 
+      {/* allow admin to link an aggregate user to the selected default user */}
       {props.admin_selectedDefaultUserId != null && <>
         <ApiRequestTrigger onRequest={onAddLinkedChannel}>
           {(onMakeRequest, response, loadingNode, errorNode) => <>
             <div>Link an aggregate user:</div>
-            <input type="number" onChange={e => setSelectedAggregateUserId(e.target.value === '' ? null : Number(e.target.value))} />
-            <button disabled={loadingNode != null || selectedAggregateUserId == null} onClick={onMakeRequest}>Link</button>
+            <TextField
+              label="Aggregate user id"
+              inputMode="numeric"
+              style={{ display: 'block' }}
+              onChange={e => setSelectedAggregateUserId(e.target.value === '' ? null : Number(e.target.value))}
+            />
+            <Button
+              disabled={loadingNode != null || selectedAggregateUserId == null}
+              sx={{ mt: 2 }}
+              onClick={onMakeRequest}>
+                Link
+            </Button>
             {response != null && <div>Success!</div>}
             {errorNode}
           </>}
@@ -121,9 +134,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
       {/* These must be null to avoid infinite recursion */}
       {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
         <RequireRank admin>
-          <div style={{ background: 'rgba(255, 0, 0, 0.2)' }}>
-            <AdminLink />
-          </div>
+          <AdminLink />
         </RequireRank>
       }
     </div>

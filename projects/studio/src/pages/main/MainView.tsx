@@ -51,7 +51,7 @@ export default function MainView () {
 
       {/* special */}
       <RouteParamsObserver />
-      <RequireRank admin>
+      <RequireRank admin hideAdminOutline>
         <DebugInfo />
       </RequireRank>
     </Box>

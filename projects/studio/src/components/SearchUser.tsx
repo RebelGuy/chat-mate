@@ -3,6 +3,9 @@ import { group, sortBy } from '@rebel/shared/util/arrays'
 import { searchRegisteredUser, searchUser } from '@rebel/studio/utility/api'
 import ApiRequest from '@rebel/studio/components/ApiRequest'
 import * as React from 'react'
+import { Button, TextField } from '@mui/material'
+import { Box } from '@mui/system'
+import { SearchUserResponse } from '@rebel/server/controllers/UserController'
 
 type Props = {
   greyOutDefaultUsers: boolean
@@ -42,13 +45,31 @@ export default class SearchUser extends React.PureComponent<Props, State> {
   }
 
   onRequestChannelSearch = async (loginToken: string, streamer: string) => {
-    const result = await searchUser(loginToken, streamer, this.state.searchTerm)
+    let result: SearchUserResponse
+    if (this.state.searchTerm === '') {
+      result = {
+        success: true,
+        timestamp: Date.now(),
+        data: { results: [] }
+      }
+    } else {
+      result = await searchUser(loginToken, streamer, this.state.searchTerm)
+    }
     this.setState({ requestId: this.state.requestId + 1 })
     return result
   }
 
   onRequestRegisteredSearch = async (loginToken: string, streamer: string) => {
-    const result = await searchRegisteredUser(loginToken, streamer, this.state.searchTerm)
+    let result: SearchUserResponse
+    if (this.state.searchTerm === '') {
+      result = {
+        success: true,
+        timestamp: Date.now(),
+        data: { results: [] }
+      }
+    } else {
+      result = await searchRegisteredUser(loginToken, streamer, this.state.searchTerm)
+    }
     this.setState({ requestId: this.state.requestId + 1 })
     return result
   }
@@ -62,15 +83,22 @@ export default class SearchUser extends React.PureComponent<Props, State> {
     this.setState({ forceRequestId: this.state.forceRequestId + 1 })
   }
 
-  override render(): React.ReactNode {
+  override render (): React.ReactNode {
     // result1: channel search
     // result2: registered user search
 
     // The two results may have overlap
 
     return <div style={{ marginBottom: 16 }}>
-      <input type="text" value={this.state.currentInput} onChange={this.onChangeInput} />
-      <button onClick={this.onForceSearch}>Search</button>
+      <Box>
+        <TextField
+          label="Channel or registered user"
+          value={this.state.currentInput}
+          onChange={this.onChangeInput}
+          sx={{ display: 'block' }}
+        />
+        <Button onClick={this.onForceSearch} sx={{ mt: 2 }}>Search</Button>
+      </Box>
       <div onMouseLeave={() => this.setState({ hoveringPrimaryUserId: -1 })}>
         <ApiRequest onDemand token={this.state.searchTerm + this.state.forceRequestId} requiresStreamer onRequest={this.onRequestChannelSearch}>
           {(result1, loading1, error1) => <>
@@ -79,39 +107,28 @@ export default class SearchUser extends React.PureComponent<Props, State> {
                 {loading1 ?? loading2}
                 {this.state.searchTerm !== '' && error1}
                 {this.state.searchTerm !== '' && error2}
-                {result1 != null && result2 != null && this.state.hideResultsForRequestId !== this.state.requestId && (result1.results.length + result2.results.length === 0 ? <div>No users found</div> : sortBy(
-                  group([...result1.results, ...result2.results], x => x.user.primaryUserId),
-                  x => x.items[0].user.levelInfo.level + x.items[0].user.levelInfo.levelProgress + (x.items[0].user.registeredUser != null ? 100 : 0), // display registered users at the top
-                  'desc'
-                ).map(({ group: _, items: result }) => {
-                  const { user, matchedChannel, allChannels } = result[0]
-                  if (user.registeredUser == null) {
-                    // `matchedChannel` is always defined for default user results
-                    return (
-                      <div
-                        key={user.primaryUserId}
-                        style={{ cursor: 'pointer', color: this.props.greyOutDefaultUsers ? 'grey' : undefined, background: this.state.hoveringPrimaryUserId === user.primaryUserId ? 'rgba(0, 0, 0, 0.2)' : undefined }}
-                        onClick={() => this.onPickResult(result[0])}
-                        onMouseEnter={() => this.setState({ hoveringPrimaryUserId: user.primaryUserId })}
-                      >
-                        [{matchedChannel!.platform === 'youtube' ? 'YT' : 'TW'}] {matchedChannel!.displayName}
-                      </div>
-                    )
-                  }
-
-                  const youtubeChannels = allChannels.filter(c => c.platform === 'youtube').length
-                  const twitchChannels = allChannels.filter(c => c.platform === 'twitch').length
-                  return (
-                    <div
-                      key={user.primaryUserId}
-                      style={{ cursor: 'pointer', background: this.state.hoveringPrimaryUserId === user.primaryUserId ? 'rgba(0, 0, 0, 0.2)' : undefined }}
-                      onClick={() => this.onPickResult(result[0])}
-                      onMouseEnter={() => this.setState({ hoveringPrimaryUserId: user.primaryUserId })}
-                    >
-                      {user.registeredUser.displayName} ({youtubeChannels} YT and {twitchChannels} TW)
-                    </div>
-                  )
-                }))}
+                {result1 != null && result2 != null && this.state.hideResultsForRequestId !== this.state.requestId &&
+                  <Box sx={{ mt: 2 }}>
+                    {result1.results.length + result2.results.length === 0
+                      ?
+                      <div>No users found</div>
+                      :
+                      sortBy(
+                        group([...result1.results, ...result2.results], x => x.user.primaryUserId),
+                        x => x.items[0].user.levelInfo.level + x.items[0].user.levelInfo.levelProgress + (x.items[0].user.registeredUser != null ? 100 : 0), // display registered users at the top
+                        'desc'
+                      ).map(({ group: _, items }) => (
+                        <UserItem
+                          matchResult={items[0]}
+                          greyOutDefaultUsers={this.props.greyOutDefaultUsers}
+                          isHovering={this.state.hoveringPrimaryUserId === items[0].user.primaryUserId}
+                          onSelect={() => this.onPickResult(items[0])}
+                          onHover={() => this.setState({ hoveringPrimaryUserId: items[0].user.primaryUserId })}
+                        />
+                      ))
+                    }
+                  </Box>
+                }
               </>}
             </ApiRequest>
           </>}
@@ -121,6 +138,49 @@ export default class SearchUser extends React.PureComponent<Props, State> {
   }
 }
 
+type UserItemProps = {
+  matchResult: PublicUserSearchResult
+  greyOutDefaultUsers: boolean
+  isHovering: boolean
+  onSelect: () => void
+  onHover: () => void
+}
+
+function UserItem (props: UserItemProps) {
+  const { user, matchedChannel, allChannels } = props.matchResult
+  if (user.registeredUser == null) {
+    // `matchedChannel` is always defined for default user results
+    return (
+      <div
+        key={user.primaryUserId}
+        style={{
+          cursor: 'pointer',color: props.greyOutDefaultUsers ? 'grey' : undefined, background: props.isHovering ? 'rgba(0, 0, 0, 0.2)' : undefined }}
+        onClick={props.onSelect}
+        onMouseEnter={props.onHover}
+      >
+        [{matchedChannel!.platform === 'youtube' ? 'YT' : 'TW'}] {matchedChannel!.displayName}
+      </div>
+    )
+  }
+
+  const youtubeChannels = allChannels.filter(c => c.platform === 'youtube').length
+  const twitchChannels = allChannels.filter(c => c.platform === 'twitch').length
+  return (
+    <div
+      key={user.primaryUserId}
+      style={{
+        cursor: 'pointer',
+        background: props.isHovering ? 'rgba(0, 0, 0, 0.2)' : undefined
+      }}
+      onClick={props.onSelect}
+      onMouseEnter={props.onHover}
+    >
+      {user.registeredUser.displayName} ({youtubeChannels} YT and {twitchChannels} TW)
+    </div>
+  )
+}
+
+
 function debounce<TArgs extends any[]> (callback: (...args: TArgs) => void, ms: number) {
   let timer: number | null = null
 
@@ -128,7 +188,7 @@ function debounce<TArgs extends any[]> (callback: (...args: TArgs) => void, ms: 
     if (timer != null) {
       window.clearTimeout(timer)
     }
-    
+
     timer = window.setTimeout(() => {
       timer = null
       callback(...args)
