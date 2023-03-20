@@ -13,9 +13,10 @@ import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 import { GetCustomEmojisResponse } from '@rebel/server/controllers/EmojiController'
 import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
-import { Close, Done, Edit } from '@mui/icons-material'
+import { Close, ContentCopy, CopyAll, Done, Edit } from '@mui/icons-material'
 import { EmptyObject } from '@rebel/shared/types'
 import { waitUntil } from '@rebel/shared/util/typescript'
+import CopyText from '@rebel/studio/components/CopyText'
 
 export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -213,10 +214,15 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
 }
 
 function CustomEmojiRow (props: { data: EmojiData, accessibleRanks: PublicRank[], onEdit: (id: number) => void }) {
+  const symbol = `:${props.data.symbol}:`
+
   return (
     <tr>
       <TableCell>{props.data.name}</TableCell>
-      <TableCell>{props.data.symbol}</TableCell>
+      <TableCell>
+        {symbol}
+        <CopyText text={symbol} tooltip="Copy symbol to clipboard" sx={{ ml: 1 }} />
+      </TableCell>
       <TableCell>{props.data.levelRequirement}</TableCell>
       <TableCell>{props.data.canUseInDonationMessage ? <Done /> : <Close />}</TableCell>
       <TableCell><RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} /></TableCell>

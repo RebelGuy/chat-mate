@@ -8,6 +8,7 @@ import { IconButton, Table, TableCell, TableHead, TableRow } from '@mui/material
 import { ContentCopy, Refresh } from '@mui/icons-material'
 import { Box } from '@mui/system'
 import { getChannelUrl } from '@rebel/studio/utility/misc'
+import CopyText from '@rebel/studio/components/CopyText'
 
 export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { success: true }>['data'], onRefresh: () => void }) {
   const header = (
@@ -56,19 +57,8 @@ export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { su
   </>
 }
 
-let timeout: number | null = null
 function ItemMessage (props: { item: PublicLinkHistoryItem }) {
-  const [showCopied, setShowCopied] = React.useState(false)
-
   const command = `!link ${props.item.token}`
-  const onCopy = () => {
-    void navigator.clipboard.writeText(command)
-    setShowCopied(true)
-    if (timeout != null) {
-      clearTimeout(timeout)
-    }
-    timeout = window.setTimeout(() => setShowCopied(false), 2000)
-  }
 
   if (props.item.message != null) {
     return <div>{props.item.message}</div>
@@ -79,13 +69,8 @@ function ItemMessage (props: { item: PublicLinkHistoryItem }) {
       <div style={{ display: 'block' }}>
         <div>Initiate the link using the command</div>
         <code>{command}</code>
-        <span title="Copy command to clipboard">
-          <IconButton onClick={onCopy}>
-            <ContentCopy />
-          </IconButton>
-        </span>
+        <CopyText text={command} tooltip="Copy command to clipboard" sx={{ ml: 1 }} />
       </div>
-      {showCopied && <div>Copied!</div>}
     </>
   } else {
     return <div>n/a</div>
