@@ -9,6 +9,10 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import * as React from 'react'
+import { Refresh } from '@mui/icons-material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material'
+import { PageLink } from '@rebel/studio/pages/navigation'
+import TextWithNewlines from '@rebel/studio/components/TextWithNewlines'
 
 export default function ApplyForStreamer () {
   const [updateToken, setUpdateToken] = React.useState(new Date().getTime())
@@ -19,7 +23,11 @@ export default function ApplyForStreamer () {
     <ApiRequest onDemand={true} token={updateToken} onRequest={getStreamerApplications}>
       {(response, loadingNode, errorNode) => <>
         <RequireRank anyOwner inverted>
-          <ApplicationForm disabled={response != null && response.streamerApplications.find(app => app.status === 'pending') != null} onApplicationCreated={regenerateUpdateToken} />
+          <ApplicationForm
+            disabled={response != null && response.streamerApplications.find(app => app.status === 'pending') != null}
+            disabledMessage={response?.streamerApplications.find(app => app.status === 'pending') != null ? 'You already have an application pending.' : null}
+            onApplicationCreated={regenerateUpdateToken}
+          />
         </RequireRank>
         <ApplicationHistory data={response} loadingNode={loadingNode} errorNode={errorNode} onApplicationUpdated={regenerateUpdateToken} />
       </>}
@@ -29,6 +37,7 @@ export default function ApplyForStreamer () {
 
 type ApplicationFormProps = {
   disabled: boolean
+  disabledMessage: string | null
   onApplicationCreated: () => void
 }
 
@@ -46,15 +55,29 @@ function ApplicationForm (props: ApplicationFormProps) {
 
   return <>
     <div>Use the form to request participation in the ChatMate Beta Program.</div>
-    <div>Once accepted, you will be able to indicate the channel(s) you will be streaming on, on Twitch and/or YouTube.</div>
+    <div>Once accepted, you will be able to indicate your primary YouTube and/or Twitch channel on the <b>{PageLink.title}</b> page.</div>
     <ApiRequestTrigger onRequest={onCreateApplication}>
       {(onMakeRequest, responseData, loadingNode, errorNode) => (
-        <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column', maxWidth: 400, margin: 'auto' }}>
-          <textarea disabled={props.disabled || loadingNode != null} placeholder="Type your message here" value={message} onChange={e => setMessage(e.target.value)} style={{ width: '100%' }} />
-          <button type="submit" disabled={props.disabled || loadingNode != null} onClick={onMakeRequest} style={{ width: '100%' }}>Submit</button>
+        <Box>
+          <TextField
+            value={message}
+            multiline
+            rows={5}
+            label={props.disabledMessage ?? 'Type your message here'}
+            disabled={props.disabled || loadingNode != null}
+            style={{ width: '100%' }}
+            onChange={e => setMessage(e.target.value)}
+          />
+          <Button
+            disabled={props.disabled || loadingNode != null}
+            sx={{ mt: 1 }}
+            onClick={onMakeRequest}
+          >
+            Submit
+          </Button>
           {loadingNode}
           {errorNode}
-        </Form>
+        </Box>
       )}
     </ApiRequestTrigger>
   </>
@@ -68,30 +91,68 @@ type ApplicationHistoryProps = {
 }
 
 function ApplicationHistory (props: ApplicationHistoryProps) {
+  const [viewingApplicationId, setViewingApplicationId] = React.useState<number | null>(null)
+  const viewingApplication = props.data?.streamerApplications.find(app => app.id === viewingApplicationId) ?? null
+
+  const header = (
+    <h3>Applications {<IconButton onClick={props.onApplicationUpdated}><Refresh /></IconButton>}</h3>
+  )
+
+  if (props.data != null && props.data.streamerApplications.length === 0) {
+    return <>
+      {header}
+      <div>
+        There are no applications to show. Create a new one using the below input field.
+      </div>
+    </>
+  }
+
   return (
     <>
-      <h3>Applications</h3>
-      {props.data && <table style={{ width: '100%', maxWidth: 800, margin: 'auto' }}>
-        <tbody>
-          <tr>
-            <th>Status</th>
-            <th>Date</th>
-            <th>User</th>
-            <th>Message</th>
-            <th>Response</th>
-            <th>Action</th>
-          </tr>
-          {sortBy(props.data.streamerApplications, app => app.timeCreated, 'desc').map(app =>
-            <ApplicationRow
-              key={app.id}
-              application={app}
-              onApplicationUpdated={props.onApplicationUpdated}
-            />
-          )}
-        </tbody>
-      </table>}
+      {header}
+      {props.data && (
+        <Table style={{ width: '100%', maxWidth: 800, margin: 'auto' }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Status</TableCell>
+              <TableCell>Date Submitted</TableCell>
+              <TableCell>User</TableCell>
+              <TableCell>Response</TableCell>
+              <TableCell>Date Closed</TableCell>
+              <TableCell></TableCell> {/* view button column */}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sortBy(props.data.streamerApplications, app => app.timeCreated, 'desc').map(app =>
+              <ApplicationRow
+                key={app.id}
+                application={app}
+                onApplicationUpdated={props.onApplicationUpdated}
+                onViewApplication={() => setViewingApplicationId(app.id)}
+              />
+            )}
+          </TableBody>
+        </Table>
+      )}
       {props.loadingNode}
       {props.errorNode}
+
+      <Dialog open={viewingApplication != null}>
+        <DialogTitle>
+          Application by {viewingApplication?.username}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <TextWithNewlines text={viewingApplication?.message ?? ''} />
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          {viewingApplication != null &&
+            <ApplicationActions application={viewingApplication} onApplicationUpdated={props.onApplicationUpdated} />
+          }
+          <Button onClick={() => setViewingApplicationId(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
@@ -99,18 +160,19 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
 type ApplicationRowProps = {
   application: PublicStreamerApplication
   onApplicationUpdated: () => void
+  onViewApplication: () => void
 }
 
 function ApplicationRow (props: ApplicationRowProps) {
   return (
-    <tr>
-      <td>{capitaliseWord(props.application.status)}</td>
-      <td>{new Date(props.application.timeCreated).toLocaleString()}</td>
-      <td>{props.application.username}</td>
-      <td>{props.application.message}</td>
-      <td>{props.application.closeMessage ?? 'n/a'}</td>
-      <td><ApplicationActions {...props} /></td>
-    </tr>
+    <TableRow>
+      <TableCell>{capitaliseWord(props.application.status)}</TableCell>
+      <TableCell>{new Date(props.application.timeCreated).toLocaleString()}</TableCell>
+      <TableCell>{props.application.username}</TableCell>
+      <TableCell>{props.application.closeMessage}</TableCell>
+      <TableCell>{props.application.timeClosed != null && new Date(props.application.timeClosed).toLocaleString()}</TableCell>
+      <TableCell><Button onClick={props.onViewApplication}>View</Button></TableCell>
+    </TableRow>
   )
 }
 
@@ -136,20 +198,32 @@ function ApplicationActions (props: ApplicationActionProps) {
       onRequest={(loginToken) => withdrawStreamerApplication(loginToken, props.application.id, 'Withdrawn by user').then(onRequestDone)}
     >
       {(onMakeRequest, response, loadingNode, errorNode) => <>
-        <button onClick={onMakeRequest} disabled={loadingNode != null}>Withdraw</button>
+        <Button
+          onClick={onMakeRequest}
+          disabled={loadingNode != null}
+          sx={{ mr: 1 }}
+        >
+          Withdraw
+        </Button>
         {errorNode}
       </>}
     </ApiRequestTrigger>
   )
 
   return (
-    <RequireRank admin forbidden={normalContent}>
+    <RequireRank admin hideAdminOutline forbidden={normalContent}>
       <div>
         <ApiRequestTrigger
           onRequest={(loginToken) => approveStreamerApplication(loginToken, props.application.id, 'Approved by admin').then(onRequestDone)}
         >
           {(onMakeRequest, response, loadingNode, errorNode) => <>
-            <button onClick={onMakeRequest} disabled={loadingNode != null}>Approve</button>
+            <Button
+              onClick={onMakeRequest}
+              disabled={loadingNode != null}
+              sx={{ mr: 1 }}
+            >
+              Approve
+            </Button>
             {errorNode}
           </>}
         </ApiRequestTrigger>
@@ -157,7 +231,13 @@ function ApplicationActions (props: ApplicationActionProps) {
           onRequest={(loginToken) => rejectStreamerApplication(loginToken, props.application.id, 'Rejected by admin').then(onRequestDone)}
         >
           {(onMakeRequest, response, loadingNode, errorNode) => <>
-            <button onClick={onMakeRequest} disabled={loadingNode != null}>Reject</button>
+            <Button
+              onClick={onMakeRequest}
+              disabled={loadingNode != null}
+              sx={{ mr: 1 }}
+            >
+              Reject
+            </Button>
             {errorNode}
           </>}
         </ApiRequestTrigger>
