@@ -184,6 +184,7 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
                   <TableBody>
                     {this.state.emojis.map(emoji =>
                       <CustomEmojiRow
+                        key={emoji.id}
                         data={emoji}
                         accessibleRanks={this.state.accessibleRanks}
                         onEdit={() => this.onEdit(emoji.id)}

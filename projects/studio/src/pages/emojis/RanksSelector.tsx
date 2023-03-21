@@ -49,7 +49,6 @@ export default function RanksSelector (props: Props) {
               <Checkbox
                 checked={props.ranks.includes(r.id)}
                 disabled={props.disabled}
-                defaultChecked={false}
                 onChange={() => toggleCheckbox(r.id)}
                 sx={{ p: 0 }}
               />

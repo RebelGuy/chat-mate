@@ -36,7 +36,7 @@ export default function SelectStreamer () {
     }
   }, [loginContext, navigate, currentPath, streamerParam])
 
-  if (loginContext.loginToken == null) {
+  if (loginContext.loginToken == null || loginContext.allStreamers.length === 0) {
     return null
   }
 
@@ -52,8 +52,8 @@ export default function SelectStreamer () {
           </Select>
         </FormControl>
         <div style={{ padding: 8, paddingTop: 16, margin: 'auto' }}>
-          <Tooltip title='Select the streamer context under which to make requests.'>
-            <Icon color='info'>
+          <Tooltip title="Select the streamer context under which to make requests.">
+            <Icon color="info">
               <Help />
             </Icon>
           </Tooltip>
@@ -64,7 +64,7 @@ export default function SelectStreamer () {
 }
 
 function InvalidStreamer ({ streamerName }: { streamerName: string }) {
-  return <Alert severity='warning' sx={{ marginBottom: 2 }} >
+  return <Alert severity="warning" sx={{ marginBottom: 2 }} >
     Unknown streamer <b>{streamerName}</b>.
   </Alert>
 }

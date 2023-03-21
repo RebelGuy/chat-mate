@@ -1,9 +1,14 @@
 import { Box } from '@mui/system'
 
-export default function TextWithNewlines ({ text }: { text: string }) {
+type Props = {
+  text: string
+  component?: React.ElementType
+}
+
+export default function TextWithNewlines ({ text, component }: Props) {
   return <>
-    {text.split('\n').map(x =>
-      <Box sx={{ mt: 1 }}>
+    {text.split('\n').map((x, i) =>
+      <Box component={component ?? 'div'} key={i} sx={{ mt: 1 }}>
         {x.length === 0 ? <>&nbsp;</> : x}
       </Box>
     )}

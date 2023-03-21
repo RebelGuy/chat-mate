@@ -97,7 +97,7 @@ export default class SearchUser extends React.PureComponent<Props, State> {
           onChange={this.onChangeInput}
           sx={{ display: 'block' }}
         />
-        <Button onClick={this.onForceSearch} sx={{ mt: 2 }}>Search</Button>
+        <Button onClick={this.onForceSearch} sx={{ mt: 1 }}>Search</Button>
       </Box>
       <div onMouseLeave={() => this.setState({ hoveringPrimaryUserId: -1 })}>
         <ApiRequest onDemand token={this.state.searchTerm + this.state.forceRequestId} requiresStreamer onRequest={this.onRequestChannelSearch}>
@@ -117,8 +117,9 @@ export default class SearchUser extends React.PureComponent<Props, State> {
                         group([...result1.results, ...result2.results], x => x.user.primaryUserId),
                         x => x.items[0].user.levelInfo.level + x.items[0].user.levelInfo.levelProgress + (x.items[0].user.registeredUser != null ? 100 : 0), // display registered users at the top
                         'desc'
-                      ).map(({ group: _, items }) => (
+                      ).map(({ group: _, items }, i) => (
                         <UserItem
+                          key={i}
                           matchResult={items[0]}
                           greyOutDefaultUsers={this.props.greyOutDefaultUsers}
                           isHovering={this.state.hoveringPrimaryUserId === items[0].user.primaryUserId}

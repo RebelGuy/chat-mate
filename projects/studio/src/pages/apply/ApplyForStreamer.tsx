@@ -119,7 +119,7 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
               <TableCell>User</TableCell>
               <TableCell>Response</TableCell>
               <TableCell>Date Closed</TableCell>
-              <TableCell></TableCell> {/* view button column */}
+              <TableCell>{/* view button column */}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -143,7 +143,7 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            <TextWithNewlines text={viewingApplication?.message ?? ''} />
+            <TextWithNewlines text={viewingApplication?.message ?? ''} component="span" />
           </DialogContentText>
         </DialogContent>
         <DialogActions>

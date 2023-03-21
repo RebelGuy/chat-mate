@@ -42,7 +42,7 @@ export function CreateLinkToken (props: { linkedCount: number, onCreated: () => 
             error={showError}
             helperText={validationError}
           />
-          {channelId != null && platform != null && <Box sx={{ mt: 2 }}>
+          {channelId != null && platform != null && <Box sx={{ mt: 1 }}>
             Please confirm you wish to link&nbsp;
             <LinkInNewTab href={getChannelUrl(channelId, platform)}>
               this {platform === 'youtube' ? 'YouTube' : 'Twitch'} channel
@@ -51,7 +51,7 @@ export function CreateLinkToken (props: { linkedCount: number, onCreated: () => 
           <Button
             disabled={loadingNode != null || showError || channelId == null || props.linkedCount >= MAX_CHANNEL_LINKS_ALLOWED}
             onClick={onMakeRequest}
-            sx={{ mt: 2, mb: 2 }}
+            sx={{ mt: 1, mb: 2 }}
             style={{ width: 'fit-content' }}
           >
             Start the link process

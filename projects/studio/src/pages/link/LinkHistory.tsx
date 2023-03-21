@@ -4,7 +4,7 @@ import { sortBy } from '@rebel/shared/util/arrays'
 import * as React from 'react'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { capitaliseWord } from '@rebel/shared/util/text'
-import { IconButton, Table, TableCell, TableHead, TableRow } from '@mui/material'
+import { IconButton, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { ContentCopy, Refresh } from '@mui/icons-material'
 import { Box } from '@mui/system'
 import { getChannelUrl } from '@rebel/studio/utility/misc'
@@ -42,17 +42,19 @@ export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { su
           <TableCell>Date</TableCell>
         </TableRow>
       </TableHead>
-      {tokens.map(item => (
-        <TableRow>
-          <TableCell><a href={getChannelUrl(item)}>{item.displayName}</a></TableCell>
-          <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
-          <TableCell>{capitaliseWord(item.type)}</TableCell>
-          <TableCell>{item.status}</TableCell>
-          <TableCell>{item.token ?? 'Initiated by admin'}</TableCell>
-          <TableCell><ItemMessage item={item} /></TableCell>
-          <TableCell>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</TableCell>
-        </TableRow>
-      ))}
+      <TableBody>
+        {tokens.map((item, i) => (
+          <TableRow key={i}>
+            <TableCell><a href={getChannelUrl(item)}>{item.displayName}</a></TableCell>
+            <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
+            <TableCell>{capitaliseWord(item.type)}</TableCell>
+            <TableCell>{item.status}</TableCell>
+            <TableCell>{item.token ?? 'Initiated by admin'}</TableCell>
+            <TableCell><ItemMessage item={item} /></TableCell>
+            <TableCell>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
     </Table>
   </>
 }

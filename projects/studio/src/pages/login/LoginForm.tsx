@@ -120,6 +120,7 @@ export default function LoginForm () {
             )}
             <FormControlLabel
               label="I am a new user"
+              sx={{ mt: 2 }}
               control={
                 <Checkbox
                   checked={isNewUser}

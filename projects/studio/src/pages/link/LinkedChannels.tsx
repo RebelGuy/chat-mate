@@ -5,7 +5,7 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
-import { Button, Checkbox, FormControlLabel, IconButton, Table, TableCell, TableHead, TableRow } from '@mui/material'
+import { Button, Checkbox, FormControlLabel, IconButton, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { Box } from '@mui/system'
 import { Refresh } from '@mui/icons-material'
 import { getChannelUrl } from '@rebel/studio/utility/misc'
@@ -40,23 +40,27 @@ export default function LinkedChannels (props: { channels: PublicChannel[], prim
           <TableCell>Channel</TableCell>
           <TableCell>Platform</TableCell>
           <RequireRank anyOwner><TableCell>Streamer actions</TableCell></RequireRank>
-          <RequireRank admin><TableCell>Admin actions</TableCell></RequireRank>
+          <RequireRank admin hideAdminOutline><TableCell>Admin actions</TableCell></RequireRank>
         </TableRow>
       </TableHead>
-      {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map(c => <TableRow style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
-        <TableCell><a href={getChannelUrl(c)}>{c.displayName}</a></TableCell>
-        <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
-        <RequireRank anyOwner>
-          <TableCell>
-            <ChangePrimaryChannel channel={c} isPrimaryChannel={isPrimaryChannel(c)} canAddPrimary={canAddPrimaryChannel(c)} onChange={props.onChange} />
-          </TableCell>
-        </RequireRank>
-        <RequireRank admin>
-          <TableCell>
-            <UnlinkUser channel={c} onChange={props.onChange} />
-          </TableCell>
-        </RequireRank>
-      </TableRow>)}
+      <TableBody>
+        {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map((c, i) =>
+          <TableRow key={i} style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
+            <TableCell><a href={getChannelUrl(c)}>{c.displayName}</a></TableCell>
+            <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
+            <RequireRank anyOwner>
+              <TableCell>
+                <ChangePrimaryChannel channel={c} isPrimaryChannel={isPrimaryChannel(c)} canAddPrimary={canAddPrimaryChannel(c)} onChange={props.onChange} />
+              </TableCell>
+            </RequireRank>
+            <RequireRank admin hideAdminOutline>
+              <TableCell>
+                <UnlinkUser channel={c} onChange={props.onChange} />
+              </TableCell>
+            </RequireRank>
+          </TableRow>
+        )}
+      </TableBody>
     </Table>
   </>
 }
