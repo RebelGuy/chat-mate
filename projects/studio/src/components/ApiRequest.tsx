@@ -72,7 +72,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
       this.props.onRequest()
         .then(res => this.onResponse(res, token))
         .catch(e => this.onError(e.message, token))
-        .then(() => this.onDone())
+        .finally(() => this.onDone())
     } else {
       waitUntil(() => !this.context.isLoading, 50, 10000).then(() => {
         if (this.context.username == null || this.context.loginToken == null) {
@@ -89,12 +89,12 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
           this.props.onRequest(this.context.loginToken, this.context.streamer)
             .then(res => this.onResponse(res, token))
             .catch(e => this.onError(e.message, token))
-            .then(() => this.onDone())
+            .finally(() => this.onDone())
         } else {
           this.props.onRequest(this.context.loginToken)
             .then(res => this.onResponse(res, token))
             .catch(e => this.onError(e.message, token))
-            .then(() => this.onDone())
+            .finally(() => this.onDone())
         }
       })
     }
@@ -192,7 +192,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
 
     if (error != null) {
       errorNode = (
-        <Alert severity='error' action={this.props.onDemand && !this.props.hideRetryOnError && <Button onClick={this.onRetry}>Retry</Button>}>
+        <Alert severity="error" action={this.props.onDemand && !this.props.hideRetryOnError && <Button onClick={this.onRetry}>Retry</Button>}>
           Error: {error}
         </Alert>
       )

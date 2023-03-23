@@ -14,12 +14,12 @@ export function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
   const [loadingCount, setLoadingCount] = React.useState(0)
-  const [streamer, setStreamer] = React.useState<string | null>(null)
+  const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
   const [initialised, setInitialised] = React.useState(false)
   const [ranks, setRanks] = React.useState<RankName[]>([])
   const [allStreamers, setAllStreamers] = React.useState<string[]>([])
 
-  function onSetLogin (username: string, token: string) {
+  function onSetLogin (usernameToSet: string, token: string) {
     try {
       window.localStorage.setItem('loginToken', token)
     } catch (e: any) {
@@ -27,7 +27,7 @@ export function LoginProvider (props: Props) {
     }
 
     setLoginToken(token)
-    setUsername(username)
+    setUsername(usernameToSet)
   }
 
   function onPersistStreamer (streamer: string | null) {
@@ -45,7 +45,7 @@ export function LoginProvider (props: Props) {
       console.error('Unable to save streamer to local storage:', e)
     }
 
-    setStreamer(streamer)
+    setSelectedStreamer(streamer)
   }
 
   function onClearAuthInfo () {
@@ -58,27 +58,30 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(null)
     setUsername(null)
-    setStreamer(null)
+    setSelectedStreamer(null)
+    setRanks([])
   }
 
   const onLogin = React.useCallback(async (): Promise<boolean> => {
     try {
-      const loginToken = window.localStorage.getItem('loginToken')
-      if (loginToken == null) {
+      const storedLoginToken = window.localStorage.getItem('loginToken')
+      if (storedLoginToken == null) {
         return false
       }
 
       setLoadingCount(c => c + 1)
-      const response = await authenticate(loginToken)
+      const response = await authenticate(storedLoginToken)
         .finally(() => setLoadingCount(c => c - 1))
 
       if (response.success) {
-        setLoginToken(loginToken)
+        setLoginToken(storedLoginToken)
         setUsername(response.data.username)
 
-        if (response.data.isStreamer && streamer == null) {
+        if (response.data.isStreamer && selectedStreamer == null) {
           onPersistStreamer(response.data.username)
         }
+
+        await onHydrateStreamers(storedLoginToken)
         return true
       } else if (response.error.errorCode === 401) {
         console.log('Stored login token was invalid. The user must log in.')
@@ -91,6 +94,20 @@ export function LoginProvider (props: Props) {
     return false
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const onHydrateStreamers = async (login: string) => {
+    if (login == null) {
+      return
+    }
+
+    setLoadingCount(c => c + 1)
+    const response = await getStreamers(login)
+      .finally(() => setLoadingCount(c => c - 1))
+
+    if (response.success) {
+      setAllStreamers(response.data.streamers)
+    }
+  }
 
   // componentDidMount equivalent
   // authenticate the saved token, if any exists
@@ -120,25 +137,8 @@ export function LoginProvider (props: Props) {
       onPersistStreamer(streamer)
       setInitialised(true)
     }
-    loadContext()
+    void loadContext()
   }, [onLogin])
-
-  React.useEffect(() => {
-    if (loginToken == null) {
-      return
-    }
-    
-    const hydrateStreamers = async () => {
-      setLoadingCount(c => c + 1)
-      const response = await getStreamers(loginToken)
-        .finally(() => setLoadingCount(c => c - 1))
-
-      if (response.success) {
-        setAllStreamers(response.data.streamers)
-      }
-    }
-    hydrateStreamers()
-  }, [loginToken])
 
   React.useEffect(() => {
     if (loginToken == null) {
@@ -148,15 +148,15 @@ export function LoginProvider (props: Props) {
 
     const loadRanks = async () => {
       setLoadingCount(c => c + 1)
-      const result = await getRanks(loginToken, streamer ?? undefined)
+      const result = await getRanks(loginToken, selectedStreamer ?? undefined)
         .finally(() => setLoadingCount(c => c - 1))
-      
+
       if (result.success) {
         setRanks(result.data.ranks.map(r => r.rank.name))
       }
     }
-    loadRanks()
-  }, [loginToken, streamer])
+    void loadRanks()
+  }, [loginToken, selectedStreamer])
 
   return (
     <LoginContext.Provider
@@ -165,7 +165,7 @@ export function LoginProvider (props: Props) {
         loginToken,
         username,
         isLoading: loadingCount > 0,
-        streamer,
+        streamer: selectedStreamer,
         allStreamers,
         isStreamer: allStreamers.includes(username ?? ''),
         setLogin: onSetLogin,

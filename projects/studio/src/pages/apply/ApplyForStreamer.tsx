@@ -3,35 +3,35 @@ import { PublicStreamerApplication } from '@rebel/server/controllers/public/user
 import { GetApplicationsResponse } from '@rebel/server/controllers/StreamerController'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { capitaliseWord } from '@rebel/shared/util/text'
-import { approveStreamerApplication, createStreamerApplication, getStreamerApplications, rejectStreamerApplication, withdrawStreamerApplication } from '@rebel/studio/utility/api'
-import ApiRequest from '@rebel/studio/components/ApiRequest'
+import { approveStreamerApplication, createStreamerApplication, rejectStreamerApplication, withdrawStreamerApplication } from '@rebel/studio/utility/api'
 import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
-import Form from '@rebel/studio/components/Form'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import * as React from 'react'
 import { Refresh } from '@mui/icons-material'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material'
 import { PageLink } from '@rebel/studio/pages/navigation'
 import TextWithNewlines from '@rebel/studio/components/TextWithNewlines'
+import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
+import ApiLoading from '@rebel/studio/components/ApiLoading'
+import ApiError from '@rebel/studio/components/ApiError'
 
 export default function ApplyForStreamer () {
-  const [updateToken, setUpdateToken] = React.useState(new Date().getTime())
+  const [updateKey, setUpdateKey] = React.useState(Date.now())
+  const { data, isLoading, error } = useRequest<GetApplicationsResponse>('/streamer/application', { updateKey })
 
-  const regenerateUpdateToken = () => setUpdateToken(new Date().getTime())
+  const regenerateUpdateKey = () => setUpdateKey(Date.now())
 
   return (
-    <ApiRequest onDemand={true} token={updateToken} onRequest={getStreamerApplications}>
-      {(response, loadingNode, errorNode) => <>
-        <RequireRank anyOwner inverted>
-          <ApplicationForm
-            disabled={response != null && response.streamerApplications.find(app => app.status === 'pending') != null}
-            disabledMessage={response?.streamerApplications.find(app => app.status === 'pending') != null ? 'You already have an application pending.' : null}
-            onApplicationCreated={regenerateUpdateToken}
-          />
-        </RequireRank>
-        <ApplicationHistory data={response} loadingNode={loadingNode} errorNode={errorNode} onApplicationUpdated={regenerateUpdateToken} />
-      </>}
-    </ApiRequest>
+    <>
+      <RequireRank anyOwner inverted>
+        <ApplicationForm
+          disabled={data?.streamerApplications.find(app => app.status === 'pending') != null}
+          disabledMessage={data?.streamerApplications.find(app => app.status === 'pending') != null ? 'You already have an application pending.' : null}
+          onApplicationCreated={regenerateUpdateKey}
+        />
+      </RequireRank>
+      <ApplicationHistory data={data} isLoading={isLoading} error={error} onApplicationUpdated={regenerateUpdateKey} />
+    </>
   )
 }
 
@@ -85,8 +85,8 @@ function ApplicationForm (props: ApplicationFormProps) {
 
 type ApplicationHistoryProps = {
   data: Extract<GetApplicationsResponse, { success: true }>['data'] | null
-  loadingNode: React.ReactNode | null
-  errorNode: React.ReactNode | null
+  isLoading: boolean
+  error: ApiRequestError | null
   onApplicationUpdated: () => void
 }
 
@@ -134,8 +134,8 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
           </TableBody>
         </Table>
       )}
-      {props.loadingNode}
-      {props.errorNode}
+      <ApiLoading isLoading={props.isLoading} />
+      <ApiError error={props.error} />
 
       <Dialog open={viewingApplication != null}>
         <DialogTitle>
