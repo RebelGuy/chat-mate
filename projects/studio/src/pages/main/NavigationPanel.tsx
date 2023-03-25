@@ -2,6 +2,7 @@ import { Box } from '@mui/material'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page } from '@rebel/studio/pages/navigation'
+import { PathParam } from '@rebel/studio/utility/types'
 import { cloneElement, useContext } from 'react'
 import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
 
@@ -25,10 +26,6 @@ export default function Navigation () {
     </nav>
   )
 }
-
-// stolen from the `generatePath` signature
-type _PathParam<Path extends string> = Path extends `${infer L}/${infer R}` ? _PathParam<L> | _PathParam<R> : Path extends `:${infer Param}` ? Param extends `${infer Optional}?` ? Optional : Param : never
-type PathParam<Path extends string> = Path extends '*' ? '*' : Path extends `${infer Rest}/*` ? '*' | _PathParam<Rest> : _PathParam<Path>
 
 type NavItemProps<P extends Page> = {
   page: P

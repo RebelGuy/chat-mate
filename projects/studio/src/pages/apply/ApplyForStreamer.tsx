@@ -1,23 +1,22 @@
-import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { GetApplicationsResponse } from '@rebel/server/controllers/StreamerController'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { capitaliseWord } from '@rebel/shared/util/text'
-import { approveStreamerApplication, createStreamerApplication, rejectStreamerApplication, withdrawStreamerApplication } from '@rebel/studio/utility/api'
-import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
+import { approveStreamerApplication, createStreamerApplication, getStreamerApplications, rejectStreamerApplication, withdrawStreamerApplication } from '@rebel/studio/utility/api'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import * as React from 'react'
-import { Refresh } from '@mui/icons-material'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material'
 import { PageLink } from '@rebel/studio/pages/navigation'
 import TextWithNewlines from '@rebel/studio/components/TextWithNewlines'
 import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
+import RefreshButton from '@rebel/studio/components/RefreshButton'
+import PanelHeader from '@rebel/studio/components/PanelHeader'
 
 export default function ApplyForStreamer () {
   const [updateKey, setUpdateKey] = React.useState(Date.now())
-  const { data, isLoading, error } = useRequest<GetApplicationsResponse>('/streamer/application', { updateKey })
+  const { data, isLoading, error } = useRequest(getStreamerApplications(), { updateKey })
 
   const regenerateUpdateKey = () => setUpdateKey(Date.now())
 
@@ -43,43 +42,37 @@ type ApplicationFormProps = {
 
 function ApplicationForm (props: ApplicationFormProps) {
   const [message, setMessage] = React.useState('')
-
-  const onCreateApplication = async (loginToken: string) => {
-    const result = await createStreamerApplication(loginToken, message)
-    if (result.success) {
+  const createApplicationRequest = useRequest(createStreamerApplication({ message }), {
+    onDemand: true,
+    onSuccess: () => {
       props.onApplicationCreated()
       setMessage('')
     }
-    return result
-  }
+  })
 
   return <>
     <div>Use the form to request participation in the ChatMate Beta Program.</div>
     <div>Once accepted, you will be able to indicate your primary YouTube and/or Twitch channel on the <b>{PageLink.title}</b> page.</div>
-    <ApiRequestTrigger onRequest={onCreateApplication}>
-      {(onMakeRequest, responseData, loadingNode, errorNode) => (
-        <Box>
-          <TextField
-            value={message}
-            multiline
-            rows={5}
-            label={props.disabledMessage ?? 'Type your message here'}
-            disabled={props.disabled || loadingNode != null}
-            style={{ width: '100%' }}
-            onChange={e => setMessage(e.target.value)}
-          />
-          <Button
-            disabled={props.disabled || loadingNode != null}
-            sx={{ mt: 1 }}
-            onClick={onMakeRequest}
-          >
-            Submit
-          </Button>
-          {loadingNode}
-          {errorNode}
-        </Box>
-      )}
-    </ApiRequestTrigger>
+    <Box>
+      <TextField
+        value={message}
+        multiline
+        rows={5}
+        label={props.disabledMessage ?? 'Type your message here'}
+        disabled={props.disabled || createApplicationRequest.isLoading}
+        style={{ width: '100%' }}
+        onChange={e => setMessage(e.target.value)}
+      />
+      <Button
+        disabled={props.disabled || createApplicationRequest.isLoading}
+        sx={{ mt: 1 }}
+        onClick={createApplicationRequest.triggerRequest}
+      >
+        Submit
+      </Button>
+      <ApiLoading requestObj={createApplicationRequest} />
+      <ApiError requestObj={createApplicationRequest} />
+    </Box>
   </>
 }
 
@@ -95,14 +88,16 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
   const viewingApplication = props.data?.streamerApplications.find(app => app.id === viewingApplicationId) ?? null
 
   const header = (
-    <h3>Applications {<IconButton onClick={props.onApplicationUpdated}><Refresh /></IconButton>}</h3>
+    <PanelHeader>
+      Applications {<RefreshButton isLoading={props.isLoading} onRefresh={props.onApplicationUpdated} />}
+    </PanelHeader>
   )
 
   if (props.data != null && props.data.streamerApplications.length === 0) {
     return <>
       {header}
       <div>
-        There are no applications to show. Create a new one using the below input field.
+        There are no applications to show. Create a new one using the above input field.
       </div>
     </>
   }
@@ -110,6 +105,9 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
   return (
     <>
       {header}
+      {props.data == null && props.error == null && <ApiLoading isLoading={props.isLoading} />}
+      <ApiError error={props.error} isLoading={props.isLoading} />
+
       {props.data && (
         <Table style={{ width: '100%', maxWidth: 800, margin: 'auto' }}>
           <TableHead>
@@ -134,8 +132,6 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
           </TableBody>
         </Table>
       )}
-      <ApiLoading isLoading={props.isLoading} />
-      <ApiError error={props.error} />
 
       <Dialog open={viewingApplication != null}>
         <DialogTitle>
@@ -148,7 +144,11 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
         </DialogContent>
         <DialogActions>
           {viewingApplication != null &&
-            <ApplicationActions application={viewingApplication} onApplicationUpdated={props.onApplicationUpdated} />
+            <ApplicationActions
+              application={viewingApplication}
+              isLoading={props.isLoading}
+              onApplicationUpdated={props.onApplicationUpdated}
+            />
           }
           <Button onClick={() => setViewingApplicationId(null)}>Close</Button>
         </DialogActions>
@@ -178,69 +178,62 @@ function ApplicationRow (props: ApplicationRowProps) {
 
 type ApplicationActionProps = {
   application: PublicStreamerApplication
+  isLoading: boolean
   onApplicationUpdated: () => void
 }
 
 function ApplicationActions (props: ApplicationActionProps) {
+  const withdrawRequest = useRequest(withdrawStreamerApplication({ message: 'Withdrawn by user' }, props.application.id), {
+    onDemand: true,
+    onSuccess: props.onApplicationUpdated
+  })
+  const approveRequest = useRequest(approveStreamerApplication({ message: 'Approved by admin' }, props.application.id), {
+    onDemand: true,
+    onSuccess: props.onApplicationUpdated
+  })
+  const rejectRequest = useRequest(rejectStreamerApplication({ message: 'Rejected by admin' }, props.application.id), {
+    onDemand: true,
+    onSuccess: props.onApplicationUpdated
+  })
+
   if (props.application.status !== 'pending') {
     return null
   }
 
-  const onRequestDone = <T extends ApiResponse<any>>(response: T) => {
-    if (response.success) {
-      props.onApplicationUpdated()
-    }
-    return response
-  }
-
   const normalContent = (
-    <ApiRequestTrigger
-      onRequest={(loginToken) => withdrawStreamerApplication(loginToken, props.application.id, 'Withdrawn by user').then(onRequestDone)}
-    >
-      {(onMakeRequest, response, loadingNode, errorNode) => <>
-        <Button
-          onClick={onMakeRequest}
-          disabled={loadingNode != null}
-          sx={{ mr: 1 }}
-        >
-          Withdraw
-        </Button>
-        {errorNode}
-      </>}
-    </ApiRequestTrigger>
+    <>
+      <Button
+        onClick={withdrawRequest.triggerRequest}
+        disabled={props.isLoading || withdrawRequest.isLoading}
+        sx={{ mr: 1 }}
+      >
+        Withdraw
+      </Button>
+      <ApiError requestObj={withdrawRequest} />
+    </>
   )
 
   return (
     <RequireRank admin hideAdminOutline forbidden={normalContent}>
       <div>
-        <ApiRequestTrigger
-          onRequest={(loginToken) => approveStreamerApplication(loginToken, props.application.id, 'Approved by admin').then(onRequestDone)}
+        <Button
+          onClick={approveRequest.triggerRequest}
+          disabled={props.isLoading || approveRequest.isLoading}
+          sx={{ mr: 1 }}
         >
-          {(onMakeRequest, response, loadingNode, errorNode) => <>
-            <Button
-              onClick={onMakeRequest}
-              disabled={loadingNode != null}
-              sx={{ mr: 1 }}
-            >
-              Approve
-            </Button>
-            {errorNode}
-          </>}
-        </ApiRequestTrigger>
-        <ApiRequestTrigger
-          onRequest={(loginToken) => rejectStreamerApplication(loginToken, props.application.id, 'Rejected by admin').then(onRequestDone)}
+          Approve
+        </Button>
+
+        <Button
+          onClick={rejectRequest.triggerRequest}
+          disabled={props.isLoading || rejectRequest.isLoading}
+          sx={{ mr: 1 }}
         >
-          {(onMakeRequest, response, loadingNode, errorNode) => <>
-            <Button
-              onClick={onMakeRequest}
-              disabled={loadingNode != null}
-              sx={{ mr: 1 }}
-            >
-              Reject
-            </Button>
-            {errorNode}
-          </>}
-        </ApiRequestTrigger>
+          Reject
+        </Button>
+
+        <ApiError requestObj={approveRequest} />
+        <ApiError requestObj={rejectRequest} />
       </div>
     </RequireRank>
   )

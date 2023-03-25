@@ -7,12 +7,37 @@ import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
-import { GenericObject } from '@rebel/shared/types'
+import { GenericObject, Primitive } from '@rebel/shared/types'
+import { PathParam } from '@rebel/studio/utility/types'
+import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
+import { Method, Request } from '@rebel/studio/hooks/useRequest'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
 
 const baseUrl = SERVER_URL + '/api'
+
+function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends Record<string, Primitive> | false = false, TArgs extends any[] = []> (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: string,                                requiresStreamer?: boolean, requiresLogin?: boolean): TRequestData extends false ? () => Request<TResponse, TRequestData> : (data: TRequestData) => Request<TResponse, TRequestData>
+function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends Record<string, Primitive> | false = false, TArgs extends any[] = []> (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: (...args: TArgs) => string,            requiresStreamer?: boolean, requiresLogin?: boolean): (...args: TRequestData extends false ? TArgs : [TRequestData, ...TArgs]) => Request<TResponse, TRequestData>
+function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends Record<string, Primitive> | false, TArgs extends any[]>              (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: string | ((...args: TArgs) => string), requiresStreamer?: boolean, requiresLogin?: boolean): (...args: TRequestData extends false ? TArgs : [TRequestData, ...TArgs]) => Request<TResponse, TRequestData> {
+  if (method === 'GET') {
+    // GET method implies that `TRequestData extends false` (and hence `data extends never`), but the compiler doesn't understand that
+    return (...args: any) => ({
+      method: method,
+      path: typeof path === 'string' ? path : path(...args),
+      requiresLogin,
+      requiresStreamer
+    }) as any
+  } else {
+    return (...args: TRequestData extends false ? TArgs : [TRequestData, ...TArgs]) => ({
+      method: method,
+      path: typeof path === 'string' ? path : path(...((typeof args[0] === 'object' ? args.slice(1) : args) as TArgs)), // yuck
+      data: typeof args[0] === 'object' ? args[0] : null,
+      requiresLogin,
+      requiresStreamer
+    })
+  }
+}
 
 export async function getAllCustomEmojis (loginToken: string, streamer: string): Promise<GetCustomEmojisResponse> {
   return await GET('/emoji/custom', loginToken, streamer)
@@ -79,29 +104,15 @@ export async function getStreamers (loginToken: string): Promise<GetStreamersRes
   return await GET('/streamer', loginToken)
 }
 
-export async function getStreamerApplications (loginToken: string): Promise<GetApplicationsResponse> {
-  return await GET('/streamer/application', loginToken)
-}
+export const getStreamerApplications = requestBuilder<GetApplicationsResponse>('GET', `/streamer/application`, false)
 
-export async function createStreamerApplication (loginToken: string, message: string): Promise<CreateApplicationResponse> {
-  const request: CreateApplicationRequest = { message }
-  return await POST('/streamer/application', request, loginToken)
-}
+export const createStreamerApplication = requestBuilder<CreateApplicationResponse, CreateApplicationRequest>('POST', `/streamer/application`, false)
 
-export async function approveStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<ApproveApplicationResponse> {
-  const request: ApproveApplicationRequest = { message }
-  return await POST(`/streamer/application/${applicationId}/approve`, request, loginToken)
-}
+export const approveStreamerApplication = requestBuilder<ApproveApplicationResponse, ApproveApplicationRequest, [number]>('POST', (applicationId: number) => `/streamer/application/${applicationId}/approve`, false)
 
-export async function rejectStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<RejectApplicationResponse> {
-  const request: RejectApplicationRequest = { message }
-  return await POST(`/streamer/application/${applicationId}/reject`, request, loginToken)
-}
+export const rejectStreamerApplication = requestBuilder<RejectApplicationResponse, RejectApplicationRequest, [number]>('POST', (applicationId: number) => `/streamer/application/${applicationId}/reject`, false)
 
-export async function withdrawStreamerApplication (loginToken: string, applicationId: number, message: string): Promise<WithdrawApplicationResponse> {
-  const request: WithdrawApplicationRequest = { message }
-  return await POST(`/streamer/application/${applicationId}/withdraw`, request, loginToken)
-}
+export const withdrawStreamerApplication = requestBuilder<WithdrawApplicationResponse, WithdrawApplicationRequest, [number]>('POST', (applicationId: number) => `/streamer/application/${applicationId}/withdraw`, false)
 
 export async function getPrimaryChannels (loginToken: string): Promise<GetPrimaryChannelsResponse> {
   return await GET(`/streamer/primaryChannels`, loginToken)

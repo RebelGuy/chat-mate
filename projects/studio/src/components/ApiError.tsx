@@ -1,19 +1,41 @@
 import { Alert, Button } from '@mui/material'
-import { ApiRequestError } from '@rebel/studio/hooks/useRequest'
+import { ApiRequestError, RequestResult } from '@rebel/studio/hooks/useRequest'
 
 type Props = {
-  error: ApiRequestError | null
   hideRetryButton?: boolean
-}
+} & ({
+  error: ApiRequestError | null
+  isLoading?: boolean
+} | {
+  requestObj: RequestResult<any>
+})
 
 export default function ApiError (props: Props) {
-  if (props.error == null) {
+  const hideRetryButton = props.hideRetryButton ?? false
+  let error: ApiRequestError | null
+  let isLoading: boolean
+
+  if ('error' in props) {
+    error = props.error
+    isLoading = props.isLoading ?? false
+  } else {
+    error = props.requestObj.error
+    isLoading = props.requestObj.isLoading
+  }
+
+  if (error == null) {
     return null
   }
 
+  const showRetryButton = !hideRetryButton && error.onRetry != null
+
   return (
-    <Alert severity="error" action={!props.hideRetryButton && props.error.onRetry != null && <Button onClick={props.error.onRetry}>Retry</Button>}>
-      Error: {props.error.message}
+    <Alert severity="error" sx={{ mt: 1, mb: 1 }} action={showRetryButton && (
+      <Button disabled={isLoading} onClick={error.onRetry}>
+        Retry
+      </Button>
+    )}>
+      Error: {error.message}
     </Alert>
   )
 }
