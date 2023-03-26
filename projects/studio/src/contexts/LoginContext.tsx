@@ -28,6 +28,7 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(token)
     setUsername(usernameToSet)
+    void onHydrateStreamers(token)
   }
 
   function onPersistStreamer (streamer: string | null) {
