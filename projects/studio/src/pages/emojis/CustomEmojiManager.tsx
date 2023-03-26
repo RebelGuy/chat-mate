@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react'
+import { ReactNode, useContext, useEffect, useState } from 'react'
 import { PublicCustomEmoji } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { addCustomEmoji, getAccessibleRanks, getAllCustomEmojis, updateCustomEmoji } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
@@ -13,14 +13,11 @@ import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 import { GetCustomEmojisResponse } from '@rebel/server/controllers/EmojiController'
 import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
-import { Close, ContentCopy, CopyAll, Done, Edit } from '@mui/icons-material'
-import { EmptyObject } from '@rebel/shared/types'
+import { Close, Done, Edit } from '@mui/icons-material'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import CopyText from '@rebel/studio/components/CopyText'
 
 export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
-
-type Props = EmptyObject
 
 type State = {
   emojis: PublicCustomEmoji[]
@@ -31,83 +28,66 @@ type State = {
   openEditor: boolean
 }
 
-export default class CustomEmojiManager extends React.PureComponent<Props, State> {
-  static override contextType = LoginContext
-  override context!: React.ContextType<typeof LoginContext>
+export default function CustomEmojiManager () {
+  const loginContext = useContext(LoginContext)
+  const [emojis, setEmojis] = useState<PublicCustomEmoji[]>([])
+  const [accessibleRanks, setAccessibleRanks] = useState<PublicRank[]>([])
+  const [editingEmoji, setEditingEmoji] = useState<EmojiData | null>(null)
+  const [editingError, setEditingError] = useState<ReactNode>(null)
+  const [isLoadingEdit, setIsLoadingEdit] = useState<boolean>(false)
+  const [openEditor, setOpenEditor] = useState<boolean>(false)
 
-  constructor (props: Props) {
-    super(props)
-
-    this.state = {
-      emojis: [],
-      accessibleRanks: [],
-      editingEmoji: null,
-      editingError: null,
-      isLoadingEdit: false,
-      openEditor: false
+  useEffect(() => {
+    const hydrateRanks = async () => {
+      await waitUntil(() => loginContext.initialised && !loginContext.isLoading, 100, 5000)
+      const response = await getAccessibleRanks(loginContext.loginToken!, loginContext.streamer!)
+      if (response.success) {
+        setAccessibleRanks(response.data.accessibleRanks)
+      }
     }
+    void hydrateRanks()
+  }, [])
+
+  const onEdit = (id: number | null) => {
+    setEditingEmoji(emojis.find(emoji => emoji.id === id) ?? null)
+    setOpenEditor(true)
   }
 
-  override async componentDidMount () {
-    await waitUntil(() => this.context.initialised && !this.context.isLoading, 100, 5000)
-    const accessibleRanks = await getAccessibleRanks(this.context.loginToken!, this.context.streamer!)
-    if (accessibleRanks.success) {
-      this.setState({
-        accessibleRanks: accessibleRanks.data.accessibleRanks
-      })
-    }
+  const onCancelEdit = () => {
+    setOpenEditor(false)
+    setEditingEmoji(null)
+    setEditingError(null)
+    setIsLoadingEdit(false)
   }
 
-  onEdit = (id: number | null) => {
-    this.setState({
-      editingEmoji: this.state.emojis.find(emoji => emoji.id === id) ?? null,
-      openEditor: true
-    })
-  }
-
-  onCancelEdit = () => {
-    this.setState({
-      openEditor: false,
-      editingEmoji: null,
-      editingError: null,
-      isLoadingEdit: false
-    })
-  }
-
-  onUpdate = async (loginToken: string, streamer: string, updatedData: EmojiData) => {
+  const onUpdate = async (loginToken: string, streamer: string, updatedData: EmojiData) => {
     const result = await updateCustomEmoji(updatedData, loginToken, streamer)
     if (result.success) {
       const updatedEmoji = result.data.updatedEmoji
-      this.setState({
-        editingEmoji: null,
-        emojis: this.state.emojis.map(emoji => emoji.id === updatedEmoji.id ? updatedEmoji : emoji)
-      })
+      setEditingEmoji(null)
+      setEmojis(emojis.map(emoji => emoji.id === updatedEmoji.id ? updatedEmoji : emoji))
     }
     return result
   }
 
-  onAdd = async (loginToken: string, streamer: string, data: EmojiData) => {
+  const onAdd = async (loginToken: string, streamer: string, data: EmojiData) => {
     const result = await addCustomEmoji(data, loginToken, streamer)
     if (result.success) {
-      this.setState({
-        emojis: [...this.state.emojis, result.data.newEmoji]
-      })
+      setEmojis([...emojis, result.data.newEmoji])
     }
     return result
   }
 
-  onSave = async (data: EmojiData) => {
-    this.setState({
-      isLoadingEdit: true,
-      editingError: null
-    })
+  const onSave = async (data: EmojiData) => {
+    setIsLoadingEdit(true)
+    setEditingError(null)
 
     let response: ApiResponse<any>
     try {
-      if (this.state.editingEmoji?.id === data.id) {
-        response = await this.onUpdate(this.context.loginToken!, this.context.streamer!, data)
+      if (editingEmoji?.id === data.id) {
+        response = await onUpdate(loginContext.loginToken!, loginContext.streamer!, data)
       } else {
-        response = await this.onAdd(this.context.loginToken!, this.context.streamer!, data)
+        response = await onAdd(loginContext.loginToken!, loginContext.streamer!, data)
       }
     } catch (e: any) {
       response = {
@@ -121,97 +101,89 @@ export default class CustomEmojiManager extends React.PureComponent<Props, State
       }
     }
 
-    this.setState({
-      isLoadingEdit: false,
-      editingError: response.success ? null : response.error.message
-    })
+    setIsLoadingEdit(false)
+    setEditingError(response.success ? null : response.error.message)
 
     if (response.success) {
-      this.setState({
-        openEditor: false,
-        editingEmoji: null
-      })
+      setOpenEditor(false)
+      setEditingEmoji(null)
     }
   }
 
-  onCheckDupliateSymbol = (symbol: string) => {
-    return this.state.emojis.find(emoji => {
-      return emoji.id !== this.state.editingEmoji?.id && emoji.symbol === symbol
+  const onCheckDupliateSymbol = (symbol: string) => {
+    return emojis.find(emoji => {
+      return emoji.id !== editingEmoji?.id && emoji.symbol === symbol
     }) != null
   }
 
-  getEmojis = async (loginToken: string, streamer: string): Promise<GetCustomEmojisResponse> => {
-    const emojis = await getAllCustomEmojis(loginToken, streamer)
-    if (emojis.success) {
-      this.setState({
-        emojis: sortBy(emojis.data.emojis, e => e.id),
-      })
+  const getEmojis = async (loginToken: string, streamer: string): Promise<GetCustomEmojisResponse> => {
+    const response = await getAllCustomEmojis(loginToken, streamer)
+    if (response.success) {
+      setEmojis(sortBy(response.data.emojis, e => e.id))
     }
-    return emojis
+    return response
   }
 
-  override render (): React.ReactNode {
-    return (
-      <>
-        <ApiRequest onDemand token={this.context.streamer} requiresStreamer onRequest={this.getEmojis}>
-          {(data, loadingNode, errorNode) => <>
-            {data != null &&
-              <Box>
-                <RequireRank owner>
-                  <Button
-                    onClick={() => this.onEdit(null)}
-                    sx={{ mb: 1 }}
-                  >
-                    Create new emoji
-                  </Button>
-                </RequireRank>
-
-                <Table
-                  stickyHeader
-                  sx={{ width: '100%', transform: 'translateY(-5px)' }}
+  return (
+    <>
+      <ApiRequest onDemand token={loginContext.streamer} requiresStreamer onRequest={getEmojis}>
+        {(data, loadingNode, errorNode) => <>
+          {data != null &&
+            <Box>
+              <RequireRank owner>
+                <Button
+                  onClick={() => onEdit(null)}
+                  sx={{ mb: 1 }}
                 >
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Symbol</TableCell>
-                      <TableCell>Level Req.</TableCell>
-                      <TableCell><TextWithHelp text="$" help="Emoji can be used in donation messages" /></TableCell>
-                      <TableCell><TextWithHelp text="Rank Whitelist" help="If there is no selection, all ranks will be able to use the emoji" /></TableCell>
-                      <TableCell>Image</TableCell>
-                      <RequireRank owner><TableCell>Action</TableCell></RequireRank>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {this.state.emojis.map(emoji =>
-                      <CustomEmojiRow
-                        key={emoji.id}
-                        data={emoji}
-                        accessibleRanks={this.state.accessibleRanks}
-                        onEdit={() => this.onEdit(emoji.id)}
-                      />)
-                    }
-                  </TableBody>
-                </Table>
-              </Box>
-            }
-            {loadingNode}
-            {errorNode}
-          </>}
-        </ApiRequest>
+                  Create new emoji
+                </Button>
+              </RequireRank>
 
-        <CustomEmojiEditor
-          open={this.state.openEditor}
-          accessibleRanks={this.state.accessibleRanks}
-          data={this.state.editingEmoji}
-          error={this.state.editingError}
-          isLoading={this.state.isLoadingEdit}
-          onCancel={this.onCancelEdit}
-          onSave={this.onSave}
-          onCheckDuplicateSymbol={this.onCheckDupliateSymbol}
-        />
-      </>
-    )
-  }
+              <Table
+                stickyHeader
+                sx={{ width: '100%', transform: 'translateY(-5px)' }}
+              >
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Symbol</TableCell>
+                    <TableCell>Level Req.</TableCell>
+                    <TableCell><TextWithHelp text="$" help="Emoji can be used in donation messages" /></TableCell>
+                    <TableCell><TextWithHelp text="Rank Whitelist" help="If there is no selection, all ranks will be able to use the emoji" /></TableCell>
+                    <TableCell>Image</TableCell>
+                    <RequireRank owner><TableCell>Action</TableCell></RequireRank>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {emojis.map(emoji =>
+                    <CustomEmojiRow
+                      key={emoji.id}
+                      data={emoji}
+                      accessibleRanks={accessibleRanks}
+                      onEdit={() => onEdit(emoji.id)}
+                    />)
+                  }
+                </TableBody>
+              </Table>
+            </Box>
+          }
+          {loadingNode}
+          {errorNode}
+        </>}
+      </ApiRequest>
+
+      <CustomEmojiEditor
+        open={openEditor}
+        accessibleRanks={accessibleRanks}
+        data={editingEmoji}
+        error={editingError}
+        isLoading={isLoadingEdit}
+        onCancel={onCancelEdit}
+        onSave={onSave}
+        onCheckDuplicateSymbol={onCheckDupliateSymbol}
+      />
+    </>
+  )
 }
 
 function CustomEmojiRow (props: { data: EmojiData, accessibleRanks: PublicRank[], onEdit: (id: number) => void }) {
