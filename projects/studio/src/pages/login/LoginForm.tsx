@@ -1,7 +1,6 @@
 import { LoginResponse, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { login, registerAccount } from '@rebel/studio/utility/api'
-import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import Form from '@rebel/studio/components/Form'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { useContext, useEffect, useState } from 'react'
@@ -11,6 +10,9 @@ import { Button, Checkbox, FormControlLabel } from '@mui/material'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import { InvalidUsernameError } from '@rebel/shared/util/error'
 import AutoFocus from '@rebel/studio/components/Autofocus'
+import useRequest, { RequestType, SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
+import ApiLoading from '@rebel/studio/components/ApiLoading'
+import ApiError from '@rebel/studio/components/ApiError'
 
 const accountHelpers = new AccountHelpers()
 
@@ -20,54 +22,28 @@ export default function LoginForm () {
   const [username, onSetUsername] = useState('')
   const [password, onSetPassword] = useState('')
   const [confirmedPassword, onSetConfirmedPassword] = useState('')
-  const [loggingIn, setLoggingIn] = useState(true)
   const [isNewUser, setIsNewUser] = useState(false)
   const navigate = useNavigate()
 
-  const onSuccess = (loginToken: string) => {
-    loginContext.setLogin(username, loginToken)
+  const onSuccess = (data: SuccessfulResponseData<RegisterResponse | LoginResponse>, type: RequestType) => {
+    loginContext.setLogin(username, data.loginToken)
     navigate(generatePath('/'))
+
+    if ('isStreamer' in data && loginContext.streamer == null && data.isStreamer) {
+      loginContext.setStreamer(username)
+    }
   }
 
+  const registerRequest = useRequest(registerAccount({ username, password }), { onDemand: true, onSuccess })
+  const loginRequest = useRequest(login({ username, password }), { onDemand: true, onSuccess })
+
+  // we don't want to show the login page if the user is already logged in
   useEffect(() => {
-    const tryLogin = async () => {
-      setLoggingIn(true)
-      const result = await loginContext.login()
-      if (result) {
-        navigate(generatePath('/'))
-      }
-      setLoggingIn(false)
+    if (loginContext.loginToken != null) {
+      navigate(generatePath('/'))
     }
-    void tryLogin()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const onSubmitForm = async (): Promise<LoginResponse | RegisterResponse> => {
-    if (isNewUser) {
-      // registration
-      const result = await registerAccount(username, password)
-
-      if (result.success) {
-        onSuccess(result.data.loginToken)
-      }
-
-      return result
-
-    } else {
-      // login
-      const result = await login(username, password)
-
-      if (result.success) {
-        onSuccess(result.data.loginToken)
-
-        if (loginContext.streamer == null && result.data.isStreamer) {
-          loginContext.setStreamer(loginContext.username)
-        }
-      }
-
-      return result
-    }
-  }
 
   let userNameError: string | null = null
   if (!isNullOrEmpty(username)) {
@@ -83,65 +59,63 @@ export default function LoginForm () {
   }
 
   const disableButton = isNullOrEmpty(username) || isNullOrEmpty(password) || (isNewUser && password !== confirmedPassword) || userNameError != null
+  const isLoading = loginRequest.isLoading || registerRequest.isLoading || loginContext.isLoading
+  const onSubmit = isNewUser ? registerRequest.triggerRequest : loginRequest.triggerRequest
 
   return (
     <div style={{ width: 'fit-content', margin: 'auto' }}>
-      <ApiRequestTrigger isAnonymous hideRetryOnError onRequest={() => onSubmitForm()}>
-        {(onMakeRequest, responseData, loadingNode, errorNode) => (
-          <Form onSubmit={onMakeRequest} style={{ display: 'flex', flexDirection: 'column' }}>
-            <AutoFocus>
-              {(onRef) => (
-                <TextField
-                  label="Username"
-                  disabled={loadingNode != null || loggingIn}
-                  error={userNameError != null}
-                  helperText={userNameError}
-                  sx={{ width: 350, mt: 2 }}
-                  inputRef={onRef}
-                  onChange={e => onSetUsername(e.target.value)}
-                />
-              )}
-            </AutoFocus>
+      <Form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+        <AutoFocus>
+          {(onRef) => (
             <TextField
-              label="Password"
-              type="password"
-              disabled={loadingNode != null || loggingIn}
+              label="Username"
+              disabled={isLoading}
+              error={userNameError != null}
+              helperText={userNameError}
               sx={{ width: 350, mt: 2 }}
-              onChange={e => onSetPassword(e.target.value)}
+              inputRef={onRef}
+              onChange={e => onSetUsername(e.target.value)}
             />
-            {isNewUser && (
-              <TextField
-                label="Confirm password"
-                onChange={e => onSetConfirmedPassword(e.target.value)}
-                disabled={loadingNode != null || loggingIn}
-                sx={{ maxWidth: 350, mt: 2 }}
-                type="password"
-              />
-            )}
-            <FormControlLabel
-              label="I am a new user"
-              sx={{ mt: 2 }}
-              control={
-                <Checkbox
-                  checked={isNewUser}
-                  onChange={() => setIsNewUser(!isNewUser)}
-                  disabled={loadingNode != null || loggingIn}
-                />
-              }
-            />
-            <Button
-              type="submit"
-              disabled={disableButton || loadingNode != null || loggingIn}
-              sx={{ mt: 2, mb: 2 }}
-              onClick={onMakeRequest}
-            >
-              {isNewUser ? 'Create account' : 'Login'}
-            </Button>
-            {loadingNode}
-            {errorNode}
-          </Form>
+          )}
+        </AutoFocus>
+        <TextField
+          label="Password"
+          type="password"
+          disabled={isLoading}
+          sx={{ width: 350, mt: 2 }}
+          onChange={e => onSetPassword(e.target.value)}
+        />
+        {isNewUser && (
+          <TextField
+            label="Confirm password"
+            onChange={e => onSetConfirmedPassword(e.target.value)}
+            disabled={isLoading}
+            sx={{ maxWidth: 350, mt: 2 }}
+            type="password"
+          />
         )}
-      </ApiRequestTrigger>
+        <FormControlLabel
+          label="I am a new user"
+          sx={{ mt: 2 }}
+          control={
+            <Checkbox
+              checked={isNewUser}
+              onChange={() => setIsNewUser(!isNewUser)}
+              disabled={isLoading}
+            />
+          }
+        />
+        <Button
+          type="submit"
+          disabled={disableButton || isLoading}
+          sx={{ mt: 2, mb: 2 }}
+          onClick={onSubmit}
+        >
+          {isNewUser ? 'Create account' : 'Login'}
+        </Button>
+        <ApiLoading isLoading={isLoading} />
+        <ApiError requestObj={isNewUser ? registerRequest : loginRequest} />
+      </Form>
     </div>
   )
 }

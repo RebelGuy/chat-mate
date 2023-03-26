@@ -64,6 +64,7 @@ export function LoginProvider (props: Props) {
 
   const onLogin = React.useCallback(async (): Promise<boolean> => {
     try {
+      const storedStreamer = window.localStorage.getItem('streamer')
       const storedLoginToken = window.localStorage.getItem('loginToken')
       if (storedLoginToken == null) {
         return false
@@ -77,7 +78,7 @@ export function LoginProvider (props: Props) {
         setLoginToken(storedLoginToken)
         setUsername(response.data.username)
 
-        if (response.data.isStreamer && selectedStreamer == null) {
+        if (response.data.isStreamer && storedStreamer == null) {
           onPersistStreamer(response.data.username)
         }
 

@@ -19,11 +19,14 @@ type RequestOptions<TResponseData> = {
   onDemand?: boolean
 
   // inline version of `useEffect(() => { if (data != null) { /* handle data here */ } }, [data])
-  onSuccess?: (data: TResponseData) => void
+  onSuccess?: (data: TResponseData, type: RequestType) => void
 
   // inline version of `useEffect(() => { if (error != null) { /* handle error here */ } }, [error])
-  onError?: (error: ApiError) => void
+  onError?: (error: ApiError, type: RequestType) => void
 }
+
+// `none` is only used before the first request has been made, and never again in the future.
+export type RequestType = 'none' | 'auto-initial' | 'auto-refresh' | 'triggered' | 'retry'
 
 export type RequestResult<TResponseData> = {
   // the data object remains available until the next request has completed
@@ -35,12 +38,13 @@ export type RequestResult<TResponseData> = {
   // the error object remains available until the next request has completed
   error: ApiRequestError | null
 
-  // true if the request was made due to `error.onRetry()` being called
-  isRetry: boolean
+  requestType: RequestType
 
   // calling this function will force-trigger a request. similar to `error.onRetry()` but uses the current props
   triggerRequest: () => void
 }
+
+export type SuccessfulResponseData<TResponse extends ApiResponse<any>> = Extract<TResponse, { success: true }>['data']
 
 export type ApiRequestError = {
   message: string
@@ -64,11 +68,11 @@ export type Request<TResponse extends ApiResponse<any>, TRequestData extends Rec
 export default function useRequest<
   TResponse extends ApiResponse<any>,
   TRequestData extends Record<string, Primitive> | false = false,
-  TResponseData extends Extract<TResponse, { success: true }>['data'] = Extract<TResponse, { success: true }>['data']
+  TResponseData extends SuccessfulResponseData<TResponse> = SuccessfulResponseData<TResponse>
 > (request: Request<TResponse, TRequestData>, options?: RequestOptions<TResponseData>): RequestResult<TResponseData> {
 // > (path: string, options?: RequestOptions<TResponseData, TRequestData>): RequestReturn<TResponseData> {
   const [isLoading, setIsLoading] = useState(false)
-  const [isRetry, setIsRetry] = useState(false)
+  const [requestType, setRequestType] = useState<RequestType>('none')
   const [data, setData] = useState<TResponseData | null>(null)
   const [apiError, setError] = useState<ApiError | null>(null)
   const [onRetry, setOnRetry] = useState<(() => void) | null>(null)
@@ -87,7 +91,7 @@ export default function useRequest<
   const loginToken = requiresLogin ? loginContext.loginToken : null
   const streamer = requiresStreamer ? loginContext.streamer : null
 
-  const makeRequest = async (isRetrying: boolean) => {
+  const makeRequest = async (type: RequestType) => {
     let headers: HeadersInit = {
       'Content-Type': 'application/json'
     }
@@ -118,39 +122,39 @@ export default function useRequest<
       if (response.success) {
         setData(response.data)
         setError(null)
-        onSuccess(response.data)
+        onSuccess(response.data, type)
       } else {
         setData(null)
         setError(response.error)
-        onError(response.error)
+        onError(response.error, type)
       }
     } catch (e: any) {
       setData(null)
       const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', message: e.message }
       setError(error)
-      onError(error)
+      onError(error, type)
     } finally {
       setIsLoading(false)
-      setIsRetry(isRetrying)
+      setRequestType(type)
     }
   }
 
   // for handling a manual request
   const triggerRequest = () => {
-    void makeRequest(false)
-    setOnRetry(() => () => makeRequest(true))
+    void makeRequest('triggered')
+    setOnRetry(() => () => makeRequest('retry'))
   }
 
   // for handling the automatic request
   useEffect(() => {
     if (!onDemand) {
-      void makeRequest(false)
-      setOnRetry(() => () => makeRequest(true))
+      void makeRequest(requestType === 'none' ? 'auto-initial' : 'auto-refresh')
+      setOnRetry(() => () => makeRequest('retry'))
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, onDemand, ...objToArr(requestData ?? {})])
 
   const error: ApiRequestError | null = apiError == null ? null : { message: apiError.message, onRetry: onRetry ?? undefined }
-  return { data, isLoading, error, isRetry, triggerRequest }
+  return { data, isLoading, error, requestType, triggerRequest }
 }

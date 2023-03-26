@@ -82,19 +82,11 @@ export async function getRanks (loginToken: string, streamer?: string): Promise<
   return await GET('/rank', loginToken, streamer)
 }
 
-export async function registerAccount (username: string, password: string): Promise<RegisterResponse> {
-  const request: RegisterRequest = { username, password }
-  return await POST('/account/register', request)
-}
+export const registerAccount = requestBuilder<RegisterResponse, RegisterRequest>('POST', `/account/register`, false, false)
 
-export async function login (username: string, password: string): Promise<LoginResponse> {
-  const request: LoginRequest = { username, password }
-  return await POST('/account/login', request)
-}
+export const login = requestBuilder<LoginResponse, LoginRequest>('POST', `/account/login`, false, false)
 
-export async function logout (loginToken: string): Promise<LogoutResponse> {
-  return await POST('/account/logout', {}, loginToken)
-}
+export const logout = requestBuilder<LogoutResponse>('POST', `/account/logout`, false)
 
 export async function authenticate (loginToken: string): Promise<AuthenticateResponse> {
   return await POST('/account/authenticate', {}, loginToken)
