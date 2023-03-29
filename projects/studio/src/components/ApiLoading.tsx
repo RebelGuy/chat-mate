@@ -4,11 +4,25 @@ import { RequestResult } from '@rebel/studio/hooks/useRequest'
 type Props = {
   isLoading: boolean
 } | {
-  requestObj: RequestResult<any>
+  requestObj: RequestResult<any> | RequestResult<any>[]
+  initialOnly?: boolean
 }
 
 export default function ApiLoading (props: Props) {
-  const isLoading = 'isLoading' in props ? props.isLoading : props.requestObj.isLoading
+  let isLoading: boolean
+  if ('isLoading' in props) {
+    isLoading = props.isLoading
+  } else {
+    const objs = Array.isArray(props.requestObj) ? props.requestObj : [props.requestObj]
+
+    // if we have data for all requests, don't show the loading spinner
+    if (props.initialOnly && objs.find(o => o.data == null) == null) {
+      return null
+    }
+
+    isLoading = objs.find(o => o.isLoading) != null
+  }
+
   if (!isLoading) {
     return null
   }

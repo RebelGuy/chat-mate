@@ -1,17 +1,24 @@
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
+import { PublicCustomEmoji } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import ApiError from '@rebel/studio/components/ApiError'
+import ApiLoading from '@rebel/studio/components/ApiLoading'
+import useRequest from '@rebel/studio/hooks/useRequest'
 import { EmojiData } from '@rebel/studio/pages/emojis/CustomEmojiManager'
 import RanksSelector from '@rebel/studio/pages/emojis/RanksSelector'
+import { updateCustomEmoji, addCustomEmoji } from '@rebel/studio/utility/api'
 import { useEffect, useState } from 'react'
 
 type Props = {
   open: boolean
+  type: 'new' | 'edit'
   data: EmojiData | null
   accessibleRanks: PublicRank[]
   error: React.ReactNode
   isLoading: boolean
-  onSave: (data: EmojiData) => void
+  onChange: (data: EmojiData) => void
+  onSave: (data: PublicCustomEmoji) => void
   onCancel: () => void
   onCheckDuplicateSymbol: (symbol: string) => boolean
 }
@@ -27,12 +34,26 @@ const DEFAULT_DATA: EmojiData = {
 }
 
 export default function CustomEmojiEditor (props: Props) {
-  const [editingData, setEditingData] = useState<EmojiData>(props.data ?? DEFAULT_DATA)
   const [enableWhitelist, setEnableWhitelist] = useState(false)
   const [symbolValidation, setSymbolValidation] = useState<string | null>(null)
   const [levelRequirementValidation, setLevelRequirementValidation] = useState<string | null>(null)
 
-  const isValid =
+  const { data: editingData, onChange } = props
+
+  const updateRequest = useRequest(updateCustomEmoji({ updatedEmoji: props.data! }), {
+    onDemand: true,
+    onSuccess: (data) => props.onSave(data.updatedEmoji)
+  })
+
+  const addRequest = useRequest(addCustomEmoji({ newEmoji: props.data! }), {
+    onDemand: true,
+    onSuccess: (data) => props.onSave(data.newEmoji)
+  })
+
+  const request = props.type === 'new' ? addRequest : updateRequest
+
+  const isValid = editingData != null &&
+    !request.isLoading &&
     symbolValidation == null &&
     levelRequirementValidation == null &&
     !isNullOrEmpty(editingData.imageData) &&
@@ -40,7 +61,7 @@ export default function CustomEmojiEditor (props: Props) {
 
   const setSymbol = (symbol: string) => {
     symbol = symbol.trim()
-    setEditingData({ ...editingData, symbol })
+    onChange({ ...editingData!, symbol })
 
     if (props.onCheckDuplicateSymbol(symbol)) {
       setSymbolValidation('Symbol already exists.')
@@ -55,7 +76,7 @@ export default function CustomEmojiEditor (props: Props) {
 
   const setLevelRequirement = (levelRequirement: string) => {
     const num = Number(levelRequirement)
-    setEditingData({ ...editingData, levelRequirement: num })
+    onChange({ ...editingData!, levelRequirement: num })
 
     if (num < 0 || num > 100) {
       setLevelRequirementValidation('Must be between 0 and 100')
@@ -79,7 +100,7 @@ export default function CustomEmojiEditor (props: Props) {
       const data = fr.result as string
       const prefix = 'data:image/png;base64,'
       const imageData = data.substring(prefix.length)
-      setEditingData({ ...editingData, imageData })
+      onChange({ ...editingData!, imageData })
     }
     fr.onerror = () => { throw new Error() }
     fr.readAsDataURL(files[0])
@@ -88,108 +109,121 @@ export default function CustomEmojiEditor (props: Props) {
   const onToggleWhitelist = (e: React.ChangeEvent<HTMLInputElement>) => {
     // disabling the whitelist means an empty whitelist array
     if (!e.target.checked) {
-      setEditingData({ ...editingData, whitelistedRanks: [] })
+      onChange({ ...editingData!, whitelistedRanks: [] })
     }
 
     setEnableWhitelist(e.target.checked)
   }
 
+  const onCancel = () => {
+    request.reset()
+    setEnableWhitelist(false)
+    props.onCancel()
+  }
+
   useEffect(() => {
-    setEditingData(props.data ?? DEFAULT_DATA)
-  }, [props.data])
+    if (editingData == null) {
+      onChange(DEFAULT_DATA)
+    } else if (editingData.whitelistedRanks.length > 0) {
+      setEnableWhitelist(true)
+    }
+  }, [editingData, onChange])
 
   return (
     <Dialog open={props.open} fullWidth sx={{ typography: 'body1' }}>
       <DialogTitle>{props.data == null ? 'Create Emoji' : 'Edit Emoji'}</DialogTitle>
       <DialogContent>
-        <Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <TextField
-              label="Name"
-              value={editingData.name}
-              disabled={props.isLoading}
-              onChange={e => setEditingData({ ...editingData, name: e.target.value })}
-            />
-            {props.data == null &&
+        {editingData == null ?
+          <ApiLoading isLoading /> :
+          <Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <TextField
-                label="Symbol"
-                value={editingData.symbol}
-                disabled={props.isLoading}
-                onChange={e => setSymbol(e.target.value)}
-                error={symbolValidation != null}
-                helperText={symbolValidation}
-                sx={{ mt: 3 }}
+                label="Name"
+                value={editingData.name}
+                disabled={props.isLoading || request.isLoading}
+                onChange={e => onChange({ ...editingData, name: e.target.value })}
               />
-            }
-            <TextField
-              label="Level Requirement"
-              inputMode="numeric"
-              value={editingData.levelRequirement}
-              disabled={props.isLoading}
-              onChange={e => setLevelRequirement(e.target.value)}
-              error={levelRequirementValidation != null}
-              helperText={levelRequirementValidation}
-              sx={{ mt: 3 }}
-            />
-            <FormControlLabel
-              label="Allow in donation messages"
-              sx={{ mt: 2 }}
-              control={
-                <Checkbox
-                  checked={editingData.canUseInDonationMessage}
-                  disabled={props.isLoading}
-                  onChange={e => setEditingData({ ...editingData, canUseInDonationMessage: e.target.checked })}
+              {props.type === 'new' &&
+                <TextField
+                  label="Symbol"
+                  value={editingData.symbol}
+                  disabled={props.isLoading || request.isLoading}
+                  onChange={e => setSymbol(e.target.value)}
+                  error={symbolValidation != null}
+                  helperText={symbolValidation}
+                  sx={{ mt: 3 }}
                 />
               }
-            />
-            <FormControl>
+              <TextField
+                label="Level Requirement"
+                inputMode="numeric"
+                value={editingData.levelRequirement}
+                disabled={props.isLoading || request.isLoading}
+                onChange={e => setLevelRequirement(e.target.value)}
+                error={levelRequirementValidation != null}
+                helperText={levelRequirementValidation}
+                sx={{ mt: 3 }}
+              />
               <FormControlLabel
-                label="Whitelist ranks"
+                label="Allow in donation messages"
                 sx={{ mt: 2 }}
                 control={
-                  <Switch
-                    disabled={props.isLoading}
-                    checked={enableWhitelist}
-                    onChange={onToggleWhitelist}
+                  <Checkbox
+                    checked={editingData.canUseInDonationMessage}
+                    disabled={props.isLoading || request.isLoading}
+                    onChange={e => onChange({ ...editingData, canUseInDonationMessage: e.target.checked })}
                   />
                 }
               />
-              <Accordion elevation={0} expanded={enableWhitelist}>
-                {/* summary is required, otherwise it breaks the accordion */}
-                <AccordionSummary style={{ minHeight: 0, maxHeight: 0, visibility: 'hidden' }} />
-                <AccordionDetails>
-                  <RanksSelector
-                    disabled={props.isLoading}
-                    accessibleRanks={props.accessibleRanks}
-                    ranks={editingData.whitelistedRanks}
-                    onChange={ranks => setEditingData({ ...editingData, whitelistedRanks: ranks })}
-                  />
-                  {enableWhitelist && editingData.whitelistedRanks.length === 0 &&
-                    <InputLabel sx={{ display: 'contents' }} error>Must select at least 1 rank to whitelist.</InputLabel>
+              <FormControl>
+                <FormControlLabel
+                  label="Whitelist ranks"
+                  sx={{ mt: 2 }}
+                  control={
+                    <Switch
+                      disabled={props.isLoading || request.isLoading}
+                      checked={enableWhitelist}
+                      onChange={onToggleWhitelist}
+                    />
                   }
-                </AccordionDetails>
-              </Accordion>
-            </FormControl>
-            <FormControl sx={{ mt: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                {!isNullOrEmpty(editingData.imageData) && <img src={`data:image/png;base64,${editingData.imageData}`} style={{ maxHeight: 32 }} alt="" />}
-              </Box>
-              <Button disabled={props.isLoading} component="label" sx={{ mt: 1 }}>
-                <input type="file" hidden accept="image/png" disabled={props.isLoading} onChange={onSelectImage} />
-                Select image
-              </Button>
-            </FormControl>
+                />
+                <Accordion elevation={0} expanded={enableWhitelist}>
+                  {/* summary is required, otherwise it breaks the accordion */}
+                  <AccordionSummary style={{ minHeight: 0, maxHeight: 0, visibility: 'hidden' }} />
+                  <AccordionDetails>
+                    <RanksSelector
+                      disabled={props.isLoading || request.isLoading}
+                      accessibleRanks={props.accessibleRanks}
+                      ranks={editingData.whitelistedRanks}
+                      onChange={ranks => onChange({ ...editingData, whitelistedRanks: ranks })}
+                    />
+                    {enableWhitelist && editingData.whitelistedRanks.length === 0 &&
+                      <InputLabel sx={{ display: 'contents' }} error>Must select at least 1 rank to whitelist.</InputLabel>
+                    }
+                  </AccordionDetails>
+                </Accordion>
+              </FormControl>
+              <FormControl sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  {!isNullOrEmpty(editingData.imageData) && <img src={`data:image/png;base64,${editingData.imageData}`} style={{ maxHeight: 32 }} alt="" />}
+                </Box>
+                <Button disabled={props.isLoading || request.isLoading} component="label" sx={{ mt: 1 }}>
+                  <input type="file" hidden accept="image/png" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />
+                  Select image
+                </Button>
+              </FormControl>
+            </Box>
           </Box>
-        </Box>
-        {props.error &&
-          <Alert severity="error" sx={{ mt: 2 }}>{props.error}</Alert>
         }
+
+        <ApiLoading isLoading={request.isLoading} />
+        <ApiError requestObj={request} hideRetryButton />
       </DialogContent>
       <DialogActions>
-        <Button disabled={!isValid || props.isLoading} onClick={() => props.onSave(editingData)}>
-          {props.data == null ? 'Create emoji' : 'Update emoji'}
+        <Button disabled={!isValid} onClick={request.triggerRequest}>
+          {props.type === 'new' ? 'Create emoji' : 'Update emoji'}
         </Button>
-        <Button onClick={() => props.onCancel()}>
+        <Button onClick={onCancel}>
           Cancel
         </Button>
       </DialogActions>

@@ -9,7 +9,7 @@ import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketToke
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
 import { GenericObject, Primitive } from '@rebel/shared/types'
 import { PathParam } from '@rebel/studio/utility/types'
-import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
+import { ApiResponse, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
@@ -17,9 +17,9 @@ const STREAMER_HEADER = 'X-Streamer'
 
 const baseUrl = SERVER_URL + '/api'
 
-function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends Record<string, Primitive> | false = false, TArgs extends any[] = []> (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: string,                                requiresStreamer?: boolean, requiresLogin?: boolean): TRequestData extends false ? () => Request<TResponse, TRequestData> : (data: TRequestData) => Request<TResponse, TRequestData>
-function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends Record<string, Primitive> | false = false, TArgs extends any[] = []> (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: (...args: TArgs) => string,            requiresStreamer?: boolean, requiresLogin?: boolean): (...args: TRequestData extends false ? TArgs : [TRequestData, ...TArgs]) => Request<TResponse, TRequestData>
-function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends Record<string, Primitive> | false, TArgs extends any[]>              (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: string | ((...args: TArgs) => string), requiresStreamer?: boolean, requiresLogin?: boolean): (...args: TRequestData extends false ? TArgs : [TRequestData, ...TArgs]) => Request<TResponse, TRequestData> {
+function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false = false, TArgs extends any[] = []> (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: string,                                requiresStreamer?: boolean, requiresLogin?: boolean): TRequestData extends false ? () => Request<TResponse, TRequestData> : (data: TRequestData) => Request<TResponse, TRequestData>
+function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false = false, TArgs extends any[] = []> (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: (...args: TArgs) => string,            requiresStreamer?: boolean, requiresLogin?: boolean): (...args: TRequestData extends false ? TArgs : [TRequestData, ...TArgs]) => Request<TResponse, TRequestData>
+function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false, TArgs extends any[]>              (method: TRequestData extends false ? Method : Exclude<Method, 'GET'>, path: string | ((...args: TArgs) => string), requiresStreamer?: boolean, requiresLogin?: boolean): (...args: TRequestData extends false ? TArgs : [TRequestData, ...TArgs]) => Request<TResponse, TRequestData> {
   if (method === 'GET') {
     // GET method implies that `TRequestData extends false` (and hence `data extends never`), but the compiler doesn't understand that
     return (...args: any) => ({
@@ -39,21 +39,11 @@ function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends
   }
 }
 
-export async function getAllCustomEmojis (loginToken: string, streamer: string): Promise<GetCustomEmojisResponse> {
-  return await GET('/emoji/custom', loginToken, streamer)
-}
+export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`)
 
-export async function updateCustomEmoji (updatedEmoji: UpdateCustomEmojiRequest['updatedEmoji'], loginToken: string, streamer: string): Promise<UpdateCustomEmojiResponse> {
-  const request: UpdateCustomEmojiRequest = { updatedEmoji }
+export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, UpdateCustomEmojiRequest> ('PATCH', `/emoji/custom`)
 
-  return await PATCH('/emoji/custom', request, loginToken, streamer)
-}
-
-export async function addCustomEmoji (newEmoji: PublicCustomEmojiNew, loginToken: string, streamer: string): Promise<AddCustomEmojiResponse> {
-  const request: AddCustomEmojiRequest = { newEmoji }
-
-  return await POST('/emoji/custom', request, loginToken, streamer)
-}
+export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEmojiRequest> ('POST', `/emoji/custom`)
 
 export async function setActiveLivestream (newLivestream: string | null, loginToken: string, streamer: string): Promise<SetActiveLivestreamResponse> {
   const request: SetActiveLivestreamRequest = { livestream: newLivestream }
@@ -73,9 +63,7 @@ export async function getStatus (loginToken: string, streamer: string): Promise<
   return await GET('/chatMate/status', loginToken, streamer)
 }
 
-export async function getAccessibleRanks (loginToken: string, streamer: string): Promise<GetAccessibleRanksResponse> {
-  return await GET('/rank/accessible', loginToken, streamer)
-}
+export const getAccessibleRanks =requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`)
 
 /** Gets global ranks if the streamer is not provided. */
 export async function getRanks (loginToken: string, streamer?: string): Promise<GetUserRanksResponse> {

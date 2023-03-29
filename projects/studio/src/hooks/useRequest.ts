@@ -1,10 +1,9 @@
-import { ApiError, ApiRequest, ApiResponse } from '@rebel/server/controllers/ControllerBase'
+import { ApiError, ApiRequest, ApiResponse, PublicObject, ResponseData } from '@rebel/server/controllers/ControllerBase'
 import { Primitive } from '@rebel/shared/types'
-import { objToArr } from '@rebel/shared/util/arrays'
-import { NO_OP } from '@rebel/shared/util/typescript'
+import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { SERVER_URL } from '@rebel/studio/utility/global'
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -18,8 +17,13 @@ type RequestOptions<TResponseData> = {
   // don't auto-start the request on mount or when the props change
   onDemand?: boolean
 
+  // IMPORTANT: callback functions must be memoised, especially for automatic requests
+
   // inline version of `useEffect(() => { if (data != null) { /* handle data here */ } }, [data])
   onSuccess?: (data: TResponseData, type: RequestType) => void
+
+  // applied to the response data every time it changes
+  transformer?: (data: TResponseData) => TResponseData
 
   // inline version of `useEffect(() => { if (error != null) { /* handle error here */ } }, [error])
   onError?: (error: ApiError, type: RequestType) => void
@@ -42,6 +46,12 @@ export type RequestResult<TResponseData> = {
 
   // calling this function will force-trigger a request. similar to `error.onRetry()` but uses the current props
   triggerRequest: () => void
+
+  // calling this function will reset the state to the initial state
+  reset: () => void
+
+  // manually change the response data
+  mutate: (newData: TResponseData | null) => void
 }
 
 export type SuccessfulResponseData<TResponse extends ApiResponse<any>> = Extract<TResponse, { success: true }>['data']
@@ -53,7 +63,7 @@ export type ApiRequestError = {
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH'
 
-export type Request<TResponse extends ApiResponse<any>, TRequestData extends Record<string, Primitive> | false> = {
+export type Request<TResponse extends ApiResponse<any>, TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false> = {
   method: Method
   path: string
   data: TRequestData extends false ? never : Method extends 'GET' ? never : TRequestData
@@ -67,7 +77,7 @@ export type Request<TResponse extends ApiResponse<any>, TRequestData extends Rec
 
 export default function useRequest<
   TResponse extends ApiResponse<any>,
-  TRequestData extends Record<string, Primitive> | false = false,
+  TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false = false,
   TResponseData extends SuccessfulResponseData<TResponse> = SuccessfulResponseData<TResponse>
 > (request: Request<TResponse, TRequestData>, options?: RequestOptions<TResponseData>): RequestResult<TResponseData> {
 // > (path: string, options?: RequestOptions<TResponseData, TRequestData>): RequestReturn<TResponseData> {
@@ -77,14 +87,23 @@ export default function useRequest<
   const [apiError, setError] = useState<ApiError | null>(null)
   const [onRetry, setOnRetry] = useState<(() => void) | null>(null)
   const loginContext = useContext(LoginContext)
+  const [invariantToken, setInvariantToken] = useState(0)
+  const invariantRef = useRef<number>()
 
+  // we need to make sure we have a way of getting the current state.
+  // the `invariantToken` const may be outdated by the time we have awaited an async operation.
+  // concept stolen from https://stackoverflow.com/a/60643670
+  invariantRef.current = invariantToken
+
+  // if adding onto these constants, make sure to update the dependency array of the `makeRequest` function
   const path = request.path
   const method = request.method
-  const requestData = (request.data ?? null) as Record<string, Primitive> | null
+  const requestData = (request.data ?? null) as PublicObject<any> | null
   const requiresLogin = request.requiresLogin ?? true
   const requiresStreamer = request.requiresStreamer ?? true
   const updateKey = options?.updateKey ?? 0
   const onDemand = options?.onDemand ?? false
+  const transformer = options?.transformer ?? null
   const onSuccess = options?.onSuccess ?? NO_OP
   const onError = options?.onError ?? NO_OP
 
@@ -102,6 +121,8 @@ export default function useRequest<
       headers[STREAMER_HEADER] = streamer
     }
 
+    const invariant = invariantToken + 1 // only track one request at a time (the most recently started)
+    setInvariantToken(invariant)
     setIsLoading(true)
     setError(null)
 
@@ -119,16 +140,25 @@ export default function useRequest<
       })
       const response: ApiResponse<TResponseData> = JSON.parse(await rawResponse.text())
 
+      if (invariantRef.current !== invariant) {
+        return
+      }
+
       if (response.success) {
-        setData(response.data)
+        const responseData = transformer == null ? response.data : transformer(response.data)
+        setData(responseData)
         setError(null)
-        onSuccess(response.data, type)
+        onSuccess(responseData, type)
       } else {
         setData(null)
         setError(response.error)
         onError(response.error, type)
       }
     } catch (e: any) {
+      if (invariantRef.current !== invariant) {
+        return
+      }
+
       setData(null)
       const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', message: e.message }
       setError(error)
@@ -145,6 +175,17 @@ export default function useRequest<
     setOnRetry(() => () => makeRequest('retry'))
   }
 
+  const reset = () => {
+    setInvariantToken(token => token + 1)
+    setIsLoading(false)
+    setData(null)
+    setError(null)
+  }
+
+  const mutate = (newData: TResponseData | null) => {
+    setData(newData)
+  }
+
   // for handling the automatic request
   useEffect(() => {
     if (!onDemand) {
@@ -153,8 +194,23 @@ export default function useRequest<
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, onDemand, ...objToArr(requestData ?? {})])
+  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, onDemand, transformer, onSuccess, onError, ...objToArr(requestData ?? {})])
 
   const error: ApiRequestError | null = apiError == null ? null : { message: apiError.message, onRetry: onRetry ?? undefined }
-  return { data, isLoading, error, requestType, triggerRequest }
+  return { data, isLoading, error, requestType, triggerRequest, reset, mutate }
+}
+
+function objToArr<T extends ResponseData<T>> (obj: PublicObject<T>): (Primitive | null)[] {
+  const keys = Object.keys(obj).sort() as (keyof T)[]
+  return keys.flatMap<Primitive | null>(key => {
+    const value = obj[key]
+    if (isPrimitive(typeof value) || value == null) {
+      return [value as Primitive | null]
+    } else if (Array.isArray(value)) {
+      // I aplogise for the typings
+      return (value as any).flatMap((item: any) => isPrimitive(typeof item) || item == null ? [item] : objToArr(item as any))
+    } else {
+      return objToArr(value)
+    }
+  })
 }

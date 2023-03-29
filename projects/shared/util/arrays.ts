@@ -348,9 +348,3 @@ export function symmetricDifference<T> (first: T[], second: T[], comparator?: (a
 export function filterTypes<T extends { type: string }, Types extends T['type'][]> (items: T[], ...types: Types): Extract<T, { type: Types[number] }>[] {
   return items.filter(x => types.includes(x.type)) as any // the any-cast is exactly why I decided to write this function
 }
-
-/** Maps the object's values into an array */
-export function objToArr (obj: Record<string, Primitive>): Primitive[] {
-  const keys = Object.keys(obj).sort()
-  return keys.map(key => obj[key])
-}

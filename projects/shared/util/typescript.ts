@@ -1,4 +1,4 @@
-import { ObjectComparator, ValueComparator } from '@rebel/shared/types'
+import { ObjectComparator, Primitive, ValueComparator } from '@rebel/shared/types'
 import { values } from '@rebel/shared/util/arrays'
 
 export const NO_OP = () => { /* Do nothing */ }
@@ -12,7 +12,7 @@ export function assert (condition: any, msg: string): asserts condition {
 }
 
 // returns false for null values
-export function isPrimitive (value: any): value is boolean | number | string | symbol | bigint {
+export function isPrimitive (value: any): value is Primitive {
   return (typeof value !== 'object' && typeof value !== 'function') || value == null
 }
 
