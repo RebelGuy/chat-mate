@@ -17,7 +17,10 @@ type RequestOptions<TResponseData> = {
   // don't auto-start the request on mount or when the props change
   onDemand?: boolean
 
-  // IMPORTANT: callback functions must be memoised, especially for automatic requests
+  // IMPORTANT: changing callback functions does NOT trigger a new request, so they do not need to be memoised.
+
+  // called before the request is fired
+  onRequest?: () => void
 
   // inline version of `useEffect(() => { if (data != null) { /* handle data here */ } }, [data])
   onSuccess?: (data: TResponseData, type: RequestType) => void
@@ -27,6 +30,9 @@ type RequestOptions<TResponseData> = {
 
   // inline version of `useEffect(() => { if (error != null) { /* handle error here */ } }, [error])
   onError?: (error: ApiError, type: RequestType) => void
+
+  // called after `onSuccess` or `onError`
+  onDone?: () => void
 }
 
 // `none` is only used before the first request has been made, and never again in the future.
@@ -106,6 +112,8 @@ export default function useRequest<
   const transformer = options?.transformer ?? null
   const onSuccess = options?.onSuccess ?? NO_OP
   const onError = options?.onError ?? NO_OP
+  const onDone = options?.onDone ?? NO_OP
+  const onRequest = options?.onRequest ?? NO_OP
 
   const loginToken = requiresLogin ? loginContext.loginToken : null
   const streamer = requiresStreamer ? loginContext.streamer : null
@@ -132,6 +140,8 @@ export default function useRequest<
       } else if (requiresStreamer && streamer == null) {
         throw new Error('You must select a streamer.')
       }
+
+      onRequest()
 
       const rawResponse = await fetch(baseUrl + path, {
         method: method,
@@ -166,6 +176,7 @@ export default function useRequest<
     } finally {
       setIsLoading(false)
       setRequestType(type)
+      onDone()
     }
   }
 
@@ -194,7 +205,7 @@ export default function useRequest<
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, onDemand, transformer, onSuccess, onError, ...objToArr(requestData ?? {})])
+  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, onDemand, ...objToArr(requestData ?? {})])
 
   const error: ApiRequestError | null = apiError == null ? null : { message: apiError.message, onRetry: onRetry ?? undefined }
   return { data, isLoading, error, requestType, triggerRequest, reset, mutate }

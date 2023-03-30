@@ -45,11 +45,7 @@ export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, Updat
 
 export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEmojiRequest> ('POST', `/emoji/custom`)
 
-export async function setActiveLivestream (newLivestream: string | null, loginToken: string, streamer: string): Promise<SetActiveLivestreamResponse> {
-  const request: SetActiveLivestreamRequest = { livestream: newLivestream }
-
-  return await PATCH('/chatMate/livestream', request, loginToken, streamer)
-}
+export const setActiveLivestream = requestBuilder<SetActiveLivestreamResponse, SetActiveLivestreamRequest>('PATCH', `/chatMate/livestream`)
 
 export async function ping (): Promise<PingResponse> {
   return await GET('/chatMate/ping')
@@ -59,9 +55,7 @@ export async function getMasterchatAuthentication (loginToken: string): Promise<
   return await GET('/chatMate/masterchat/authentication', loginToken)
 }
 
-export async function getStatus (loginToken: string, streamer: string): Promise<GetStatusResponse> {
-  return await GET('/chatMate/status', loginToken, streamer)
-}
+export const getStatus = requestBuilder<GetStatusResponse>('GET', `/chatMate/status`)
 
 export const getAccessibleRanks =requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`)
 
@@ -106,14 +100,9 @@ export async function unsetPrimaryChannel (loginToken: string, platform: 'youtub
   return await DELETE(`/streamer/primaryChannels/${platform}`, null, loginToken)
 }
 
-export async function setStreamlabsSocketToken (loginToken: string, streamer: string, socketToken: string | null): Promise<SetWebsocketTokenResponse> {
-  const request: SetWebsocketTokenRequest = { websocketToken: socketToken }
-  return await POST(`/donation/streamlabs/socketToken`, request, loginToken, streamer)
-}
+export const setStreamlabsSocketToken = requestBuilder<SetWebsocketTokenResponse, SetWebsocketTokenRequest>('POST', `/donation/streamlabs/socketToken`)
 
-export async function getStreamlabsStatus (loginToken: string, streamer: string): Promise<GetStreamlabsStatusResponse> {
-  return await GET(`/donation/streamlabs/status`, loginToken, streamer)
-}
+export const getStreamlabsStatus = requestBuilder<GetStreamlabsStatusResponse>('GET', `/donation/streamlabs/status`)
 
 export async function searchUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
   const request: SearchUserRequest = { searchTerm }

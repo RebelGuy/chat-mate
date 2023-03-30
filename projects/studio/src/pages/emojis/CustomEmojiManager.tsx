@@ -20,6 +20,7 @@ import useRequest, { SuccessfulResponseData } from '@rebel/studio/hooks/useReque
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
+import PanelHeader from '@rebel/studio/components/PanelHeader'
 
 export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -77,7 +78,7 @@ export default function CustomEmojiManager () {
 
   return (
     <>
-      <h3>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={() => setRefreshToken(token => token + 1)} />}</h3>
+      <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={() => setRefreshToken(token => token + 1)} />}</PanelHeader>
 
       {emojisRequest.data != null &&
         <Box>
