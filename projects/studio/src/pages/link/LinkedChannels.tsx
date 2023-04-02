@@ -5,17 +5,30 @@ import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
-import { Button, Checkbox, FormControlLabel, IconButton, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
+import { Button, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { Box } from '@mui/system'
-import { Refresh } from '@mui/icons-material'
 import { getChannelUrl } from '@rebel/studio/utility/misc'
+import useRequest, { RequestResult, SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
+import ApiLoading from '@rebel/studio/components/ApiLoading'
+import ApiError from '@rebel/studio/components/ApiError'
+import { GetLinkedChannelsResponse } from '@rebel/server/controllers/UserController'
+import { GetPrimaryChannelsResponse } from '@rebel/server/controllers/StreamerController'
+import PanelHeader from '@rebel/studio/components/PanelHeader'
+import RefreshButton from '@rebel/studio/components/RefreshButton'
 
-export default function LinkedChannels (props: { channels: PublicChannel[], primaryChannels: { youtubeChannelId: number | null, twitchChannelId: number | null }, onChange: () => void, onRefresh: () => void }) {
+type Props = {
+  channelsRequestObj: RequestResult<SuccessfulResponseData<GetLinkedChannelsResponse>>
+  primaryChannelsRequestObj: RequestResult<SuccessfulResponseData<GetPrimaryChannelsResponse>>
+  onChange: () => void
+  onRefresh: () => void
+}
+
+export default function LinkedChannels (props: Props) {
   const header = (
-    <h3>Linked Channels {<IconButton onClick={props.onRefresh}><Refresh /></IconButton>}</h3>
+    <PanelHeader>Linked Channels {<RefreshButton isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj.isLoading} onRefresh={props.onRefresh} />}</PanelHeader>
   )
 
-  if (props.channels.length === 0) {
+  if (props.channelsRequestObj.data?.channels.length === 0) {
     return <>
       {header}
       <div>
@@ -24,8 +37,11 @@ export default function LinkedChannels (props: { channels: PublicChannel[], prim
     </>
   }
 
-  const isPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && channel.channelId === props.primaryChannels.youtubeChannelId) || (channel.platform === 'twitch' && channel.channelId === props.primaryChannels.twitchChannelId)
-  const canAddPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && props.primaryChannels.youtubeChannelId == null) || (channel.platform === 'twitch' && props.primaryChannels.twitchChannelId == null)
+  const primaryYoutubeChannel = props.primaryChannelsRequestObj.data?.youtubeChannelId
+  const primaryTwitchChannel = props.primaryChannelsRequestObj.data?.twitchChannelId
+
+  const isPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && channel.channelId === primaryYoutubeChannel) || (channel.platform === 'twitch' && channel.channelId === primaryTwitchChannel)
+  const canAddPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && primaryYoutubeChannel == null) || (channel.platform === 'twitch' && primaryTwitchChannel == null)
 
   return <>
     {header}
@@ -34,75 +50,91 @@ export default function LinkedChannels (props: { channels: PublicChannel[], prim
         Primary linked channels are the channels that you will stream on. You can select at most one primary channel on YouTube, and one on Twitch.
       </Box>
     </RequireRank>
-    <Table style={{ margin: 'auto' }}>
-      <TableHead>
-        <TableRow>
-          <TableCell>Channel</TableCell>
-          <TableCell>Platform</TableCell>
-          <RequireRank anyOwner><TableCell>Streamer actions</TableCell></RequireRank>
-          <RequireRank admin hideAdminOutline><TableCell>Admin actions</TableCell></RequireRank>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {sortBy(props.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map((c, i) =>
-          <TableRow key={i} style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
-            <TableCell><a href={getChannelUrl(c)}>{c.displayName}</a></TableCell>
-            <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
-            <RequireRank anyOwner>
-              <TableCell>
-                <ChangePrimaryChannel channel={c} isPrimaryChannel={isPrimaryChannel(c)} canAddPrimary={canAddPrimaryChannel(c)} onChange={props.onChange} />
-              </TableCell>
-            </RequireRank>
-            <RequireRank admin hideAdminOutline>
-              <TableCell>
-                <UnlinkUser channel={c} onChange={props.onChange} />
-              </TableCell>
-            </RequireRank>
+    {props.channelsRequestObj.data != null &&
+      <Table style={{ margin: 'auto' }}>
+        <TableHead>
+          <TableRow>
+            <TableCell>Channel</TableCell>
+            <TableCell>Platform</TableCell>
+            <RequireRank anyOwner><TableCell>Streamer actions</TableCell></RequireRank>
+            <RequireRank admin hideAdminOutline><TableCell>Admin actions</TableCell></RequireRank>
           </TableRow>
-        )}
-      </TableBody>
-    </Table>
+        </TableHead>
+        <TableBody>
+          {sortBy(props.channelsRequestObj.data.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map((c, i) =>
+            <TableRow key={i} style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
+              <TableCell><a href={getChannelUrl(c)}>{c.displayName}</a></TableCell>
+              <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
+              <RequireRank anyOwner>
+                <TableCell>
+                  <ChangePrimaryChannel
+                    channel={c}
+                    isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj.isLoading}
+                    isPrimaryChannel={isPrimaryChannel(c)}
+                    canAddPrimary={canAddPrimaryChannel(c)}
+                    onChange={props.onChange}
+                  />
+                </TableCell>
+              </RequireRank>
+              <RequireRank admin hideAdminOutline>
+                <TableCell>
+                  <UnlinkUser channel={c} onChange={props.onChange} />
+                </TableCell>
+              </RequireRank>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    }
+
+    <ApiLoading requestObj={[props.channelsRequestObj, props.primaryChannelsRequestObj]} initialOnly />
+    <ApiError requestObj={[props.channelsRequestObj, props.primaryChannelsRequestObj]} />
   </>
 }
 
-function ChangePrimaryChannel (props: { channel: PublicChannel, isPrimaryChannel: boolean, canAddPrimary: boolean, onChange: () => void }) {
+type ChangePrimaryChannelProps = {
+  channel: PublicChannel
+  isPrimaryChannel: boolean
+  canAddPrimary: boolean
+  isLoading: boolean
+  onChange: () => void
+}
+
+function ChangePrimaryChannel (props: ChangePrimaryChannelProps) {
+  const confirmAction = () => {
+    if (!window.confirm(`Are you sure you want to ${props.isPrimaryChannel ? 'unset' : 'set'} the current primary channel?`)) {
+      throw new Error('Aborted')
+    }
+  }
+
+  const setPrimaryChannelRequest = useRequest(setPrimaryChannel(props.channel.platform, props.channel.channelId), {
+    onDemand: true,
+    onRequest: confirmAction,
+    onSuccess: props.onChange
+  })
+  const unsetPrimaryChannelRequest = useRequest(unsetPrimaryChannel(props.channel.platform), {
+    onDemand: true,
+    onRequest: confirmAction,
+    onSuccess: props.onChange
+  })
+
   if (!props.isPrimaryChannel && !props.canAddPrimary) {
     return null
   }
 
-  const onChangePrimaryChannel = async (loginToken: string) => {
-    if (!window.confirm(`Are you sure you want to ${props.isPrimaryChannel ? 'unset' : 'set'} the current primary channel?`)) {
-      throw new Error('Aborted')
-    }
-
-    const result = props.isPrimaryChannel ? await unsetPrimaryChannel(loginToken, props.channel.platform) : await setPrimaryChannel(loginToken, props.channel.platform, props.channel.channelId)
-
-    if (result.success) {
-      props.onChange()
-    }
-
-    return result
-  }
-
+  const activeRequest = props.isPrimaryChannel ? unsetPrimaryChannelRequest : setPrimaryChannelRequest
   const platform = props.channel.platform === 'youtube' ? 'YouTube' : 'Twitch'
 
   return <>
-    <ApiRequestTrigger onRequest={onChangePrimaryChannel}>
-      {(onMakeRequest, response, loading, error) => <>
-        <Button
-          style={{ color: props.isPrimaryChannel ? 'red' : undefined }}
-          disabled={loading != null}
-          onClick={onMakeRequest}
-        >
-          {props.isPrimaryChannel ? `Unset primary channel for ${platform}` : `Set primary channel for ${platform}`}
-        </Button>
-        {error != null && (
-          <Box sx={{ mt: 1 }}>
-            {error}
-          </Box>
-        )}
-      </>}
-    </ApiRequestTrigger>
+    <Button
+      style={{ color: props.isPrimaryChannel ? 'red' : undefined }}
+      disabled={activeRequest.isLoading || props.isLoading}
+      onClick={activeRequest.triggerRequest}
+    >
+      {props.isPrimaryChannel ? `Unset primary channel for ${platform}` : `Set primary channel for ${platform}`}
+    </Button>
+    <ApiLoading requestObj={activeRequest} />
+    <ApiError requestObj={activeRequest} />
   </>
 }
 

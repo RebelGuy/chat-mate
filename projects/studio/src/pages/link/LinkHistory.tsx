@@ -1,21 +1,32 @@
 import { GetLinkHistoryResponse } from '@rebel/server/controllers/UserController'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { sortBy } from '@rebel/shared/util/arrays'
-import * as React from 'react'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { capitaliseWord } from '@rebel/shared/util/text'
-import { IconButton, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
-import { ContentCopy, Refresh } from '@mui/icons-material'
-import { Box } from '@mui/system'
+import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { getChannelUrl } from '@rebel/studio/utility/misc'
 import CopyText from '@rebel/studio/components/CopyText'
+import useRequest, { SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
+import RefreshButton from '@rebel/studio/components/RefreshButton'
+import PanelHeader from '@rebel/studio/components/PanelHeader'
+import { getLinkHistory } from '@rebel/studio/utility/api'
+import ApiError from '@rebel/studio/components/ApiError'
+import ApiLoading from '@rebel/studio/components/ApiLoading'
 
-export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { success: true }>['data'], onRefresh: () => void }) {
+type Props = {
+  updateKey: number
+  admin_selectedAggregateUserId: number | undefined
+  onRefresh: () => void
+}
+
+export function LinkHistory (props: Props) {
+  const getLinkHistoryRequest = useRequest(getLinkHistory(props.admin_selectedAggregateUserId), { updateKey: props.updateKey })
+
   const header = (
-    <h3>Link History {<IconButton onClick={props.onRefresh}><Refresh /></IconButton>}</h3>
+    <PanelHeader>Link History {<RefreshButton isLoading={getLinkHistoryRequest.isLoading} onRefresh={props.onRefresh} />}</PanelHeader>
   )
 
-  if (props.data.items.length === 0) {
+  if (getLinkHistoryRequest.data?.items.length === 0) {
     return <>
       {header}
       <div>
@@ -25,37 +36,43 @@ export function LinkHistory (props: { data: Extract<GetLinkHistoryResponse, { su
   }
 
   // show unfinished links first, then order completed links in descending order. kinda nasty but it works!
-  const maxDate = Math.max(...props.data.items.filter(item => item.dateCompleted != null).map(item => item.dateCompleted!))
-  const tokens = sortBy(props.data.items, t => t.status === 'processing' || t.status === 'pending' ? 1 : t.status === 'waiting' ? 0 : maxDate + 1 - t.dateCompleted!)
+  const items = getLinkHistoryRequest.data?.items ?? []
+  const maxDate = Math.max(...items.filter(item => item.dateCompleted != null).map(item => item.dateCompleted!))
+  const tokens = sortBy(items, t => t.status === 'processing' || t.status === 'pending' ? 1 : t.status === 'waiting' ? 0 : maxDate + 1 - t.dateCompleted!)
 
   return <>
     {header}
-    <Table style={{ margin: 'auto' }}>
-      <TableHead>
-        <TableRow>
-          <TableCell>Channel</TableCell>
-          <TableCell>Platform</TableCell>
-          <TableCell>Type</TableCell>
-          <TableCell>Link status</TableCell>
-          <TableCell>Link token</TableCell>
-          <TableCell>Message</TableCell>
-          <TableCell>Date</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {tokens.map((item, i) => (
-          <TableRow key={i}>
-            <TableCell><a href={getChannelUrl(item)}>{item.displayName}</a></TableCell>
-            <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
-            <TableCell>{capitaliseWord(item.type)}</TableCell>
-            <TableCell>{item.status}</TableCell>
-            <TableCell>{item.token ?? 'Initiated by admin'}</TableCell>
-            <TableCell><ItemMessage item={item} /></TableCell>
-            <TableCell>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</TableCell>
+    {getLinkHistoryRequest.data != null &&
+      <Table style={{ margin: 'auto' }}>
+        <TableHead>
+          <TableRow>
+            <TableCell>Channel</TableCell>
+            <TableCell>Platform</TableCell>
+            <TableCell>Type</TableCell>
+            <TableCell>Link status</TableCell>
+            <TableCell>Link token</TableCell>
+            <TableCell>Message</TableCell>
+            <TableCell>Date</TableCell>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHead>
+        <TableBody>
+          {tokens.map((item, i) => (
+            <TableRow key={i}>
+              <TableCell><a href={getChannelUrl(item)}>{item.displayName}</a></TableCell>
+              <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
+              <TableCell>{capitaliseWord(item.type)}</TableCell>
+              <TableCell>{item.status}</TableCell>
+              <TableCell>{item.token ?? 'Initiated by admin'}</TableCell>
+              <TableCell><ItemMessage item={item} /></TableCell>
+              <TableCell>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    }
+
+    <ApiLoading requestObj={getLinkHistoryRequest} initialOnly />
+    <ApiError requestObj={getLinkHistoryRequest} />
   </>
 }
 

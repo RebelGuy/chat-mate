@@ -6,38 +6,36 @@ import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import useRequest from '@rebel/studio/hooks/useRequest'
 
 export default function ServerStatus () {
-  const [pingStart, setPingStart] = React.useState(0)
-  const [pingEnd, setPingEnd] = React.useState(0)
-  const [key, updateKey] = useUpdateKey({ repeatInterval: 5000 })
+  const pingRef = React.useRef<number>(0)
+  const [calculatedPing, setCalculatedPing] = React.useState(0)
+  const [key] = useUpdateKey({ repeatInterval: 5000 })
 
-  const statusRequest = useRequest(getStatus(), { updateKey: key })
-
-  const sendPing = () => {
-    setPingStart(new Date().getTime())
-    return ping().finally(() => setPingEnd(new Date().getTime()))
-  }
+  const { data: statusData, isLoading, error } = useRequest(getStatus(), { updateKey: key })
+  const pingRequest = useRequest(ping(), {
+    updateKey: key,
+    onRequest: () => pingRef.current = Date.now(),
+    onDone: () => setCalculatedPing(Date.now() - pingRef.current)
+  })
 
   return (
     <>
-      <ApiRequest onDemand={false} repeatInterval={5000} isAnonymous onRequest={sendPing}>
-        {(data, loadingNode, errorNode) => <div style={{ color: data ? 'green' : errorNode ? 'red' : undefined }}>
-          {data && `Server available (${pingEnd - pingStart}ms)`}
-          {loadingNode && 'Checking availability'}
-          {errorNode && `Server unavailable (${pingEnd - pingStart}ms)`}
-        </div>}
-      </ApiRequest>
-      <PlatformStatus status={statusRequest.data?.youtubeApiStatus} name="YouTube" />
-      <PlatformStatus status={statusRequest.data?.twitchApiStatus} name="Twitch" />
+      <div style={{ color: statusData != null ? 'green' : error != null ? 'red' : undefined }}>
+        {statusData != null && `Server available (${calculatedPing}ms)`}
+        {isLoading && statusData == null && 'Checking availability'}
+        {error != null && `Server unavailable (${calculatedPing}ms)`}
+      </div>
+      <PlatformStatus status={statusData?.youtubeApiStatus} name="YouTube" />
+      <PlatformStatus status={statusData?.twitchApiStatus} name="Twitch" />
     </>
   )
 }
 
 function PlatformStatus (props: { status: PublicApiStatus | undefined, name: string }) {
   const status = props.status?.status
-  const ping = props.status?.avgRoundtrip
+  const platformPing = props.status?.avgRoundtrip
 
   return <div>
     <div style={{ display: 'inline' }}>{props.name} API: </div>
-    <div style={{ display: 'inline', color: status === 'ok' ? 'green' : 'red' }}>{status ?? 'unknown'}{ping && ` (${Math.round(ping)}ms)`}</div>
+    <div style={{ display: 'inline', color: status === 'ok' ? 'green' : 'red' }}>{status ?? 'unknown'}{platformPing && ` (${Math.round(platformPing)}ms)`}</div>
   </div>
 }

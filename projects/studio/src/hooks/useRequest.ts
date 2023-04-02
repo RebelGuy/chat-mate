@@ -14,13 +14,13 @@ type RequestOptions<TResponseData> = {
   // forces the request to refresh. has no effect when `onDemand` is true
   updateKey?: Primitive
 
-  // don't auto-start the request on mount or when the props change
+  // don't auto-start the request on mount or when the props change (even if the `updateKey` changes)
   onDemand?: boolean
 
   // IMPORTANT: changing callback functions does NOT trigger a new request, so they do not need to be memoised.
 
-  // called before the request is fired
-  onRequest?: () => void
+  // called before the request is fired. return true to cancel the request.
+  onRequest?: () => true | any
 
   // inline version of `useEffect(() => { if (data != null) { /* handle data here */ } }, [data])
   onSuccess?: (data: TResponseData, type: RequestType) => void
@@ -113,7 +113,7 @@ export default function useRequest<
   const onSuccess = options?.onSuccess ?? NO_OP
   const onError = options?.onError ?? NO_OP
   const onDone = options?.onDone ?? NO_OP
-  const onRequest = options?.onRequest ?? NO_OP
+  const onRequest: () => true | any = options?.onRequest ?? NO_OP
 
   const loginToken = requiresLogin ? loginContext.loginToken : null
   const streamer = requiresStreamer ? loginContext.streamer : null
@@ -141,7 +141,9 @@ export default function useRequest<
         throw new Error('You must select a streamer.')
       }
 
-      onRequest()
+      if (onRequest() === true) {
+        return
+      }
 
       const rawResponse = await fetch(baseUrl + path, {
         method: method,
@@ -174,9 +176,11 @@ export default function useRequest<
       setError(error)
       onError(error, type)
     } finally {
-      setIsLoading(false)
-      setRequestType(type)
-      onDone()
+      if (invariantRef.current === invariant) {
+        setIsLoading(false)
+        setRequestType(type)
+        onDone()
+      }
     }
   }
 

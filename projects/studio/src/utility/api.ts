@@ -47,13 +47,9 @@ export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEm
 
 export const setActiveLivestream = requestBuilder<SetActiveLivestreamResponse, SetActiveLivestreamRequest>('PATCH', `/chatMate/livestream`)
 
-export async function ping (): Promise<PingResponse> {
-  return await GET('/chatMate/ping')
-}
+export const ping = requestBuilder<PingResponse>('GET', `/chatMate/ping`, false, false)
 
-export async function getMasterchatAuthentication (loginToken: string): Promise<GetMasterchatAuthenticationResponse> {
-  return await GET('/chatMate/masterchat/authentication', loginToken)
-}
+export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
 
 export const getStatus = requestBuilder<GetStatusResponse>('GET', `/chatMate/status`)
 
@@ -88,17 +84,19 @@ export const rejectStreamerApplication = requestBuilder<RejectApplicationRespons
 
 export const withdrawStreamerApplication = requestBuilder<WithdrawApplicationResponse, WithdrawApplicationRequest, [number]>('POST', (applicationId: number) => `/streamer/application/${applicationId}/withdraw`, false)
 
-export async function getPrimaryChannels (loginToken: string): Promise<GetPrimaryChannelsResponse> {
-  return await GET(`/streamer/primaryChannels`, loginToken)
-}
+export const getPrimaryChannels = requestBuilder<GetPrimaryChannelsResponse>('GET', `/streamer/primaryChannels`, false)
 
-export async function setPrimaryChannel (loginToken: string, platform: 'youtube' | 'twitch', channelId: number): Promise<SetPrimaryChannelResponse> {
-  return await POST(`/streamer/primaryChannels/${platform}/${channelId}`, null, loginToken)
-}
+export const setPrimaryChannel = requestBuilder<SetPrimaryChannelResponse, false, [platform: 'youtube' | 'twitch', channelId: number]>(
+  'POST',
+  (platform, channelId) => `/streamer/primaryChannels/${platform}/${channelId}`,
+  false
+)
 
-export async function unsetPrimaryChannel (loginToken: string, platform: 'youtube' | 'twitch'): Promise<UnsetPrimaryChannelResponse> {
-  return await DELETE(`/streamer/primaryChannels/${platform}`, null, loginToken)
-}
+export const unsetPrimaryChannel = requestBuilder<UnsetPrimaryChannelResponse, false, [platform: 'youtube' | 'twitch']>(
+  'DELETE',
+  (platform) => `/streamer/primaryChannels/${platform}`,
+  false
+)
 
 export const setStreamlabsSocketToken = requestBuilder<SetWebsocketTokenResponse, SetWebsocketTokenRequest>('POST', `/donation/streamlabs/socketToken`)
 
@@ -114,26 +112,33 @@ export async function searchRegisteredUser (loginToken: string, streamer: string
   return await POST(`/user/search/registered`, request, loginToken, streamer)
 }
 
-export async function getLinkedChannels (loginToken: string, admin_aggregateUserId?: number): Promise<GetLinkedChannelsResponse> {
-  return await GET(constructPath('/user/link/channels', { admin_aggregateUserId: admin_aggregateUserId }), loginToken)
-}
+export const getLinkedChannels = requestBuilder<GetLinkedChannelsResponse, false, [admin_aggregateUserId?: number]>(
+  'GET',
+  (admin_aggregateUserId) => constructPath('/user/link/channels', { admin_aggregateUserId })
+)
 
-export async function addLinkedChannel (loginToken: string, aggregateUserId: number, defaultUserId: number): Promise<AddLinkedChannelResponse> {
-  return await POST(constructPath(`/user/link/channels/${aggregateUserId}/${defaultUserId}`), null, loginToken)
-}
+export const addLinkedChannel = requestBuilder<AddLinkedChannelResponse, false, [aggregateUserId: number, defaultUserId: number]>(
+  'POST',
+  (aggregateUserId, defaultUserId) => `/user/link/channels/${aggregateUserId}/${defaultUserId}`,
+  false
+)
 
 export async function removeLinkedChannel (loginToken: string, defaultUserId: number, transferRanks: boolean, relinkChatExperience: boolean, relinkDonations: boolean): Promise<RemoveLinkedChannelResponse> {
   const queryParams = { transferRanks: transferRanks, relinkChatExperience: relinkChatExperience, relinkDonations: relinkDonations }
   return await DELETE(constructPath(`/user/link/channels/${defaultUserId}`, queryParams), null, loginToken)
 }
 
-export async function getLinkHistory (loginToken: string, admin_aggregateUserId?: number): Promise<GetLinkHistoryResponse> {
-  return await GET(constructPath('/user/link/history', { admin_aggregateUserId: admin_aggregateUserId }), loginToken)
-}
+export const getLinkHistory = requestBuilder<GetLinkHistoryResponse, false, [admin_aggregateUserId?: number]>(
+  'GET',
+  (admin_aggregateUserId?: number) => constructPath(`/user/link/history`, { admin_aggregateUserId }),
+  false
+)
 
-export async function createLinkToken (loginToken: string, externalId: string): Promise<CreateLinkTokenResponse> {
-  return await POST(`/user/link/token?externalId=${externalId}`, null, loginToken)
-}
+export const createLinkToken = requestBuilder<CreateLinkTokenResponse, false, [string]>(
+  'POST',
+  (externalId) => constructPath(`/user/link/token`, { externalId }),
+  false
+)
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
   return await request('GET', path, null, loginToken, streamer)
