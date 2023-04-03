@@ -16,7 +16,7 @@ export default function Navigation () {
       {/* todo: instead of hiding navigation items when not logged in/not selected a streamer, gray them out. need to make custom component and do some css magic */}
       <NavItem page={PageHome} />
       {isLoggedIn && loginContext.streamer != null && <NavItem page={PageEmojis} streamer={loginContext.streamer} />}
-      <RequireRank owner>
+      <RequireRank anyOwner>
         <NavItem page={PageManager} />
       </RequireRank>
       <RequireRank admin>

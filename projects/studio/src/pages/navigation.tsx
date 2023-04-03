@@ -58,7 +58,7 @@ export const PageLink = {
 
 export const PageManager = {
   id: 'manager',
-  title: 'ChatMate Manager',
+  title: 'Stream Manager',
   element: <ChatMateManager />,
   icon: <Settings />,
   path: '/manager'

@@ -143,17 +143,15 @@ export default function CustomEmojiEditor (props: Props) {
                 disabled={props.isLoading || request.isLoading}
                 onChange={e => onChange({ ...editingData, name: e.target.value })}
               />
-              {props.type === 'new' &&
-                <TextField
-                  label="Symbol"
-                  value={editingData.symbol}
-                  disabled={props.isLoading || request.isLoading}
-                  onChange={e => setSymbol(e.target.value)}
-                  error={symbolValidation != null}
-                  helperText={symbolValidation}
-                  sx={{ mt: 3 }}
-                />
-              }
+              <TextField
+                label="Symbol"
+                value={editingData.symbol}
+                disabled={props.isLoading || request.isLoading || props.type !== 'new'}
+                onChange={e => setSymbol(e.target.value)}
+                error={symbolValidation != null}
+                helperText={symbolValidation}
+                sx={{ mt: 3 }}
+              />
               <TextField
                 label="Level Requirement"
                 inputMode="numeric"
