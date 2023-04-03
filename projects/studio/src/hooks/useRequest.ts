@@ -77,8 +77,9 @@ export type Request<TResponse extends ApiResponse<any>, TRequestData extends Pub
   // defaults to true
   requiresLogin?: boolean
 
-  // defaults to true
-  requiresStreamer?: boolean
+  // defaults to true, which will use the currently selected streamer.
+  // if 'self', will use the currently logged-in user as the streamer.
+  requiresStreamer?: boolean | 'self'
 }
 
 export default function useRequest<
@@ -116,7 +117,7 @@ export default function useRequest<
   const onRequest: () => true | any = options?.onRequest ?? NO_OP
 
   const loginToken = requiresLogin ? loginContext.loginToken : null
-  const streamer = requiresStreamer ? loginContext.streamer : null
+  const streamer = requiresStreamer === true ? loginContext.streamer : requiresStreamer === 'self' ? loginContext.username : null
 
   const makeRequest = async (type: RequestType) => {
     let headers: HeadersInit = {
@@ -135,8 +136,10 @@ export default function useRequest<
     try {
       if (requiresLogin && loginToken == null) {
         throw new Error('You must be logged in to do that.')
-      } else if (requiresStreamer && streamer == null) {
-        throw new Error('You must select a streamer.')
+      } else if (requiresStreamer === true && streamer == null) {
+        throw new Error('You must select a streamer to do that.')
+      } else if (requiresStreamer === 'self' && !loginContext.isStreamer) {
+        throw new Error('You must be a streamer to do that.')
       }
 
       if (onRequest() === true) {

@@ -37,7 +37,11 @@ export default function ChatMateManager () {
       setLastLivestreamResponse('')
     }
   })
-  const setLivestreamRequest = useRequest(setActiveLivestream({ livestream: nullIfEmpty(currentLivestreamInput) }), { onDemand: true })
+  const setLivestreamRequest = useRequest(setActiveLivestream({ livestream: nullIfEmpty(currentLivestreamInput) }), {
+    onDemand: true,
+    onSuccess: () => setLastLivestreamResponse(currentLivestreamInput.trim()),
+    onError: updateLivestreamKey
+  })
 
   const getStreamlabsStatusRequest = useRequest(getStreamlabsStatus(), { updateKey: socketKey })
   const setStreamlabsSocketTokenRequest = useRequest(setStreamlabsSocketToken({ websocketToken: nullIfEmpty(currentSocketInput) }), {
@@ -94,7 +98,7 @@ export default function ChatMateManager () {
         value={currentLivestreamInput}
         label="YouTube livestream ID or URL"
         disabled={getStatusRequest.isLoading || setLivestreamRequest.isLoading}
-        style={{ width: 400 }}
+        style={{ width: 500 }}
         helperText={livestreamIdError}
         error={livestreamIdError != null}
         onChange={(e) => setCurrentLivestreamInput(e.target.value)}
@@ -114,7 +118,8 @@ export default function ChatMateManager () {
     >
       {currentLivestreamInput.length === 0 ? 'Clear' : 'Set'} active livestream
     </Button>
-    <ApiLoading requestObj={[getStatusRequest, setLivestreamRequest]} initialOnly={!setLivestreamRequest.isLoading} />
+    <ApiLoading requestObj={getStatusRequest} initialOnly />
+    <ApiLoading requestObj={setLivestreamRequest} />
     <ApiError requestObj={[getStatusRequest, setLivestreamRequest]} />
 
     <PanelHeader>Donations {<RefreshButton isLoading={getStreamlabsStatusRequest.isLoading} onRefresh={updateSocketKey} />}</PanelHeader>
@@ -128,13 +133,15 @@ export default function ChatMateManager () {
       Set the StreamLabs socket token to listen for donations. If the token field is left blank, ChatMate will stop listening to donations.<br />
       You can get your StreamLabs socket token by going to {<LinkInNewTab href="https://streamlabs.com/dashboard#/settings/api-settings">your dashboard</LinkInNewTab>} -&gt; API Tokens tab -&gt; copying the Socket API Token.
     </div>
-    <TextField
-      value={currentSocketInput}
-      label="Socket token"
-      disabled={setStreamlabsSocketTokenRequest.isLoading}
-      style={{ width: 400 }}
-      onChange={(e) => setCurrentSocketInput(e.target.value)}
-    />
+    <Box style={{ display: 'flex' }}>
+      <TextField
+        value={currentSocketInput}
+        label="Socket token"
+        disabled={setStreamlabsSocketTokenRequest.isLoading}
+        style={{ width: 500 }}
+        onChange={(e) => setCurrentSocketInput(e.target.value)}
+      />
+    </Box>
     <Button
       disabled={setStreamlabsSocketTokenRequest.isLoading}
       sx={{ display: 'block', mt: 1 }}
