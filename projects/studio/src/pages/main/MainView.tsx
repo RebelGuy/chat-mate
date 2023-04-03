@@ -27,7 +27,7 @@ export default function MainView () {
 
       {/* body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
-        <Container sx={{ flex: 1, minWidth: 250 }}>
+        <Container style={{ flex: '1 0 250px', paddingRight: 0 }}>
           <Panel style={{ height: 'calc(50% - 20px)', marginBottom: 20 }}>
             <NavigationPanel />
           </Panel>
@@ -36,7 +36,7 @@ export default function MainView () {
           </Panel>
         </Container>
 
-        <Container sx={{ minWidth: 300, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
+        <Container style={{ minWidth: 300, maxWidth: 10000, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
           <Panel style={{ height: '100%', overflow: 'auto' }}>
             <Box sx={{ m: 1 }}>
               {!loginContext.isLoading && loginContext.initialised &&
