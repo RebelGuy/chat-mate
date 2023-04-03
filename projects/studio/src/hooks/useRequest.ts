@@ -131,8 +131,6 @@ export default function useRequest<
 
     const invariant = invariantToken + 1 // only track one request at a time (the most recently started)
     setInvariantToken(invariant)
-    setIsLoading(true)
-    setError(null)
 
     try {
       if (requiresLogin && loginToken == null) {
@@ -144,6 +142,9 @@ export default function useRequest<
       if (onRequest() === true) {
         return
       }
+
+      setIsLoading(true)
+      setError(null)
 
       const rawResponse = await fetch(baseUrl + path, {
         method: method,
@@ -213,6 +214,10 @@ export default function useRequest<
 
   const error: ApiRequestError | null = apiError == null ? null : { message: apiError.message, onRetry: onRetry ?? undefined }
   return { data, isLoading, error, requestType, triggerRequest, reset, mutate }
+}
+
+export function onConfirmRequest (msg: string) {
+  return !window.confirm(msg)
 }
 
 function objToArr<T extends ResponseData<T>> (obj: PublicObject<T>): (Primitive | null)[] {

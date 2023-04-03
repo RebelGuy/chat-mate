@@ -8,7 +8,7 @@ import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChann
 import { Button, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { Box } from '@mui/system'
 import { getChannelUrl } from '@rebel/studio/utility/misc'
-import useRequest, { RequestResult, SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
+import useRequest, { onConfirmRequest, RequestResult, SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 import { GetLinkedChannelsResponse } from '@rebel/server/controllers/UserController'
@@ -78,7 +78,11 @@ export default function LinkedChannels (props: Props) {
               </RequireRank>
               <RequireRank admin hideAdminOutline>
                 <TableCell>
-                  <UnlinkUser channel={c} onChange={props.onChange} />
+                  <UnlinkUser
+                    channel={c}
+                    isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj.isLoading}
+                    onChange={props.onChange}
+                  />
                 </TableCell>
               </RequireRank>
             </TableRow>
@@ -101,11 +105,7 @@ type ChangePrimaryChannelProps = {
 }
 
 function ChangePrimaryChannel (props: ChangePrimaryChannelProps) {
-  const confirmAction = () => {
-    if (!window.confirm(`Are you sure you want to ${props.isPrimaryChannel ? 'unset' : 'set'} the current primary channel?`)) {
-      throw new Error('Aborted')
-    }
-  }
+  const confirmAction = () => onConfirmRequest(`Are you sure you want to ${props.isPrimaryChannel ? 'unset' : 'set'} the current primary channel?`)
 
   const setPrimaryChannelRequest = useRequest(setPrimaryChannel(props.channel.platform, props.channel.channelId), {
     onDemand: true,
@@ -138,72 +138,60 @@ function ChangePrimaryChannel (props: ChangePrimaryChannelProps) {
   </>
 }
 
-function UnlinkUser (props: { channel: PublicChannel, onChange: () => void }) {
+function UnlinkUser (props: { channel: PublicChannel, isLoading: boolean, onChange: () => void }) {
   const [transferRanks, setTransferRanks] = React.useState(true)
   const [relinkChatExperience, setRelinkChatExperience] = React.useState(true)
   const [relinkDoantions, setRelinkDonations] = React.useState(true)
-
-  const removeLink = async (loginToken: string) => {
-    if (!window.confirm('Are you sure you wish to unlink the user?')) {
-      throw new Error('Aborted')
-    }
-
-    const result = await removeLinkedChannel(loginToken, props.channel.defaultUserId, transferRanks, relinkChatExperience, relinkDoantions)
-
-    if (result.success) {
-      props.onChange()
-    }
-
-    return result
-  }
+  const request = useRequest(removeLinkedChannel(props.channel.defaultUserId, transferRanks, relinkChatExperience, relinkDoantions), {
+    onDemand: true,
+    onRequest: () => onConfirmRequest('Are you sure you wish to unlink the user?'),
+    onSuccess: props.onChange
+  })
 
   return <>
-    <ApiRequestTrigger onRequest={removeLink}>
-      {(onMakeRequest, response, loading, error) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-          <FormControlLabel
-            label="Transfer ranks"
-            control={
-              <Checkbox
-                checked={transferRanks}
-                onChange={() => setTransferRanks(!transferRanks)}
-                sx={{ pt: 0, pb: 0, ml: 2 }}
-              />
-            }
+    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+      <FormControlLabel
+        label="Transfer ranks"
+        control={
+          <Checkbox
+            checked={transferRanks}
+            onChange={() => setTransferRanks(!transferRanks)}
+            sx={{ pt: 0, pb: 0, ml: 2 }}
           />
-          <FormControlLabel
-            label="Relink chat experience"
-            control={
-              <Checkbox
-                checked={relinkChatExperience}
-                onChange={() => setRelinkChatExperience(!relinkChatExperience)}
-                sx={{ pt: 0, pb: 0, ml: 2 }}
-              />
-            }
+        }
+      />
+      <FormControlLabel
+        label="Relink chat experience"
+        control={
+          <Checkbox
+            checked={relinkChatExperience}
+            onChange={() => setRelinkChatExperience(!relinkChatExperience)}
+            sx={{ pt: 0, pb: 0, ml: 2 }}
           />
-          <FormControlLabel
-            label="Relink donations"
-            control={
-              <Checkbox
-                checked={relinkDoantions}
-                onChange={() => setRelinkDonations(!relinkDoantions)}
-                sx={{ pt: 0, pb: 0, ml: 2 }}
-              />
-            }
+        }
+      />
+      <FormControlLabel
+        label="Relink donations"
+        control={
+          <Checkbox
+            checked={relinkDoantions}
+            onChange={() => setRelinkDonations(!relinkDoantions)}
+            sx={{ pt: 0, pb: 0, ml: 2 }}
           />
-          <Button
-            disabled={loading != null}
-            sx={{ m: 2 }}
-            onClick={onMakeRequest}
-          >
-            Remove link
-          </Button>
-          <Box>
-            {response != null && <div>Success!</div>}
-            {error}
-          </Box>
-        </Box>
-      )}
-    </ApiRequestTrigger>
+        }
+      />
+      <Button
+        disabled={request.isLoading || props.isLoading}
+        sx={{ m: 2 }}
+        onClick={request.triggerRequest}
+      >
+        Remove link
+      </Button>
+      <Box>
+        {request.data != null && <div>Success!</div>}
+        <ApiLoading requestObj={request} />
+        <ApiError requestObj={request} />
+      </Box>
+    </Box>
   </>
 }

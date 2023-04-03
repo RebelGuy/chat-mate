@@ -102,15 +102,9 @@ export const setStreamlabsSocketToken = requestBuilder<SetWebsocketTokenResponse
 
 export const getStreamlabsStatus = requestBuilder<GetStreamlabsStatusResponse>('GET', `/donation/streamlabs/status`)
 
-export async function searchUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
-  const request: SearchUserRequest = { searchTerm }
-  return await POST(`/user/search`, request, loginToken, streamer)
-}
+export const searchUser = requestBuilder<SearchUserResponse, SearchUserRequest>('POST', `/user/search`)
 
-export async function searchRegisteredUser (loginToken: string, streamer: string, searchTerm: string): Promise<SearchUserResponse> {
-  const request: SearchUserRequest = { searchTerm }
-  return await POST(`/user/search/registered`, request, loginToken, streamer)
-}
+export const searchRegisteredUser = requestBuilder<SearchUserResponse, SearchUserRequest>('POST', `/user/search/registered`)
 
 export const getLinkedChannels = requestBuilder<GetLinkedChannelsResponse, false, [admin_aggregateUserId?: number]>(
   'GET',
@@ -123,10 +117,11 @@ export const addLinkedChannel = requestBuilder<AddLinkedChannelResponse, false, 
   false
 )
 
-export async function removeLinkedChannel (loginToken: string, defaultUserId: number, transferRanks: boolean, relinkChatExperience: boolean, relinkDonations: boolean): Promise<RemoveLinkedChannelResponse> {
-  const queryParams = { transferRanks: transferRanks, relinkChatExperience: relinkChatExperience, relinkDonations: relinkDonations }
-  return await DELETE(constructPath(`/user/link/channels/${defaultUserId}`, queryParams), null, loginToken)
-}
+export const removeLinkedChannel = requestBuilder<RemoveLinkedChannelResponse, false, [defaultUserId: number, transferRanks: boolean, relinkChatExperience: boolean, relinkDonations: boolean]>(
+  'DELETE',
+  (defaultUserId, transferRanks, relinkChatExperience, relinkDonations) => constructPath(`/user/link/channels/${defaultUserId}`, { transferRanks, relinkChatExperience, relinkDonations }),
+  false
+)
 
 export const getLinkHistory = requestBuilder<GetLinkHistoryResponse, false, [admin_aggregateUserId?: number]>(
   'GET',

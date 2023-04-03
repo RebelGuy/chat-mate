@@ -9,7 +9,7 @@ import { Alert, Button, TextField } from '@mui/material'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { CreateLinkToken } from '@rebel/studio/pages/link/CreateLinkToken'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import useRequest from '@rebel/studio/hooks/useRequest'
+import useRequest, { onConfirmRequest } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 
@@ -31,11 +31,8 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
 
   const linkChannelByAdminRequest = useRequest(addLinkedChannel(selectedAggregateUserId!, props.admin_selectedDefaultUserId!), {
     onDemand: true,
-    onRequest: () => {
-      if (!window.confirm('Are you sure you wish to link the user?')) {
-        throw new Error('Aborted')
-      }
-    }, onDone: updateKey
+    onRequest: () => onConfirmRequest('Are you sure you wish to link the user?'),
+    onDone: updateKey
   })
 
   return (
