@@ -16,7 +16,7 @@ export default function ApiLoading (props: Props) {
     const objs = Array.isArray(props.requestObj) ? props.requestObj : [props.requestObj]
 
     // if we have data for all requests, don't show the loading spinner
-    if (props.initialOnly && objs.find(o => o.data == null) == null) {
+    if (props.initialOnly && objs.find(o => o.data == null && o.error == null) == null) {
       return null
     }
 

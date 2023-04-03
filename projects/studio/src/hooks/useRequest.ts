@@ -144,7 +144,6 @@ export default function useRequest<
       }
 
       setIsLoading(true)
-      setError(null)
 
       const rawResponse = await fetch(baseUrl + path, {
         method: method,
