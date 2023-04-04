@@ -13,7 +13,8 @@ const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
   borderRadius: 12,
   padding: 4,
-  boxShadow: '3px 3px 5px rgba(0, 0, 0, 0.1)'
+  boxShadow: '3px 3px 5px rgba(0, 0, 0, 0.1)',
+  overflow: 'auto'
 })
 
 export default function MainView () {
@@ -23,7 +24,7 @@ export default function MainView () {
   return (
     <Box sx={{ overflow: 'hidden', height: '100vh', display: 'flex', flexDirection: 'column', typography: 'body1' }}>
       {/* header */}
-      <Typography variant="h2" style={{ fontWeight: 500, margin: 'auto' }} ref={node => setHeaderHeight(node?.clientHeight ?? 0)}>ChatMate</Typography>
+      <Typography variant="h3" style={{ fontWeight: 500, margin: 'auto' }} ref={node => setHeaderHeight(node?.clientHeight ?? 0)}>ChatMate</Typography>
 
       {/* body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
@@ -37,7 +38,7 @@ export default function MainView () {
         </Container>
 
         <Container style={{ minWidth: 300, maxWidth: 10000, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
-          <Panel style={{ height: '100%', overflow: 'auto' }}>
+          <Panel style={{ height: '100%' }}>
             <Box sx={{ m: 1 }}>
               {!loginContext.isLoading && loginContext.initialised &&
                 // placeholder component for the page that is currently selected
