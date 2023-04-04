@@ -16,7 +16,7 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
 
 ## Scripts for development:
 1. `yarn install`.
-2. `yarn auth` to fetch the authentication credentials for YouTube (once done, copy the token from the console and set it in the respective [`.env`](#.env) file), and `yarn auth:twitch:<local|debug|release>` to refresh Twitch authentication.
+2. `yarn auth:youtube:<local|debug|release>` to refresh the authentication credentials
 3. `yarn watch` while developing
   - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
   - Rely on VSCode for checking types if using this mode
@@ -31,11 +31,13 @@ If building fails because the Prisma client could not be found, please run `yarn
 Run `yarn auth:youtube:<local|debug|release>` and log in using the streaming account, or a moderator account. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID.
 
 ### Twitch
-Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments [note: at the moment, `debug` and `local` share the same application].
 
 For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<local|debug|release>` and sign in manually with the relevant ChatMate account. The access token and refresh token will automatically be stored in the database (`twitch_auth` table) and retrieved/updated automatically thereon.
 
 Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
+
+At the moment, the Twitch auth script is broken because Twitch rejects Electron as a valid browser. An alternative way of refreshing the Twitch Application authentication is via the `/admin/twitch` page on Studio.
 
 ## Logging
 

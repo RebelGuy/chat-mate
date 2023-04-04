@@ -48,6 +48,26 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.24 - The Studio Update [5/4/2023]
+- Server
+  - Added the ability to query the status of a command
+  - Added endpoints for authenticating the ChatMate Twitch Application externally, instead of using the local scripts
+  - Bug fixes
+- Studio
+  - Major redesign of the entire project
+    - Uses Material UI frontend
+    - Better navigation and streamer selection
+    - Improved overall user experience
+    - Better user instructions for how linking works
+  - Major refactoring of the entire project
+    - Studio now uses React Router
+      - e.g. `/<streamer>/emojis` automatically selects the specified streamer and shows their emojis
+    - Added developer-friendly hooks
+    - Converted class-based components to functional components
+  - The ChatMate Twitch Application can now be authenticated from within Studio
+- Masterchat
+  - Logging is now saved alongside server logs (previously, Masterchat logs were not saved anywhere)
+
 ## v1.23 - The Cleanup Update [11/2/2023]
 - Server
   - Streamers must now select a primary channel (at most one per platform) to stream on
