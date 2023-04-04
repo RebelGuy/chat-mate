@@ -1,3 +1,4 @@
+/* eslint-disable */
 // this is for configuring the `react-app-rewired` package. why? because the vanilla `react-scripts` have presets that don't work with our project setup.
 // react-scripts don't support path aliasing. oddly, VSCode was also having issues until this config file was added.
 

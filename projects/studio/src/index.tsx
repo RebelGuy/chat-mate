@@ -1,11 +1,14 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
+import { BrowserRouter } from 'react-router-dom'
+import { createRoot } from 'react-dom/client'
+import App from '@rebel/studio/App'
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+const root = createRoot(document.getElementById('root')!)
+
+// note: strict mode invokes lifecycle methods twice so that it's easier to spot bugs. i don't think we want this since our code is bug-free
+root.render(
+  // <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  // </React.StrictMode>
+)

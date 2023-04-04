@@ -64,24 +64,24 @@ export default class CustomEmojiStore extends ContextClass {
     const emojiWhitelistsPromise = this.db.customEmojiRankWhitelist.findMany()
 
     // note: there is a trigger in the `custom_emoji_version` table that gurantees that there is no more than one active version for each emoji
-    const emojis = await this.db.customEmojiVersion.findMany({
+    const versions = await this.db.customEmojiVersion.findMany({
       where: { isActive: true, customEmoji: { streamerId} },
       include: { customEmoji: true }
     })
     const emojiWhitelists = await emojiWhitelistsPromise
 
-    return emojis.map(emoji => ({
-      id: emoji.customEmoji.id,
-      symbol: emoji.customEmoji.symbol,
-      streamerId: emoji.customEmoji.streamerId,
-      image: emoji.image,
-      isActive: emoji.isActive,
-      levelRequirement: emoji.levelRequirement,
-      canUseInDonationMessage: emoji.canUseInDonationMessage,
-      modifiedAt: emoji.modifiedAt,
-      name: emoji.name,
-      version: emoji.version,
-      whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === emoji.id).map(w => w.rankId)
+    return versions.map(version => ({
+      id: version.customEmoji.id,
+      symbol: version.customEmoji.symbol,
+      streamerId: version.customEmoji.streamerId,
+      image: version.image,
+      isActive: version.isActive,
+      levelRequirement: version.levelRequirement,
+      canUseInDonationMessage: version.canUseInDonationMessage,
+      modifiedAt: version.modifiedAt,
+      name: version.name,
+      version: version.version,
+      whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === version.customEmoji.id).map(w => w.rankId)
     }))
   }
 
@@ -166,7 +166,7 @@ export default class CustomEmojiStore extends ContextClass {
         data: { isActive: false }
       })
 
-      if (updateResult.count == 0) {
+      if (updateResult.count === 0) {
         throw new Error(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
       }
 

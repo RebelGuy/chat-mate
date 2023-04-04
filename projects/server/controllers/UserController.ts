@@ -323,7 +323,8 @@ export default class UserController extends ControllerBase {
             return {
               status: h.type === 'pending' ? 'pending' : 'processing',
               token: h.maybeToken,
-              channelUserName: getUserName(channel),
+              externalIdOrUserName: getExternalIdOrUserName(channel),
+              displayName: getUserName(channel),
               platform: platform,
               message: null,
               dateCompleted: null,
@@ -333,7 +334,8 @@ export default class UserController extends ControllerBase {
             return {
               status: h.type === 'success' ? 'succeeded' : 'failed',
               token: h.token,
-              channelUserName: getUserName(channel),
+              externalIdOrUserName: getExternalIdOrUserName(channel),
+              displayName: getUserName(channel),
               platform: platform,
               message: h.message,
               dateCompleted: h.completionTime.getTime(),
@@ -343,7 +345,8 @@ export default class UserController extends ControllerBase {
             return {
               status: 'waiting',
               token: h.token,
-              channelUserName: getUserName(channel),
+              externalIdOrUserName: getExternalIdOrUserName(channel),
+              displayName: getUserName(channel),
               platform: platform,
               message: null,
               dateCompleted: null,

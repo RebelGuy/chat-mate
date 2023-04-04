@@ -13,8 +13,11 @@ export type PublicLinkHistoryItem = PublicObject<{
   /** Which platform the channel is on. */
   platform: 'youtube' | 'twitch'
 
+  /** The YouTube channel ID or Twitch user name of the channel. */
+  externalIdOrUserName: string
+
   /** The current display name of the channel. */
-  channelUserName: string
+  displayName: string
 
   /** A message containing more information about a `succeeded` or `failed` attempt. */
   message: string | null

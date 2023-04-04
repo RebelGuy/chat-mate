@@ -2,6 +2,7 @@
   "root": true,
   "env": { "node": true },
   "extends": [
+    "react-app",
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:@typescript-eslint/recommended-requiring-type-checking"
@@ -39,6 +40,9 @@
     "no-empty-function": "warn",
     "no-trailing-spaces": "warn",
     "eol-last": "warn",
+    "no-mixed-operators": "off",
+    "array-callback-return": "off",
+    "jsx-quotes": ["warn", "prefer-double"],
     
     // see https://typescript-eslint.io/rules
     "@typescript-eslint/unbound-method": "error",

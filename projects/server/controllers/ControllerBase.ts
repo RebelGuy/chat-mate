@@ -4,6 +4,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import ApiService from '@rebel/server/controllers/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
+import { Primitive } from '@rebel/shared/types'
 
 export const BASE_PATH = '/api'
 
@@ -30,10 +31,10 @@ export type ResponseData<T extends ResponseData<T>> = {
   // each property must be one of the following types:
   [K in keyof T]
     // nullable primitive types
-    : T[K] extends number | string | boolean | null ? T[K]
+    : T[K] extends Primitive | null ? T[K]
 
     // primitive arrays
-    : T[K] extends number[] | string[] | boolean[] ? T[K]
+    : T[K] extends Primitive[] ? T[K]
 
     // nullable PulicObject types
     : T[K] extends PublicObject<infer PO> ? PO

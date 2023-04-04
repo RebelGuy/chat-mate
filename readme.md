@@ -2,7 +2,9 @@ At the moment, the main project in `chat-mate` is `./projects/server`. It commun
 
 A work-in-progress is the `./projects/studio` project. It is a web interface to manage some data within the database and view account information. It communicates with the server endpoints.
 
-To get things running, ensure Node 18 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
+To get things running, ensure Node 18 is installed (recommend [nvm](https://github.com/nvm-sh/nvm), and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
+
+Ensure the VSCode Typescript version is the same as the one used in the workspace to avoid getting "Type instantiation is excessively deep and possibly infinite" errors all over the place.
 
 Recommended VSCode extensions:
 - `ESLint`
@@ -46,6 +48,26 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ```
 
 # Change Log
+## v1.24 - The Studio Update [5/4/2023]
+- Server
+  - Added the ability to query the status of a command
+  - Added endpoints for authenticating the ChatMate Twitch Application externally, instead of using the local scripts
+  - Bug fixes
+- Studio
+  - Major redesign of the entire project
+    - Uses Material UI frontend
+    - Better navigation and streamer selection
+    - Improved overall user experience
+    - Better user instructions for how linking works
+  - Major refactoring of the entire project
+    - Studio now uses React Router
+      - e.g. `/<streamer>/emojis` automatically selects the specified streamer and shows their emojis
+    - Added developer-friendly hooks
+    - Converted class-based components to functional components
+  - The ChatMate Twitch Application can now be authenticated from within Studio
+- Masterchat
+  - Logging is now saved alongside server logs (previously, Masterchat logs were not saved anywhere)
+
 ## v1.23 - The Cleanup Update [11/2/2023]
 - Server
   - Streamers must now select a primary channel (at most one per platform) to stream on

@@ -111,7 +111,7 @@ export default class ApiService extends ContextClass {
     }
 
     if (streamer == null) {
-      throw new PreProcessorError(400, 'Invalid stream selected.')
+      throw new PreProcessorError(400, 'Invalid streamer selected.')
     }
 
     // todo: CHAT-481 check if the user is a viewer for this stream
