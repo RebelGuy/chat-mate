@@ -1,4 +1,3 @@
-import { ChatUser } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import RankStore from '@rebel/server/stores/RankStore'
@@ -6,6 +5,7 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
 import { AccessToken } from '@twurple/auth/lib'
 import LogService from '@rebel/server/services/LogService'
+import WebService from '@rebel/server/services/WebService'
 
 type Deps = Dependencies<{
   twitchClientId: string
@@ -14,6 +14,7 @@ type Deps = Dependencies<{
   rankStore: RankStore
   authStore: AuthStore
   logService: LogService
+  webService: WebService
 }>
 
 export default class AdminService extends ContextClass {
@@ -25,6 +26,7 @@ export default class AdminService extends ContextClass {
   private readonly rankStore: RankStore
   private readonly authStore: AuthStore
   private readonly logService: LogService
+  private readonly webService: WebService
 
   constructor (deps: Deps) {
     super()
@@ -35,6 +37,7 @@ export default class AdminService extends ContextClass {
     this.rankStore = deps.resolve('rankStore')
     this.authStore = deps.resolve('authStore')
     this.logService = deps.resolve('logService')
+    this.webService = deps.resolve('webService')
   }
 
   /** Returns all current system admin users. */
@@ -54,12 +57,12 @@ export default class AdminService extends ContextClass {
     const redirectUrl = this.getRedirectUrl()
     const url = `https://id.twitch.tv/oauth2/token?client_id=${this.twitchClientId}&client_secret=${this.twitchClientSecret}&code=${authorisationCode}&grant_type=authorization_code&redirect_uri=${redirectUrl}`
 
-    const rawResponse = await fetch(url, {
+    const rawResponse = await this.webService.fetch(url, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
-      },
+      }
     })
     if (!rawResponse.ok) {
       const message = `Twitch auth response was status ${rawResponse.status}: ${await rawResponse.text()}`

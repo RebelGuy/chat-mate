@@ -87,6 +87,7 @@ import UserService from '@rebel/server/services/UserService'
 import GenericStore from '@rebel/server/stores/GenericStore'
 import { createLogContext } from '@rebel/shared/ILogService'
 import AdminController from '@rebel/server/controllers/AdminController'
+import WebService from '@rebel/server/services/WebService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -140,6 +141,7 @@ const globalContext = ContextProvider.create()
   .withClass('fileService', FileService)
   .withClass('applicationInsightsService', ApplicationInsightsService)
   .withClass('logService', LogService)
+  .withClass('webService', WebService)
   .withClass('dbProvider', DbProvider)
   .withClass('authStore', AuthStore)
   .withClass('masterchatFactory', MasterchatFactory)
