@@ -14,7 +14,8 @@ type RequestOptions<TResponseData> = {
   // forces the request to refresh. has no effect when `onDemand` is true
   updateKey?: Primitive
 
-  // don't auto-start the request on mount or when the props change (even if the `updateKey` changes)
+  // don't auto-start the request on mount or when the props change (even if the `updateKey` changes).
+  // instead, the request is made only when `triggerRequest()` is called
   onDemand?: boolean
 
   // IMPORTANT: changing callback functions does NOT trigger a new request, so they do not need to be memoised.
@@ -39,18 +40,21 @@ type RequestOptions<TResponseData> = {
 export type RequestType = 'none' | 'auto-initial' | 'auto-refresh' | 'triggered' | 'retry'
 
 export type RequestResult<TResponseData> = {
-  // the data object remains available until the next request has completed
+  // the data object remains available until the next request has completed.
+  // at that point, it gets either overwritten (if request succeeded) or cleared (if request failed).
   data: TResponseData | null
 
   // whether a request is currently in progress
   isLoading: boolean
 
-  // the error object remains available until the next request has completed
+  // the error object remains available until the next request has completed.
+  // at that point, it gets either cleared (if request succeeded) or overwritten (if request failed again).
   error: ApiRequestError | null
 
   requestType: RequestType
 
-  // calling this function will force-trigger a request. similar to `error.onRetry()` but uses the current props
+  // calling this function will force-trigger a request. similar to `error.onRetry()` but uses the current props.
+  // if `onDemand` is `true`, this is the only way to make a request.
   triggerRequest: () => void
 
   // calling this function will reset the state to the initial state
@@ -87,7 +91,6 @@ export default function useRequest<
   TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false = false,
   TResponseData extends SuccessfulResponseData<TResponse> = SuccessfulResponseData<TResponse>
 > (request: Request<TResponse, TRequestData>, options?: RequestOptions<TResponseData>): RequestResult<TResponseData> {
-// > (path: string, options?: RequestOptions<TResponseData, TRequestData>): RequestReturn<TResponseData> {
   const [isLoading, setIsLoading] = useState(false)
   const [requestType, setRequestType] = useState<RequestType>('none')
   const [data, setData] = useState<TResponseData | null>(null)
@@ -102,7 +105,7 @@ export default function useRequest<
   // concept stolen from https://stackoverflow.com/a/60643670
   invariantRef.current = invariantToken
 
-  // if adding onto these constants, make sure to update the dependency array of the `makeRequest` function
+  // if adding non-callbacks onto these constants, make sure to update the dependency array of the `makeRequest` function
   const path = request.path
   const method = request.method
   const requestData = (request.data ?? null) as PublicObject<any> | null

@@ -21,6 +21,7 @@ import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
+import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 
 export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -31,7 +32,7 @@ export default function CustomEmojiManager () {
   const [editingError, setEditingError] = useState<ReactNode>(null)
   const [openEditor, setOpenEditor] = useState<boolean>(false)
   const [editingType, setEditingType] = useState<'new' | 'edit'>('new')
-  const [refreshToken, setRefreshToken] = useState(0)
+  const [refreshToken, updateRefreshToken] = useUpdateKey()
   const emojisRequest = useRequest(getAllCustomEmojis(), {
     updateKey: refreshToken,
     transformer: emojiSorter
@@ -67,7 +68,7 @@ export default function CustomEmojiManager () {
 
     setOpenEditor(false)
     setEditingEmoji(null)
-    setRefreshToken(token => token + 1)
+    updateRefreshToken()
   }
 
   const onCheckDupliateSymbol = (symbol: string) => {
@@ -78,7 +79,7 @@ export default function CustomEmojiManager () {
 
   return (
     <>
-      <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={() => setRefreshToken(token => token + 1)} />}</PanelHeader>
+      <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
 
       {emojisRequest.data != null &&
         <Box>

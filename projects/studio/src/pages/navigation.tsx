@@ -72,6 +72,6 @@ export const PageTwitchAuth = {
   icon: <Camera />,
   // don't change this path without also updating AdminService
   path: '/admin/twitch'
-}
+} as const
 
 export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageManager, PageTwitchAuth]

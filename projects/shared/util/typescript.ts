@@ -106,7 +106,7 @@ export function waitUntil (predicate: () => boolean, pollInterval: number, timeo
 
       if (now - start > timeout) {
         clearInterval(interval)
-        reject(`Waiting for predicated timed out after ${timeout} ms.`)
+        reject(`Waiting for predicate timed out after ${timeout} ms.`)
       } else if (predicate()) {
         clearInterval(interval)
         resolve()

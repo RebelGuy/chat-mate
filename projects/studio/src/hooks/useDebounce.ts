@@ -1,10 +1,9 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 
 export default function useDebounce<TArgs extends any[]> (callback: (...args: TArgs) => void, ms: number) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(debounce(callback, ms), [])
 }
-
 
 function debounce<TArgs extends any[]> (callback: (...args: TArgs) => void, ms: number) {
   let timer: number | null = null
