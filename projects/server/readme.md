@@ -48,6 +48,7 @@ Define `local.env`, `debug.env` and `release.env` files that set the following e
 
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
+- `STUDIO_URL`: The URL to ChatMate Studio (not ending in `/`).
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
@@ -71,9 +72,8 @@ The following set of environmnet variables is available only for **deployed inst
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:
 - `NODE_ENV`: Either `local`, `debug` or `release` to indicate which servers we are connecting to. Some behaviour is different when running the server locally than when the server is deployed.
 
-Finally, the following environment variables must be present in the `<local|debug|release>.env` file when building via webpack. These are not checked at runtime, and ommitting them leads to undefined behaviour.
+Finally, the following environment variables must be present in the `<local|debug|release>.env` file when building via webpack. These are not checked at runtime, and ommitting them leads to undefined behaviour. *Note: if you change these, you need to update the `build-and-deploy.yml` file and ensure the new variables are inserted into the `.env` file.*
 - `NAME`: A unique name to give this build.
-- `STUDIO_URL`: The URL to ChatMate studio.
 
 For testing, define a `test.env` file that sets only a subset of the above variables:
 - `DATABASE_URL`
@@ -173,6 +173,23 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `401`: When the login token is invalid.
+
+## Admin Endpoints
+Path: `/admin`.
+
+### `GET /twitch/login`
+Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio.
+
+Returns data with the following properties:
+- `url` (`string`): The login URL. It will redirect back to Studio.
+
+### `POST /twitch/authorise`
+Authorises the authorisation token and updates the stored Twitch `access_token` in the database.
+
+Query parameters:
+- `code` (`string`): The authorisation code obtained from Twitch after logging on.
+
+Returns an empty response body.
 
 ## Chat Endpoints
 Path: `/chat`.

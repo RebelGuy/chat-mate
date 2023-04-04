@@ -21,7 +21,7 @@ beforeEach(() => {
 
   adminService = new AdminService(new Dependencies({
     rankStore: mockRankStore
-  }))
+  } as any))
 })
 
 describe(nameof(AdminService, 'getAdminUsers'), () => {

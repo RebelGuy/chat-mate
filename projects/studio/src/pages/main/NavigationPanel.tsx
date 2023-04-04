@@ -1,7 +1,7 @@
 import { Box } from '@mui/material'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page } from '@rebel/studio/pages/navigation'
+import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth } from '@rebel/studio/pages/navigation'
 import { PathParam } from '@rebel/studio/utility/types'
 import { cloneElement, useContext } from 'react'
 import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
@@ -21,6 +21,9 @@ export default function Navigation () {
       </RequireRank>
       <RequireRank admin>
         <NavItem page={PageApply} />
+      </RequireRank>
+      <RequireRank admin>
+        <NavItem page={PageTwitchAuth} />
       </RequireRank>
       {isLoggedIn && <NavItem page={PageLink} />}
     </nav>

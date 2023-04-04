@@ -86,6 +86,7 @@ import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import UserService from '@rebel/server/services/UserService'
 import GenericStore from '@rebel/server/stores/GenericStore'
 import { createLogContext } from '@rebel/shared/ILogService'
+import AdminController from '@rebel/server/controllers/AdminController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -95,6 +96,7 @@ import { createLogContext } from '@rebel/shared/ILogService'
 const app: Express = express()
 
 const port = env('port')
+const studioUrl = env('studioUrl')
 const dataPath = path.resolve(__dirname, `../../data/`)
 const twitchClientId = env('twitchClientId')
 const twitchClientSecret = env('twitchClientSecret')
@@ -109,6 +111,7 @@ const streamlabsAccessToken = env('streamlabsAccessToken')
 const globalContext = ContextProvider.create()
   .withObject('app', app)
   .withProperty('port', port)
+  .withProperty('studioUrl', studioUrl)
   .withProperty('channelId', env('channelId'))
   .withProperty('dataPath', dataPath)
   .withProperty('nodeEnv', env('nodeEnv'))
@@ -273,6 +276,7 @@ app.use(async (req, res, next) => {
     .withClass('livestreamController', LivestreamController)
     .withClass('accountController', AccountController)
     .withClass('streamerController', StreamerController)
+    .withClass('adminController', AdminController)
     .build()
   await context.initialise()
   setContextProvider(req, context)
@@ -301,7 +305,8 @@ Server.buildServices(app,
   DonationController,
   LivestreamController,
   AccountController,
-  StreamerController
+  StreamerController,
+  AdminController
 )
 
 // error handler

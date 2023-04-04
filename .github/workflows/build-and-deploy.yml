@@ -47,7 +47,6 @@ jobs:
           touch ./projects/server/${{ inputs.NODE_ENV }}.env
           echo NODE_ENV=${{ inputs.NODE_ENV }} >> ./projects/server/${{ inputs.NODE_ENV }}.env
           echo "NAME=\"${{ github.sha }} - ${{ github.event_name }} - ${{ github.head_ref || github.ref_name }}\"" >> ./projects/server/${{ inputs.NODE_ENV }}.env
-          echo STUDIO_URL=${{ inputs.STUDIO_URL }} >> ./projects/server/${{ inputs.NODE_ENV }}.env
           cat ./projects/server/${{ inputs.NODE_ENV }}.env
 
       - name: Set up Node.js

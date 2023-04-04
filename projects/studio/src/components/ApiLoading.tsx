@@ -1,12 +1,16 @@
 import { Box, CircularProgress } from '@mui/material'
 import { RequestResult } from '@rebel/studio/hooks/useRequest'
+import { ReactNode } from 'react'
 
 type Props = {
+  // by default, renders "Loading...", unless children are provided.
+  children?: ReactNode
+} & ({
   isLoading: boolean
 } | {
   requestObj: RequestResult<any> | RequestResult<any>[]
   initialOnly?: boolean
-}
+})
 
 export default function ApiLoading (props: Props) {
   let isLoading: boolean
@@ -30,7 +34,7 @@ export default function ApiLoading (props: Props) {
   return (
     <Box sx={{ mt: 1, mb: 1, display: 'flex', alignItems: 'center' }}>
       <CircularProgress size="1rem" />
-      <Box sx={{ display: 'inline', pl: 1 }}>Loading...</Box>
+      <Box sx={{ display: 'inline', pl: 1 }}>{props.children ?? 'Loading...'}</Box>
     </Box>
   )
 }

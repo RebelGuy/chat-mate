@@ -5,7 +5,8 @@ import LinkUser from '@rebel/studio/pages/link/LinkUser'
 import LoginForm from '@rebel/studio/pages/login/LoginForm'
 import React from 'react'
 import Home from '@rebel/studio/pages/home/Home'
-import { AccountCircle, Home as HomeIcon, Link, Mood, Settings, StarBorder } from '@mui/icons-material'
+import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Settings, StarBorder } from '@mui/icons-material'
+import TwitchAdminLogin from '@rebel/studio/pages/admin/twitch/TwitchAdminLogin'
 
 export type Page = {
   id: string
@@ -64,4 +65,13 @@ export const PageManager = {
   path: '/manager'
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageManager]
+export const PageTwitchAuth = {
+  id: 'twitch',
+  title: 'Twitch Admin Login',
+  element: <TwitchAdminLogin />,
+  icon: <Camera />,
+  // don't change this path without also updating AdminService
+  path: '/admin/twitch'
+}
+
+export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageManager, PageTwitchAuth]

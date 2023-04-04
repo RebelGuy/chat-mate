@@ -29,7 +29,7 @@ module.exports = (env) => {
 
   const isLocal = nodeEnv === 'local'
   const NAME = process.env.NAME ?? '' // env variable defined in CI (e.g. '74d8a7029d5c30e332fe59c075a42a75aa6deffd - push - master')
-  const STUDIO_URL = process.env.STUDIO_URL ?? env.STUDIO_URL ?? '' // defined in CI or in the .env file when building locally
+  const STUDIO_URL = process.env.STUDIO_URL
   const NOW = new Date()
 
   // special env variable passed to webpack during local development for faster building

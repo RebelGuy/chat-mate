@@ -2,13 +2,12 @@ import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse,
 import { GetMasterchatAuthenticationResponse, GetStatusResponse, PingResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
 import { GetAccessibleRanksResponse, GetUserRanksResponse } from '@rebel/server/controllers/RankController'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStreamersResponse, RejectApplicationRequest, RejectApplicationResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
-import { PublicCustomEmojiNew } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
-import { GenericObject, Primitive } from '@rebel/shared/types'
-import { PathParam } from '@rebel/studio/utility/types'
+import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse } from '@rebel/server/controllers/AdminController'
+import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
 
@@ -132,6 +131,14 @@ export const getLinkHistory = requestBuilder<GetLinkHistoryResponse, false, [adm
 export const createLinkToken = requestBuilder<CreateLinkTokenResponse, false, [string]>(
   'POST',
   (externalId) => constructPath(`/user/link/token`, { externalId }),
+  false
+)
+
+export const getTwitchLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/admin/twitch/login', false)
+
+export const authoriseTwitch = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
+  'POST',
+  (code) => constructPath('/admin/twitch/authorise', { code }),
   false
 )
 
