@@ -9,8 +9,8 @@ import { compareArrays } from '@rebel/shared/util/arrays'
 import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 // see https://dev.twitch.tv/docs/authentication/scopes
-// if you edit the scope here, you must request a new access token via `yarn auth:twitch:<env>`.
-export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate']
+// if you edit the scope here, you must request a new access token via Studio.
+export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate', 'moderator:read:followers']
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
