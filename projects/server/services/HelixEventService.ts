@@ -114,21 +114,25 @@ export default class HelixEventService extends ContextClass {
       // - assume this happens in the next 5 seconds (generous delay - we are in no rush)
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       setTimeout(async () => {
-        await middleware.markAsReady()
+        try {
+          await middleware.markAsReady()
 
-        const subscriptions = await this.eventSubApi.getSubscriptions()
-        const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
-        this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions:', readableSubscriptions)
-        if (subscriptions.total !== subscriptions.data.length) {
-          throw new Error('Time to implement pagination')
+          const subscriptions = await this.eventSubApi.getSubscriptions()
+          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
+          this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions:', readableSubscriptions)
+          if (subscriptions.total !== subscriptions.data.length) {
+            throw new Error('Time to implement pagination')
+          }
+
+          middleware.onVerify((success, subscription) => this.logService.logInfo(this, 'middleware.onVerify', 'success:', success, 'subscription:', subscription.id))
+          middleware.onRevoke((subscription) => this.logService.logInfo(this, 'middleware.onRevoke', 'subscription:', subscription.id))
+
+          // from what I understand we can safely re-subscribe to events when using the middleware
+          await this.initialiseSubscriptions()
+          this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Middleware listener]')
+        } catch (e) {
+          this.logService.logError(this, 'Failed to initialise Helix events.', e)
         }
-
-        middleware.onVerify((success, subscription) => this.logService.logInfo(this, 'middleware.onVerify', 'success:', success, 'subscription:', subscription.id))
-        middleware.onRevoke((subscription) => this.logService.logInfo(this, 'middleware.onRevoke', 'subscription:', subscription.id))
-
-        // from what I understand we can safely re-subscribe to events when using the middleware
-        await this.initialiseSubscriptions()
-        this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Middleware listener]')
       }, 5000)
       this.logService.logInfo(this, 'Subscription to Helix events via the EventSub API has been set up and will be initialised in 5 seconds')
     }
