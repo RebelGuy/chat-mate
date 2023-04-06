@@ -3,7 +3,7 @@ import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import useRequest from '@rebel/studio/hooks/useRequest'
-import { authoriseTwitch, getTwitchLoginUrl } from '@rebel/studio/utility/api'
+import { authoriseTwitch, getAdministrativeMode, getTwitchLoginUrl } from '@rebel/studio/utility/api'
 import { ReactNode, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -15,6 +15,8 @@ export default function TwitchAdminLogin () {
   const [requiresLogin] = useState(code == null)
   const [error] = useState<string | null>(params.get('error'))
   const [errorDescription] = useState<string | null>(params.get('error_description'))
+
+  const getAdministrativeModeRequest = useRequest(getAdministrativeMode())
 
   const getLoginUrlRequest = useRequest(getTwitchLoginUrl(), { onDemand: true })
   const authoriseTwitchRequest = useRequest(authoriseTwitch(code ?? ''), { onDemand: true })
@@ -30,14 +32,20 @@ export default function TwitchAdminLogin () {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const onLoginToTwitch = () => {
+    if (getAdministrativeModeRequest.data?.isAdministrativeMode || window.confirm('Are you sure you want to re-authenticate Twitch? ChatMate is not in administrative mode.')) {
+      window.location.href = getLoginUrlRequest.data!.url
+    }
+  }
+
   let contents: ReactNode
   if (requiresLogin) {
     contents = <>
       <div>Click here to login to the Application owner's Twitch account. Once logged-in, you will be redirected to this page.</div>
       <div>If you are already logged into a different account, you may have to open this in an incognito window.</div>
       <Button
-        href={getLoginUrlRequest.data?.url}
-        disabled={getLoginUrlRequest.isLoading}
+        onClick={onLoginToTwitch}
+        disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null}
         sx={{ mt: 1 }}
       >
         Login to Twitch
@@ -47,7 +55,7 @@ export default function TwitchAdminLogin () {
     </>
   } else {
     contents = <>
-      {authoriseTwitchRequest.data != null && <div>Successfully updated Twitch access token. You may now close this page.</div>}
+      {authoriseTwitchRequest.data != null && <div>Successfully updated Twitch access token. You may have to restart the server for changes to come into effect.</div>}
       <ApiLoading requestObj={authoriseTwitchRequest}>Updating access token. Please wait...</ApiLoading>
       <ApiError requestObj={authoriseTwitchRequest} />
     </>

@@ -221,6 +221,7 @@ export default function useRequest<
   return { data, isLoading, error, requestType, triggerRequest, reset, mutate }
 }
 
+// returns true if the request should be cancelled
 export function onConfirmRequest (msg: string) {
   return !window.confirm(msg)
 }
