@@ -19,6 +19,7 @@ const ownerRank = cast<Rank>({ name: 'owner' })
 let mockRankStore: MockProxy<RankStore>
 let mockAuthStore: MockProxy<AuthStore>
 let mockWebService: MockProxy<WebService>
+let mockIsAdministrativeMode: MockProxy<() => boolean>
 const mockStudioUrl = 'studio'
 const mockTwitchClientId = 'clientId'
 const mockTwitchClientSecret = 'clientSecret'
@@ -28,6 +29,7 @@ beforeEach(() => {
   mockRankStore = mock()
   mockAuthStore = mock()
   mockWebService = mock()
+  mockIsAdministrativeMode = mock()
 
   adminService = new AdminService(new Dependencies({
     rankStore: mockRankStore,
@@ -36,7 +38,8 @@ beforeEach(() => {
     logService: mock(),
     studioUrl: mockStudioUrl,
     twitchClientId: mockTwitchClientId,
-    twitchClientSecret: mockTwitchClientSecret
+    twitchClientSecret: mockTwitchClientSecret,
+    isAdministrativeMode: mockIsAdministrativeMode
   }))
 })
 

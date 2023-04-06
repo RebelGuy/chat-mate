@@ -94,259 +94,279 @@ import WebService from '@rebel/server/services/WebService'
 //   - some Rebel Guy
 //
 
-const app: Express = express()
+const main = async () => {
+  const app: Express = express()
 
-const port = env('port')
-const studioUrl = env('studioUrl')
-const dataPath = path.resolve(__dirname, `../../data/`)
-const twitchClientId = env('twitchClientId')
-const twitchClientSecret = env('twitchClientSecret')
-const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
-const enableDbLogging = env('enableDbLogging')
-const hostName = env('websiteHostname')
-const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
-const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
-const dbTransactionTimeout = env('dbTransactionTimeout')
-const streamlabsAccessToken = env('streamlabsAccessToken')
+  const port = env('port')
+  const studioUrl = env('studioUrl')
+  const dataPath = path.resolve(__dirname, `../../data/`)
+  const twitchClientId = env('twitchClientId')
+  const twitchClientSecret = env('twitchClientSecret')
+  const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
+  const enableDbLogging = env('enableDbLogging')
+  const hostName = env('websiteHostname')
+  const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
+  const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
+  const dbTransactionTimeout = env('dbTransactionTimeout')
+  const streamlabsAccessToken = env('streamlabsAccessToken')
 
-const globalContext = ContextProvider.create()
-  .withObject('app', app)
-  .withProperty('port', port)
-  .withProperty('studioUrl', studioUrl)
-  .withProperty('channelId', env('channelId'))
-  .withProperty('dataPath', dataPath)
-  .withProperty('nodeEnv', env('nodeEnv'))
-  .withProperty('databaseUrl', env('databaseUrl'))
-  .withProperty('disableExternalApis', env('useFakeControllers') === true)
-  .withProperty('twitchClientId', twitchClientId)
-  .withProperty('twitchClientSecret', twitchClientSecret)
-  .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
-  .withProperty('enableDbLogging', enableDbLogging)
-  .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
-  .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
-  .withProperty('dbTransactionTimeout', dbTransactionTimeout)
-  .withProperty('hostName', hostName)
-  .withProperty('streamlabsAccessToken', streamlabsAccessToken)
-  .withHelpers('experienceHelpers', ExperienceHelpers)
-  .withHelpers('timerHelpers', TimerHelpers)
-  .withHelpers('dateTimeHelpers', DateTimeHelpers)
-  .withHelpers('rankHelpers', RankHelpers)
-  .withHelpers('donationHelpers', DonationHelpers)
-  .withHelpers('accountHelpers', AccountHelpers)
-  .withHelpers('commandHelpers', CommandHelpers)
-  .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
-  .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
-  .withFactory('websocketFactory', WebsocketFactory)
-  .withClass('eventDispatchService', EventDispatchService)
-  .withClass('fileService', FileService)
-  .withClass('applicationInsightsService', ApplicationInsightsService)
-  .withClass('logService', LogService)
-  .withClass('webService', WebService)
-  .withClass('dbProvider', DbProvider)
-  .withClass('authStore', AuthStore)
-  .withClass('masterchatFactory', MasterchatFactory)
-  .withClass('masterchatStatusService', StatusService)
-  .withClass('twurpleStatusService', StatusService)
-  .withClass('streamlabsStatusService', StatusService)
-  .withClass('masterchatProxyService', MasterchatProxyService)
-  .withClass('twurpleAuthProvider', TwurpleAuthProvider)
-  .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
-  .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
-  .withClass('twurpleApiProxyService', TwurpleApiProxyService)
-  .withClass('streamlabsProxyService', StreamlabsProxyService)
-  .withClass('livestreamStore', LivestreamStore)
-  .withClass('accountStore', AccountStore)
-  .withClass('streamerStore', StreamerStore)
-  .withClass('channelStore', ChannelStore)
-  .withClass('streamerChannelStore', StreamerChannelStore)
-  .withClass('streamerChannelService', StreamerChannelService)
-  .withClass('livestreamService', LivestreamService)
-  .withClass('rankStore', RankStore)
-  .withClass('adminService', AdminService)
-  .withClass('experienceStore', ExperienceStore)
-  .withClass('chatStore', ChatStore)
-  .withClass('accountService', AccountService)
-  .withClass('channelService', ChannelService)
-  .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
-  .withClass('twurpleService', TwurpleService)
-  .withClass('linkStore', LinkStore)
-  .withClass('userService', UserService)
-  .withClass('punishmentService', PunishmentService)
-  .withClass('genericStore', GenericStore)
-  .withClass('experienceService', ExperienceService)
-  .withClass('customEmojiStore', CustomEmojiStore)
-  .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
-  .withClass('emojiService', EmojiService)
-  .withClass('commandStore', CommandStore)
-  .withClass('donationStore', DonationStore)
-  .withClass('modService', ModService)
-  .withClass('rankService', RankService)
-  .withClass('donationService', DonationService)
-  .withClass('linkService', LinkService)
-  .withClass('linkCommand', LinkCommand)
-  .withClass('commandService', CommandService)
-  .withClass('chatService', ChatService)
-  .withClass('chatFetchService', ChatFetchService)
-  .withClass('followerStore', FollowerStore)
-  .withClass('helixEventService', HelixEventService)
-  .withClass('donationFetchService', DonationFetchService)
-  .withClass('chatMateEventService', ChatMateEventService)
-  .withClass('streamerService', StreamerService)
-  .withClass('linkDataService', LinkDataService)
-  .build()
+  let isAdministrativeMode = false
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
-  res.header('Access-Control-Allow-Headers', '*')
-
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200)
-  } else {
-    next()
-  }
-})
-
-app.use((req, res, next) => {
-  // intercept the JSON body so we can customise the error code
-  // "inspired" by https://stackoverflow.com/a/57553226
-  const send = res.send.bind(res)
-
-  res.send = (body) => {
-    if (res.headersSent) {
-      // already sent
-      return res
-    }
-
-    let responseBody: ApiResponse<any> | null
-    if (body == null) {
-      responseBody = null
-    } else {
-      try {
-        responseBody = JSON.parse(body)
-      } catch (e: any) {
-        // the response body was just a message (string), so we must construct the error object explicitly
-        if (res.statusCode === 200) {
-          throw new Error('It is expected that only errors are ever sent with a simple message.')
-        }
-
-        responseBody = {
-          timestamp: new Date().getTime(),
-          success: false,
-          error: {
-            errorCode: res.statusCode as any,
-            errorType: res.statusMessage ?? 'Internal Server Error',
-            message: body
-          }
-        }
-        res.set('Content-Type', 'application/json')
-      }
-    }
-
-    if (responseBody?.success === false) {
-      res.status(responseBody.error.errorCode ?? 500)
-    }
-
-    return send(JSON.stringify(responseBody))
-  }
-
-  next()
-})
-
-app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
-app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
-app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
-app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
-app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
-app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
-
-const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
-
-app.use(async (req, res, next) => {
-  const context = globalContext.asParent()
-    .withObject('request', req) // these are required because, within the ApiService, we don't have access to @Context yet at the time that preprocessors fire
-    .withObject('response', res)
-    .withClass('apiService', ApiService)
-    .withClass('chatMateController', ChatMateController)
-    .withClass('chatController', ChatController)
-    .withClass('emojiController', EmojiController)
-    .withClass('experienceController', ExperienceController)
-    .withClass('userController', UserController)
-    .withClass('punishmentController', PunishmentController)
-    .withClass('rankController', RankController)
-    .withClass('donationController', DonationController)
-    .withClass('livestreamController', LivestreamController)
-    .withClass('accountController', AccountController)
-    .withClass('streamerController', StreamerController)
-    .withClass('adminController', AdminController)
+  const globalContext = ContextProvider.create()
+    .withVariable('isAdministrativeMode', () => isAdministrativeMode)
+    .withObject('app', app)
+    .withProperty('port', port)
+    .withProperty('studioUrl', studioUrl)
+    .withProperty('channelId', env('channelId'))
+    .withProperty('dataPath', dataPath)
+    .withProperty('nodeEnv', env('nodeEnv'))
+    .withProperty('databaseUrl', env('databaseUrl'))
+    .withProperty('disableExternalApis', env('useFakeControllers') === true)
+    .withProperty('twitchClientId', twitchClientId)
+    .withProperty('twitchClientSecret', twitchClientSecret)
+    .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
+    .withProperty('enableDbLogging', enableDbLogging)
+    .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
+    .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
+    .withProperty('dbTransactionTimeout', dbTransactionTimeout)
+    .withProperty('hostName', hostName)
+    .withProperty('streamlabsAccessToken', streamlabsAccessToken)
+    .withHelpers('experienceHelpers', ExperienceHelpers)
+    .withHelpers('timerHelpers', TimerHelpers)
+    .withHelpers('dateTimeHelpers', DateTimeHelpers)
+    .withHelpers('rankHelpers', RankHelpers)
+    .withHelpers('donationHelpers', DonationHelpers)
+    .withHelpers('accountHelpers', AccountHelpers)
+    .withHelpers('commandHelpers', CommandHelpers)
+    .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
+    .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
+    .withFactory('websocketFactory', WebsocketFactory)
+    .withClass('eventDispatchService', EventDispatchService)
+    .withClass('fileService', FileService)
+    .withClass('applicationInsightsService', ApplicationInsightsService)
+    .withClass('logService', LogService)
+    .withClass('webService', WebService)
+    .withClass('dbProvider', DbProvider)
+    .withClass('authStore', AuthStore)
+    .withClass('masterchatFactory', MasterchatFactory)
+    .withClass('masterchatStatusService', StatusService)
+    .withClass('twurpleStatusService', StatusService)
+    .withClass('streamlabsStatusService', StatusService)
+    .withClass('masterchatProxyService', MasterchatProxyService)
+    .withClass('twurpleAuthProvider', TwurpleAuthProvider)
+    .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
+    .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
+    .withClass('twurpleApiProxyService', TwurpleApiProxyService)
+    .withClass('streamlabsProxyService', StreamlabsProxyService)
+    .withClass('livestreamStore', LivestreamStore)
+    .withClass('accountStore', AccountStore)
+    .withClass('streamerStore', StreamerStore)
+    .withClass('channelStore', ChannelStore)
+    .withClass('streamerChannelStore', StreamerChannelStore)
+    .withClass('streamerChannelService', StreamerChannelService)
+    .withClass('livestreamService', LivestreamService)
+    .withClass('rankStore', RankStore)
+    .withClass('adminService', AdminService)
+    .withClass('experienceStore', ExperienceStore)
+    .withClass('chatStore', ChatStore)
+    .withClass('accountService', AccountService)
+    .withClass('channelService', ChannelService)
+    .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
+    .withClass('twurpleService', TwurpleService)
+    .withClass('linkStore', LinkStore)
+    .withClass('userService', UserService)
+    .withClass('punishmentService', PunishmentService)
+    .withClass('genericStore', GenericStore)
+    .withClass('experienceService', ExperienceService)
+    .withClass('customEmojiStore', CustomEmojiStore)
+    .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
+    .withClass('emojiService', EmojiService)
+    .withClass('commandStore', CommandStore)
+    .withClass('donationStore', DonationStore)
+    .withClass('modService', ModService)
+    .withClass('rankService', RankService)
+    .withClass('donationService', DonationService)
+    .withClass('linkService', LinkService)
+    .withClass('linkCommand', LinkCommand)
+    .withClass('commandService', CommandService)
+    .withClass('chatService', ChatService)
+    .withClass('chatFetchService', ChatFetchService)
+    .withClass('followerStore', FollowerStore)
+    .withClass('helixEventService', HelixEventService)
+    .withClass('donationFetchService', DonationFetchService)
+    .withClass('chatMateEventService', ChatMateEventService)
+    .withClass('streamerService', StreamerService)
+    .withClass('linkDataService', LinkDataService)
     .build()
-  await context.initialise()
-  setContextProvider(req, context)
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  res.on('finish', async () => {
-    await context.dispose()
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
+    res.header('Access-Control-Allow-Headers', '*')
+
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200)
+    } else {
+      next()
+    }
   })
 
-  next()
-})
+  app.use((req, res, next) => {
+    // intercept the JSON body so we can customise the error code
+    // "inspired" by https://stackoverflow.com/a/57553226
+    const send = res.send.bind(res)
 
-// for each request, the Server will instantiate a new instance of each Controller.
-// since we want to inject dependencies, we need to provide a custom implementation.
-Server.registerServiceFactory(new ServiceFactory())
+    res.send = (body) => {
+      if (res.headersSent) {
+        // already sent
+        return res
+      }
 
-// tells the server which classes to use as Controllers
-Server.buildServices(app,
-  ChatMateController,
-  ChatController,
-  EmojiController,
-  ExperienceController,
-  UserController,
-  PunishmentController,
-  RankController,
-  DonationController,
-  LivestreamController,
-  AccountController,
-  StreamerController,
-  AdminController
-)
+      let responseBody: ApiResponse<any> | null
+      if (body == null) {
+        responseBody = null
+      } else {
+        try {
+          responseBody = JSON.parse(body)
+        } catch (e: any) {
+          // the response body was just a message (string), so we must construct the error object explicitly
+          if (res.statusCode === 200) {
+            throw new Error('It is expected that only errors are ever sent with a simple message.')
+          }
 
-// error handler
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  // any errors reaching here are unhandled - just return a 500
-  logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
+          responseBody = {
+            timestamp: new Date().getTime(),
+            success: false,
+            error: {
+              errorCode: res.statusCode as any,
+              errorType: res.statusMessage ?? 'Internal Server Error',
+              message: body
+            }
+          }
+          res.set('Content-Type', 'application/json')
+        }
+      }
 
-  if (!res.headersSent) {
-    res.sendStatus(500)
+      if (responseBody?.success === false) {
+        res.status(responseBody.error.errorCode ?? 500)
+      }
+
+      return send(JSON.stringify(responseBody))
+    }
+
+    next()
+  })
+
+  app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
+  app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+  app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
+  app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
+  app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
+  app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
+
+  const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
+
+  app.use(async (req, res, next) => {
+    const context = globalContext.asParent()
+      .withObject('request', req) // these are required because, within the ApiService, we don't have access to @Context yet at the time that preprocessors fire
+      .withObject('response', res)
+      .withClass('apiService', ApiService)
+      .withClass('chatMateController', ChatMateController)
+      .withClass('chatController', ChatController)
+      .withClass('emojiController', EmojiController)
+      .withClass('experienceController', ExperienceController)
+      .withClass('userController', UserController)
+      .withClass('punishmentController', PunishmentController)
+      .withClass('rankController', RankController)
+      .withClass('donationController', DonationController)
+      .withClass('livestreamController', LivestreamController)
+      .withClass('accountController', AccountController)
+      .withClass('streamerController', StreamerController)
+      .withClass('adminController', AdminController)
+      .build()
+    await context.initialise()
+    setContextProvider(req, context)
+
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    res.on('finish', async () => {
+      await context.dispose()
+    })
+
+    next()
+  })
+
+  // for each request, the Server will instantiate a new instance of each Controller.
+  // since we want to inject dependencies, we need to provide a custom implementation.
+  Server.registerServiceFactory(new ServiceFactory())
+
+  // tells the server which classes to use as Controllers
+  Server.buildServices(app,
+    ChatMateController,
+    ChatController,
+    EmojiController,
+    ExperienceController,
+    UserController,
+    PunishmentController,
+    RankController,
+    DonationController,
+    LivestreamController,
+    AccountController,
+    StreamerController,
+    AdminController
+  )
+
+  // error handler
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    // any errors reaching here are unhandled - just return a 500
+    logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
+
+    if (!res.headersSent) {
+      res.sendStatus(500)
+    }
+
+    // don't call `next(error)` - the next middleware would be the default express error handler,
+    // which just logs the error to the console.
+    // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
+  })
+
+  process.on('unhandledRejection', (error) => {
+    if (error instanceof TimeoutError) {
+      // when a db request queues a high number of callbacks in the semaphore, timing out the first
+      // callback will correctly fail the request, but there may be more callbacks whose timeout
+      // error takes a bit longer to fire. at that point, though, there won't be a listener anymore
+      // (because the original request has already failed) and errors will bubble up to this point.
+      // we can safely ignore them
+      return
+    }
+
+    // from https://stackoverflow.com/questions/46629778/debug-unhandled-promise-rejections
+    // to debug timers quietly failing: https://github.com/nodejs/node/issues/22149#issuecomment-410706698
+    logContext.logError('process.unhandledRejection', error)
+    throw error
+  })
+
+  process.on('uncaughtException', (error) => {
+    logContext.logError('process.uncaughtException', error)
+    throw error
+  })
+
+  if (env('useFakeControllers')) {
+    logContext.logInfo(`Using fake controllers`)
   }
 
-  // don't call `next(error)` - the next middleware would be the default express error handler,
-  // which just logs the error to the console.
-  // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
-})
+  // ensure the server can still run if Twitch auth fails, so that we can re-authenticate via the Studio Twitch admin page
+  await globalContext.initialise((erroredClass, stage, e) => {
+    if (erroredClass instanceof TwurpleAuthProvider && stage === 'initialise') {
+      isAdministrativeMode = true
+      return 'ignore'
+    }
 
-process.on('unhandledRejection', (error) => {
-  if (error instanceof TimeoutError) {
-    // when a db request queues a high number of callbacks in the semaphore, timing out the first
-    // callback will correctly fail the request, but there may be more callbacks whose timeout
-    // error takes a bit longer to fire. at that point, though, there won't be a listener anymore
-    // (because the original request has already failed) and errors will bubble up to this point.
-    // we can safely ignore them
-    return
-  }
+    return 'abort'
+  })
 
-  // from https://stackoverflow.com/questions/46629778/debug-unhandled-promise-rejections
-  // to debug timers quietly failing: https://github.com/nodejs/node/issues/22149#issuecomment-410706698
-  logContext.logError('process.unhandledRejection', error)
-  throw error
-})
-
-if (env('useFakeControllers')) {
-  logContext.logInfo(`Using fake controllers`)
-}
-
-globalContext.initialise().then(() => {
   app.listen(port, () => {
     logContext.logInfo(`Server is listening on ${port}`)
   })
-})
+}
+
+void main()

@@ -179,6 +179,12 @@ Can return the following errors:
 ## Admin Endpoints
 Path: `/admin`.
 
+### `GET /administrativeMode`
+Returns whether the Server is currently in administrative mode. If true, Twitch communication is disabled and must be re-authenticated.
+
+Returns data with the following properties:
+- `isAdministrativeMode` (`boolean`): Whether we are currently in administrative mode.
+
 ### `GET /twitch/login`
 Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio.
 

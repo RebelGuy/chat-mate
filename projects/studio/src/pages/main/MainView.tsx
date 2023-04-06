@@ -8,6 +8,9 @@ import UserPanel from '@rebel/studio/pages/main/UserPanel'
 import styled from '@emotion/styled'
 import { useContext, useState } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
+import useRequest from '@rebel/studio/hooks/useRequest'
+import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
+import { getAdministrativeMode } from '@rebel/studio/utility/api'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -20,11 +23,16 @@ const Panel = styled('div')({
 export default function MainView () {
   const [headerHeight, setHeaderHeight] = useState(0)
   const loginContext = useContext(LoginContext)
+  const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), { onRequest: () => loginContext.hasRank('admin') })
+
+  const isAdministrativeMode = getAdministrativeModeRequest.data?.isAdministrativeMode === true
 
   return (
     <Box sx={{ overflow: 'hidden', height: '100vh', display: 'flex', flexDirection: 'column', typography: 'body1' }}>
       {/* header */}
-      <Typography variant="h3" style={{ fontWeight: 500, margin: 'auto' }} ref={node => setHeaderHeight(node?.clientHeight ?? 0)}>ChatMate</Typography>
+      <Typography variant="h3" style={{ fontWeight: 500, margin: 'auto', color: isAdministrativeMode ? 'red' : undefined }} ref={node => setHeaderHeight(node?.clientHeight ?? 0)}>
+        ChatMate{isAdministrativeMode ? ' (Administrative Mode)' : ''}
+      </Typography>
 
       {/* body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>

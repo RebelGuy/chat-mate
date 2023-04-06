@@ -8,8 +8,9 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import { compareArrays } from '@rebel/shared/util/arrays'
 import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
-// see https://dev.twitch.tv/docs/authentication/scopes
-// if you edit the scope here, you must request a new access token via Studio.
+// see https://dev.twitch.tv/docs/authentication/scopes for available scopes.
+// see https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/ to determine which scope an event subscription needs.
+// if you edit the scopes here, you must request a new access token via Studio.
 export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate', 'moderator:read:followers']
 
 type Deps = Dependencies<{
@@ -53,7 +54,8 @@ export default class TwurpleAuthProvider extends ContextClass {
       return
     }
 
-    let token: AccessToken
+    // eslint-disable-next-line @typescript-eslint/semi
+    let token: AccessToken; // for some reason this semicolon is required to help vscode with syntax highlighting in this file......
     try {
       token = await this.authStore.loadTwitchAccessToken()
     } catch (e: any) {

@@ -15,6 +15,7 @@ type Deps = Dependencies<{
   authStore: AuthStore
   logService: LogService
   webService: WebService
+  isAdministrativeMode: () => boolean
 }>
 
 export default class AdminService extends ContextClass {
@@ -27,6 +28,7 @@ export default class AdminService extends ContextClass {
   private readonly authStore: AuthStore
   private readonly logService: LogService
   private readonly webService: WebService
+  private readonly isAdministrativeMode: () => boolean
 
   constructor (deps: Deps) {
     super()
@@ -38,6 +40,7 @@ export default class AdminService extends ContextClass {
     this.authStore = deps.resolve('authStore')
     this.logService = deps.resolve('logService')
     this.webService = deps.resolve('webService')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   /** Returns all current system admin users. */

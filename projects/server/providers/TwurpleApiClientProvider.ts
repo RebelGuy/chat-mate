@@ -11,15 +11,17 @@ type Deps = Dependencies<{
   disableExternalApis: boolean
   twurpleAuthProvider: TwurpleAuthProvider
   logService: LogService
+  isAdministrativeMode: () => boolean
 }>
 
-export default class TwurpleApiClientProvider extends ContextClass implements IProvider<ApiClient> {
+export default class TwurpleApiClientProvider extends ContextClass {
   public readonly name = TwurpleApiClientProvider.name
 
   private readonly disableExternalApis: boolean
   private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly logService: LogService
   private readonly logContext: LogContext
+  private readonly isAdministrativeMode: () => boolean
   private apiClient!: ApiClient
   private clientApiClient!: ApiClient
 
@@ -29,11 +31,15 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.logContext = createLogContext(this.logService, this)
   }
 
   public override initialise () {
     if (this.disableExternalApis) {
+      return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 

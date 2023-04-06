@@ -33,6 +33,7 @@ type Deps = Dependencies<{
   app: Express
   streamerChannelService: StreamerChannelService
   eventDispatchService: EventDispatchService
+  isAdministrativeMode: () => boolean
 }>
 
 // this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
@@ -53,6 +54,7 @@ export default class HelixEventService extends ContextClass {
   private readonly app: Express
   private readonly streamerChannelService: StreamerChannelService
   private readonly eventDispatchService: EventDispatchService
+  private readonly isAdministrativeMode: () => boolean
 
   private listener: EventSubListener | null
   private eventSubBase!: EventSubBase
@@ -73,12 +75,16 @@ export default class HelixEventService extends ContextClass {
     this.app = deps.resolve('app')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
 
     this.listener = null
   }
 
   public override async initialise () {
     if (this.disableExternalApis) {
+      return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 

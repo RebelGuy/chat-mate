@@ -6,7 +6,7 @@ import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
-import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse } from '@rebel/server/controllers/AdminController'
+import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse } from '@rebel/server/controllers/AdminController'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
@@ -133,6 +133,8 @@ export const createLinkToken = requestBuilder<CreateLinkTokenResponse, false, [s
   (externalId) => constructPath(`/user/link/token`, { externalId }),
   false
 )
+
+export const getAdministrativeMode = requestBuilder<GetAdministrativeModeResponse>('GET', '/admin/administrativeMode', false)
 
 export const getTwitchLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/admin/twitch/login', false)
 
