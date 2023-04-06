@@ -24,6 +24,7 @@ type Deps = Dependencies<{
   accountStore: AccountStore
   streamerStore: StreamerStore
   streamerChannelService: StreamerChannelService
+  isAdministrativeMode: () => boolean
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -38,6 +39,7 @@ export default class TwurpleService extends ContextClass {
   private readonly accountStore: AccountStore
   private readonly streamerStore: StreamerStore
   private readonly streamerChannelService: StreamerChannelService
+  private readonly isAdministrativeMode: () => boolean
   private chatClient!: ChatClient
 
   constructor (deps: Deps) {
@@ -51,11 +53,15 @@ export default class TwurpleService extends ContextClass {
     this.accountStore = deps.resolve('accountStore')
     this.streamerStore = deps.resolve('streamerStore')
     this.streamerChannelService = deps.resolve('streamerChannelService')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   public override async initialise () {
     this.chatClient = this.chatClientProvider.get()
     if (this.disableExternalApis) {
+      return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 

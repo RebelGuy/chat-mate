@@ -1,7 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import { ChatItem } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
-import ChatService from '@rebel/server/services/ChatService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import { cast, nameof } from '@rebel/server/_test/utils'
 import { single, single2 } from '@rebel/shared/util/arrays'
@@ -48,7 +47,8 @@ beforeEach(() => {
     eventDispatchService: mockEventDispatchService,
     accountStore: mockAccountStore,
     streamerStore: mockStreamerStore,
-    streamerChannelService: mockStreamerChannelService
+    streamerChannelService: mockStreamerChannelService,
+    isAdministrativeMode: () => false
   }))
 })
 
@@ -63,7 +63,28 @@ describe(nameof(TwurpleService, 'initialise'), () => {
       eventDispatchService: mockEventDispatchService,
       accountStore: mockAccountStore,
       streamerStore: mockStreamerStore,
-      streamerChannelService: mockStreamerChannelService
+      streamerChannelService: mockStreamerChannelService,
+      isAdministrativeMode: () => false
+    }))
+
+    await twurpleService.initialise()
+
+    expect(mockChatClient.onMessage.mock.calls.length).toBe(0)
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
+  })
+
+  test('does not initialise if in administrative mode', async () => {
+    twurpleService = new TwurpleService(new Dependencies({
+      logService: mock(),
+      twurpleChatClientProvider: mockTwurpleChatClientProvider,
+      disableExternalApis: false,
+      twurpleApiProxyService: mockTwurpleApiProxyService,
+      channelStore: mockChannelStore,
+      eventDispatchService: mockEventDispatchService,
+      accountStore: mockAccountStore,
+      streamerStore: mockStreamerStore,
+      streamerChannelService: mockStreamerChannelService,
+      isAdministrativeMode: () => true
     }))
 
     await twurpleService.initialise()
