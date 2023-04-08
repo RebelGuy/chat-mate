@@ -23,7 +23,7 @@ const Panel = styled('div')({
 export default function MainView () {
   const [headerHeight, setHeaderHeight] = useState(0)
   const loginContext = useContext(LoginContext)
-  const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), { onRequest: () => loginContext.hasRank('admin') })
+  const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), { onRequest: () => !loginContext.hasRank('admin') })
 
   const isAdministrativeMode = getAdministrativeModeRequest.data?.isAdministrativeMode === true
 
