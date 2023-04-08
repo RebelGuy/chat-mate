@@ -16,15 +16,9 @@ export default function Navigation () {
       {/* todo: instead of hiding navigation items when not logged in/not selected a streamer, gray them out. need to make custom component and do some css magic */}
       <NavItem page={PageHome} />
       {isLoggedIn && loginContext.streamer != null && <NavItem page={PageEmojis} streamer={loginContext.streamer} />}
-      <RequireRank anyOwner>
-        <NavItem page={PageManager} />
-      </RequireRank>
-      <RequireRank admin>
-        <NavItem page={PageApply} />
-      </RequireRank>
-      <RequireRank admin>
-        <NavItem page={PageTwitchAuth} />
-      </RequireRank>
+      <NavItem page={PageManager} />
+      <NavItem page={PageApply} />
+      <NavItem page={PageTwitchAuth} />
       {isLoggedIn && <NavItem page={PageLink} />}
     </nav>
   )
@@ -39,12 +33,17 @@ type NavItemProps<P extends Page> = {
 }
 
 function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
+  const loginContext = useContext(LoginContext)
   const { pathname: currentPath } = useLocation()
   const isSelected = matchPath({ path: page.path }, currentPath)
 
   const path = generatePath(page.path, params)
 
-  return (
+  if (loginContext.isLoading || !loginContext.initialised) {
+    return null
+  }
+
+  const content = (
     <Box sx={{ m: 0.5 }}>
       <Link to={path} style={{ color: 'black', textDecoration: 'none' }}>
         <Box sx={{
@@ -65,4 +64,14 @@ function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
       </Link>
     </Box>
   )
+
+  if (page.requireRanksProps == null) {
+    return content
+  } else {
+    return (
+      <RequireRank {...page.requireRanksProps}>
+        {content}
+      </RequireRank>
+    )
+  }
 }

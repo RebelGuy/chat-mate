@@ -2,15 +2,15 @@ import RequireRank from '@rebel/studio/components/RequireRank'
 import RouteParamsObserver from '@rebel/studio/components/RouteParamsObserver'
 import DebugInfo from '@rebel/studio/pages/main/DebugInfo'
 import { Outlet } from 'react-router-dom'
-import { Box, Container, Typography } from '@mui/material'
+import { Alert, Box, Container, Typography } from '@mui/material'
 import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
 import UserPanel from '@rebel/studio/pages/main/UserPanel'
 import styled from '@emotion/styled'
 import { useContext, useState } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
-import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { getAdministrativeMode } from '@rebel/studio/utility/api'
+import useCurrentPage from '@rebel/studio/hooks/useCurrentPage'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -49,8 +49,7 @@ export default function MainView () {
           <Panel style={{ height: '100%' }}>
             <Box sx={{ m: 1 }}>
               {!loginContext.isLoading && loginContext.initialised &&
-                // placeholder component for the page that is currently selected
-                <Outlet />
+                <CurrentPage />
               }
             </Box>
           </Panel>
@@ -69,6 +68,24 @@ export default function MainView () {
       </RequireRank>
     </Box>
   )
+}
+
+function CurrentPage () {
+  const page = useCurrentPage()
+
+  if (page == null || page.requireRanksProps == null) {
+    return <Outlet />
+  } else {
+    return (
+      <RequireRank
+        hideAdminOutline
+        forbidden={<Alert severity="error">You do not have permission to access this page.</Alert>}
+        {...page.requireRanksProps}
+      >
+        <Outlet />
+      </RequireRank>
+    )
+  }
 }
 
 // todo: auth flow: https://github.com/remix-run/react-router/blob/dev/examples/auth/src/App.tsx

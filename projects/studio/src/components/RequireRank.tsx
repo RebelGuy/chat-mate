@@ -2,7 +2,7 @@ import { Box } from '@mui/system'
 import LoginContext, { RankName } from '@rebel/studio/contexts/LoginContext'
 import { useContext } from 'react'
 
-type Props = {
+export type Props = {
   children: React.ReactElement
   forbidden?: React.ReactElement
   inverted?: boolean
