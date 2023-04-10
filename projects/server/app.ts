@@ -315,13 +315,19 @@ const main = async () => {
     AdminController
   )
 
+  // at this point, none of the routes have matched, so we want to return a custom formatted error
+  // from https://expressjs.com/en/starter/faq.html#how-do-i-handle-404-responses
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.status(404).send('Not found.')
+  })
+
   // error handler
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     // any errors reaching here are unhandled - just return a 500
     logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
 
     if (!res.headersSent) {
-      res.sendStatus(500)
+      res.status(500).send(err.message)
     }
 
     // don't call `next(error)` - the next middleware would be the default express error handler,
