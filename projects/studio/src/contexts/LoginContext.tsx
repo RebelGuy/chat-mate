@@ -1,7 +1,9 @@
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
-import { authenticate, getRanks, getStreamers } from '@rebel/studio/utility/api'
+import useRequest from '@rebel/studio/hooks/useRequest'
+import { authenticate, getRanks, getStreamers, getUser } from '@rebel/studio/utility/api'
 import * as React from 'react'
 
 export type RankName = PublicRank['name']
@@ -18,6 +20,12 @@ export function LoginProvider (props: Props) {
   const [initialised, setInitialised] = React.useState(false)
   const [ranks, setRanks] = React.useState<RankName[]>([])
   const [allStreamers, setAllStreamers] = React.useState<string[]>([])
+  const getUserRequest = useRequest(getUser(), {
+    onDemand: true,
+    loginToken: loginToken,
+    streamer: selectedStreamer,
+    onError: console.log
+  })
 
   function onSetLogin (usernameToSet: string, token: string) {
     try {
@@ -145,8 +153,11 @@ export function LoginProvider (props: Props) {
   React.useEffect(() => {
     if (loginToken == null) {
       setRanks([])
+      getUserRequest.reset()
       return
     }
+
+    getUserRequest.triggerRequest()
 
     const loadRanks = async () => {
       setLoadingCount(c => c + 1)
@@ -158,6 +169,7 @@ export function LoginProvider (props: Props) {
       }
     }
     void loadRanks()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loginToken, selectedStreamer])
 
   return (
@@ -166,7 +178,8 @@ export function LoginProvider (props: Props) {
         initialised,
         loginToken,
         username,
-        isLoading: loadingCount > 0,
+        user: getUserRequest.data?.user ?? null,
+        isLoading: loadingCount > 0 || getUserRequest.isLoading || getUserRequest == null,
         streamer: selectedStreamer,
         allStreamers,
         isStreamer: allStreamers.includes(username ?? ''),
@@ -182,7 +195,7 @@ export function LoginProvider (props: Props) {
   )
 }
 
-type LoginContextType = {
+export type LoginContextType = {
   initialised: boolean
   loginToken: string | null
 
@@ -193,6 +206,7 @@ type LoginContextType = {
   /** The streamer context. */
   streamer: string | null
   username: string | null
+  user: PublicUser | null
   isLoading: boolean
 
   /** Logs the user in using the saved credentials, if any. Returns true if the login was successful. */

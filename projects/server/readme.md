@@ -725,6 +725,12 @@ Can return the following errors:
 ## User Endpoints
 Path: `/user`.
 
+### `GET /`
+Gets info about the logged-in user.
+
+Returns data with the following properties:
+- `user` (`PublicUser`): The data object of the currently logged-in user.
+
 ### `POST /search`
 Search for a specific channel name.
 

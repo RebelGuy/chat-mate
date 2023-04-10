@@ -5,7 +5,7 @@ import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicatio
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
-import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
+import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse } from '@rebel/server/controllers/UserController'
 import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse } from '@rebel/server/controllers/AdminController'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse, PublicObject } from '@rebel/server/controllers/ControllerBase'
@@ -100,6 +100,8 @@ export const unsetPrimaryChannel = requestBuilder<UnsetPrimaryChannelResponse, f
 export const setStreamlabsSocketToken = requestBuilder<SetWebsocketTokenResponse, SetWebsocketTokenRequest>('POST', `/donation/streamlabs/socketToken`, 'self')
 
 export const getStreamlabsStatus = requestBuilder<GetStreamlabsStatusResponse>('GET', `/donation/streamlabs/status`, 'self')
+
+export const getUser = requestBuilder<GetUserResponse>('GET', `/user`)
 
 export const searchUser = requestBuilder<SearchUserResponse, SearchUserRequest>('POST', `/user/search`)
 

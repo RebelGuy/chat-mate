@@ -4,6 +4,7 @@ import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChann
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
 import { registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
@@ -23,6 +24,10 @@ import { sleep } from '@rebel/shared/util/node'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { assertUnreachable, firstOrDefault } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
+
+export type GetUserResponse = ApiResponse<{
+  user: PublicUser
+}>
 
 export type SearchUserRequest = ApiRequest<{
   searchTerm: string
@@ -78,6 +83,20 @@ export default class UserController extends ControllerBase {
     this.linkDataService = deps.resolve('linkDataService')
     this.accountStore = deps.resolve('accountStore')
     this.linkService = deps.resolve('linkService')
+  }
+
+  @GET
+  @Path('/')
+  @PreProcessor(requireAuth)
+  public async getUser (): Promise<GetUserResponse> {
+    const builder = this.registerResponseBuilder<GetUserResponse>('GET /')
+
+    try {
+      const allData = await this.apiService.getAllData([this.getCurrentUser().aggregateChatUserId]).then(single)
+      return builder.success({ user: userDataToPublicUser(allData) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
   }
 
   @POST
