@@ -17,7 +17,7 @@ export function formatTime (date?: Date, utc?: boolean) {
   return `${num2str(hours, 2)}:${num2str(minutes, 2)}:${num2str(seconds, 2)}.${num2str(milliseconds, 3)}`
 }
 
-function deconstructDate (date: Date, utc: boolean) {
+export function deconstructDate (date: Date, utc: boolean) {
   return {
     year: utc ? date.getUTCFullYear() : date.getFullYear(),
     // months start at zero...

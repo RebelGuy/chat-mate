@@ -3,7 +3,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import FileService from '@rebel/server/services/FileService'
-import { formatDate, formatTime } from '@rebel/shared/util/datetime'
+import { deconstructDate, formatDate, formatTime } from '@rebel/shared/util/datetime'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { LogLevel } from '@twurple/chat'
 import ILogService, { ILoggable, LogContext } from '@rebel/shared/ILogService'
@@ -102,7 +102,8 @@ export default class LogService extends ContextClass implements ILogService {
 
   // automatically write to a new file every day so they don't get too large
   private getLogFile () {
-    return this.fileService.getDataFilePath(`log_${formatDate()}.txt`)
+    const { hours } = deconstructDate(new Date(), false)
+    return this.fileService.getDataFilePath(`log_${formatDate()}_${String(hours).padStart(2, '0')}.txt`)
   }
 }
 
