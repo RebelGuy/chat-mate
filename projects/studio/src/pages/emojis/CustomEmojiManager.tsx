@@ -7,7 +7,7 @@ import ApiRequest from '@rebel/studio/components/ApiRequest'
 import { sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { Box, Button, Checkbox, createTheme, FormControlLabel, Icon, IconButton, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
+import { Box, Button, Checkbox, createTheme, FormControlLabel, Icon, IconButton, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
 import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
@@ -25,6 +25,11 @@ import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { request } from 'http'
 
 export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
+
+type Eligibility = {
+  meetsLevelRequirement: boolean
+  meetsRankRequirement: boolean
+}
 
 const emojiSorter = (data: SuccessfulResponseData<GetCustomEmojisResponse>) => ({ emojis: sortBy(data.emojis, e => e.id)})
 
@@ -81,14 +86,20 @@ export default function CustomEmojiManager () {
     }) != null
   }
 
-  const meetsEmojiRequirements = (emoji: PublicCustomEmoji) => {
+  const meetsEmojiRequirements = (emoji: PublicCustomEmoji): Eligibility => {
     if (loginContext.isLoading || !loginContext.initialised || accessibleRanksRequest.data == null) {
-      return false
+      return {
+        meetsLevelRequirement: false,
+        meetsRankRequirement: false
+      }
     }
+
+    let meetsLevelRequirement = true
+    let meetsRankRequirement = true
 
     const currentLevel = loginContext.user?.levelInfo.level ?? 0
     if (currentLevel < emoji.levelRequirement) {
-      return false
+      meetsLevelRequirement = false
     }
 
     if (emoji.whitelistedRanks.length > 0) {
@@ -105,11 +116,11 @@ export default function CustomEmojiManager () {
       }
 
       if (!hasRank) {
-        return false
+        meetsRankRequirement = false
       }
     }
 
-    return true
+    return { meetsLevelRequirement, meetsRankRequirement }
   }
 
   return (
@@ -197,33 +208,50 @@ const disabledTheme = createTheme({
   }
 })
 
+const ineligibilityOutline: SxProps = {
+  border: 'red 2px dotted',
+  borderRadius: 2,
+  width: 'fit-content',
+  padding: 1
+}
+
 type CustomEmojiRowProps = {
   data: EmojiData
   accessibleRanks: PublicRank[]
   isLoading: boolean
-  meetsRequirements: boolean
+  meetsRequirements: Eligibility
   showOnlyEligibleEmojis: boolean
   onEdit: (id: number) => void
 }
 
 function CustomEmojiRow (props: CustomEmojiRowProps) {
-  if (props.showOnlyEligibleEmojis && !props.meetsRequirements) {
+  const { meetsLevelRequirement, meetsRankRequirement } = props.meetsRequirements
+  const isEligible = meetsLevelRequirement && meetsRankRequirement
+  if (props.showOnlyEligibleEmojis && !isEligible) {
     return null
   }
 
   const symbol = `:${props.data.symbol}:`
 
   return (
-    <ThemeProvider theme={props.meetsRequirements ? {} : disabledTheme}>
+    <ThemeProvider theme={isEligible ? {} : disabledTheme}>
       <TableRow>
         <TableCell>{props.data.name}</TableCell>
         <TableCell>
           {symbol}
-          {!props.isLoading && props.meetsRequirements && <CopyText text={symbol} tooltip="Copy symbol to clipboard" sx={{ ml: 1 }} />}
+          {!props.isLoading && isEligible && <CopyText text={symbol} tooltip="Copy symbol to clipboard" sx={{ ml: 1 }} />}
         </TableCell>
-        <TableCell>{props.data.levelRequirement}</TableCell>
+        <TableCell>
+          <Box sx={!meetsLevelRequirement ? ineligibilityOutline : undefined}>
+            {props.data.levelRequirement}
+          </Box>
+        </TableCell>
         <TableCell>{props.data.canUseInDonationMessage ? <Done /> : <Close />}</TableCell>
-        <TableCell><RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} /></TableCell>
+        <TableCell>
+          <Box sx={!meetsRankRequirement ? ineligibilityOutline : undefined}>
+            <RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} />
+          </Box>
+        </TableCell>
         <TableCell>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             {!isNullOrEmpty(props.data.imageData) && <img src={`data:image/png;base64,${props.data.imageData}`} style={{ maxHeight: 32 }} alt="" />}

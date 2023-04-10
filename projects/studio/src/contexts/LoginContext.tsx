@@ -157,7 +157,9 @@ export function LoginProvider (props: Props) {
       return
     }
 
-    getUserRequest.triggerRequest()
+    if (selectedStreamer != null) {
+      getUserRequest.triggerRequest()
+    }
 
     const loadRanks = async () => {
       setLoadingCount(c => c + 1)
