@@ -12,11 +12,11 @@ export default function SelectStreamer () {
   const navigate = useNavigate()
   const { streamer: streamerParam } = useParams()
 
-  const isUnknownStreamer = streamerParam != null && loginContext.initialised && !loginContext.isLoading && !loginContext.allStreamers.includes(streamerParam)
+  const isUnknownStreamer = streamerParam != null && loginContext.isHydrated && !loginContext.allStreamers.includes(streamerParam)
 
   useEffect(() => {
     const streamer = loginContext.streamer
-    if (streamerParam == null || streamerParam === streamer || loginContext.isLoading || !loginContext.initialised) {
+    if (streamerParam == null || streamerParam === streamer || !loginContext.isHydrated) {
       return
     }
 

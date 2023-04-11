@@ -48,7 +48,7 @@ export default function MainView () {
         <Container style={{ minWidth: 300, maxWidth: 10000, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
           <Panel style={{ height: '100%' }}>
             <Box sx={{ m: 1 }}>
-              {!loginContext.isLoading && loginContext.initialised &&
+              {!loginContext.isLoading && loginContext.isHydrated &&
                 <CurrentPage />
               }
             </Box>

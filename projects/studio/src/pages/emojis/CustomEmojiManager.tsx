@@ -87,7 +87,7 @@ export default function CustomEmojiManager () {
   }
 
   const meetsEmojiRequirements = (emoji: PublicCustomEmoji): Eligibility => {
-    if (loginContext.isLoading || !loginContext.initialised || accessibleRanksRequest.data == null) {
+    if (accessibleRanksRequest.data == null) {
       return {
         meetsLevelRequirement: false,
         meetsRankRequirement: false

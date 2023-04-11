@@ -54,10 +54,9 @@ export const getStatus = requestBuilder<GetStatusResponse>('GET', `/chatMate/sta
 
 export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`)
 
-/** Gets global ranks if the streamer is not provided. */
-export async function getRanks (loginToken: string, streamer?: string): Promise<GetUserRanksResponse> {
-  return await GET('/rank', loginToken, streamer)
-}
+export const getRanksForStreamer = requestBuilder<GetUserRanksResponse>('GET', `/rank`)
+
+export const getGlobalRanks = requestBuilder<GetUserRanksResponse>('GET', `/rank`, false)
 
 export const registerAccount = requestBuilder<RegisterResponse, RegisterRequest>('POST', `/account/register`, false, false)
 
@@ -69,9 +68,7 @@ export async function authenticate (loginToken: string): Promise<AuthenticateRes
   return await POST('/account/authenticate', {}, loginToken)
 }
 
-export async function getStreamers (loginToken: string): Promise<GetStreamersResponse> {
-  return await GET('/streamer', loginToken)
-}
+export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false)
 
 export const getStreamerApplications = requestBuilder<GetApplicationsResponse>('GET', `/streamer/application`, false)
 

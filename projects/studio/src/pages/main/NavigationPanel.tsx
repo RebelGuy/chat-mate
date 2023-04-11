@@ -1,4 +1,5 @@
 import { Box } from '@mui/material'
+import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth } from '@rebel/studio/pages/navigation'
@@ -8,6 +9,10 @@ import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
 
 export default function Navigation () {
   const loginContext = useContext(LoginContext)
+
+  if (!loginContext.isHydrated) {
+    return <CentredLoadingSpinner />
+  }
 
   const isLoggedIn = loginContext.username != null
 
@@ -39,7 +44,7 @@ function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
 
   const path = generatePath(page.path, params)
 
-  if (loginContext.isLoading || !loginContext.initialised) {
+  if (!loginContext.isHydrated) {
     return null
   }
 
