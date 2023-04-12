@@ -10,21 +10,19 @@ import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
 export default function Navigation () {
   const loginContext = useContext(LoginContext)
 
-  if (!loginContext.isHydrated) {
+  if (!loginContext.isHydrated && loginContext.isLoading) {
     return <CentredLoadingSpinner />
   }
-
-  const isLoggedIn = loginContext.username != null
 
   return (
     <nav>
       {/* todo: instead of hiding navigation items when not logged in/not selected a streamer, gray them out. need to make custom component and do some css magic */}
       <NavItem page={PageHome} />
-      {isLoggedIn && loginContext.streamer != null && <NavItem page={PageEmojis} streamer={loginContext.streamer} />}
+      <NavItem page={PageEmojis} streamer={loginContext.streamer} />
       <NavItem page={PageManager} />
       <NavItem page={PageApply} />
       <NavItem page={PageTwitchAuth} />
-      {isLoggedIn && <NavItem page={PageLink} />}
+      <NavItem page={PageLink} />
     </nav>
   )
 }
@@ -40,13 +38,16 @@ type NavItemProps<P extends Page> = {
 function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
   const loginContext = useContext(LoginContext)
   const { pathname: currentPath } = useLocation()
-  const isSelected = matchPath({ path: page.path }, currentPath)
 
-  const path = generatePath(page.path, params)
-
-  if (!loginContext.isHydrated) {
+  if (!loginContext.isHydrated && page.requireRanksProps != null ||
+    loginContext.username == null && page.requiresLogin ||
+    loginContext.streamer == null && page.requiresStreamer
+  ) {
     return null
   }
+
+  const isSelected = matchPath({ path: page.path }, currentPath)
+  const path = generatePath(page.path, params)
 
   const content = (
     <Box sx={{ m: 0.5 }}>

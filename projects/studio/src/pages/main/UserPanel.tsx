@@ -11,7 +11,7 @@ export default function UserPanel () {
     return <UserInfo />
   }
 
-  if (!loginContext.isHydrated) {
+  if (!loginContext.isHydrated && loginContext.isLoading) {
     return <CentredLoadingSpinner />
   }
 

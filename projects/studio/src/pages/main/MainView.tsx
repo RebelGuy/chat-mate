@@ -6,7 +6,7 @@ import { Alert, Box, Container, Typography } from '@mui/material'
 import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
 import UserPanel from '@rebel/studio/pages/main/UserPanel'
 import styled from '@emotion/styled'
-import { useContext, useState } from 'react'
+import { ReactNode, useContext, useState } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import { getAdministrativeMode } from '@rebel/studio/utility/api'
@@ -48,13 +48,7 @@ export default function MainView () {
 
         <Container style={{ minWidth: 300, maxWidth: 10000, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
           <Panel style={{ height: '100%' }}>
-            {!loginContext.isLoading && loginContext.isHydrated ?
-              <Box sx={{ m: 1 }}>
-                <CurrentPage />
-              </Box>
-              :
-              <CentredLoadingSpinner />
-            }
+            <CurrentPage />
           </Panel>
         </Container>
       </div>
@@ -74,12 +68,20 @@ export default function MainView () {
 }
 
 function CurrentPage () {
+  const loginContext = useContext(LoginContext)
   const page = useCurrentPage()
 
+  if (loginContext.isLoading && !loginContext.isHydrated ||
+    loginContext.isLoading && (page?.requireRanksProps != null || page?.requiresStreamer)
+  ) {
+    return <CentredLoadingSpinner />
+  }
+
+  let content: ReactNode
   if (page == null || page.requireRanksProps == null) {
-    return <Outlet />
+    content = <Outlet />
   } else {
-    return (
+    content = (
       <RequireRank
         hideAdminOutline
         forbidden={<Alert severity="error">You do not have permission to access this page.</Alert>}
@@ -89,6 +91,12 @@ function CurrentPage () {
       </RequireRank>
     )
   }
+
+  return (
+    <Box sx={{ m: 1 }}>
+      {content}
+    </Box>
+  )
 }
 
 // todo: auth flow: https://github.com/remix-run/react-router/blob/dev/examples/auth/src/App.tsx

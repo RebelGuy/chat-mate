@@ -131,6 +131,7 @@ export default function CustomEmojiManager () {
         <Box>
           <RequireRank owner>
             <Button
+              disabled={isLoading}
               onClick={() => onEdit(null)}
               sx={{ mb: 1 }}
             >
@@ -239,7 +240,7 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
         <TableCell>{props.data.name}</TableCell>
         <TableCell>
           {symbol}
-          {!props.isLoading && isEligible && <CopyText text={symbol} tooltip="Copy symbol to clipboard" sx={{ ml: 1 }} />}
+          {isEligible && <CopyText text={symbol} tooltip="Copy symbol to clipboard" sx={{ ml: 1 }} />}
         </TableCell>
         <TableCell>
           <Box sx={!meetsLevelRequirement ? ineligibilityOutline : undefined}>

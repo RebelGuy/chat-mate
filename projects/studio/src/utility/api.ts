@@ -106,7 +106,8 @@ export const searchRegisteredUser = requestBuilder<SearchUserResponse, SearchUse
 
 export const getLinkedChannels = requestBuilder<GetLinkedChannelsResponse, false, [admin_aggregateUserId?: number]>(
   'GET',
-  (admin_aggregateUserId) => constructPath('/user/link/channels', { admin_aggregateUserId })
+  (admin_aggregateUserId) => constructPath('/user/link/channels', { admin_aggregateUserId }),
+  false
 )
 
 export const addLinkedChannel = requestBuilder<AddLinkedChannelResponse, false, [aggregateUserId: number, defaultUserId: number]>(

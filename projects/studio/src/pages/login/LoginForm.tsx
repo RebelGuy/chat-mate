@@ -25,8 +25,8 @@ export default function LoginForm () {
   const [isNewUser, setIsNewUser] = useState(false)
   const navigate = useNavigate()
 
-  const onSuccess = (data: SuccessfulResponseData<RegisterResponse | LoginResponse>, type: RequestType) => {
-    loginContext.setLogin(username, data.loginToken)
+  const onSuccess = (data: SuccessfulResponseData<RegisterResponse | LoginResponse>) => {
+    loginContext.setLogin(username, data.loginToken, 'isStreamer' in data && data.isStreamer)
     navigate(generatePath('/'))
 
     if ('isStreamer' in data && loginContext.streamer == null && data.isStreamer) {

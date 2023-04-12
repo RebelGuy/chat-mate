@@ -15,6 +15,8 @@ export type Page = {
   element: React.ReactElement
   icon: React.ReactElement
   path: string
+  requiresLogin: boolean
+  requiresStreamer: boolean
   requireRanksProps: Omit<RequireRankProps, 'children' | 'hideAdminOutline'> | null
 }
 
@@ -25,6 +27,8 @@ export const PageHome = {
   element: <Home />,
   icon: <HomeIcon />,
   path: '/',
+  requiresLogin: false,
+  requiresStreamer: false,
   requireRanksProps: null
 } as const
 
@@ -34,6 +38,8 @@ export const PageEmojis = {
   element: <CustomEmojiManager />,
   icon: <Mood />,
   path: '/:streamer/emojis',
+  requiresLogin: true,
+  requiresStreamer: true,
   requireRanksProps: null
 } as const
 
@@ -43,6 +49,8 @@ export const PageApply = {
   element: <ApplyForStreamer />,
   icon: <StarBorder />,
   path: '/apply',
+  requiresLogin: true,
+  requiresStreamer: false,
   requireRanksProps: { admin: true }
 } as const
 
@@ -52,6 +60,8 @@ export const PageLogin = {
   element: <LoginForm />,
   icon: <AccountCircle />,
   path: '/login',
+  requiresLogin: false,
+  requiresStreamer: false,
   requireRanksProps: null
 } as const
 
@@ -61,6 +71,8 @@ export const PageLink = {
   element: <LinkUser />,
   icon: <Link />,
   path: '/link',
+  requiresLogin: true,
+  requiresStreamer: false,
   requireRanksProps: null
 } as const
 
@@ -70,6 +82,8 @@ export const PageManager = {
   element: <ChatMateManager />,
   icon: <Settings />,
   path: '/manager',
+  requiresLogin: true,
+  requiresStreamer: false,
   requireRanksProps: { anyOwner: true }
 } as const
 
@@ -80,6 +94,8 @@ export const PageTwitchAuth = {
   icon: <Camera />,
   // don't change this path without also updating AdminService
   path: '/admin/twitch',
+  requiresLogin: true,
+  requiresStreamer: false,
   requireRanksProps: { admin: true }
 } as const
 

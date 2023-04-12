@@ -20,7 +20,6 @@ export function LoginProvider (props: Props) {
   const [isStreamer, setIsStreamer] = React.useState(false)
   const [loadingCount, setLoadingCount] = React.useState(0)
   const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
-  const [initialised, setInitialised] = React.useState(false)
 
   const getGlobalRanksRequest = useRequest(getGlobalRanks(), {
     onDemand: true,
@@ -45,7 +44,7 @@ export function LoginProvider (props: Props) {
     onError: console.log
   })
 
-  function onSetLogin (usernameToSet: string, token: string) {
+  function onSetLogin (usernameToSet: string, token: string, isStreamerToSet: boolean) {
     try {
       window.localStorage.setItem('loginToken', token)
     } catch (e: any) {
@@ -54,6 +53,7 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(token)
     setUsername(usernameToSet)
+    setIsStreamer(isStreamerToSet)
   }
 
   function onPersistStreamer (streamer: string | null) {
@@ -147,7 +147,6 @@ export function LoginProvider (props: Props) {
       }
 
       onPersistStreamer(streamer)
-      setInitialised(true)
     }
     void loadContext()
   }, [onLogin])
@@ -166,9 +165,10 @@ export function LoginProvider (props: Props) {
     getGlobalRanksRequest.triggerRequest()
     getStreamersRequest.triggerRequest()
 
+    // this ensures we don't end up being un-hydrated if not selecting a streamer
     if (selectedStreamer == null) {
-      getRanksForStreamerRequest.reset()
-      getUserRequest.reset()
+      getRanksForStreamerRequest.reset({ ranks: [] })
+      getUserRequest.reset(undefined, { errorCode: 500, errorType: 'Unknown', message: 'No data' })
       return
     }
 
@@ -222,7 +222,7 @@ export type LoginContextType = {
   isLoading: boolean
   errors: ApiRequestError[] | null
 
-  setLogin: (username: string, token: string) => void
+  setLogin: (username: string, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void
   logout: () => void
   hasRank: (rankName: RankName) => boolean

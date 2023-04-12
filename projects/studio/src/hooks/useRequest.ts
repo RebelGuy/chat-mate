@@ -61,8 +61,9 @@ export type RequestResult<TResponseData> = {
   // if `onDemand` is `true`, this is the only way to make a request.
   triggerRequest: () => void
 
-  // calling this function will reset the state to the initial state
-  reset: () => void
+  // calling this function will reset the state to the initial state or set the given data/error.
+  // setting both the data and error leads to undefined behaviour.
+  reset: (useData?: TResponseData, useError?: ApiError) => void
 
   // manually change the response data
   mutate: (newData: TResponseData | null) => void
@@ -210,11 +211,11 @@ export default function useRequest<
     setOnRetry(() => () => makeRequest('retry'))
   }
 
-  const reset = () => {
+  const reset = (useData?: TResponseData, useError?: ApiError) => {
     invariantRef.current = invariantRef.current + 1
     setIsLoading(false)
-    setData(null)
-    setError(null)
+    setData(useData ?? null)
+    setError(useError ?? null)
   }
 
   const mutate = (newData: TResponseData | null) => {
