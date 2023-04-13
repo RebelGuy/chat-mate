@@ -21,6 +21,8 @@ import { getUserName } from '@rebel/server/services/ChannelService'
 // every now and then
 const NGROK_MAX_SESSION = 3600 * 2 * 1000
 
+type SubscriptionType = 'followers'
+
 type Deps = Dependencies<{
   disableExternalApis: boolean
   nodeEnv: NodeEnv
@@ -59,7 +61,7 @@ export default class HelixEventService extends ContextClass {
   private listener: EventSubListener | null
   private eventSubBase!: EventSubBase
   private eventSubApi!: HelixEventSubApi
-  private streamerSubscriptions: Map<number, EventSubSubscription[]> = new Map()
+  private streamerSubscriptions: Map<number, Partial<Record<SubscriptionType, EventSubSubscription>>> = new Map()
 
   constructor (deps: Deps) {
     super()
@@ -135,7 +137,7 @@ export default class HelixEventService extends ContextClass {
 
           // from what I understand we can safely re-subscribe to events when using the middleware
           await this.initialiseSubscriptions()
-          this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Middleware listener]')
+          this.logService.logInfo(this, 'Finished initial subscriptions to Helix events via the EventSub API [Middleware listener]')
         } catch (e) {
           this.logService.logError(this, 'Failed to initialise Helix events.', e)
         }
@@ -190,12 +192,19 @@ export default class HelixEventService extends ContextClass {
     const client = this.twurpleApiClientProvider.getClientApi()
     const user = await client.users.getUserByName(channelName)
     if (user == null) {
-      throw new Error(`Could not get Twitch user '${channelName}' and could not subscribe to channel events`)
+      this.logService.logError(this, `Failed to get Twitch user '${channelName}' (streamer ${streamerId}) and thus could not subscribe to channel events`)
+      return
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    const subscription = await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
-    this.onSubscriptionAdded(streamerId, subscription)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      const subscription = await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
+      this.onSubscriptionAdded(streamerId, 'followers', subscription)
+      this.logService.logInfo(this, `Subscribed to channel events of Twitch user '${channelName} (streamer ${streamerId})`)
+    } catch (e: any) {
+      const subscribedTypes = Object.keys(this.streamerSubscriptions.get(streamerId) ?? {})
+      this.logService.logError(this, `Failed to subscribe to all channel events of Twitch user '${channelName} (streamer ${streamerId}).`, 'Active subscriptions:', subscribedTypes, 'Error:', e)
+    }
   }
 
   private async unsubscribeFromChannelEvents (streamerId: number) {
@@ -203,16 +212,24 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
-    await Promise.all(this.streamerSubscriptions.get(streamerId)!.map(sub => sub.stop()))
-    this.streamerSubscriptions.delete(streamerId)
+    try {
+      const subscriptions = this.streamerSubscriptions.get(streamerId)!
+      const subscribedTypes = Object.keys(subscriptions) as (keyof typeof subscriptions)[]
+      await Promise.all(subscribedTypes.map(type => subscriptions[type]!.stop()))
+      this.streamerSubscriptions.delete(streamerId)
+      this.logService.logInfo(this, `Unsubscribed from all channel events of streamer ${streamerId}`)
+    } catch (e: any) {
+      const subscribedTypes = Object.keys(this.streamerSubscriptions.get(streamerId) ?? {})
+      this.logService.logError(this, `Failed to unsubscribe from all channel events of streamer ${streamerId}.`, 'Active subscriptions:', subscribedTypes, 'Error:', e)
+    }
   }
 
-  private onSubscriptionAdded (streamerId: number, subscription: EventSubSubscription) {
+  private onSubscriptionAdded (streamerId: number, type: SubscriptionType, subscription: EventSubSubscription) {
     if (!this.streamerSubscriptions.has(streamerId)) {
-      this.streamerSubscriptions.set(streamerId, [])
+      this.streamerSubscriptions.set(streamerId, {})
     }
 
-    this.streamerSubscriptions.get(streamerId)!.push(subscription)
+    this.streamerSubscriptions.get(streamerId)![type] = subscription
   }
 
   private createNewListener () {
