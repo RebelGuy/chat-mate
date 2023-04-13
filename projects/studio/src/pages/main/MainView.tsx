@@ -24,7 +24,11 @@ const Panel = styled('div')({
 export default function MainView () {
   const [headerHeight, setHeaderHeight] = useState(0)
   const loginContext = useContext(LoginContext)
-  const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), { onRequest: () => !loginContext.hasRank('admin') })
+  const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), {
+    // normally we don't need to do this, but the MainView renders before login info is completely loaded in and we need to trigger a re-request once it has finished loading
+    updateKey: loginContext.isHydrated,
+    onRequest: () => !loginContext.hasRank('admin')
+  })
 
   const isAdministrativeMode = getAdministrativeModeRequest.data?.isAdministrativeMode === true
 
