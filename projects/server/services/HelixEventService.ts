@@ -200,10 +200,10 @@ export default class HelixEventService extends ContextClass {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const subscription = await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
       this.onSubscriptionAdded(streamerId, 'followers', subscription)
-      this.logService.logInfo(this, `Subscribed to channel events of Twitch user '${channelName} (streamer ${streamerId})`)
+      this.logService.logInfo(this, `Subscribed to channel events of Twitch user '${channelName}' (streamer ${streamerId})`)
     } catch (e: any) {
       const subscribedTypes = Object.keys(this.streamerSubscriptions.get(streamerId) ?? {})
-      this.logService.logError(this, `Failed to subscribe to all channel events of Twitch user '${channelName} (streamer ${streamerId}).`, 'Active subscriptions:', subscribedTypes, 'Error:', e)
+      this.logService.logError(this, `Failed to subscribe to all channel events of Twitch user '${channelName}' (streamer ${streamerId}).`, 'Active subscriptions:', subscribedTypes, 'Error:', e)
     }
   }
 

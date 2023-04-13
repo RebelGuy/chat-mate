@@ -75,6 +75,16 @@ export default class TwurpleAuthProvider extends ContextClass {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       onRefresh: async (newToken: AccessToken) => await this.saveAccessToken(newToken)
     }, token!)
+
+    // if the access token is invalid, the auth provider will crash the server at an indeterminate point in the future.
+    // we can check the validity right here by forcing a refresh - if it throws, we will let the error bubble up and trigger administration mode to be enabled.
+    try {
+      await this.auth.refresh()
+    } catch (e) {
+      // dispose of the auth provider to prevent auto refreshing from crashing the server later
+      this.auth = null!
+      throw e
+    }
   }
 
   get () {
