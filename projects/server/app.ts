@@ -36,7 +36,7 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
-import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
+import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
@@ -139,7 +139,7 @@ const main = async () => {
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
     .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
-    .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
+    .withFactory('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withFactory('websocketFactory', WebsocketFactory)
     .withClass('eventDispatchService', EventDispatchService)
     .withClass('fileService', FileService)

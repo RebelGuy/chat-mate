@@ -36,7 +36,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     }
 
     this.chatClient = new ChatClient({
-      authProvider: this.twurkpleAuthProvider.get(),
+      authProvider: this.twurkpleAuthProvider.getUserTokenAuthProvider(),
       isAlwaysMod: false, // can't guarantee that streamers will mod the client, so err on the safe side
       readOnly: false,
 
@@ -50,17 +50,11 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
 
     await this.chatClient.connect()
 
-    // the previous await is for the connection only and resolves before authentication occurs.
-    // since there is no event provided by Twurple, we manually poll the authenticated username -
-    // this is initially an empty string, and set once authentication succeeds.
-    // authentication is required before we proceed so that we can start ChatClient actions which
-    // would be rejected without authentication being completed.
-    await waitUntil(() => this.chatClient.currentNick !== '', 100, 5000)
-    this.logService.logInfo(this, 'Connected to the Twurple chat client as user', this.chatClient.currentNick)
+    this.logService.logInfo(this, 'Successfully connected to the Twurple chat client')
   }
 
-  override async dispose (): Promise<void> {
-    await this.chatClient.quit()
+  override dispose (): void {
+    this.chatClient.quit()
 
     this.logService.logInfo(this, 'Disconnected from the Twurple chat client')
   }

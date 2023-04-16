@@ -1,12 +1,12 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
+import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import { NodeEnv } from '@rebel/server/globals'
 import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { compareArrays } from '@rebel/shared/util/arrays'
-import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
+import { AccessToken, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 
 // see https://dev.twitch.tv/docs/authentication/scopes for available scopes.
 // see https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/ to determine which scope an event subscription needs.
@@ -21,7 +21,7 @@ type Deps = Dependencies<{
   logService: LogService
   authStore: AuthStore
   refreshingAuthProviderFactory: RefreshingAuthProviderFactory
-  clientCredentialsAuthProviderFactory: ClientCredentialsAuthProviderFactory
+  appTokenAuthProviderFactory: AppTokenAuthProviderFactory
 }>
 
 export default class TwurpleAuthProvider extends ContextClass {
@@ -34,8 +34,8 @@ export default class TwurpleAuthProvider extends ContextClass {
   private readonly logService: LogService
   private readonly authStore: AuthStore
   private readonly refreshingAuthProviderFactory: RefreshingAuthProviderFactory
-  private auth!: RefreshingAuthProvider
-  private readonly clientAuth: ClientCredentialsAuthProvider
+  private userTokenAuthProvider!: RefreshingAuthProvider
+  private readonly appTokenAuthProvider: AppTokenAuthProvider
 
   constructor (deps: Deps) {
     super()
@@ -46,7 +46,7 @@ export default class TwurpleAuthProvider extends ContextClass {
     this.logService = deps.resolve('logService')
     this.authStore = deps.resolve('authStore')
     this.refreshingAuthProviderFactory = deps.resolve('refreshingAuthProviderFactory')
-    this.clientAuth = deps.resolve('clientCredentialsAuthProviderFactory').create(this.clientId, this.clientSecret)
+    this.appTokenAuthProvider = deps.resolve('appTokenAuthProviderFactory').create(this.clientId, this.clientSecret)
   }
 
   public override async initialise (): Promise<void> {
@@ -68,31 +68,24 @@ export default class TwurpleAuthProvider extends ContextClass {
       throw new Error('The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
     }
 
-    this.auth = this.refreshingAuthProviderFactory.create({
+    this.userTokenAuthProvider = this.refreshingAuthProviderFactory.create({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
       // async callbacks are allowed as per the example at https://twurple.js.org/docs/auth/providers/refreshing.html
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      onRefresh: async (newToken: AccessToken) => await this.saveAccessToken(newToken)
-    }, token!)
-
-    // if the access token is invalid, the auth provider will crash the server at an indeterminate point in the future.
-    // we can check the validity right here by forcing a refresh - if it throws, we will let the error bubble up and trigger administration mode to be enabled.
-    try {
-      await this.auth.refresh()
-    } catch (e) {
-      // dispose of the auth provider to prevent auto refreshing from crashing the server later
-      this.auth = null!
-      throw e
-    }
+      onRefresh: async (userId: string, newToken: AccessToken) => await this.saveAccessToken(newToken)
+    })
+    await this.userTokenAuthProvider.addUserForToken(token!, ['chat']) // i don't understand intents
   }
 
-  get () {
-    return this.auth
+  // uses the authorization code grant flow (using a scoped user access token)
+  getUserTokenAuthProvider () {
+    return this.userTokenAuthProvider
   }
 
-  getClientAuthProvider () {
-    return this.clientAuth
+  // uses the client credentials grant flow (using a non-scoped app access token)
+  getAppTokenAuthProvider () {
+    return this.appTokenAuthProvider
   }
 
   private async saveAccessToken (token: AccessToken) {

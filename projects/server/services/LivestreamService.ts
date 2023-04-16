@@ -4,13 +4,13 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import { IMasterchat, ITwurpleApi, TwitchMetadata } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime } from '@rebel/shared/util/datetime'
+import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
@@ -30,7 +30,7 @@ export default class LivestreamService extends ContextClass {
 
   private readonly livestreamStore: LivestreamStore
   private readonly masterchatProxyService: MasterchatProxyService
-  private readonly twurpleApiProxyService: ITwurpleApi
+  private readonly twurpleApiProxyService: TwurpleApiProxyService
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
   private readonly disableExternalApis: boolean

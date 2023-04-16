@@ -1,11 +1,11 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
+import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleAuthProvider, { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/shared/util/arrays'
-import { AccessToken, ClientCredentialsAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
+import { AccessToken, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let clientId: string
@@ -13,8 +13,8 @@ let clientSecret: string
 let mockAuthStore: MockProxy<AuthStore>
 let mockRefreshingAuthProvider: MockProxy<RefreshingAuthProvider>
 let mockRefreshingAuthProviderFactory: MockProxy<RefreshingAuthProviderFactory>
-let mockClientCredentialsAuthProvider: MockProxy<ClientCredentialsAuthProvider>
-let mockClientCredentialsAuthProviderFactory: MockProxy<ClientCredentialsAuthProviderFactory>
+let mockClientCredentialsAuthProvider: MockProxy<AppTokenAuthProvider>
+let mockAppTokenAuthProviderFactory: MockProxy<AppTokenAuthProviderFactory>
 let twurpleAuthProvider: TwurpleAuthProvider
 
 beforeEach(() => {
@@ -24,10 +24,10 @@ beforeEach(() => {
   mockRefreshingAuthProvider = mock()
   mockRefreshingAuthProviderFactory = mock()
   mockClientCredentialsAuthProvider = mock()
-  mockClientCredentialsAuthProviderFactory = mock()
+  mockAppTokenAuthProviderFactory = mock()
 
-  mockRefreshingAuthProviderFactory.create.calledWith(expect.anything(), expect.anything()).mockReturnValue(mockRefreshingAuthProvider)
-  mockClientCredentialsAuthProviderFactory.create.calledWith(clientId, clientSecret).mockReturnValue(mockClientCredentialsAuthProvider)
+  mockRefreshingAuthProviderFactory.create.calledWith(expect.anything()).mockReturnValue(mockRefreshingAuthProvider)
+  mockAppTokenAuthProviderFactory.create.calledWith(clientId, clientSecret).mockReturnValue(mockClientCredentialsAuthProvider)
 
   twurpleAuthProvider = new TwurpleAuthProvider(new Dependencies({
     disableExternalApis: false,
@@ -37,7 +37,7 @@ beforeEach(() => {
     logService: mock(),
     authStore: mockAuthStore,
     refreshingAuthProviderFactory: mockRefreshingAuthProviderFactory,
-    clientCredentialsAuthProviderFactory: mockClientCredentialsAuthProviderFactory
+    appTokenAuthProviderFactory: mockAppTokenAuthProviderFactory
   }))
 })
 
@@ -54,7 +54,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
 
     await twurpleAuthProvider.initialise()
 
-    const [_, initialToken] = single(mockRefreshingAuthProviderFactory.create.mock.calls)
+    const [initialToken] = single(mockRefreshingAuthProvider.addUserForToken.mock.calls)
     expect(initialToken.accessToken).toBe(loadedToken.accessToken)
     expect(initialToken.refreshToken).toBe(loadedToken.refreshToken)
   })
@@ -65,12 +65,12 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
 
     await twurpleAuthProvider.initialise()
 
-    const [config, _] = single(mockRefreshingAuthProviderFactory.create.mock.calls)
+    const [config] = single(mockRefreshingAuthProviderFactory.create.mock.calls)
     expect(config.clientId).toBe(clientId)
     expect(config.clientSecret).toBe(clientSecret)
 
     const refreshedToken: AccessToken = {} as any
-    await config.onRefresh!(refreshedToken)
+    await config.onRefresh!('' as string & AccessToken, refreshedToken)
     expect(single(single(mockAuthStore.saveTwitchAccessToken.mock.calls))).toBe(refreshedToken)
   })
 
@@ -80,7 +80,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
 
     await twurpleAuthProvider.initialise()
 
-    const [providedClientId, providedClientSecret] = single(mockClientCredentialsAuthProviderFactory.create.mock.calls)
+    const [providedClientId, providedClientSecret] = single(mockAppTokenAuthProviderFactory.create.mock.calls)
     expect(providedClientId).toBe(clientId)
     expect(providedClientSecret).toBe(clientSecret)
   })

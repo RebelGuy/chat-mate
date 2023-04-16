@@ -2,7 +2,8 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { NgrokAdapter } from '@twurple/eventsub-ngrok'
-import { ConnectionAdapter, DirectConnectionAdapter, EventSubListener, EventSubMiddleware, EventSubSubscription } from '@twurple/eventsub'
+import { ConnectionAdapter, DirectConnectionAdapter, EventSubHttpListener, EventSubMiddleware } from '@twurple/eventsub-http'
+import { EventSubSubscription } from '@twurple/eventsub-base'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
 import { HelixEventSubApi } from '@twurple/api/lib'
@@ -10,7 +11,7 @@ import { disconnect, kill } from 'ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
-import { EventSubBase } from '@twurple/eventsub/lib/EventSubBase'
+import { EventSubHttpBase } from '@twurple/eventsub-http/lib/EventSubHttpBase'
 import { NodeEnv } from '@rebel/server/globals'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
@@ -58,10 +59,10 @@ export default class HelixEventService extends ContextClass {
   private readonly eventDispatchService: EventDispatchService
   private readonly isAdministrativeMode: () => boolean
 
-  private listener: EventSubListener | null
-  private eventSubBase!: EventSubBase
+  private listener: EventSubHttpListener | null
+  private eventSubBase!: EventSubHttpBase
   private eventSubApi!: HelixEventSubApi
-  private streamerSubscriptions: Map<number, Partial<Record<SubscriptionType, EventSubSubscription>>> = new Map()
+  private streamerSubscriptions: Map<number, Partial<Record<SubscriptionType, EventSubSubscription<any>>>> = new Map()
 
   constructor (deps: Deps) {
     super()
@@ -103,7 +104,7 @@ export default class HelixEventService extends ContextClass {
 
       this.listener = this.createNewListener()
       this.eventSubBase = this.listener
-      await this.listener.listen()
+      this.listener.start()
       this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
       await this.initialiseSubscriptions()
       this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Ngrok listener]')
@@ -116,7 +117,7 @@ export default class HelixEventService extends ContextClass {
         secret: this.getSecret()
       })
       this.eventSubBase = middleware
-      await middleware.apply(this.app)
+      middleware.apply(this.app)
 
       // hack: only mark as ready once we are starting the app so no events get lost
       // - assume this happens in the next 5 seconds (generous delay - we are in no rush)
@@ -175,7 +176,7 @@ export default class HelixEventService extends ContextClass {
       // this will create a new Ngrok server/tunnel with a different address
       this.listener = this.createNewListener()
       this.eventSubBase = this.listener
-      await this.listener.listen()
+      this.listener.start()
       await this.initialiseSubscriptions()
       this.logService.logInfo(this, 'Successfully refreshed the Ngrok server. The EventSub events will continue to work normally.')
     } catch (e) {
@@ -197,8 +198,9 @@ export default class HelixEventService extends ContextClass {
     }
 
     try {
+      const moderatorUserId = user.id // todo CHAT-444: use the ChatMate user. if the streamer didn't give us moderator permissions, we won't be able to subscribe to moderator events.
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      const subscription = await this.eventSubBase.subscribeToChannelFollowEvents(user.id, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
+      const subscription = this.eventSubBase.onChannelFollow(user.id, moderatorUserId, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
       this.onSubscriptionAdded(streamerId, 'followers', subscription)
       this.logService.logInfo(this, `Subscribed to channel events of Twitch user '${channelName}' (streamer ${streamerId})`)
     } catch (e: any) {
@@ -233,10 +235,11 @@ export default class HelixEventService extends ContextClass {
   }
 
   private createNewListener () {
-    return new EventSubListener({
+    return new EventSubHttpListener({
       apiClient: this.twurpleApiClientProvider.getClientApi(),
       adapter: this.createAdapter(),
-      secret: this.getSecret()
+      secret: this.getSecret(),
+      legacySecrets: 'migrate'
     })
   }
 
