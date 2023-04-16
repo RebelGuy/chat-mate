@@ -291,7 +291,7 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
   private async withErrorHandling (className: keyof TClasses, stage: 'initialise' | 'onReady' | 'dispose', errorHandler?: ErrorHandler) {
     const contextClass = this.dependencies[className] as ContextClass
     if (contextClass == null) {
-      throw new Error(`Context: Can't process class ${String(className)} in stage ${stage} because it does not exist in the dependencies.`)
+      throw new Error(`Context: Can't process class '${String(className)}' in stage '${stage}' because it does not exist in the dependencies.`)
     }
 
     try {
@@ -306,12 +306,12 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
       }
     } catch (e) {
       if (errorHandler == null) {
-        console.error(`Context: Can't process class ${String(className)} in stage ${stage} because of an unhandled exception.`)
+        console.error(`Context: Can't process class '${String(className)}' in stage '${stage}' because of an unhandled exception.`, e)
         throw e
       }
 
       const result = errorHandler(contextClass, stage, e)
-      console.error(`Context: Processed ${String(className)} in stage ${stage} but encountered an error. Handler action: ${result}`)
+      console.error(`Context: Processed '${String(className)}' in stage '${stage}' but encountered an error. Handler action: ${result}`, e)
 
       if (result === 'abort') {
         throw e
