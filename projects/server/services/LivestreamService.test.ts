@@ -11,10 +11,10 @@ import { Livestream } from '@prisma/client'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
-import { TwitchMetadata } from '@rebel/server/interfaces'
 import { addTime } from '@rebel/shared/util/datetime'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
