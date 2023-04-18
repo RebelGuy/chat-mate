@@ -272,7 +272,7 @@ export default class TwurpleService extends ContextClass {
     try {
       await this.chatClient.join(channelName)
       this.channelChatStatus.set(channelName.toLowerCase(), { status: 'active' })
-      this.logService.logError(this, `Successfully joined the chat for channel ${channelName} (streamerId ${streamerId})`)
+      this.logService.logInfo(this, `Successfully joined the chat for channel ${channelName} (streamerId ${streamerId})`)
     } catch (e: any) {
       this.channelChatStatus.set(channelName.toLowerCase(), { status: 'inactive', message: e.message ?? 'Unknown error' })
       this.logService.logError(this, `Failed to join the chat for channel ${channelName} (streamerId ${streamerId})`, e)

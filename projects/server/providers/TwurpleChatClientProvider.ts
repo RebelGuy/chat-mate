@@ -11,6 +11,7 @@ type Deps = Dependencies<{
   twurpleAuthProvider: TwurpleAuthProvider
   logService: LogService
   disableExternalApis: boolean
+  isAdministrativeMode: () => boolean
 }>
 
 export default class TwurpleChatClientProvider extends ContextClass implements IProvider<ChatClient> {
@@ -20,6 +21,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
   private readonly logService: LogService
   private readonly logContext: LogContext
   private readonly disableExternalApis: boolean
+  private readonly isAdministrativeMode: () => boolean
   private chatClient!: ChatClient
 
   constructor (deps: Deps) {
@@ -28,10 +30,14 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
     this.disableExternalApis = deps.resolve('disableExternalApis')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   override async initialise (): Promise<void> {
     if (this.disableExternalApis) {
+      return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 
