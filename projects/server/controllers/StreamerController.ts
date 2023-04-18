@@ -1,15 +1,18 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import StreamerService from '@rebel/server/services/StreamerService'
+import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { EmptyObject } from '@rebel/shared/types'
 import { single } from '@rebel/shared/util/arrays'
 import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { keysOf } from '@rebel/shared/util/objects'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
 
 export type GetStreamersResponse = ApiResponse<{ streamers: string[] }>
@@ -34,12 +37,15 @@ export type SetPrimaryChannelResponse = ApiResponse<EmptyObject>
 
 export type UnsetPrimaryChannelResponse = ApiResponse<EmptyObject>
 
+export type GetTwitchStatusResponse = ApiResponse<{ statuses: PublicTwitchEventStatus[] }>
+
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
   streamerService: StreamerService
   accountStore: AccountStore
   streamerChannelStore: StreamerChannelStore
   streamerChannelService: StreamerChannelService
+  streamerTwitchEventService: StreamerTwitchEventService
 }>
 
 @Path(buildPath('streamer'))
@@ -50,6 +56,7 @@ export default class StreamerController extends ControllerBase {
   private readonly accountStore: AccountStore
   private readonly streamerChannelStore: StreamerChannelStore
   private readonly streamerChannelService: StreamerChannelService
+  private readonly streamerTwitchEventService: StreamerTwitchEventService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -58,6 +65,7 @@ export default class StreamerController extends ControllerBase {
     this.accountStore = deps.resolve('accountStore')
     this.streamerChannelStore = deps.resolve('streamerChannelStore')
     this.streamerChannelService = deps.resolve('streamerChannelService')
+    this.streamerTwitchEventService = deps.resolve('streamerTwitchEventService')
   }
 
   @GET
@@ -262,6 +270,37 @@ export default class StreamerController extends ControllerBase {
 
       await this.streamerChannelService.unsetPrimaryChannel(streamer.id, platform as 'youtube' | 'twitch')
       return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/twitch/status')
+  public async getTwitchStatus (): Promise<GetTwitchStatusResponse> {
+    const builder = this.registerResponseBuilder<GetTwitchStatusResponse>('GET /twitch/status')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const statuses = await this.streamerTwitchEventService.getStatuses(streamer.id)
+      if (statuses == null) {
+        return builder.failure(404, 'No Twitch statuses found. Please ensure you have set a primary Twitch channel.')
+      }
+
+      let result: PublicTwitchEventStatus[] = []
+      for (const type of keysOf(statuses)) {
+        const status = statuses[type]
+        result.push({
+          eventType: type,
+          status: status.status,
+          errorMessage: status.status === 'inactive' ? (status.message ?? null) : null
+        })
+      }
+      return builder.success({ statuses: result })
     } catch (e: any) {
       return builder.failure(e)
     }

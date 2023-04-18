@@ -16,13 +16,16 @@ import { NodeEnv } from '@rebel/server/globals'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
 import { getUserName } from '@rebel/server/services/ChannelService'
+import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
 // every now and then
 const NGROK_MAX_SESSION = 3600 * 2 * 1000
 
-type SubscriptionType = 'followers'
+const EVENT_SUB_TYPES = ['followers'] as const
+
+export type EventSubType = (typeof EVENT_SUB_TYPES)[number]
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
@@ -36,6 +39,7 @@ type Deps = Dependencies<{
   app: Express
   streamerChannelService: StreamerChannelService
   eventDispatchService: EventDispatchService
+  twitchClientId: string
   isAdministrativeMode: () => boolean
 }>
 
@@ -57,12 +61,13 @@ export default class HelixEventService extends ContextClass {
   private readonly app: Express
   private readonly streamerChannelService: StreamerChannelService
   private readonly eventDispatchService: EventDispatchService
+  private readonly twitchClientId: string
   private readonly isAdministrativeMode: () => boolean
 
   private listener: EventSubHttpListener | null
   private eventSubBase!: EventSubHttpBase
   private eventSubApi!: HelixEventSubApi
-  private streamerSubscriptions: Map<number, Partial<Record<SubscriptionType, EventSubSubscription<any>>>> = new Map()
+  private streamerSubscriptions: Map<number, Partial<Record<EventSubType, EventSubSubscription<any>>>> = new Map()
 
   constructor (deps: Deps) {
     super()
@@ -78,6 +83,7 @@ export default class HelixEventService extends ContextClass {
     this.app = deps.resolve('app')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
+    this.twitchClientId = deps.resolve('twitchClientId')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
 
     this.listener = null
@@ -92,7 +98,7 @@ export default class HelixEventService extends ContextClass {
     }
 
     // https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html
-    // we have to use the clientCredentialsApiClient, for some reasont he refreshing one doesn't work
+    // we have to use the clientCredentialsApiClient, for some reason the refreshing one doesn't work
     const client = this.twurpleApiClientProvider.getClientApi()
     this.eventSubApi = client.eventSub
 
@@ -106,6 +112,7 @@ export default class HelixEventService extends ContextClass {
       this.eventSubBase = this.listener
       this.listener.start()
       this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
+      this.subscribeToGlobalEvents()
       await this.initialiseSubscriptions()
       this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Ngrok listener]')
     } else {
@@ -118,6 +125,7 @@ export default class HelixEventService extends ContextClass {
       })
       this.eventSubBase = middleware
       middleware.apply(this.app)
+      this.subscribeToGlobalEvents()
 
       // hack: only mark as ready once we are starting the app so no events get lost
       // - assume this happens in the next 5 seconds (generous delay - we are in no rush)
@@ -133,9 +141,6 @@ export default class HelixEventService extends ContextClass {
             throw new Error('Time to implement pagination')
           }
 
-          middleware.onVerify((success, subscription) => this.logService.logInfo(this, 'middleware.onVerify', 'success:', success, 'subscription:', subscription.id))
-          middleware.onRevoke((subscription) => this.logService.logInfo(this, 'middleware.onRevoke', 'subscription:', subscription.id))
-
           // from what I understand we can safely re-subscribe to events when using the middleware
           await this.initialiseSubscriptions()
           this.logService.logInfo(this, 'Finished initial subscriptions to Helix events via the EventSub API [Middleware listener]')
@@ -148,6 +153,38 @@ export default class HelixEventService extends ContextClass {
 
     this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
     this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
+  }
+
+  public getEventSubscriptions (streamerId: number): Record<EventSubType, SubscriptionStatus> {
+    const result = {} as Record<EventSubType, SubscriptionStatus>
+    EVENT_SUB_TYPES.map(type => result[type] = { status: 'inactive' })
+
+    const subscriptions = this.streamerSubscriptions.get(streamerId) ?? {}
+    for (const type of EVENT_SUB_TYPES) {
+      const subscription = subscriptions[type]
+      if (subscription != null) {
+        result[type] = { status: 'active' }
+      }
+    }
+
+    return result
+  }
+
+  private subscribeToGlobalEvents () {
+    // todo: momentarily listen to these when creating/removing subscriptions to find out whether the subscription succeeded or not, then update in-memory data
+    // idea: make a map of subscription id -> status and update the status based on the below events. the status will be removed if the subscription gets removed.
+    this.eventSubBase.onVerify((success, subscription) => this.logService.logInfo(this, 'eventSub.onVerify', 'success:', success, 'subscription:', subscription.id))
+    this.eventSubBase.onRevoke((subscription) => this.logService.logWarning(this, 'eventSub.onRevoke', 'subscription:', subscription.id))
+    this.eventSubBase.onSubscriptionCreateSuccess((subscription) => this.logService.logInfo(this, 'eventSub.onSubscriptionCreateSuccess', 'subscription:', subscription.id))
+    this.eventSubBase.onSubscriptionCreateFailure((subscription, error) => this.logService.logError(this, 'eventSub.onSubscriptionCreateFailure', 'subscription:', subscription.id, error))
+    this.eventSubBase.onSubscriptionDeleteSuccess((subscription) => this.logService.logInfo(this, 'eventSub.onSubscriptionDeleteSuccess', 'subscription:', subscription.id))
+    this.eventSubBase.onSubscriptionDeleteFailure((subscription, error) => this.logService.logError(this, 'eventSub.onSubscriptionDeleteFailure', 'subscription:', subscription.id, error))
+
+    // todo: add/remove all subscriptions when this happens
+    this.eventSubBase.onUserAuthorizationGrant(this.twitchClientId, (data) => this.logService.logInfo(this, 'eventSub.onUserAuthorizationGrant', data.userDisplayName))
+    this.eventSubBase.onUserAuthorizationRevoke(this.twitchClientId, (data) => this.logService.logWarning(this, 'eventSub.onUserAuthorizationRevoke', data.userDisplayName))
+
+    this.logService.logInfo(this, 'Subscribed to base events')
   }
 
   private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {
@@ -201,8 +238,7 @@ export default class HelixEventService extends ContextClass {
       const moderatorUserId = user.id // todo CHAT-444: use the ChatMate user. if the streamer didn't give us moderator permissions, we won't be able to subscribe to moderator events.
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const subscription = this.eventSubBase.onChannelFollow(user.id, moderatorUserId, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
-      this.onSubscriptionAdded(streamerId, 'followers', subscription)
-      this.logService.logInfo(this, `Subscribed to channel events of Twitch user '${channelName}' (streamer ${streamerId})`)
+      this.onSubscriptionAdded(streamerId, channelName, 'followers', subscription)
     } catch (e: any) {
       const subscribedTypes = Object.keys(this.streamerSubscriptions.get(streamerId) ?? {})
       this.logService.logError(this, `Failed to subscribe to all channel events of Twitch user '${channelName}' (streamer ${streamerId}).`, 'Active subscriptions:', subscribedTypes, 'Error:', e)
@@ -226,12 +262,13 @@ export default class HelixEventService extends ContextClass {
     }
   }
 
-  private onSubscriptionAdded (streamerId: number, type: SubscriptionType, subscription: EventSubSubscription) {
+  private onSubscriptionAdded (streamerId: number, channelName: string, type: EventSubType, subscription: EventSubSubscription) {
     if (!this.streamerSubscriptions.has(streamerId)) {
       this.streamerSubscriptions.set(streamerId, {})
     }
 
     this.streamerSubscriptions.get(streamerId)![type] = subscription
+    this.logService.logInfo(this, `Subscribed to '${type}' events for Twitch user '${channelName}' (streamer ${streamerId})`)
   }
 
   private createNewListener () {

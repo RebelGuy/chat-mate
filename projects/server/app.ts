@@ -88,6 +88,7 @@ import GenericStore from '@rebel/server/stores/GenericStore'
 import { createLogContext } from '@rebel/shared/ILogService'
 import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
+import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -197,6 +198,7 @@ const main = async () => {
     .withClass('chatMateEventService', ChatMateEventService)
     .withClass('streamerService', StreamerService)
     .withClass('linkDataService', LinkDataService)
+    .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .build()
 
   app.use((req, res, next) => {

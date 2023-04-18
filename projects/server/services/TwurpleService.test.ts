@@ -17,6 +17,7 @@ import StreamerChannelService from '@rebel/server/services/StreamerChannelServic
 import { ApiClient, HelixUser } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { HelixUserData } from '@twurple/api/lib/interfaces/helix/user.external'
+import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 
 const onMessage_example = '{"msgId":"c2ddc7b6-51b6-4d75-9670-d262a6e98cf1","userInfo":{"userName":"chat_mate1","displayName":"chat_mate1","color":"#0000FF","badges":{},"badgeInfo":{},"userId":"781376034","userType":"","isBroadcaster":true,"isSubscriber":false,"isFounder":false,"isMod":false,"isVip":false},"channelId":"781376034","isCheer":false,"bits":0,"emoteOffsets":{},"messageParts":[{"type":"emote","position":0,"length":2,"id":"1","name":":)","displayInfo":{}},{"type":"text","position":2,"length":1,"text":" "},{"type":"emote","position":3,"length":6,"id":"301544927","name":"SirUwU","displayInfo":{}},{"type":"text","position":9,"length":1,"text":" "},{"type":"emote","position":10,"length":7,"id":"30259","name":"HeyGuys","displayInfo":{}}]}'
 
@@ -259,6 +260,76 @@ describe(nameof(TwurpleService, 'untimeout'), () => {
 
     const args = single(mockTwurpleApiProxyService.timeout.mock.calls)
     expect(args).toEqual(expectArray(args, [streamerHelixUser, helixUser, 1, reason]))
+  })
+})
+
+describe(nameof(TwurpleService, 'getChatStatus'), () => {
+  // this should probably be split into 5 tests but I just can't be bothered rn
+  test('Keeps track of initial streamers and joined/parted/failed channels and returns the correct active statuses', async () => {
+    // succeeds and stays
+    const channelName1 = 'test1'
+    const streamerId1 = 1
+    const addPrimaryChannelData1 = cast<EventData['addPrimaryChannel']>({
+      streamerId: streamerId1,
+      userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName1 }]}}}
+    })
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId1).mockResolvedValue(channelName1)
+
+    // succeeds and leaves
+    const channelName2 = 'test2'
+    const streamerId2 = 2
+    const addPrimaryChannelData2 = cast<EventData['addPrimaryChannel']>({
+      streamerId: streamerId2,
+      userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName2 }]}}}
+    })
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId2).mockResolvedValue(channelName2)
+
+    // fails to join
+    const channelName3 = 'test3'
+    const streamerId3 = 3
+    const addPrimaryChannelData3 = cast<EventData['addPrimaryChannel']>({
+      streamerId: streamerId3,
+      userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName3 }]}}}
+    })
+    const testErrorMessage = 'testError'
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId3).mockResolvedValue(channelName3)
+    mockChatClient.join.calledWith(channelName3).mockRejectedValue(new Error(testErrorMessage))
+
+    // succeeds
+    const channelName4 = 'test4'
+    const streamerId4 = 4
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([{
+      streamerId: streamerId4,
+      twitchChannelName: channelName4
+    }])
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId4).mockResolvedValue(channelName4)
+
+    // doesn't have a primary Twitch channel
+    const streamerId5 = 5
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId5).mockResolvedValue(null)
+
+    await twurpleService.initialise()
+
+    const onAddPrimaryChannel = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'addPrimaryChannel')![1]
+    const onRemovePrimaryChannel = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'removePrimaryChannel')![1]
+
+    await onAddPrimaryChannel(addPrimaryChannelData1)
+    await onAddPrimaryChannel(addPrimaryChannelData2)
+    await onAddPrimaryChannel(addPrimaryChannelData3)
+    await onRemovePrimaryChannel(addPrimaryChannelData2) // `add` has same schema as `remove`
+
+    const status1 = await twurpleService.getChatStatus(streamerId1)
+    const status2 = await twurpleService.getChatStatus(streamerId2)
+    const status3 = await twurpleService.getChatStatus(streamerId3)
+    const status4 = await twurpleService.getChatStatus(streamerId4)
+    const status5 = await twurpleService.getChatStatus(streamerId5)
+    expect([status1, status2, status3, status4, status5]).toEqual(expectArray<SubscriptionStatus | null>([
+      { status: 'active' },
+      { status: 'inactive' },
+      { status: 'inactive', message: testErrorMessage },
+      { status: 'active' },
+      null
+    ]))
   })
 })
 

@@ -13,8 +13,9 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
-import { HelixModerationApi, HelixUser, HelixUserApi } from '@twurple/api/lib'
+import { HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
+import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 
 export type TwitchMetadata = {
   streamId: string
@@ -54,6 +55,9 @@ export default class TwurpleService extends ContextClass {
   private userApi!: HelixUserApi
   private chatClient!: ChatClient
 
+  /** The keys are the channel names in lowercase characters. */
+  private channelChatStatus: Map<string, SubscriptionStatus> = new Map()
+
   constructor (deps: Deps) {
     super()
     this.logService = deps.resolve('logService')
@@ -88,6 +92,8 @@ export default class TwurpleService extends ContextClass {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
 
+    this.chatClient.onConnect(() => this.logService.logInfo(this, 'Connected.'))
+    this.chatClient.onDisconnect((manually, reason) => this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason))
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onJoinFailure((channel, reason) => this.logService.logError(this, 'chatClient.onJoinFailure', channel, reason))
     this.chatClient.onJoin((channel, user) => this.logService.logInfo(this, 'chatClient.onJoin', channel, user))
@@ -114,6 +120,17 @@ export default class TwurpleService extends ContextClass {
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.ban(broadcaster, user, reason ?? undefined)
+  }
+
+  /** Returns null if the streamer does not have a primary Twitch channel. */
+  public async getChatStatus (streamerId: number): Promise<SubscriptionStatus | null> {
+    const twitchChannelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
+    if (twitchChannelName == null) {
+      return null
+    }
+
+    const status = this.channelChatStatus.get(twitchChannelName.toLowerCase())
+    return status ?? { status: 'inactive' }
   }
 
   public async modChannel (streamerId: number, twitchChannelId: number) {
@@ -175,7 +192,8 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    await this.chatClient.join(getUserName(data.userChannel))
+    const channelName = getUserName(data.userChannel)
+    await this.joinSafe(channelName, data.streamerId)
   }
 
   private onPrimaryChannelRemoved (data: EventData['removePrimaryChannel']) {
@@ -183,7 +201,15 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    this.chatClient.part(getUserName(data.userChannel))
+    const channelName = getUserName(data.userChannel)
+    try {
+      this.chatClient.part(channelName)
+      this.logService.logError(this, `Successfully left the chat for channel ${channelName} (streamerId ${data.streamerId})`)
+    } catch (e: any) {
+      this.logService.logError(this, `Failed to leave the chat for channel ${channelName} (streamerId ${data.streamerId})`, e)
+    }
+
+    this.channelChatStatus.delete(channelName.toLowerCase())
   }
 
   private async getTwitchUserFromChannelId (internalTwitchChannelId: number): Promise<HelixUser> {
@@ -239,6 +265,17 @@ export default class TwurpleService extends ContextClass {
 
   private async joinStreamerChannels (): Promise<void> {
     const channels = await this.streamerChannelService.getAllTwitchStreamerChannels()
-    await Promise.all(channels.map(c => this.chatClient.join(c.twitchChannelName)))
+    await Promise.all(channels.map(c => this.joinSafe(c.twitchChannelName, c.streamerId)))
+  }
+
+  private async joinSafe (channelName: string, streamerId: number): Promise<void> {
+    try {
+      await this.chatClient.join(channelName)
+      this.channelChatStatus.set(channelName.toLowerCase(), { status: 'active' })
+      this.logService.logError(this, `Successfully joined the chat for channel ${channelName} (streamerId ${streamerId})`)
+    } catch (e: any) {
+      this.channelChatStatus.set(channelName.toLowerCase(), { status: 'inactive', message: e.message ?? 'Unknown error' })
+      this.logService.logError(this, `Failed to join the chat for channel ${channelName} (streamerId ${streamerId})`, e)
+    }
   }
 }

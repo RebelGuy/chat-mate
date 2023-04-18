@@ -722,6 +722,16 @@ Returns an empty body.
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
+### `GET /twitch/status`
+Gets the list of Twitch subscription statuses.
+
+Returns data with the following properties:
+- `statuses` (`PublicTwitchEventStatus[]`): The list of statuses, one for each subscription type.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+- `404`: When no Twitch statuses were found. Most likely this is because the streamer has not set a primary Twitch channel.
+
 ## User Endpoints
 Path: `/user`.
 
