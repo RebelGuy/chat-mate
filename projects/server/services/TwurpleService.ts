@@ -204,7 +204,7 @@ export default class TwurpleService extends ContextClass {
     const channelName = getUserName(data.userChannel)
     try {
       this.chatClient.part(channelName)
-      this.logService.logError(this, `Successfully left the chat for channel ${channelName} (streamerId ${data.streamerId})`)
+      this.logService.logInfo(this, `Successfully left the chat for channel ${channelName} (streamerId ${data.streamerId})`)
     } catch (e: any) {
       this.logService.logError(this, `Failed to leave the chat for channel ${channelName} (streamerId ${data.streamerId})`, e)
     }
