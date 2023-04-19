@@ -129,10 +129,10 @@ export default class TwurpleService extends ContextClass {
       return null
     }
 
-    if (!this.chatClient.isConnected) {
-      return { status: 'inactive', message: 'ChatMate is not connected to the Twitch chat server.' }
-    } else if (this.chatClient.isConnecting) {
+    if (this.chatClient.isConnecting) {
       return { status: 'pending' }
+    } else if (!this.chatClient.isConnected) {
+      return { status: 'inactive', message: 'ChatMate is not connected to the Twitch chat server.' }
     }
 
     const status = this.channelChatStatus.get(twitchChannelName.toLowerCase())

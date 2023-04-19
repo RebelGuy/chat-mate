@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { ChatItem } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import TwurpleService from '@rebel/server/services/TwurpleService'
-import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, mockGetter, nameof } from '@rebel/server/_test/utils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { DeepMockProxy, mock, mockDeep, MockProxy } from 'jest-mock-extended'
@@ -266,6 +266,9 @@ describe(nameof(TwurpleService, 'untimeout'), () => {
 describe(nameof(TwurpleService, 'getChatStatus'), () => {
   // this should probably be split into 5 tests but I just can't be bothered rn
   test('Keeps track of initial streamers and joined/parted/failed channels and returns the correct active statuses', async () => {
+    mockGetter(mockChatClient, 'isConnected').mockReturnValue(true)
+    mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
+
     // succeeds and stays
     const channelName1 = 'test1'
     const streamerId1 = 1
@@ -330,6 +333,32 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
       { status: 'active' },
       null
     ]))
+  })
+
+  test('Returns pending when the chat client is currently connecting', async () => {
+    const streamerId = 1
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue('')
+    mockGetter(mockChatClient, 'isConnected').mockReturnValue(false)
+    mockGetter(mockChatClient, 'isConnecting').mockReturnValue(true)
+
+    await twurpleService.initialise()
+
+    const result = await twurpleService.getChatStatus(streamerId)
+
+    expect(result).toEqual(expectObject(result, { status: 'pending' }))
+  })
+
+  test('Returns inactive when the chat client is not connected', async () => {
+    const streamerId = 1
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue('')
+    mockGetter(mockChatClient, 'isConnected').mockReturnValue(false)
+    mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
+
+    await twurpleService.initialise()
+
+    const result = await twurpleService.getChatStatus(streamerId)
+
+    expect(result).toEqual(expectObject(result, { status: 'inactive', message: expect.any(String) }))
   })
 })
 
