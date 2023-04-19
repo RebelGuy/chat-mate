@@ -81,7 +81,8 @@ export default class HelixEventService extends ContextClass {
   private verificationListeners: Set<typeof this.onVerify> = new Set()
   private revocationListeners: Set<typeof this.onRevoke> = new Set()
   private subscriptionCreationFailureListeners: Set<typeof this.onSubscriptionCreateFailure> = new Set()
-  private subscriptionVerificationFailureListeners: Set<typeof this.onSubscriptionVerifyFailure> = new Set()
+  private subscriptionDeleteSuccessListeners: Set<typeof this.onSubscriptionDeleteSuccess> = new Set()
+  private subscriptionDeleteFailureListeners: Set<typeof this.onSubscriptionDeleteFailure> = new Set()
 
   constructor (deps: Deps) {
     super()
@@ -201,8 +202,8 @@ export default class HelixEventService extends ContextClass {
     this.eventSubBase.onRevoke(this.onRevoke)
     this.eventSubBase.onSubscriptionCreateSuccess((subscription) => this.logService.logInfo(this, 'eventSub.onSubscriptionCreateSuccess', 'subscription:', subscription.id))
     this.eventSubBase.onSubscriptionCreateFailure(this.onSubscriptionCreateFailure)
-    this.eventSubBase.onSubscriptionDeleteSuccess((subscription) => this.logService.logInfo(this, 'eventSub.onSubscriptionDeleteSuccess', 'subscription:', subscription.id))
-    this.eventSubBase.onSubscriptionDeleteFailure(this.onSubscriptionVerifyFailure)
+    this.eventSubBase.onSubscriptionDeleteSuccess(this.onSubscriptionDeleteSuccess)
+    this.eventSubBase.onSubscriptionDeleteFailure(this.onSubscriptionDeleteFailure)
 
     this.eventSubBase.onUserAuthorizationGrant(this.twitchClientId, this.onUserAuthorizationGrant)
     this.eventSubBase.onUserAuthorizationRevoke(this.twitchClientId, this.onUserAuthorizationRevoke)
@@ -226,9 +227,14 @@ export default class HelixEventService extends ContextClass {
     this.subscriptionCreationFailureListeners.forEach(listener => listener(subscription, error))
   }
 
-  private onSubscriptionVerifyFailure = (subscription: EventSubSubscription, error: Error) => {
-    this.logService.logError(this, `eventSub.onSubscriptionVerifyFailure - subscription: ${subscription.id}`, error)
-    this.subscriptionVerificationFailureListeners.forEach(listener => listener(subscription, error))
+  private onSubscriptionDeleteSuccess = (subscription: EventSubSubscription) => {
+    this.logService.logInfo(this, `eventSub.onSubscriptionDeleteSuccess - subscription: ${subscription.id}`)
+    this.subscriptionDeleteSuccessListeners.forEach(listener => listener(subscription))
+  }
+
+  private onSubscriptionDeleteFailure = (subscription: EventSubSubscription, error: Error) => {
+    this.logService.logError(this, `eventSub.onSubscriptionDeleteFailure - subscription: ${subscription.id}`, error)
+    this.subscriptionDeleteFailureListeners.forEach(listener => listener(subscription, error))
   }
 
   private onUserAuthorizationGrant = async (data: EventSubUserAuthorizationGrantEvent) => {
@@ -277,7 +283,7 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
-    await this.unsubscribeFromChannelEvents(data.streamerId)
+    await this.unsubscribeFromChannelEvents(data.streamerId, getUserName(data.userChannel))
   }
 
   private async refreshNgrok () {
@@ -333,6 +339,7 @@ export default class HelixEventService extends ContextClass {
 
       // this is kinda nasty... but also kinda not!
       const error = await new Promise<string | null>(resolve => {
+        // no need to listen to the creationSuccess event - if we are verified, then it must have also been created successfully.
         const verificationListener = (success: boolean, verifiedSubscription: EventSubSubscription) => {
           if (verifiedSubscription.id === subscription.id) {
             cleanUp()
@@ -373,7 +380,7 @@ export default class HelixEventService extends ContextClass {
     }
   }
 
-  private async unsubscribeFromChannelEvents (streamerId: number) {
+  private async unsubscribeFromChannelEvents (streamerId: number, channelName: string) {
     if (!this.streamerSubscriptionInfos.has(streamerId)) {
       return
     }
@@ -381,12 +388,60 @@ export default class HelixEventService extends ContextClass {
     try {
       const subscriptions = this.streamerSubscriptionInfos.get(streamerId)!
       const subscribedTypes = keysOf(subscriptions)
-      await Promise.all(subscribedTypes.map(type => subscriptions[type]!.subscription?.stop()))
-      this.streamerSubscriptionInfos.delete(streamerId)
-      this.logService.logInfo(this, `Unsubscribed from all channel events of streamer ${streamerId}`)
+      for (const type of subscribedTypes) {
+        await this.removeSubscriptionSafe(subscriptions[type]!.subscription, streamerId, channelName, type)
+      }
+      this.logService.logInfo(this, `Finished subscription removal sequence of Twitch user '${channelName}' (streamer ${streamerId}).`)
     } catch (e: any) {
       const subscribedTypes = Object.keys(this.streamerSubscriptionInfos.get(streamerId) ?? {})
-      this.logService.logError(this, `Failed to unsubscribe from all channel events of streamer ${streamerId}.`, 'Active subscriptions:', subscribedTypes, 'Error:', e)
+      this.logService.logError(this, `Failed to complete subscription removal sequence of Twitch user '${channelName}' (streamer ${streamerId}).`, 'Active subscriptions (may be broken):', subscribedTypes, 'Error:', e)
+    }
+  }
+
+  private async removeSubscriptionSafe (subscription: EventSubSubscription | null, streamerId: number, channelName: string, eventType: EventSubType) {
+    try {
+      let error: string | null = null
+      if (subscription != null) {
+        error = await new Promise<string | null>(resolve => {
+          const successListener = (createdSubscription: EventSubSubscription) => {
+            if (createdSubscription.id === subscription.id) {
+              cleanUp()
+              resolve(null)
+            }
+          }
+
+          const failureListener = (failedSubscription: EventSubSubscription, e: Error) => {
+            if (failedSubscription.id === subscription.id) {
+              cleanUp()
+              resolve(`Failed to remove subscription: ${e.message}`)
+            }
+          }
+
+          const clearTimeout = this.timerHelpers.setTimeout(() => {
+            cleanUp()
+            resolve('Failed to remove subscription because it took to long.')
+          }, 5000)
+
+          const cleanUp = () => {
+            this.subscriptionDeleteFailureListeners.delete(failureListener)
+            this.subscriptionDeleteSuccessListeners.add(successListener)
+            clearTimeout()
+          }
+
+          this.subscriptionDeleteFailureListeners.add(failureListener)
+          this.subscriptionDeleteSuccessListeners.add(successListener)
+          subscription.stop()
+        })
+      }
+
+      this.setSubscriptionInfo(streamerId, eventType, subscription, error)
+      if (error == null) {
+        this.logService.logInfo(this, `Unsubscribed from '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}). Subscription id: ${subscription?.id ?? '<none>'}`)
+      } else {
+        this.logService.logError(this, `Gracefully failed to unsubscribe from '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}). ${error}`)
+      }
+    } catch (e: any) {
+      this.logService.logError(this, `Unexpectedly failed to unsubscribe from '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}).`, e)
     }
   }
 
@@ -395,7 +450,11 @@ export default class HelixEventService extends ContextClass {
       this.streamerSubscriptionInfos.set(streamerId, {})
     }
 
-    this.streamerSubscriptionInfos.get(streamerId)![type] = { subscription, errorMessage }
+    if (subscription == null && errorMessage == null) {
+      delete this.streamerSubscriptionInfos.get(streamerId)![type]
+    } else {
+      this.streamerSubscriptionInfos.get(streamerId)![type] = { subscription, errorMessage }
+    }
   }
 
   private createNewListener () {
