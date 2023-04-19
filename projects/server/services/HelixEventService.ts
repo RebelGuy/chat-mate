@@ -77,6 +77,12 @@ export default class HelixEventService extends ContextClass {
   // note: the `subscription.verify` property will update on the initial (unverified) subscription object
   private streamerSubscriptionInfos: Map<number, Partial<Record<EventSubType, SubscriptionInfo>>> = new Map()
 
+  // internal event listeners
+  private verificationListeners: Set<typeof this.onVerify> = new Set()
+  private revocationListeners: Set<typeof this.onRevoke> = new Set()
+  private subscriptionCreationFailureListeners: Set<typeof this.onSubscriptionCreateFailure> = new Set()
+  private subscriptionVerificationFailureListeners: Set<typeof this.onSubscriptionVerifyFailure> = new Set()
+
   constructor (deps: Deps) {
     super()
 
@@ -191,18 +197,38 @@ export default class HelixEventService extends ContextClass {
     // todo: momentarily listen to these when creating/removing subscriptions to find out whether the subscription succeeded or not, then update in-memory data
     // idea: make a map of subscription id -> status and update the status based on the below events. the status will be removed if the subscription gets removed.
     /* eslint-disable @typescript-eslint/no-misused-promises */
-    this.eventSubBase.onVerify((success, subscription) => this.logService.logInfo(this, 'eventSub.onVerify', 'success:', success, 'subscription:', subscription.id))
-    this.eventSubBase.onRevoke((subscription) => this.logService.logWarning(this, 'eventSub.onRevoke', 'subscription:', subscription.id))
+    this.eventSubBase.onVerify(this.onVerify)
+    this.eventSubBase.onRevoke(this.onRevoke)
     this.eventSubBase.onSubscriptionCreateSuccess((subscription) => this.logService.logInfo(this, 'eventSub.onSubscriptionCreateSuccess', 'subscription:', subscription.id))
-    this.eventSubBase.onSubscriptionCreateFailure((subscription, error) => this.logService.logError(this, 'eventSub.onSubscriptionCreateFailure', 'subscription:', subscription.id, error))
+    this.eventSubBase.onSubscriptionCreateFailure(this.onSubscriptionCreateFailure)
     this.eventSubBase.onSubscriptionDeleteSuccess((subscription) => this.logService.logInfo(this, 'eventSub.onSubscriptionDeleteSuccess', 'subscription:', subscription.id))
-    this.eventSubBase.onSubscriptionDeleteFailure((subscription, error) => this.logService.logError(this, 'eventSub.onSubscriptionDeleteFailure', 'subscription:', subscription.id, error))
+    this.eventSubBase.onSubscriptionDeleteFailure(this.onSubscriptionVerifyFailure)
 
     this.eventSubBase.onUserAuthorizationGrant(this.twitchClientId, this.onUserAuthorizationGrant)
     this.eventSubBase.onUserAuthorizationRevoke(this.twitchClientId, this.onUserAuthorizationRevoke)
     /* eslint-enable @typescript-eslint/no-misused-promises */
 
     this.logService.logInfo(this, 'Subscribed to base events')
+  }
+
+  private onVerify = (success: boolean, subscription: EventSubSubscription) => {
+    this.logService.logInfo(this, `eventSub.onVerify - success: ${success}, subscription: ${subscription.id}`)
+    this.verificationListeners.forEach(listener => listener(success, subscription))
+  }
+
+  private onRevoke = (subscription: EventSubSubscription) => {
+    this.logService.logWarning(this, `eventSub.onRevoke - subscription: ${subscription.id}`)
+    this.revocationListeners.forEach(listener => listener(subscription))
+  }
+
+  private onSubscriptionCreateFailure = (subscription: EventSubSubscription, error: Error) => {
+    this.logService.logError(this, `eventSub.onSubscriptionCreateFailure - subscription: ${subscription.id}`, error)
+    this.subscriptionCreationFailureListeners.forEach(listener => listener(subscription, error))
+  }
+
+  private onSubscriptionVerifyFailure = (subscription: EventSubSubscription, error: Error) => {
+    this.logService.logError(this, `eventSub.onSubscriptionVerifyFailure - subscription: ${subscription.id}`, error)
+    this.subscriptionVerificationFailureListeners.forEach(listener => listener(subscription, error))
   }
 
   private onUserAuthorizationGrant = async (data: EventSubUserAuthorizationGrantEvent) => {
@@ -289,24 +315,61 @@ export default class HelixEventService extends ContextClass {
       const moderatorUserId = user.id // todo CHAT-444: use the ChatMate user. if the streamer didn't give us moderator permissions, we won't be able to subscribe to moderator events.
 
       /* eslint-disable @typescript-eslint/no-misused-promises */
-      this.createSubscriptionSafe(() => {
+      await this.createSubscriptionSafe(() => {
         return this.eventSubBase.onChannelFollow(user.id, moderatorUserId, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
       }, streamerId, channelName, 'followers')
       /* eslint-enable @typescript-eslint/no-misused-promises */
 
-      this.logService.logInfo(this, `Finished subscribing to all channel events of Twitch user '${channelName}' (streamer ${streamerId}).`)
+      this.logService.logInfo(this, `Finished subscription sequence of Twitch user '${channelName}' (streamer ${streamerId}).`)
     } catch (e: any) {
       const subscribedTypes = Object.keys(this.streamerSubscriptionInfos.get(streamerId) ?? {})
-      this.logService.logError(this, `Failed to subscribe to all channel events of Twitch user '${channelName}' (streamer ${streamerId}).`, 'Active subscriptions (may be broken):', subscribedTypes, 'Error:', e)
+      this.logService.logError(this, `Failed to complete subscription sequence of Twitch user '${channelName}' (streamer ${streamerId}).`, 'Active subscriptions (may be broken):', subscribedTypes, 'Error:', e)
     }
   }
 
-  private createSubscriptionSafe (onCreateSubscription: () => EventSubSubscription, streamerId: number, channelName: string, eventType: EventSubType) {
+  private async createSubscriptionSafe (onCreateSubscription: () => EventSubSubscription, streamerId: number, channelName: string, eventType: EventSubType) {
     try {
       const subscription = onCreateSubscription()
-      this.onSubscriptionAdded(streamerId, channelName, 'followers', subscription)
+
+      // this is kinda nasty... but also kinda not!
+      const error = await new Promise<string | null>(resolve => {
+        const verificationListener = (success: boolean, verifiedSubscription: EventSubSubscription) => {
+          if (verifiedSubscription.id === subscription.id) {
+            cleanUp()
+            resolve(success ? null : 'Failed to verify subscription.')
+          }
+        }
+
+        const creationFailureListener = (failedSubscription: EventSubSubscription, e: Error) => {
+          if (failedSubscription.id === subscription.id) {
+            cleanUp()
+            resolve(`Failed to create subscription: ${e.message}`)
+          }
+        }
+
+        const clearTimeout = this.timerHelpers.setTimeout(() => {
+          cleanUp()
+          resolve('Failed to create subscription because it took to long.')
+        }, 5000)
+
+        const cleanUp = () => {
+          this.verificationListeners.delete(verificationListener)
+          this.subscriptionCreationFailureListeners.add(creationFailureListener)
+          clearTimeout()
+        }
+
+        this.verificationListeners.add(verificationListener)
+        this.subscriptionCreationFailureListeners.add(creationFailureListener)
+      })
+
+      this.setSubscriptionInfo(streamerId, eventType, subscription, error)
+      if (error == null) {
+        this.logService.logInfo(this, `Subscribed to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}). Subscription id: ${subscription.id}`)
+      } else {
+        this.logService.logError(this, `Gracefully failed to subscribe to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}). ${error}`)
+      }
     } catch (e: any) {
-      this.logService.logError(this, `Failed to subscribe to to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}).`, e)
+      this.logService.logError(this, `Unexpectedly failed to subscribe to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}).`, e)
     }
   }
 
@@ -327,13 +390,12 @@ export default class HelixEventService extends ContextClass {
     }
   }
 
-  private onSubscriptionAdded (streamerId: number, channelName: string, type: EventSubType, subscription: EventSubSubscription) {
+  private setSubscriptionInfo (streamerId: number, type: EventSubType, subscription: EventSubSubscription | null, errorMessage: string | null) {
     if (!this.streamerSubscriptionInfos.has(streamerId)) {
       this.streamerSubscriptionInfos.set(streamerId, {})
     }
 
-    this.streamerSubscriptionInfos.get(streamerId)![type] = { subscription, errorMessage: null }
-    this.logService.logInfo(this, `Subscribed to '${type}' events for Twitch user '${channelName}' (streamer ${streamerId}). Subscription id: ${subscription.id}`)
+    this.streamerSubscriptionInfos.get(streamerId)![type] = { subscription, errorMessage }
   }
 
   private createNewListener () {

@@ -30,8 +30,10 @@ export default class TimerHelpers extends ContextClass {
     this.timers = new Map()
   }
 
-  public setTimeout (callback: () => Promise<any> | any, ms?: number): void {
-    setTimeout(() => callback(), ms)
+  /** Returns a function that, when invoked, will cancel the timeout. */
+  public setTimeout (callback: () => Promise<any> | any, ms?: number): () => void {
+    const id = setTimeout(() => callback(), ms)
+    return () => clearTimeout(id)
   }
 
   /**
