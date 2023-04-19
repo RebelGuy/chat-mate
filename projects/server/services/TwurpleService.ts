@@ -129,6 +129,12 @@ export default class TwurpleService extends ContextClass {
       return null
     }
 
+    if (!this.chatClient.isConnected) {
+      return { status: 'inactive', message: 'ChatMate is not connected to the Twitch chat server.' }
+    } else if (this.chatClient.isConnecting) {
+      return { status: 'pending' }
+    }
+
     const status = this.channelChatStatus.get(twitchChannelName.toLowerCase())
     return status ?? { status: 'inactive' }
   }
@@ -141,6 +147,10 @@ export default class TwurpleService extends ContextClass {
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
     await this.twurpleApiProxyService.mod(broadcaster, user)
+  }
+
+  public reconnectClient () {
+    void this.chatClient.reconnect()
   }
 
   public async timeout (streamerId: number, twitchChannelId: number, reason: string | null, durationSeconds: number) {

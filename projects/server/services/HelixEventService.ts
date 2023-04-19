@@ -232,7 +232,7 @@ export default class HelixEventService extends ContextClass {
   }
 
   private onUserAuthorizationGrant = async (data: EventSubUserAuthorizationGrantEvent) => {
-    this.logService.logInfo(this, 'eventSub.onUserAuthorizationGrant', data)
+    this.logService.logInfo(this, 'eventSub.onUserAuthorizationGrant', data.userName)
 
     const streamerId = await this.streamerChannelService.getStreamerFromTwitchChannelName(data.userName)
     if (streamerId == null) {
@@ -245,7 +245,7 @@ export default class HelixEventService extends ContextClass {
   }
 
   private onUserAuthorizationRevoke = async (data: EventSubUserAuthorizationRevokeEvent) => {
-    this.logService.logInfo(this, 'eventSub.onUserAuthorizationRevoke', data)
+    this.logService.logInfo(this, 'eventSub.onUserAuthorizationRevoke', data.userName)
 
     let streamerId: number | null = null
     if (data.userName != null) {

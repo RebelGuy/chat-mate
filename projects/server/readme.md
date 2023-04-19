@@ -199,6 +199,11 @@ Query parameters:
 
 Returns an empty response body.
 
+### `POST /twitch/reconnectChatClient`
+Reconnects the Twitch chat client. Note that this will have no effect if the stored access/refresh token was previously revoked - in this case, the server must be restarted since the token is retrieved and set at startup.
+
+Returns an empty response body.
+
 ## Chat Endpoints
 Path: `/chat`.
 

@@ -6,7 +6,7 @@ import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse } from '@rebel/server/controllers/UserController'
-import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse } from '@rebel/server/controllers/AdminController'
+import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse } from '@rebel/server/controllers/AdminController'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
@@ -145,6 +145,8 @@ export const authoriseTwitch = requestBuilder<TwitchAuthorisationResponse, false
   (code) => constructPath('/admin/twitch/authorise', { code }),
   false
 )
+
+export const reconnectChatClient = requestBuilder<ReconnectTwitchChatClientResponse>('POST', '/admin/twitch/reconnectChatClient', false)
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
   return await request('GET', path, null, loginToken, streamer)

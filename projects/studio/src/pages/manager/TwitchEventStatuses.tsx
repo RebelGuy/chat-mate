@@ -1,13 +1,14 @@
 import { Close, Done, Error } from '@mui/icons-material'
-import { CircularProgress, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip } from '@mui/material'
+import { Button, CircularProgress, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip } from '@mui/material'
 import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
+import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { getTwitchEventStatuses } from '@rebel/studio/utility/api'
+import { getTwitchEventStatuses, reconnectChatClient } from '@rebel/studio/utility/api'
 
 type EventInfo = {
   name: string
@@ -28,10 +29,11 @@ const EVENT_INFO: Record<PublicTwitchEventStatus['eventType'], EventInfo> = {
 export default function TwitchEventStatuses () {
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const getStatusesRequest = useRequest(getTwitchEventStatuses(), { updateKey: refreshToken })
+  const reconnectChatClientRequest = useRequest(reconnectChatClient(), { onDemand: true })
 
   return <>
     <PanelHeader>Twitch Events {<RefreshButton isLoading={getStatusesRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
-    <ApiLoading requestObj={getStatusesRequest} />
+    <ApiLoading requestObj={getStatusesRequest} initialOnly />
     <ApiError requestObj={getStatusesRequest} />
 
     {getStatusesRequest.data != null && <>
@@ -53,6 +55,19 @@ export default function TwitchEventStatuses () {
         </TableBody>
       </Table>
     </>}
+
+    <RequireRank admin hideAdminOutline>
+      <>
+        <Button
+          sx={{ mt: 2 }}
+          onClick={reconnectChatClientRequest.triggerRequest}
+          disabled={reconnectChatClientRequest.isLoading}
+        >
+          Reconnect Twitch chat client
+        </Button>
+        <ApiError requestObj={reconnectChatClientRequest} />
+      </>
+    </RequireRank>
   </>
 }
 
