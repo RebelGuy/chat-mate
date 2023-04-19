@@ -37,8 +37,8 @@ describe(nameof(StreamerTwitchEventService, 'getStatuses'), () => {
 
   test('Returns the chat and eventSub statuses for the streamer', async () => {
     const streamerId = 5
-    const chatStatus: SubscriptionStatus = { status: 'active' }
-    const eventSubStatus: Record<EventSubType, SubscriptionStatus> = cast({ followers: { status: 'inactive', message: 'test' }})
+    const chatStatus: SubscriptionStatus = { status: 'active', lastChange: Date.now() }
+    const eventSubStatus: Record<EventSubType, SubscriptionStatus> = cast({ followers: { status: 'inactive', message: 'test', lastChange: Date.now() }})
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId]))
       .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: {} })])
     mockTwurpleService.getChatStatus.calledWith(streamerId).mockResolvedValue(chatStatus)

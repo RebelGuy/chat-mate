@@ -297,7 +297,8 @@ export default class StreamerController extends ControllerBase {
         result.push({
           eventType: type,
           status: status.status,
-          errorMessage: status.status === 'inactive' ? (status.message ?? null) : null
+          errorMessage: status.status === 'inactive' ? (status.message ?? null) : null,
+          lastChange: status.lastChange
         })
       }
       return builder.success({ statuses: result })

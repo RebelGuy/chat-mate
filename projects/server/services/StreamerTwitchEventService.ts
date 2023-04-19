@@ -8,6 +8,8 @@ import { single } from '@rebel/shared/util/arrays'
 export type SubscriptionType = EventSubType | 'chat'
 
 export type SubscriptionStatus = {
+  lastChange: number
+} & ({
   status: 'active'
 } | {
   status: 'pending'
@@ -16,7 +18,7 @@ export type SubscriptionStatus = {
 
   // no message implies no error
   message?: string
-}
+})
 
 type Deps = Dependencies<{
   helixEventService: HelixEventService

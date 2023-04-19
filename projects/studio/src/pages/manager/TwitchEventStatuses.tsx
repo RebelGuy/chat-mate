@@ -5,6 +5,7 @@ import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
+import RelativeTime from '@rebel/studio/components/RelativeTime'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
@@ -48,6 +49,7 @@ export default function TwitchEventStatuses () {
             <TableCell>Event Name</TableCell>
             <TableCell>Info</TableCell>
             <TableCell>Status</TableCell>
+            <TableCell>Last Change</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -79,6 +81,7 @@ function StatusRow (props: StatusProps) {
   const type = props.status.eventType
   const status = props.status.status
   const errorMessage = props.status.errorMessage
+  const lastChange = props.status.lastChange
 
   let statusIcon: React.ReactNode
   let tooltip: string
@@ -107,6 +110,7 @@ function StatusRow (props: StatusProps) {
           </IconButton>
         </Tooltip>
       </TableCell>
+      <TableCell><RelativeTime time={lastChange} /></TableCell>
     </TableRow>
   )
 }

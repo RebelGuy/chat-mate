@@ -18,6 +18,7 @@ import EventDispatchService, { EventData } from '@rebel/server/services/EventDis
 import { getUserName } from '@rebel/server/services/ChannelService'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import { keysOf } from '@rebel/shared/util/objects'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -31,6 +32,7 @@ export type EventSubType = (typeof EVENT_SUB_TYPES)[number]
 type SubscriptionInfo = {
   subscription: EventSubSubscription | null
   errorMessage: string | null
+  lastChange: number
 }
 
 type Deps = Dependencies<{
@@ -47,6 +49,7 @@ type Deps = Dependencies<{
   eventDispatchService: EventDispatchService
   twitchClientId: string
   isAdministrativeMode: () => boolean
+  dateTimeHelpers: DateTimeHelpers
 }>
 
 // this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
@@ -69,6 +72,7 @@ export default class HelixEventService extends ContextClass {
   private readonly eventDispatchService: EventDispatchService
   private readonly twitchClientId: string
   private readonly isAdministrativeMode: () => boolean
+  private readonly dateTimeHelpers: DateTimeHelpers
 
   private listener: EventSubHttpListener | null
   private eventSubBase!: EventSubHttpBase
@@ -100,6 +104,7 @@ export default class HelixEventService extends ContextClass {
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.twitchClientId = deps.resolve('twitchClientId')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
+    this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
 
     this.listener = null
   }
@@ -172,7 +177,7 @@ export default class HelixEventService extends ContextClass {
 
   public getEventSubscriptions (streamerId: number): Record<EventSubType, SubscriptionStatus> {
     const result = {} as Record<EventSubType, SubscriptionStatus>
-    EVENT_SUB_TYPES.map(type => result[type] = { status: 'inactive' })
+    EVENT_SUB_TYPES.forEach(type => result[type] = { status: 'inactive', lastChange: this.dateTimeHelpers.ts() })
 
     const infos = this.streamerSubscriptionInfos.get(streamerId) ?? {}
     for (const type of EVENT_SUB_TYPES) {
@@ -180,13 +185,24 @@ export default class HelixEventService extends ContextClass {
       if (info != null) {
         const error = info.errorMessage
         const subscription = info.subscription
+        const lastChange = info.lastChange
 
         if (error != null) {
-          result[type] = { status: 'inactive', message: error }
+          result[type] = {
+            status: 'inactive',
+            message: error,
+            lastChange: lastChange
+          }
         } else if (subscription == null) {
-          result[type] = { status: 'inactive' }
+          result[type] = {
+            status: 'inactive',
+            lastChange: lastChange
+          }
         } else {
-          result[type] = { status: subscription.verified ? 'active' : 'pending' }
+          result[type] = {
+            status: subscription.verified ? 'active' : 'pending',
+            lastChange: lastChange
+          }
         }
       }
     }
@@ -453,7 +469,11 @@ export default class HelixEventService extends ContextClass {
     if (subscription == null && errorMessage == null) {
       delete this.streamerSubscriptionInfos.get(streamerId)![type]
     } else {
-      this.streamerSubscriptionInfos.get(streamerId)![type] = { subscription, errorMessage }
+      this.streamerSubscriptionInfos.get(streamerId)![type] = {
+        subscription: subscription,
+        errorMessage: errorMessage,
+        lastChange: this.dateTimeHelpers.ts()
+      }
     }
   }
 

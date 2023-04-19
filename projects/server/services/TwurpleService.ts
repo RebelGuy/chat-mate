@@ -16,6 +16,7 @@ import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMe
 import { HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 
 export type TwitchMetadata = {
   streamId: string
@@ -36,6 +37,7 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   streamerChannelService: StreamerChannelService
   isAdministrativeMode: () => boolean
+  dateTimeHelpers: DateTimeHelpers
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -52,6 +54,7 @@ export default class TwurpleService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly streamerChannelService: StreamerChannelService
   private readonly isAdministrativeMode: () => boolean
+  private readonly dateTimeHelpers: DateTimeHelpers
   private userApi!: HelixUserApi
   private chatClient!: ChatClient
 
@@ -71,6 +74,7 @@ export default class TwurpleService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
+    this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
   }
 
   public override async initialise () {
@@ -130,13 +134,26 @@ export default class TwurpleService extends ContextClass {
     }
 
     if (this.chatClient.isConnecting) {
-      return { status: 'pending' }
+      return {
+        status: 'pending',
+        lastChange: this.dateTimeHelpers.ts()
+      }
     } else if (!this.chatClient.isConnected) {
-      return { status: 'inactive', message: 'ChatMate is not connected to the Twitch chat server.' }
+      return {
+        status: 'inactive',
+        message: 'ChatMate is not connected to the Twitch chat server.', lastChange: this.dateTimeHelpers.ts()
+      }
     }
 
     const status = this.channelChatStatus.get(twitchChannelName.toLowerCase())
-    return status ?? { status: 'inactive' }
+    if (status != null) {
+      return status
+    } else {
+      return {
+        status: 'inactive',
+        lastChange: this.dateTimeHelpers.ts()
+      }
+    }
   }
 
   public async modChannel (streamerId: number, twitchChannelId: number) {
@@ -281,10 +298,19 @@ export default class TwurpleService extends ContextClass {
   private async joinSafe (channelName: string, streamerId: number): Promise<void> {
     try {
       await this.chatClient.join(channelName)
-      this.channelChatStatus.set(channelName.toLowerCase(), { status: 'active' })
+      const status: SubscriptionStatus = {
+        status: 'active',
+        lastChange: this.dateTimeHelpers.ts()
+      }
+      this.channelChatStatus.set(channelName.toLowerCase(), status)
       this.logService.logInfo(this, `Successfully joined the chat for channel ${channelName} (streamerId ${streamerId})`)
     } catch (e: any) {
-      this.channelChatStatus.set(channelName.toLowerCase(), { status: 'inactive', message: e.message ?? 'Unknown error' })
+      const status: SubscriptionStatus = {
+        status: 'inactive',
+        message: e.message ?? 'Unknown error',
+        lastChange: this.dateTimeHelpers.ts()
+      }
+      this.channelChatStatus.set(channelName.toLowerCase(), status)
       this.logService.logError(this, `Failed to join the chat for channel ${channelName} (streamerId ${streamerId})`, e)
     }
   }

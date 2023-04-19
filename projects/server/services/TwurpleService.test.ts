@@ -18,6 +18,7 @@ import { ApiClient, HelixUser } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { HelixUserData } from '@twurple/api/lib/interfaces/helix/user.external'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 
 const onMessage_example = '{"msgId":"c2ddc7b6-51b6-4d75-9670-d262a6e98cf1","userInfo":{"userName":"chat_mate1","displayName":"chat_mate1","color":"#0000FF","badges":{},"badgeInfo":{},"userId":"781376034","userType":"","isBroadcaster":true,"isSubscriber":false,"isFounder":false,"isMod":false,"isVip":false},"channelId":"781376034","isCheer":false,"bits":0,"emoteOffsets":{},"messageParts":[{"type":"emote","position":0,"length":2,"id":"1","name":":)","displayInfo":{}},{"type":"text","position":2,"length":1,"text":" "},{"type":"emote","position":3,"length":6,"id":"301544927","name":"SirUwU","displayInfo":{}},{"type":"text","position":9,"length":1,"text":" "},{"type":"emote","position":10,"length":7,"id":"30259","name":"HeyGuys","displayInfo":{}}]}'
 
@@ -31,6 +32,7 @@ let mockEventDispatchService: MockProxy<EventDispatchService>
 let mockAccountStore: MockProxy<AccountStore>
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockStreamerChannelService: MockProxy<StreamerChannelService>
+let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let twurpleService: TwurpleService
 
 beforeEach(() => {
@@ -46,6 +48,7 @@ beforeEach(() => {
   mockAccountStore = mock()
   mockStreamerStore = mock()
   mockStreamerChannelService = mock()
+  mockDateTimeHelpers = mock()
 
   twurpleService = new TwurpleService(new Dependencies({
     logService: mock(),
@@ -58,7 +61,8 @@ beforeEach(() => {
     accountStore: mockAccountStore,
     streamerStore: mockStreamerStore,
     streamerChannelService: mockStreamerChannelService,
-    isAdministrativeMode: () => false
+    isAdministrativeMode: () => false,
+    dateTimeHelpers: mockDateTimeHelpers
   }))
 
   mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([])
@@ -77,7 +81,8 @@ describe(nameof(TwurpleService, 'initialise'), () => {
       accountStore: mockAccountStore,
       streamerStore: mockStreamerStore,
       streamerChannelService: mockStreamerChannelService,
-      isAdministrativeMode: () => false
+      isAdministrativeMode: () => false,
+      dateTimeHelpers: mockDateTimeHelpers
     }))
 
     await twurpleService.initialise()
@@ -98,7 +103,8 @@ describe(nameof(TwurpleService, 'initialise'), () => {
       accountStore: mockAccountStore,
       streamerStore: mockStreamerStore,
       streamerChannelService: mockStreamerChannelService,
-      isAdministrativeMode: () => true
+      isAdministrativeMode: () => true,
+      dateTimeHelpers: mockDateTimeHelpers
     }))
 
     await twurpleService.initialise()

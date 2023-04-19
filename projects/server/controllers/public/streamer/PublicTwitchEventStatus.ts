@@ -9,4 +9,7 @@ export type PublicTwitchEventStatus = PublicObject<{
 
   /** An optional error message. `null` implies that there is no error. */
   errorMessage: string | null
+
+  /** The time at which this status has last changed or was generated. */
+  lastChange: number
 }>
