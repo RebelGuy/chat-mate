@@ -50,7 +50,32 @@ export default class StreamerChannelService extends ContextClass {
     return nonNull(primaryChannels.map(c => c.twitchChannel != null ? { streamerId: c.streamerId, twitchChannelName: getUserName(c.twitchChannel) } : null))
   }
 
-  /** Returns null when the streamer does not have a primary twitch channel. */
+  /** Case insensitive. Returns a non-null value only if the channel exists and is the primary Twitch channel of the streamer. */
+  public async getStreamerFromTwitchChannelName (channelName: string): Promise<number | null> {
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName)
+    if (channel == null) {
+      return null
+    }
+
+    const registeredUser = await this.accountStore.getRegisteredUsers([channel.userId]).then(single)
+    if (registeredUser.registeredUser == null) {
+      return null
+    }
+
+    const streamer = await this.streamerStore.getStreamerByRegisteredUserId(registeredUser.registeredUser.id)
+    if (streamer == null) {
+      return null
+    }
+
+    const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamer.id]).then(single)
+    if (primaryChannels.twitchChannel == null || getUserName(primaryChannels.twitchChannel).toLowerCase() !== channelName.toLowerCase()) {
+      return null
+    }
+
+    return streamer.id
+  }
+
+  /** Returns null when the streamer does not have a primary Twitch channel. */
   public async getTwitchChannelName (streamerId: number): Promise<string | null> {
     const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamerId]).then(single)
     return primaryChannels?.twitchChannel != null ? getUserName(primaryChannels.twitchChannel) : null

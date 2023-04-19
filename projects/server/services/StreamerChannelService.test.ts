@@ -1,8 +1,8 @@
-import { ChatUser, Livestream, RegisteredUser, Streamer } from '@prisma/client'
+import { ChatUser, Livestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
-import AccountStore from '@rebel/server/stores/AccountStore'
+import AccountStore, { RegisteredUserResult } from '@rebel/server/stores/AccountStore'
 import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
@@ -59,6 +59,31 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
       {streamerId: streamerId1, twitchChannelName: twitchName1 },
       {streamerId: streamerId2, twitchChannelName: twitchName2 }
     ])
+  })
+})
+
+describe(nameof(StreamerChannelService, 'getStreamerFromTwitchChannelName'), () => {
+  test('Returns the streamer whose primary Twitch channel matches the given name', async () => {
+    const channelName = 'testName'
+    const userId = 159
+    const registeredUserId = 182
+    const streamerId = 5
+    const twitchChannel = cast<TwitchChannel>({ userId })
+    const registeredUser = cast<RegisteredUserResult>({ registeredUser: { id: registeredUserId }})
+    const streamer = cast<Streamer>({ id: streamerId })
+    const primaryChannels = cast<PrimaryChannels>({ twitchChannel: { platformInfo: {
+      channel: { infoHistory: [{ displayName: channelName.toUpperCase() }] },
+      platform: 'twitch'
+    }}})
+
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(channelName).mockResolvedValue(twitchChannel)
+    mockAccountStore.getRegisteredUsers.calledWith(expectArray<number>([userId])).mockResolvedValue([registeredUser])
+    mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue(streamer)
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId])).mockResolvedValue([primaryChannels])
+
+    const result = await streamerChannelService.getStreamerFromTwitchChannelName(channelName)
+
+    expect(result).toBe(streamerId)
   })
 })
 

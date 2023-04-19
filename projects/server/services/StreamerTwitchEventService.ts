@@ -10,6 +10,8 @@ export type SubscriptionType = EventSubType | 'chat'
 export type SubscriptionStatus = {
   status: 'active'
 } | {
+  status: 'pending'
+} | {
   status: 'inactive'
 
   // no message implies no error

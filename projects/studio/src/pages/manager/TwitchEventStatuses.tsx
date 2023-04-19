@@ -1,5 +1,5 @@
 import { Close, Done, Error } from '@mui/icons-material'
-import { IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip } from '@mui/material'
+import { CircularProgress, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip } from '@mui/material'
 import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
@@ -70,6 +70,9 @@ function StatusRow (props: StatusProps) {
   if (status === 'active') {
     statusIcon = <Done color="success" />
     tooltip = 'Subscription is active.'
+  } else if (status === 'pending') {
+    statusIcon = <CircularProgress size="1rem" />
+    tooltip = 'Subscription is being created - please wait a few seconds.'
   } else if (errorMessage == null) {
     statusIcon = <Close color="warning" />
     tooltip = 'Subscription is not active.'

@@ -5,7 +5,7 @@ export type PublicTwitchEventStatus = PublicObject<{
   eventType: 'chat' | 'followers'
 
   /** The current status of the event. */
-  status: 'active' | 'inactive'
+  status: 'active' | 'pending' | 'inactive'
 
   /** An optional error message. `null` implies that there is no error. */
   errorMessage: string | null
