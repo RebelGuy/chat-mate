@@ -112,6 +112,31 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
   })
 })
 
+describe(nameof(StreamerChannelService, 'getYoutubeExternalId'), () => {
+  test(`Returns the streamer's linked YouTube channel`, async () => {
+    const streamerId = 125
+    const youtubeId = 'testYoutubeId'
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId])).mockResolvedValue(cast<PrimaryChannels[]>([
+      { youtubeChannel: { platformInfo: { channel: { youtubeId }}}}
+    ]))
+
+    const result = await streamerChannelService.getYoutubeExternalId(streamerId)
+
+    expect(result).toBe(youtubeId)
+  })
+
+  test('Returns null if the streamer does not have a primary YouTube channel selected', async () => {
+    const streamerId = 1
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId])).mockResolvedValue(cast<PrimaryChannels[]>([
+      { youtubeChannel: null }
+    ]))
+
+    const result = await streamerChannelService.getYoutubeExternalId(streamerId)
+
+    expect(result).toBeNull()
+  })
+})
+
 describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
   test('Sets the primary youtube channel and dispatches an event', async () => {
     const streamerId = 4

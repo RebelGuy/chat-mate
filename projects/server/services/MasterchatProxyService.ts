@@ -74,6 +74,13 @@ export default class MasterchatProxyService extends ApiService {
     return await this.wrappedMasterchats.get(liveId)!.fetchMetadata()
   }
 
+  /** Returns the YouTube external channel ID to which the livestream belongs. LiveId does not have to belong to an existing Masterchat instance. */
+  public async getChannelIdFromAnyLiveId (liveId: string): Promise<string> {
+    const masterchat = this.wrappedMasterchats.get(liveId) ?? this.masterchatFactory.create(liveId)
+    const metadata = await masterchat.fetchMetadata()
+    return metadata.channelId
+  }
+
   /** Returns true if the channel was banned. False indicates that the 'hide channel' option
    * was not included in the latest chat item's context menu. */
   public async banYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {

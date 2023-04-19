@@ -5,7 +5,7 @@ import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
 import StatusService from '@rebel/server/services/StatusService'
-import { nameof } from '@rebel/server/_test/utils'
+import { cast, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 
@@ -98,6 +98,17 @@ describe(nameof(MasterchatProxyService, 'fetchMetadata'), () => {
     mockMasterchat.fetchMetadata.calledWith().mockRejectedValue(expectedResponse)
 
     await testFailing(() => masterchatProxyService.fetchMetadata(liveId), expectedResponse)
+  })
+})
+
+describe(nameof(MasterchatProxyService, 'getChannelIdFromAnyLiveId'), () => {
+  test('Gets the channel ID from the livestream', async () => {
+    const youtubeId = 'testYoutubeId'
+    mockMasterchat.fetchMetadata.calledWith().mockResolvedValue(cast<Metadata>({ channelId: youtubeId }))
+
+    const result = await masterchatProxyService.getChannelIdFromAnyLiveId(liveId)
+
+    expect(result).toBe(youtubeId)
   })
 })
 

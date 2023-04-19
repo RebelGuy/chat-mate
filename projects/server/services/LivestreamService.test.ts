@@ -267,11 +267,37 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 describe(nameof(LivestreamService, 'setActiveLivestream'), () => {
   test('sets active livestream', async () => {
     const testLiveId = 'testLiveId'
+    const youtubeId = 'testYoutubeId'
+    mockStreamerChannelService.getYoutubeExternalId.calledWith(streamer1).mockResolvedValue(youtubeId)
+    mockMasterchatProxyService.getChannelIdFromAnyLiveId.calledWith(testLiveId).mockResolvedValue(youtubeId)
 
     await livestreamService.setActiveLivestream(streamer1, testLiveId)
 
     expect(single(mockLivestreamStore.setActiveLivestream.mock.calls)).toEqual([streamer1, testLiveId, 'publicLivestream'])
     expect(single(mockMasterchatProxyService.addMasterchat.mock.calls)).toEqual([testLiveId])
+  })
+
+  test('throws if the streamer does not have a primary YouTube channel', async () => {
+    const testLiveId = 'testLiveId'
+    mockStreamerChannelService.getYoutubeExternalId.calledWith(streamer1).mockResolvedValue(null)
+
+    await expect(() => livestreamService.setActiveLivestream(streamer1, testLiveId)).rejects.toThrow()
+
+    expect(mockLivestreamStore.setActiveLivestream.mock.calls.length).toEqual(0)
+    expect(mockMasterchatProxyService.addMasterchat.mock.calls.length).toEqual(0)
+  })
+
+  test(`throws if the streamer's YouTube channel is different to the livestream's YouTube channel`, async () => {
+    const testLiveId = 'testLiveId'
+    const youtubeId1 = 'testYoutubeId1'
+    const youtubeId2 = 'testYoutubeId2'
+    mockStreamerChannelService.getYoutubeExternalId.calledWith(streamer1).mockResolvedValue(youtubeId1)
+    mockMasterchatProxyService.getChannelIdFromAnyLiveId.calledWith(testLiveId).mockResolvedValue(youtubeId2)
+
+    await expect(() => livestreamService.setActiveLivestream(streamer1, testLiveId)).rejects.toThrow()
+
+    expect(mockLivestreamStore.setActiveLivestream.mock.calls.length).toEqual(0)
+    expect(mockMasterchatProxyService.addMasterchat.mock.calls.length).toEqual(0)
   })
 })
 

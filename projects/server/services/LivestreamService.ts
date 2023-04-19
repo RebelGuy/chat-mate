@@ -79,8 +79,19 @@ export default class LivestreamService extends ContextClass {
   }
 
   /** Sets the given livestream as active for the streamer, and creates a masterchat instance.
-   * Please ensure you deactivate the previous livestream first, if applicable. */
+   * Please ensure you deactivate the previous livestream first, if applicable.
+   * Attempts of activating a livestream that is from a different channel than the streamer's primary channel will throw. */
   public async setActiveLivestream (streamerId: number, liveId: string) {
+    const streamerYoutubeChannelId = await this.streamerChannelService.getYoutubeExternalId(streamerId)
+    if (streamerYoutubeChannelId == null) {
+      throw new Error('No primary YouTube channel has been set for the streamer.')
+    }
+
+    const livestreamYoutubeChannelId = await this.masterchatProxyService.getChannelIdFromAnyLiveId(liveId)
+    if (streamerYoutubeChannelId !== livestreamYoutubeChannelId) {
+      throw new Error(`The livestream does not belong to the streamer's primary YouTube channel.`)
+    }
+
     await this.livestreamStore.setActiveLivestream(streamerId, liveId, 'publicLivestream')
     this.masterchatProxyService.addMasterchat(liveId)
     this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been activated.`)

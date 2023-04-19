@@ -81,6 +81,12 @@ export default class StreamerChannelService extends ContextClass {
     return primaryChannels?.twitchChannel != null ? getUserName(primaryChannels.twitchChannel) : null
   }
 
+  /** Returns null when the streamer does not have a primary YouTube channel. */
+  public async getYoutubeExternalId (streamerId: number): Promise<string | null> {
+    const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamerId]).then(single)
+    return primaryChannels?.youtubeChannel?.platformInfo.channel.youtubeId ?? null
+  }
+
   /** Sets the provided channel to be the streamer's primary youtube or twitch channel.
    * @throws {@link ForbiddenError}: When the streamer is not linked to the youtube or twitch channel.
   */
