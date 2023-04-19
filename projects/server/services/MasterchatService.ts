@@ -17,14 +17,14 @@ type Deps = Dependencies<{
   masterchatFactory: MasterchatFactory
 }>
 
-export default class MasterchatProxyService extends ApiService {
+export default class MasterchatService extends ApiService {
   private readonly masterchatFactory: MasterchatFactory
 
   // note that some endpoints are livestream-agnostic
   private readonly wrappedMasterchats: Map<string, PartialMasterchat>
 
   constructor (deps: Deps) {
-    const name = MasterchatProxyService.name
+    const name = MasterchatService.name
     const logService = deps.resolve('logService')
     const statusService = deps.resolve('masterchatStatusService')
     const timeout = null

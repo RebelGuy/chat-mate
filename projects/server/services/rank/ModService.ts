@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import UserService from '@rebel/server/services/UserService'
@@ -13,7 +13,7 @@ import { single } from '@rebel/shared/util/arrays'
 type Deps = Dependencies<{
   rankStore: RankStore
   channelStore: ChannelStore
-  masterchatProxyService: MasterchatProxyService
+  masterchatService: MasterchatService
   twurpleService: TwurpleService
   chatStore: ChatStore
   logService: LogService
@@ -25,7 +25,7 @@ export default class ModService extends ContextClass {
 
   private readonly rankStore: RankStore
   private readonly channelStore: ChannelStore
-  private readonly masterchatProxyService: MasterchatProxyService
+  private readonly masterchatService: MasterchatService
   private readonly twurpleService: TwurpleService
   private readonly chatStore: ChatStore
   private readonly logService: LogService
@@ -36,7 +36,7 @@ export default class ModService extends ContextClass {
 
     this.rankStore = deps.resolve('rankStore')
     this.channelStore = deps.resolve('channelStore')
-    this.masterchatProxyService = deps.resolve('masterchatProxyService')
+    this.masterchatService = deps.resolve('masterchatService')
     this.twurpleService = deps.resolve('twurpleService')
     this.chatStore = deps.resolve('chatStore')
     this.logService = deps.resolve('logService')
@@ -134,9 +134,9 @@ export default class ModService extends ContextClass {
     try {
       let result: boolean
       if (isMod) {
-        result = await this.masterchatProxyService.mod(lastChatItem.contextToken)
+        result = await this.masterchatService.mod(lastChatItem.contextToken)
       } else {
-        result = await this.masterchatProxyService.unmod(lastChatItem.contextToken)
+        result = await this.masterchatService.unmod(lastChatItem.contextToken)
       }
 
       this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)

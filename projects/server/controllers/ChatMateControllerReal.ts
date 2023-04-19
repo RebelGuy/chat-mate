@@ -15,7 +15,7 @@ import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import { promised } from '@rebel/server/_test/utils'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import RankStore from '@rebel/server/stores/RankStore'
 import DonationStore from '@rebel/server/stores/DonationStore'
 import { livestreamToPublic } from '@rebel/server/models/livestream'
@@ -37,7 +37,7 @@ export type ChatMateControllerDeps = ControllerDependencies<{
   followerStore: FollowerStore
   punishmentService: PunishmentService
   livestreamService: LivestreamService
-  masterchatProxyService: MasterchatProxyService
+  masterchatService: MasterchatService
   rankStore: RankStore
   donationStore: DonationStore
   chatMateEventService: ChatMateEventService
@@ -54,7 +54,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
   readonly followerStore: FollowerStore
   readonly punishmentService: PunishmentService
   readonly livestreamService: LivestreamService
-  readonly masterchatProxyService: MasterchatProxyService
+  readonly masterchatService: MasterchatService
   readonly rankStore: RankStore
   readonly donationStore: DonationStore
   readonly chatMateEventService: ChatMateEventService
@@ -71,7 +71,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     this.followerStore = deps.resolve('followerStore')
     this.punishmentService = deps.resolve('punishmentService')
     this.livestreamService = deps.resolve('livestreamService')
-    this.masterchatProxyService = deps.resolve('masterchatProxyService')
+    this.masterchatService = deps.resolve('masterchatService')
     this.rankStore = deps.resolve('rankStore')
     this.donationStore = deps.resolve('donationStore')
     this.chatMateEventService = deps.resolve('chatMateEventService')
@@ -173,7 +173,7 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
 
   public getMasterchatAuthentication (args: In<GetMasterchatAuthenticationEndpoint>): Out<GetMasterchatAuthenticationEndpoint> {
     return promised(args.builder.success({
-      authenticated: this.masterchatProxyService.checkCredentials()
+      authenticated: this.masterchatService.checkCredentials()
     }))
   }
 

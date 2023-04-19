@@ -40,7 +40,7 @@ beforeEach(async () => {
   await twurpleApiProxyService.initialise()
 })
 
-// this test mirrors the MasterchatProxyService tests implementation
+// this test mirrors the MasterchatService tests implementation
 describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
   test('successful request', async () => {
     const streamerChannelName = 'streamerChannelName'

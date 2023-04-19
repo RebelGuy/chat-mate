@@ -5,7 +5,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -16,7 +16,7 @@ export const METADATA_SYNC_INTERVAL_MS = 12_000
 
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
-  masterchatProxyService: MasterchatProxyService
+  masterchatService: MasterchatService
   twurpleApiProxyService: TwurpleApiProxyService
   logService: LogService
   timerHelpers: TimerHelpers
@@ -29,7 +29,7 @@ export default class LivestreamService extends ContextClass {
   readonly name: string = LivestreamService.name
 
   private readonly livestreamStore: LivestreamStore
-  private readonly masterchatProxyService: MasterchatProxyService
+  private readonly masterchatService: MasterchatService
   private readonly twurpleApiProxyService: TwurpleApiProxyService
   private readonly logService: LogService
   private readonly timerHelpers: TimerHelpers
@@ -40,7 +40,7 @@ export default class LivestreamService extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.livestreamStore = deps.resolve('livestreamStore')
-    this.masterchatProxyService = deps.resolve('masterchatProxyService')
+    this.masterchatService = deps.resolve('masterchatService')
     this.twurpleApiProxyService = deps.resolve('twurpleApiProxyService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
@@ -55,7 +55,7 @@ export default class LivestreamService extends ContextClass {
     }
 
     const activeLivestreams = await this.livestreamStore.getActiveLivestreams()
-    activeLivestreams.forEach(l => this.masterchatProxyService.addMasterchat(l.liveId))
+    activeLivestreams.forEach(l => this.masterchatService.addMasterchat(l.liveId))
 
     const timerOptions: TimerOptions = {
       behaviour: 'start',
@@ -74,7 +74,7 @@ export default class LivestreamService extends ContextClass {
 
     const liveId = activeLivestream.liveId
     await this.livestreamStore.deactivateLivestream(streamerId)
-    this.masterchatProxyService.removeMasterchat(liveId)
+    this.masterchatService.removeMasterchat(liveId)
     this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been deactivated.`)
   }
 
@@ -87,19 +87,19 @@ export default class LivestreamService extends ContextClass {
       throw new Error('No primary YouTube channel has been set for the streamer.')
     }
 
-    const livestreamYoutubeChannelId = await this.masterchatProxyService.getChannelIdFromAnyLiveId(liveId)
+    const livestreamYoutubeChannelId = await this.masterchatService.getChannelIdFromAnyLiveId(liveId)
     if (streamerYoutubeChannelId !== livestreamYoutubeChannelId) {
       throw new Error(`The livestream does not belong to the streamer's primary YouTube channel.`)
     }
 
     await this.livestreamStore.setActiveLivestream(streamerId, liveId, 'publicLivestream')
-    this.masterchatProxyService.addMasterchat(liveId)
+    this.masterchatService.addMasterchat(liveId)
     this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
   }
 
   private async fetchYoutubeMetadata (liveId: string): Promise<Metadata | null> {
     try {
-      return await this.masterchatProxyService.fetchMetadata(liveId)
+      return await this.masterchatService.fetchMetadata(liveId)
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching youtube metadata.', e.message)
       return null

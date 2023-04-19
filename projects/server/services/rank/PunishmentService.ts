@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -31,7 +31,7 @@ import UserService from '@rebel/server/services/UserService'
 
 type Deps = Dependencies<{
   logService: LogService
-  masterchatProxyService: MasterchatProxyService
+  masterchatService: MasterchatService
   twurpleService: TwurpleService
   channelStore: ChannelStore
   rankStore: RankStore
@@ -45,7 +45,7 @@ export default class PunishmentService extends ContextClass {
   public readonly name = PunishmentService.name
 
   private readonly logService: LogService
-  private readonly masterchat: MasterchatProxyService
+  private readonly masterchat: MasterchatService
   private readonly twurpleService: TwurpleService
   private readonly rankStore: RankStore
   private readonly channelStore: ChannelStore
@@ -58,7 +58,7 @@ export default class PunishmentService extends ContextClass {
     super()
 
     this.logService = deps.resolve('logService')
-    this.masterchat = deps.resolve('masterchatProxyService')
+    this.masterchat = deps.resolve('masterchatService')
     this.twurpleService = deps.resolve('twurpleService')
     this.rankStore = deps.resolve('rankStore')
     this.channelStore = deps.resolve('channelStore')

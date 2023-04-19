@@ -20,7 +20,7 @@ import LivestreamService from '@rebel/server/services/LivestreamService'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import ChatMateController from '@rebel/server/controllers/ChatMateController'
 import StatusService from '@rebel/server/services/StatusService'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceController from '@rebel/server/controllers/ExperienceController'
 import UserController from '@rebel/server/controllers/UserController'
@@ -153,7 +153,7 @@ const main = async () => {
     .withClass('masterchatStatusService', StatusService)
     .withClass('twurpleStatusService', StatusService)
     .withClass('streamlabsStatusService', StatusService)
-    .withClass('masterchatProxyService', MasterchatProxyService)
+    .withClass('masterchatService', MasterchatService)
     .withClass('twurpleAuthProvider', TwurpleAuthProvider)
     .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
     .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
