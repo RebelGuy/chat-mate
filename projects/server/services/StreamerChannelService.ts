@@ -123,7 +123,7 @@ export default class StreamerChannelService extends ContextClass {
   public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
     const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (activeLivestream != null) {
-      throw new Error('Cannot unset the primary channel because a livestream is currently in progress. Please try again later.')
+      throw new Error('Cannot unset the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
     let userChannel: UserChannel | null
