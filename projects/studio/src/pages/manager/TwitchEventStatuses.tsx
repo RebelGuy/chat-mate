@@ -47,8 +47,6 @@ export default function TwitchEventStatuses () {
   // it is not an error for the user to unnecessarily re-authenticate, but it's a nicer user experience if the button only shows when authentication is actually required
   const requiresAuth = getStatusesRequest.data == null || getStatusesRequest.data.statuses.find(requiresAuthentication) != null
 
-  // if success && requiresAuth
-
   useEffect(() => {
     if (requiresAuth) {
       primaryChannelsRequest.triggerRequest()
