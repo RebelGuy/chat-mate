@@ -5,7 +5,7 @@ import { NgrokAdapter } from '@twurple/eventsub-ngrok'
 import { ConnectionAdapter, DirectConnectionAdapter, EventSubHttpListener, EventSubMiddleware } from '@twurple/eventsub-http'
 import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUserAuthorizationRevokeEvent } from '@twurple/eventsub-base'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
-import LogService from '@rebel/server/services/LogService'
+import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { HelixEventSubApi } from '@twurple/api/lib'
 import { disconnect, kill } from 'ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
@@ -19,6 +19,8 @@ import { getUserName } from '@rebel/server/services/ChannelService'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import { keysOf } from '@rebel/shared/util/objects'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import { createLogContext, LogContext } from '@rebel/shared/ILogService'
+import { LogLevel } from '@twurple/chat/lib'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -66,6 +68,7 @@ export default class HelixEventService extends ContextClass {
   private readonly followerStore: FollowerStore
   private readonly timerHelpers: TimerHelpers
   private readonly logService: LogService
+  private readonly logContext: LogContext
   private readonly fileService: FileService
   private readonly app: Express
   private readonly streamerChannelService: StreamerChannelService
@@ -98,6 +101,7 @@ export default class HelixEventService extends ContextClass {
     this.followerStore = deps.resolve('followerStore')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.logService = deps.resolve('logService')
+    this.logContext = createLogContext(this.logService, this)
     this.fileService = deps.resolve('fileService')
     this.app = deps.resolve('app')
     this.streamerChannelService = deps.resolve('streamerChannelService')
@@ -141,7 +145,12 @@ export default class HelixEventService extends ContextClass {
         apiClient: this.twurpleApiClientProvider.getClientApi(),
         pathPrefix: '/twitch',
         hostName: this.hostName!,
-        secret: this.getSecret()
+        secret: this.getSecret(),
+        logger: {
+          custom: {
+            log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
+          }
+        }
       })
       this.eventSubBase = middleware
       middleware.apply(this.app)
@@ -484,7 +493,12 @@ export default class HelixEventService extends ContextClass {
       apiClient: this.twurpleApiClientProvider.getClientApi(),
       adapter: this.createAdapter(),
       secret: this.getSecret(),
-      legacySecrets: 'migrate'
+      legacySecrets: 'migrate',
+      logger: {
+        custom: {
+          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
+        }
+      }
     })
   }
 

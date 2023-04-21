@@ -108,6 +108,8 @@ export default class LogService extends ContextClass implements ILogService {
 }
 
 export function onTwurpleClientLog (context: LogContext, level: LogLevel, message: string): void {
+  message = `[Relayed from Twurple] ${message}`
+
   switch (level) {
     case LogLevel.CRITICAL:
       context.logError('[CRITICAL]', message)
