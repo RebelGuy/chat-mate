@@ -13,10 +13,11 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
-import { HelixUser, HelixUserApi } from '@twurple/api/lib'
+import { HelixModerationApi, HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 export type TwitchMetadata = {
   streamId: string
@@ -29,6 +30,7 @@ type Deps = Dependencies<{
   logService: LogService
   twurpleChatClientProvider: TwurpleChatClientProvider
   twurpleApiClientProvider: TwurpleApiClientProvider
+  twurpleAuthProvider: TwurpleAuthProvider
   twurpleApiProxyService: TwurpleApiProxyService
   disableExternalApis: boolean
   channelStore: ChannelStore
@@ -38,6 +40,7 @@ type Deps = Dependencies<{
   streamerChannelService: StreamerChannelService
   isAdministrativeMode: () => boolean
   dateTimeHelpers: DateTimeHelpers
+  twitchUsername: string
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -46,6 +49,7 @@ export default class TwurpleService extends ContextClass {
   private readonly logService: LogService
   private readonly chatClientProvider: TwurpleChatClientProvider
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly twurpleApiProxyService: TwurpleApiProxyService
   private readonly disableExternalApis: boolean
   private readonly channelStore: ChannelStore
@@ -55,7 +59,9 @@ export default class TwurpleService extends ContextClass {
   private readonly streamerChannelService: StreamerChannelService
   private readonly isAdministrativeMode: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
+  private readonly twitchUsername: string
   private userApi!: HelixUserApi
+  private moderationApi!: HelixModerationApi
   private chatClient!: ChatClient
 
   /** The keys are the channel names in lowercase characters. */
@@ -66,6 +72,7 @@ export default class TwurpleService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.chatClientProvider = deps.resolve('twurpleChatClientProvider')
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.twurpleApiProxyService = deps.resolve('twurpleApiProxyService')
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.channelStore = deps.resolve('channelStore')
@@ -75,6 +82,7 @@ export default class TwurpleService extends ContextClass {
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+    this.twitchUsername = deps.resolve('twitchUsername')
   }
 
   public override async initialise () {
@@ -85,6 +93,7 @@ export default class TwurpleService extends ContextClass {
 
     this.chatClient = this.chatClientProvider.get()
     this.userApi = this.twurpleApiClientProvider.get().users
+    this.moderationApi = this.twurpleApiClientProvider.get().moderation
 
     if (this.disableExternalApis) {
       return
@@ -147,7 +156,33 @@ export default class TwurpleService extends ContextClass {
 
     const status = this.channelChatStatus.get(twitchChannelName.toLowerCase())
     if (status != null) {
-      return status
+      // we could listen for moderator add/remove events, but this is easier!
+      const user = await this.userApi.getUserByName(twitchChannelName)
+      const hasUser = this.twurpleAuthProvider.getUserTokenAuthProvider().hasUser(user!)
+      if (!hasUser) {
+        return {
+          status: 'active',
+          lastChange: this.dateTimeHelpers.ts(),
+          message: `Currently listening to chat messages, but unable to perform moderator actions because of missing permissions. Please authorise ChatMate to act on your behalf.`,
+          requiresAuthorisation: true
+        }
+      }
+
+      // todo: we probably don't require moderation status anymore if the user has authorised us (but we can't get here yet to check without first implementing user authorisation into the auth provider)
+      const moderators = await this.moderationApi.getModerators(user!)
+
+      const chatMateIsMod = moderators.data.map(d => d.userName.toLowerCase()).includes(this.twitchUsername.toLowerCase())
+      if (chatMateIsMod) {
+        return status
+      } else {
+        return {
+          status: 'active',
+          lastChange: this.dateTimeHelpers.ts(),
+          message: `Currently listening to chat messages, but unable to perform moderator actions because the Twitch channel '${this.twitchUsername}' must be added as a moderator for your channel.`,
+          requiresAuthorisation: true
+        }
+      }
+
     } else {
       return {
         status: 'inactive',

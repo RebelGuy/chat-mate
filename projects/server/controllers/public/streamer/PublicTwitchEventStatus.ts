@@ -12,4 +12,7 @@ export type PublicTwitchEventStatus = PublicObject<{
 
   /** The time at which this status has last changed or was generated. */
   lastChange: number
+
+  /** If the subscription is not working properly, whether this can be fixed by obtaining (re-)authorisation from the streamer. */
+  requiresAuthorisation: boolean
 }>

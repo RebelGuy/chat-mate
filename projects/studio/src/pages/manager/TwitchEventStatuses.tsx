@@ -45,7 +45,15 @@ export default function TwitchEventStatuses () {
   const [errorDescription] = useState<string | null>(params.get('error_description'))
 
   // it is not an error for the user to unnecessarily re-authenticate, but it's a nicer user experience if the button only shows when authentication is actually required
-  const requiresAuth = getStatusesRequest.data == null || getStatusesRequest.data.statuses.find(requiresAuthentication) != null
+  const requiresAuth = getStatusesRequest.data == null || getStatusesRequest.data.statuses.find(status => status.requiresAuthorisation) != null
+
+  // for some reason we can't immediately clear the params here, else the states won't initialise. but it's working fine on the admin authentication page?!
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setParams({}), 500)
+
+    return () => window.clearTimeout(timeout)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (requiresAuth) {
@@ -160,17 +168,17 @@ function StatusRow (props: StatusProps) {
 
   let statusIcon: React.ReactNode
   let tooltip: string
-  if (status === 'active') {
+  if (status === 'active' && errorMessage == null) {
     statusIcon = <Done color="success" />
     tooltip = 'Subscription is active.'
-  } else if (status === 'pending') {
+  } else if (status === 'pending' && errorMessage == null) {
     statusIcon = <CircularProgress size="1rem" />
     tooltip = 'Subscription is being created - please wait a few seconds.'
   } else if (errorMessage == null) {
     statusIcon = <Close color="warning" />
     tooltip = 'Subscription is not active.'
   } else {
-    statusIcon = <Error color="error" />
+    statusIcon = <Error color={status === 'active' ? 'warning' : 'error'} />
     tooltip = errorMessage
   }
 
@@ -188,9 +196,4 @@ function StatusRow (props: StatusProps) {
       <TableCell><RelativeTime time={lastChange} /></TableCell>
     </TableRow>
   )
-}
-
-function requiresAuthentication (status: PublicTwitchEventStatus) {
-  return status.errorMessage?.toLowerCase().includes('subscription missing proper authorization') // automatically returned from EventSub after failing to subscribe
-    || status.errorMessage?.toLowerCase().includes('authorisation has been revoked.') // custom error set by the Server when the user has revoked access to the ChatMate Application
 }

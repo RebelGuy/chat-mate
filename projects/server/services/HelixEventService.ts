@@ -195,12 +195,14 @@ export default class HelixEventService extends ContextClass {
         const error = info.errorMessage
         const subscription = info.subscription
         const lastChange = info.lastChange
+        const requiresAuth = requiresAuthorisation(info)
 
         if (error != null) {
           result[type] = {
             status: 'inactive',
             message: error,
-            lastChange: lastChange
+            lastChange: lastChange,
+            requiresAuthorisation: requiresAuth
           }
         } else if (subscription == null) {
           result[type] = {
@@ -362,42 +364,59 @@ export default class HelixEventService extends ContextClass {
 
   private async createSubscriptionSafe (onCreateSubscription: () => EventSubSubscription, streamerId: number, channelName: string, eventType: EventSubType) {
     try {
-      const subscription = onCreateSubscription()
+      let subscription: EventSubSubscription | null = null
+      let error: string | null = null
+      let hasExistingSubscription = false
 
-      // this is kinda nasty... but also kinda not!
-      const error = await new Promise<string | null>(resolve => {
-        // no need to listen to the creationSuccess event - if we are verified, then it must have also been created successfully.
-        const verificationListener = (success: boolean, verifiedSubscription: EventSubSubscription) => {
-          if (verifiedSubscription.id === subscription.id) {
-            cleanUp()
-            resolve(success ? null : 'Failed to verify subscription.')
-          }
+      // check first if we have an existing subscription (otherwise our event listeners below will time out!)
+      if (this.streamerSubscriptionInfos.has(streamerId)) {
+        const existingInfo = this.streamerSubscriptionInfos.get(streamerId)![eventType]
+        if (existingInfo != null && existingInfo.errorMessage == null && existingInfo.subscription?.verified === true) {
+          subscription = existingInfo.subscription
+          hasExistingSubscription = true
         }
+      }
 
-        const creationFailureListener = (failedSubscription: EventSubSubscription, e: Error) => {
-          if (failedSubscription.id === subscription.id) {
-            cleanUp()
-            resolve(`Failed to create subscription: ${e.message}`)
+      if (subscription == null) {
+        subscription = onCreateSubscription()
+
+        // this is kinda nasty... but also kinda not!
+        error = await new Promise<string | null>(resolve => {
+          // no need to listen to the creationSuccess event - if we are verified, then it must have also been created successfully.
+          const verificationListener = (success: boolean, verifiedSubscription: EventSubSubscription) => {
+            if (verifiedSubscription.id === subscription!.id) {
+              cleanUp()
+              resolve(success ? null : 'Failed to verify subscription.')
+            }
           }
-        }
 
-        const clearTimeout = this.timerHelpers.setTimeout(() => {
-          cleanUp()
-          resolve('Failed to create subscription because it took to long.')
-        }, 5000)
+          const creationFailureListener = (failedSubscription: EventSubSubscription, e: Error) => {
+            if (failedSubscription.id === subscription!.id) {
+              cleanUp()
+              resolve(`Failed to create subscription: ${e.message}`)
+            }
+          }
 
-        const cleanUp = () => {
-          this.verificationListeners.delete(verificationListener)
+          const clearTimeout = this.timerHelpers.setTimeout(() => {
+            cleanUp()
+            resolve('Failed to create subscription because it took to long.')
+          }, 5000)
+
+          const cleanUp = () => {
+            this.verificationListeners.delete(verificationListener)
+            this.subscriptionCreationFailureListeners.add(creationFailureListener)
+            clearTimeout()
+          }
+
+          this.verificationListeners.add(verificationListener)
           this.subscriptionCreationFailureListeners.add(creationFailureListener)
-          clearTimeout()
-        }
-
-        this.verificationListeners.add(verificationListener)
-        this.subscriptionCreationFailureListeners.add(creationFailureListener)
-      })
+        })
+      }
 
       this.setSubscriptionInfo(streamerId, eventType, subscription, error)
-      if (error == null) {
+      if (hasExistingSubscription) {
+        this.logService.logInfo(this, `Already subscribed to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}). Subscription id: ${subscription.id}`)
+      } else if (error == null) {
         this.logService.logInfo(this, `Subscribed to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}). Subscription id: ${subscription.id}`)
       } else {
         this.logService.logError(this, `Gracefully failed to subscribe to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}). ${error}`)
@@ -528,4 +547,9 @@ export default class HelixEventService extends ContextClass {
   private getSecret (): string {
     return `065adade-b312-11ec-b909-0242ac120002-${this.nodeEnv}`
   }
+}
+
+function requiresAuthorisation (info: SubscriptionInfo) {
+  return info.errorMessage?.toLowerCase().includes('subscription missing proper authorization') // automatically returned from EventSub after failing to subscribe
+    || info.errorMessage?.toLowerCase().includes('authorisation has been revoked.') // custom error for when the user has revoked access to the ChatMate Application
 }

@@ -8,17 +8,15 @@ import { single } from '@rebel/shared/util/arrays'
 export type SubscriptionType = EventSubType | 'chat'
 
 export type SubscriptionStatus = {
+  status: 'active' | 'pending' | 'inactive'
   lastChange: number
-} & ({
-  status: 'active'
-} | {
-  status: 'pending'
-} | {
-  status: 'inactive'
 
   // no message implies no error
   message?: string
-})
+
+  // if the subscription is not working properly, whether this can be fixed by obtaining (re-)authorisation from the streamer
+  requiresAuthorisation?: boolean
+}
 
 type Deps = Dependencies<{
   helixEventService: HelixEventService
