@@ -66,11 +66,12 @@ export default class TwurpleApiClientProvider extends ContextClass {
     })
   }
 
-  /** This is probably the one you want. */
+  /** Uses the refreshable user access token. This is probably the one you want. Requests are performed on behalf of the ChatMate Twitch channel. */
   public get () {
     return this.apiClient
   }
 
+  /** Uses the app access token. Only required for event-based API access. */
   public getClientApi () {
     return this.clientApiClient
   }

@@ -1,12 +1,13 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
-import TwurpleAuthProvider, { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/shared/util/arrays'
 import { AccessToken, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { mock, MockProxy } from 'jest-mock-extended'
+import { TWITCH_SCOPE } from '@rebel/server/constants'
 
 let clientId: string
 let clientSecret: string

@@ -14,6 +14,8 @@ import { mock, MockProxy } from 'jest-mock-extended'
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockRankStore: MockProxy<RankStore>
 let mockAccountStore: MockProxy<AccountStore>
+const mockTwitchClientId = 'clientId'
+const mockStudioUrl = 'studioUrl'
 let streamerService: StreamerService
 
 beforeEach(() => {
@@ -24,7 +26,9 @@ beforeEach(() => {
   streamerService = new StreamerService(new Dependencies({
     streamerStore: mockStreamerStore,
     rankStore: mockRankStore,
-    accountStore: mockAccountStore
+    accountStore: mockAccountStore,
+    twitchClientId: mockTwitchClientId,
+    studioUrl: mockStudioUrl
   }))
 })
 
@@ -67,5 +71,14 @@ describe(nameof(StreamerService, 'createStreamerApplication'), () => {
     mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue({ id: 1, registeredUserId })
 
     await expect(() => streamerService.createStreamerApplication(registeredUserId, '')).rejects.toThrowError(UserAlreadyStreamerError)
+  })
+})
+
+describe(nameof(StreamerService, 'getTwitchLoginUrl'), () => {
+  test('Returns a URL', () => {
+    const url = streamerService.getTwitchLoginUrl()
+
+    expect(url).toEqual(expect.stringContaining(mockStudioUrl))
+    expect(url).toEqual(expect.stringContaining(mockTwitchClientId))
   })
 })

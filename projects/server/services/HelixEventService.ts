@@ -282,8 +282,10 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
-    // don't need to do anything else - the subscriptions themselves have already stopped
-    this.streamerSubscriptionInfos.delete(streamerId)
+    // the subscriptions themselves have already stopped, but we need to store the error so the streamer can deal with it appropriately in Studio
+    for (const type of EVENT_SUB_TYPES) {
+      this.setSubscriptionInfo(streamerId, type, null, 'Authorisation has been revoked.')
+    }
   }
 
   private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {

@@ -7,7 +7,7 @@ import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 export type GetAdministrativeModeResponse = ApiResponse<{ isAdministrativeMode: boolean }>
 
-export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string }>
+export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string, twitchUsername: string }>
 
 export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
 
@@ -52,7 +52,8 @@ export default class AdminController extends ControllerBase {
 
     try {
       const url = this.adminService.getTwitchLoginUrl()
-      return builder.success({ url })
+      const twitchUsername = this.adminService.getTwitchUsername()
+      return builder.success({ url, twitchUsername })
     } catch (e: any) {
       return builder.failure(e)
     }

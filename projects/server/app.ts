@@ -110,6 +110,7 @@ const main = async () => {
   const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
   const dbTransactionTimeout = env('dbTransactionTimeout')
   const streamlabsAccessToken = env('streamlabsAccessToken')
+  const twitchUsername = env('twitchUsername')
 
   let isAdministrativeMode = false
 
@@ -132,6 +133,7 @@ const main = async () => {
     .withProperty('dbTransactionTimeout', dbTransactionTimeout)
     .withProperty('hostName', hostName)
     .withProperty('streamlabsAccessToken', streamlabsAccessToken)
+    .withProperty('twitchUsername', twitchUsername)
     .withHelpers('experienceHelpers', ExperienceHelpers)
     .withHelpers('timerHelpers', TimerHelpers)
     .withHelpers('dateTimeHelpers', DateTimeHelpers)

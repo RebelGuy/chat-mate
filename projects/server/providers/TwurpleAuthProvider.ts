@@ -7,11 +7,7 @@ import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { compareArrays } from '@rebel/shared/util/arrays'
 import { AccessToken, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
-
-// see https://dev.twitch.tv/docs/authentication/scopes for available scopes.
-// see https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/ to determine which scope an event subscription needs.
-// if you edit the scopes here, you must request a new access token via Studio.
-export const TWITCH_SCOPE = ['chat:read', 'chat:edit', 'moderation:read', 'moderator:manage:banned_users', 'channel:moderate', 'moderator:read:followers']
+import { TWITCH_SCOPE } from '@rebel/server/constants'
 
 type Deps = Dependencies<{
   disableExternalApis: boolean

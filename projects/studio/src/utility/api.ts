@@ -96,6 +96,8 @@ export const unsetPrimaryChannel = requestBuilder<UnsetPrimaryChannelResponse, f
 
 export const getTwitchEventStatuses = requestBuilder<GetTwitchStatusResponse>('GET', `/streamer/twitch/status`, 'self')
 
+export const getTwitchStreamerLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/streamer/twitch/login', false)
+
 export const setStreamlabsSocketToken = requestBuilder<SetWebsocketTokenResponse, SetWebsocketTokenRequest>('POST', `/donation/streamlabs/socketToken`, 'self')
 
 export const getStreamlabsStatus = requestBuilder<GetStreamlabsStatusResponse>('GET', `/donation/streamlabs/status`, 'self')
@@ -138,7 +140,7 @@ export const createLinkToken = requestBuilder<CreateLinkTokenResponse, false, [s
 
 export const getAdministrativeMode = requestBuilder<GetAdministrativeModeResponse>('GET', '/admin/administrativeMode', false)
 
-export const getTwitchLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/admin/twitch/login', false)
+export const getTwitchAdminLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/admin/twitch/login', false)
 
 export const authoriseTwitch = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
   'POST',

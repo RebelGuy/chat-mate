@@ -3,7 +3,7 @@ import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import useRequest from '@rebel/studio/hooks/useRequest'
-import { authoriseTwitch, getAdministrativeMode, getTwitchLoginUrl } from '@rebel/studio/utility/api'
+import { authoriseTwitch, getAdministrativeMode, getTwitchAdminLoginUrl } from '@rebel/studio/utility/api'
 import { ReactNode, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -18,7 +18,7 @@ export default function TwitchAdminLogin () {
 
   const getAdministrativeModeRequest = useRequest(getAdministrativeMode())
 
-  const getLoginUrlRequest = useRequest(getTwitchLoginUrl(), { onDemand: true })
+  const getLoginUrlRequest = useRequest(getTwitchAdminLoginUrl(), { onDemand: true })
   const authoriseTwitchRequest = useRequest(authoriseTwitch(code ?? ''), { onDemand: true })
 
   useEffect(() => {
@@ -41,14 +41,15 @@ export default function TwitchAdminLogin () {
   let contents: ReactNode
   if (requiresLogin) {
     contents = <>
-      <div>Click here to login to the Application owner's Twitch account. Once logged-in, you will be redirected to this page.</div>
+      <div>Click here to login to the Application owner's Twitch account (this should be user '{<b>{getLoginUrlRequest.data?.twitchUsername ?? '<loading>'}</b>}'). Once logged-in, you will be redirected to this page.</div>
       <div>If you are already logged into a different account, you may have to open this in an incognito window.</div>
       <Button
         onClick={onLoginToTwitch}
         disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null}
         sx={{ mt: 1 }}
       >
-        Login to Twitch
+        {/* lol @ nbsp */}
+        Login to Twitch via the&nbsp;{<b>{getLoginUrlRequest.data?.twitchUsername ?? '<loading>'}</b>}&nbsp;account
       </Button>
       <ApiLoading requestObj={getLoginUrlRequest} />
       <ApiError requestObj={getLoginUrlRequest} />

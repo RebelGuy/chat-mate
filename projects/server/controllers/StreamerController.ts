@@ -3,6 +3,7 @@ import { requireAuth, requireRank, requireStreamer } from '@rebel/server/control
 import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
+import { getUserName } from '@rebel/server/services/ChannelService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import StreamerService from '@rebel/server/services/StreamerService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
@@ -31,13 +32,15 @@ export type RejectApplicationResponse = ApiResponse<{ updatedApplication: Public
 export type WithdrawApplicationRequest = ApiRequest<{ message: string }>
 export type WithdrawApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
 
-export type GetPrimaryChannelsResponse = ApiResponse<{ youtubeChannelId: number | null, twitchChannelId: number | null }>
+export type GetPrimaryChannelsResponse = ApiResponse<{ youtubeChannelId: number | null, twitchChannelId: number | null, twitchChannelName: string | null }>
 
 export type SetPrimaryChannelResponse = ApiResponse<EmptyObject>
 
 export type UnsetPrimaryChannelResponse = ApiResponse<EmptyObject>
 
 export type GetTwitchStatusResponse = ApiResponse<{ statuses: PublicTwitchEventStatus[] }>
+
+export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string }>
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -205,7 +208,8 @@ export default class StreamerController extends ControllerBase {
       const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamer.id]).then(single)
       return builder.success({
         youtubeChannelId: primaryChannels.youtubeChannel?.platformInfo.channel.id ?? null,
-        twitchChannelId: primaryChannels.twitchChannel?.platformInfo.channel.id ?? null
+        twitchChannelId: primaryChannels.twitchChannel?.platformInfo.channel.id ?? null,
+        twitchChannelName: primaryChannels.twitchChannel != null ? getUserName(primaryChannels.twitchChannel) : null
       })
     } catch (e: any) {
       return builder.failure(e)
@@ -306,4 +310,23 @@ export default class StreamerController extends ControllerBase {
       return builder.failure(e)
     }
   }
+
+  @GET
+  @Path('/twitch/login')
+  public async getTwitchLoginUrl (): Promise<GetTwitchLoginUrlResponse> {
+    const builder = this.registerResponseBuilder<GetTwitchLoginUrlResponse>('GET /twitch/login')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const url = this.streamerService.getTwitchLoginUrl()
+      return builder.success({ url })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
 }

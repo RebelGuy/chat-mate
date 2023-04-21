@@ -2,7 +2,7 @@
 import { app, BrowserWindow } from 'electron'
 import { URL } from 'url'
 import fetch from 'node-fetch'
-import { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
+import { TWITCH_SCOPE } from '@rebel/server/constants'
 import { DB, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import DbProvider from '@rebel/server/providers/DbProvider'

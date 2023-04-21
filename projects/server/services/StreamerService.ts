@@ -5,23 +5,30 @@ import RankStore, { AddUserRankArgs } from '@rebel/server/stores/RankStore'
 import StreamerStore, { CreateApplicationArgs, StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import { UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { TWITCH_SCOPE } from '@rebel/server/constants'
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore
   rankStore: RankStore
   accountStore: AccountStore
+  studioUrl: string
+  twitchClientId: string
 }>
 
 export default class StreamerService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly rankStore: RankStore
   private readonly accountStore: AccountStore
+  private readonly studioUrl: string
+  private readonly twitchClientId: string
 
   constructor (deps: Deps) {
     super()
     this.streamerStore = deps.resolve('streamerStore')
     this.rankStore = deps.resolve('rankStore')
     this.accountStore = deps.resolve('accountStore')
+    this.studioUrl = deps.resolve('studioUrl')
+    this.twitchClientId = deps.resolve('twitchClientId')
   }
 
   /** Note that new streamers do not have primary channels by default.
@@ -55,5 +62,19 @@ export default class StreamerService extends ContextClass {
 
     const data: CreateApplicationArgs = { registeredUserId, message}
     return await this.streamerStore.addStreamerApplication(data)
+  }
+
+  public getTwitchLoginUrl () {
+    const scope = TWITCH_SCOPE.join('+')
+    const redirectUrl = this.getRedirectUrl()
+
+    // note: we don't store the authorisation code, but Studio needs to know whether the user authorisation succeeded,
+    // and the presence of the code in the query params is one way of achieving this.
+    const url = `https://id.twitch.tv/oauth2/authorize?client_id=${this.twitchClientId}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}`
+    return url
+  }
+
+  private getRedirectUrl () {
+    return `${this.studioUrl}/manager`
   }
 }

@@ -54,6 +54,7 @@ The following environment variables must be set in the `.env` file:
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
+- `TWITCH_USERNAME`: The channel name of the ChatMate Twitch account. This will be used to connect to streamers' chat rooms and perform moderation operations.
 - `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -186,10 +187,11 @@ Returns data with the following properties:
 - `isAdministrativeMode` (`boolean`): Whether we are currently in administrative mode.
 
 ### `GET /twitch/login`
-Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio.
+Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
 
 Returns data with the following properties:
 - `url` (`string`): The login URL. It will redirect back to Studio.
+- `twitchUsername` (`string`): The username of the ChatMate Twitch account. This account must be used to authenticate on the admin page.
 
 ### `POST /twitch/authorise`
 Authorises the authorisation token and updates the stored Twitch `access_token` in the database.
@@ -700,8 +702,9 @@ Can return the following errors:
 Gets the logged-in streamer's primary channels, that is, the channels that they have selected to stream on.
 
 Returns data with the following properties:
-- `youtubeChannel` (`number | null`): The internal id of the streamer's primary YouTube channel, if set.
-- `twitchChannel` (`number | null`): The internal id of the streamer's primary Twitch channel, if set.
+- `youtubeChannelId` (`number | null`): The internal id of the streamer's primary YouTube channel, if set.
+- `twitchChannelId` (`number | null`): The internal id of the streamer's primary Twitch channel, if set.
+- `twitchChannelName` (`string | null`): The Twitch channel name of the streamer's primary Twitch channel, if set.
 
 ### `POST /primaryChannels/:platform/:channelId`
 Sets the streamer's primary channel for the specified platform. Note that this request will fail if a primary channel already exists.
@@ -736,6 +739,15 @@ Returns data with the following properties:
 Can return the following errors:
 - `403`: When the logged-in user is not a streamer.
 - `404`: When no Twitch statuses were found. Most likely this is because the streamer has not set a primary Twitch channel.
+
+### `GET /twitch/login`
+Retrieves the Twitch login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
+
+Returns data with the following properties:
+- `url` (`string`): The login URL. It will redirect back to Studio.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
 
 ## User Endpoints
 Path: `/user`.
