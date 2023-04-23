@@ -20,4 +20,4 @@ ALTER TABLE `experience_data_chat_message` ADD COLUMN `baseExperience` INTEGER N
 ALTER TABLE `experience_transaction` ADD COLUMN `livestreamId` INTEGER NOT NULL;
 
 -- AddForeignKey
-ALTER TABLE `experience_transaction` ADD CONSTRAINT `experience_transaction_livestreamId_fkey` FOREIGN KEY (`livestreamId`) REFERENCES `Livestream`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `experience_transaction` ADD CONSTRAINT `experience_transaction_livestreamId_fkey` FOREIGN KEY (`livestreamId`) REFERENCES `livestream`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
