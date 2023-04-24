@@ -76,7 +76,7 @@ function CurrentPage () {
   const page = useCurrentPage()
 
   if (loginContext.isLoading && !loginContext.isHydrated ||
-    loginContext.isLoading && (page?.requireRanksProps != null || page?.requiresStreamer)
+    loginContext.isLoading && (page?.requireRanksProps != null || page?.requiresStreamer || page?.requiresLogin)
   ) {
     return <CentredLoadingSpinner />
   }

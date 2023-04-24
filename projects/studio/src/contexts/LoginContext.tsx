@@ -18,7 +18,7 @@ export function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
   const [isStreamer, setIsStreamer] = React.useState(false)
-  const [loadingCount, setLoadingCount] = React.useState(0)
+  const [hasLoadedAuth, setHasLoadedAuth] = React.useState(false)
   const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
 
   const getGlobalRanksRequest = useRequest(getGlobalRanks(), {
@@ -96,9 +96,12 @@ export function LoginProvider (props: Props) {
         return
       }
 
-      setLoadingCount(c => c + 1)
       const response = await authenticate(storedLoginToken)
-        .finally(() => setLoadingCount(c => c - 1))
+        // ugly hack: once authentication has completed, it will trigger the side effect of hydrating everything else.
+        // however, this doesn't happen instantly and there are a few frames where we are logged in and not loading, causing the current page to possibly mount.
+        // once we finished loading, the page will be re-mounted.
+        // to avoid this interruption of the loading state, delay the time before we claim to have finished loading the authentication.
+        .finally(() => window.setTimeout(() => setHasLoadedAuth(true), 50))
 
       if (response.success) {
         setLoginToken(storedLoginToken)
@@ -191,7 +194,7 @@ export function LoginProvider (props: Props) {
         loginToken,
         username,
         user: getUserRequest.data?.user ?? null,
-        isLoading: loadingCount > 0 || isLoading,
+        isLoading: !hasLoadedAuth || isLoading,
         errors: errors.length === 0 ? null : errors,
         streamer: selectedStreamer,
         allStreamers: getStreamersRequest.data?.streamers ?? [],
