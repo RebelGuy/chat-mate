@@ -410,7 +410,7 @@ export default class HelixEventService extends ContextClass {
           const clearTimeout = this.timerHelpers.setTimeout(() => {
             cleanUp()
             resolve('Failed to create subscription because it took to long.')
-          }, 5000)
+          }, 20000)
 
           const cleanUp = () => {
             this.verificationListeners.delete(verificationListener)
@@ -476,7 +476,7 @@ export default class HelixEventService extends ContextClass {
           const clearTimeout = this.timerHelpers.setTimeout(() => {
             cleanUp()
             resolve('Failed to remove subscription because it took to long.')
-          }, 5000)
+          }, 20000)
 
           const cleanUp = () => {
             this.subscriptionDeleteFailureListeners.delete(failureListener)
