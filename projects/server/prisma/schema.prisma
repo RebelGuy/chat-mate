@@ -14,8 +14,13 @@ datasource db {
 
 /// Persists access tokens for twitch authentication
 model TwitchAuth {
-  // there can only be one access token per client
-  clientId String @id
+  id Int @id @default(autoincrement())
+
+  /// Only allowed to be null (temporarily) for the admin account.
+  twitchUserId String?
+
+  /// Must be set for the admin account.
+  twitchUsername String
 
   accessToken         String
   refreshToken        String
@@ -23,6 +28,8 @@ model TwitchAuth {
   obtainmentTimestamp BigInt
   scope               String
 
+  @@unique([twitchUserId], map: "twitch_auth_twitchUserId_key")
+  @@unique([twitchUsername], map: "twitch_auth_twitchUsername_key")
   @@map("twitch_auth")
 }
 

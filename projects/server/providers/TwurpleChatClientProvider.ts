@@ -33,7 +33,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
-  override async initialise (): Promise<void> {
+  override initialise (): void {
     if (this.disableExternalApis) {
       return
     } else if (this.isAdministrativeMode()) {
@@ -42,7 +42,7 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
     }
 
     this.chatClient = new ChatClient({
-      authProvider: this.twurkpleAuthProvider.getUserTokenAuthProvider(),
+      authProvider: this.twurkpleAuthProvider.getUserTokenAuthProviderForAdmin(),
       isAlwaysMod: false, // can't guarantee that streamers will mod the client, so err on the safe side
       readOnly: false,
 
@@ -54,7 +54,8 @@ export default class TwurpleChatClientProvider extends ContextClass implements I
       }
     })
 
-    await this.chatClient.connect()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.chatClient.connect()
 
     this.logService.logInfo(this, 'Successfully connected to the Twurple chat client')
   }

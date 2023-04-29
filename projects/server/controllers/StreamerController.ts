@@ -14,7 +14,7 @@ import { EmptyObject } from '@rebel/shared/types'
 import { single } from '@rebel/shared/util/arrays'
 import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
-import { DELETE, GET, Path, PathParam, POST, PreProcessor } from 'typescript-rest'
+import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 export type GetStreamersResponse = ApiResponse<{ streamers: string[] }>
 
@@ -41,6 +41,8 @@ export type UnsetPrimaryChannelResponse = ApiResponse<EmptyObject>
 export type GetTwitchStatusResponse = ApiResponse<{ statuses: PublicTwitchEventStatus[] }>
 
 export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string }>
+
+export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -330,4 +332,23 @@ export default class StreamerController extends ControllerBase {
     }
   }
 
+  @POST
+  @Path('/twitch/authorise')
+  public async authoriseTwitch (
+    @QueryParam('code') code: string
+  ): Promise<TwitchAuthorisationResponse> {
+    const builder = this.registerResponseBuilder<TwitchAuthorisationResponse>('POST /twitch/authorise')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      await this.streamerService.authoriseTwitchLogin(streamer.id, code)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
 }

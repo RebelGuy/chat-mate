@@ -18,6 +18,7 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
+import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
 
 export type TwitchMetadata = {
   streamId: string
@@ -155,40 +156,64 @@ export default class TwurpleService extends ContextClass {
     }
 
     const status = this.channelChatStatus.get(twitchChannelName.toLowerCase())
-    if (status != null) {
-      // we could listen for moderator add/remove events, but this is easier!
-      const user = await this.userApi.getUserByName(twitchChannelName)
-      const hasUser = this.twurpleAuthProvider.getUserTokenAuthProvider().hasUser(user!)
-      if (!hasUser) {
-        return {
-          status: 'active',
-          lastChange: this.dateTimeHelpers.ts(),
-          message: `Currently listening to chat messages, but unable to perform moderator actions because of missing permissions. Please authorise ChatMate to act on your behalf.`,
-          requiresAuthorisation: true
-        }
-      }
-
-      // todo: we probably don't require moderation status anymore if the user has authorised us (but we can't get here yet to check without first implementing user authorisation into the auth provider)
-      const moderators = await this.moderationApi.getModerators(user!)
-
-      const chatMateIsMod = moderators.data.map(d => d.userName.toLowerCase()).includes(this.twitchUsername.toLowerCase())
-      if (chatMateIsMod) {
-        return status
-      } else {
-        return {
-          status: 'active',
-          lastChange: this.dateTimeHelpers.ts(),
-          message: `Currently listening to chat messages, but unable to perform moderator actions because the Twitch channel '${this.twitchUsername}' must be added as a moderator for your channel.`,
-          requiresAuthorisation: true
-        }
-      }
-
-    } else {
+    if (status == null) {
       return {
         status: 'inactive',
         lastChange: this.dateTimeHelpers.ts()
       }
     }
+
+    let errorMessage: string | null = null
+    let isActive: boolean = true
+    const user = await this.userApi.getUserByName(twitchChannelName)
+    try {
+      await this.twurpleAuthProvider.getUserTokenAuthProvider(user!.id)
+    } catch (e: any) {
+      if (e instanceof NotAuthorisedError) {
+        errorMessage = 'You have not yet authorised ChatMate to act on your behalf.'
+        isActive = false
+      } else if (e instanceof AuthorisationExpiredError) {
+        errorMessage = 'Your previous authorisation of ChatMate has expired. Re-authorisation is required.'
+        isActive = false
+      } else if (e instanceof InconsistentScopesError) {
+        errorMessage = 'You have authorised ChatMate to act on your behalf, but the permissions that ChatMate requires have changed since then. Re-authorise is required.'
+        isActive = false
+      } else {
+        throw e
+      }
+    }
+
+    const hasUser = this.twurpleAuthProvider.hasTokenForUser(user!.id)
+    if (!hasUser && errorMessage == null) {
+      errorMessage = `Currently listening to chat messages, but unable to perform moderator actions because of missing permissions. Please authorise ChatMate to act on your behalf.`
+      isActive = true
+    }
+
+    if (errorMessage != null) {
+      return {
+        status: isActive ? 'active' : 'inactive',
+        lastChange: this.dateTimeHelpers.ts(),
+        message: errorMessage,
+        requiresAuthorisation: true
+      }
+    }
+
+    return status
+
+    // todo: we probably don't require moderation status anymore if the user has authorised us (but we can't get here yet to check without first implementing user authorisation into the auth provider)
+    // const moderators = await this.moderationApi.getModerators(user!)
+
+    // const chatMateIsMod = moderators.data.map(d => d.userName.toLowerCase()).includes(this.twitchUsername.toLowerCase())
+    // if (chatMateIsMod) {
+    //   return status
+    // } else {
+    //   return {
+    //     status: 'active',
+    //     lastChange: this.dateTimeHelpers.ts(),
+    //     message: `Currently listening to chat messages, but unable to perform moderator actions because the Twitch channel '${this.twitchUsername}' must be added as a moderator for your channel.`,
+    //     requiresAuthorisation: true
+    //   }
+    // }
   }
 
   public async modChannel (streamerId: number, twitchChannelId: number) {

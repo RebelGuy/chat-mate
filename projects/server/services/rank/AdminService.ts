@@ -86,7 +86,10 @@ export default class AdminService extends ContextClass {
       expiresIn: 0,
       obtainmentTimestamp: 0
     }
-    await this.authStore.saveTwitchAccessToken(token)
+
+    // we can't get the Twitch user ID because we may not yet have authenticated the API client.
+    // this will be set the next time we refresh the token in the TwurpleAuthProvider.
+    await this.authStore.saveTwitchAccessToken(null, this.twitchUsername, token)
 
     this.logService.logInfo(this, `Successfully updated Twitch access token.`)
   }

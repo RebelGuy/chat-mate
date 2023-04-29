@@ -21,8 +21,11 @@ import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventSe
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { RefreshingAuthProvider } from '@twurple/auth/lib'
+import { NotAuthorisedError } from '@rebel/shared/util/error'
 
 const onMessage_example = '{"msgId":"c2ddc7b6-51b6-4d75-9670-d262a6e98cf1","userInfo":{"userName":"chat_mate1","displayName":"chat_mate1","color":"#0000FF","badges":{},"badgeInfo":{},"userId":"781376034","userType":"","isBroadcaster":true,"isSubscriber":false,"isFounder":false,"isMod":false,"isVip":false},"channelId":"781376034","isCheer":false,"bits":0,"emoteOffsets":{},"messageParts":[{"type":"emote","position":0,"length":2,"id":"1","name":":)","displayInfo":{}},{"type":"text","position":2,"length":1,"text":" "},{"type":"emote","position":3,"length":6,"id":"301544927","name":"SirUwU","displayInfo":{}},{"type":"text","position":9,"length":1,"text":" "},{"type":"emote","position":10,"length":7,"id":"30259","name":"HeyGuys","displayInfo":{}}]}'
+
+const twitchUserId = 'userId'
 
 let mockTwurpleChatClientProvider: MockProxy<TwurpleChatClientProvider>
 let mockTwurpleApiClientProvider: MockProxy<TwurpleApiClientProvider>
@@ -55,7 +58,7 @@ beforeEach(() => {
   mockTwurpleApiClientProvider.get.calledWith().mockReturnValue(mockApiClient)
   mockTwurpleAuthProvider = mock()
   mockRefreshingAuthProvider = mock()
-  mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith().mockReturnValue(mockRefreshingAuthProvider)
+  mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith(twitchUserId).mockResolvedValue(mockRefreshingAuthProvider)
   mockTwurpleApiProxyService = mock()
   mockChannelStore = mock()
   mockEventDispatchService = mock()
@@ -294,7 +297,6 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
   test('Keeps track of initial streamers and joined/parted/failed channels and returns the correct active statuses', async () => {
     mockGetter(mockChatClient, 'isConnected').mockReturnValue(true)
     mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
-    mockModerationApi.getModerators.mockResolvedValue(cast({ data: [cast<HelixModerator>({ userName: mockTwitchUsername })]}))
 
     // succeeds and stays
     const channelName1 = 'test1'
@@ -303,7 +305,10 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
       streamerId: streamerId1,
       userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName1 }]}}}
     })
+    const user1 = cast<HelixUser>({ id: 'userId1' })
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId1).mockResolvedValue(channelName1)
+    mockUserApi.getUserByName.calledWith(channelName1).mockResolvedValue(user1)
+    mockTwurpleAuthProvider.hasTokenForUser.calledWith(user1.id).mockReturnValue(true)
 
     // succeeds and leaves
     const channelName2 = 'test2'
@@ -312,7 +317,10 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
       streamerId: streamerId2,
       userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName2 }]}}}
     })
+    const user2 = cast<HelixUser>({ id: 'userId2' })
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId2).mockResolvedValue(channelName2)
+    mockUserApi.getUserByName.calledWith(channelName2).mockResolvedValue(user2)
+    mockTwurpleAuthProvider.hasTokenForUser.calledWith(user2.id).mockReturnValue(true)
 
     // fails to join
     const channelName3 = 'test3'
@@ -322,17 +330,23 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
       userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName3 }]}}}
     })
     const testErrorMessage = 'testError'
+    const user3 = cast<HelixUser>({ id: 'userId3' })
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId3).mockResolvedValue(channelName3)
     mockChatClient.join.calledWith(channelName3).mockRejectedValue(new Error(testErrorMessage))
+    mockUserApi.getUserByName.calledWith(channelName3).mockResolvedValue(user3)
+    mockTwurpleAuthProvider.hasTokenForUser.calledWith(user3.id).mockReturnValue(true)
 
     // succeeds
     const channelName4 = 'test4'
     const streamerId4 = 4
+    const user4 = cast<HelixUser>({ id: 'userId4' })
     mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([{
       streamerId: streamerId4,
       twitchChannelName: channelName4
     }])
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId4).mockResolvedValue(channelName4)
+    mockUserApi.getUserByName.calledWith(channelName4).mockResolvedValue(user4)
+    mockTwurpleAuthProvider.hasTokenForUser.calledWith(user4.id).mockReturnValue(true)
 
     // doesn't have a primary Twitch channel
     const streamerId5 = 5
@@ -388,7 +402,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     expect(result).toEqual(expectObject(result, { status: 'inactive', message: expect.any(String) }))
   })
 
-  test('Returns an error if the streamer requesting the status has not added the ChatMate channel as a moderator', async () => {
+  test('Returns an error if the streamer requesting the status has not authorised ChatMate', async () => {
     const streamerId = 1
     const channelName = 'testchannel'
     const addPrimaryChannelData1 = cast<EventData['addPrimaryChannel']>({
@@ -401,7 +415,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(channelName)
     mockUserApi.getUserByName.calledWith(channelName).mockResolvedValue(user)
-    mockModerationApi.getModerators.calledWith(user).mockResolvedValue(cast({ data: [cast<HelixModerator>({ userName: 'otherUser' })]}))
+    mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith(user.id).mockRejectedValue(new NotAuthorisedError(user.id))
 
     await twurpleService.initialise()
     const onAddPrimaryChannel = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'addPrimaryChannel')![1]
@@ -409,7 +423,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
 
     const result = await twurpleService.getChatStatus(streamerId)
 
-    expect(result).toEqual(expectObject(result, { status: 'active', message: expect.any(String) }))
+    expect(result).toEqual(expectObject(result, { status: 'active', message: expect.any(String), requiresAuthorisation: true }))
   })
 })
 

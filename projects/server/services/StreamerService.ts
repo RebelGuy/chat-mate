@@ -6,6 +6,12 @@ import StreamerStore, { CreateApplicationArgs, StreamerApplicationWithUser } fro
 import { single } from '@rebel/shared/util/arrays'
 import { UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
+import WebService from '@rebel/server/services/WebService'
+import LogService from '@rebel/server/services/LogService'
+import { AccessToken } from '@twurple/auth/lib'
+import AuthStore from '@rebel/server/stores/AuthStore'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
+import { getUserName } from '@rebel/server/services/ChannelService'
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore
@@ -13,14 +19,26 @@ type Deps = Dependencies<{
   accountStore: AccountStore
   studioUrl: string
   twitchClientId: string
+  twitchClientSecret: string
+  webService: WebService
+  logService: LogService
+  authStore: AuthStore
+  streamerChannelStore: StreamerChannelStore
 }>
 
 export default class StreamerService extends ContextClass {
+  readonly name = StreamerService.name
+
   private readonly streamerStore: StreamerStore
   private readonly rankStore: RankStore
   private readonly accountStore: AccountStore
   private readonly studioUrl: string
   private readonly twitchClientId: string
+  private readonly twitchClientSecret: string
+  private readonly webService: WebService
+  private readonly logService: LogService
+  private readonly authStore: AuthStore
+  private readonly streamerChannelStore: StreamerChannelStore
 
   constructor (deps: Deps) {
     super()
@@ -29,6 +47,11 @@ export default class StreamerService extends ContextClass {
     this.accountStore = deps.resolve('accountStore')
     this.studioUrl = deps.resolve('studioUrl')
     this.twitchClientId = deps.resolve('twitchClientId')
+    this.twitchClientSecret = deps.resolve('twitchClientSecret')
+    this.webService = deps.resolve('webService')
+    this.logService = deps.resolve('logService')
+    this.authStore = deps.resolve('authStore')
+    this.streamerChannelStore = deps.resolve('streamerChannelStore')
   }
 
   /** Note that new streamers do not have primary channels by default.
@@ -72,6 +95,44 @@ export default class StreamerService extends ContextClass {
     // and the presence of the code in the query params is one way of achieving this.
     const url = `https://id.twitch.tv/oauth2/authorize?client_id=${this.twitchClientId}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}`
     return url
+  }
+
+  /** Once the user has authorised ChatMate, this method gets an access token and saves it to the database. */
+  public async authoriseTwitchLogin (streamerId: number, authorisationCode: string): Promise<void> {
+    const primaryChannel = await this.streamerChannelStore.getPrimaryChannels([streamerId]).then(single)
+    if (primaryChannel.twitchChannel == null) {
+      throw new Error(`Could not find a primary Twitch channel for streamer ${streamerId}.`)
+    }
+
+    const redirectUrl = this.getRedirectUrl()
+    const url = `https://id.twitch.tv/oauth2/token?client_id=${this.twitchClientId}&client_secret=${this.twitchClientSecret}&code=${authorisationCode}&grant_type=authorization_code&redirect_uri=${redirectUrl}`
+
+    const rawResponse = await this.webService.fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
+    if (!rawResponse.ok) {
+      const message = `Twitch auth response was status ${rawResponse.status}: ${await rawResponse.text()}`
+      this.logService.logError(this, `Failed to set Twitch access token for streamer ${streamerId}. ${message}`)
+      throw new Error(message)
+    }
+
+    const response = await rawResponse.json() as any
+    const token: AccessToken = {
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+      scope: TWITCH_SCOPE,
+      expiresIn: 0,
+      obtainmentTimestamp: 0
+    }
+    const twitchChannelName = getUserName(primaryChannel.twitchChannel)
+    const twitchUserId = primaryChannel.twitchChannel.platformInfo.channel.twitchId
+    await this.authStore.saveTwitchAccessToken(twitchUserId, twitchChannelName, token)
+
+    this.logService.logInfo(this, `Successfully updated Twitch access token for twitch channel '${twitchChannelName}'.`)
   }
 
   private getRedirectUrl () {

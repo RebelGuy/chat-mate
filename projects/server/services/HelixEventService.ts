@@ -21,6 +21,8 @@ import { keysOf } from '@rebel/shared/util/objects'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import { createLogContext, LogContext } from '@rebel/shared/ILogService'
 import { LogLevel } from '@twurple/chat/lib'
+import AuthStore from '@rebel/server/stores/AuthStore'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -52,6 +54,8 @@ type Deps = Dependencies<{
   twitchClientId: string
   isAdministrativeMode: () => boolean
   dateTimeHelpers: DateTimeHelpers
+  authStore: AuthStore
+  twurpleAuthProvider: TwurpleAuthProvider
 }>
 
 // this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
@@ -76,6 +80,8 @@ export default class HelixEventService extends ContextClass {
   private readonly twitchClientId: string
   private readonly isAdministrativeMode: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
+  private readonly authStore: AuthStore
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
 
   private listener: EventSubHttpListener | null
   private eventSubBase!: EventSubHttpBase
@@ -109,6 +115,8 @@ export default class HelixEventService extends ContextClass {
     this.twitchClientId = deps.resolve('twitchClientId')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+    this.authStore = deps.resolve('authStore')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
 
     this.listener = null
   }
@@ -200,7 +208,7 @@ export default class HelixEventService extends ContextClass {
         if (error != null) {
           result[type] = {
             status: 'inactive',
-            message: error,
+            message: error.includes('subscription missing proper authorization') ? 'Unable to subscribe to event because of missing permissions.' : error,
             lastChange: lastChange,
             requiresAuthorisation: requiresAuth
           }
@@ -282,6 +290,8 @@ export default class HelixEventService extends ContextClass {
 
     let streamerId: number | null = null
     if (data.userName != null) {
+      await this.authStore.tryDeleteTwitchAccessToken(data.userId)
+      this.twurpleAuthProvider.removeTokenForUser(data.userId)
       streamerId = await this.streamerChannelService.getStreamerFromTwitchChannelName(data.userName)
     }
 

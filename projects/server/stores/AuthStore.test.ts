@@ -2,10 +2,10 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/server/_test/utils'
 import { AccessToken } from '@twurple/auth'
+import { single } from '@rebel/shared/util/arrays'
 
-const clientId = 'clientId'
 const accessToken: AccessToken = {
   accessToken: 'accessToken1',
   expiresIn: 100,
@@ -20,6 +20,10 @@ const otherAccessToken: AccessToken = {
   refreshToken: 'refreshToken2',
   scope: ['scope3', 'scope4']
 }
+const twitchUserId1 = 'userId1'
+const twitchUserId2 = 'userId2'
+const twitchChannelName1 = 'channelName1'
+const twitchChannelName2 = 'channelName2'
 
 export default () => {
   let authStore: AuthStore
@@ -27,26 +31,43 @@ export default () => {
 
   beforeEach(async () => {
     const dbProvider = await startTestDb()
-    authStore = new AuthStore(new Dependencies({ dbProvider, twitchClientId: clientId }))
+    authStore = new AuthStore(new Dependencies({ dbProvider }))
     db = dbProvider.get()
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
 
   describe(nameof(AuthStore, 'loadTwitchAccessToken'), () => {
-    test('Throws if no access token exists for client', async () => {
-      await addTwitchAccessToken(db, 'client2', otherAccessToken)
+    test(`Returns the user token`, async () => {
+      await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
+      await addTwitchAccessToken(db, twitchUserId2, twitchChannelName2, accessToken)
 
-      await expect(() => authStore.loadTwitchAccessToken()).rejects.toThrow()
-    })
-
-    test('returns correct access token for client', async () => {
-      await addTwitchAccessToken(db, 'client2', otherAccessToken)
-      await addTwitchAccessToken(db, clientId, accessToken)
-
-      const result = await authStore.loadTwitchAccessToken()
+      const result = await authStore.loadTwitchAccessToken(twitchUserId1)
 
       expect(result).toEqual(accessToken)
+    })
+
+    test(`Throws if the user's token could not be found`, async () => {
+      await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
+
+      await expect(() => authStore.loadTwitchAccessToken(twitchUserId2)).rejects.toThrow()
+    })
+  })
+
+  describe(nameof(AuthStore, 'loadTwitchAccessTokenByChannelName'), () => {
+    test(`Returns the user token`, async () => {
+      await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
+      await addTwitchAccessToken(db, twitchUserId2, twitchChannelName2, accessToken)
+
+      const result = await authStore.loadTwitchAccessTokenByChannelName(twitchChannelName1)
+
+      expect(result).toEqual(accessToken)
+    })
+
+    test(`Throws if the user's token could not be found`, async () => {
+      await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
+
+      await expect(() => authStore.loadTwitchAccessToken(twitchChannelName2)).rejects.toThrow()
     })
   })
 
@@ -73,20 +94,34 @@ export default () => {
   })
 
   describe(nameof(AuthStore, 'saveTwitchAccessToken'), () => {
-    test('adds new access token to database', async () => {
-      await authStore.saveTwitchAccessToken(accessToken)
+    test('Adds the new admin access token to database', async () => {
+      await authStore.saveTwitchAccessToken(twitchUserId1, twitchChannelName1, accessToken)
 
-      expectRowCount(db.twitchAuth).toBe(1)
+      await expectRowCount(db.twitchAuth).toBe(1)
     })
 
-    test('overwrites existing access token', async () => {
-      await addTwitchAccessToken(db, clientId, accessToken)
+    test('Overwrites existing access token', async () => {
+      await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
 
-      await authStore.saveTwitchAccessToken(otherAccessToken)
+      await authStore.saveTwitchAccessToken(twitchUserId1, twitchChannelName1, otherAccessToken)
 
-      expectRowCount(db.twitchAuth).toBe(1)
-      const saved = await db.twitchAuth.findFirst()
-      expect(saved).toEqual(otherAccessToken)
+      const saved = await db.twitchAuth.findMany().then(single)
+      expect(saved).toEqual(expectObject(saved, {
+        refreshToken: otherAccessToken.refreshToken!,
+        expiresIn: otherAccessToken.expiresIn!,
+        obtainmentTimestamp: BigInt(otherAccessToken.obtainmentTimestamp!),
+        scope: otherAccessToken.scope.join(',')
+      }))
+    })
+
+    test('Throws if attempting to update an access token without providing the Twitch userId', async () => {
+      await addTwitchAccessToken(db, null, twitchChannelName1, accessToken)
+
+      await expect(() => authStore.saveTwitchAccessToken(null, twitchChannelName1, otherAccessToken)).rejects.toThrow()
+    })
+
+    test('Throws if attempting to create a new token without providing a Twitch channel name', async () => {
+      await expect(() => authStore.saveTwitchAccessToken(twitchUserId1, null, otherAccessToken)).rejects.toThrow()
     })
   })
 
@@ -118,12 +153,34 @@ export default () => {
       expect(stored!.updateTime.getTime()).not.toBe(originalDate.getTime())
     })
   })
+
+  describe(nameof(AuthStore, 'tryDeleteTwitchAccessToken'), () => {
+    test('Deletes the access token for the specified Twitch user', async () => {
+      await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
+      await addTwitchAccessToken(db, twitchUserId2, twitchChannelName2, otherAccessToken)
+
+      await authStore.tryDeleteTwitchAccessToken(twitchUserId2)
+
+      const stored = await db.twitchAuth.findMany().then(single)
+      expect(stored.twitchUserId).toBe(twitchUserId1)
+    })
+
+    test('Does not throw if Twitch user does not exist', async () => {
+      await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
+
+      await authStore.tryDeleteTwitchAccessToken(twitchUserId2)
+
+      const stored = await db.twitchAuth.findMany().then(single)
+      expect(stored.twitchUserId).toBe(twitchUserId1)
+    })
+  })
 }
 
-async function addTwitchAccessToken (db: Db, client: string, token: AccessToken) {
+async function addTwitchAccessToken (db: Db, twitchUserId: string | null, twitchChannelName: string, token: AccessToken) {
   await db.twitchAuth.create({ data: {
     accessToken: token.accessToken,
-    clientId: client,
+    twitchUsername: twitchChannelName,
+    twitchUserId: twitchUserId,
     expiresIn: token.expiresIn!,
     obtainmentTimestamp: token.obtainmentTimestamp,
     refreshToken: token.refreshToken!,

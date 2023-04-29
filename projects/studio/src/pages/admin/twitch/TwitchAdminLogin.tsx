@@ -3,7 +3,7 @@ import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import useRequest from '@rebel/studio/hooks/useRequest'
-import { authoriseTwitch, getAdministrativeMode, getTwitchAdminLoginUrl } from '@rebel/studio/utility/api'
+import { authoriseTwitchAdmin, getAdministrativeMode, getTwitchAdminLoginUrl } from '@rebel/studio/utility/api'
 import { ReactNode, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -19,7 +19,7 @@ export default function TwitchAdminLogin () {
   const getAdministrativeModeRequest = useRequest(getAdministrativeMode())
 
   const getLoginUrlRequest = useRequest(getTwitchAdminLoginUrl(), { onDemand: true })
-  const authoriseTwitchRequest = useRequest(authoriseTwitch(code ?? ''), { onDemand: true })
+  const authoriseTwitchRequest = useRequest(authoriseTwitchAdmin(code!), { onDemand: true })
 
   useEffect(() => {
     setParams({})

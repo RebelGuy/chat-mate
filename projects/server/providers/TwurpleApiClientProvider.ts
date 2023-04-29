@@ -44,7 +44,7 @@ export default class TwurpleApiClientProvider extends ContextClass {
     }
 
     this.apiClient = new ApiClient({
-      authProvider: this.twurpleAuthProvider.getUserTokenAuthProvider(),
+      authProvider: this.twurpleAuthProvider.getUserTokenAuthProviderForAdmin(),
 
       // inject custom logging
       logger: {

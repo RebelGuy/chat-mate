@@ -12,6 +12,7 @@ import AccountStoreSuite from '@rebel/server/stores/AccountStore.test'
 import StreamerStoreSuite from '@rebel/server/stores/StreamerStore.test'
 import StreamerChannelStoreSuite from '@rebel/server/stores/StreamerChannelStore.test'
 import LinkStoreSuite from '@rebel/server/stores/LinkStore.test'
+import AuthStoreSuite from '@rebel/server/stores/AuthStore.test'
 
 // keep an eye on this one: https://github.com/prisma/prisma/issues/732
 // it would HUGELY improve efficiency if we can use an in-memory mock database for testing.
@@ -20,6 +21,8 @@ import LinkStoreSuite from '@rebel/server/stores/LinkStore.test'
 const describeFn = process.env.CI === 'true' ? describe.skip : describe
 
 describeFn('AccountStore Suite', AccountStoreSuite)
+
+describeFn('AuthStore Suite', AuthStoreSuite)
 
 describeFn('ChannelStore Suite', ChannelStoreSuite)
 

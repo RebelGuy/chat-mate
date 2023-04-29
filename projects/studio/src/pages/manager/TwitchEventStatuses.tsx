@@ -9,7 +9,7 @@ import RelativeTime from '@rebel/studio/components/RelativeTime'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient } from '@rebel/studio/utility/api'
+import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient } from '@rebel/studio/utility/api'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -33,52 +33,55 @@ let successPoller: number | null = null
 
 export default function TwitchEventStatuses () {
   const [params, setParams] = useSearchParams()
+  const code = params.get('code')
+
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const getStatusesRequest = useRequest(getTwitchEventStatuses(), { updateKey: refreshToken })
   const reconnectChatClientRequest = useRequest(reconnectChatClient(), { onDemand: true })
   const primaryChannelsRequest = useRequest(getPrimaryChannels(), { onDemand: true })
   const getLoginUrlRequest = useRequest(getTwitchStreamerLoginUrl(), { onDemand: true })
+  const authoriseTwitchRequest = useRequest(authoriseTwitchStreamer(code!), { onDemand: true })
 
-  const code = params.get('code')
-  const [isAuthSuccess] = useState(code != null)
   const [error] = useState<string | null>(params.get('error'))
   const [errorDescription] = useState<string | null>(params.get('error_description'))
 
-  // it is not an error for the user to unnecessarily re-authenticate, but it's a nicer user experience if the button only shows when authentication is actually required
+  // if true, we detected that ChatMate is not working properly because of missing permissions
   const requiresAuth = getStatusesRequest.data == null || getStatusesRequest.data.statuses.find(status => status.requiresAuthorisation) != null
 
-  // for some reason we can't immediately clear the params here, else the states won't initialise. but it's working fine on the admin authentication page?!
   useEffect(() => {
+    // for some reason we can't immediately clear the params here, else the states won't initialise. but it's working fine on the admin authentication page?!
     const timeout = window.setTimeout(() => setParams({}), 500)
+
+    primaryChannelsRequest.triggerRequest()
+    getLoginUrlRequest.triggerRequest()
+    if (code != null) {
+      authoriseTwitchRequest.triggerRequest()
+    }
 
     return () => window.clearTimeout(timeout)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    if (requiresAuth) {
-      primaryChannelsRequest.triggerRequest()
-      getLoginUrlRequest.triggerRequest()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requiresAuth])
-
   // if the user authorised successfully, it may take a few seconds for events to re-subscribe. poll the server until we are in the clear
   useEffect(() => {
-    if (isAuthSuccess && requiresAuth) {
+    if (authoriseTwitchRequest.data != null && requiresAuth) {
       // what the fuck is eslint on about
       // eslint-disable-next-line @typescript-eslint/no-implied-eval
       successPoller = window.setInterval(updateRefreshToken, 2000)
 
       // if we take longer than this then something probably went wrong and we don't want to keep polling
-      window.setTimeout(() => window.clearTimeout(successPoller!), 10000)
-    } else if (isAuthSuccess && !requiresAuth) {
+      window.setTimeout(() => {
+        window.clearTimeout(successPoller!)
+        authoriseTwitchRequest.reset()
+      }, 10000)
+    } else if (authoriseTwitchRequest.data != null && !requiresAuth) {
       setParams({})
       window.clearTimeout(successPoller!)
+      authoriseTwitchRequest.reset()
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthSuccess, requiresAuth])
+  }, [authoriseTwitchRequest.data, requiresAuth])
 
   const onLoginToTwitch = () => {
     window.location.href = getLoginUrlRequest.data!.url
@@ -103,25 +106,33 @@ export default function TwitchEventStatuses () {
         As such, ChatMate may not work correctly if any of the subscriptions are broken.
       </div>
 
-      {requiresAuth && !isAuthSuccess && <>
-        <Alert severity="warning">
-          <div>
-            Looks like some of the events are broken because ChatMate did not have permission.
-            Please use your Twitch channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} to provide access.
-          </div>
+      {authoriseTwitchRequest.data == null && <>
+        <Alert sx={{ mt: 1 }} severity={requiresAuth ? 'warning' : 'info'}>
+          {requiresAuth ?
+            <div>
+              Looks like some of the events are broken because ChatMate did not have permission.
+              Please use your Twitch channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} to provide access.
+            </div>
+            :
+            <div>
+              Looks like all events are working correctly and you do not need to authorise ChatMate again.
+              If you still want to refresh authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>}, you can do so using the below button.
+            </div>
+          }
           <Button
             onClick={onLoginToTwitch}
-            disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null || primaryChannelsRequest.isLoading || primaryChannelsRequest.data == null}
+            disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null || primaryChannelsRequest.isLoading || primaryChannelsRequest.data == null || authoriseTwitchRequest.isLoading}
             sx={{ mt: 1 }}
           >
             Authorise ChatMate
           </Button>
-          <ApiError requestObj={[getLoginUrlRequest, primaryChannelsRequest]} />
         </Alert>
       </>}
 
-      {isAuthSuccess && <>
-        <Alert severity="success">
+      <ApiError requestObj={[getLoginUrlRequest, primaryChannelsRequest, authoriseTwitchRequest]} hideRetryButton />
+
+      {authoriseTwitchRequest.data != null && <>
+        <Alert sx={{ mt: 1 }} severity="success">
           Successfully authenticated ChatMate. You may have to wait for a few seconds for your changes to take effect.
         </Alert>
       </>}

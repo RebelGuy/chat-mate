@@ -94,6 +94,12 @@ export const unsetPrimaryChannel = requestBuilder<UnsetPrimaryChannelResponse, f
   false
 )
 
+export const authoriseTwitchStreamer = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
+  'POST',
+  (code) => constructPath('/streamer/twitch/authorise', { code }),
+  false
+)
+
 export const getTwitchEventStatuses = requestBuilder<GetTwitchStatusResponse>('GET', `/streamer/twitch/status`, 'self')
 
 export const getTwitchStreamerLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/streamer/twitch/login', false)
@@ -142,7 +148,7 @@ export const getAdministrativeMode = requestBuilder<GetAdministrativeModeRespons
 
 export const getTwitchAdminLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/admin/twitch/login', false)
 
-export const authoriseTwitch = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
+export const authoriseTwitchAdmin = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
   'POST',
   (code) => constructPath('/admin/twitch/authorise', { code }),
   false

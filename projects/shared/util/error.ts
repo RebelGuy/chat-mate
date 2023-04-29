@@ -130,6 +130,24 @@ export class InvalidCommandArgumentsError extends CustomError {
   }
 }
 
+export class NotAuthorisedError extends CustomError {
+  constructor (twitchUserId: string) {
+    super(NotAuthorisedError.prototype, `Twitch user ${twitchUserId} has not authorised ChatMate.`)
+  }
+}
+
+export class AuthorisationExpiredError extends CustomError {
+  constructor () {
+    super(AuthorisationExpiredError.prototype)
+  }
+}
+
+export class InconsistentScopesError extends CustomError {
+  constructor () {
+    super(InconsistentScopesError.prototype, 'The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

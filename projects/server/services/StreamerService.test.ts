@@ -1,34 +1,47 @@
 import { RegisteredUser, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
-import HelixEventService from '@rebel/server/services/HelixEventService'
 import StreamerService from '@rebel/server/services/StreamerService'
-import TwurpleService from '@rebel/server/services/TwurpleService'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import RankStore, { AddUserRankArgs } from '@rebel/server/stores/RankStore'
+import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore, { StreamerApplicationWithUser, CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
-import { single2 } from '@rebel/shared/util/arrays'
+import { single, single2 } from '@rebel/shared/util/arrays'
 import { UserAlreadyStreamerError } from '@rebel/shared/util/error'
-import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import AuthStore from '@rebel/server/stores/AuthStore'
+import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
+import WebService from '@rebel/server/services/WebService'
 
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockRankStore: MockProxy<RankStore>
 let mockAccountStore: MockProxy<AccountStore>
 const mockTwitchClientId = 'clientId'
 const mockStudioUrl = 'studioUrl'
+let mockAuthStore: MockProxy<AuthStore>
+let mockStreamerChannelStore: MockProxy<StreamerChannelStore>
+const mockTwitchClientSecret = 'clientSecret'
+let mockWebService: MockProxy<WebService>
 let streamerService: StreamerService
 
 beforeEach(() => {
   mockStreamerStore = mock()
   mockRankStore = mock()
   mockAccountStore = mock()
+  mockAuthStore = mock()
+  mockStreamerChannelStore = mock()
+  mockWebService = mock()
 
   streamerService = new StreamerService(new Dependencies({
     streamerStore: mockStreamerStore,
     rankStore: mockRankStore,
     accountStore: mockAccountStore,
     twitchClientId: mockTwitchClientId,
-    studioUrl: mockStudioUrl
+    studioUrl: mockStudioUrl,
+    authStore: mockAuthStore,
+    logService: mock(),
+    streamerChannelStore: mockStreamerChannelStore,
+    twitchClientSecret: mockTwitchClientSecret,
+    webService: mockWebService
   }))
 })
 
@@ -80,5 +93,41 @@ describe(nameof(StreamerService, 'getTwitchLoginUrl'), () => {
 
     expect(url).toEqual(expect.stringContaining(mockStudioUrl))
     expect(url).toEqual(expect.stringContaining(mockTwitchClientId))
+  })
+})
+
+describe(nameof(StreamerService, 'authoriseTwitchLogin'), () => {
+  test('Sends an authorisation request and saves the provided access token to the database', async () => {
+    const streamerId = 54
+    const twitchUserId = 'twitchUserId'
+    const twitchChannelName = 'twitchChannelName'
+    const code = 'code123'
+    const access_token = 'access_token123'
+    const refresh_token = 'refresh_token123'
+
+    mockStreamerChannelStore.getPrimaryChannels
+      .calledWith(expectArray<number>([streamerId]))
+      .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: { platformInfo: { platform: 'twitch', channel: { twitchId: twitchUserId, infoHistory: [{ displayName: twitchChannelName }] }}}})])
+    mockWebService.fetch
+      .calledWith(expect.stringContaining(code))
+      .mockResolvedValue(cast<Response>({ ok: true, json: () => Promise.resolve({ access_token, refresh_token }) }))
+
+    await streamerService.authoriseTwitchLogin(streamerId, code)
+
+    const [providedTwitchUserId, providedTwitchChannelName, providedToken] = single(mockAuthStore.saveTwitchAccessToken.mock.calls)
+    expect(providedTwitchUserId).toBe(twitchUserId)
+    expect(providedTwitchChannelName).toBe(twitchChannelName)
+    expect(providedToken).toEqual(expectObject(providedToken, { accessToken: access_token, refreshToken: refresh_token }))
+  })
+
+  test('Throws if the streamer does not have a primary Twitch channel', async () => {
+    const streamerId = 54
+    const code = 'code123'
+
+    mockStreamerChannelStore.getPrimaryChannels
+      .calledWith(expectArray<number>([streamerId]))
+      .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: null })])
+
+    await expect(() => streamerService.authoriseTwitchLogin(streamerId, code)).rejects.toThrow()
   })
 })

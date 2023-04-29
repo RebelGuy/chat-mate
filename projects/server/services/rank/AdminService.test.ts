@@ -2,11 +2,11 @@ import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import WebService from '@rebel/server/services/WebService'
-import { single2 } from '@rebel/shared/util/arrays'
+import { single } from '@rebel/shared/util/arrays'
 
 const primaryUser1 = 1
 const primaryUser2 = 2
@@ -92,7 +92,7 @@ describe(nameof(AdminService, 'authoriseTwitchLogin'), () => {
 
     await adminService.authoriseTwitchLogin(code)
 
-    const storedToken = single2(mockAuthStore.saveTwitchAccessToken.mock.calls)
-    expect(storedToken).toEqual(expectObject(storedToken, { accessToken: access_token, refreshToken: refresh_token }))
+    const args = single(mockAuthStore.saveTwitchAccessToken.mock.calls)
+    expect(args).toEqual(expectObjectDeep(args, [null, twitchUsername, { accessToken: access_token, refreshToken: refresh_token }]))
   })
 })
