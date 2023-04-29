@@ -114,12 +114,6 @@ export default () => {
       }))
     })
 
-    test('Throws if attempting to update an access token without providing the Twitch userId', async () => {
-      await addTwitchAccessToken(db, null, twitchChannelName1, accessToken)
-
-      await expect(() => authStore.saveTwitchAccessToken(null, twitchChannelName1, otherAccessToken)).rejects.toThrow()
-    })
-
     test('Throws if attempting to create a new token without providing a Twitch channel name', async () => {
       await expect(() => authStore.saveTwitchAccessToken(twitchUserId1, null, otherAccessToken)).rejects.toThrow()
     })

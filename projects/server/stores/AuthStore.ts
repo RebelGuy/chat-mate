@@ -54,7 +54,7 @@ export default class AuthStore extends ContextClass {
   }
 
   /** Must provide a Twitch username when creating a new access token (not required when refreshing the token).
-   * The userId is also required when creating/refreshing, except when creating the ChatMate admin Twitch channel token. */
+   * The userId is also required when creating/refreshing, except for the ChatMate admin Twitch channel token. */
   public async saveTwitchAccessToken (twitchUserId: string | null, twitchUsername: string | null, token: AccessToken) {
     const tokenData = {
       accessToken: token.accessToken,
@@ -78,10 +78,6 @@ export default class AuthStore extends ContextClass {
 
       await this.dbProvider.get().twitchAuth.create({ data: { twitchUsername, twitchUserId, ...tokenData }})
     } else {
-      if (twitchUserId == null) {
-        throw new Error('Must provide a Twitch userId when updating an existing access token')
-      }
-
       await this.dbProvider.get().twitchAuth.update({
         where: { id: existingToken.id },
         data: {
