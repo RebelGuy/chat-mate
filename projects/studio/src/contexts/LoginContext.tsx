@@ -93,6 +93,7 @@ export function LoginProvider (props: Props) {
       const storedStreamer = window.localStorage.getItem('streamer')
       const storedLoginToken = window.localStorage.getItem('loginToken')
       if (storedLoginToken == null) {
+        setHasLoadedAuth(true)
         return
       }
 
@@ -183,6 +184,7 @@ export function LoginProvider (props: Props) {
 
   const requests = [getUserRequest, getGlobalRanksRequest, getRanksForStreamerRequest, getStreamersRequest]
   const isHydrated = requests.find(r => r.data == null && r.error == null) == null
+  console.log(requests)
   const isLoading = requests.find(r => r.isLoading) != null
   const errors = nonNull(requests.map(r => r.error))
   const ranks = [...(getGlobalRanksRequest.data?.ranks ?? []), ...(getRanksForStreamerRequest.data?.ranks ?? [])]
