@@ -601,7 +601,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     expect(mockMasterchatService.timeout.mock.calls.length).toBe(0)
 
     const twitchCalls = mockTwurpleService.untimeout.mock.calls
-    expect(twitchCalls).toEqual([[streamerId1, 1, any()], [streamerId1, 2, any()]])
+    expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
 
     const stopTrackingArgs = single(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls)
     expect(stopTrackingArgs[0]).toBe(expectedResult.id)
@@ -637,12 +637,11 @@ describe(nameof(PunishmentService, 'untimeoutUserExternal'), () => {
       youtubeChannelIds: [youtubeChannel]
     }
     const rankId = 581
-    const revokeMessage = 'test123'
 
     mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
-    mockTwurpleService.untimeout.calledWith(streamerId, twitchChannel, revokeMessage).mockResolvedValue()
+    mockTwurpleService.untimeout.calledWith(streamerId, twitchChannel).mockResolvedValue()
 
-    const result = await punishmentService.untimeoutUserExternal(defaultUserId, streamerId, rankId, revokeMessage)
+    const result = await punishmentService.untimeoutUserExternal(defaultUserId, streamerId, rankId, 'test123')
 
     expect(single2(mockYoutubeTimeoutRefreshService.stopTrackingTimeout.mock.calls)).toBe(rankId)
     expect(single(result.twitchResults).error).toBeNull()

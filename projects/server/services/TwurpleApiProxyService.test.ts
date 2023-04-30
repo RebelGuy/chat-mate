@@ -15,29 +15,30 @@ const chatMateModeratorId: string = 'moderator id'
 
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
-let twurpleApiProxyService: TwurpleApiProxyService
 let mockApiClient: DeepMockProxy<ApiClient>
 let mockChatClient: MockProxy<ChatClient>
+let mockTwitchUsername: string
+let twurpleApiProxyService: TwurpleApiProxyService
 
-beforeEach(async () => {
+beforeEach(() => {
   jest.useFakeTimers()
   mockLogService = mock()
   mockStatusService = mock()
   mockApiClient = mock({ streams: mock(), users: mock() }) as any // the compiler wants us to mock every property individually?
-  const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => mockApiClient })
+  const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => Promise.resolve(mockApiClient) })
   mockChatClient = mock()
   const mockTwurpleChatClientProvider = mock<TwurpleChatClientProvider>({ get: () => mockChatClient })
-
-  mockApiClient.users.getUserByName.calledWith('chat_mate1').mockResolvedValue(new HelixUser(cast<HelixUserData>({ id: chatMateModeratorId }), mockApiClient))
+  mockTwitchUsername = 'twitchUsername'
 
   twurpleApiProxyService = new TwurpleApiProxyService(new Dependencies({
     logService: mockLogService,
     twurpleApiClientProvider: mockTwurpleApiClientProvider,
     twurpleChatClientProvider: mockTwurpleChatClientProvider,
     twurpleStatusService: mockStatusService,
-    isAdministrativeMode: () => false
+    isAdministrativeMode: () => false,
+    twitchUsername: mockTwitchUsername
   }))
-  await twurpleApiProxyService.initialise()
+  twurpleApiProxyService.initialise()
 })
 
 // this test mirrors the MasterchatService tests implementation

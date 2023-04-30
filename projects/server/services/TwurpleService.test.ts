@@ -55,7 +55,8 @@ beforeEach(() => {
   mockGetter(mockApiClient, 'users').mockReturnValue(mockUserApi)
   mockGetter(mockApiClient, 'moderation').mockReturnValue(mockModerationApi)
   mockTwurpleApiClientProvider = mock()
-  mockTwurpleApiClientProvider.get.calledWith().mockReturnValue(mockApiClient)
+  mockTwurpleApiClientProvider.get.calledWith(expect.any(String)).mockResolvedValue(mockApiClient)
+  mockTwurpleApiClientProvider.get.calledWith(null).mockResolvedValue(mockApiClient)
   mockTwurpleAuthProvider = mock()
   mockRefreshingAuthProvider = mock()
   mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith(twitchUserId).mockResolvedValue(mockRefreshingAuthProvider)
@@ -233,15 +234,20 @@ describe(nameof(TwurpleService, 'unbanChannel'), () => {
     const streamerId = 2
     const channelId = 5
     const streamerChannelName = 'streamerChannelName'
+    const streamerHelixUser = new HelixUser(cast<HelixUserData>({ id: 'streamer' }), mockApiClient)
     const channelName = 'testChannelName'
     const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
     mockChannelStore.getTwitchChannelFromChannelId.calledWith(expect.arrayContaining([channelId])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
+    mockApiClient.users.getUserByName.calledWith(streamerChannelName).mockResolvedValue(streamerHelixUser)
+    mockApiClient.users.getUserByName.calledWith(channelName).mockResolvedValue(helixUser)
 
     await twurpleService.initialise()
     await twurpleService.unbanChannel(streamerId, channelId)
 
-    expect(single(mockTwurpleApiProxyService.say.mock.calls)).toEqual([streamerChannelName, `/unban ${channelName}`])
+    const args = single(mockTwurpleApiProxyService.unban.mock.calls)
+    expect(args).toEqual(expectArray(args, [streamerHelixUser, helixUser]))
   })
 })
 
@@ -278,17 +284,16 @@ describe(nameof(TwurpleService, 'untimeout'), () => {
     const channelName = 'testChannelName'
     const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
     const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
-    const reason = 'test reason'
     mockChannelStore.getTwitchChannelFromChannelId.calledWith(expect.arrayContaining([channelId])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
     mockApiClient.users.getUserByName.calledWith(streamerChannelName).mockResolvedValue(streamerHelixUser)
     mockApiClient.users.getUserByName.calledWith(channelName).mockResolvedValue(helixUser)
 
     await twurpleService.initialise()
-    await twurpleService.untimeout(streamerId, channelId, reason)
+    await twurpleService.untimeout(streamerId, channelId)
 
-    const args = single(mockTwurpleApiProxyService.timeout.mock.calls)
-    expect(args).toEqual(expectArray(args, [streamerHelixUser, helixUser, 1, reason]))
+    const args = single(mockTwurpleApiProxyService.unTimeout.mock.calls)
+    expect(args).toEqual(expectArray(args, [streamerHelixUser, helixUser]))
   })
 })
 

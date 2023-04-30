@@ -12,6 +12,7 @@ import { AccessToken } from '@twurple/auth/lib'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import { getUserName } from '@rebel/server/services/ChannelService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore
@@ -24,6 +25,7 @@ type Deps = Dependencies<{
   logService: LogService
   authStore: AuthStore
   streamerChannelStore: StreamerChannelStore
+  twurpleAuthProvider: TwurpleAuthProvider
 }>
 
 export default class StreamerService extends ContextClass {
@@ -39,6 +41,7 @@ export default class StreamerService extends ContextClass {
   private readonly logService: LogService
   private readonly authStore: AuthStore
   private readonly streamerChannelStore: StreamerChannelStore
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
 
   constructor (deps: Deps) {
     super()
@@ -52,6 +55,7 @@ export default class StreamerService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.authStore = deps.resolve('authStore')
     this.streamerChannelStore = deps.resolve('streamerChannelStore')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
   }
 
   /** Note that new streamers do not have primary channels by default.
@@ -128,9 +132,13 @@ export default class StreamerService extends ContextClass {
       expiresIn: 0,
       obtainmentTimestamp: 0
     }
+
     const twitchChannelName = getUserName(primaryChannel.twitchChannel)
     const twitchUserId = primaryChannel.twitchChannel.platformInfo.channel.twitchId
     await this.authStore.saveTwitchAccessToken(twitchUserId, twitchChannelName, token)
+
+    // invalidate the existing access token so that the next request will fetch the updated one
+    this.twurpleAuthProvider.removeTokenForUser(twitchUserId)
 
     this.logService.logInfo(this, `Successfully updated Twitch access token for twitch channel '${twitchChannelName}'.`)
   }

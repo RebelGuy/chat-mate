@@ -66,8 +66,11 @@ export default class TwurpleApiClientProvider extends ContextClass {
     })
   }
 
-  /** Uses the refreshable user access token. This is probably the one you want. Requests are performed on behalf of the ChatMate Twitch channel. */
-  public get () {
+  /** Uses the refreshable user access token. This is probably the one you want. Requests are performed on behalf of the give user's Twitch channel, or, if not provided, the ChatMate admin Twitch channel. */
+  public get = async (twitchUserId: string | null) => {
+    if (twitchUserId != null) {
+      await this.twurpleAuthProvider.getUserTokenAuthProvider(twitchUserId)
+    }
     return this.apiClient
   }
 

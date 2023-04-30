@@ -13,7 +13,7 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
-import { HelixModerationApi, HelixUser, HelixUserApi } from '@twurple/api/lib'
+import { HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
@@ -60,9 +60,7 @@ export default class TwurpleService extends ContextClass {
   private readonly streamerChannelService: StreamerChannelService
   private readonly isAdministrativeMode: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
-  private readonly twitchUsername: string
   private userApi!: HelixUserApi
-  private moderationApi!: HelixModerationApi
   private chatClient!: ChatClient
 
   /** The keys are the channel names in lowercase characters. */
@@ -83,7 +81,6 @@ export default class TwurpleService extends ContextClass {
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
-    this.twitchUsername = deps.resolve('twitchUsername')
   }
 
   public override async initialise () {
@@ -93,8 +90,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     this.chatClient = this.chatClientProvider.get()
-    this.userApi = this.twurpleApiClientProvider.get().users
-    this.moderationApi = this.twurpleApiClientProvider.get().moderation
+    this.userApi = await this.twurpleApiClientProvider.get(null).then(client => client.users)
 
     if (this.disableExternalApis) {
       return
@@ -176,7 +172,7 @@ export default class TwurpleService extends ContextClass {
         errorMessage = 'Your previous authorisation of ChatMate has expired. Re-authorisation is required.'
         isActive = false
       } else if (e instanceof InconsistentScopesError) {
-        errorMessage = 'You have authorised ChatMate to act on your behalf, but the permissions that ChatMate requires have changed since then. Re-authorise is required.'
+        errorMessage = 'You have authorised ChatMate to act on your behalf, but the permissions that ChatMate requires have changed since then. Re-authorisation is required.'
         isActive = false
       } else {
         throw e
@@ -199,21 +195,6 @@ export default class TwurpleService extends ContextClass {
     }
 
     return status
-
-    // todo: we probably don't require moderation status anymore if the user has authorised us (but we can't get here yet to check without first implementing user authorisation into the auth provider)
-    // const moderators = await this.moderationApi.getModerators(user!)
-
-    // const chatMateIsMod = moderators.data.map(d => d.userName.toLowerCase()).includes(this.twitchUsername.toLowerCase())
-    // if (chatMateIsMod) {
-    //   return status
-    // } else {
-    //   return {
-    //     status: 'active',
-    //     lastChange: this.dateTimeHelpers.ts(),
-    //     message: `Currently listening to chat messages, but unable to perform moderator actions because the Twitch channel '${this.twitchUsername}' must be added as a moderator for your channel.`,
-    //     requiresAuthorisation: true
-    //   }
-    // }
   }
 
   public async modChannel (streamerId: number, twitchChannelId: number) {
@@ -241,16 +222,13 @@ export default class TwurpleService extends ContextClass {
   }
 
   public async unbanChannel (streamerId: number, twitchChannelId: number) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+    const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
+    if (broadcaster == null) {
       return
     }
 
-    // todo: does it make sense to use say commands exclusively? they are much simpler, with less overhead
-    // there is no API for unbanning a user, but the `ban` implementation is essentially just a wrapper around the `say` method, so we can manually use it here
-    const channel = single(await this.channelStore.getTwitchChannelFromChannelId([twitchChannelId]))
-    const twitchUserName = channel.platformInfo.channel.infoHistory[0].userName
-    this.twurpleApiProxyService.say(channelName, `/unban ${twitchUserName}`)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.unban(broadcaster, user)
   }
 
   public async unmodChannel (streamerId: number, twitchChannelId: number) {
@@ -263,15 +241,14 @@ export default class TwurpleService extends ContextClass {
     await this.twurpleApiProxyService.unmod(broadcaster, user)
   }
 
-  public async untimeout (streamerId: number, twitchChannelId: number, reason: string | null) {
+  public async untimeout (streamerId: number, twitchChannelId: number) {
     const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
     if (broadcaster == null) {
       return
     }
 
-    // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
-    const twitchUserName = await this.getTwitchUserFromChannelId(twitchChannelId)
-    await this.twurpleApiProxyService.timeout(broadcaster, twitchUserName, 1, reason ?? undefined)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.unTimeout(broadcaster, user)
   }
 
   private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {

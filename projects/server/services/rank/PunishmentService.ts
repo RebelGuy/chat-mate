@@ -353,7 +353,7 @@ export default class PunishmentService extends ContextClass {
         assert(durationSeconds != null, 'Timeout duration must be defined')
         await this.twurpleService.timeout(streamerId, twitchChannelId, reason, durationSeconds)
       } else if (type === 'untimeout') {
-        await this.twurpleService.untimeout(streamerId, twitchChannelId, reason)
+        await this.twurpleService.untimeout(streamerId, twitchChannelId)
       } else {
         assertUnreachable(type)
       }

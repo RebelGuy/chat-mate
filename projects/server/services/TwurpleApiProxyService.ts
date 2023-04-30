@@ -15,6 +15,7 @@ type Deps = Dependencies<{
   twurpleStatusService: StatusService
   twurpleApiClientProvider: TwurpleApiClientProvider
   twurpleChatClientProvider: TwurpleChatClientProvider
+  twitchUsername: string
   isAdministrativeMode: () => boolean
 }>
 
@@ -22,12 +23,11 @@ type Deps = Dependencies<{
 export default class TwurpleApiProxyService extends ApiService {
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
   private readonly twurpleChatClientProvider: TwurpleChatClientProvider
+  private readonly twitchUsername: string
   private readonly isAdministrativeMode: () => boolean
-  private api!: ApiClient
-  private wrappedApi!: DeepPartial<ApiClient>
+  private wrappedApi!: (twitchUserId: string | null) => Promise<ApiClient>
   private chat!: ChatClient
   private wrappedChat!: DeepPartial<ChatClient>
-  private chatMateModeratorId!: string
 
   constructor (deps: Deps) {
     const name = TwurpleApiProxyService.name
@@ -38,23 +38,20 @@ export default class TwurpleApiProxyService extends ApiService {
 
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
     this.twurpleChatClientProvider = deps.resolve('twurpleChatClientProvider')
+    this.twitchUsername = deps.resolve('twitchUsername')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
-  public override async initialise (): Promise<void> {
+  public override initialise (): void {
     if (this.isAdministrativeMode()) {
       this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 
-    this.api = this.twurpleApiClientProvider.get()
     this.wrappedApi = this.createApiWrapper()
 
     this.chat = this.twurpleChatClientProvider.get()
     this.wrappedChat = this.createChatWrapper()
-
-    const user = await this.api.users.getUserByName('chat_mate1') // todo CHAT-444: use the ChatMate user
-    this.chatMateModeratorId = user!.id
   }
 
   public async ban (broadcaster: HelixUser, twitchUser: HelixUser, reason?: string): Promise<void> {
@@ -62,12 +59,14 @@ export default class TwurpleApiProxyService extends ApiService {
       user: twitchUser,
       reason: reason ?? '<no reason provided>'
     }
-    await this.wrappedApi.moderation!.banUser!(broadcaster, this.chatMateModeratorId, data)
+    const api = await this.wrappedApi(broadcaster.id)
+    await api.moderation.banUser(broadcaster, broadcaster, data)
   }
 
   /** Returns null if the stream hasn't started. */
   public async fetchMetadata (channelName: string): Promise<TwitchMetadata | null> {
-    const stream = await this.wrappedApi.streams!.getStreamByUserName!(channelName)
+    const api = await this.wrappedApi(null)
+    const stream = await api.streams.getStreamByUserName(channelName)
 
     if (stream == null) {
       return null
@@ -82,7 +81,8 @@ export default class TwurpleApiProxyService extends ApiService {
   }
 
   public async mod (broadcaster: HelixUser, user: HelixUser) {
-    await this.wrappedApi.moderation!.addModerator!(broadcaster, user)
+    const api = await this.wrappedApi(broadcaster.id)
+    await api.moderation.addModerator(broadcaster, user)
   }
 
   /** Says the message in chat. For the list of available commands that can be said, refer to https://help.twitch.tv/s/article/chat-commands (must include an initial `/`) */
@@ -96,28 +96,45 @@ export default class TwurpleApiProxyService extends ApiService {
       duration: durationSeconds,
       reason: reason ?? '<no reason provided>'
     }
-    await this.wrappedApi.moderation!.banUser!(broadcaster, this.chatMateModeratorId, data)
+    const api = await this.wrappedApi(broadcaster.id)
+    await api.moderation.banUser!(broadcaster, broadcaster, data)
+  }
+
+  public async unban (broadcaster: HelixUser, user: HelixUser) {
+    const api = await this.wrappedApi(broadcaster.id)
+    await api.moderation.unbanUser(broadcaster, broadcaster, user)
   }
 
   public async unmod (broadcaster: HelixUser, user: HelixUser) {
-    await this.wrappedApi.moderation!.removeModerator!(broadcaster, user)
+    const api = await this.wrappedApi(broadcaster.id)
+    await api.moderation.removeModerator(broadcaster, user)
+  }
+
+  public async unTimeout (broadcaster: HelixUser, user: HelixUser) {
+    const api = await this.wrappedApi(broadcaster.id)
+    await api.moderation.unbanUser(broadcaster, broadcaster, user)
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
-  private createApiWrapper = (): DeepPartial<ApiClient> => {
-    const getStreamByUserName = super.wrapRequest((userName: string) => this.api.streams.getStreamByUserName(userName), 'twurpleApiClient.streams.getStreamByUserName')
-    const banUser = super.wrapRequest((broadcaster: UserIdResolvable, moderator: UserIdResolvable, data: HelixBanUserRequest) => this.api.moderation.banUser(broadcaster, moderator, data), 'twurpleChatClient.ban')
-    const addModerator = super.wrapRequest((channel: string, twitchUserName: string) => this.api.moderation.addModerator(channel, twitchUserName), 'twurpleChatClient.mod')
-    const removeModerator = super.wrapRequest((channel: string, twitchUserName: string) => this.api.moderation.removeModerator(channel, twitchUserName), 'twurpleChatClient.unmod')
+  private createApiWrapper = () => {
+    return async (twitchUserId: string | null) => {
+      const api = await this.twurpleApiClientProvider.get(twitchUserId)
+      const getStreamByUserName = super.wrapRequest((userName: string) => api.streams.getStreamByUserName(userName), 'twurpleApiClient.streams.getStreamByUserName')
+      const banUser = super.wrapRequest((broadcaster: UserIdResolvable, moderator: UserIdResolvable, data: HelixBanUserRequest) => api.moderation.banUser(broadcaster, moderator, data), 'twurpleChatClient.moderation.banUser')
+      const unbanUser = super.wrapRequest((broadcaster: UserIdResolvable, moderator: UserIdResolvable, user: UserIdResolvable) => api.moderation.unbanUser(broadcaster, moderator, user), 'twurpleChatClient.moderation.unbanUser')
+      const addModerator = super.wrapRequest((channel: string, twitchUserName: string) => api.moderation.addModerator(channel, twitchUserName), 'twurpleApiClient.moderation.addModerator')
+      const removeModerator = super.wrapRequest((channel: string, twitchUserName: string) => api.moderation.removeModerator(channel, twitchUserName), 'twurpleApiClient.moderation.removeModerator')
 
-    return {
-      streams: {
-        getStreamByUserName
-      }, moderation: {
-        banUser,
-        addModerator,
-        removeModerator
-      }
+      return {
+        streams: {
+          getStreamByUserName
+        }, moderation: {
+          banUser,
+          unbanUser,
+          addModerator,
+          removeModerator
+        }
+      } as ApiClient
     }
   }
 

@@ -357,11 +357,9 @@ export default class HelixEventService extends ContextClass {
     }
 
     try {
-      const moderatorUserId = user.id // todo CHAT-444: use the ChatMate user. if the streamer didn't give us moderator permissions, we won't be able to subscribe to moderator events.
-
       /* eslint-disable @typescript-eslint/no-misused-promises */
       await this.createSubscriptionSafe(() => {
-        return this.eventSubBase.onChannelFollow(user.id, moderatorUserId, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
+        return this.eventSubBase.onChannelFollow(user, user, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
       }, streamerId, channelName, 'followers')
       /* eslint-enable @typescript-eslint/no-misused-promises */
 

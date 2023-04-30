@@ -11,6 +11,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import WebService from '@rebel/server/services/WebService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockRankStore: MockProxy<RankStore>
@@ -21,6 +22,7 @@ let mockAuthStore: MockProxy<AuthStore>
 let mockStreamerChannelStore: MockProxy<StreamerChannelStore>
 const mockTwitchClientSecret = 'clientSecret'
 let mockWebService: MockProxy<WebService>
+let mockTwurpleAuthProvider: MockProxy<TwurpleAuthProvider>
 let streamerService: StreamerService
 
 beforeEach(() => {
@@ -30,6 +32,7 @@ beforeEach(() => {
   mockAuthStore = mock()
   mockStreamerChannelStore = mock()
   mockWebService = mock()
+  mockTwurpleAuthProvider = mock()
 
   streamerService = new StreamerService(new Dependencies({
     streamerStore: mockStreamerStore,
@@ -41,7 +44,8 @@ beforeEach(() => {
     logService: mock(),
     streamerChannelStore: mockStreamerChannelStore,
     twitchClientSecret: mockTwitchClientSecret,
-    webService: mockWebService
+    webService: mockWebService,
+    twurpleAuthProvider: mockTwurpleAuthProvider
   }))
 })
 
@@ -118,6 +122,9 @@ describe(nameof(StreamerService, 'authoriseTwitchLogin'), () => {
     expect(providedTwitchUserId).toBe(twitchUserId)
     expect(providedTwitchChannelName).toBe(twitchChannelName)
     expect(providedToken).toEqual(expectObject(providedToken, { accessToken: access_token, refreshToken: refresh_token }))
+
+    const removedUserId = single2(mockTwurpleAuthProvider.removeTokenForUser.mock.calls)
+    expect(removedUserId).toBe(twitchUserId)
   })
 
   test('Throws if the streamer does not have a primary Twitch channel', async () => {
@@ -129,5 +136,8 @@ describe(nameof(StreamerService, 'authoriseTwitchLogin'), () => {
       .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: null })])
 
     await expect(() => streamerService.authoriseTwitchLogin(streamerId, code)).rejects.toThrow()
+
+    expect(mockAuthStore.saveTwitchAccessToken.mock.calls.length).toBe(0)
+    expect(mockTwurpleAuthProvider.removeTokenForUser.mock.calls.length).toBe(0)
   })
 })
