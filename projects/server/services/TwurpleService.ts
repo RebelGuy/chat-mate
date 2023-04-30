@@ -163,7 +163,7 @@ export default class TwurpleService extends ContextClass {
     let isActive: boolean = true
     const user = await this.userApi.getUserByName(twitchChannelName)
     try {
-      await this.twurpleAuthProvider.getUserTokenAuthProvider(user!.id)
+      await this.twurpleAuthProvider.getUserTokenAuthProvider(user!.id, true)
     } catch (e: any) {
       if (e instanceof NotAuthorisedError) {
         errorMessage = 'You have not yet authorised ChatMate to act on your behalf.'

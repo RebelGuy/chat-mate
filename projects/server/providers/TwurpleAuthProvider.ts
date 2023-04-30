@@ -78,9 +78,9 @@ export default class TwurpleAuthProvider extends ContextClass {
   /** Use this provided if you want to make requests on behalf of the user. The access token will be loaded in, if it exists.
    * @throws {@link NotAuthorisedError}: When the user has not yet provided authorisation for ChatMate to act on their behalf.
    * @throws {@link AuthorisationExpiredError}: When the user has provided authorisation for ChatMate to act on their behalf, but it has expired and is no longer valid.
-   * @throws {@link InconsistentScopesError}: When the user has provided authorisation for ChatMate to act on their behalf, but the scopes required by ChatMate to function properly have changed.
+   * @throws {@link InconsistentScopesError}: [Only thrown when `checkScopes` is `true`] When the user has provided authorisation for ChatMate to act on their behalf, but the scopes required by ChatMate to function properly have changed.
    */
-  public async getUserTokenAuthProvider (twitchUserId: string) {
+  public async getUserTokenAuthProvider (twitchUserId: string, checkScopes?: boolean) {
     await waitUntil(() => this.isInitialised, 100, 5000)
 
     if (!this.userTokenAuthProvider.hasUser(twitchUserId)) {
@@ -103,9 +103,11 @@ export default class TwurpleAuthProvider extends ContextClass {
       }
     }
 
-    const scopes = this.userTokenAuthProvider.getCurrentScopesForUser(twitchUserId)
-    if (!this.compareScopes(TWITCH_SCOPE, scopes)) {
-      throw new InconsistentScopesError()
+    if (checkScopes) {
+      const scopes = this.userTokenAuthProvider.getCurrentScopesForUser(twitchUserId)
+      if (!this.compareScopes(TWITCH_SCOPE, scopes)) {
+        throw new InconsistentScopesError()
+      }
     }
 
     return this.userTokenAuthProvider

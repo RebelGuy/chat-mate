@@ -1,9 +1,9 @@
 ChatMate authenticates via an OAuth2 Application on Twitch. There are two forms of authentication required for ChatMate to function properly:
-- Admin authentication: allows the Server to join streamers' chat rooms and perform moderation operations.
-- Streamer authentication: allows the Server to listen to the streamers' events.
+- Admin authentication: allows the Server to join streamers' chat rooms using the ChatMate admin Twitch channel.
+- Streamer authentication: allows the Server to listen to the streamers' events and perform moderation actions on the streamer's behalf.
 
 # Authentication by an admin
-For some actions, such as joining chat rooms and performing moderation operations, the ChatMate Server Application acts on behalf of the corresponding ChatMate Twitch account. To make this possible, the Twitch account must first authorise the Application to perform these actions. The `/admin/twitch` Studio page contains instructions and provides a button for refreshing the authorisation. Please ensure you authorise only using the Twitch channel state on that page - else, things won't work properly. A server restart is required for changes to come into effect.
+For some actions, such as joining chat rooms, the ChatMate Server Application acts on behalf of the ChatMate Twitch account. To make this possible, the Twitch account must first authorise the Application to perform these actions. The `/admin/twitch` Studio page contains instructions and provides a button for refreshing the authorisation. Please ensure you authorise only using the Twitch channel stated on that page - else, things won't work properly. A server restart is required for changes to come into effect.
 
 Generally, the admin authorisation is only required when ChatMate is in administrative mode (for example, if the scopes have changed or the access token has expired).
 
@@ -21,18 +21,10 @@ The authentication flow works as follows:
 Importantly, the above generates a **user access token** that we persist and refresh over time. It gives us permission to act on behalf of the ChatMate Twitch channel.
 
 # Authentication by a streamer
-For other actions, such as subscribing to events via the EventSub API, the ChatMate Server acts as its own entity (not on behalf of the user). Without explicit authorisation from the streamer, some event subscriptions will fail.
+For other actions, such as subscribing to events via the EventSub API or performing moderation actions, the ChatMate Server acts on behalf of the streamer. It requires explicit authorisation from the streamer.
 
-The authentication flow works as follows:
-1. Todo
-last. ChatMate will automatically re-attempt subscribing to those of the streamer's events that failed to create due to a 403 error code.
+The authorisation flow is the same as for the admin authorisation outlined above, except it is performed via the `/manager` page on Studio.
 
-Importantly, the above generates an **app access token** that we discard, as it is stored by Twitch internally for bookkeeping. We simply have to provide our application's Client ID and Secret for authentication when subscribing to a streamer's events, and Twitch will check their records to verify that the user has given our Application access to subscribe to these events.
+Once authrosation is granted, ChatMate will automatically re-attempt subscribing to the streamer's failed events. Whenever requests for the streamer's data are made using the TwurpleClient, the streamer's saved access token will be loaded into memory (if it doesn't exist already) and used under the hood by the client to is requests.
 
-From [this article](https://barrycarlyon.co.uk/wordpress/2021/02/03/how-does-twitchs-new-eventsub-work/):
-```
-[W]hen you make a subscription request to EventSub, Twitch looks at your App Access token, then checks in the background if the requested broadcaster has connected to your Application at any point, with the relevant scopes, and not revoked that connection.
-```
-
-The streamer authorisation is required by any new streamers, and whenever the scopes have changed.
-
+Authorisation is required by any new streamers, and whenever the scopes have changed. Note that, in the case of changed scopes, everything _may_ continue to work correctly for the streamer - 

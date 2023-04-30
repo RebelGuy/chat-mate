@@ -189,6 +189,18 @@ describe(nameof(TwurpleAuthProvider, 'getUserTokenAuthProvider'), () => {
     mockRefreshingAuthProvider.getIntentsForUser.calledWith(userId).mockReturnValue([])
     mockRefreshingAuthProvider.getCurrentScopesForUser.calledWith(userId).mockReturnValue(['different.scope'])
 
-    await expect(() => twurpleAuthProvider.getUserTokenAuthProvider(userId)).rejects.toThrowError(InconsistentScopesError)
+    await expect(() => twurpleAuthProvider.getUserTokenAuthProvider(userId, true)).rejects.toThrowError(InconsistentScopesError)
+  })
+
+  test(`Does not throw ${InconsistentScopesError.name} if the scopes have changed and the 'checkScopes' flag is not provided`, async () => {
+    mockRefreshingAuthProvider.hasUser.calledWith(userId).mockReturnValue(false)
+    mockAuthStore.loadTwitchAccessToken.calledWith(userId).mockResolvedValue(cast<AccessToken>({}))
+    mockRefreshingAuthProvider.refreshAccessTokenForUser.calledWith(userId).mockResolvedValue(cast<AccessTokenWithUserId>({}))
+    mockRefreshingAuthProvider.getIntentsForUser.calledWith(userId).mockReturnValue([])
+    mockRefreshingAuthProvider.getCurrentScopesForUser.calledWith(userId).mockReturnValue(['different.scope'])
+
+    const result = await twurpleAuthProvider.getUserTokenAuthProvider(userId)
+
+    expect(result).toBe(mockRefreshingAuthProvider)
   })
 })
