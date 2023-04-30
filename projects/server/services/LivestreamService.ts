@@ -55,7 +55,7 @@ export default class LivestreamService extends ContextClass {
     }
 
     const activeLivestreams = await this.livestreamStore.getActiveLivestreams()
-    activeLivestreams.forEach(l => this.masterchatService.addMasterchat(l.liveId))
+    activeLivestreams.forEach(l => this.masterchatService.addMasterchat(l.streamerId, l.liveId))
 
     const timerOptions: TimerOptions = {
       behaviour: 'start',
@@ -72,10 +72,9 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
-    const liveId = activeLivestream.liveId
     await this.livestreamStore.deactivateLivestream(streamerId)
-    this.masterchatService.removeMasterchat(liveId)
-    this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been deactivated.`)
+    this.masterchatService.removeMasterchat(streamerId)
+    this.logService.logInfo(this, `Livestream with id ${activeLivestream.liveId} for streamer ${streamerId} has been deactivated.`)
   }
 
   /** Sets the given livestream as active for the streamer, and creates a masterchat instance.
@@ -93,13 +92,13 @@ export default class LivestreamService extends ContextClass {
     }
 
     await this.livestreamStore.setActiveLivestream(streamerId, liveId)
-    this.masterchatService.addMasterchat(liveId)
+    this.masterchatService.addMasterchat(streamerId, liveId)
     this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
   }
 
-  private async fetchYoutubeMetadata (liveId: string): Promise<Metadata | null> {
+  private async fetchYoutubeMetadata (streamerId: number): Promise<Metadata | null> {
     try {
-      return await this.masterchatService.fetchMetadata(liveId)
+      return await this.masterchatService.fetchMetadata(streamerId)
     } catch (e: any) {
       this.logService.logWarning(this, 'Encountered error while fetching youtube metadata.', e.message)
       return null
@@ -134,7 +133,7 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
-    const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.liveId)
+    const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.streamerId)
     const twitchMetadata = await this.fetchTwitchMetadata(livestream.streamerId)
 
     // deliberately require that youtube metadata is always called successfully, as it

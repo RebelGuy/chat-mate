@@ -112,7 +112,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     const twitchChannelName = 'twitchChannelName'
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
     mockStreamerChannelService.getTwitchChannelName.calledWith(livestream.streamerId).mockResolvedValue(twitchChannelName)
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue({ ...makeYoutubeMetadata('not_started'), viewerCount: 2 })
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue({ ...makeYoutubeMetadata('not_started'), viewerCount: 2 })
     mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockResolvedValue(makeTwitchMetadata(10))
 
     await livestreamService.initialise()
@@ -123,7 +123,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   test('passes to LivestreamStore if receives `live` status from metadata', async () => {
     const livestream = makeStream(null, null)
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue(makeYoutubeMetadata('live'))
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(makeYoutubeMetadata('live'))
 
     await livestreamService.initialise()
 
@@ -136,7 +136,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   test('passes to LivestreamStore if receives `finished` status from metadata', async () => {
     const livestream = makeStream(new Date(), null)
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue(makeYoutubeMetadata('finished'))
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(makeYoutubeMetadata('finished'))
 
     await livestreamService.initialise()
 
@@ -161,7 +161,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   test('ignores if invalid status', async () => {
     const livestream = makeStream(new Date(), new Date())
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue(makeYoutubeMetadata('live'))
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(makeYoutubeMetadata('live'))
 
     await livestreamService.initialise()
 
@@ -184,14 +184,14 @@ describe(nameof(LivestreamService, 'initialise'), () => {
 
     await livestreamService.initialise()
 
-    const addedLiveIds = mockMasterchatService.addMasterchat.mock.calls.map(args => single(args))
-    expect(addedLiveIds).toEqual([livestream1.liveId, livestream2.liveId])
+    const addedLiveIds = mockMasterchatService.addMasterchat.mock.calls
+    expect(addedLiveIds).toEqual([[livestream1.streamerId, livestream1.liveId], [livestream2.streamerId, livestream2.liveId]])
   })
 
   test('updates metadata regularly', async () => {
     const livestream = makeStream(null, null)
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue(makeYoutubeMetadata('not_started'))
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(makeYoutubeMetadata('not_started'))
 
     await livestreamService.initialise()
 
@@ -204,7 +204,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
     mockStreamerChannelService.getTwitchChannelName.calledWith(livestream.streamerId).mockResolvedValue(twitchChannelName)
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue(metadata)
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(metadata)
     mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockResolvedValue(makeTwitchMetadata(5))
 
     await livestreamService.initialise()
@@ -221,7 +221,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
     mockStreamerChannelService.getTwitchChannelName.calledWith(livestream.streamerId).mockResolvedValue(twitchChannelName)
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue(metadata)
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(metadata)
     mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockRejectedValue(new Error('Test error'))
 
     await livestreamService.initialise()
@@ -238,7 +238,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     const metadata: Metadata = { ...makeYoutubeMetadata('live'), viewerCount: 10 }
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
     mockStreamerChannelService.getTwitchChannelName.calledWith(livestream.streamerId).mockResolvedValue(twitchChannelName)
-    mockMasterchatService.fetchMetadata.calledWith(livestream.liveId).mockResolvedValue(metadata)
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(metadata)
     mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockResolvedValue(null)
 
     await livestreamService.initialise()
@@ -254,7 +254,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([data.livestream1])
     mockDateTimeHelpers.now.mockReset().calledWith().mockReturnValue(data.livestream1.end!)
     mockStreamerChannelService.getTwitchChannelName.calledWith(data.livestream1.streamerId).mockResolvedValue(twitchChannelName)
-    mockMasterchatService.fetchMetadata.calledWith(data.livestream1.liveId).mockRejectedValue(new Error('Test error'))
+    mockMasterchatService.fetchMetadata.calledWith(data.livestream1.streamerId).mockRejectedValue(new Error('Test error'))
     mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockRejectedValue(new Error('Test error'))
 
     await livestreamService.initialise()
@@ -274,7 +274,7 @@ describe(nameof(LivestreamService, 'setActiveLivestream'), () => {
     await livestreamService.setActiveLivestream(streamer1, testLiveId)
 
     expect(single(mockLivestreamStore.setActiveLivestream.mock.calls)).toEqual([streamer1, testLiveId])
-    expect(single(mockMasterchatService.addMasterchat.mock.calls)).toEqual([testLiveId])
+    expect(single(mockMasterchatService.addMasterchat.mock.calls)).toEqual([streamer1, testLiveId])
   })
 
   test('throws if the streamer does not have a primary YouTube channel', async () => {
@@ -303,12 +303,11 @@ describe(nameof(LivestreamService, 'setActiveLivestream'), () => {
 
 describe(nameof(LivestreamService, 'deactivateLivestream'), () => {
   test('deactivates livestream', async () => {
-    const testLiveId = 'testLiveId'
-    mockLivestreamStore.getActiveLivestream.calledWith(streamer1).mockResolvedValue(cast<Livestream>({ liveId: testLiveId }))
+    mockLivestreamStore.getActiveLivestream.calledWith(streamer1).mockResolvedValue(cast<Livestream>({ streamerId: streamer1 }))
 
     await livestreamService.deactivateLivestream(streamer1)
 
     expect(single(mockLivestreamStore.deactivateLivestream.mock.calls)).toEqual([streamer1])
-    expect(single(mockMasterchatService.removeMasterchat.mock.calls)).toEqual([testLiveId])
+    expect(single(mockMasterchatService.removeMasterchat.mock.calls)).toEqual([streamer1])
   })
 })

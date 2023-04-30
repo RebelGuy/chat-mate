@@ -21,7 +21,7 @@ export default class MasterchatService extends ApiService {
   private readonly masterchatFactory: MasterchatFactory
 
   // note that some endpoints are livestream-agnostic
-  private readonly wrappedMasterchats: Map<string, PartialMasterchat>
+  private readonly wrappedMasterchats: Map<number, PartialMasterchat>
 
   constructor (deps: Deps) {
     const name = MasterchatService.name
@@ -35,18 +35,22 @@ export default class MasterchatService extends ApiService {
     this.wrappedMasterchats = new Map()
   }
 
-  public addMasterchat (liveId: string) {
+  public addMasterchat (streamerId: number, liveId: string) {
+    if (this.wrappedMasterchats.has(streamerId)) {
+      throw new Error(`Cannot add masterchat instance for streamer ${streamerId} and liveId ${liveId} because one already exists with liveId ${liveId}`)
+    }
+
     const newMasterchat = this.createWrapper(liveId, this.masterchatFactory.create(liveId))
-    this.wrappedMasterchats.set(liveId, newMasterchat)
+    this.wrappedMasterchats.set(streamerId, newMasterchat)
   }
 
-  public removeMasterchat (liveId: string) {
-    const masterchat = this.wrappedMasterchats.get(liveId)
+  public removeMasterchat (streamerId: number) {
+    const masterchat = this.wrappedMasterchats.get(streamerId)
     if (masterchat != null) {
       masterchat.masterchat.stop()
     }
 
-    this.wrappedMasterchats.delete(liveId)
+    this.wrappedMasterchats.delete(streamerId)
   }
 
   /** If an instance of masterchat is active, returns whether the credentials are currently active and valid.
@@ -61,22 +65,22 @@ export default class MasterchatService extends ApiService {
   }
 
   // the second argument is not optional to avoid bugs where `fetch(continuationToken)` is erroneously called.
-  public async fetch (liveId: string, continuationToken: string | undefined): Promise<ChatResponse> {
+  public async fetch (streamerId: number, continuationToken: string | undefined): Promise<ChatResponse> {
     // this quirky code is required for typescript to recognise which overloaded `fetch` method we are using
     if (continuationToken == null) {
-      return await this.wrappedMasterchats.get(liveId)!.fetch()
+      return await this.wrappedMasterchats.get(streamerId)!.fetch()
     } else {
-      return await this.wrappedMasterchats.get(liveId)!.fetch(continuationToken)
+      return await this.wrappedMasterchats.get(streamerId)!.fetch(continuationToken)
     }
   }
 
-  public async fetchMetadata (liveId: string): Promise<Metadata> {
-    return await this.wrappedMasterchats.get(liveId)!.fetchMetadata()
+  public async fetchMetadata (streamerId: number): Promise<Metadata> {
+    return await this.wrappedMasterchats.get(streamerId)!.fetchMetadata()
   }
 
   /** Returns the YouTube external channel ID to which the livestream belongs. LiveId does not have to belong to an existing Masterchat instance. */
   public async getChannelIdFromAnyLiveId (liveId: string): Promise<string> {
-    const masterchat = this.wrappedMasterchats.get(liveId) ?? this.masterchatFactory.create(liveId)
+    const masterchat = this.masterchatFactory.create(liveId)
     const metadata = await masterchat.fetchMetadata()
     return metadata.channelId
   }

@@ -71,7 +71,7 @@ export default class ChatFetchService extends ContextClass {
     const liveId = livestream.liveId
 
     try {
-      const result = await this.masterchatService.fetch(liveId, token ?? undefined)
+      const result = await this.masterchatService.fetch(livestream.streamerId, token ?? undefined)
       return result
     } catch (e: any) {
       this.logService.logWarning(this, `Encountered error while fetching chat for livestream ${livestream.id} for streamer ${livestream.streamerId}:`, e.message)
