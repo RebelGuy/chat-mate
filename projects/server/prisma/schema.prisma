@@ -46,14 +46,13 @@ model YoutubeAuth {
 // since we never run a twitch livestream without also running a youtube livestream, we point the twitch
 // livestream to the youtube livestream.
 model Livestream {
-  id        Int            @id @default(autoincrement())
-  liveId    String         @db.VarChar(11) // unique
-  createdAt DateTime       @default(now())
+  id        Int       @id @default(autoincrement())
+  liveId    String    @db.VarChar(11) // unique
+  createdAt DateTime  @default(now())
   start     DateTime?
   end       DateTime?
-  type      LivestreamType
 
-  // if false, we don't listen to messages anymore (e.g. for when a livestream has concluded)
+  // if false, we don't listen to messages anymore (e.g. for when a livestream has concluded/not yet started)
   isActive Boolean
 
   // for fetching the youtube chat of this livestream
@@ -68,10 +67,6 @@ model Livestream {
   @@unique([liveId], map: "livestream_liveId_key")
   @@index([streamerId], map: "livestream_streamerId_fkey")
   @@map("livestream")
-}
-
-enum LivestreamType {
-  publicLivestream
 }
 
 model LiveViewers {

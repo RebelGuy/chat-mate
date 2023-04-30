@@ -17,8 +17,7 @@ export const livestream1: Livestream = {
   createdAt: time1,
   start: time1,
   end: addTime(time1, 'seconds', 1),
-  isActive: true,
-  type: 'publicLivestream'
+  isActive: true
 }
 export const livestream2: Livestream = {
   id: 2,
@@ -28,8 +27,7 @@ export const livestream2: Livestream = {
   createdAt: time2,
   start: time2,
   end: addTime(time2, 'seconds', 1),
-  isActive: true,
-  type: 'publicLivestream'
+  isActive: true
 }
 export const livestream3: Livestream = {
   id: 3,
@@ -39,8 +37,7 @@ export const livestream3: Livestream = {
   createdAt: time3,
   start: time3,
   end: null,
-  isActive: true,
-  type: 'publicLivestream'
+  isActive: true
 }
 
 export const youtubeChannel1 = 'channel1'

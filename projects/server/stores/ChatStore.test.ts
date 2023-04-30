@@ -18,8 +18,7 @@ const livestream: Livestream = {
   createdAt: new Date(),
   start: new Date(),
   end: null,
-  isActive: true,
-  type: 'publicLivestream'
+  isActive: true
 }
 
 const youtube1UserId = 1

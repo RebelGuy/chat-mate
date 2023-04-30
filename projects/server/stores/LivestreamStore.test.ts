@@ -41,8 +41,8 @@ export default () => {
   describe(nameof(LivestreamStore, 'deactivateLivestream'), () => {
     test('updates entry in the database and clears cache', async () => {
       await db.livestream.createMany({ data: [
-        { liveId: liveId1, streamerId: streamer1, type: 'publicLivestream', isActive: true },
-        { liveId: liveId2, streamerId: streamer2, type: 'publicLivestream', isActive: true }
+        { liveId: liveId1, streamerId: streamer1, isActive: true },
+        { liveId: liveId2, streamerId: streamer2, isActive: true }
       ]})
 
       await livestreamStore.deactivateLivestream(streamer2)
@@ -57,9 +57,9 @@ export default () => {
   describe(nameof(LivestreamStore, 'getActiveLivestream'), () => {
     test(`returns the streamer's currently active, public livestream`, async () => {
       await db.livestream.createMany({ data: [
-        { liveId: liveId1, streamerId: streamer1, type: 'publicLivestream', isActive: false },
-        { liveId: liveId2, streamerId: streamer1, type: 'publicLivestream', isActive: true },
-        { liveId: liveId3, streamerId: streamer2, type: 'publicLivestream', isActive: true }
+        { liveId: liveId1, streamerId: streamer1, isActive: false },
+        { liveId: liveId2, streamerId: streamer1, isActive: true },
+        { liveId: liveId3, streamerId: streamer2, isActive: true }
       ]})
 
       const result = await livestreamStore.getActiveLivestream(streamer1)
@@ -69,8 +69,8 @@ export default () => {
 
     test('returns null when no livestream is active', async () => {
       await db.livestream.createMany({ data: [
-        { liveId: liveId1, streamerId: streamer1, type: 'publicLivestream', isActive: false },
-        { liveId: liveId2, streamerId: streamer2, type: 'publicLivestream', isActive: true }
+        { liveId: liveId1, streamerId: streamer1, isActive: false },
+        { liveId: liveId2, streamerId: streamer2, isActive: true }
       ]})
 
       const result = await livestreamStore.getActiveLivestream(streamer1)
@@ -82,9 +82,9 @@ export default () => {
   describe(nameof(LivestreamStore, 'getActiveLivestreams'), () => {
     test('returns all active, public livestreams', async () => {
       await db.livestream.createMany({ data: [
-        { liveId: liveId1, streamerId: streamer1, type: 'publicLivestream', isActive: false },
-        { liveId: liveId2, streamerId: streamer1, type: 'publicLivestream', isActive: true },
-        { liveId: liveId3, streamerId: streamer2, type: 'publicLivestream', isActive: true }
+        { liveId: liveId1, streamerId: streamer1, isActive: false },
+        { liveId: liveId2, streamerId: streamer1, isActive: true },
+        { liveId: liveId3, streamerId: streamer2, isActive: true }
       ]})
 
       const result = await livestreamStore.getActiveLivestreams()
@@ -99,10 +99,10 @@ export default () => {
     test(`gets the ordered list of the streamer's livestreams`, async () => {
       await db.livestream.createMany({
         data: [
-          { liveId: 'puS6DpPKZ3E', streamerId: streamer2, type: 'publicLivestream', start: data.time3, end: null, isActive: true },
-          { liveId: 'puS6DpPKZ3f', streamerId: streamer2, type: 'publicLivestream', start: null, end: data.time3, isActive: true },
-          { liveId: 'puS6DpPKZ3g', streamerId: streamer1, type: 'publicLivestream', start: data.time2, end: data.time3, isActive: false },
-          { liveId: 'puS6DpPKZ3h', streamerId: streamer2, type: 'publicLivestream', start: data.time2, end: data.time3, isActive: false }
+          { liveId: 'puS6DpPKZ3E', streamerId: streamer2, start: data.time3, end: null, isActive: true },
+          { liveId: 'puS6DpPKZ3f', streamerId: streamer2, start: null, end: data.time3, isActive: true },
+          { liveId: 'puS6DpPKZ3g', streamerId: streamer1, start: data.time2, end: data.time3, isActive: false },
+          { liveId: 'puS6DpPKZ3h', streamerId: streamer2, start: data.time2, end: data.time3, isActive: false }
         ],
       })
 
@@ -115,9 +115,9 @@ export default () => {
   describe(nameof(LivestreamStore, 'setActiveLivestream'), () => {
     test('creates and sets new active livestream', async () => {
       // there is an active livestream for a different streamer - this should affect the request for streamer 1
-      await db.livestream.create({ data: { liveId: liveId2, streamerId: streamer2, type: 'publicLivestream', isActive: true }})
+      await db.livestream.create({ data: { liveId: liveId2, streamerId: streamer2, isActive: true }})
 
-      const result = await livestreamStore.setActiveLivestream(streamer1, liveId1, 'publicLivestream')
+      const result = await livestreamStore.setActiveLivestream(streamer1, liveId1)
 
       await expectRowCount(db.livestream).toBe(2)
       const storedLivestreams = await db.livestream.findMany()
@@ -126,9 +126,9 @@ export default () => {
     })
 
     test('updates existing livestream in the db', async () => {
-      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, type: 'publicLivestream', isActive: false }})
+      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: false }})
 
-      const result = await livestreamStore.setActiveLivestream(streamer1, liveId1, 'publicLivestream')
+      const result = await livestreamStore.setActiveLivestream(streamer1, liveId1)
 
       const storedLivestream = single(await db.livestream.findMany())
       expect(storedLivestream).toEqual(expectObject<Livestream>({ liveId: liveId1, streamerId: streamer1, isActive: true }))
@@ -136,15 +136,15 @@ export default () => {
     })
 
     test('throws if there is already an active livestream', async () => {
-      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, type: 'publicLivestream', isActive: true }})
+      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: true }})
 
-      await expect(() => livestreamStore.setActiveLivestream(streamer1, 'id2', 'publicLivestream')).rejects.toThrow()
+      await expect(() => livestreamStore.setActiveLivestream(streamer1, 'id2')).rejects.toThrow()
     })
   })
 
   describe(nameof(LivestreamStore, 'setContinuationToken'), () => {
     test('continuation token is updated for active livestream', async () => {
-      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: true, type: 'publicLivestream' } })
+      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: true } })
 
       const stream = await livestreamStore.setContinuationToken(liveId1, 'token')
 
@@ -160,7 +160,7 @@ export default () => {
   describe(nameof(LivestreamStore, 'setTimes'), () => {
     test('times are updated correctly for active livestream', async () => {
       const time = new Date()
-      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: true, type: 'publicLivestream' } })
+      await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: true } })
 
       const returnedStream = await livestreamStore.setTimes(liveId1, { start: time, end: null })
 
@@ -179,10 +179,10 @@ export default () => {
 
   describe(nameof(LivestreamStore, 'addLiveViewCount'), () => {
     test('correctly adds live viewer count', async () => {
-      const inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' } })
-      const inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' } })
-      const activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' } })
-      const activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true, type: 'publicLivestream' } })
+      const inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false } })
+      const inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false } })
+      const activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true } })
+      const activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true } })
       const youtubeViews = 5
       const twitchViews = 2
 
@@ -204,10 +204,10 @@ export default () => {
     let activeLivestream2: Livestream
 
     beforeEach(async () => {
-      inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' } })
-      inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' } })
-      activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' } })
-      activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true, type: 'publicLivestream' } })
+      inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false } })
+      inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false } })
+      activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true } })
+      activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true } })
     })
 
     test('returns null if no data exists for active livestream', async () => {
@@ -261,10 +261,10 @@ export default () => {
     let activeLivestream2: Livestream
 
     beforeEach(async () => {
-      inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false, type: 'publicLivestream' } })
-      inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false, type: 'publicLivestream' } })
-      activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true, type: 'publicLivestream' } })
-      activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true, type: 'publicLivestream' } })
+      inactiveLivestream1 = await db.livestream.create({ data: { liveId: 'id1', streamerId: streamer1, start: data.time1, createdAt: data.time1, isActive: false } })
+      inactiveLivestream2 = await db.livestream.create({ data: { liveId: 'id2', streamerId: streamer1, start: data.time2, createdAt: data.time2, isActive: false } })
+      activeLivestream1 = await db.livestream.create({ data: { liveId: 'id3', streamerId: streamer1, start: data.time3, createdAt: data.time3, isActive: true } })
+      activeLivestream2 = await db.livestream.create({ data: { liveId: 'id4', streamerId: streamer2, start: data.time2, createdAt: data.time2, isActive: true } })
       await db.chatUser.createMany({ data: [{}, {}, {}]})
 
       await db.youtubeChannel.createMany({ data: [{ userId: user1, youtubeId: data.youtubeChannel1 }, { userId: user2, youtubeId: data.youtubeChannel2 }]})

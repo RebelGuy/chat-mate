@@ -10,10 +10,8 @@ import RankStore, { AddUserRankArgs, groupFilter, RemoveUserRankArgs, UserRankWi
 import { addTime } from '@rebel/shared/util/datetime'
 import { assert, assertUnreachable } from '@rebel/shared/util/typescript'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 
 // It is not an issue on Twitch, but on Youtube we come across the interesting problem of being unable to check

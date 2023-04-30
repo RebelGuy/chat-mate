@@ -92,7 +92,7 @@ export default class LivestreamService extends ContextClass {
       throw new Error(`The livestream does not belong to the streamer's primary YouTube channel.`)
     }
 
-    await this.livestreamStore.setActiveLivestream(streamerId, liveId, 'publicLivestream')
+    await this.livestreamStore.setActiveLivestream(streamerId, liveId)
     this.masterchatService.addMasterchat(liveId)
     this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
   }

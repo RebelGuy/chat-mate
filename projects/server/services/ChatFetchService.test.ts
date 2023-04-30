@@ -31,7 +31,6 @@ const currentLivestreams: Livestream[] = [{
   createdAt: new Date(),
   start: new Date(),
   end: null,
-  type: 'publicLivestream',
   isActive: true
 }, {
   id: 1,
@@ -41,7 +40,6 @@ const currentLivestreams: Livestream[] = [{
   createdAt: new Date(),
   start: new Date(),
   end: null,
-  type: 'publicLivestream',
   isActive: true
 }]
 const chatAction1: AddChatItemAction = cast<AddChatItemAction>({

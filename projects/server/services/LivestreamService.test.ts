@@ -273,7 +273,7 @@ describe(nameof(LivestreamService, 'setActiveLivestream'), () => {
 
     await livestreamService.setActiveLivestream(streamer1, testLiveId)
 
-    expect(single(mockLivestreamStore.setActiveLivestream.mock.calls)).toEqual([streamer1, testLiveId, 'publicLivestream'])
+    expect(single(mockLivestreamStore.setActiveLivestream.mock.calls)).toEqual([streamer1, testLiveId])
     expect(single(mockMasterchatService.addMasterchat.mock.calls)).toEqual([testLiveId])
   })
 
