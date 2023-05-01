@@ -5,6 +5,15 @@ import StatusService from '@rebel/server/services/StatusService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import { firstOrDefault } from '@rebel/shared/util/typescript'
 import ApiService from '@rebel/server/services/abstract/ApiService'
+import ChatStore from '@rebel/server/stores/ChatStore'
+import { NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
+
+export type ChatMateModeratorStatus = {
+  isModerator: boolean
+
+  /** The time at which we know for certain the moderator state of ChatMate. It might have changed since then, but we have no way of knowing. */
+  time: number
+}
 
 type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'> & {
   // underlying instance
@@ -15,10 +24,12 @@ type Deps = Dependencies<{
   logService: LogService
   masterchatStatusService: StatusService
   masterchatFactory: MasterchatFactory
+  chatStore: ChatStore
 }>
 
 export default class MasterchatService extends ApiService {
   private readonly masterchatFactory: MasterchatFactory
+  private readonly chatStore: ChatStore
 
   // note that some endpoints are livestream-agnostic
   private readonly wrappedMasterchats: Map<number, PartialMasterchat>
@@ -31,6 +42,7 @@ export default class MasterchatService extends ApiService {
     super(name, logService, statusService, timeout)
 
     this.masterchatFactory = deps.resolve('masterchatFactory')
+    this.chatStore = deps.resolve('chatStore')
 
     this.wrappedMasterchats = new Map()
   }
@@ -85,6 +97,35 @@ export default class MasterchatService extends ApiService {
     return metadata.channelId
   }
 
+  /** Gets the moderation status at the time of the last chat message received to the streamer's livestream. It may have changed since then.
+   * @throws {@link NoYoutubeChatMessagesError}: When the streamer has not yet received any chat messages.
+  */
+  public async getChatMateModeratorStatus (streamerId: number): Promise<ChatMateModeratorStatus> {
+    // todo CHAT-615: the last message must have been received by the streamer's current primary youtube channel
+    const lastMessage = await this.chatStore.getLastYoutubeChat(streamerId)
+    if (lastMessage == null) {
+      throw new NoYoutubeChatMessagesError('Unable to find any chat messages for the given streamer.')
+    } else if (lastMessage.contextToken == null) {
+      throw new NoContextTokenError(`Unable to find a context token associated with the latest chat message of ID ${lastMessage.id}, and thus was unable to determine the moderation status.`)
+    }
+
+    const masterchat = this.masterchatFactory.create('')
+    const catalog = await masterchat.getActionCatalog(lastMessage.contextToken)
+
+    return {
+      isModerator: catalog != null && (
+        catalog.addModerator != null ||
+        catalog.hide != null ||
+        catalog.pin != null ||
+        catalog.removeModerator != null ||
+        catalog.timeout != null ||
+        catalog.unhide != null ||
+        catalog.unpin != null
+      ),
+      time: lastMessage.time.getTime()
+    }
+  }
+
   /** Returns true if the channel was banned. False indicates that the 'hide channel' option
    * was not included in the latest chat item's context menu. */
   public async banYoutubeChannel (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
@@ -137,7 +178,7 @@ export default class MasterchatService extends ApiService {
   public async unmod (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
     if (!this.wrappedMasterchats.has(streamerId)) {
       throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
-  }
+    }
 
     const result = await this.wrappedMasterchats.get(streamerId)!.removeModerator(contextMenuEndpointParams)
     return result != null

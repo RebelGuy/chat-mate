@@ -1,6 +1,6 @@
 import { ControllerBase, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
-import { GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
+import { GetChatMateYoutubeChannelEndpoint, GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import { chooseWeightedRandom, pickRandom, randomInt, randomString } from '@rebel/shared/util/random'
 import { addTime } from '@rebel/shared/util/datetime'
@@ -176,5 +176,9 @@ export default class ChatMateControllerFake extends ControllerBase implements IC
     return promised(args.builder.success({
       authenticated: true
     }))
+  }
+
+  public getChatMateYoutubeChannel (args: In<GetChatMateYoutubeChannelEndpoint>): Out<GetChatMateYoutubeChannelEndpoint> {
+    throw new Error('NYI')
   }
 }

@@ -18,14 +18,14 @@ function assertPlayability(playabilityStatus: YTPlayabilityStatus | undefined) {
   }
   switch (playabilityStatus.status) {
     case "ERROR":
-      throw new UnavailableError(playabilityStatus.reason!);
+      throw new UnavailableError(playabilityStatus.reason ?? 'Unavailable.');
     case "LOGIN_REQUIRED":
-      throw new NoPermissionError(playabilityStatus.reason!);
+      throw new NoPermissionError(playabilityStatus.reason ?? 'No permission. Ensure the livestream is not set to private.');
     case "UNPLAYABLE": {
       if (
         "playerLegacyDesktopYpcOfferRenderer" in playabilityStatus.errorScreen!
       ) {
-        throw new MembersOnlyError(playabilityStatus.reason!);
+        throw new MembersOnlyError(playabilityStatus.reason ?? 'This is a members-only stream.');
       }
       throw new NoStreamRecordingError(playabilityStatus.reason!);
     }
@@ -109,7 +109,7 @@ export function parseMetadataFromWatch (html: string): Omit<Metadata, 'videoId'>
   const initialData = findInitialData(html)!;
 
   const playabilityStatus = findPlayabilityStatus(html);
-  // assertPlayability(playabilityStatus);
+  if (playabilityStatus) assertPlayability(playabilityStatus);
 
   // TODO: initialData.contents.twoColumnWatchNextResults.conversationBar.conversationBarRenderer.availabilityMessage.messageRenderer.text.runs[0].text === 'Chat is disabled for this live stream.'
   const results =

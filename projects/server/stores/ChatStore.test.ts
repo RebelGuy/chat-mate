@@ -415,6 +415,52 @@ export default () => {
     })
   })
 
+  describe(nameof(ChatStore, 'getLastYoutubeChat'), () => {
+    test(`Returns the latest YouTube chat item sent to the streamer's livestream`, async () => {
+      const contextToken1 = 'contextToken1'
+      const contextToken2 = 'contextToken2'
+
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1, // earlier time
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+        contextToken: contextToken1
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2, // later time
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+        contextToken: contextToken2
+      }})
+
+      const result = await chatStore.getLastYoutubeChat(streamer1)
+
+      expect(result!.id).toBe(2)
+      expect(result!.contextToken).toBe(contextToken2)
+    })
+
+    test('Returns null if the streamer has not received any messages to their livestream from YouTube', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time1,
+        externalId: 'x1',
+        twitchChannel: { connect: { id: 1 }},
+        livestream: { connect: { id: 1 }}
+      }})
+
+      const result = await chatStore.getLastYoutubeChat(streamer1)
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(ChatStore, 'getLastChatByYoutubeChannel'), () => {
     test('returns null if youtube channel has not posted a message', async () => {
       const result = await chatStore.getLastChatByYoutubeChannel(streamer1, 1)

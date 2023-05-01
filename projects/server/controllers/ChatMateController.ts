@@ -7,7 +7,8 @@ import env from '@rebel/server/globals'
 import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 import { EmptyObject } from '@rebel/shared/types'
-import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 
 export type PingResponse = ApiResponse<EmptyObject>
 
@@ -36,11 +37,16 @@ export type GetMasterchatAuthenticationResponse = ApiResponse<{ authenticated: b
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type GetMasterchatAuthenticationEndpoint = Endpoint<{}, GetMasterchatAuthenticationResponse>
 
+export type GetChatMateYoutubeChannelResponse = ApiResponse<PublicChannel>
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type GetChatMateYoutubeChannelEndpoint = Endpoint<{}, GetChatMateYoutubeChannelResponse>
+
 export interface IChatMateController {
   getStatus: GetStatusEndpoint
   getEvents: GetEventsEndpoint
   setActiveLivestream: SetActiveLivestreamEndpoint
   getMasterchatAuthentication: GetMasterchatAuthenticationEndpoint
+  getChatMateYoutubeChannel: GetChatMateYoutubeChannelEndpoint
 }
 
 @Path(buildPath('chatMate'))
@@ -117,6 +123,17 @@ export default class ChatMateController extends ControllerBase {
       return await this.implementation.getMasterchatAuthentication({ builder })
     } catch (e: any) {
       return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/youtube/channel')
+  public async getChatMateYoutubeChannel (): Promise<GetChatMateYoutubeChannelResponse> {
+    const builder = this.registerResponseBuilder<GetChatMateYoutubeChannelResponse>('GET /youtube/channel')
+    try {
+      return await this.implementation.getChatMateYoutubeChannel({ builder })
+    } catch (e: any) {
+      return builder.failure(404, e)
     }
   }
 }

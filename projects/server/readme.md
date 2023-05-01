@@ -291,6 +291,11 @@ Returns data with the following properties:
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
 
+### `GET /youtube/channel`
+Gets info about the ChatMate admin YouTube channel.
+
+Returns a `PublicChannel` object.
+
 ## Donation Endpoints
 Path: `/donation`.
 
@@ -745,6 +750,16 @@ Retrieves the Twitch login URL that should be used by the streamer to authorise 
 
 Returns data with the following properties:
 - `url` (`string`): The login URL. It will redirect back to Studio.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+
+### `GET /youtube/status`
+Retrieves the status of the ChatMate admin YouTube channel in relation to the logged-in streamer's current primary YouTube channel. ChatMate requires that the streamer add the admin channel as a moderator. Note that we can only check the moderator status at the time of the last message received in the streamer's latest livestream.
+
+Returns data with the following properties:
+- `chatMateIsModerator` (`boolean`): Whether the ChatMate admin YouTube channel was added as a moderator to the logged-in streamer's current primary YouTube channel.
+- `timestamp` (`number`): The latest time for which the moderation status could be verified. It may have changed since then.
 
 Can return the following errors:
 - `403`: When the logged-in user is not a streamer.

@@ -1,10 +1,14 @@
-import { Tooltip } from '@mui/material'
+import { CSSProperties } from '@emotion/serialize'
+import { SxProps, Tooltip } from '@mui/material'
 import { Box } from '@mui/system'
+import { toSentenceCase } from '@rebel/shared/util/text'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { useEffect, useState } from 'react'
 
 type Props = {
   time: number
+  useSentenceCase?: boolean
+  sx?: SxProps
 }
 
 const ONE_MINUTE = 1000 * 60
@@ -24,8 +28,8 @@ export default function RelativeTime (props: Props) {
 
   return <>
     <Tooltip title={new Date(props.time).toLocaleString()}>
-      <Box>
-        {text}
+      <Box sx={props.sx}>
+        {props.useSentenceCase ? toSentenceCase(text) : text}
       </Box>
     </Tooltip>
   </>
@@ -47,7 +51,7 @@ function getElapsedText (elapsed: number) {
   let unit: string
   let amount: number
   if (elapsed < 5000) {
-    return 'Just now'
+    return 'just now'
   } else if (elapsed < ONE_MINUTE) {
     unit = 'second'
     amount = Math.floor(elapsed / 1000)

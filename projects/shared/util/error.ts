@@ -148,6 +148,18 @@ export class InconsistentScopesError extends CustomError {
   }
 }
 
+export class NoYoutubeChatMessagesError extends CustomError {
+  constructor (message: string) {
+    super(NoYoutubeChatMessagesError.prototype, message)
+  }
+}
+
+export class NoContextTokenError extends CustomError {
+  constructor (message: string) {
+    super(NoContextTokenError.prototype, message)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

@@ -1,35 +1,39 @@
-import { ChatResponse, FetchChatOptions, Masterchat, Metadata } from '@rebel/masterchat'
-import { YTAction } from '@rebel/masterchat/interfaces/yt/chat'
+import { ActionCatalog, ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
-import { IMasterchat } from '@rebel/server/interfaces'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import StatusService from '@rebel/server/services/StatusService'
 import { cast, nameof } from '@rebel/server/_test/utils'
-import { mock, MockProxy } from 'jest-mock-extended'
+import { any, mock, MockProxy } from 'jest-mock-extended'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
+import ChatStore from '@rebel/server/stores/ChatStore'
+import { NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
+import { ChatItemWithRelations } from '@rebel/server/models/chat'
 
 const liveId = 'liveId'
-const streamerId = 0
+const streamerId = 10000
 
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
 let mockMasterchatFactory: MockProxy<MasterchatFactory>
 let mockMasterchat: MockProxy<Masterchat>
+let mockChatStore: MockProxy<ChatStore>
 let masterchatService: MasterchatService
 
 beforeEach(() => {
-  mockLogService = mock<LogService>()
-  mockStatusService = mock<StatusService>()
-  mockMasterchatFactory = mock<MasterchatFactory>()
-  mockMasterchat = mock<Masterchat>()
+  mockLogService = mock()
+  mockStatusService = mock()
+  mockMasterchatFactory = mock()
+  mockMasterchat = mock()
+  mockChatStore = mock()
 
   mockMasterchatFactory.create.calledWith(liveId).mockReturnValue(mockMasterchat)
 
   masterchatService = new MasterchatService(new Dependencies({
     logService: mockLogService,
     masterchatStatusService: mockStatusService,
-    masterchatFactory: mockMasterchatFactory
+    masterchatFactory: mockMasterchatFactory,
+    chatStore: mockChatStore
   }))
 
   masterchatService.addMasterchat(streamerId, liveId)
@@ -116,6 +120,47 @@ describe(nameof(MasterchatService, 'getChannelIdFromAnyLiveId'), () => {
     const result = await masterchatService.getChannelIdFromAnyLiveId(liveId)
 
     expect(result).toBe(youtubeId)
+  })
+})
+
+describe(nameof(MasterchatService, 'getChatMateModeratorStatus'), () => {
+  test('Returns true if the action catalog for the last chat message contains moderator actions', async () => {
+    const time = new Date()
+    const contextToken = 'contextToken'
+    const lastMessage = cast<ChatItemWithRelations>({ contextToken, time })
+    mockChatStore.getLastYoutubeChat.calledWith(streamerId).mockResolvedValue(lastMessage)
+    mockMasterchatFactory.create.calledWith(any()).mockReturnValue(mockMasterchat)
+    mockMasterchat.getActionCatalog.calledWith(contextToken).mockResolvedValue(cast<ActionCatalog>({ pin: {} }))
+
+    const result = await masterchatService.getChatMateModeratorStatus(streamerId)
+
+    expect(result).toEqual<typeof result>({ isModerator: true, time: time.getTime() })
+  })
+
+  test('Returns false if the action catalog for the last chat message does not contain moderator actions', async () => {
+    const time = new Date()
+    const contextToken = 'contextToken'
+    const lastMessage = cast<ChatItemWithRelations>({ contextToken, time })
+    mockChatStore.getLastYoutubeChat.calledWith(streamerId).mockResolvedValue(lastMessage)
+    mockMasterchatFactory.create.calledWith(any()).mockReturnValue(mockMasterchat)
+    mockMasterchat.getActionCatalog.calledWith(contextToken).mockResolvedValue(cast<ActionCatalog>({ block: {} }))
+
+    const result = await masterchatService.getChatMateModeratorStatus(streamerId)
+
+    expect(result).toEqual<typeof result>({ isModerator: false, time: time.getTime() })
+  })
+
+  test(`Throws ${NoYoutubeChatMessagesError.name} if no chat messages have been found for the given streamer`, async () => {
+    mockChatStore.getLastYoutubeChat.calledWith(streamerId).mockResolvedValue(null)
+
+    await expect(() => masterchatService.getChatMateModeratorStatus(streamerId)).rejects.toThrow(NoYoutubeChatMessagesError)
+  })
+
+  test(`Throws ${NoContextTokenError.name} if no context token was attached to the last chat message`, async () => {
+    const lastMessage = cast<ChatItemWithRelations>({ contextToken: null })
+    mockChatStore.getLastYoutubeChat.calledWith(streamerId).mockResolvedValue(lastMessage)
+
+    await expect(() => masterchatService.getChatMateModeratorStatus(streamerId)).rejects.toThrow(NoContextTokenError)
   })
 })
 

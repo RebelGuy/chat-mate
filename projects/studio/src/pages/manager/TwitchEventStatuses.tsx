@@ -152,10 +152,9 @@ export default function TwitchEventStatuses () {
       </Table>
     </>}
 
-    <RequireRank admin hideAdminOutline>
+    <RequireRank admin adminSx={{ mt: 2, width: 'fit-content' }}>
       <>
         <Button
-          sx={{ mt: 2 }}
           onClick={reconnectChatClientRequest.triggerRequest}
           disabled={reconnectChatClientRequest.isLoading}
         >
@@ -204,7 +203,7 @@ function StatusRow (props: StatusProps) {
           </IconButton>
         </Tooltip>
       </TableCell>
-      <TableCell><RelativeTime time={lastChange} /></TableCell>
+      <TableCell><RelativeTime time={lastChange} useSentenceCase /></TableCell>
     </TableRow>
   )
 }

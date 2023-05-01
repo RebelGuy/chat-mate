@@ -4,6 +4,7 @@ import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/stream
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
 import { getUserName } from '@rebel/server/services/ChannelService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import StreamerService from '@rebel/server/services/StreamerService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
@@ -44,6 +45,8 @@ export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string }>
 
 export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
 
+export type GetYoutubeStatusResponse = ApiResponse<{ chatMateIsModerator: boolean, timestamp: number }>
+
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
   streamerService: StreamerService
@@ -51,6 +54,7 @@ type Deps = ControllerDependencies<{
   streamerChannelStore: StreamerChannelStore
   streamerChannelService: StreamerChannelService
   streamerTwitchEventService: StreamerTwitchEventService
+  masterchatService: MasterchatService
 }>
 
 @Path(buildPath('streamer'))
@@ -62,6 +66,7 @@ export default class StreamerController extends ControllerBase {
   private readonly streamerChannelStore: StreamerChannelStore
   private readonly streamerChannelService: StreamerChannelService
   private readonly streamerTwitchEventService: StreamerTwitchEventService
+  private readonly masterchatService: MasterchatService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -71,6 +76,7 @@ export default class StreamerController extends ControllerBase {
     this.streamerChannelStore = deps.resolve('streamerChannelStore')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.streamerTwitchEventService = deps.resolve('streamerTwitchEventService')
+    this.masterchatService = deps.resolve('masterchatService')
   }
 
   @GET
@@ -347,6 +353,24 @@ export default class StreamerController extends ControllerBase {
 
       await this.streamerService.authoriseTwitchLogin(streamer.id, code)
       return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/youtube/status')
+  public async getYoutubeStatus (): Promise<GetYoutubeStatusResponse> {
+    const builder = this.registerResponseBuilder<GetYoutubeStatusResponse>('GET /youtube/status')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const status = await this.masterchatService.getChatMateModeratorStatus(streamer.id)
+      return builder.success({ chatMateIsModerator: status.isModerator, timestamp: status.time })
     } catch (e: any) {
       return builder.failure(e)
     }

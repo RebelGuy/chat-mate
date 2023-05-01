@@ -10,3 +10,13 @@ export function getChannelUrl (channel: Pick<PublicChannel, 'platform' | 'extern
     assertUnreachable(channel.platform)
   }
 }
+
+export function getChannelDashboardUrl (channel: Pick<PublicChannel, 'platform' | 'externalIdOrUserName'>) {
+  if (channel.platform === 'youtube') {
+    return `https://studio.youtube.com/channel/${channel.externalIdOrUserName}`
+  } else if (channel.platform === 'twitch') {
+    return `https://dashboard.twitch.tv/u/${channel.externalIdOrUserName}/home`
+  } else {
+    assertUnreachable(channel.platform)
+  }
+}
