@@ -201,14 +201,17 @@ describe(nameof(PunishmentService, 'initialise'), () => {
     const onRefreshUser1 = args1[3]
     mockMasterchatService.timeout.mockClear()
     await onRefreshUser1()
-    const resuppliedContextTokensUser1 = mockMasterchatService.timeout.mock.calls.map(c => single(c))
-    expect(resuppliedContextTokensUser1).toEqual([contextToken1, contextToken2])
+    const masterchatCallsUser1 = mockMasterchatService.timeout.mock.calls
+    expect(masterchatCallsUser1).toEqual(expectArray(masterchatCallsUser1, [
+      [streamerId1, contextToken1],
+      [streamerId1, contextToken2]
+    ]))
 
     const onRefreshUser2 = args2[3]
     mockMasterchatService.timeout.mockClear()
     await onRefreshUser2()
-    const resuppliedContextTokensUser2 = mockMasterchatService.timeout.mock.calls.map(c => single(c))
-    expect(resuppliedContextTokensUser2).toEqual([contextToken3])
+    const masterchatCallsUser2 = single(mockMasterchatService.timeout.mock.calls)
+    expect(masterchatCallsUser2).toEqual(expectArray(masterchatCallsUser2, [streamerId2, contextToken3]))
   })
 })
 
@@ -217,8 +220,8 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     const contextToken1 = 'testToken1'
     const contextToken2 = 'testToken2'
     const error2 = 'error2'
-    mockMasterchatService.banYoutubeChannel.calledWith(contextToken1).mockResolvedValue(true)
-    mockMasterchatService.banYoutubeChannel.calledWith(contextToken2).mockRejectedValue(new Error(error2))
+    mockMasterchatService.banYoutubeChannel.calledWith(streamerId1, contextToken1).mockResolvedValue(true)
+    mockMasterchatService.banYoutubeChannel.calledWith(streamerId1, contextToken2).mockRejectedValue(new Error(error2))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
@@ -246,8 +249,11 @@ describe(nameof(PunishmentService, 'banUser'), () => {
       { twitchChannelId: 2, error: null }
     ])
 
-    const suppliedContextTokens = mockMasterchatService.banYoutubeChannel.mock.calls.map(c => single(c))
-    expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
+    const masterchatCalls = mockMasterchatService.banYoutubeChannel.mock.calls
+    expect(masterchatCalls).toEqual(expectArray(masterchatCalls, [
+      [streamerId1, contextToken1],
+      [streamerId1, contextToken2]
+    ]))
 
     const twitchCalls = mockTwurpleService.banChannel.mock.calls
     expect(twitchCalls.length).toBe(2)
@@ -291,7 +297,7 @@ describe(nameof(PunishmentService, 'banUserExternal'), () => {
 
     mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
-    mockMasterchatService.banYoutubeChannel.calledWith(contextToken).mockResolvedValue(true)
+    mockMasterchatService.banYoutubeChannel.calledWith(streamerId, contextToken).mockResolvedValue(true)
     mockTwurpleService.banChannel.calledWith(streamerId, twitchChannel, banMessage).mockResolvedValue()
 
     const result = await punishmentService.banUserExternal(defaultUserId, streamerId, banMessage)
@@ -367,8 +373,8 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     const contextToken2 = 'testToken2'
     const error1 = 'error1'
     const error3 = 'error3'
-    mockMasterchatService.timeout.calledWith(contextToken1).mockRejectedValue(new Error(error1))
-    mockMasterchatService.timeout.calledWith(contextToken2).mockResolvedValue(true)
+    mockMasterchatService.timeout.calledWith(streamerId1, contextToken1).mockRejectedValue(new Error(error1))
+    mockMasterchatService.timeout.calledWith(streamerId1, contextToken2).mockResolvedValue(true)
     mockTwurpleService.timeout.calledWith(streamerId1, 1, 'test', 1000).mockRejectedValue(new Error(error3))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
@@ -403,8 +409,11 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
       { twitchChannelId: 2, error: null }
     ])
 
-    const suppliedContextTokens = mockMasterchatService.timeout.mock.calls.map(c => single(c))
-    expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
+    const masterchatCalls = mockMasterchatService.timeout.mock.calls
+    expect(masterchatCalls).toEqual(expectArray(masterchatCalls, [
+      [streamerId1, contextToken1],
+      [streamerId1, contextToken2]
+    ]))
 
     const timeoutCalls = mockTwurpleService.timeout.mock.calls
     expect(timeoutCalls).toEqual([[streamerId1, 1, any(), 1000], [streamerId1, 2, any(), 1000]])
@@ -416,8 +425,11 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     const onRefresh = youtubeTimeoutRefreshArgs[3]
     mockMasterchatService.timeout.mockClear()
     await onRefresh()
-    const resuppliedContextTokens = mockMasterchatService.timeout.mock.calls.map(c => single(c))
-    expect(resuppliedContextTokens).toEqual([contextToken1, contextToken2])
+    const refreshedMasterchatCalls = mockMasterchatService.timeout.mock.calls
+    expect(refreshedMasterchatCalls).toEqual(expectArray(masterchatCalls, [
+      [streamerId1, contextToken1],
+      [streamerId1, contextToken2]
+    ]))
   })
 
   test('Catches error and returns error message', async () => {
@@ -456,7 +468,7 @@ describe(nameof(PunishmentService, 'timeoutUserExternal'), () => {
 
     mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
-    mockMasterchatService.timeout.calledWith(contextToken).mockResolvedValue(true)
+    mockMasterchatService.timeout.calledWith(streamerId, contextToken).mockResolvedValue(true)
     mockTwurpleService.timeout.calledWith(streamerId, twitchChannel, timeoutMessage, durationSeconds).mockResolvedValue()
 
     const result = await punishmentService.timeoutUserExternal(defaultUserId, streamerId, rankId, timeoutMessage, durationSeconds)
@@ -495,8 +507,8 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
   test('unbans user on platforms and revokes ban in database', async () => {
     const contextToken1 = 'testToken1'
     const contextToken2 = 'testToken2'
-    mockMasterchatService.unbanYoutubeChannel.calledWith(contextToken1).mockResolvedValue(true)
-    mockMasterchatService.unbanYoutubeChannel.calledWith(contextToken2).mockResolvedValue(true)
+    mockMasterchatService.unbanYoutubeChannel.calledWith(streamerId1, contextToken1).mockResolvedValue(true)
+    mockMasterchatService.unbanYoutubeChannel.calledWith(streamerId1, contextToken2).mockResolvedValue(true)
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
@@ -524,8 +536,11 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
       { twitchChannelId: 2, error: null }
     ])
 
-    const suppliedContextTokens = mockMasterchatService.unbanYoutubeChannel.mock.calls.map(c => single(c))
-    expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
+    const masterchatCalls = mockMasterchatService.unbanYoutubeChannel.mock.calls
+    expect(masterchatCalls).toEqual(expectArray(masterchatCalls, [
+      [streamerId1, contextToken1],
+      [streamerId1, contextToken2]
+    ]))
 
     const twitchCalls = mockTwurpleService.unbanChannel.mock.calls
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])

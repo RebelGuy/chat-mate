@@ -134,9 +134,9 @@ export default class ModService extends ContextClass {
     try {
       let result: boolean
       if (isMod) {
-        result = await this.masterchatService.mod(lastChatItem.contextToken)
+        result = await this.masterchatService.mod(streamerId, lastChatItem.contextToken)
       } else {
-        result = await this.masterchatService.unmod(lastChatItem.contextToken)
+        result = await this.masterchatService.unmod(streamerId, lastChatItem.contextToken)
       }
 
       this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)

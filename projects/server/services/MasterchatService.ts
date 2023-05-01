@@ -87,9 +87,13 @@ export default class MasterchatService extends ApiService {
 
   /** Returns true if the channel was banned. False indicates that the 'hide channel' option
    * was not included in the latest chat item's context menu. */
-  public async banYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
+  public async banYoutubeChannel (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
+    if (!this.wrappedMasterchats.has(streamerId)) {
+      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+    }
+
     // only returns null if the action is not available in the context menu, e.g. if the user is already banned
-    const result = await this.getFirst().hide(contextMenuEndpointParams)
+    const result = await this.wrappedMasterchats.get(streamerId)!.hide(contextMenuEndpointParams)
     return result != null
   }
 
@@ -97,38 +101,46 @@ export default class MasterchatService extends ApiService {
    *
    * Returns true if the channel was banned. False indicates that the 'timeout channel'
    * option was not included in the latest chat item's context menu. */
-  public async timeout (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.getFirst().timeout(contextMenuEndpointParams)
+  public async timeout (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
+    if (!this.wrappedMasterchats.has(streamerId)) {
+      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+    }
+
+    const result = await this.wrappedMasterchats.get(streamerId)!.timeout(contextMenuEndpointParams)
     return result != null
   }
 
   /** Returns true if the channel was banned. False indicates that the 'unhide channel' option
    * was not included in the latest chat item's context menu. */
-  public async unbanYoutubeChannel (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.getFirst().unhide(contextMenuEndpointParams)
+  public async unbanYoutubeChannel (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
+    if (!this.wrappedMasterchats.has(streamerId)) {
+      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+    }
+
+    const result = await this.wrappedMasterchats.get(streamerId)!.unhide(contextMenuEndpointParams)
     return result != null
   }
 
   /** Returns true if the channel was modded. False indicates that the 'add moderator' option
    * was not included in the latest chat item's context menu. */
-  public async mod (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.getFirst().addModerator(contextMenuEndpointParams)
+  public async mod (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
+    if (!this.wrappedMasterchats.has(streamerId)) {
+      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+    }
+
+    const result = await this.wrappedMasterchats.get(streamerId)!.addModerator(contextMenuEndpointParams)
     return result != null
   }
 
   /** Returns true if the channel was modded. False indicates that the 'remove moderator' option
    * was not included in the latest chat item's context menu. */
-  public async unmod (contextMenuEndpointParams: string): Promise<boolean> {
-    const result = await this.getFirst().removeModerator(contextMenuEndpointParams)
-    return result != null
+  public async unmod (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
+    if (!this.wrappedMasterchats.has(streamerId)) {
+      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
   }
 
-  private getFirst () {
-    const masterchat = firstOrDefault(this.wrappedMasterchats, null)
-    if (masterchat == null) {
-      throw new Error('No masterchat instance exists')
-    }
-    return masterchat
+    const result = await this.wrappedMasterchats.get(streamerId)!.removeModerator(contextMenuEndpointParams)
+    return result != null
   }
 
   // insert some middleware to deal with automatic logging and status updates :)

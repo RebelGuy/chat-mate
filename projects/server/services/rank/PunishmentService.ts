@@ -318,11 +318,11 @@ export default class PunishmentService extends ContextClass {
     try {
       let result: boolean
       if (type === 'ban') {
-        result = await this.masterchat.banYoutubeChannel(lastChatItem.contextToken)
+        result = await this.masterchat.banYoutubeChannel(streamerId, lastChatItem.contextToken)
       } else if (type === 'unban') {
-        result = await this.masterchat.unbanYoutubeChannel(lastChatItem.contextToken)
+        result = await this.masterchat.unbanYoutubeChannel(streamerId, lastChatItem.contextToken)
       } else if (type === 'timeout' || type === 'refreshTimeout') {
-        result = await this.masterchat.timeout(lastChatItem.contextToken)
+        result = await this.masterchat.timeout(streamerId, lastChatItem.contextToken)
       } else {
         assertUnreachable(type)
       }

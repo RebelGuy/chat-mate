@@ -124,14 +124,14 @@ describe(nameof(MasterchatService, 'banYoutubeChannel'), () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.hide.calledWith(contextMenuEndpointParams).mockResolvedValue([])
 
-    await testSuccessful(() => masterchatService.banYoutubeChannel(contextMenuEndpointParams), true)
+    await testSuccessful(() => masterchatService.banYoutubeChannel(streamerId, contextMenuEndpointParams), true)
   })
 
   test('successful request with user not banned', async () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.hide.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
 
-    await testSuccessful(() => masterchatService.banYoutubeChannel(contextMenuEndpointParams), false)
+    await testSuccessful(() => masterchatService.banYoutubeChannel(streamerId, contextMenuEndpointParams), false)
   })
 
   test('failed request', async () => {
@@ -139,7 +139,7 @@ describe(nameof(MasterchatService, 'banYoutubeChannel'), () => {
     const error = new Error()
     mockMasterchat.hide.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
 
-    await testFailing(() => masterchatService.banYoutubeChannel(contextMenuEndpointParams), error)
+    await testFailing(() => masterchatService.banYoutubeChannel(streamerId, contextMenuEndpointParams), error)
   })
 })
 
@@ -148,14 +148,14 @@ describe(nameof(MasterchatService, 'timeout'), () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.timeout.calledWith(contextMenuEndpointParams).mockResolvedValue([])
 
-    await testSuccessful(() => masterchatService.timeout(contextMenuEndpointParams), true)
+    await testSuccessful(() => masterchatService.timeout(streamerId, contextMenuEndpointParams), true)
   })
 
   test('successful request with user not timed out', async () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.timeout.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
 
-    await testSuccessful(() => masterchatService.timeout(contextMenuEndpointParams), false)
+    await testSuccessful(() => masterchatService.timeout(streamerId, contextMenuEndpointParams), false)
   })
 
   test('failed request', async () => {
@@ -163,7 +163,7 @@ describe(nameof(MasterchatService, 'timeout'), () => {
     const error = new Error()
     mockMasterchat.timeout.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
 
-    await testFailing(() => masterchatService.timeout(contextMenuEndpointParams), error)
+    await testFailing(() => masterchatService.timeout(streamerId, contextMenuEndpointParams), error)
   })
 })
 
@@ -172,14 +172,14 @@ describe(nameof(MasterchatService, 'unbanYoutubeChannel'), () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.unhide.calledWith(contextMenuEndpointParams).mockResolvedValue([])
 
-    await testSuccessful(() => masterchatService.unbanYoutubeChannel(contextMenuEndpointParams), true)
+    await testSuccessful(() => masterchatService.unbanYoutubeChannel(streamerId, contextMenuEndpointParams), true)
   })
 
   test('successful request with user not unbanned', async () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.unhide.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
 
-    await testSuccessful(() => masterchatService.unbanYoutubeChannel(contextMenuEndpointParams), false)
+    await testSuccessful(() => masterchatService.unbanYoutubeChannel(streamerId, contextMenuEndpointParams), false)
   })
 
   test('failed request', async () => {
@@ -187,7 +187,7 @@ describe(nameof(MasterchatService, 'unbanYoutubeChannel'), () => {
     const error = new Error()
     mockMasterchat.unhide.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
 
-    await testFailing(() => masterchatService.unbanYoutubeChannel(contextMenuEndpointParams), error)
+    await testFailing(() => masterchatService.unbanYoutubeChannel(streamerId, contextMenuEndpointParams), error)
   })
 
   test('throws if invalid liveId', async () => {
@@ -208,14 +208,14 @@ describe(nameof(MasterchatService, 'mod'), () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.addModerator.calledWith(contextMenuEndpointParams).mockResolvedValue([])
 
-    await testSuccessful(() => masterchatService.mod(contextMenuEndpointParams), true)
+    await testSuccessful(() => masterchatService.mod(streamerId, contextMenuEndpointParams), true)
   })
 
   test('successful request with user not modded', async () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.addModerator.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
 
-    await testSuccessful(() => masterchatService.mod(contextMenuEndpointParams), false)
+    await testSuccessful(() => masterchatService.mod(streamerId, contextMenuEndpointParams), false)
   })
 
   test('failed request', async () => {
@@ -223,7 +223,7 @@ describe(nameof(MasterchatService, 'mod'), () => {
     const error = new Error()
     mockMasterchat.addModerator.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
 
-    await testFailing(() => masterchatService.mod(contextMenuEndpointParams), error)
+    await testFailing(() => masterchatService.mod(streamerId, contextMenuEndpointParams), error)
   })
 })
 
@@ -232,14 +232,14 @@ describe(nameof(MasterchatService, 'unmod'), () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.removeModerator.calledWith(contextMenuEndpointParams).mockResolvedValue([])
 
-    await testSuccessful(() => masterchatService.unmod(contextMenuEndpointParams), true)
+    await testSuccessful(() => masterchatService.unmod(streamerId, contextMenuEndpointParams), true)
   })
 
   test('successful request with user not unmodded', async () => {
     const contextMenuEndpointParams = 'test'
     mockMasterchat.removeModerator.calledWith(contextMenuEndpointParams).mockResolvedValue(null!)
 
-    await testSuccessful(() => masterchatService.unmod(contextMenuEndpointParams), false)
+    await testSuccessful(() => masterchatService.unmod(streamerId, contextMenuEndpointParams), false)
   })
 
   test('failed request', async () => {
@@ -247,7 +247,7 @@ describe(nameof(MasterchatService, 'unmod'), () => {
     const error = new Error()
     mockMasterchat.removeModerator.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
 
-    await testFailing(() => masterchatService.unmod(contextMenuEndpointParams), error)
+    await testFailing(() => masterchatService.unmod(streamerId, contextMenuEndpointParams), error)
   })
 })
 
