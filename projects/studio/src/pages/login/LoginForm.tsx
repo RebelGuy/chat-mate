@@ -60,7 +60,7 @@ export default function LoginForm () {
 
   const disableButton = isNullOrEmpty(username) || isNullOrEmpty(password) || (isNewUser && password !== confirmedPassword) || userNameError != null
   const isLoading = loginRequest.isLoading || registerRequest.isLoading || loginContext.isLoading
-  const onSubmit = isNewUser ? registerRequest.triggerRequest : loginRequest.triggerRequest
+  const onSubmit = isNewUser ? () => { console.log('trigger'); registerRequest.triggerRequest() } : loginRequest.triggerRequest
 
   return (
     <div style={{ width: 'fit-content', margin: 'auto' }}>
@@ -109,7 +109,6 @@ export default function LoginForm () {
           type="submit"
           disabled={disableButton || isLoading}
           sx={{ mt: 2, mb: 2 }}
-          onClick={onSubmit}
         >
           {isNewUser ? 'Create account' : 'Login'}
         </Button>
