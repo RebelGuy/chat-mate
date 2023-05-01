@@ -283,7 +283,7 @@ export function subGroupedSingle<T, G, S> (arr: T[], mainGrouper: (item: T) => G
   return result
 }
 
-export function nonNull<T> (arr: (T | null)[]): Exclude<T, null>[] {
+export function nonNull<T> (arr: (T | null | undefined)[]): Exclude<T, null>[] {
   return arr.filter(value => value != null) as Exclude<T, null>[]
 }
 

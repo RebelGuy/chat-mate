@@ -8,7 +8,7 @@ type Props = {
   error: ApiRequestError | null
   isLoading?: boolean
 } | {
-  requestObj: RequestResult<any> | RequestResult<any>[]
+  requestObj: RequestResult<any> | (RequestResult<any> | null | undefined)[]
 })
 
 export default function ApiError (props: Props) {
@@ -20,8 +20,9 @@ export default function ApiError (props: Props) {
     isLoading = props.isLoading ?? false
     errors = props.error == null ? [] : [props.error]
   } else if (Array.isArray(props.requestObj)) {
-    isLoading = props.requestObj.find(obj => obj.isLoading) != null
-    errors = nonNull(props.requestObj.map(obj => obj.error))
+    const objs = nonNull(props.requestObj)
+    isLoading = objs.find(obj => obj.isLoading) != null
+    errors = nonNull(objs.map(obj => obj.error))
   } else {
     isLoading = props.requestObj.isLoading
     errors = props.requestObj.error == null ? [] : [props.requestObj.error]

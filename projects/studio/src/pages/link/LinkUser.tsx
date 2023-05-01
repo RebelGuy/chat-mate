@@ -99,7 +99,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         <div style={{ marginBottom: 16 }}>
           <LinkedChannels
             channelsRequestObj={getLinkedChannelsRequest}
-            primaryChannelsRequestObj={getPrimaryChannelsRequest}
+            primaryChannelsRequestObj={loginContext.isStreamer ? getPrimaryChannelsRequest : null}
             onChange={updateKey}
             onRefresh={updateKey}
           />

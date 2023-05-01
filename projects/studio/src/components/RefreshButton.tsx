@@ -2,7 +2,7 @@ import { Refresh } from '@mui/icons-material'
 import { CircularProgress, IconButton } from '@mui/material'
 
 type Props = {
-  isLoading: boolean
+  isLoading: boolean | undefined
   onRefresh: () => void
 }
 
