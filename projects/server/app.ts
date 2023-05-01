@@ -134,6 +134,7 @@ const main = async () => {
     .withProperty('hostName', hostName)
     .withProperty('streamlabsAccessToken', streamlabsAccessToken)
     .withProperty('twitchUsername', twitchUsername)
+    .withProperty('chatMateRegisteredUserName', env('chatMateRegisteredUserName'))
     .withHelpers('experienceHelpers', ExperienceHelpers)
     .withHelpers('timerHelpers', TimerHelpers)
     .withHelpers('dateTimeHelpers', DateTimeHelpers)
