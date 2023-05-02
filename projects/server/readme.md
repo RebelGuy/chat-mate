@@ -31,11 +31,11 @@ If building fails because the Prisma client could not be found, please run `yarn
 Run `yarn auth:youtube:<local|debug|release>` and log in using the streaming account, or a moderator account. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID.
 
 ### Twitch
-Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments [note: at the moment, `debug` and `local` share the same application].
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
 
 For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<local|debug|release>` and sign in manually with the relevant ChatMate account. The access token and refresh token will automatically be stored in the database (`twitch_auth` table) and retrieved/updated automatically thereon.
 
-Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
+Important: The application scope is hardcoded in `constants.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
 
 At the moment, the Twitch auth script is broken because Twitch rejects Electron as a valid browser. An alternative way of refreshing the Twitch Application authentication is via the `/admin/twitch` page on Studio.
 
@@ -51,7 +51,7 @@ Define `local.env`, `debug.env` and `release.env` files that set the following e
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `STUDIO_URL`: The URL to ChatMate Studio (not ending in `/`).
-- `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube.
+- `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube. If this is ever changed, you will need to re-authenticate and purge all Context Tokens from the `chat_message` table.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
 - `TWITCH_USERNAME`: The channel name of the ChatMate Twitch account. This will be used to connect to streamers' chat rooms and perform moderation operations.
