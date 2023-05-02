@@ -40,7 +40,7 @@ export default function YoutubeStatus () {
         ChatMate is
         <Box display="inline" sx={{ color: getYoutubeStatusRequest.data.chatMateIsModerator ? 'green' : 'red' }}>{getYoutubeStatusRequest.data.chatMateIsModerator ? '' : 'not'} added as a moderator </Box>
         to your channel
-        <Box display="inline" color="grey"> (as of {<RelativeTime time={getYoutubeStatusRequest.data.timestamp} sx={{ display: 'inline'}} />})</Box>.
+        <Box display="inline" color="grey"> (as of {<RelativeTime time={getYoutubeStatusRequest.data.timestamp} />})</Box>.
       </Box>
     </>}
   </>

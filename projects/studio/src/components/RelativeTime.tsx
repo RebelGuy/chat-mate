@@ -28,7 +28,7 @@ export default function RelativeTime (props: Props) {
 
   return <>
     <Tooltip title={new Date(props.time).toLocaleString()}>
-      <Box sx={props.sx}>
+      <Box sx={{ display: 'inline', ...(props.sx ?? {}) }}>
         {props.useSentenceCase ? toSentenceCase(text) : text}
       </Box>
     </Tooltip>

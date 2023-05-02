@@ -3,12 +3,16 @@ import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { nonNull } from '@rebel/shared/util/arrays'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
 import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
+import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { authenticate, getGlobalRanks, getRanksForStreamer, getStreamers, getUser } from '@rebel/studio/utility/api'
 import * as React from 'react'
 
 export type RankName = PublicRank['name']
+
+export type RefreshableDataType = 'streamerList'
 
 type Props = {
   children: React.ReactNode
@@ -20,6 +24,8 @@ export function LoginProvider (props: Props) {
   const [isStreamer, setIsStreamer] = React.useState(false)
   const [hasLoadedAuth, setHasLoadedAuth] = React.useState(false)
   const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
+
+  const [streamerListUpdateKey, incrementStreamerListUpdateKey] = useUpdateKey({ repeatInterval: 60_000 })
 
   const getGlobalRanksRequest = useRequest(getGlobalRanks(), {
     onDemand: true,
@@ -39,8 +45,9 @@ export function LoginProvider (props: Props) {
     onError: console.log
   })
   const getStreamersRequest = useRequest(getStreamers(), {
-    onDemand: true,
+    updateKey: streamerListUpdateKey,
     loginToken: loginToken,
+    onRequest: () => loginToken == null,
     onError: console.log
   })
 
@@ -125,6 +132,14 @@ export function LoginProvider (props: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const refreshData = (dataType: RefreshableDataType) => {
+    if (dataType === 'streamerList') {
+      incrementStreamerListUpdateKey()
+    } else {
+      assertUnreachable(dataType)
+    }
+  }
+
   // componentDidMount equivalent
   // authenticate the saved token, if any exists
   React.useEffect(() => {
@@ -196,6 +211,7 @@ export function LoginProvider (props: Props) {
         username,
         user: getUserRequest.data?.user ?? null,
         isLoading: !hasLoadedAuth || isLoading,
+        loadingData: nonNull([getStreamersRequest.isLoading ? 'streamerList' : null]),
         errors: errors.length === 0 ? null : errors,
         streamer: selectedStreamer,
         allStreamers: getStreamersRequest.data?.streamers ?? [],
@@ -203,7 +219,8 @@ export function LoginProvider (props: Props) {
         setLogin: onSetLogin,
         setStreamer: onPersistStreamer,
         logout: onClearAuthInfo,
-        hasRank: rankName => ranks.find(r => r.rank.name === rankName) != null
+        hasRank: rankName => ranks.find(r => r.rank.name === rankName) != null,
+        refreshData: refreshData
       }}
     >
       {props.children}
@@ -224,12 +241,14 @@ export type LoginContextType = {
   username: string | null
   user: PublicUser | null
   isLoading: boolean
+  loadingData: RefreshableDataType[]
   errors: ApiRequestError[] | null
 
   setLogin: (username: string, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void
   logout: () => void
   hasRank: (rankName: RankName) => boolean
+  refreshData: (dataType: RefreshableDataType) => void
 }
 
 const LoginContext = React.createContext<LoginContextType>(null!)

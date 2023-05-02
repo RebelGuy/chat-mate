@@ -75,10 +75,11 @@ function CurrentPage () {
   const loginContext = useContext(LoginContext)
   const page = useCurrentPage()
 
-  if (loginContext.isLoading && !loginContext.isHydrated ||
-    loginContext.isLoading && (page?.requireRanksProps != null || page?.requiresStreamer || page?.requiresLogin)
-  ) {
+  if (loginContext.isLoading && !loginContext.isHydrated) {
     return <CentredLoadingSpinner />
+  } else if (page?.requiresStreamer && loginContext.streamer == null) {
+    // the user already gets redirected to Home in the SelectStreamer component
+    return null
   }
 
   let content: ReactNode

@@ -1,4 +1,5 @@
 import { RegisteredUser } from '@prisma/client'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
@@ -12,13 +13,7 @@ export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks 
   return {
     primaryUserId: data.primaryUserId,
     registeredUser: registeredUserToPublic(data.registeredUser),
-    channel: {
-      channelId: data.platformInfo.channel.id,
-      defaultUserId: data.defaultUserId,
-      displayName: getUserName(data),
-      externalIdOrUserName: getExternalIdOrUserName(data),
-      platform: data.platformInfo.platform
-    },
+    channel: channelToPublic(data),
     levelInfo: {
       level: data.level.level,
       levelProgress: data.level.levelProgress
@@ -31,6 +26,16 @@ export function registeredUserToPublic (registeredUser: RegisteredUser | null): 
   return registeredUser == null ? null : {
     id: registeredUser.id,
     displayName: registeredUser.username
+  }
+}
+
+export function channelToPublic (channel: UserChannel): PublicChannel {
+  return {
+    channelId: channel.platformInfo.channel.id,
+    defaultUserId: channel.defaultUserId,
+    displayName: getUserName(channel),
+    externalIdOrUserName: getExternalIdOrUserName(channel),
+    platform: channel.platformInfo.platform
   }
 }
 

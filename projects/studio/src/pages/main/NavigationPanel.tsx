@@ -2,7 +2,7 @@ import { Box } from '@mui/material'
 import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth } from '@rebel/studio/pages/navigation'
+import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth, PageStreamerInfo } from '@rebel/studio/pages/navigation'
 import { PathParam } from '@rebel/studio/utility/types'
 import { cloneElement, useContext } from 'react'
 import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
@@ -19,6 +19,7 @@ export default function Navigation () {
       {/* todo: instead of hiding navigation items when not logged in/not selected a streamer, gray them out. need to make custom component and do some css magic */}
       <NavItem page={PageHome} />
       <NavItem page={PageEmojis} streamer={loginContext.streamer} />
+      <NavItem page={PageStreamerInfo} streamer={loginContext.streamer} />
       <NavItem page={PageManager} />
       <NavItem page={PageApply} />
       <NavItem page={PageTwitchAuth} />

@@ -1,3 +1,4 @@
+import { PublicLivestream } from '@rebel/server/controllers/public/livestream/PublicLivestream'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
@@ -19,4 +20,8 @@ export function getChannelDashboardUrl (channel: Pick<PublicChannel, 'platform' 
   } else {
     assertUnreachable(channel.platform)
   }
+}
+
+export function isLive (livestream: PublicLivestream | null): boolean {
+  return livestream != null && livestream.status === 'live'
 }

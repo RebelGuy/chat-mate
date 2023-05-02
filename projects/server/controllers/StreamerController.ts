@@ -1,9 +1,11 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { requireAuth, requireRank } from '@rebel/server/controllers/preProcessors'
 import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer/PublicStreamerSummary'
 import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
+import { livestreamToPublic } from '@rebel/server/models/livestream'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
+import { channelToPublic } from '@rebel/server/models/user'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
@@ -12,9 +14,9 @@ import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEve
 import AccountStore from '@rebel/server/stores/AccountStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
-import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
+import StreamerStore, { CloseApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { EmptyObject } from '@rebel/shared/types'
-import { single, zipOn, zipOnStrict } from '@rebel/shared/util/arrays'
+import { single, zipOnStrict } from '@rebel/shared/util/arrays'
 import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
@@ -91,15 +93,20 @@ export default class StreamerController extends ControllerBase {
     try {
       const livestreamPromise = this.livestreamStore.getActiveLivestreams()
       const streamers = await this.streamerStore.getStreamers()
+      const primaryChannelsPromise = this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
       const users = await this.accountStore.getRegisteredUsersFromIds(streamers.map(s => s.registeredUserId))
       const livestreams = await livestreamPromise
+      const primaryChannels = await primaryChannelsPromise
 
       const streamerUsers = zipOnStrict(streamers, users, 'registeredUserId', 'id', 'registeredUserId')
       const streamerSummary: PublicStreamerSummary[] = streamerUsers.map(streamer => {
         const livestream = livestreams.find(stream => stream.streamerId === streamer.id)
+        const { youtubeChannel, twitchChannel } = primaryChannels.find(channels => channels.streamerId === streamer.id)!
         return {
           username: streamer.username,
-          isLive: livestream != null && livestream.start != null && livestream.end == null
+          currentLivestream: livestream == null ? null : livestreamToPublic(livestream),
+          youtubeChannel: youtubeChannel == null ? null : channelToPublic(youtubeChannel),
+          twitchChannel: twitchChannel == null ? null : channelToPublic(twitchChannel)
         }
       })
 

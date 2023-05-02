@@ -5,9 +5,10 @@ import LinkUser from '@rebel/studio/pages/link/LinkUser'
 import LoginForm from '@rebel/studio/pages/login/LoginForm'
 import React from 'react'
 import Home from '@rebel/studio/pages/home/Home'
-import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Settings, StarBorder } from '@mui/icons-material'
+import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Settings, StarBorder, Videocam } from '@mui/icons-material'
 import TwitchAdminLogin from '@rebel/studio/pages/admin/twitch/TwitchAdminLogin'
 import { Props as RequireRankProps } from '@rebel/studio/components/RequireRank'
+import StreamerInfo from '@rebel/studio/pages/streamer-info/StreamerInfo'
 
 export type Page = {
   id: string
@@ -76,11 +77,23 @@ export const PageLink = {
   requireRanksProps: null
 } as const
 
+export const PageStreamerInfo = {
+  id: 'streamerInfo',
+  title: 'Streamer Info',
+  element: <StreamerInfo />,
+  icon: <Videocam />,
+  path: '/:streamer/info',
+  requiresLogin: true,
+  requiresStreamer: true,
+  requireRanksProps: null
+} as const
+
 export const PageManager = {
   id: 'manager',
   title: 'Stream Manager',
   element: <ChatMateManager />,
   icon: <Settings />,
+  // don't change this path without also updating StreamerService and application redirect URLs
   path: '/manager',
   requiresLogin: true,
   requiresStreamer: false,
@@ -92,11 +105,11 @@ export const PageTwitchAuth = {
   title: 'Twitch Admin Login',
   element: <TwitchAdminLogin />,
   icon: <Camera />,
-  // don't change this path without also updating AdminService
+  // don't change this path without also updating AdminService and application redirect URLs
   path: '/admin/twitch',
   requiresLogin: true,
   requiresStreamer: false,
   requireRanksProps: { admin: true }
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageManager, PageTwitchAuth]
+export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth]
