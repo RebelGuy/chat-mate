@@ -638,10 +638,10 @@ Can return the following errors:
 Path: `/streamer`.
 
 ### `GET`
-Gets all streamer usernames in ChatMate.
+Gets all streamer data in ChatMate.
 
 Returns data with the following properties:
-- `streamers` (`string[]`): The array of streamer usernames.
+- `streamers` (`PublicStreamerSummary[]`): The array of streamer data.
 
 ### `GET /application`
 Gets all streamer applications of the user. If the user is an admin, returns all applications of all users.

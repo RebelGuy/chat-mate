@@ -1,5 +1,5 @@
-import { ApiError } from '@rebel/server/controllers/ControllerBase'
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
+import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer/PublicStreamerSummary'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { nonNull } from '@rebel/shared/util/arrays'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
@@ -217,7 +217,7 @@ export type LoginContextType = {
 
   /** Is streamer anywhere, regardless of the current streamer context. */
   isStreamer: boolean
-  allStreamers: string[]
+  allStreamers: PublicStreamerSummary[]
 
   /** The streamer context. */
   streamer: string | null

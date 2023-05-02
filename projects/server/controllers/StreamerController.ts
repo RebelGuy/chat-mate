@@ -1,5 +1,6 @@
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer/PublicStreamerSummary'
 import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
@@ -9,15 +10,16 @@ import StreamerChannelService from '@rebel/server/services/StreamerChannelServic
 import StreamerService from '@rebel/server/services/StreamerService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { EmptyObject } from '@rebel/shared/types'
-import { single } from '@rebel/shared/util/arrays'
+import { single, zipOn, zipOnStrict } from '@rebel/shared/util/arrays'
 import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
-export type GetStreamersResponse = ApiResponse<{ streamers: string[] }>
+export type GetStreamersResponse = ApiResponse<{ streamers: PublicStreamerSummary[] }>
 
 export type CreateApplicationRequest = ApiRequest<{ message: string }>
 export type CreateApplicationResponse = ApiResponse<{ newApplication: PublicStreamerApplication }>
@@ -55,6 +57,7 @@ type Deps = ControllerDependencies<{
   streamerChannelService: StreamerChannelService
   streamerTwitchEventService: StreamerTwitchEventService
   masterchatService: MasterchatService
+  livestreamStore: LivestreamStore
 }>
 
 @Path(buildPath('streamer'))
@@ -67,6 +70,7 @@ export default class StreamerController extends ControllerBase {
   private readonly streamerChannelService: StreamerChannelService
   private readonly streamerTwitchEventService: StreamerTwitchEventService
   private readonly masterchatService: MasterchatService
+  private readonly livestreamStore: LivestreamStore
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -77,6 +81,7 @@ export default class StreamerController extends ControllerBase {
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.streamerTwitchEventService = deps.resolve('streamerTwitchEventService')
     this.masterchatService = deps.resolve('masterchatService')
+    this.livestreamStore = deps.resolve('livestreamStore')
   }
 
   @GET
@@ -84,9 +89,21 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /')
 
     try {
+      const livestreamPromise = this.livestreamStore.getActiveLivestreams()
       const streamers = await this.streamerStore.getStreamers()
       const users = await this.accountStore.getRegisteredUsersFromIds(streamers.map(s => s.registeredUserId))
-      return builder.success({ streamers: users.map(user => user.username) })
+      const livestreams = await livestreamPromise
+
+      const streamerUsers = zipOnStrict(streamers, users, 'registeredUserId', 'id', 'registeredUserId')
+      const streamerSummary: PublicStreamerSummary[] = streamerUsers.map(streamer => {
+        const livestream = livestreams.find(stream => stream.streamerId === streamer.id)
+        return {
+          username: streamer.username,
+          isLive: livestream != null && livestream.start != null && livestream.end == null
+        }
+      })
+
+      return builder.success({ streamers: streamerSummary })
     } catch (e: any) {
       return builder.failure(e)
     }

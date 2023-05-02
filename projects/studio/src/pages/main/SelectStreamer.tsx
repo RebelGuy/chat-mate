@@ -1,5 +1,6 @@
 import { Help } from '@mui/icons-material'
 import { Alert, Box, FormControl, Icon, InputLabel, MenuItem, Select, Tooltip } from '@mui/material'
+import { nonNull } from '@rebel/shared/util/arrays'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { pages } from '@rebel/studio/pages/navigation'
@@ -12,7 +13,7 @@ export default function SelectStreamer () {
   const navigate = useNavigate()
   const { streamer: streamerParam } = useParams()
 
-  const isUnknownStreamer = streamerParam != null && loginContext.isHydrated && !loginContext.allStreamers.includes(streamerParam)
+  const isUnknownStreamer = streamerParam != null && loginContext.isHydrated && !loginContext.allStreamers.map(s => s.username).includes(streamerParam)
 
   useEffect(() => {
     const streamer = loginContext.streamer
@@ -40,6 +41,11 @@ export default function SelectStreamer () {
     return null
   }
 
+  const currentStreamer = loginContext.allStreamers.find(streamer => streamer.username === loginContext.username)
+  const liveStreamers = loginContext.allStreamers.filter(streamer => streamer.username !== loginContext.username && streamer.isLive)
+  const otherStreamers = loginContext.allStreamers.filter(streamer => streamer.username !== loginContext.username && !streamer.isLive)
+  const allStreamers = nonNull([currentStreamer, ...liveStreamers, ...otherStreamers])
+
   return (
     <Box sx={{ mt: 2 }}>
       {isUnknownStreamer && <InvalidStreamer streamerName={streamerParam} />}
@@ -48,7 +54,7 @@ export default function SelectStreamer () {
           <InputLabel>Streamer</InputLabel>
           <Select error={isUnknownStreamer} value={loginContext.streamer ?? ''} onChange={e => loginContext.setStreamer(e.target.value)} label="Streamer">
             <MenuItem value=""><em>None</em></MenuItem>
-            {loginContext.allStreamers.map(streamer => <MenuItem key={streamer} value={streamer}>{streamer}</MenuItem>)}
+            {allStreamers.map(streamer => <MenuItem key={streamer.username} value={streamer.username}>{streamer.username}{streamer.isLive ? ' 🔴' : ''}</MenuItem>)}
           </Select>
         </FormControl>
         <div style={{ padding: 8, paddingTop: 16, margin: 'auto' }}>
