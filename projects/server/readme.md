@@ -51,6 +51,7 @@ Define `local.env`, `debug.env` and `release.env` files that set the following e
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `STUDIO_URL`: The URL to ChatMate Studio (not ending in `/`).
+- `CHAT_MATE_REGISTERED_USER_NAME`: The registered username of the official ChatMate account on the server.
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube. If this is ever changed, you will need to re-authenticate and purge all Context Tokens from the `chat_message` table.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
@@ -291,10 +292,11 @@ Returns data with the following properties:
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
 
-### `GET /youtube/channel`
-Gets info about the ChatMate admin YouTube channel.
+### `GET /username`
+Gets the username of the official ChatMate registered account.
 
-Returns a `PublicChannel` object.
+Returns data with the following properties:
+- `username` (`string`): The username of the registered account.
 
 ## Donation Endpoints
 Path: `/donation`.

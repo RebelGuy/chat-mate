@@ -2,13 +2,12 @@ import { ApiRequest, ApiResponse, buildPath, ControllerBase, Endpoint, PublicObj
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
-import { GET, PATCH, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
+import { GET, PATCH, Path, PreProcessor, QueryParam } from 'typescript-rest'
 import env from '@rebel/server/globals'
 import ChatMateControllerReal, { ChatMateControllerDeps } from '@rebel/server/controllers/ChatMateControllerReal'
 import ChatMateControllerFake from '@rebel/server/controllers/ChatMateControllerFake'
 import { EmptyObject } from '@rebel/shared/types'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
-import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 
 export type PingResponse = ApiResponse<EmptyObject>
 
@@ -37,16 +36,16 @@ export type GetMasterchatAuthenticationResponse = ApiResponse<{ authenticated: b
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type GetMasterchatAuthenticationEndpoint = Endpoint<{}, GetMasterchatAuthenticationResponse>
 
-export type GetChatMateYoutubeChannelResponse = ApiResponse<PublicChannel>
+export type GetChatMateRegisteredUsernameResponse = ApiResponse<{ username: string }>
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type GetChatMateYoutubeChannelEndpoint = Endpoint<{}, GetChatMateYoutubeChannelResponse>
+export type GetChatMateRegisteredUsernameEndpoint = Endpoint<{}, GetChatMateRegisteredUsernameResponse>
 
 export interface IChatMateController {
   getStatus: GetStatusEndpoint
   getEvents: GetEventsEndpoint
   setActiveLivestream: SetActiveLivestreamEndpoint
   getMasterchatAuthentication: GetMasterchatAuthenticationEndpoint
-  getChatMateYoutubeChannel: GetChatMateYoutubeChannelEndpoint
+  getChatMateRegisteredUsername: GetChatMateRegisteredUsernameEndpoint
 }
 
 @Path(buildPath('chatMate'))
@@ -127,11 +126,11 @@ export default class ChatMateController extends ControllerBase {
   }
 
   @GET
-  @Path('/youtube/channel')
-  public async getChatMateYoutubeChannel (): Promise<GetChatMateYoutubeChannelResponse> {
-    const builder = this.registerResponseBuilder<GetChatMateYoutubeChannelResponse>('GET /youtube/channel')
+  @Path('/username')
+  public async getChatMateRegisteredUsername (): Promise<GetChatMateRegisteredUsernameResponse> {
+    const builder = this.registerResponseBuilder<GetChatMateRegisteredUsernameResponse>('GET /username')
     try {
-      return await this.implementation.getChatMateYoutubeChannel({ builder })
+      return await this.implementation.getChatMateRegisteredUsername({ builder })
     } catch (e: any) {
       return builder.failure(404, e)
     }

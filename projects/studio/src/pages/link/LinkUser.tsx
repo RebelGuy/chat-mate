@@ -1,5 +1,5 @@
 import AdminLink from '@rebel/studio/pages/link/AdminLink'
-import { addLinkedChannel, getLinkedChannels, getPrimaryChannels } from '@rebel/studio/utility/api'
+import { addLinkedChannel, getChatMateRegisteredUsername, getLinkedChannels, getPrimaryChannels } from '@rebel/studio/utility/api'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LinkedChannels from '@rebel/studio/pages/link/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/pages/link/LinkHistory'
@@ -12,6 +12,7 @@ import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import useRequest, { onConfirmRequest } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
+import StreamerLinks from '@rebel/studio/components/StreamerLinks'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
@@ -23,6 +24,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
 
   const getLinkedChannelsRequest = useRequest(getLinkedChannels(props.admin_selectedAggregateUserId), { updateKey: key })
   const getPrimaryChannelsRequest = useRequest(getPrimaryChannels(), { updateKey: key })
+  const getChatMateRegisteredUsernameRequest = useRequest(getChatMateRegisteredUsername())
 
   React.useEffect(() => {
     updateKey()
@@ -55,7 +57,9 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
           </li>
           <li>
             <b>Prove channel ownership. </b>
-              Paste the provided command in the YouTube/Twitch chat (corresponding to the platform of the channel you want to link), shown in the Link History section.
+            Paste the provided command shown in the Link History section to the YouTube/Twitch chat (corresponding to the platform of the channel you want to link).
+            You can use either the official ChatMate channels below, or any other streamer channel registered on Chatmate:
+            {getChatMateRegisteredUsernameRequest.data != null && <StreamerLinks streamerName={getChatMateRegisteredUsernameRequest.data.username} />}
           </li>
           <li>
             <b>Wait for a few seconds. </b>
@@ -70,7 +74,8 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
             onCreated={updateKey}
           />
         }
-        <ApiLoading requestObj={getLinkedChannelsRequest} initialOnly />
+        <ApiLoading requestObj={[getLinkedChannelsRequest, getChatMateRegisteredUsernameRequest, getPrimaryChannelsRequest]} initialOnly />
+        <ApiError requestObj={[getLinkedChannelsRequest, getChatMateRegisteredUsernameRequest, getPrimaryChannelsRequest]} />
       </>}
 
       {/* allow admin to link an aggregate user to the selected default user */}

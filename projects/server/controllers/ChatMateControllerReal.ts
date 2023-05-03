@@ -1,4 +1,3 @@
-import { LiveStatus } from '@rebel/masterchat'
 import { ControllerBase, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
@@ -6,10 +5,10 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import StatusService from '@rebel/server/services/StatusService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
-import { filterTypes, nonNull, single, unique, zipOnStrictMany } from '@rebel/shared/util/arrays'
+import { filterTypes, nonNull, unique } from '@rebel/shared/util/arrays'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
-import { GetChatMateYoutubeChannelEndpoint, GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
-import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
+import { GetChatMateRegisteredUsernameEndpoint, GetEventsEndpoint, GetMasterchatAuthenticationEndpoint, GetStatusEndpoint, IChatMateController, SetActiveLivestreamEndpoint } from '@rebel/server/controllers/ChatMateController'
+import ChannelService, {  } from '@rebel/server/services/ChannelService'
 import { userDataToPublicUser } from '@rebel/server/models/user'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
@@ -188,25 +187,8 @@ export default class ChatMateControllerReal extends ControllerBase implements IC
     }))
   }
 
-  public async getChatMateYoutubeChannel (args: In<GetChatMateYoutubeChannelEndpoint>): Out<GetChatMateYoutubeChannelEndpoint> {
-    const streamer = await this.streamerStore.getStreamerByName(this.chatMateRegisteredUserName)
-    if (streamer == null) {
-      throw new Error('The ChatMate admin channel is not a streamer.')
-    }
-
-    const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamer!.id]).then(single)
-    const channel = primaryChannels.youtubeChannel
-    if (channel == null) {
-      throw new Error('The ChatMate account does not have a primary YouTube channel set.')
-    }
-
-    return args.builder.success({
-      channelId: channel.platformInfo.channel.id,
-      defaultUserId: channel.defaultUserId,
-      displayName: getUserName(channel),
-      externalIdOrUserName: getExternalIdOrUserName(channel),
-      platform: channel.platformInfo.platform
-    })
+  public getChatMateRegisteredUsername (args: In<GetChatMateRegisteredUsernameEndpoint>): Out<GetChatMateRegisteredUsernameEndpoint> {
+    return promised(args.builder.success({ username: this.chatMateRegisteredUserName }))
   }
 
   private async getLivestreamStatus (streamerId: number): Promise<PublicLivestreamStatus | null> {

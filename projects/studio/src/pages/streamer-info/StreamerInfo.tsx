@@ -1,10 +1,10 @@
-import { Button } from '@mui/material'
 import { Box } from '@mui/system'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
+import StreamerLinks from '@rebel/studio/components/StreamerLinks'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { getChannelUrl, isLive } from '@rebel/studio/utility/misc'
+import { isLive } from '@rebel/studio/utility/misc'
 import { useContext, useEffect } from 'react'
 
 export default function StreamerInfo () {
@@ -40,17 +40,6 @@ export default function StreamerInfo () {
       </>}
     </Box>
 
-    <Box>
-      {info.youtubeChannel != null && <>
-        <Button href={getChannelUrl(info.youtubeChannel)} sx={{ mr: 2 }}>
-          {loginContext.streamer} on YouTube
-        </Button>
-      </>}
-      {info.twitchChannel != null && <>
-        <Button href={getChannelUrl(info.twitchChannel)}>
-          {loginContext.streamer} on Twitch
-        </Button>
-      </>}
-    </Box>
+    <StreamerLinks streamerName={loginContext.streamer!} />
   </>
 }
