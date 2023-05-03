@@ -113,7 +113,12 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
       {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId != null ?
         <div>Selected a default user - no link history to show.</div>
         :
-        <LinkHistory updateKey={key} admin_selectedAggregateUserId={props.admin_selectedAggregateUserId} onRefresh={updateKey} />
+        <LinkHistory
+          updateKey={key}
+          admin_selectedAggregateUserId={props.admin_selectedAggregateUserId}
+          onRefresh={updateKey}
+          chatMateUsername={getChatMateRegisteredUsernameRequest.data?.username}
+        />
       }
       {/* These must be null to avoid infinite recursion */}
       {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
