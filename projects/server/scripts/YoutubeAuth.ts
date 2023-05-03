@@ -1,7 +1,7 @@
 // https://www.electronjs.org/docs/api/session
 import { Dependencies } from '@rebel/shared/context/context'
 import DbProvider from '@rebel/server/providers/DbProvider'
-import { DB } from '@rebel/server/scripts/consts'
+import { CHANNEL_ID, DB } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { app, BrowserWindow } from 'electron'
 
@@ -74,7 +74,9 @@ async function createWindow () {
           new Promise(resolve => setTimeout(resolve, 500))
             .then(() => {
               // this element is now available
-              return document.getElementById("endpoint")?.href
+              // getting the element by ID works in the normal browser, but not in electron. here's a workaround:
+              return Array.from(document.getElementsByClassName("yt-simple-endpoint style-scope ytd-compact-link-renderer"))
+                .filter(el => el.id === "endpoint" && el.nodeName === 'A' && el.href.includes("/channel/"))[0].href
             })
         `)
         if (channelUrl == null) {
@@ -86,8 +88,12 @@ async function createWindow () {
           throw new Error(`Invalid channelId: ${channelId} (from URL ${channelUrl})`)
         }
         console.log(`Successfully retrieved channel ID ${channelId} from the Youtube page.`)
+
+        if (channelId !== CHANNEL_ID) {
+          throw new Error(`Expected a channel ID of ${CHANNEL_ID}. Please ensure you are logged into the correct YouTube account.`)
+        }
       } catch (ex: any) {
-        console.error('Failed to get channel ID from the page. Aborting.', ex)
+        console.error('Failed to complete YouTube auth.', ex)
         app.quit()
         return
       }
