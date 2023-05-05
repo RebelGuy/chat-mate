@@ -250,40 +250,6 @@ Pings the server.
 
 Returns data with no properties.
 
-### `GET /status`
-Gets the latest status information.
-
-Returns data with the following properties:
-- `livestreamStatus` (`PublicLivestreamStatus | null`): Status information relating to the active public livestream. Null if there is no active public livestream.
-- `youtubeApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
-- `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
-
-### `GET /events`
-Gets the events that have occurred since the specified time.
-
-Query parameters:
-- `since` (`number`): *Required.* Gets only events **after** the given time (unix ms).
-
-Returns data with the following properties:
-- `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp, sorted by time in ascending order.
-
-Can return the following errors:
-- `400`: When the required query parameters have not been provided.
-
-### `PATCH /livestream`
-Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
-
-Request data (body):
-- `livestream` (`string | null`): *Required.* The livestream link or id to set as active. If `null`, the active stream will be deactivated.
-
-Returns data with the following properties:
-- `livestreamLink` (`string | null`): The new livestream link.
-
-Can return the following errors:
-- `400`: When the request data is not sent, or is formatted incorrectly.
-- `422`: When an active livestream already exists.
-
 ### `GET /masterchat/authentication`
 Check whether the currently active Masterchat instance is authenticated.
 
@@ -766,6 +732,40 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `403`: When the logged-in user is not a streamer.
+
+### `GET /status`
+Gets the latest status information.
+
+Returns data with the following properties:
+- `livestreamStatus` (`PublicLivestreamStatus | null`): Status information relating to the active public livestream. Null if there is no active public livestream.
+- `youtubeApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
+- `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
+
+### `GET /events`
+Gets the events that have occurred since the specified time.
+
+Query parameters:
+- `since` (`number`): *Required.* Gets only events **after** the given time (unix ms).
+
+Returns data with the following properties:
+- `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp, sorted by time in ascending order.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+
+### `PATCH /livestream`
+Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
+
+Request data (body):
+- `livestream` (`string | null`): *Required.* The livestream link or id to set as active. If `null`, the active stream will be deactivated.
+
+Returns data with the following properties:
+- `livestreamLink` (`string | null`): The new livestream link.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `422`: When an active livestream already exists.
 
 ## User Endpoints
 Path: `/user`.

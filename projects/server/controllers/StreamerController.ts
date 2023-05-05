@@ -1,13 +1,24 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth, requireRank } from '@rebel/server/controllers/preProcessors'
+import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
+import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
+import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
+import { PublicLevelUpData } from '@rebel/server/controllers/public/event/PublicLevelUpData'
+import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/event/PublicNewTwitchFollowerData'
+import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
+import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer/PublicStreamerSummary'
 import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
 import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
+import { toPublicMessagePart } from '@rebel/server/models/chat'
 import { livestreamToPublic } from '@rebel/server/models/livestream'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
-import { channelToPublic } from '@rebel/server/models/user'
+import { channelToPublic, userDataToPublicUser } from '@rebel/server/models/user'
 import { getUserName } from '@rebel/server/services/ChannelService'
+import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
+import LivestreamService from '@rebel/server/services/LivestreamService'
 import MasterchatService from '@rebel/server/services/MasterchatService'
+import StatusService from '@rebel/server/services/StatusService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import StreamerService from '@rebel/server/services/StreamerService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
@@ -16,10 +27,12 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { EmptyObject } from '@rebel/shared/types'
-import { single, zipOnStrict } from '@rebel/shared/util/arrays'
+import { filterTypes, nonNull, single, unique, zipOnStrict } from '@rebel/shared/util/arrays'
 import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
-import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
+import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
+import { DELETE, GET, PATCH, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 export type GetStreamersResponse = ApiResponse<{ streamers: PublicStreamerSummary[] }>
 
@@ -51,6 +64,23 @@ export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
 
 export type GetYoutubeStatusResponse = ApiResponse<{ chatMateIsModerator: boolean, timestamp: number }>
 
+export type GetStatusResponse = ApiResponse<{
+  livestreamStatus: PublicObject<PublicLivestreamStatus> | null
+  youtubeApiStatus: PublicObject<PublicApiStatus>
+  twitchApiStatus: PublicObject<PublicApiStatus>
+}>
+
+type GetEventsResponse = ApiResponse<{
+  // include the timestamp so it can easily be used for the next request
+  reusableTimestamp: number
+  events: PublicObject<PublicChatMateEvent>[]
+}>
+
+export type GetEventsRequest = ApiRequest<{ since: number }>
+
+export type SetActiveLivestreamRequest = ApiRequest<{ livestream: string | null }>
+export type SetActiveLivestreamResponse = ApiResponse<{ livestreamLink: string | null }>
+
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
   streamerService: StreamerService
@@ -60,6 +90,10 @@ type Deps = ControllerDependencies<{
   streamerTwitchEventService: StreamerTwitchEventService
   masterchatService: MasterchatService
   livestreamStore: LivestreamStore
+  masterchatStatusService: StatusService
+  twurpleStatusService: StatusService
+  chatMateEventService: ChatMateEventService
+  livestreamService: LivestreamService
 }>
 
 @Path(buildPath('streamer'))
@@ -73,6 +107,10 @@ export default class StreamerController extends ControllerBase {
   private readonly streamerTwitchEventService: StreamerTwitchEventService
   private readonly masterchatService: MasterchatService
   private readonly livestreamStore: LivestreamStore
+  private readonly masterchatStatusService: StatusService
+  private readonly twurpleStatusService: StatusService
+  private readonly chatMateEventService: ChatMateEventService
+  private readonly livestreamService: LivestreamService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -84,6 +122,10 @@ export default class StreamerController extends ControllerBase {
     this.streamerTwitchEventService = deps.resolve('streamerTwitchEventService')
     this.masterchatService = deps.resolve('masterchatService')
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.masterchatStatusService = deps.resolve('masterchatStatusService')
+    this.twurpleStatusService = deps.resolve('twurpleStatusService')
+    this.chatMateEventService = deps.resolve('chatMateEventService')
+    this.livestreamService = deps.resolve('livestreamService')
   }
 
   @GET
@@ -397,6 +439,151 @@ export default class StreamerController extends ControllerBase {
       return builder.success({ chatMateIsModerator: status.isModerator, timestamp: status.time })
     } catch (e: any) {
       return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('status')
+  @PreProcessor(requireStreamer)
+  public async getStatus (): Promise<GetStatusResponse> {
+    const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status')
+    try {
+      const livestreamStatus = await this.getLivestreamStatus(this.getStreamerId())
+      const youtubeApiStatus = this.masterchatStatusService.getApiStatus()
+      const twitchApiStatus = this.twurpleStatusService.getApiStatus()
+
+      return builder.success({ livestreamStatus, youtubeApiStatus, twitchApiStatus })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('events')
+  @PreProcessor(requireStreamer)
+  @PreProcessor(requireRank('owner'))
+  public async getEvents (
+    @QueryParam('since') since: number
+  ): Promise<GetEventsResponse> {
+    const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events')
+    if (since == null) {
+      return builder.failure(400, `A value for 'since' must be provided.`)
+    }
+
+    try {
+      const streamerId = this.getStreamerId()
+
+      const events = await this.chatMateEventService.getEventsSince(streamerId, since)
+
+      // pre-fetch user data for `levelUp` and `donation` events
+      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.primaryUserId)))
+      const allData = await this.apiService.getAllData(primaryUserIds)
+
+      let result: PublicChatMateEvent[] = []
+      for (const event of events) {
+        let levelUpData: PublicLevelUpData | null = null
+        let newTwitchFollowerData: PublicNewTwitchFollowerData | null = null
+        let donationData: PublicDonationData | null = null
+
+        if (event.type === 'levelUp') {
+          const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
+          levelUpData = {
+            newLevel: event.newLevel,
+            oldLevel: event.oldLevel,
+            user: user
+          }
+        } else if (event.type === 'newTwitchFollower') {
+          newTwitchFollowerData = {
+            displayName: event.displayName
+          }
+        } else if (event.type === 'donation') {
+          const user: PublicUser | null = event.primaryUserId == null ? null : userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
+          donationData = {
+            id: event.donation.id,
+            time: event.donation.time.getTime(),
+            amount: event.donation.amount,
+            formattedAmount: event.donation.formattedAmount,
+            currency: event.donation.currency,
+            name: event.donation.name,
+            messageParts: event.donation.messageParts.map(toPublicMessagePart),
+            linkedUser: user
+          }
+        } else {
+          assertUnreachable(event)
+        }
+
+        result.push({
+          type: event.type,
+          timestamp: event.timestamp,
+          levelUpData,
+          newTwitchFollowerData,
+          donationData
+        })
+      }
+
+      return builder.success({
+        reusableTimestamp: result.at(-1)?.timestamp ?? since,
+        events: result
+      })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @PATCH
+  @Path('livestream')
+  @PreProcessor(requireStreamer)
+  @PreProcessor(requireRank('owner'))
+  public async setActiveLivestream (request: SetActiveLivestreamRequest): Promise<SetActiveLivestreamResponse> {
+    const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream')
+    if (request == null || request.livestream === undefined) {
+      return builder.failure(400, `A value for 'livestream' must be provided or set to null.`)
+    }
+
+    try {
+      let liveId: string | null
+      if (request.livestream == null) {
+        liveId = null
+      } else {
+        try {
+          liveId = getLiveId(request.livestream)
+        } catch (e: any) {
+          return builder.failure(400, `Cannot parse the liveId: ${e.message}`)
+        }
+      }
+
+      const streamerId = this.getStreamerId()
+      const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
+      if (activeLivestream == null && liveId != null) {
+        await this.livestreamService.setActiveLivestream(streamerId, liveId)
+      } else if (activeLivestream != null && liveId == null) {
+        await this.livestreamService.deactivateLivestream(streamerId)
+      } else if (!(activeLivestream == null && liveId == null || activeLivestream!.liveId === liveId)) {
+        return builder.failure(422, `Cannot set active livestream ${liveId} for streamer ${streamerId} because another livestream is already active.`)
+      }
+
+      return builder.success({ livestreamLink: liveId == null ? null : getLivestreamLink(liveId) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  private async getLivestreamStatus (streamerId: number): Promise<PublicLivestreamStatus | null> {
+    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    if (activeLivestream == null) {
+      return null
+    }
+
+    const publicLivestream = livestreamToPublic(activeLivestream)
+    let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
+    if (publicLivestream.status === 'live') {
+      viewers = await this.livestreamStore.getLatestLiveCount(publicLivestream.id)
+    }
+
+    return {
+      livestream: publicLivestream,
+      youtubeLiveViewers: viewers?.viewCount ?? null,
+      twitchLiveViewers: viewers?.twitchViewCount ?? null,
     }
   }
 }
