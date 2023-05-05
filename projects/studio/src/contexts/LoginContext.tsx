@@ -30,25 +30,25 @@ export function LoginProvider (props: Props) {
   const getGlobalRanksRequest = useRequest(getGlobalRanks(), {
     onDemand: true,
     loginToken: loginToken,
-    onError: console.log
+    onError: (error, type) => console.error(error)
   })
   const getRanksForStreamerRequest = useRequest(getRanksForStreamer(), {
     onDemand: true,
     loginToken: loginToken,
     streamer: selectedStreamer,
-    onError: console.log
+    onError: (error, type) => console.error(error)
   })
   const getUserRequest = useRequest(getUser(), {
     onDemand: true,
     loginToken: loginToken,
     streamer: selectedStreamer,
-    onError: console.log
+    onError: (error, type) => console.error(error)
   })
   const getStreamersRequest = useRequest(getStreamers(), {
     updateKey: streamerListUpdateKey,
     loginToken: loginToken,
     onRequest: () => loginToken == null,
-    onError: console.log
+    onError: (error, type) => console.error(error)
   })
 
   function onSetLogin (usernameToSet: string, token: string, isStreamerToSet: boolean) {
@@ -187,7 +187,7 @@ export function LoginProvider (props: Props) {
     // this ensures we don't end up being un-hydrated if not selecting a streamer
     if (selectedStreamer == null) {
       getRanksForStreamerRequest.reset({ ranks: [] })
-      getUserRequest.reset(undefined, { errorCode: 500, errorType: 'Unknown', message: 'No data' })
+      getUserRequest.reset(undefined, { errorCode: 500, errorType: 'Unknown', internalErrorType: 'Unknown', message: 'No data' })
       return
     }
 

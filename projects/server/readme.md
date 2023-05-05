@@ -126,6 +126,7 @@ A response contains the following properties:
 - `error` (`object`): Only included if `success` is `false`. Contains the following properties:
   - `errorCode` (`number`): The HTTP error code that most closely matches the type of problem encountered.
   - `errorType` (`string`): The general type of error encounterd.
+  - `internalErrorType` (`string`): The internal error type that was encountered, for example, the name of the CustomError classes in `/shared/util/error.ts`.
   - `message` (`string`): An optional error message describing what went wrong.
 
 Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.

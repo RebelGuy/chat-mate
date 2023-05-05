@@ -9,6 +9,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
 import { YoutubeChannelInfo, Livestream, TwitchChannelInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
+import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
 
 const livestream: Livestream = {
   id: 1,
@@ -574,10 +575,10 @@ export default () => {
       ]})
     }
 
-    test('Throws if no chat message was found for the stream for any of the given users', async () => {
+    test(`Throws ${ChatMessageForStreamerNotFoundError.name} if no chat message was found for the stream for any of the given users`, async () => {
       await setupMessages()
 
-      await expect(() => chatStore.getLastChatOfUsers(streamer1, [user3])).rejects.toThrow()
+      await expect(() => chatStore.getLastChatOfUsers(streamer1, [user3])).rejects.toThrowError(ChatMessageForStreamerNotFoundError)
     })
 
     test('returns the latest chat item of all default users in the streamer context', async () => {

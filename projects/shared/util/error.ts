@@ -160,6 +160,12 @@ export class NoContextTokenError extends CustomError {
   }
 }
 
+export class ChatMessageForStreamerNotFoundError extends CustomError {
+  constructor (message: string) {
+    super(ChatMessageForStreamerNotFoundError.prototype, message)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

@@ -245,6 +245,7 @@ const main = async () => {
             error: {
               errorCode: res.statusCode as any,
               errorType: res.statusMessage ?? 'Internal Server Error',
+              internalErrorType: 'Error',
               message: body
             }
           }

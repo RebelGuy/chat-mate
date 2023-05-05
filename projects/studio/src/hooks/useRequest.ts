@@ -193,7 +193,7 @@ export default function useRequest<
       }
 
       setData(null)
-      const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', message: e.message }
+      const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', internalErrorType: 'Unknown', message: e.message }
       setError(error)
       onError(error, type)
     } finally {
