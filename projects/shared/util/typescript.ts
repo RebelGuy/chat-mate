@@ -99,6 +99,11 @@ export function firstOrDefault<T, Default> (map: Map<any, T>, def: Default): T |
 
 export function waitUntil (predicate: () => boolean, pollInterval: number, timeout: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
+    if (predicate()) {
+      resolve()
+      return
+    }
+
     const start = new Date().getTime()
 
     const interval = setInterval(() => {

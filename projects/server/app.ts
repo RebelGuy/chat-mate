@@ -113,9 +113,11 @@ const main = async () => {
   const twitchUsername = env('twitchUsername')
 
   let isAdministrativeMode = false
+  let isContextInitialised = false
 
   const globalContext = ContextProvider.create()
     .withVariable('isAdministrativeMode', () => isAdministrativeMode)
+    .withVariable('isContextInitialised', () => isContextInitialised)
     .withObject('app', app)
     .withProperty('port', port)
     .withProperty('studioUrl', studioUrl)
@@ -375,6 +377,8 @@ const main = async () => {
 
     return 'abort'
   })
+
+  isContextInitialised = true
 
   app.listen(port, () => {
     logContext.logInfo(`Server is listening on ${port}`)

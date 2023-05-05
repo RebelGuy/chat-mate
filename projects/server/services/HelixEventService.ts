@@ -23,6 +23,7 @@ import { createLogContext, LogContext } from '@rebel/shared/ILogService'
 import { LogLevel } from '@twurple/chat/lib'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
+import { waitUntil } from '@rebel/shared/util/typescript'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -53,6 +54,7 @@ type Deps = Dependencies<{
   eventDispatchService: EventDispatchService
   twitchClientId: string
   isAdministrativeMode: () => boolean
+  isContextInitialised: () => boolean
   dateTimeHelpers: DateTimeHelpers
   authStore: AuthStore
   twurpleAuthProvider: TwurpleAuthProvider
@@ -79,11 +81,13 @@ export default class HelixEventService extends ContextClass {
   private readonly eventDispatchService: EventDispatchService
   private readonly twitchClientId: string
   private readonly isAdministrativeMode: () => boolean
+  private readonly isContextInitialised: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly authStore: AuthStore
   private readonly twurpleAuthProvider: TwurpleAuthProvider
 
-  private listener: EventSubHttpListener | null
+  private initialisedStreamerEvents: boolean = false
+  private listener: EventSubHttpListener | null = null
   private eventSubBase!: EventSubHttpBase
   private eventSubApi!: HelixEventSubApi
 
@@ -114,14 +118,13 @@ export default class HelixEventService extends ContextClass {
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.twitchClientId = deps.resolve('twitchClientId')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
+    this.isContextInitialised = deps.resolve('isContextInitialised')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.authStore = deps.resolve('authStore')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
-
-    this.listener = null
   }
 
-  public override async initialise () {
+  public override initialise () {
     if (this.disableExternalApis) {
       return
     } else if (this.isAdministrativeMode()) {
@@ -129,45 +132,51 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
-    // https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html
-    // we have to use the clientCredentialsApiClient, for some reason the refreshing one doesn't work
-    const client = this.twurpleApiClientProvider.getClientApi()
-    this.eventSubApi = client.eventSub
+    this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
+    this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
 
-    if (this.nodeEnv === 'local') {
-      // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
-      // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
-      // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
-      await this.eventSubApi.deleteAllSubscriptions()
+    // there is no need to initialise everything right now - wait for the server to be set up first,
+    // then subscribe to events (this could take a long time if there are many streamers)
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    setTimeout(async () => {
+      await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
+      this.logService.logInfo(this, 'Starting initial subscriptions to Helix events...')
 
-      this.listener = this.createNewListener()
-      this.eventSubBase = this.listener
-      this.listener.start()
-      this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
-      this.subscribeToGlobalEvents()
-      await this.initialiseSubscriptions()
-      this.logService.logInfo(this, 'Successfully subscribed to Helix events via the EventSub API [Ngrok listener]')
-    } else {
-      // can't use the listener - have to inject the middleware
-      const middleware = new EventSubMiddleware({
-        apiClient: this.twurpleApiClientProvider.getClientApi(),
-        pathPrefix: '/twitch',
-        hostName: this.hostName!,
-        secret: this.getSecret(),
-        logger: {
-          custom: {
-            log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
+      // https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html
+      // we have to use the clientCredentialsApiClient, for some reason the refreshing one doesn't work
+      const client = this.twurpleApiClientProvider.getClientApi()
+      this.eventSubApi = client.eventSub
+
+      if (this.nodeEnv === 'local') {
+        // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
+        // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
+        // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
+        await this.eventSubApi.deleteAllSubscriptions()
+
+        this.listener = this.createNewListener()
+        this.eventSubBase = this.listener
+        this.listener.start()
+        this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
+        this.subscribeToGlobalEvents()
+        await this.initialiseSubscriptions()
+        this.logService.logInfo(this, 'Finished initial subscriptions to Helix events via the EventSub API [Ngrok listener]')
+      } else {
+        // can't use the listener - have to inject the middleware
+        const middleware = new EventSubMiddleware({
+          apiClient: this.twurpleApiClientProvider.getClientApi(),
+          pathPrefix: '/twitch',
+          hostName: this.hostName!,
+          secret: this.getSecret(),
+          logger: {
+            custom: {
+              log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
+            }
           }
-        }
-      })
-      this.eventSubBase = middleware
-      middleware.apply(this.app)
-      this.subscribeToGlobalEvents()
+        })
+        this.eventSubBase = middleware
+        middleware.apply(this.app)
+        this.subscribeToGlobalEvents()
 
-      // hack: only mark as ready once we are starting the app so no events get lost
-      // - assume this happens in the next 5 seconds (generous delay - we are in no rush)
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      setTimeout(async () => {
         try {
           await middleware.markAsReady()
 
@@ -184,17 +193,21 @@ export default class HelixEventService extends ContextClass {
         } catch (e) {
           this.logService.logError(this, 'Failed to initialise Helix events.', e)
         }
-      }, 5000)
-      this.logService.logInfo(this, 'Subscription to Helix events via the EventSub API has been set up and will be initialised in 5 seconds')
-    }
+      }
 
-    this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
-    this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
+      this.initialisedStreamerEvents = true
+    }, 0)
   }
 
   public getEventSubscriptions (streamerId: number): Record<EventSubType, SubscriptionStatus> {
     const result = {} as Record<EventSubType, SubscriptionStatus>
-    EVENT_SUB_TYPES.forEach(type => result[type] = { status: 'inactive', lastChange: this.dateTimeHelpers.ts() })
+
+    // set base status for all events, and overwrite it below for the events that we know about
+    const baseStatus: SubscriptionStatus = {
+      status: this.initialisedStreamerEvents ? 'inactive' : 'pending',
+      lastChange: this.dateTimeHelpers.ts()
+    }
+    EVENT_SUB_TYPES.forEach(type => result[type] = baseStatus)
 
     const infos = this.streamerSubscriptionInfos.get(streamerId) ?? {}
     for (const type of EVENT_SUB_TYPES) {
@@ -314,6 +327,8 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
+    // this means that API requests adding a channel will have to wait until we have initialised our events - but that's ok! it won't happen very often
+    await waitUntil(() => this.initialisedStreamerEvents, 500, 5 * 60_000)
     await this.subscribeToChannelEventsByChannelName(data.streamerId, getUserName(data.userChannel))
   }
 
@@ -322,6 +337,7 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
+    await waitUntil(() => this.initialisedStreamerEvents, 500, 5 * 60_000)
     await this.unsubscribeFromChannelEvents(data.streamerId, getUserName(data.userChannel))
   }
 
@@ -345,10 +361,16 @@ export default class HelixEventService extends ContextClass {
 
   private async initialiseSubscriptions () {
     const streamerChannels = await this.streamerChannelService.getAllTwitchStreamerChannels()
-    await Promise.all(streamerChannels.map(c => this.subscribeToChannelEventsByChannelName(c.streamerId, c.twitchChannelName)))
+
+    // initialise the subscriptions one-by-one - I don't know about you, but I don't want to get rate-limited by Twitch
+    for (const streamerChannel of streamerChannels) {
+      await this.subscribeToChannelEventsByChannelName(streamerChannel.streamerId, streamerChannel.twitchChannelName)
+    }
   }
 
   private async subscribeToChannelEventsByChannelName (streamerId: number, channelName: string) {
+    this.logService.logInfo(this, `Starting subscription sequence of Twitch user '${channelName}' (streamer ${streamerId}).`)
+
     const client = this.twurpleApiClientProvider.getClientApi()
     const user = await client.users.getUserByName(channelName)
     if (user == null) {
@@ -361,7 +383,6 @@ export default class HelixEventService extends ContextClass {
       await this.createSubscriptionSafe(() => {
         return this.eventSubBase.onChannelFollow(user, user, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
       }, streamerId, channelName, 'followers')
-      /* eslint-enable @typescript-eslint/no-misused-promises */
 
       this.logService.logInfo(this, `Finished subscription sequence of Twitch user '${channelName}' (streamer ${streamerId}).`)
     } catch (e: any) {
@@ -438,6 +459,8 @@ export default class HelixEventService extends ContextClass {
     if (!this.streamerSubscriptionInfos.has(streamerId)) {
       return
     }
+
+    this.logService.logInfo(this, `Starting subscription removal sequence of Twitch user '${channelName}' (streamer ${streamerId}).`)
 
     try {
       const subscriptions = this.streamerSubscriptionInfos.get(streamerId)!
