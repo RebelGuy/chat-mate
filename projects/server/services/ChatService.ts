@@ -127,10 +127,9 @@ export default class ChatService extends ContextClass {
     if (message != null && command == null) {
       try {
         const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
-        if (livestream == null) {
-          throw new Error(`No livestream is active for streamer ${streamerId}`)
+        if (livestream != null) {
+          await this.experienceService.addExperienceForChat(item, streamerId)
         }
-        await this.experienceService.addExperienceForChat(item, streamerId)
       } catch (e: any) {
         this.logService.logError(this, `Successfully added ${platform!} chat item ${item.id} but failed to complete side effects.`, e)
       }
