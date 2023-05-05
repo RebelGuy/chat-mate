@@ -152,16 +152,16 @@ export default function useRequest<
     invariantRef.current = invariant
 
     try {
+      if (onRequest() === true) {
+        return
+      }
+
       if (requiresLogin && loginToken == null) {
         throw new Error('You must be logged in to do that.')
       } else if (requiresStreamer === true && streamer == null) {
         throw new Error('You must select a streamer to do that.')
       } else if (requiresStreamer === 'self' && !loginContext.isStreamer) {
         throw new Error('You must be a streamer to do that.')
-      }
-
-      if (onRequest() === true) {
-        return
       }
 
       setIsLoading(true)

@@ -24,6 +24,7 @@ export function LoginProvider (props: Props) {
   const [isStreamer, setIsStreamer] = React.useState(false)
   const [hasLoadedAuth, setHasLoadedAuth] = React.useState(false)
   const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
+  const [authError, setAuthError] = React.useState<string | null>(null)
 
   const [streamerListUpdateKey, incrementStreamerListUpdateKey] = useUpdateKey({ repeatInterval: 60_000 })
 
@@ -61,6 +62,7 @@ export function LoginProvider (props: Props) {
     setLoginToken(token)
     setUsername(usernameToSet)
     setIsStreamer(isStreamerToSet)
+    setAuthError(null)
   }
 
   function onPersistStreamer (streamer: string | null) {
@@ -104,6 +106,7 @@ export function LoginProvider (props: Props) {
         return
       }
 
+      setAuthError(null)
       const response = await authenticate(storedLoginToken)
         // ugly hack: once authentication has completed, it will trigger the side effect of hydrating everything else.
         // however, this doesn't happen instantly and there are a few frames where we are logged in and not loading, causing the current page to possibly mount.
@@ -127,6 +130,7 @@ export function LoginProvider (props: Props) {
       }
     } catch (e: any) {
       console.error('Unable to login:', e)
+      setAuthError(e.message)
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -216,6 +220,7 @@ export function LoginProvider (props: Props) {
         streamer: selectedStreamer,
         allStreamers: getStreamersRequest.data?.streamers ?? [],
         isStreamer: isStreamer,
+        authError: authError,
         setLogin: onSetLogin,
         setStreamer: onPersistStreamer,
         logout: onClearAuthInfo,
@@ -243,6 +248,7 @@ export type LoginContextType = {
   isLoading: boolean
   loadingData: RefreshableDataType[]
   errors: ApiRequestError[] | null
+  authError: string | null
 
   setLogin: (username: string, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void
