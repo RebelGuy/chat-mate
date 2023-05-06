@@ -101,7 +101,8 @@ export default class MasterchatService extends ApiService {
    * @throws {@link NoYoutubeChatMessagesError}: When the streamer has not yet received any chat messages.
   */
   public async getChatMateModeratorStatus (streamerId: number): Promise<ChatMateModeratorStatus> {
-    // todo CHAT-615: the last message must have been received by the streamer's current primary youtube channel
+    // CHAT-615: it is a known limitation that this last chat message may have been for a different youtube channel (if the streamer changed their primary channel),
+    // which would lead us to check the moderation status of the wrong channel.
     const lastMessage = await this.chatStore.getLastYoutubeChat(streamerId)
     if (lastMessage == null) {
       throw new NoYoutubeChatMessagesError('Unable to find any chat messages for the given streamer.')

@@ -272,6 +272,7 @@ model YoutubeChannel {
   id        Int    @id @default(autoincrement())
   youtubeId String @db.VarChar(63) // unique
 
+  // always a default user
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "youtube_channel_userId_fkey")
 
@@ -310,6 +311,7 @@ model TwitchChannel {
   id       Int    @id @default(autoincrement())
   twitchId String @db.VarChar(32) // unique
 
+  // always a default user
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channel_userId_fkey")
 
@@ -510,6 +512,8 @@ model ChatMessage {
   // youtube and twitch ids are used to ensure we know what actual platform account authored the message.
   // it is possible that they are both null - in that case, this is not a regular livestream message
   // (probably it is a donation message - see below)
+  // note that we need to link the channel directly; linking to the user is not enough to determine the author's channel,
+  // because the user may be an aggregate user.
   youtubeChannelId Int?
   youtubeChannel   YoutubeChannel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
 
