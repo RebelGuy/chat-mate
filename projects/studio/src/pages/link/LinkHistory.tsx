@@ -3,7 +3,6 @@ import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
 import { capitaliseWord } from '@rebel/shared/util/text'
 import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
-import { getChannelUrl } from '@rebel/studio/utility/misc'
 import CopyText from '@rebel/studio/components/CopyText'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
@@ -14,6 +13,7 @@ import ApiLoading from '@rebel/studio/components/ApiLoading'
 import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
 import { useContext } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
+import { getChannelUrlFromPublic } from '@rebel/server/models/user'
 
 type Props = {
   updateKey: number
@@ -61,7 +61,7 @@ export function LinkHistory (props: Props) {
         <TableBody>
           {tokens.map((item, i) => (
             <TableRow key={i}>
-              <TableCell><a href={getChannelUrl(item)}>{item.displayName}</a></TableCell>
+              <TableCell><a href={getChannelUrlFromPublic(item)}>{item.displayName}</a></TableCell>
               <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
               <TableCell>{capitaliseWord(item.type)}</TableCell>
               <TableCell>{item.status}</TableCell>
@@ -93,9 +93,9 @@ function ItemMessage (props: { item: PublicLinkHistoryItem, chatMateUsername: st
     let channelUrl: string | null = null
     if (chatMateStreamer != null) {
       if (props.item.platform === 'youtube' && chatMateStreamer.youtubeChannel != null) {
-        channelUrl = chatMateStreamer.currentLivestream?.livestreamLink ?? getChannelUrl(chatMateStreamer.youtubeChannel)
+        channelUrl = chatMateStreamer.currentLivestream?.livestreamLink ?? getChannelUrlFromPublic(chatMateStreamer.youtubeChannel)
       } else if (props.item.platform === 'twitch' && chatMateStreamer.twitchChannel != null) {
-        channelUrl = getChannelUrl(chatMateStreamer.twitchChannel)
+        channelUrl = getChannelUrlFromPublic(chatMateStreamer.twitchChannel)
       }
     }
 

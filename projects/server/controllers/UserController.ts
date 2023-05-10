@@ -5,7 +5,7 @@ import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/Pub
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
-import { registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
+import { channelToPublicChannel, registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
 import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
@@ -126,20 +126,8 @@ export default class UserController extends ControllerBase {
 
         return {
           user: userDataToPublicUser(data),
-          matchedChannel: {
-            channelId: match.platformInfo.channel.id,
-            defaultUserId: match.defaultUserId,
-            externalIdOrUserName: getExternalIdOrUserName(match),
-            platform: match.platformInfo.platform,
-            displayName: getUserName(match)
-          },
-          allChannels: channels.channels.map(c => ({
-            channelId: c.platformInfo.channel.id,
-            defaultUserId: c.defaultUserId,
-            externalIdOrUserName: getExternalIdOrUserName(match),
-            platform: c.platformInfo.platform,
-            displayName: getUserName(c)
-          }))
+          matchedChannel: channelToPublicChannel(match),
+          allChannels: channels.channels.map(channelToPublicChannel)
         }
       })
 
@@ -205,13 +193,7 @@ export default class UserController extends ControllerBase {
             registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser
           }),
           matchedChannel: null,
-          allChannels: channels.channels.map(c => ({
-            channelId: c.platformInfo.channel.id,
-            defaultUserId: c.defaultUserId,
-            platform: c.platformInfo.platform,
-            displayName: getUserName(c),
-            externalIdOrUserName: getExternalIdOrUserName(c)
-          }))
+          allChannels: channels.channels.map(channelToPublicChannel)
         }
       })
 
@@ -243,13 +225,7 @@ export default class UserController extends ControllerBase {
 
       return builder.success({
         registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
-        channels: channels.channels.map<PublicChannel>(channel => ({
-          channelId: channel.platformInfo.channel.id,
-          defaultUserId: channel.defaultUserId,
-          externalIdOrUserName: getExternalIdOrUserName(channel),
-          platform: channel.platformInfo.platform,
-          displayName: getUserName(channel)
-        }))
+        channels: channels.channels.map(channelToPublicChannel)
       })
     } catch (e: any) {
       return builder.failure(e)

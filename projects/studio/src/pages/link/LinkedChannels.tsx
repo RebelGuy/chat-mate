@@ -1,13 +1,11 @@
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { removeLinkedChannel, setPrimaryChannel, unsetPrimaryChannel } from '@rebel/studio/utility/api'
 import * as React from 'react'
-import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { Button, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { Box } from '@mui/system'
-import { getChannelUrl } from '@rebel/studio/utility/misc'
 import useRequest, { onConfirmRequest, RequestResult, SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
@@ -15,6 +13,7 @@ import { GetLinkedChannelsResponse } from '@rebel/server/controllers/UserControl
 import { GetPrimaryChannelsResponse } from '@rebel/server/controllers/StreamerController'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
+import { getChannelUrlFromPublic } from '@rebel/server/models/user'
 
 type Props = {
   channelsRequestObj: RequestResult<SuccessfulResponseData<GetLinkedChannelsResponse>>
@@ -63,7 +62,7 @@ export default function LinkedChannels (props: Props) {
         <TableBody>
           {sortBy(props.channelsRequestObj.data.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map((c, i) =>
             <TableRow key={i} style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
-              <TableCell><a href={getChannelUrl(c)}>{c.displayName}</a></TableCell>
+              <TableCell><a href={getChannelUrlFromPublic(c)}>{c.displayName}</a></TableCell>
               <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
               <RequireRank anyOwner>
                 <TableCell>

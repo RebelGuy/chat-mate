@@ -13,7 +13,7 @@ import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
 import { livestreamToPublic } from '@rebel/server/models/livestream'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
-import { channelToPublic, userDataToPublicUser } from '@rebel/server/models/user'
+import { channelToPublicChannel, userDataToPublicUser } from '@rebel/server/models/user'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
@@ -147,8 +147,8 @@ export default class StreamerController extends ControllerBase {
         return {
           username: streamer.username,
           currentLivestream: livestream == null ? null : livestreamToPublic(livestream),
-          youtubeChannel: youtubeChannel == null ? null : channelToPublic(youtubeChannel),
-          twitchChannel: twitchChannel == null ? null : channelToPublic(twitchChannel)
+          youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),
+          twitchChannel: twitchChannel == null ? null : channelToPublicChannel(twitchChannel)
         }
       })
 

@@ -1,4 +1,5 @@
 import { Alert, Box } from '@mui/material'
+import { getChannelUrlFromPublic } from '@rebel/server/models/user'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
@@ -9,7 +10,6 @@ import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { getYoutubeStatus, getChatMateRegisteredUsername } from '@rebel/studio/utility/api'
-import { getChannelUrl } from '@rebel/studio/utility/misc'
 import { useContext } from 'react'
 
 export default function YoutubeStatus () {
@@ -29,7 +29,7 @@ export default function YoutubeStatus () {
     {getYoutubeStatusRequest.data != null && getChatMateRegisteredUsernameRequest.data != null && <>
       <Box>
         In order to function properly, ChatMate requires that you add the&nbsp;
-        <LinkInNewTab href={getChannelUrl(chatMateInfo!.youtubeChannel!)}><b>{chatMateInfo!.youtubeChannel!.displayName}</b></LinkInNewTab>
+        <LinkInNewTab href={getChannelUrlFromPublic(chatMateInfo!.youtubeChannel!)}><b>{chatMateInfo!.youtubeChannel!.displayName}</b></LinkInNewTab>
         &nbsp;YouTube channel to the standard moderator list (
         <LinkInNewTab href="https://studio.youtube.com/">YouTube Studio</LinkInNewTab>
         &nbsp;-&gt; Settings -&gt; Community).

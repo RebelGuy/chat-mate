@@ -1,4 +1,4 @@
-import { ChatMessage, YoutubeChannelInfo, ChatMessagePart, ChatEmoji, ChatCustomEmoji, ChatText, YoutubeChannel, CustomEmoji, ChatCheer, TwitchChannelInfo, TwitchChannel, CustomEmojiVersion, ChatCommand, ChatUser, RegisteredUser } from '@prisma/client'
+import { ChatCheer, ChatCommand, ChatCustomEmoji, ChatEmoji, ChatMessage, ChatMessagePart, ChatText, ChatUser, CustomEmojiVersion, RegisteredUser, TwitchChannel, TwitchChannelInfo, YoutubeChannel, YoutubeChannelInfo } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
 import { PublicMessageCheer } from '@rebel/server/controllers/public/chat/PublicMessageCheer'
@@ -7,14 +7,11 @@ import { PublicMessageEmoji } from '@rebel/server/controllers/public/chat/Public
 import { PublicMessagePart } from '@rebel/server/controllers/public/chat/PublicMessagePart'
 import { PublicMessageText } from '@rebel/server/controllers/public/chat/PublicMessageText'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
-import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicLevelInfo } from '@rebel/server/controllers/public/user/PublicLevelInfo'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
-import { registeredUserToPublic } from '@rebel/server/models/user'
+import { channelToPublicChannel, registeredUserToPublic } from '@rebel/server/models/user'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
-import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
-import { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { Singular } from '@rebel/shared/types'
 import { sortByLength } from '@rebel/shared/util/arrays'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
@@ -302,14 +299,6 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     throw new Error(`Cannot determine platform of chat item ${chat.id} because both the channel and twitchChannel are null`)
   }
 
-  const channel: PublicChannel = {
-    channelId: userChannel.platformInfo.channel.id,
-    defaultUserId: chat.userId,
-    externalIdOrUserName: getExternalIdOrUserName(userChannel),
-    platform: userChannel.platformInfo.platform,
-    displayName: getUserName(userChannel),
-  }
-
   const levelInfo: PublicLevelInfo = {
     level: levelData.level,
     levelProgress: levelData.levelProgress
@@ -324,7 +313,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
     author: {
       primaryUserId: getPrimaryUserId(chat.user),
       registeredUser: registeredUserToPublic(registeredUser),
-      channel: channel,
+      channel: channelToPublicChannel(userChannel),
       levelInfo,
       activeRanks: activeRanks
     }
