@@ -12,6 +12,7 @@ import LinkDataService from '@rebel/server/services/LinkDataService'
 import LinkService, { UnlinkUserOptions } from '@rebel/server/services/LinkService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
+import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { EmptyObject } from '@rebel/shared/types'
 import { intersection, nonNull, single, symmetricDifference, unique } from '@rebel/shared/util/arrays'
@@ -51,6 +52,8 @@ export type CreateLinkTokenResponse = ApiResponse<{
   token: string
 }>
 
+export type DeleteLinkTokenResponse = ApiResponse<EmptyObject>
+
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
   channelStore: ChannelStore
@@ -59,17 +62,19 @@ type Deps = ControllerDependencies<{
   linkDataService: LinkDataService
   accountStore: AccountStore
   linkService: LinkService
+  linkStore: LinkStore
 }>
 
 @Path(buildPath('user'))
 export default class UserController extends ControllerBase {
-  readonly channelService: ChannelService
-  readonly channelStore: ChannelStore
-  readonly experienceService: ExperienceService
-  readonly rankStore: RankStore
-  readonly linkDataService: LinkDataService
-  readonly accountStore: AccountStore
-  readonly linkService: LinkService
+  private readonly channelService: ChannelService
+  private readonly channelStore: ChannelStore
+  private readonly experienceService: ExperienceService
+  private readonly rankStore: RankStore
+  private readonly linkDataService: LinkDataService
+  private readonly accountStore: AccountStore
+  private readonly linkService: LinkService
+  private readonly linkStore: LinkStore
 
   constructor (deps: Deps) {
     super(deps, 'user')
@@ -80,6 +85,7 @@ export default class UserController extends ControllerBase {
     this.linkDataService = deps.resolve('linkDataService')
     this.accountStore = deps.resolve('accountStore')
     this.linkService = deps.resolve('linkService')
+    this.linkStore = deps.resolve('linkStore')
   }
 
   @GET
@@ -381,6 +387,30 @@ export default class UserController extends ControllerBase {
       } else {
         return builder.failure(e)
       }
+    }
+  }
+
+  @DELETE
+  @Path('link/token')
+  @PreProcessor(requireAuth)
+  public async deleteLinkToken (
+    @QueryParam('linkToken') linkToken: string
+  ): Promise<DeleteLinkTokenResponse> {
+    const builder = this.registerResponseBuilder<DeleteLinkTokenResponse>('DELETE /link/token')
+
+    if (isNullOrEmpty(linkToken)) {
+      return builder.failure(400, 'linkToken must be provided')
+    }
+
+    try {
+      const success = await this.linkStore.deleteLinkToken(this.getCurrentUser().aggregateChatUserId, linkToken)
+      if (!success) {
+        return builder.failure(404, `Could not delete the link token because it doesn't exist`)
+      } else {
+        return builder.success({})
+      }
+    } catch (e: any) {
+      return builder.failure(e)
     }
   }
 }

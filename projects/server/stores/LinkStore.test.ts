@@ -70,6 +70,51 @@ export default () => {
     })
   })
 
+  describe(nameof(LinkStore, 'deleteLinkToken'), () => {
+    test('Returns true if the link token was found for the specified user and not already used up', async () => {
+      const linkToken = 'test token'
+      await db.chatUser.createMany({ data: [{}, {}, {}, {}, {}]})
+      await db.linkToken.createMany({ data: [
+        { token: linkToken, aggregateChatUserId: 1, defaultChatUserId: 2 }, // our user, our token
+        { token: 'other token 1', aggregateChatUserId: 1, defaultChatUserId: 3 }, // our user, different token
+        { token: 'other token 2', aggregateChatUserId: 4, defaultChatUserId: 5 } // different user, different token
+      ]})
+      await db.linkAttempt.create({ data: { aggregateChatUserId: 1, defaultChatUserId: 3, linkTokenId: 2, log: '', startTime: new Date(), type: 'link' }})
+
+      const result = await linkStore.deleteLinkToken(1, linkToken)
+
+      expect(result).toBe(true)
+    })
+
+    test('Returns false if the link token was found for the specified user but already used up', async () => {
+      const linkToken = 'test token'
+      await db.chatUser.createMany({ data: [{}, {}, {}, {}, {}]})
+      await db.linkToken.createMany({ data: [
+        { token: 'other token 1', aggregateChatUserId: 1, defaultChatUserId: 2 }, // our user, different token
+        { token: linkToken, aggregateChatUserId: 1, defaultChatUserId: 3 }, // our user, our token (used)
+        { token: 'other token 2', aggregateChatUserId: 4, defaultChatUserId: 5 } // different user, different token
+      ]})
+      await db.linkAttempt.create({ data: { aggregateChatUserId: 1, defaultChatUserId: 3, linkTokenId: 2, log: '', startTime: new Date(), type: 'link' }})
+
+      const result = await linkStore.deleteLinkToken(1, linkToken)
+
+      expect(result).toBe(false)
+    })
+
+    test('Returns false if the link token was not found for the specified user', async () => {
+      const linkToken = 'test token'
+      await db.chatUser.createMany({ data: [{}, {}, {}, {}, {}]})
+      await db.linkToken.createMany({ data: [
+        { token: 'other token', aggregateChatUserId: 1, defaultChatUserId: 2 }, // our user, different token
+        { token: linkToken, aggregateChatUserId: 4, defaultChatUserId: 5 } // different user, our token
+      ]})
+
+      const result = await linkStore.deleteLinkToken(1, linkToken)
+
+      expect(result).toBe(false)
+    })
+  })
+
   describe(nameof(LinkStore, 'getOrCreateLinkToken'), () => {
     test('Creates a new token if no existing token exists for the aggregate-default user pair', async () => {
       await db.chatUser.createMany({ data: [{}, {}]})

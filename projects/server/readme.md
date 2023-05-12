@@ -848,3 +848,15 @@ Can return the following errors:
 - `400`: When the `externalId` is not sent.
 - `404`: When no channel matching the given `externalId` could be found. The channel in question must have sent at least one chat message in the past so that it is added to our database.
 - `422`: When the specified channel is already linked to a user.
+
+### `DELETE /link/token`
+
+Delete a pending link token that is connected to the logged-in account.
+
+Path parameters:
+- `linkToken` (`string`): The link token to delete.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `404`: When the specified pending link token is not found. For example, if it is not connected to the logged-in user, or already used as part of a link attempt.
