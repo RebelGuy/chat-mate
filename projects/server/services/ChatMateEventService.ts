@@ -3,7 +3,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithMessage } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import { sortBy } from '@rebel/shared/util/arrays'
+import { sortBy, unique } from '@rebel/shared/util/arrays'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 
@@ -83,7 +83,8 @@ export default class ChatMateEventService extends ContextClass {
     }
 
     const newMessages = await this.chatStore.getChatSince(streamerId, since)
-    const newViewers = await this.chatStore.getTimeOfFirstChat(streamerId, newMessages.map(msg => getPrimaryUserId(msg.user!)))
+    const primaryUserIds = unique(newMessages.map(msg => getPrimaryUserId(msg.user!)))
+    const newViewers = await this.chatStore.getTimeOfFirstChat(streamerId, primaryUserIds)
     for (let i = 0; i < newViewers.length; i++) {
       const viewer = newViewers[i]
       const message = newMessages.find(msg => getPrimaryUserId(msg.user!) === viewer.primaryUserId)!

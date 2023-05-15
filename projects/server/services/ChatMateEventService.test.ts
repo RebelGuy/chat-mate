@@ -45,15 +45,16 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
     const donation1 = cast<DonationWithUser>({ time: data.time2 })
     const donation2 = cast<DonationWithUser>({ time: data.time3 })
     const chat1 = cast<ChatItemWithRelations>({ time: data.time2, user: { id: userId1 } })
-    const chat2 = cast<ChatItemWithRelations>({ time: data.time3, user: { id: 125152, aggregateChatUserId: userId2 }})
+    const chat2 = cast<ChatItemWithRelations>({ time: data.time4, user: { id: userId1 } }) // duplicate user
+    const chat3 = cast<ChatItemWithRelations>({ time: data.time3, user: { id: 125152, aggregateChatUserId: userId2 }})
 
     mockExperienceService.getLevelDiffs.calledWith(streamerId, since).mockResolvedValue([levelDiff1, levelDiff2])
     mockFollowerStore.getFollowersSince.calledWith(streamerId, since).mockResolvedValue([follower1, follower2])
     mockDonationStore.getDonationsSince.calledWith(streamerId, since).mockResolvedValue([donation1, donation2])
-    mockChatStore.getChatSince.calledWith(streamerId, since).mockResolvedValue([chat1, chat2])
+    mockChatStore.getChatSince.calledWith(streamerId, since).mockResolvedValue([chat1, chat2, chat3]) // duplicate chat user ids should be ignored
     mockChatStore.getTimeOfFirstChat.calledWith(streamerId, expectArray<number>([userId1, userId2])).mockResolvedValue([
-      { primaryUserId: userId1, firstSeen: chat1.time.getTime() },
-      { primaryUserId: userId2, firstSeen: data.time2.getTime() }
+      { primaryUserId: userId1, firstSeen: chat1.time.getTime() }, // before the `since` time - no first message in the window we are looking
+      { primaryUserId: userId2, firstSeen: data.time2.getTime() } // after the `since` time - the message above must have been the user's first message
     ])
 
     const result = await chatMateEventService.getEventsSince(streamerId, since)
