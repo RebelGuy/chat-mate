@@ -265,7 +265,7 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   }
 }
 
-export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[], registeredUser: RegisteredUser | null): PublicChatItem {
+export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[], registeredUser: RegisteredUser | null, firstSeen: number): PublicChatItem {
   const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
   if (PLATFORM_TYPES !== 'youtube' && PLATFORM_TYPES !== 'twitch') {
@@ -315,7 +315,8 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
       registeredUser: registeredUserToPublic(registeredUser),
       channel: channelToPublicChannel(userChannel),
       levelInfo,
-      activeRanks: activeRanks
+      activeRanks: activeRanks,
+      firstSeen: firstSeen
     }
   }
   return newItem

@@ -9,8 +9,10 @@ import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { UserRanks } from '@rebel/server/stores/RankStore'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
+export type AllUserData = UserChannel & UserRanks & UserLevel & { registeredUser: RegisteredUser | null, firstSeen: number }
+
 /** It is expected that the data is for the primary user, thus `userId` is the `primaryUserId`. */
-export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks & { registeredUser: RegisteredUser | null }): PublicUser {
+export function userDataToPublicUser (data: AllUserData): PublicUser {
   return {
     primaryUserId: data.primaryUserId,
     registeredUser: registeredUserToPublic(data.registeredUser),
@@ -19,7 +21,8 @@ export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks 
       level: data.level.level,
       levelProgress: data.level.levelProgress
     },
-    activeRanks: data.ranks.map(userRankToPublicObject)
+    activeRanks: data.ranks.map(userRankToPublicObject),
+    firstSeen: data.firstSeen
   }
 }
 

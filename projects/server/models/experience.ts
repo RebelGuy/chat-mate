@@ -5,7 +5,7 @@ import { channelToPublicChannel, registeredUserToPublic } from '@rebel/server/mo
 import { RankedEntry } from '@rebel/server/services/ExperienceService'
 import { UserRanks } from '@rebel/server/stores/RankStore'
 
-export function rankedEntryToPublic (data: RankedEntry & UserRanks & { registeredUser: RegisteredUser | null }): PublicRankedUser {
+export function rankedEntryToPublic (data: RankedEntry & UserRanks & { registeredUser: RegisteredUser | null, firstSeen: number }): PublicRankedUser {
   return {
     rank: data.rank,
     user: {
@@ -16,7 +16,8 @@ export function rankedEntryToPublic (data: RankedEntry & UserRanks & { registere
         level: data.level,
         levelProgress: data.levelProgress
       },
-      activeRanks: data.ranks.map(userRankToPublicObject)
+      activeRanks: data.ranks.map(userRankToPublicObject),
+      firstSeen: data.firstSeen
     }
   }
 }

@@ -4,6 +4,7 @@ import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/Publ
 import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
 import { PublicLevelUpData } from '@rebel/server/controllers/public/event/PublicLevelUpData'
 import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/event/PublicNewTwitchFollowerData'
+import { PublicNewViewerData } from '@rebel/server/controllers/public/event/PublicNewViewerData'
 import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
 import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer/PublicStreamerSummary'
@@ -475,8 +476,8 @@ export default class StreamerController extends ControllerBase {
 
       const events = await this.chatMateEventService.getEventsSince(streamerId, since)
 
-      // pre-fetch user data for `levelUp` and `donation` events
-      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation').map(e => e.primaryUserId)))
+      // pre-fetch user data for some of the events
+      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer').map(e => e.primaryUserId)))
       const allData = await this.apiService.getAllData(primaryUserIds)
 
       let result: PublicChatMateEvent[] = []
@@ -484,6 +485,7 @@ export default class StreamerController extends ControllerBase {
         let levelUpData: PublicLevelUpData | null = null
         let newTwitchFollowerData: PublicNewTwitchFollowerData | null = null
         let donationData: PublicDonationData | null = null
+        let newViewerData: PublicNewViewerData | null = null
 
         if (event.type === 'levelUp') {
           const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
@@ -508,6 +510,11 @@ export default class StreamerController extends ControllerBase {
             messageParts: event.donation.messageParts.map(toPublicMessagePart),
             linkedUser: user
           }
+        } else if (event.type === 'newViewer') {
+          const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
+          newViewerData = {
+            user: user
+          }
         } else {
           assertUnreachable(event)
         }
@@ -517,7 +524,8 @@ export default class StreamerController extends ControllerBase {
           timestamp: event.timestamp,
           levelUpData,
           newTwitchFollowerData,
-          donationData
+          donationData,
+          newViewerData
         })
       }
 

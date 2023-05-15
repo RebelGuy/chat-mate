@@ -6,7 +6,6 @@ import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChat
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItemWithRelations, chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
-import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
@@ -14,6 +13,7 @@ import { asGte, asLt } from '@rebel/shared/util/math'
 import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/shared/util/random'
 import { cast } from '@rebel/server/_test/utils'
 import { Path } from 'typescript-rest'
+import { addTime } from '@rebel/shared/util/datetime'
 
 @Path(buildPath('chat'))
 export default class ChatControllerFake extends ControllerBase implements IChatController {
@@ -49,7 +49,8 @@ export default class ChatControllerFake extends ControllerBase implements IChatC
       }
       const ranks = single(await this.rankStore.getUserRanks([item.userId!], this.getStreamerId())).ranks.map(userRankToPublicObject)
       const registeredUser = item.user?.aggregateChatUserId == null ? null : cast<RegisteredUser>({ aggregateChatUserId: item.user!.aggregateChatUserId!, username: 'test username' })
-      items.push(chatAndLevelToPublicChatItem(item, level, ranks, registeredUser))
+      const firstSeen = addTime(new Date(), 'hours', -Math.random() * 24).getTime()
+      items.push(chatAndLevelToPublicChatItem(item, level, ranks, registeredUser, firstSeen))
     }
 
     return builder.success({ reusableTimestamp: since, chat: items })

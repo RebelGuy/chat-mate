@@ -196,7 +196,8 @@ export default class UserController extends ControllerBase {
                   time: new Date()
                 }]
               }},
-            registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser
+            registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser,
+            firstSeen: 0
           }),
           matchedChannel: null,
           allChannels: channels.channels.map(channelToPublicChannel)

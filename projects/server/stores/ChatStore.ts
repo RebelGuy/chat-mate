@@ -109,6 +109,37 @@ export default class ChatStore extends ContextClass {
     })
   }
 
+  /** For each user, returns the time of the first chat item authored by the user or any of its linked users.
+   * @throws {@link ChatMessageForStreamerNotFoundError}: When no chat message was found for any of the given user ids for the specified streamer. */
+  public async getTimeOfFirstChat (streamerId: number, primaryUserIds: number[]): Promise<{ primaryUserId: number, firstSeen: number }[]> {
+    const userTimes = await this.db.chatMessage.findMany({
+      distinct: ['userId'],
+      orderBy: {
+        time: 'asc'
+      },
+      select: {
+        time: true,
+        user: true
+      },
+      where: {
+        streamerId: streamerId,
+        OR: [
+          { userId: { in: primaryUserIds } },
+          { user: { aggregateChatUserId: { in: primaryUserIds } } }
+        ]
+      }
+    })
+
+    return primaryUserIds.map(id => {
+      const userTime = userTimes.find(c => c.user!.id === id || c.user!.aggregateChatUserId === id)
+      if (userTime == null) {
+        throw new ChatMessageForStreamerNotFoundError(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
+      } else {
+        return { primaryUserId: id, firstSeen: userTime.time.getTime() }
+      }
+    })
+  }
+
   /** For each user, returns the last chat item authored by the user or any of its linked users.
    * @throws {@link ChatMessageForStreamerNotFoundError}: When no chat message was found for any of the given user ids for the specified streamer. */
   public async getLastChatOfUsers (streamerId: number, primaryUserIds: number[]): Promise<ChatItemWithRelations[]> {
