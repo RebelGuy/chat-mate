@@ -22,6 +22,8 @@ Pushing to any branch will trigger the build process. Pushing to `master` or `de
 
 Deployment of the Server includes an automatic migration of the database.
 
+If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped on Github.
+
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
 - Set up the livestream on YouTube (e.g. via scheduling) and get its link or ID

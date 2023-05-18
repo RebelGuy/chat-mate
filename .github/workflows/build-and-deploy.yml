@@ -16,6 +16,9 @@ on:
       deploy:
         type: boolean
         required: true
+      tests:
+        type: boolean
+        required: true
     secrets:
       publishProfile:
         # must be set if `deploy` is `true`
@@ -59,7 +62,7 @@ jobs:
         run: yarn install
 
       - name: Build typescript project
-        run: yarn workspace server build:${{ inputs.NODE_ENV }}
+        run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=${{ !inputs.test }}
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
@@ -68,6 +71,7 @@ jobs:
           path: ./dist/**
   
   test-server:
+    if: inputs.tests
     name: Test Server
     runs-on: ubuntu-latest
 
