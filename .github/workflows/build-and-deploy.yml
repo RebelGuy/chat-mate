@@ -62,7 +62,7 @@ jobs:
         run: yarn install
 
       - name: Build typescript project
-        run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=${{ !inputs.test }}
+        run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=${{ !inputs.tests }}
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
