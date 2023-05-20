@@ -22,6 +22,9 @@ on:
       migrations:
         type: boolean
         required: true
+      studio:
+        type: boolean
+        required: true
     secrets:
       publishProfile:
         # must be set if `deploy` is `true`
@@ -113,6 +116,7 @@ jobs:
           yarn workspace shared test
 
   build-studio:
+    if: inputs.studio
     name: Build Studio
     runs-on: ubuntu-latest
     needs: [build-server, test-server]
@@ -214,7 +218,7 @@ jobs:
           package: .
 
   deploy-studio:
-    if: inputs.deploy == true
+    if: inputs.deploy == true && inputs.studio
     name: Deploy Studio
     runs-on: ubuntu-latest
     needs: [build-server, test-server, build-studio]
