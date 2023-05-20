@@ -120,7 +120,8 @@ jobs:
           yarn workspace shared test
 
   build-studio:
-    if: inputs.studio
+    # from https://github.com/actions/runner/issues/491#issuecomment-907216595
+    if: inputs.studio && (needs.*.result == 'success' || needs.*.result == 'skipped')
     name: Build Studio
     runs-on: ubuntu-latest
     needs: [build-server, test-server]
