@@ -24,6 +24,8 @@ Deployment of the Server includes an automatic migration of the database.
 
 If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped on Github.
 
+If the string `--skip-migrations` is included in the commit message, new migrations will not be applied (applies to both the server build and test runs). Note that migrations in the server build are already skipped if `--skip-deploy` is included in the commit message.
+
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
 - Set up the livestream on YouTube (e.g. via scheduling) and get its link or ID

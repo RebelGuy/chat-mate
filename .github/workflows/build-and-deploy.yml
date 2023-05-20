@@ -19,6 +19,9 @@ on:
       tests:
         type: boolean
         required: true
+      migrations:
+        type: boolean
+        required: true
     secrets:
       publishProfile:
         # must be set if `deploy` is `true`
@@ -96,7 +99,8 @@ jobs:
       - name: Install node modules
         run: yarn install
 
-      - name: Set up test database
+      - name: Migrate test database
+        if: inputs.migrations
         run: yarn workspace server test:db
           
       - name: Generate Prisma client
@@ -153,7 +157,7 @@ jobs:
 
   # this must be done in a different run so we don't upload the generated files here during deployment
   migrate-database:
-    if: inputs.deploy == true
+    if: inputs.deploy && inputs.migrations
     name: Migrate database
     runs-on: ubuntu-latest
     needs: [build-server, test-server, build-studio]
