@@ -140,7 +140,7 @@ jobs:
       
       # ideally in the future we will only need the shared project, but at the moment the entire server has to be built
       - name: Generate Server files
-        if: !inputs.server
+        if: inputs.server == false
         # skip tests because we are not here to validate the server code
         run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=true
 
