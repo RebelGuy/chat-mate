@@ -26,6 +26,8 @@ If the string `--skip-tests` is included in the commit message, test files will 
 
 If the string `--skip-migrations` is included in the commit message, new migrations will not be applied (applies to both the server build and test runs). Note that migrations in the server build are already skipped if `--skip-deploy` is included in the commit message.
 
+If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed.
+
 If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
 
 ## Quick livestream setup

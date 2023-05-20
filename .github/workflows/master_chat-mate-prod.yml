@@ -14,6 +14,7 @@ jobs:
       deploy: ${{ !contains(github.event.head_commit.message, '--skip-deploy') }}
       tests: ${{ !contains(github.event.head_commit.message, '--skip-tests') }}
       migrations: ${{ !contains(github.event.head_commit.message, '--skip-migrations') }}
+      server: ${{ !contains(github.event.head_commit.message, '--skip-server') }}
       studio: ${{ !contains(github.event.head_commit.message, '--skip-studio') }}
       STUDIO_URL: 'https://www.chat-mate.com'
       SERVER_URL: 'https://chat-mate-prod.azurewebsites.net'
