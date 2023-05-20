@@ -21,6 +21,7 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
   - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
   - Rely on VSCode for checking types if using this mode
   - Use `yarn watch:check` to use `ts-loader` and enable type checking
+  - Use `yarn watch:check SKIP_TESTS=true` to not include test files in the build process
 4. `yarn start:local` to run the server locally, or `yarn start:mock` to use fake implementations of controllers, where available.
 
 If building fails because the Prisma client could not be found, please run `yarn generate`.
