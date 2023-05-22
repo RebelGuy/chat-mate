@@ -53,17 +53,18 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         <ol>
           <li>
             <b>Specify the channel. </b>
-              In the below input field, enter either the YouTube channel ID or Twitch channel name.
+              In the below input field, enter either the YouTube channel ID or Twitch channel name that you wish to link.
           </li>
           <li>
             <b>Prove channel ownership. </b>
-            Paste the provided command shown in the Link History section to the YouTube/Twitch chat (corresponding to the platform of the channel you want to link).
-            You can use either the official ChatMate channels below, or any other streamer channel registered on Chatmate:
+            Ensure you are logged in to the channel you want to link.
+            Head over to a ChatMate-enabled livestream and paste the provided command shown in the Link History section to the chat.
+            The official ChatMate channels below can be used for this purpose, or the channel of the current streamer you are watching, if any.
             {getChatMateRegisteredUsernameRequest.data != null && <StreamerLinks streamerName={getChatMateRegisteredUsernameRequest.data.username} />}
           </li>
           <li>
             <b>Wait for a few seconds. </b>
-              The link process has been initiated and should complete soon. Its status can be checked below.
+              Once you have sent the link command to the stream chat, the link process will be initiated and should complete within a few seconds. Its status can be checked below.
           </li>
         </ol>
 
