@@ -47,6 +47,7 @@ export default function TwitchEventStatuses () {
 
   // if true, we detected that ChatMate is not working properly because of missing permissions
   const requiresAuth = getStatusesRequest.data == null || getStatusesRequest.data.statuses.find(status => status.requiresAuthorisation) != null
+  const hasBrokenEvents = getStatusesRequest.data?.statuses.find(status => status.status === 'inactive') != null
 
   useEffect(() => {
     // for some reason we can't immediately clear the params here, else the states won't initialise. but it's working fine on the admin authentication page?!
@@ -107,17 +108,23 @@ export default function TwitchEventStatuses () {
       </div>
 
       {authoriseTwitchRequest.data == null && <>
-        <Alert sx={{ mt: 1 }} severity={requiresAuth ? 'warning' : 'info'}>
+        <Alert sx={{ mt: 1 }} severity={requiresAuth || hasBrokenEvents ? 'warning' : 'info'}>
           {requiresAuth ?
             <div>
               Looks like some of the events are broken because ChatMate did not have permission.
               Please use your Twitch channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} to provide access.
             </div>
             :
-            <div>
-              Looks like all events are working correctly and you do not need to authorise ChatMate again.
-              If you still want to refresh authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>}, you can do so using the below button.
-            </div>
+            hasBrokenEvents ?
+              <div>
+                Looks like one or more events are broken. Please contact an administrator.
+                You can also try refreshing authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} using the below button.
+              </div>
+              :
+              <div>
+                Looks like all events are working correctly and you do not need to authorise ChatMate again.
+                If you still want to refresh authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>}, you can do so using the below button.
+              </div>
           }
           <Button
             onClick={onLoginToTwitch}

@@ -18,30 +18,30 @@ export default function YoutubeStatus () {
   const getYoutubeStatusRequest = useRequest(getYoutubeStatus(), { updateKey: refreshToken })
   const getChatMateRegisteredUsernameRequest = useRequest(getChatMateRegisteredUsername())
 
-  const streamerInfo = loginContext.allStreamers.find(streamer => streamer.username === loginContext.username)
   const chatMateInfo = loginContext.allStreamers.find(streamer => streamer.username === getChatMateRegisteredUsernameRequest.data?.username)
 
   return <>
     <PanelHeader>YouTube Status {<RefreshButton isLoading={getYoutubeStatusRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
+
+    <Box>
+      In order to function properly, ChatMate requires that you add the&nbsp;
+      <LinkInNewTab href={chatMateInfo != null ? getChannelUrlFromPublic(chatMateInfo.youtubeChannel!) : ''}><b>{chatMateInfo?.youtubeChannel!.displayName ?? 'ChatMate'}</b></LinkInNewTab>
+      &nbsp;YouTube channel to the standard moderator list (
+      <LinkInNewTab href="https://studio.youtube.com/">YouTube Studio</LinkInNewTab>
+      &nbsp;-&gt; Settings -&gt; Community).
+    </Box>
+
+    <Alert severity="info" sx={{ mt: 1, mb: 1 }}>
+      Due to limitations with the current YouTube API that ChatMate is using, we are only able to
+      check the moderator status at the time of the last received chat message in your latest livestream
+      that was sent by a non-moderator user.
+      The below status may be outdated and should be used as a guide only.
+    </Alert>
+
     <ApiLoading requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest]} initialOnly />
     <ApiError requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest]} />
 
     {getYoutubeStatusRequest.data != null && getChatMateRegisteredUsernameRequest.data != null && <>
-      <Box>
-        In order to function properly, ChatMate requires that you add the&nbsp;
-        <LinkInNewTab href={getChannelUrlFromPublic(chatMateInfo!.youtubeChannel!)}><b>{chatMateInfo!.youtubeChannel!.displayName}</b></LinkInNewTab>
-        &nbsp;YouTube channel to the standard moderator list (
-        <LinkInNewTab href="https://studio.youtube.com/">YouTube Studio</LinkInNewTab>
-        &nbsp;-&gt; Settings -&gt; Community).
-      </Box>
-
-      <Alert severity="info" sx={{ mt: 1, mb: 1 }}>
-        Due to limitations with the current YouTube API that ChatMate is using, we are only able to
-        check the moderator status at the time of the last received chat message in your latest livestream
-        that was sent by a non-moderator user.
-        The below status may be outdated and should be used as a guide only.
-      </Alert>
-
       <Box>
         ChatMate is
         <Box display="inline" sx={{ color: getYoutubeStatusRequest.data.chatMateIsModerator ? 'green' : 'red' }}>{getYoutubeStatusRequest.data.chatMateIsModerator ? '' : ' not'} added as a moderator </Box>
