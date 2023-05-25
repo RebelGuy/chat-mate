@@ -1,5 +1,5 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/server/controllers/EmojiController'
-import { GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/server/controllers/ChatMateController'
+import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/server/controllers/ChatMateController'
 import { GetAccessibleRanksResponse, GetUserRanksResponse } from '@rebel/server/controllers/RankController'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchStatusResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
 import { SERVER_URL } from '@rebel/studio/utility/global'
@@ -47,6 +47,8 @@ export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, Updat
 export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEmojiRequest> ('POST', `/emoji/custom`, 'self')
 
 export const ping = requestBuilder<PingResponse>('GET', `/chatMate/ping`, false, false)
+
+export const getChatMateStats = requestBuilder<ChatMateStatsResponse>('GET', `/chatMate/stats`, false, false)
 
 export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
 
