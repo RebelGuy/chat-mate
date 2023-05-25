@@ -87,6 +87,10 @@ export default class ChatStore extends ContextClass {
     })
   }
 
+  public async getChatMessageCount (): Promise<number> {
+    return await this.db.chatMessage.count()
+  }
+
   public async getLastYoutubeChat (streamerId: number): Promise<ChatItemWithRelations | null> {
     return await this.db.chatMessage.findFirst({
       where: {

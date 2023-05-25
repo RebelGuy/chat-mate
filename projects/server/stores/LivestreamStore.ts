@@ -4,6 +4,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
 import { assertUnreachableCompile } from '@rebel/shared/util/typescript'
+import { single } from '@rebel/shared/util/arrays'
 
 export type LivestreamParticipation = Livestream & { participated: boolean }
 
@@ -60,6 +61,14 @@ export default class LivestreamStore extends ContextClass {
     let result = orderedLivestreams.filter(l => l.start != null)
     result.push(...orderedLivestreams.filter(l => l.start == null))
     return result
+  }
+
+  public async getTotalDaysLivestreamed (): Promise<number> {
+    const queryResult = await this.db.$queryRaw<{ duration: number | null }[]>`
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, CURRENT_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM livestream;
+    `
+
+    return single(queryResult).duration ?? 0
   }
 
   /** Sets the streamer's given livestream as active, such that `LivestreamStore.activeLivestream` returns this stream.

@@ -417,6 +417,31 @@ export default () => {
     })
   })
 
+  describe(nameof(ChatStore, 'getChatMessageCount'), () => {
+    test('Returns the number of chat messages', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1,
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+      }})
+
+      const result = await chatStore.getChatMessageCount()
+
+      expect(result).toBe(2)
+    })
+  })
+
   describe(nameof(ChatStore, 'getLastYoutubeChat'), () => {
     test(`Returns the latest YouTube chat item sent to the streamer's livestream`, async () => {
       const contextToken1 = 'contextToken1'

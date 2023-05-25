@@ -112,6 +112,38 @@ export default () => {
     })
   })
 
+  describe(nameof(LivestreamStore, 'getTotalDaysLivestreamed'), () => {
+    test('Calculates the total streaming time for all completed livestreams', async () => {
+      await db.livestream.createMany({ data: [
+        { isActive: true, start: data.time1, end: data.time2, liveId: '1', streamerId: streamer1 },
+        { isActive: true, start: data.time3, end: data.time4, liveId: '2', streamerId: streamer2 }
+      ]})
+
+      const result = await livestreamStore.getTotalDaysLivestreamed()
+
+      const expectedMs = data.time2.getTime() - data.time1.getTime() + data.time4.getTime() - data.time3.getTime()
+      const expectedDays = expectedMs / 1000 / 3600 / 24
+      expect(result).toBeCloseTo(expectedDays, 8)
+    })
+
+    test('Uses the current time as the end date for ongoing livestreams', async () => {
+      const time = addTime(new Date(), 'days', -5)
+      await db.livestream.create({ data: { isActive: true, start: time, liveId: '1', streamerId: streamer1 }})
+
+      const result = await livestreamStore.getTotalDaysLivestreamed()
+
+      expect(Math.round(result)).toBe(5)
+    })
+
+    test('Ignored livestreams that have not been started', async () => {
+      await db.livestream.create({ data: { isActive: true, liveId: '1', streamerId: streamer1 }})
+
+      const result = await livestreamStore.getTotalDaysLivestreamed()
+
+      expect(result).toBe(0)
+    })
+  })
+
   describe(nameof(LivestreamStore, 'setActiveLivestream'), () => {
     test('creates and sets new active livestream', async () => {
       // there is an active livestream for a different streamer - this should affect the request for streamer 1
