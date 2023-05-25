@@ -112,10 +112,11 @@ export function onTwurpleClientLog (context: LogContext, level: LogLevel, messag
 
   switch (level) {
     case LogLevel.CRITICAL:
-      context.logError('[CRITICAL]', message)
+      // error so we can print the stack trace
+      context.logError('[CRITICAL]', new Error(message))
       break
     case LogLevel.ERROR:
-      context.logError('[ERROR]', message)
+      context.logError('[ERROR]', new Error(message))
       break
     case LogLevel.WARNING:
       context.logWarning('[WARNING]', message)
