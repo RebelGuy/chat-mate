@@ -75,6 +75,25 @@ Passwords:
 - YouTube: `C`
 
 # Change Log
+## V1.25 - The Multistream Update [27/5/2023]
+- Server
+  - Twitch access tokens are now saved against all streamers, and most requests are done on behalf of the streamer
+  - Link tokens can now be deleted
+  - Optimised the server startup time
+  - Added new ChatMate event type for first-time viewers
+  - Fixed streamers being able to set an active livestream that was not hosted by their primary Youtube channel
+  - Updated Twurple to the latest version
+- Studio
+  - Ability for streamers to see the Twitch and Youtube status and remedy any problems
+    - For Youtube, we check that the streamer has modded the ChatMate youtube channel
+    - For Twitch, we show a list of all actions that ChatMate is participating in, and whether a problem has occurred
+  - New Streamer Info page for the steamer's current status, and links to the livestream(s)
+  - New home page
+    - Demonstration video to show the capabilities of ChatMate
+    - List of current ChatMate stats
+  - The emoji page now includes an option for filtering only emojis that the current user is eligible for
+  - Improvements to the Link User page UX
+
 ## v1.24 - The Studio Update [5/4/2023]
 - Server
   - Added the ability to query the status of a command

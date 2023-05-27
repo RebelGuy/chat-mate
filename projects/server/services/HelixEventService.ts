@@ -243,8 +243,6 @@ export default class HelixEventService extends ContextClass {
   }
 
   private subscribeToGlobalEvents () {
-    // todo: momentarily listen to these when creating/removing subscriptions to find out whether the subscription succeeded or not, then update in-memory data
-    // idea: make a map of subscription id -> status and update the status based on the below events. the status will be removed if the subscription gets removed.
     /* eslint-disable @typescript-eslint/no-misused-promises */
     this.eventSubBase.onVerify(this.onVerify)
     this.eventSubBase.onRevoke(this.onRevoke)
@@ -383,6 +381,7 @@ export default class HelixEventService extends ContextClass {
       await this.createSubscriptionSafe(() => {
         return this.eventSubBase.onChannelFollow(user, user, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
       }, streamerId, channelName, 'followers')
+      /* eslint-enable @typescript-eslint/no-misused-promises */
 
       this.logService.logInfo(this, `Finished subscription sequence of Twitch user '${channelName}' (streamer ${streamerId}).`)
     } catch (e: any) {
