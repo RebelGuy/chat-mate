@@ -6,7 +6,7 @@ import { ConnectionAdapter, DirectConnectionAdapter, EventSubHttpListener, Event
 import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUserAuthorizationRevokeEvent } from '@twurple/eventsub-base'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
-import { HelixEventSubApi } from '@twurple/api/lib'
+import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
 import { disconnect, kill } from 'ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
@@ -181,11 +181,13 @@ export default class HelixEventService extends ContextClass {
           await middleware.markAsReady()
 
           const subscriptions = await this.eventSubApi.getSubscriptions()
-          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status} ${JSON.stringify(s.condition)}`)
-          this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions:', readableSubscriptions)
+          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
+          this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions (broken subscriptions will be deleted):', readableSubscriptions)
           if (subscriptions.total !== subscriptions.data.length) {
             throw new Error('Time to implement pagination')
           }
+
+          await this.eventSubApi.deleteBrokenSubscriptions()
 
           // from what I understand we can safely re-subscribe to events when using the middleware
           await this.initialiseSubscriptions()
