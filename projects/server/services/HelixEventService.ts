@@ -167,6 +167,7 @@ export default class HelixEventService extends ContextClass {
           pathPrefix: '/twitch',
           hostName: this.hostName!,
           secret: this.getSecret(),
+          legacySecrets: 'migrate',
           logger: {
             custom: {
               log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
@@ -181,7 +182,7 @@ export default class HelixEventService extends ContextClass {
           await middleware.markAsReady()
 
           const subscriptions = await this.eventSubApi.getSubscriptions()
-          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
+          const readableSubscriptions = subscriptions.data.map(s => `${s.id}: ${s.status}`)
           this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions (broken subscriptions will be deleted):', readableSubscriptions)
           if (subscriptions.total !== subscriptions.data.length) {
             throw new Error('Time to implement pagination')
