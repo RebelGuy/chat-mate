@@ -1,9 +1,10 @@
-import { Livestream, LivestreamType } from '@prisma/client'
+import { Livestream } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
-import { assertUnreachableCompile, reminder } from '@rebel/shared/util/typescript'
+import { assertUnreachableCompile } from '@rebel/shared/util/typescript'
+import { single } from '@rebel/shared/util/arrays'
 
 export type LivestreamParticipation = Livestream & { participated: boolean }
 
@@ -38,16 +39,14 @@ export default class LivestreamStore extends ContextClass {
   public async getActiveLivestream (streamerId: number): Promise<Livestream | null> {
     return await this.db.livestream.findFirst({ where: {
       streamerId: streamerId,
-      isActive: true,
-      type: 'publicLivestream'
+      isActive: true
     }})
   }
 
   /** Gets the active public livestreams across all streamers. */
   public async getActiveLivestreams (): Promise<Livestream[]> {
     return await this.db.livestream.findMany({ where: {
-      isActive: true,
-      type: 'publicLivestream'
+      isActive: true
     }})
   }
 
@@ -64,10 +63,17 @@ export default class LivestreamStore extends ContextClass {
     return result
   }
 
-  // todo: in the future, we can pass more options into this function, e.g. if a livestream is considered unlisted
+  public async getTotalDaysLivestreamed (): Promise<number> {
+    const queryResult = await this.db.$queryRaw<{ duration: number | null }[]>`
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, CURRENT_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM livestream;
+    `
+
+    return single(queryResult).duration ?? 0
+  }
+
   /** Sets the streamer's given livestream as active, such that `LivestreamStore.activeLivestream` returns this stream.
    * Please ensure you deactivate the previous livestream first, if applicable. */
-  public async setActiveLivestream (streamerId: number, liveId: string, type: LivestreamType): Promise<Livestream> {
+  public async setActiveLivestream (streamerId: number, liveId: string): Promise<Livestream> {
     const activeLivestream = await this.getActiveLivestream(streamerId)
     if (activeLivestream != null) {
       if (activeLivestream.liveId === liveId) {
@@ -78,7 +84,7 @@ export default class LivestreamStore extends ContextClass {
     }
 
     return await this.db.livestream.upsert({
-      create: { liveId, streamerId, createdAt: new Date(), isActive: true, type },
+      create: { liveId, streamerId, createdAt: new Date(), isActive: true },
       update: { isActive: true },
       where: { liveId }
     })
@@ -131,16 +137,13 @@ export default class LivestreamStore extends ContextClass {
       assertUnreachableCompile(LIVESTREAM_PARTICIPATION_TYPES)
     }
 
-    // please add a test to ensure we don't add participation for chat messages in unlisted streams
-    reminder<LivestreamType>({ publicLivestream: true })
-
     const livestreams = await this.db.livestream.findMany({
       where: { streamerId },
       include: {
         chatMessages: {
           where: {
             user: { id: { in: anyUserIds } },
-            livestream: { type: 'publicLivestream', streamerId }
+            livestream: { streamerId }
           },
           take: 1 // order doesn't matter
         }

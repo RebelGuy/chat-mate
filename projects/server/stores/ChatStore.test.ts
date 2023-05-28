@@ -3,12 +3,14 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { expectObject, mockGetter, nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/server/_test/utils'
 import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
 import { YoutubeChannelInfo, Livestream, TwitchChannelInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
+import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
+import { addTime } from '@rebel/shared/util/datetime'
 
 const livestream: Livestream = {
   id: 1,
@@ -18,8 +20,7 @@ const livestream: Livestream = {
   createdAt: new Date(),
   start: new Date(),
   end: null,
-  isActive: true,
-  type: 'publicLivestream'
+  isActive: true
 }
 
 const youtube1UserId = 1
@@ -416,6 +417,77 @@ export default () => {
     })
   })
 
+  describe(nameof(ChatStore, 'getChatMessageCount'), () => {
+    test('Returns the number of chat messages', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1,
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+      }})
+
+      const result = await chatStore.getChatMessageCount()
+
+      expect(result).toBe(2)
+    })
+  })
+
+  describe(nameof(ChatStore, 'getLastYoutubeChat'), () => {
+    test(`Returns the latest YouTube chat item sent to the streamer's livestream`, async () => {
+      const contextToken1 = 'contextToken1'
+      const contextToken2 = 'contextToken2'
+
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1, // earlier time
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+        contextToken: contextToken1
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2, // later time
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        livestream: { connect: { id: 1 }},
+        contextToken: contextToken2
+      }})
+
+      const result = await chatStore.getLastYoutubeChat(streamer1)
+
+      expect(result!.id).toBe(2)
+      expect(result!.contextToken).toBe(contextToken2)
+    })
+
+    test('Returns null if the streamer has not received any messages to their livestream from YouTube', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time1,
+        externalId: 'x1',
+        twitchChannel: { connect: { id: 1 }},
+        livestream: { connect: { id: 1 }}
+      }})
+
+      const result = await chatStore.getLastYoutubeChat(streamer1)
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(ChatStore, 'getLastChatByYoutubeChannel'), () => {
     test('returns null if youtube channel has not posted a message', async () => {
       const result = await chatStore.getLastChatByYoutubeChannel(streamer1, 1)
@@ -460,6 +532,99 @@ export default () => {
       const result = await chatStore.getLastChatByYoutubeChannel(streamer1, 2)
 
       expect(result!.time).toEqual(data.time2)
+    })
+  })
+
+  describe(nameof(ChatStore, 'getTimeOfFirstChat'), () => {
+    let user3: number
+    beforeEach(async () => {
+      // user 3 has no chat messages in streamer 1
+      user3 = (await db.chatUser.create({ data: { aggregateChatUserId: aggregateUserId1 }})).id
+      await db.chatUser.update({ where: { id: youtube1UserId }, data: { aggregateChatUserId: aggregateUserId1 }})
+      await db.chatUser.update({ where: { id: youtube2UserId }, data: { aggregateChatUserId: aggregateUserId1 }})
+      await db.chatUser.update({ where: { id: twitchUserId }, data: { aggregateChatUserId: aggregateUserId2 }})
+
+      await db.chatMessage.createMany({ data: [
+        // user 1:
+        {
+          livestreamId: 1,
+          streamerId: streamer1,
+          time: data.time2,
+          userId: youtube1UserId,
+          externalId: 'user 1 msg 2',
+          youtubeChannelId: 1
+        }, {
+          livestreamId: 1,
+          streamerId: streamer1,
+          time: data.time1,
+          userId: youtube1UserId,
+          externalId: 'user 1 msg 1',
+          twitchChannelId: 1
+        }, {
+          livestreamId: 1,
+          streamerId: streamer1,
+          time: data.time3,
+          userId: youtube1UserId,
+          externalId: 'user 1 msg 3',
+          youtubeChannelId: 2
+        }, {
+          livestreamId: 1,
+          streamerId: streamer2,
+          time: addTime(data.time1, 'days', -1),
+          userId: youtube1UserId,
+          externalId: 'user 1 msg 4',
+          youtubeChannelId: 2
+        },
+
+        // user 2:
+        {
+          livestreamId: 1,
+          streamerId: streamer1,
+          time: data.time2,
+          userId: twitchUserId,
+          externalId: 'user 2 msg 1',
+          twitchChannelId: 1
+        }, {
+          livestreamId: 1,
+          streamerId: streamer1,
+          time: data.time4,
+          userId: twitchUserId,
+          externalId: 'user 2 msg 2',
+          twitchChannelId: 1
+        },
+
+        // user 3:
+        {
+          livestreamId: 1,
+          streamerId: streamer2, // different streamer
+          time: addTime(data.time2, 'hours', -1),
+          userId: user3,
+          externalId: 'user 3 msg 1',
+          youtubeChannelId: 1
+        }
+      ]})
+    })
+
+    test('Returns the first seen timestamp for the given default users', async () => {
+      const result = await chatStore.getTimeOfFirstChat(streamer1, [youtube1UserId, twitchUserId])
+
+      expect(result).toEqual(expectObject(result, [
+        { primaryUserId: youtube1UserId, firstSeen: data.time1.getTime() },
+        { primaryUserId: twitchUserId, firstSeen: data.time2.getTime() }
+      ]))
+    })
+
+    test('Returns the first seen timestamp for the given aggregate users', async () => {
+      const result = await chatStore.getTimeOfFirstChat(streamer1, [aggregateUserId1, aggregateUserId2])
+
+      expect(result).toEqual(expectObject(result, [
+        { primaryUserId: aggregateUserId1, firstSeen: data.time1.getTime() },
+        { primaryUserId: aggregateUserId2, firstSeen: data.time2.getTime() }
+      ]))
+    })
+
+    test('Throws if the user has not posted a message in the given streamer', async () => {
+      await expect(() => chatStore.getTimeOfFirstChat(streamer1, [user3])).rejects.toThrow()
     })
   })
 
@@ -529,10 +694,10 @@ export default () => {
       ]})
     }
 
-    test('Throws if no chat message was found for the stream for any of the given users', async () => {
+    test(`Throws ${ChatMessageForStreamerNotFoundError.name} if no chat message was found for the stream for any of the given users`, async () => {
       await setupMessages()
 
-      await expect(() => chatStore.getLastChatOfUsers(streamer1, [user3])).rejects.toThrow()
+      await expect(() => chatStore.getLastChatOfUsers(streamer1, [user3])).rejects.toThrowError(ChatMessageForStreamerNotFoundError)
     })
 
     test('returns the latest chat item of all default users in the streamer context', async () => {

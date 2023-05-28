@@ -1,4 +1,3 @@
-import { Dependencies } from '@rebel/shared/context/context'
 import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
 import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
@@ -17,8 +16,8 @@ import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/
 import { addTime } from '@rebel/shared/util/datetime'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import UserService from '@rebel/server/services/UserService'
+import { channelToPublicChannel } from '@rebel/server/models/user'
 
 export type GetUserRanksResponse = ApiResponse<{ ranks: PublicUserRank[] }>
 
@@ -263,13 +262,7 @@ export default class RankController extends ControllerBase {
       }
 
       return {
-        channel: {
-          channelId: channelId,
-          defaultUserId: channel.defaultUserId,
-          externalIdOrUserName: getExternalIdOrUserName(channel),
-          platform: platform,
-          displayName: getUserName(channel)
-        },
+        channel: channelToPublicChannel(channel),
         error: error,
       }
     }

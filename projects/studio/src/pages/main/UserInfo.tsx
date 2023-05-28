@@ -20,6 +20,10 @@ export default function UserInfo () {
         You are not currently logged in.
       </Alert>
       <Button onClick={() => navigate(generatePath(PageLogin.path))} fullWidth sx={{ marginTop: 1, marginBottom: 1}}>Login</Button>
+
+      {loginContext.authError != null && <>
+        <Alert severity="error">{loginContext.authError}</Alert>
+      </>}
     </>
   }
 

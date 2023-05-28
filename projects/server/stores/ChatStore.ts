@@ -7,6 +7,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { reverse } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
+import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
 
 export type ChatSave = {
   continuationToken: string | null
@@ -86,6 +87,21 @@ export default class ChatStore extends ContextClass {
     })
   }
 
+  public async getChatMessageCount (): Promise<number> {
+    return await this.db.chatMessage.count()
+  }
+
+  public async getLastYoutubeChat (streamerId: number): Promise<ChatItemWithRelations | null> {
+    return await this.db.chatMessage.findFirst({
+      where: {
+        streamerId: streamerId,
+        NOT: { youtubeChannel: null }
+      },
+      orderBy: { time: 'desc' },
+      include: chatMessageIncludeRelations
+    })
+  }
+
   public async getLastChatByYoutubeChannel (streamerId: number, youtubeChannelId: number): Promise<ChatItemWithRelations | null> {
     return await this.db.chatMessage.findFirst({
       where: {
@@ -97,8 +113,39 @@ export default class ChatStore extends ContextClass {
     })
   }
 
+  /** For each user, returns the time of the first chat item authored by the user or any of its linked users.
+   * @throws {@link ChatMessageForStreamerNotFoundError}: When no chat message was found for any of the given user ids for the specified streamer. */
+  public async getTimeOfFirstChat (streamerId: number, primaryUserIds: number[]): Promise<{ primaryUserId: number, firstSeen: number }[]> {
+    const userTimes = await this.db.chatMessage.findMany({
+      distinct: ['userId'],
+      orderBy: {
+        time: 'asc'
+      },
+      select: {
+        time: true,
+        user: true
+      },
+      where: {
+        streamerId: streamerId,
+        OR: [
+          { userId: { in: primaryUserIds } },
+          { user: { aggregateChatUserId: { in: primaryUserIds } } }
+        ]
+      }
+    })
+
+    return primaryUserIds.map(id => {
+      const userTime = userTimes.find(c => c.user!.id === id || c.user!.aggregateChatUserId === id)
+      if (userTime == null) {
+        throw new ChatMessageForStreamerNotFoundError(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
+      } else {
+        return { primaryUserId: id, firstSeen: userTime.time.getTime() }
+      }
+    })
+  }
+
   /** For each user, returns the last chat item authored by the user or any of its linked users.
-   * Throws if no chat message was found for any of the given user ids. */
+   * @throws {@link ChatMessageForStreamerNotFoundError}: When no chat message was found for any of the given user ids for the specified streamer. */
   public async getLastChatOfUsers (streamerId: number, primaryUserIds: number[]): Promise<ChatItemWithRelations[]> {
     const chatMessagesForDefaultUsers = await this.db.chatMessage.findMany({
       distinct: ['userId'],
@@ -127,7 +174,7 @@ export default class ChatStore extends ContextClass {
     return primaryUserIds.map(id => {
       const message = chatMessagesForDefaultUsers.find(c => c.userId === id) ?? chatMessagesForAggregateUsers.find(c => c.user!.aggregateChatUserId === id)
       if (message == null) {
-        throw new Error(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
+        throw new ChatMessageForStreamerNotFoundError(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
       } else {
         return message
       }

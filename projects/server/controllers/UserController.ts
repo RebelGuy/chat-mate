@@ -2,12 +2,11 @@ import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependenc
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
-import { PublicLinkToken } from '@rebel/server/controllers/public/user/PublicLinkToken'
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
-import { registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
-import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
-import ChannelService, { getExternalIdOrUserName, getUserName, getUserNameFromChannelInfo } from '@rebel/server/services/ChannelService'
+import { channelToPublicChannel, registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
+import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import LinkService, { UnlinkUserOptions } from '@rebel/server/services/LinkService'
@@ -16,13 +15,17 @@ import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { EmptyObject } from '@rebel/shared/types'
-import { first, intersection, nonNull, single, singleOrNull, symmetricDifference, unique, zipOnStrictMany } from '@rebel/shared/util/arrays'
-import { LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
+import { intersection, nonNull, single, symmetricDifference, unique } from '@rebel/shared/util/arrays'
+import { ChatMessageForStreamerNotFoundError, LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
 import { asGte, asLte } from '@rebel/shared/util/math'
 import { sleep } from '@rebel/shared/util/node'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
-import { assertUnreachable, firstOrDefault } from '@rebel/shared/util/typescript'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
+
+export type GetUserResponse = ApiResponse<{
+  user: PublicUser
+}>
 
 export type SearchUserRequest = ApiRequest<{
   searchTerm: string
@@ -49,6 +52,8 @@ export type CreateLinkTokenResponse = ApiResponse<{
   token: string
 }>
 
+export type DeleteLinkTokenResponse = ApiResponse<EmptyObject>
+
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
   channelStore: ChannelStore
@@ -57,17 +62,19 @@ type Deps = ControllerDependencies<{
   linkDataService: LinkDataService
   accountStore: AccountStore
   linkService: LinkService
+  linkStore: LinkStore
 }>
 
 @Path(buildPath('user'))
 export default class UserController extends ControllerBase {
-  readonly channelService: ChannelService
-  readonly channelStore: ChannelStore
-  readonly experienceService: ExperienceService
-  readonly rankStore: RankStore
-  readonly linkDataService: LinkDataService
-  readonly accountStore: AccountStore
-  readonly linkService: LinkService
+  private readonly channelService: ChannelService
+  private readonly channelStore: ChannelStore
+  private readonly experienceService: ExperienceService
+  private readonly rankStore: RankStore
+  private readonly linkDataService: LinkDataService
+  private readonly accountStore: AccountStore
+  private readonly linkService: LinkService
+  private readonly linkStore: LinkStore
 
   constructor (deps: Deps) {
     super(deps, 'user')
@@ -78,6 +85,25 @@ export default class UserController extends ControllerBase {
     this.linkDataService = deps.resolve('linkDataService')
     this.accountStore = deps.resolve('accountStore')
     this.linkService = deps.resolve('linkService')
+    this.linkStore = deps.resolve('linkStore')
+  }
+
+  @GET
+  @Path('/')
+  @PreProcessor(requireAuth)
+  public async getUser (): Promise<GetUserResponse> {
+    const builder = this.registerResponseBuilder<GetUserResponse>('GET /')
+
+    try {
+      const allData = await this.apiService.getAllData([this.getCurrentUser().aggregateChatUserId]).then(single)
+      return builder.success({ user: userDataToPublicUser(allData) })
+    } catch (e: any) {
+      if (e instanceof ChatMessageForStreamerNotFoundError) {
+        return builder.failure(404, e)
+      } else {
+        return builder.failure(e)
+      }
+    }
   }
 
   @POST
@@ -106,20 +132,8 @@ export default class UserController extends ControllerBase {
 
         return {
           user: userDataToPublicUser(data),
-          matchedChannel: {
-            channelId: match.platformInfo.channel.id,
-            defaultUserId: match.defaultUserId,
-            externalIdOrUserName: getExternalIdOrUserName(match),
-            platform: match.platformInfo.platform,
-            displayName: getUserName(match)
-          },
-          allChannels: channels.channels.map(c => ({
-            channelId: c.platformInfo.channel.id,
-            defaultUserId: c.defaultUserId,
-            externalIdOrUserName: getExternalIdOrUserName(match),
-            platform: c.platformInfo.platform,
-            displayName: getUserName(c)
-          }))
+          matchedChannel: channelToPublicChannel(match),
+          allChannels: channels.channels.map(channelToPublicChannel)
         }
       })
 
@@ -182,16 +196,11 @@ export default class UserController extends ControllerBase {
                   time: new Date()
                 }]
               }},
-            registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser
+            registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser,
+            firstSeen: 0
           }),
           matchedChannel: null,
-          allChannels: channels.channels.map(c => ({
-            channelId: c.platformInfo.channel.id,
-            defaultUserId: c.defaultUserId,
-            platform: c.platformInfo.platform,
-            displayName: getUserName(c),
-            externalIdOrUserName: getExternalIdOrUserName(c)
-          }))
+          allChannels: channels.channels.map(channelToPublicChannel)
         }
       })
 
@@ -223,13 +232,7 @@ export default class UserController extends ControllerBase {
 
       return builder.success({
         registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
-        channels: channels.channels.map<PublicChannel>(channel => ({
-          channelId: channel.platformInfo.channel.id,
-          defaultUserId: channel.defaultUserId,
-          externalIdOrUserName: getExternalIdOrUserName(channel),
-          platform: channel.platformInfo.platform,
-          displayName: getUserName(channel)
-        }))
+        channels: channels.channels.map(channelToPublicChannel)
       })
     } catch (e: any) {
       return builder.failure(e)
@@ -385,6 +388,30 @@ export default class UserController extends ControllerBase {
       } else {
         return builder.failure(e)
       }
+    }
+  }
+
+  @DELETE
+  @Path('link/token')
+  @PreProcessor(requireAuth)
+  public async deleteLinkToken (
+    @QueryParam('linkToken') linkToken: string
+  ): Promise<DeleteLinkTokenResponse> {
+    const builder = this.registerResponseBuilder<DeleteLinkTokenResponse>('DELETE /link/token')
+
+    if (isNullOrEmpty(linkToken)) {
+      return builder.failure(400, 'linkToken must be provided')
+    }
+
+    try {
+      const success = await this.linkStore.deleteLinkToken(this.getCurrentUser().aggregateChatUserId, linkToken)
+      if (!success) {
+        return builder.failure(404, `Could not delete the link token because it doesn't exist`)
+      } else {
+        return builder.success({})
+      }
+    } catch (e: any) {
+      return builder.failure(e)
     }
   }
 }

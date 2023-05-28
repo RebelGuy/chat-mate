@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import RankStore from '@rebel/server/stores/RankStore'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
+import { TWITCH_SCOPE } from '@rebel/server/constants'
 import { AccessToken } from '@twurple/auth/lib'
 import LogService from '@rebel/server/services/LogService'
 import WebService from '@rebel/server/services/WebService'
@@ -10,12 +10,12 @@ import WebService from '@rebel/server/services/WebService'
 type Deps = Dependencies<{
   twitchClientId: string
   twitchClientSecret: string
+  twitchUsername: string
   studioUrl: string
   rankStore: RankStore
   authStore: AuthStore
   logService: LogService
   webService: WebService
-  isAdministrativeMode: () => boolean
 }>
 
 export default class AdminService extends ContextClass {
@@ -23,24 +23,24 @@ export default class AdminService extends ContextClass {
 
   private readonly twitchClientId: string
   private readonly twitchClientSecret: string
+  private readonly twitchUsername: string
   private readonly studioUrl: string
   private readonly rankStore: RankStore
   private readonly authStore: AuthStore
   private readonly logService: LogService
   private readonly webService: WebService
-  private readonly isAdministrativeMode: () => boolean
 
   constructor (deps: Deps) {
     super()
 
     this.twitchClientId = deps.resolve('twitchClientId')
     this.twitchClientSecret = deps.resolve('twitchClientSecret')
+    this.twitchUsername = deps.resolve('twitchUsername')
     this.studioUrl = deps.resolve('studioUrl')
     this.rankStore = deps.resolve('rankStore')
     this.authStore = deps.resolve('authStore')
     this.logService = deps.resolve('logService')
     this.webService = deps.resolve('webService')
-    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   /** Returns all current system admin users. */
@@ -54,6 +54,11 @@ export default class AdminService extends ContextClass {
     const redirectUrl = this.getRedirectUrl()
     const url = `https://id.twitch.tv/oauth2/authorize?client_id=${this.twitchClientId}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}`
     return url
+  }
+
+  /** The username of the ChatMate Twitch account. */
+  public getTwitchUsername (): string {
+    return this.twitchUsername
   }
 
   public async authoriseTwitchLogin (authorisationCode: string): Promise<void> {
@@ -81,7 +86,10 @@ export default class AdminService extends ContextClass {
       expiresIn: 0,
       obtainmentTimestamp: 0
     }
-    await this.authStore.saveTwitchAccessToken(token)
+
+    // we can't get the Twitch user ID because we may not yet have authenticated the API client.
+    // this will be set the next time we refresh the token in the TwurpleAuthProvider.
+    await this.authStore.saveTwitchAccessToken(null, this.twitchUsername, token)
 
     this.logService.logInfo(this, `Successfully updated Twitch access token.`)
   }

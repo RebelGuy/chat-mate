@@ -1,12 +1,12 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/server/controllers/EmojiController'
-import { GetMasterchatAuthenticationResponse, GetStatusResponse, PingResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse } from '@rebel/server/controllers/ChatMateController'
+import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/server/controllers/ChatMateController'
 import { GetAccessibleRanksResponse, GetUserRanksResponse } from '@rebel/server/controllers/RankController'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStreamersResponse, RejectApplicationRequest, RejectApplicationResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchStatusResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/server/controllers/StreamerController'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/server/controllers/AccountController'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/server/controllers/DonationController'
-import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse } from '@rebel/server/controllers/UserController'
-import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse } from '@rebel/server/controllers/AdminController'
+import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, DeleteLinkTokenResponse } from '@rebel/server/controllers/UserController'
+import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse } from '@rebel/server/controllers/AdminController'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse, PublicObject } from '@rebel/server/controllers/ControllerBase'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
@@ -38,26 +38,25 @@ function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends
   }
 }
 
+export const getChatMateRegisteredUsername = requestBuilder<GetChatMateRegisteredUsernameResponse>('GET', `/chatMate/username`)
+
 export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`)
 
 export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, UpdateCustomEmojiRequest> ('PATCH', `/emoji/custom`, 'self')
 
 export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEmojiRequest> ('POST', `/emoji/custom`, 'self')
 
-export const setActiveLivestream = requestBuilder<SetActiveLivestreamResponse, SetActiveLivestreamRequest>('PATCH', `/chatMate/livestream`, 'self')
-
 export const ping = requestBuilder<PingResponse>('GET', `/chatMate/ping`, false, false)
+
+export const getChatMateStats = requestBuilder<ChatMateStatsResponse>('GET', `/chatMate/stats`, false, false)
 
 export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
 
-export const getStatus = requestBuilder<GetStatusResponse>('GET', `/chatMate/status`, 'self')
-
 export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`)
 
-/** Gets global ranks if the streamer is not provided. */
-export async function getRanks (loginToken: string, streamer?: string): Promise<GetUserRanksResponse> {
-  return await GET('/rank', loginToken, streamer)
-}
+export const getRanksForStreamer = requestBuilder<GetUserRanksResponse>('GET', `/rank`)
+
+export const getGlobalRanks = requestBuilder<GetUserRanksResponse>('GET', `/rank`, false)
 
 export const registerAccount = requestBuilder<RegisterResponse, RegisterRequest>('POST', `/account/register`, false, false)
 
@@ -69,9 +68,7 @@ export async function authenticate (loginToken: string): Promise<AuthenticateRes
   return await POST('/account/authenticate', {}, loginToken)
 }
 
-export async function getStreamers (loginToken: string): Promise<GetStreamersResponse> {
-  return await GET('/streamer', loginToken)
-}
+export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false)
 
 export const getStreamerApplications = requestBuilder<GetApplicationsResponse>('GET', `/streamer/application`, false)
 
@@ -97,9 +94,27 @@ export const unsetPrimaryChannel = requestBuilder<UnsetPrimaryChannelResponse, f
   false
 )
 
+export const authoriseTwitchStreamer = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
+  'POST',
+  (code) => constructPath('/streamer/twitch/authorise', { code }),
+  false
+)
+
+export const getTwitchEventStatuses = requestBuilder<GetTwitchStatusResponse>('GET', `/streamer/twitch/status`, 'self')
+
+export const getTwitchStreamerLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/streamer/twitch/login', false)
+
+export const getYoutubeStatus = requestBuilder<GetYoutubeStatusResponse>('GET', '/streamer/youtube/status', false)
+
+export const setActiveLivestream = requestBuilder<SetActiveLivestreamResponse, SetActiveLivestreamRequest>('PATCH', `/streamer/livestream`, 'self')
+
+export const getStatus = requestBuilder<GetStatusResponse>('GET', `/streamer/status`, 'self')
+
 export const setStreamlabsSocketToken = requestBuilder<SetWebsocketTokenResponse, SetWebsocketTokenRequest>('POST', `/donation/streamlabs/socketToken`, 'self')
 
 export const getStreamlabsStatus = requestBuilder<GetStreamlabsStatusResponse>('GET', `/donation/streamlabs/status`, 'self')
+
+export const getUser = requestBuilder<GetUserResponse>('GET', `/user`)
 
 export const searchUser = requestBuilder<SearchUserResponse, SearchUserRequest>('POST', `/user/search`)
 
@@ -107,7 +122,8 @@ export const searchRegisteredUser = requestBuilder<SearchUserResponse, SearchUse
 
 export const getLinkedChannels = requestBuilder<GetLinkedChannelsResponse, false, [admin_aggregateUserId?: number]>(
   'GET',
-  (admin_aggregateUserId) => constructPath('/user/link/channels', { admin_aggregateUserId })
+  (admin_aggregateUserId) => constructPath('/user/link/channels', { admin_aggregateUserId }),
+  false
 )
 
 export const addLinkedChannel = requestBuilder<AddLinkedChannelResponse, false, [aggregateUserId: number, defaultUserId: number]>(
@@ -128,21 +144,29 @@ export const getLinkHistory = requestBuilder<GetLinkHistoryResponse, false, [adm
   false
 )
 
-export const createLinkToken = requestBuilder<CreateLinkTokenResponse, false, [string]>(
+export const createLinkToken = requestBuilder<CreateLinkTokenResponse, false, [externalId: string]>(
   'POST',
   (externalId) => constructPath(`/user/link/token`, { externalId }),
   false
 )
 
+export const deleteLinkToken = requestBuilder<DeleteLinkTokenResponse, false, [linkToken: string]>(
+  'DELETE',
+  (linkToken) => constructPath(`/user/link/token`, { linkToken }),
+  false
+)
+
 export const getAdministrativeMode = requestBuilder<GetAdministrativeModeResponse>('GET', '/admin/administrativeMode', false)
 
-export const getTwitchLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/admin/twitch/login', false)
+export const getTwitchAdminLoginUrl = requestBuilder<GetTwitchLoginUrlResponse>('GET', '/admin/twitch/login', false)
 
-export const authoriseTwitch = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
+export const authoriseTwitchAdmin = requestBuilder<TwitchAuthorisationResponse, false, [code: string]>(
   'POST',
   (code) => constructPath('/admin/twitch/authorise', { code }),
   false
 )
+
+export const reconnectChatClient = requestBuilder<ReconnectTwitchChatClientResponse>('POST', '/admin/twitch/reconnectChatClient', false)
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
   return await request('GET', path, null, loginToken, streamer)

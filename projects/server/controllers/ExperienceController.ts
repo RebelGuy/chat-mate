@@ -9,6 +9,7 @@ import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import AccountStore from '@rebel/server/stores/AccountStore'
+import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single, zipOnStrictMany } from '@rebel/shared/util/arrays'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
@@ -39,6 +40,7 @@ type Deps = ControllerDependencies<{
   rankStore: RankStore
   accountStore: AccountStore
   accountService: AccountService
+  chatStore: ChatStore
 }>
 
 @Path(buildPath('experience'))
@@ -51,6 +53,7 @@ export default class ExperienceController extends ControllerBase {
   private readonly rankStore: RankStore
   private readonly accountStore: AccountStore
   private readonly accountService: AccountService
+  private readonly chatStore: ChatStore
 
   constructor (deps: Deps) {
     super(deps, 'experience')
@@ -60,6 +63,7 @@ export default class ExperienceController extends ControllerBase {
     this.rankStore = deps.resolve('rankStore')
     this.accountStore = deps.resolve('accountStore')
     this.accountService = deps.resolve('accountService')
+    this.chatStore = deps.resolve('chatStore')
   }
 
   @GET
@@ -69,11 +73,12 @@ export default class ExperienceController extends ControllerBase {
     try {
       const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
       const primaryUserIds = leaderboard.map(r => r.primaryUserId)
-      const [activeRanks, registeredUsers] = await Promise.all([
+      const [activeRanks, registeredUsers, firstSeen] = await Promise.all([
         this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
-        this.accountStore.getRegisteredUsers(primaryUserIds)
+        this.accountStore.getRegisteredUsers(primaryUserIds),
+        this.chatStore.getTimeOfFirstChat(this.getStreamerId(), primaryUserIds)
       ])
-      const publicLeaderboard = zipOnStrictMany(leaderboard, 'primaryUserId', activeRanks, registeredUsers)
+      const publicLeaderboard = zipOnStrictMany(leaderboard, 'primaryUserId', activeRanks, registeredUsers, firstSeen)
         .map(data => rankedEntryToPublic(data))
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
@@ -95,7 +100,7 @@ export default class ExperienceController extends ControllerBase {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
 
       let userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [primaryUserId])
-      if (userChannels.length == 0) {
+      if (userChannels.length === 0) {
         return builder.failure(404, `Could not find an active channel for primary user ${primaryUserId}.`)
       }
 
@@ -119,9 +124,12 @@ export default class ExperienceController extends ControllerBase {
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
 
       const primaryUserIds = prunedLeaderboard.map(entry => entry.primaryUserId)
-      const activeRanks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
-      const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
-      const publicLeaderboard = zipOnStrictMany(prunedLeaderboard, 'primaryUserId', activeRanks, registeredUsers).map(rankedEntryToPublic)
+      const [activeRanks, registeredUsers, firstSeen] = await Promise.all([
+        this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
+        this.accountStore.getRegisteredUsers(primaryUserIds),
+        this.chatStore.getTimeOfFirstChat(this.getStreamerId(), primaryUserIds)
+      ])
+      const publicLeaderboard = zipOnStrictMany(prunedLeaderboard, 'primaryUserId', activeRanks, registeredUsers, firstSeen).map(rankedEntryToPublic)
 
       return builder.success({
         relevantIndex: prunedLeaderboard.findIndex(l => l === match),

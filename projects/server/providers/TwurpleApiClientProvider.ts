@@ -44,7 +44,7 @@ export default class TwurpleApiClientProvider extends ContextClass {
     }
 
     this.apiClient = new ApiClient({
-      authProvider: this.twurpleAuthProvider.get(),
+      authProvider: this.twurpleAuthProvider.getUserTokenAuthProviderForAdmin(),
 
       // inject custom logging
       logger: {
@@ -55,7 +55,7 @@ export default class TwurpleApiClientProvider extends ContextClass {
     })
 
     this.clientApiClient = new ApiClient({
-      authProvider: this.twurpleAuthProvider.getClientAuthProvider(),
+      authProvider: this.twurpleAuthProvider.getAppTokenAuthProvider(),
 
       // inject custom logging
       logger: {
@@ -66,11 +66,15 @@ export default class TwurpleApiClientProvider extends ContextClass {
     })
   }
 
-  /** This is probably the one you want. */
-  public get () {
+  /** Uses the refreshable user access token. This is probably the one you want. Requests are performed on behalf of the give user's Twitch channel, or, if not provided, the ChatMate admin Twitch channel. */
+  public get = async (twitchUserId: string | null) => {
+    if (twitchUserId != null) {
+      await this.twurpleAuthProvider.getUserTokenAuthProvider(twitchUserId)
+    }
     return this.apiClient
   }
 
+  /** Uses the app access token. Only required for event-based API access. */
   public getClientApi () {
     return this.clientApiClient
   }

@@ -7,7 +7,7 @@ import { clamp, clampNormFn, min, sum } from '@rebel/shared/util/math'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
 import { Livestream } from '@prisma/client'
@@ -27,7 +27,7 @@ type Deps = Dependencies<{
   chatService: ChatService,
   chatStore: ChatStore,
   logService: LogService,
-  masterchatProxyService: MasterchatProxyService,
+  masterchatService: MasterchatService,
   timerHelpers: TimerHelpers,
   livestreamStore: LivestreamStore,
   disableExternalApis: boolean
@@ -38,7 +38,7 @@ export default class ChatFetchService extends ContextClass {
   private readonly chatService: ChatService
   private readonly chatStore: ChatStore
   private readonly logService: LogService
-  private readonly masterchatProxyService: MasterchatProxyService
+  private readonly masterchatService: MasterchatService
   private readonly timerHelpers: TimerHelpers
   private readonly livestreamStore: LivestreamStore
   private readonly disableExternalApis: boolean
@@ -47,7 +47,7 @@ export default class ChatFetchService extends ContextClass {
     super()
     this.chatService = deps.resolve('chatService')
     this.chatStore = deps.resolve('chatStore')
-    this.masterchatProxyService = deps.resolve('masterchatProxyService')
+    this.masterchatService = deps.resolve('masterchatService')
     this.logService = deps.resolve('logService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -71,7 +71,7 @@ export default class ChatFetchService extends ContextClass {
     const liveId = livestream.liveId
 
     try {
-      const result = await this.masterchatProxyService.fetch(liveId, token ?? undefined)
+      const result = await this.masterchatService.fetch(livestream.streamerId, token ?? undefined)
       return result
     } catch (e: any) {
       this.logService.logWarning(this, `Encountered error while fetching chat for livestream ${livestream.id} for streamer ${livestream.streamerId}:`, e.message)

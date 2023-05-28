@@ -2,15 +2,16 @@ import RequireRank from '@rebel/studio/components/RequireRank'
 import RouteParamsObserver from '@rebel/studio/components/RouteParamsObserver'
 import DebugInfo from '@rebel/studio/pages/main/DebugInfo'
 import { Outlet } from 'react-router-dom'
-import { Box, Container, Typography } from '@mui/material'
+import { Alert, Box, Container, Typography } from '@mui/material'
 import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
 import UserPanel from '@rebel/studio/pages/main/UserPanel'
 import styled from '@emotion/styled'
-import { useContext, useState } from 'react'
+import { ReactNode, useContext, useState } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
-import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { getAdministrativeMode } from '@rebel/studio/utility/api'
+import useCurrentPage from '@rebel/studio/hooks/useCurrentPage'
+import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -23,7 +24,11 @@ const Panel = styled('div')({
 export default function MainView () {
   const [headerHeight, setHeaderHeight] = useState(0)
   const loginContext = useContext(LoginContext)
-  const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), { onRequest: () => loginContext.hasRank('admin') })
+  const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), {
+    // normally we don't need to do this, but the MainView renders before login info is completely loaded in and we need to trigger a re-request once it has finished loading
+    updateKey: loginContext.isHydrated,
+    onRequest: () => !loginContext.hasRank('admin')
+  })
 
   const isAdministrativeMode = getAdministrativeModeRequest.data?.isAdministrativeMode === true
 
@@ -47,12 +52,7 @@ export default function MainView () {
 
         <Container style={{ minWidth: 300, maxWidth: 10000, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
           <Panel style={{ height: '100%' }}>
-            <Box sx={{ m: 1 }}>
-              {!loginContext.isLoading && loginContext.initialised &&
-                // placeholder component for the page that is currently selected
-                <Outlet />
-              }
-            </Box>
+            <CurrentPage />
           </Panel>
         </Container>
       </div>
@@ -67,6 +67,39 @@ export default function MainView () {
       <RequireRank admin hideAdminOutline>
         <DebugInfo />
       </RequireRank>
+    </Box>
+  )
+}
+
+function CurrentPage () {
+  const loginContext = useContext(LoginContext)
+  const page = useCurrentPage()
+
+  if (loginContext.isLoading && !loginContext.isHydrated) {
+    return <CentredLoadingSpinner />
+  } else if (page?.requiresStreamer && loginContext.streamer == null) {
+    // the user already gets redirected to Home in the SelectStreamer component
+    return null
+  }
+
+  let content: ReactNode
+  if (page == null || page.requireRanksProps == null) {
+    content = <Outlet />
+  } else {
+    content = (
+      <RequireRank
+        hideAdminOutline
+        forbidden={<Alert severity="error">You do not have permission to access this page.</Alert>}
+        {...page.requireRanksProps}
+      >
+        <Outlet />
+      </RequireRank>
+    )
+  }
+
+  return (
+    <Box sx={{ m: 1 }}>
+      {content}
     </Box>
   )
 }

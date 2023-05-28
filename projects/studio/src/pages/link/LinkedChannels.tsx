@@ -1,13 +1,11 @@
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { removeLinkedChannel, setPrimaryChannel, unsetPrimaryChannel } from '@rebel/studio/utility/api'
 import * as React from 'react'
-import ApiRequestTrigger from '@rebel/studio/components/ApiRequestTrigger'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { Button, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { Box } from '@mui/system'
-import { getChannelUrl } from '@rebel/studio/utility/misc'
 import useRequest, { onConfirmRequest, RequestResult, SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
@@ -15,17 +13,18 @@ import { GetLinkedChannelsResponse } from '@rebel/server/controllers/UserControl
 import { GetPrimaryChannelsResponse } from '@rebel/server/controllers/StreamerController'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
+import { getChannelUrlFromPublic } from '@rebel/server/models/user'
 
 type Props = {
   channelsRequestObj: RequestResult<SuccessfulResponseData<GetLinkedChannelsResponse>>
-  primaryChannelsRequestObj: RequestResult<SuccessfulResponseData<GetPrimaryChannelsResponse>>
+  primaryChannelsRequestObj: RequestResult<SuccessfulResponseData<GetPrimaryChannelsResponse>> | null
   onChange: () => void
   onRefresh: () => void
 }
 
 export default function LinkedChannels (props: Props) {
   const header = (
-    <PanelHeader>Linked Channels {<RefreshButton isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj.isLoading} onRefresh={props.onRefresh} />}</PanelHeader>
+    <PanelHeader>Linked Channels {<RefreshButton isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj?.isLoading} onRefresh={props.onRefresh} />}</PanelHeader>
   )
 
   if (props.channelsRequestObj.data?.channels.length === 0) {
@@ -37,8 +36,8 @@ export default function LinkedChannels (props: Props) {
     </>
   }
 
-  const primaryYoutubeChannel = props.primaryChannelsRequestObj.data?.youtubeChannelId
-  const primaryTwitchChannel = props.primaryChannelsRequestObj.data?.twitchChannelId
+  const primaryYoutubeChannel = props.primaryChannelsRequestObj?.data?.youtubeChannelId
+  const primaryTwitchChannel = props.primaryChannelsRequestObj?.data?.twitchChannelId
 
   const isPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && channel.channelId === primaryYoutubeChannel) || (channel.platform === 'twitch' && channel.channelId === primaryTwitchChannel)
   const canAddPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && primaryYoutubeChannel == null) || (channel.platform === 'twitch' && primaryTwitchChannel == null)
@@ -63,13 +62,13 @@ export default function LinkedChannels (props: Props) {
         <TableBody>
           {sortBy(props.channelsRequestObj.data.channels, c => isPrimaryChannel(c) ? c.channelId * -1 : c.channelId).map((c, i) =>
             <TableRow key={i} style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
-              <TableCell><a href={getChannelUrl(c)}>{c.displayName}</a></TableCell>
+              <TableCell><a href={getChannelUrlFromPublic(c)}>{c.displayName}</a></TableCell>
               <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
               <RequireRank anyOwner>
                 <TableCell>
                   <ChangePrimaryChannel
                     channel={c}
-                    isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj.isLoading}
+                    isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj?.isLoading}
                     isPrimaryChannel={isPrimaryChannel(c)}
                     canAddPrimary={canAddPrimaryChannel(c)}
                     onChange={props.onChange}
@@ -80,7 +79,7 @@ export default function LinkedChannels (props: Props) {
                 <TableCell>
                   <UnlinkUser
                     channel={c}
-                    isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj.isLoading}
+                    isLoading={props.channelsRequestObj.isLoading || props.primaryChannelsRequestObj?.isLoading}
                     onChange={props.onChange}
                   />
                 </TableCell>
@@ -100,7 +99,7 @@ type ChangePrimaryChannelProps = {
   channel: PublicChannel
   isPrimaryChannel: boolean
   canAddPrimary: boolean
-  isLoading: boolean
+  isLoading: boolean | undefined
   onChange: () => void
 }
 
@@ -138,7 +137,7 @@ function ChangePrimaryChannel (props: ChangePrimaryChannelProps) {
   </>
 }
 
-function UnlinkUser (props: { channel: PublicChannel, isLoading: boolean, onChange: () => void }) {
+function UnlinkUser (props: { channel: PublicChannel, isLoading: boolean | undefined, onChange: () => void }) {
   const [transferRanks, setTransferRanks] = React.useState(true)
   const [relinkChatExperience, setRelinkChatExperience] = React.useState(true)
   const [relinkDoantions, setRelinkDonations] = React.useState(true)

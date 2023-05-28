@@ -1,10 +1,18 @@
 import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
+import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer/PublicStreamerSummary'
+import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
+import { nonNull } from '@rebel/shared/util/arrays'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
-import { authenticate, getRanks, getStreamers } from '@rebel/studio/utility/api'
+import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
+import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
+import { authenticate, getGlobalRanks, getRanksForStreamer, getStreamers, getUser } from '@rebel/studio/utility/api'
 import * as React from 'react'
 
 export type RankName = PublicRank['name']
+
+export type RefreshableDataType = 'streamerList'
 
 type Props = {
   children: React.ReactNode
@@ -13,13 +21,38 @@ type Props = {
 export function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
-  const [loadingCount, setLoadingCount] = React.useState(0)
+  const [isStreamer, setIsStreamer] = React.useState(false)
+  const [hasLoadedAuth, setHasLoadedAuth] = React.useState(false)
   const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
-  const [initialised, setInitialised] = React.useState(false)
-  const [ranks, setRanks] = React.useState<RankName[]>([])
-  const [allStreamers, setAllStreamers] = React.useState<string[]>([])
+  const [authError, setAuthError] = React.useState<string | null>(null)
 
-  function onSetLogin (usernameToSet: string, token: string) {
+  const [streamerListUpdateKey, incrementStreamerListUpdateKey] = useUpdateKey({ repeatInterval: 60_000 })
+
+  const getGlobalRanksRequest = useRequest(getGlobalRanks(), {
+    onDemand: true,
+    loginToken: loginToken,
+    onError: (error, type) => console.error(error)
+  })
+  const getRanksForStreamerRequest = useRequest(getRanksForStreamer(), {
+    onDemand: true,
+    loginToken: loginToken,
+    streamer: selectedStreamer,
+    onError: (error, type) => console.error(error)
+  })
+  const getUserRequest = useRequest(getUser(), {
+    onDemand: true,
+    loginToken: loginToken,
+    streamer: selectedStreamer,
+    onError: (error, type) => console.error(error)
+  })
+  const getStreamersRequest = useRequest(getStreamers(), {
+    updateKey: streamerListUpdateKey,
+    loginToken: loginToken,
+    onRequest: () => loginToken == null,
+    onError: (error, type) => console.error(error)
+  })
+
+  function onSetLogin (usernameToSet: string, token: string, isStreamerToSet: boolean) {
     try {
       window.localStorage.setItem('loginToken', token)
     } catch (e: any) {
@@ -28,7 +61,8 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(token)
     setUsername(usernameToSet)
-    void onHydrateStreamers(token)
+    setIsStreamer(isStreamerToSet)
+    setAuthError(null)
   }
 
   function onPersistStreamer (streamer: string | null) {
@@ -59,55 +93,54 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(null)
     setUsername(null)
+    setIsStreamer(false)
     setSelectedStreamer(null)
-    setRanks([])
   }
 
-  const onLogin = React.useCallback(async (): Promise<boolean> => {
+  const onLogin = React.useCallback(async () => {
     try {
       const storedStreamer = window.localStorage.getItem('streamer')
       const storedLoginToken = window.localStorage.getItem('loginToken')
       if (storedLoginToken == null) {
-        return false
+        setHasLoadedAuth(true)
+        return
       }
 
-      setLoadingCount(c => c + 1)
+      setAuthError(null)
       const response = await authenticate(storedLoginToken)
-        .finally(() => setLoadingCount(c => c - 1))
+        // ugly hack: once authentication has completed, it will trigger the side effect of hydrating everything else.
+        // however, this doesn't happen instantly and there are a few frames where we are logged in and not loading, causing the current page to possibly mount.
+        // once we finished loading, the page will be re-mounted.
+        // to avoid this interruption of the loading state, delay the time before we claim to have finished loading the authentication.
+        .finally(() => window.setTimeout(() => setHasLoadedAuth(true), 50))
 
       if (response.success) {
         setLoginToken(storedLoginToken)
         setUsername(response.data.username)
+        setIsStreamer(response.data.isStreamer)
 
         if (response.data.isStreamer && storedStreamer == null) {
           onPersistStreamer(response.data.username)
         }
 
-        await onHydrateStreamers(storedLoginToken)
-        return true
+        return
       } else if (response.error.errorCode === 401) {
         console.log('Stored login token was invalid. The user must log in.')
         onClearAuthInfo()
       }
     } catch (e: any) {
       console.error('Unable to login:', e)
+      setAuthError(e.message)
     }
 
-    return false
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const onHydrateStreamers = async (login: string) => {
-    if (login == null) {
-      return
-    }
-
-    setLoadingCount(c => c + 1)
-    const response = await getStreamers(login)
-      .finally(() => setLoadingCount(c => c - 1))
-
-    if (response.success) {
-      setAllStreamers(response.data.streamers)
+  const refreshData = (dataType: RefreshableDataType) => {
+    if (dataType === 'streamerList') {
+      incrementStreamerListUpdateKey()
+    } else {
+      assertUnreachable(dataType)
     }
   }
 
@@ -137,44 +170,62 @@ export function LoginProvider (props: Props) {
       }
 
       onPersistStreamer(streamer)
-      setInitialised(true)
     }
     void loadContext()
   }, [onLogin])
 
   React.useEffect(() => {
     if (loginToken == null) {
-      setRanks([])
+      getGlobalRanksRequest.reset()
+      getStreamersRequest.reset()
+      getRanksForStreamerRequest.reset()
+      getUserRequest.reset()
       return
     }
 
-    const loadRanks = async () => {
-      setLoadingCount(c => c + 1)
-      const result = await getRanks(loginToken, selectedStreamer ?? undefined)
-        .finally(() => setLoadingCount(c => c - 1))
+    // always load global ranks, and use them as a fallback if we don't have a streamer selected
+    // (streamer ranks include global ranks)
+    getGlobalRanksRequest.triggerRequest()
+    getStreamersRequest.triggerRequest()
 
-      if (result.success) {
-        setRanks(result.data.ranks.map(r => r.rank.name))
-      }
+    // this ensures we don't end up being un-hydrated if not selecting a streamer
+    if (selectedStreamer == null) {
+      getRanksForStreamerRequest.reset({ ranks: [] })
+      getUserRequest.reset(undefined, { errorCode: 500, errorType: 'Unknown', internalErrorType: 'Unknown', message: 'No data' })
+      return
     }
-    void loadRanks()
+
+    getRanksForStreamerRequest.triggerRequest()
+    getUserRequest.triggerRequest()
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loginToken, selectedStreamer])
+
+  const requests = [getUserRequest, getGlobalRanksRequest, getRanksForStreamerRequest, getStreamersRequest]
+  const isHydrated = requests.find(r => r.data == null && r.error == null) == null
+  const isLoading = requests.find(r => r.isLoading) != null
+  const errors = nonNull(requests.map(r => r.error))
+  const ranks = [...(getGlobalRanksRequest.data?.ranks ?? []), ...(getRanksForStreamerRequest.data?.ranks ?? [])]
 
   return (
     <LoginContext.Provider
       value={{
-        initialised,
+        isHydrated,
         loginToken,
         username,
-        isLoading: loadingCount > 0,
+        user: getUserRequest.data?.user ?? null,
+        isLoading: !hasLoadedAuth || isLoading,
+        loadingData: nonNull([getStreamersRequest.isLoading ? 'streamerList' : null]),
+        errors: errors.length === 0 ? null : errors,
         streamer: selectedStreamer,
-        allStreamers,
-        isStreamer: allStreamers.includes(username ?? ''),
+        allStreamers: getStreamersRequest.data?.streamers ?? [],
+        isStreamer: isStreamer,
+        authError: authError,
         setLogin: onSetLogin,
-        login: onLogin,
         setStreamer: onPersistStreamer,
         logout: onClearAuthInfo,
-        hasRank: rankName => ranks.find(r => r === rankName) != null,
+        hasRank: rankName => ranks.find(r => r.rank.name === rankName) != null,
+        refreshData: refreshData
       }}
     >
       {props.children}
@@ -182,25 +233,28 @@ export function LoginProvider (props: Props) {
   )
 }
 
-type LoginContextType = {
-  initialised: boolean
+export type LoginContextType = {
+  isHydrated: boolean
   loginToken: string | null
 
   /** Is streamer anywhere, regardless of the current streamer context. */
   isStreamer: boolean
-  allStreamers: string[]
+  allStreamers: PublicStreamerSummary[]
 
   /** The streamer context. */
   streamer: string | null
   username: string | null
+  user: PublicUser | null
   isLoading: boolean
+  loadingData: RefreshableDataType[]
+  errors: ApiRequestError[] | null
+  authError: string | null
 
-  /** Logs the user in using the saved credentials, if any. Returns true if the login was successful. */
-  login: () => Promise<boolean>
-  setLogin: (username: string, token: string) => void
+  setLogin: (username: string, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void
   logout: () => void
   hasRank: (rankName: RankName) => boolean
+  refreshData: (dataType: RefreshableDataType) => void
 }
 
 const LoginContext = React.createContext<LoginContextType>(null!)

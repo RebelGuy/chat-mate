@@ -1,19 +1,19 @@
-import { RankName, RegisteredUser, Streamer, UserRank } from '@prisma/client'
+import { RankName, RegisteredUser, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ChannelService from '@rebel/server/services/ChannelService'
-import ExperienceService, { UserLevel } from '@rebel/server/services/ExperienceService'
+import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import { UserChannel } from '@rebel/server/stores/ChannelStore'
-import RankStore, { UserRanks } from '@rebel/server/stores/RankStore'
+import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single, unique, zipOnStrictMany } from '@rebel/shared/util/arrays'
-import { InvalidUsernameError, PreProcessorError } from '@rebel/shared/util/error'
+import { PreProcessorError } from '@rebel/shared/util/error'
 import { Request, Response } from 'express'
-import { Errors } from 'typescript-rest'
+import ChatStore from '@rebel/server/stores/ChatStore'
+import { AllUserData } from '@rebel/server/models/user'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 
@@ -29,6 +29,7 @@ type Deps = Dependencies<{
   channelService: ChannelService
   experienceService: ExperienceService
   logService: LogService
+  chatStore: ChatStore
 }>
 
 // we could do a lot of these things directly in the ControllerBase, but it will be trickier to get the preProcessors to work because we don't know which controller instance from the context to use
@@ -44,6 +45,7 @@ export default class ApiService extends ContextClass {
   private readonly channelService: ChannelService
   private readonly experienceService: ExperienceService
   private readonly logService: LogService
+  private readonly chatStore: ChatStore
 
   private registeredUser: RegisteredUser | null = null
   private streamerId: number | null = null
@@ -60,6 +62,7 @@ export default class ApiService extends ContextClass {
     this.channelService = deps.resolve('channelService')
     this.experienceService = deps.resolve('experienceService')
     this.logService = deps.resolve('logService')
+    this.chatStore = deps.resolve('chatStore')
   }
 
   /** If this method runs to completion, `getCurrentUser` will return a non-null object.
@@ -171,20 +174,25 @@ export default class ApiService extends ContextClass {
     return this.ranks!.includes(rank)
   }
 
-  public async getAllData (primaryUserIds: number[]): Promise<(UserChannel & UserRanks & UserLevel & { registeredUser: RegisteredUser | null })[]> {
+  public async getAllData (primaryUserIds: number[]): Promise<AllUserData[]> {
     if (primaryUserIds.length === 0) {
       return []
     }
 
     primaryUserIds = unique(primaryUserIds)
-    const activeUserChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), primaryUserIds)
-      .then(channels => channels.map(c => ({ ...c, primaryUserId: getPrimaryUserId(c) })))
-    const levels = await this.experienceService.getLevels(this.getStreamerId(), primaryUserIds)
-    const ranks = await this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId())
-    const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
+
+    // it's not pretty but it's efficient!
+    const [activeUserChannels, levels, ranks, registeredUsers, firstSeen] = await Promise.all([
+      this.channelService.getActiveUserChannels(this.getStreamerId(), primaryUserIds)
+        .then(channels => channels.map(c => ({ ...c, primaryUserId: getPrimaryUserId(c) }))),
+      this.experienceService.getLevels(this.getStreamerId(), primaryUserIds),
+      this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
+      this.accountStore.getRegisteredUsers(primaryUserIds),
+      this.chatStore.getTimeOfFirstChat(this.getStreamerId(), primaryUserIds)
+    ])
 
     try {
-      return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers)
+      return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers, firstSeen)
     } catch (e: any) {
       this.logService.logError(this, `Failed to get all data for primaryUserIds [${primaryUserIds.join(', ')}]. Most likely one or more of the ids were not primary (leading to duplicate effective primary user ids) or a link/unlink was not successful such that fetching data for a (probably default) primary user returned data for another (proabbly aggregate) primary user.`, e)
       throw new Error('Unable to get all data.')

@@ -20,7 +20,7 @@ import LivestreamService from '@rebel/server/services/LivestreamService'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import ChatMateController from '@rebel/server/controllers/ChatMateController'
 import StatusService from '@rebel/server/services/StatusService'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceController from '@rebel/server/controllers/ExperienceController'
 import UserController from '@rebel/server/controllers/UserController'
@@ -36,7 +36,7 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
-import ClientCredentialsAuthProviderFactory from '@rebel/server/factories/ClientCredentialsAuthProviderFactory'
+import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthProviderFactory'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
@@ -88,6 +88,7 @@ import GenericStore from '@rebel/server/stores/GenericStore'
 import { createLogContext } from '@rebel/shared/ILogService'
 import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
+import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -109,11 +110,14 @@ const main = async () => {
   const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
   const dbTransactionTimeout = env('dbTransactionTimeout')
   const streamlabsAccessToken = env('streamlabsAccessToken')
+  const twitchUsername = env('twitchUsername')
 
   let isAdministrativeMode = false
+  let isContextInitialised = false
 
   const globalContext = ContextProvider.create()
     .withVariable('isAdministrativeMode', () => isAdministrativeMode)
+    .withVariable('isContextInitialised', () => isContextInitialised)
     .withObject('app', app)
     .withProperty('port', port)
     .withProperty('studioUrl', studioUrl)
@@ -131,6 +135,8 @@ const main = async () => {
     .withProperty('dbTransactionTimeout', dbTransactionTimeout)
     .withProperty('hostName', hostName)
     .withProperty('streamlabsAccessToken', streamlabsAccessToken)
+    .withProperty('twitchUsername', twitchUsername)
+    .withProperty('chatMateRegisteredUserName', env('chatMateRegisteredUserName'))
     .withHelpers('experienceHelpers', ExperienceHelpers)
     .withHelpers('timerHelpers', TimerHelpers)
     .withHelpers('dateTimeHelpers', DateTimeHelpers)
@@ -139,7 +145,7 @@ const main = async () => {
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
     .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
-    .withFactory('clientCredentialsAuthProviderFactory', ClientCredentialsAuthProviderFactory)
+    .withFactory('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withFactory('websocketFactory', WebsocketFactory)
     .withClass('eventDispatchService', EventDispatchService)
     .withClass('fileService', FileService)
@@ -152,13 +158,14 @@ const main = async () => {
     .withClass('masterchatStatusService', StatusService)
     .withClass('twurpleStatusService', StatusService)
     .withClass('streamlabsStatusService', StatusService)
-    .withClass('masterchatProxyService', MasterchatProxyService)
+    .withClass('livestreamStore', LivestreamStore)
+    .withClass('chatStore', ChatStore)
+    .withClass('masterchatService', MasterchatService)
     .withClass('twurpleAuthProvider', TwurpleAuthProvider)
     .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
     .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
     .withClass('twurpleApiProxyService', TwurpleApiProxyService)
     .withClass('streamlabsProxyService', StreamlabsProxyService)
-    .withClass('livestreamStore', LivestreamStore)
     .withClass('accountStore', AccountStore)
     .withClass('streamerStore', StreamerStore)
     .withClass('channelStore', ChannelStore)
@@ -168,7 +175,6 @@ const main = async () => {
     .withClass('rankStore', RankStore)
     .withClass('adminService', AdminService)
     .withClass('experienceStore', ExperienceStore)
-    .withClass('chatStore', ChatStore)
     .withClass('accountService', AccountService)
     .withClass('channelService', ChannelService)
     .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
@@ -197,6 +203,7 @@ const main = async () => {
     .withClass('chatMateEventService', ChatMateEventService)
     .withClass('streamerService', StreamerService)
     .withClass('linkDataService', LinkDataService)
+    .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .build()
 
   app.use((req, res, next) => {
@@ -240,6 +247,7 @@ const main = async () => {
             error: {
               errorCode: res.statusCode as any,
               errorType: res.statusMessage ?? 'Internal Server Error',
+              internalErrorType: 'Error',
               message: body
             }
           }
@@ -315,13 +323,19 @@ const main = async () => {
     AdminController
   )
 
+  // at this point, none of the routes have matched, so we want to return a custom formatted error
+  // from https://expressjs.com/en/starter/faq.html#how-do-i-handle-404-responses
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.status(404).send('Not found.')
+  })
+
   // error handler
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     // any errors reaching here are unhandled - just return a 500
     logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
 
     if (!res.headersSent) {
-      res.sendStatus(500)
+      res.status(500).send(err.message)
     }
 
     // don't call `next(error)` - the next middleware would be the default express error handler,
@@ -363,6 +377,8 @@ const main = async () => {
 
     return 'abort'
   })
+
+  isContextInitialised = true
 
   app.listen(port, () => {
     logContext.logInfo(`Server is listening on ${port}`)

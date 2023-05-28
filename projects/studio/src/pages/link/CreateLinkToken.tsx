@@ -26,7 +26,7 @@ export function CreateLinkToken (props: { linkedCount: number, isLoading: boolea
     <Box sx={{ display : 'flex', flexDirection: 'column' }}>
       <TextField
         disabled={createLinkTokenRequest.isLoading}
-        label="Channel URL or ID"
+        label="Enter YouTube/Twitch channel URL or ID to link"
         value={channelInput}
         onChange={e => setChannelInput(e.target.value)}
         sx={{ maxWidth: '600px' }}

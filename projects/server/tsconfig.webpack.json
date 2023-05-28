@@ -1,0 +1,34 @@
+// do not make changes to this file without also updating ./tsconfig.json
+// ideally this would simply extend ./tsconfig.json and override only the exclude property, but of course it doesn't work like that 
+{
+  "extends": "../../tsconfig.base.json",
+  "references": [
+    { "path": "../masterchat" },
+    { "path": "../shared" },
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "../../dist/server",
+    "module": "commonjs",
+    "target": "es2020", // required because masterchat uses BigInt
+    "lib": ["ES6", "DOM"], // DOM is required to make `fetch` work
+    "noImplicitOverride": true
+  },
+  "include": ["./**/*"],
+  "exclude": [
+    "./**/*.test.ts",
+    "./**/*.spec.ts",
+
+    "./node_modules",
+    "./prisma",
+
+    // related to data migrations - ignore for now
+    "./scripts/migrations/_dataMigrationTemplate.ts",
+    "./scripts/migrations/applyMigrations.ts",
+    "./scripts/migrations/migrateData.ts",
+
+    // old scripts we don't want to continue maintaining
+    "./scripts/v1.5-db-backfill.ts",
+    "./scripts/fillDatabaseWithJsonData.ts",
+  ]
+}

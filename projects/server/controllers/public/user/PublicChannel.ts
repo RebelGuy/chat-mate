@@ -15,4 +15,7 @@ export type PublicChannel = PublicObject<{
 
   /** The current display name of the channel. */
   displayName: string
+
+  /** The link to the external channel page. */
+  channelUrl: string
 }>

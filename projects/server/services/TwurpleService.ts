@@ -13,10 +13,25 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ChatClient } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
+import { HelixUser, HelixUserApi } from '@twurple/api/lib'
+import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
+import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
+import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
+
+export type TwitchMetadata = {
+  streamId: string
+  startTime: Date
+  title: string
+  viewerCount: number
+}
 
 type Deps = Dependencies<{
   logService: LogService
   twurpleChatClientProvider: TwurpleChatClientProvider
+  twurpleApiClientProvider: TwurpleApiClientProvider
+  twurpleAuthProvider: TwurpleAuthProvider
   twurpleApiProxyService: TwurpleApiProxyService
   disableExternalApis: boolean
   channelStore: ChannelStore
@@ -25,6 +40,8 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   streamerChannelService: StreamerChannelService
   isAdministrativeMode: () => boolean
+  dateTimeHelpers: DateTimeHelpers
+  twitchUsername: string
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -32,6 +49,8 @@ export default class TwurpleService extends ContextClass {
 
   private readonly logService: LogService
   private readonly chatClientProvider: TwurpleChatClientProvider
+  private readonly twurpleApiClientProvider: TwurpleApiClientProvider
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly twurpleApiProxyService: TwurpleApiProxyService
   private readonly disableExternalApis: boolean
   private readonly channelStore: ChannelStore
@@ -40,12 +59,19 @@ export default class TwurpleService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly streamerChannelService: StreamerChannelService
   private readonly isAdministrativeMode: () => boolean
+  private readonly dateTimeHelpers: DateTimeHelpers
+  private userApi!: HelixUserApi
   private chatClient!: ChatClient
+
+  /** The keys are the channel names in lowercase characters. */
+  private channelChatStatus: Map<string, SubscriptionStatus> = new Map()
 
   constructor (deps: Deps) {
     super()
     this.logService = deps.resolve('logService')
     this.chatClientProvider = deps.resolve('twurpleChatClientProvider')
+    this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.twurpleApiProxyService = deps.resolve('twurpleApiProxyService')
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.channelStore = deps.resolve('channelStore')
@@ -54,10 +80,18 @@ export default class TwurpleService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
+    this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
   }
 
   public override async initialise () {
+    if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
+      return
+    }
+
     this.chatClient = this.chatClientProvider.get()
+    this.userApi = await this.twurpleApiClientProvider.get(null).then(client => client.users)
+
     if (this.disableExternalApis) {
       return
     } else if (this.isAdministrativeMode()) {
@@ -65,8 +99,11 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg) as any as void) // it doesn't like async message handlers, but not much we can do about that
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
 
+    this.chatClient.onConnect(() => this.logService.logInfo(this, 'Connected.'))
+    this.chatClient.onDisconnect((manually, reason) => this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason))
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onJoinFailure((channel, reason) => this.logService.logError(this, 'chatClient.onJoinFailure', channel, reason))
     this.chatClient.onJoin((channel, user) => this.logService.logInfo(this, 'chatClient.onJoin', channel, user))
@@ -79,9 +116,6 @@ export default class TwurpleService extends ContextClass {
     this.chatClient.onBan((channel, user) => this.logService.logInfo(this, 'chatClient.onBan', channel, user))
     this.chatClient.onTimeout((channel, user, duration) => this.logService.logInfo(this, 'chatClient.onTimeout', channel, user, duration))
 
-    // represents an info message in chat, e.g. confirmation that an action was successful
-    this.chatClient.onNotice((target, user, msg, notice) => this.logService.logInfo(this, 'chatClient.onNotice', target, user, msg, notice))
-
     await this.joinStreamerChannels()
 
     this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
@@ -89,75 +123,132 @@ export default class TwurpleService extends ContextClass {
   }
 
   public async banChannel (streamerId: number, twitchChannelId: number, reason: string | null) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+    const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
+    if (broadcaster == null) {
       return
     }
 
-    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
-    await this.twurpleApiProxyService.ban(channelName, twitchUserName, reason ?? undefined)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.ban(broadcaster, user, reason ?? undefined)
+  }
+
+  /** Returns null if the streamer does not have a primary Twitch channel. */
+  public async getChatStatus (streamerId: number): Promise<SubscriptionStatus | null> {
+    const twitchChannelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
+    if (twitchChannelName == null) {
+      return null
+    }
+
+    if (this.chatClient.isConnecting) {
+      return {
+        status: 'pending',
+        lastChange: this.dateTimeHelpers.ts()
+      }
+    } else if (!this.chatClient.isConnected) {
+      return {
+        status: 'inactive',
+        message: 'ChatMate is not connected to the Twitch chat server.', lastChange: this.dateTimeHelpers.ts()
+      }
+    }
+
+    const status = this.channelChatStatus.get(twitchChannelName.toLowerCase())
+    if (status == null) {
+      return {
+        status: 'inactive',
+        lastChange: this.dateTimeHelpers.ts()
+      }
+    }
+
+    let errorMessage: string | null = null
+    let isActive: boolean = true
+    const user = await this.userApi.getUserByName(twitchChannelName)
+    try {
+      await this.twurpleAuthProvider.getUserTokenAuthProvider(user!.id, true)
+    } catch (e: any) {
+      if (e instanceof NotAuthorisedError) {
+        errorMessage = 'You have not yet authorised ChatMate to act on your behalf.'
+        isActive = false
+      } else if (e instanceof AuthorisationExpiredError) {
+        errorMessage = 'Your previous authorisation of ChatMate has expired. Re-authorisation is required.'
+        isActive = false
+      } else if (e instanceof InconsistentScopesError) {
+        errorMessage = 'You have authorised ChatMate to act on your behalf, but the permissions that ChatMate requires have changed since then. Re-authorisation is required.'
+        isActive = false
+      } else {
+        throw e
+      }
+    }
+
+    const hasUser = this.twurpleAuthProvider.hasTokenForUser(user!.id)
+    if (!hasUser && errorMessage == null) {
+      errorMessage = `Currently listening to chat messages, but unable to perform moderator actions because of missing permissions. Please authorise ChatMate to act on your behalf.`
+      isActive = true
+    }
+
+    if (errorMessage != null) {
+      return {
+        status: isActive ? 'active' : 'inactive',
+        lastChange: this.dateTimeHelpers.ts(),
+        message: errorMessage,
+        requiresAuthorisation: true
+      }
+    }
+
+    return status
   }
 
   public async modChannel (streamerId: number, twitchChannelId: number) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+    const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
+    if (broadcaster == null) {
       return
     }
 
-    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
-    await this.twurpleApiProxyService.mod(channelName, twitchUserName)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.mod(broadcaster, user)
   }
 
-  /** Instructs the Twurple chat client to start listening for messages on the streamer's Twitch channel, if it exists. */
-  public async joinChannel (streamerId: number) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
-      return
-    }
-
-    await this.chatClient.join(channelName)
+  public reconnectClient () {
+    void this.chatClient.reconnect()
   }
 
   public async timeout (streamerId: number, twitchChannelId: number, reason: string | null, durationSeconds: number) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+    const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
+    if (broadcaster == null) {
       return
     }
 
-    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
-    await this.twurpleApiProxyService.timeout(channelName, twitchUserName, durationSeconds, reason ?? undefined)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.timeout(broadcaster, user, durationSeconds, reason ?? undefined)
   }
 
   public async unbanChannel (streamerId: number, twitchChannelId: number) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+    const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
+    if (broadcaster == null) {
       return
     }
 
-    // there is no API for unbanning a user, but the `ban` implementation is essentially just a wrapper around the `say` method, so we can manually use it here
-    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
-    this.twurpleApiProxyService.say(channelName, `/unban ${twitchUserName}`)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.unban(broadcaster, user)
   }
 
   public async unmodChannel (streamerId: number, twitchChannelId: number) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+    const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
+    if (broadcaster == null) {
       return
     }
 
-    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
-    await this.twurpleApiProxyService.unmod(channelName, twitchUserName)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.unmod(broadcaster, user)
   }
 
-  public async untimeout (streamerId: number, twitchChannelId: number, reason: string | null) {
-    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-    if (channelName == null) {
+  public async untimeout (streamerId: number, twitchChannelId: number) {
+    const broadcaster = await this.getTwitchUserFromStreamerId(streamerId)
+    if (broadcaster == null) {
       return
     }
 
-    // there is no API for removing a timeout, but a legitimate workaround is to add a new timeout that lasts for 1 second, which will overwrite the existing timeout
-    const twitchUserName = await this.getTwitchUserName(twitchChannelId)
-    await this.twurpleApiProxyService.timeout(channelName, twitchUserName, 1, reason ?? undefined)
+    const user = await this.getTwitchUserFromChannelId(twitchChannelId)
+    await this.twurpleApiProxyService.unTimeout(broadcaster, user)
   }
 
   private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {
@@ -165,7 +256,8 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    await this.chatClient.join(getUserName(data.userChannel))
+    const channelName = getUserName(data.userChannel)
+    await this.joinSafe(channelName, data.streamerId)
   }
 
   private onPrimaryChannelRemoved (data: EventData['removePrimaryChannel']) {
@@ -173,12 +265,40 @@ export default class TwurpleService extends ContextClass {
       return
     }
 
-    this.chatClient.part(getUserName(data.userChannel))
+    const channelName = getUserName(data.userChannel)
+    try {
+      this.chatClient.part(channelName)
+      this.logService.logInfo(this, `Successfully left the chat for channel ${channelName} (streamerId ${data.streamerId})`)
+    } catch (e: any) {
+      this.logService.logError(this, `Failed to leave the chat for channel ${channelName} (streamerId ${data.streamerId})`, e)
+    }
+
+    this.channelChatStatus.delete(channelName.toLowerCase())
   }
 
-  private async getTwitchUserName (internalTwitchChannelId: number) {
+  private async getTwitchUserFromChannelId (internalTwitchChannelId: number): Promise<HelixUser> {
     const channel = single(await this.channelStore.getTwitchChannelFromChannelId([internalTwitchChannelId]))
-    return channel.platformInfo.channel.infoHistory[0].userName
+    const channelName = channel.platformInfo.channel.infoHistory[0].userName
+    const user = await this.userApi.getUserByName(channelName)
+    if (user == null) {
+      throw new Error(`Unable to get HelixUser for Twitch channel ${channelName} (internal id ${internalTwitchChannelId})`)
+    }
+
+    return user
+  }
+
+  private async getTwitchUserFromStreamerId (streamerId: number): Promise<HelixUser | null> {
+    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
+    if (channelName == null) {
+      return null
+    }
+
+    const user = await this.userApi.getUserByName(channelName)
+    if (user == null) {
+      throw new Error(`Unable to get HelixUser for Twitch channel ${channelName} (streamerId ${streamerId})`)
+    }
+
+    return user
   }
 
   private async onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
@@ -209,6 +329,26 @@ export default class TwurpleService extends ContextClass {
 
   private async joinStreamerChannels (): Promise<void> {
     const channels = await this.streamerChannelService.getAllTwitchStreamerChannels()
-    await Promise.all(channels.map(c => this.chatClient.join(c.twitchChannelName)))
+    await Promise.all(channels.map(c => this.joinSafe(c.twitchChannelName, c.streamerId)))
+  }
+
+  private async joinSafe (channelName: string, streamerId: number): Promise<void> {
+    try {
+      await this.chatClient.join(channelName)
+      const status: SubscriptionStatus = {
+        status: 'active',
+        lastChange: this.dateTimeHelpers.ts()
+      }
+      this.channelChatStatus.set(channelName.toLowerCase(), status)
+      this.logService.logInfo(this, `Successfully joined the chat for channel ${channelName} (streamerId ${streamerId})`)
+    } catch (e: any) {
+      const status: SubscriptionStatus = {
+        status: 'inactive',
+        message: e.message ?? 'Unknown error',
+        lastChange: this.dateTimeHelpers.ts()
+      }
+      this.channelChatStatus.set(channelName.toLowerCase(), status)
+      this.logService.logError(this, `Failed to join the chat for channel ${channelName} (streamerId ${streamerId})`, e)
+    }
   }
 }

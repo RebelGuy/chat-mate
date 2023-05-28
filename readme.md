@@ -22,6 +22,14 @@ Pushing to any branch will trigger the build process. Pushing to `master` or `de
 
 Deployment of the Server includes an automatic migration of the database.
 
+If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped on Github.
+
+If the string `--skip-migrations` is included in the commit message, new migrations will not be applied (applies to both the server build and test runs). Note that migrations in the server build are already skipped if `--skip-deploy` is included in the commit message.
+
+If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed.
+
+If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
+
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
 - Set up the livestream on YouTube (e.g. via scheduling) and get its link or ID
@@ -49,7 +57,43 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ]
 ```
 
+## ChatMate admin channels
+
+External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`.
+
+| Environment | Email | YouTube Name* | YouTube Channel ID | Twitch Name | Twitch App Name | Twitch App Client ID |
+| --- | --- | --- | --- | --- | --- | --- |
+| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig) | UCobq78RdXWvXlG1jcRjkTig | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
+| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA) | UCEM2zbU-YVO6BMF_fukrdUA | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
+| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g) | UCY-5SHtJqoKGqm2YmOMOm_g | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
+
+*YouTube appears to be prohibiting the word "mate" in the channel name.
+
+Passwords:
+- Email: `P`
+- Twitch: `T`
+- YouTube: `C`
+
 # Change Log
+## V1.25 - The Multistream Update [27/5/2023]
+- Server
+  - Twitch access tokens are now saved against all streamers, and most requests are done on behalf of the streamer
+  - Link tokens can now be deleted
+  - Optimised the server startup time
+  - Added new ChatMate event type for first-time viewers
+  - Fixed streamers being able to set an active livestream that was not hosted by their primary Youtube channel
+  - Updated Twurple to the latest version
+- Studio
+  - Ability for streamers to see the Twitch and Youtube status and remedy any problems
+    - For Youtube, we check that the streamer has modded the ChatMate youtube channel
+    - For Twitch, we show a list of all actions that ChatMate is participating in, and whether a problem has occurred
+  - New Streamer Info page for the steamer's current status, and links to the livestream(s)
+  - New home page
+    - Demonstration video to show the capabilities of ChatMate
+    - List of current ChatMate stats
+  - The emoji page now includes an option for filtering only emojis that the current user is eligible for
+  - Improvements to the Link User page UX
+
 ## v1.24 - The Studio Update [5/4/2023]
 - Server
   - Added the ability to query the status of a command

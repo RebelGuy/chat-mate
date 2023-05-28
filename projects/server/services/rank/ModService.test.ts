@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import ModService from '@rebel/server/services/rank/ModService'
 import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
@@ -9,14 +9,14 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
-import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import UserService from '@rebel/server/services/UserService'
 
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
-let mockMasterchatProxyService: MockProxy<MasterchatProxyService>
+let mockMasterchatService: MockProxy<MasterchatService>
 let mockRankStore: MockProxy<RankStore>
 let mockTwurpleService: MockProxy<TwurpleService>
 let mockUserService: MockProxy<UserService>
@@ -25,7 +25,7 @@ let modService: ModService
 beforeEach(() => {
   mockChannelStore = mock()
   mockChatStore = mock()
-  mockMasterchatProxyService = mock()
+  mockMasterchatService = mock()
   mockRankStore = mock()
   mockTwurpleService = mock()
   mockUserService = mock()
@@ -34,7 +34,7 @@ beforeEach(() => {
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
     logService: mock(),
-    masterchatProxyService: mockMasterchatProxyService,
+    masterchatService: mockMasterchatService,
     rankStore: mockRankStore,
     twurpleService: mockTwurpleService,
     userService: mockUserService
@@ -51,8 +51,8 @@ describe(nameof(ModService, 'setModRank'), () => {
   const error2 = 'error2'
 
   test('Adds the moderator rank on platforms and the database and returns the new rank', async () => {
-    mockMasterchatProxyService.mod.calledWith(contextToken1).mockResolvedValue(true)
-    mockMasterchatProxyService.mod.calledWith(contextToken2).mockRejectedValue(new Error(error2))
+    mockMasterchatService.mod.calledWith(streamerId1, contextToken1).mockResolvedValue(true)
+    mockMasterchatService.mod.calledWith(streamerId1, contextToken2).mockRejectedValue(new Error(error2))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
@@ -80,8 +80,11 @@ describe(nameof(ModService, 'setModRank'), () => {
       { twitchChannelId: 2, error: null }
     ])
 
-    const suppliedContextTokens = mockMasterchatProxyService.mod.mock.calls.map(c => single(c))
-    expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
+    const masterchatCalls = mockMasterchatService.mod.mock.calls
+    expect(masterchatCalls).toEqual(expectArray(masterchatCalls, [
+      [streamerId1, contextToken1],
+      [streamerId1, contextToken2]
+    ]))
 
     const twitchCalls = mockTwurpleService.modChannel.mock.calls
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
@@ -97,8 +100,8 @@ describe(nameof(ModService, 'setModRank'), () => {
   })
 
   test('Removes the moderator rank on platforms and the database and returns the updated rank', async () => {
-    mockMasterchatProxyService.unmod.calledWith(contextToken1).mockResolvedValue(true)
-    mockMasterchatProxyService.unmod.calledWith(contextToken2).mockRejectedValue(new Error(error2))
+    mockMasterchatService.unmod.calledWith(streamerId1, contextToken1).mockResolvedValue(true)
+    mockMasterchatService.unmod.calledWith(streamerId1, contextToken2).mockRejectedValue(new Error(error2))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 1).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken1 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 2).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: contextToken2 }))
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId1, 3).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken: null }))
@@ -126,8 +129,11 @@ describe(nameof(ModService, 'setModRank'), () => {
       { twitchChannelId: 2, error: null }
     ])
 
-    const suppliedContextTokens = mockMasterchatProxyService.unmod.mock.calls.map(c => single(c))
-    expect(suppliedContextTokens).toEqual([contextToken1, contextToken2])
+    const masterchatCalls = mockMasterchatService.unmod.mock.calls
+    expect(masterchatCalls).toEqual(expectArray(masterchatCalls, [
+      [streamerId1, contextToken1],
+      [streamerId1, contextToken2]
+    ]))
 
     const twitchCalls = mockTwurpleService.unmodChannel.mock.calls
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
@@ -165,7 +171,7 @@ describe(nameof(ModService, 'setModRankExternal'), () => {
   test('Calls Twurple/Masterchat methods to add the mod rank', async () => {
     mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
-    mockMasterchatProxyService.mod.calledWith(contextToken).mockResolvedValue(true)
+    mockMasterchatService.mod.calledWith(streamerId, contextToken).mockResolvedValue(true)
     mockTwurpleService.modChannel.calledWith(streamerId, twitchChannel).mockResolvedValue()
 
     const result = await modService.setModRankExternal(defaultUserId, streamerId, true)
@@ -173,14 +179,14 @@ describe(nameof(ModService, 'setModRankExternal'), () => {
     expect(single(result.twitchResults).error).toBeNull()
     expect(single(result.youtubeResults).error).toBeNull()
     expect(single(mockTwurpleService.modChannel.mock.calls)).toEqual([streamerId, twitchChannel])
-    expect(mockMasterchatProxyService.mod.mock.calls.length).toBe(1)
+    expect(mockMasterchatService.mod.mock.calls.length).toBe(1)
     expect(mockRankStore.addUserRank.mock.calls.length).toBe(0)
   })
 
   test('Calls Twurple/Masterchat methods to remove the mod rank', async () => {
     mockChannelStore.getDefaultUserOwnedChannels.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([userChannels])
     mockChatStore.getLastChatByYoutubeChannel.calledWith(streamerId, youtubeChannel).mockResolvedValue(cast<ChatItemWithRelations>({ contextToken }))
-    mockMasterchatProxyService.unmod.calledWith(contextToken).mockResolvedValue(true)
+    mockMasterchatService.unmod.calledWith(streamerId, contextToken).mockResolvedValue(true)
     mockTwurpleService.unmodChannel.calledWith(streamerId, twitchChannel).mockResolvedValue()
 
     const result = await modService.setModRankExternal(defaultUserId, streamerId, false)
@@ -188,7 +194,7 @@ describe(nameof(ModService, 'setModRankExternal'), () => {
     expect(single(result.twitchResults).error).toBeNull()
     expect(single(result.youtubeResults).error).toBeNull()
     expect(single(mockTwurpleService.unmodChannel.mock.calls)).toEqual([streamerId, twitchChannel])
-    expect(mockMasterchatProxyService.unmod.mock.calls.length).toBe(1)
+    expect(mockMasterchatService.unmod.mock.calls.length).toBe(1)
     expect(mockRankStore.removeUserRank.mock.calls.length).toBe(0)
   })
 })

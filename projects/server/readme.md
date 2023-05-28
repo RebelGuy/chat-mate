@@ -21,6 +21,7 @@ Note: Importing modules from Twurple must be done from the package level, `@twur
   - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
   - Rely on VSCode for checking types if using this mode
   - Use `yarn watch:check` to use `ts-loader` and enable type checking
+  - Use `yarn watch:check SKIP_TESTS=true` to not include test files in the build process
 4. `yarn start:local` to run the server locally, or `yarn start:mock` to use fake implementations of controllers, where available.
 
 If building fails because the Prisma client could not be found, please run `yarn generate`.
@@ -31,11 +32,11 @@ If building fails because the Prisma client could not be found, please run `yarn
 Run `yarn auth:youtube:<local|debug|release>` and log in using the streaming account, or a moderator account. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID.
 
 ### Twitch
-Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments [note: at the moment, `debug` and `local` share the same application].
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
 
 For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<local|debug|release>` and sign in manually with the relevant ChatMate account. The access token and refresh token will automatically be stored in the database (`twitch_auth` table) and retrieved/updated automatically thereon.
 
-Important: The application scope is hardcoded in `TwurpleAuthProvider.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
+Important: The application scope is hardcoded in `constants.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
 
 At the moment, the Twitch auth script is broken because Twitch rejects Electron as a valid browser. An alternative way of refreshing the Twitch Application authentication is via the `/admin/twitch` page on Studio.
 
@@ -51,9 +52,11 @@ Define `local.env`, `debug.env` and `release.env` files that set the following e
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `STUDIO_URL`: The URL to ChatMate Studio (not ending in `/`).
-- `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube.
+- `CHAT_MATE_REGISTERED_USER_NAME`: The registered username of the official ChatMate account on the server.
+- `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube. If this is ever changed, you will need to re-authenticate and purge all Context Tokens from the `chat_message` table.
 - `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
+- `TWITCH_USERNAME`: The channel name of the ChatMate Twitch account. This will be used to connect to streamers' chat rooms and perform moderation operations.
 - `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -124,6 +127,7 @@ A response contains the following properties:
 - `error` (`object`): Only included if `success` is `false`. Contains the following properties:
   - `errorCode` (`number`): The HTTP error code that most closely matches the type of problem encountered.
   - `errorType` (`string`): The general type of error encounterd.
+  - `internalErrorType` (`string`): The internal error type that was encountered, for example, the name of the CustomError classes in `/shared/util/error.ts`.
   - `message` (`string`): An optional error message describing what went wrong.
 
 Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
@@ -186,16 +190,22 @@ Returns data with the following properties:
 - `isAdministrativeMode` (`boolean`): Whether we are currently in administrative mode.
 
 ### `GET /twitch/login`
-Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio.
+Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
 
 Returns data with the following properties:
 - `url` (`string`): The login URL. It will redirect back to Studio.
+- `twitchUsername` (`string`): The username of the ChatMate Twitch account. This account must be used to authenticate on the admin page.
 
 ### `POST /twitch/authorise`
 Authorises the authorisation token and updates the stored Twitch `access_token` in the database.
 
 Query parameters:
 - `code` (`string`): The authorisation code obtained from Twitch after logging on.
+
+Returns an empty response body.
+
+### `POST /twitch/reconnectChatClient`
+Reconnects the Twitch chat client. Note that this will have no effect if the stored access/refresh token was previously revoked - in this case, the server must be restarted since the token is retrieved and set at startup.
 
 Returns an empty response body.
 
@@ -241,40 +251,6 @@ Pings the server.
 
 Returns data with no properties.
 
-### `GET /status`
-Gets the latest status information.
-
-Returns data with the following properties:
-- `livestreamStatus` (`PublicLivestreamStatus | null`): Status information relating to the active public livestream. Null if there is no active public livestream.
-- `youtubeApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
-- `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
-
-### `GET /events`
-Gets the events that have occurred since the specified time.
-
-Query parameters:
-- `since` (`number`): *Required.* Gets only events **after** the given time (unix ms).
-
-Returns data with the following properties:
-- `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp, sorted by time in ascending order.
-
-Can return the following errors:
-- `400`: When the required query parameters have not been provided.
-
-### `PATCH /livestream`
-Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
-
-Request data (body):
-- `livestream` (`string | null`): *Required.* The livestream link or id to set as active. If `null`, the active stream will be deactivated.
-
-Returns data with the following properties:
-- `livestreamLink` (`string | null`): The new livestream link.
-
-Can return the following errors:
-- `400`: When the request data is not sent, or is formatted incorrectly.
-- `422`: When an active livestream already exists.
-
 ### `GET /masterchat/authentication`
 Check whether the currently active Masterchat instance is authenticated.
 
@@ -283,6 +259,12 @@ Returns data with the following properties:
   - `true`: The Masterchat instance is authenticated.
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
+
+### `GET /username`
+Gets the username of the official ChatMate registered account.
+
+Returns data with the following properties:
+- `username` (`string`): The username of the registered account.
 
 ## Donation Endpoints
 Path: `/donation`.
@@ -626,10 +608,10 @@ Can return the following errors:
 Path: `/streamer`.
 
 ### `GET`
-Gets all streamer usernames in ChatMate.
+Gets all streamer data in ChatMate.
 
 Returns data with the following properties:
-- `streamers` (`string[]`): The array of streamer usernames.
+- `streamers` (`PublicStreamerSummary[]`): The array of streamer data.
 
 ### `GET /application`
 Gets all streamer applications of the user. If the user is an admin, returns all applications of all users.
@@ -695,8 +677,9 @@ Can return the following errors:
 Gets the logged-in streamer's primary channels, that is, the channels that they have selected to stream on.
 
 Returns data with the following properties:
-- `youtubeChannel` (`number | null`): The internal id of the streamer's primary YouTube channel, if set.
-- `twitchChannel` (`number | null`): The internal id of the streamer's primary Twitch channel, if set.
+- `youtubeChannelId` (`number | null`): The internal id of the streamer's primary YouTube channel, if set.
+- `twitchChannelId` (`number | null`): The internal id of the streamer's primary Twitch channel, if set.
+- `twitchChannelName` (`string | null`): The Twitch channel name of the streamer's primary Twitch channel, if set.
 
 ### `POST /primaryChannels/:platform/:channelId`
 Sets the streamer's primary channel for the specified platform. Note that this request will fail if a primary channel already exists.
@@ -722,8 +705,77 @@ Returns an empty body.
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
+### `GET /twitch/status`
+Gets the list of Twitch subscription statuses.
+
+Returns data with the following properties:
+- `statuses` (`PublicTwitchEventStatus[]`): The list of statuses, one for each subscription type.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+- `404`: When no Twitch statuses were found. Most likely this is because the streamer has not set a primary Twitch channel.
+
+### `GET /twitch/login`
+Retrieves the Twitch login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
+
+Returns data with the following properties:
+- `url` (`string`): The login URL. It will redirect back to Studio.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+
+### `GET /youtube/status`
+Retrieves the status of the ChatMate admin YouTube channel in relation to the logged-in streamer's current primary YouTube channel. ChatMate requires that the streamer add the admin channel as a moderator. Note that we can only check the moderator status at the time of the last message received in the streamer's latest livestream.
+
+Returns data with the following properties:
+- `chatMateIsModerator` (`boolean`): Whether the ChatMate admin YouTube channel was added as a moderator to the logged-in streamer's current primary YouTube channel.
+- `timestamp` (`number`): The latest time for which the moderation status could be verified. It may have changed since then.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+
+### `GET /status`
+Gets the latest status information.
+
+Returns data with the following properties:
+- `livestreamStatus` (`PublicLivestreamStatus | null`): Status information relating to the active public livestream. Null if there is no active public livestream.
+- `youtubeApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
+- `twitchApiStatus` (`PublicApiStatus`): Status information relating to the YouTube API.
+
+### `GET /events`
+Gets the events that have occurred since the specified time.
+
+Query parameters:
+- `since` (`number`): *Required.* Gets only events **after** the given time (unix ms).
+
+Returns data with the following properties:
+- `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
+- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp, sorted by time in ascending order.
+
+Can return the following errors:
+- `400`: When the required query parameters have not been provided.
+
+### `PATCH /livestream`
+Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
+
+Request data (body):
+- `livestream` (`string | null`): *Required.* The livestream link or id to set as active. If `null`, the active stream will be deactivated.
+
+Returns data with the following properties:
+- `livestreamLink` (`string | null`): The new livestream link.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `422`: When an active livestream already exists.
+
 ## User Endpoints
 Path: `/user`.
+
+### `GET /`
+Gets info about the logged-in user.
+
+Returns data with the following properties:
+- `user` (`PublicUser`): The data object of the currently logged-in user.
 
 ### `POST /search`
 Search for a specific channel name.
@@ -797,3 +849,15 @@ Can return the following errors:
 - `400`: When the `externalId` is not sent.
 - `404`: When no channel matching the given `externalId` could be found. The channel in question must have sent at least one chat message in the past so that it is added to our database.
 - `422`: When the specified channel is already linked to a user.
+
+### `DELETE /link/token`
+
+Delete a pending link token that is connected to the logged-in account.
+
+Path parameters:
+- `linkToken` (`string`): The link token to delete.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `404`: When the specified pending link token is not found. For example, if it is not connected to the logged-in user, or already used as part of a link attempt.

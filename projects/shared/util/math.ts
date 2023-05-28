@@ -168,3 +168,8 @@ export function avg (...values: number[]): number | null {
 export function scaleNorm<Min extends number, Max extends number> (normValue: Norm, min: Min, max: Max): NumRange<Min, Max> {
   return normValue * (max - min) + min as NumRange<Min, Max>
 }
+
+export function round (num: number, decimals: number = 0): number {
+  const multiplier = Math.pow(10, decimals)
+  return Math.round(num * multiplier) / multiplier
+}

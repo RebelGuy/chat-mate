@@ -1,4 +1,5 @@
 import { RegisteredUser } from '@prisma/client'
+import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
 import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
 import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
@@ -6,24 +7,22 @@ import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/Cha
 import { UserLevel } from '@rebel/server/services/ExperienceService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { UserRanks } from '@rebel/server/stores/RankStore'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
+
+export type AllUserData = UserChannel & UserRanks & UserLevel & { registeredUser: RegisteredUser | null, firstSeen: number }
 
 /** It is expected that the data is for the primary user, thus `userId` is the `primaryUserId`. */
-export function userDataToPublicUser (data: UserChannel & UserLevel & UserRanks & { registeredUser: RegisteredUser | null }): PublicUser {
+export function userDataToPublicUser (data: AllUserData): PublicUser {
   return {
     primaryUserId: data.primaryUserId,
     registeredUser: registeredUserToPublic(data.registeredUser),
-    channel: {
-      channelId: data.platformInfo.channel.id,
-      defaultUserId: data.defaultUserId,
-      displayName: getUserName(data),
-      externalIdOrUserName: getExternalIdOrUserName(data),
-      platform: data.platformInfo.platform
-    },
+    channel: channelToPublicChannel(data),
     levelInfo: {
       level: data.level.level,
       levelProgress: data.level.levelProgress
     },
-    activeRanks: data.ranks.map(userRankToPublicObject)
+    activeRanks: data.ranks.map(userRankToPublicObject),
+    firstSeen: data.firstSeen
   }
 }
 
@@ -34,6 +33,31 @@ export function registeredUserToPublic (registeredUser: RegisteredUser | null): 
   }
 }
 
+export function channelToPublicChannel (channel: UserChannel): PublicChannel {
+  return {
+    channelId: channel.platformInfo.channel.id,
+    defaultUserId: channel.defaultUserId,
+    displayName: getUserName(channel),
+    externalIdOrUserName: getExternalIdOrUserName(channel),
+    platform: channel.platformInfo.platform,
+    channelUrl: getChannelUrl(channel)
+  }
+}
+
+function getChannelUrl (channel: UserChannel) {
+  const id = getExternalIdOrUserName(channel)
+  return getChannelUrlFromPublic({ externalIdOrUserName: id, platform: channel.platformInfo.platform })
+}
+
+export function getChannelUrlFromPublic (channel: Pick<PublicChannel, 'platform' | 'externalIdOrUserName'>) {
+  if (channel.platform === 'youtube') {
+    return `https://www.youtube.com/channel/${channel.externalIdOrUserName}`
+  } else if (channel.platform === 'twitch') {
+    return `https://www.twitch.tv/${channel.externalIdOrUserName}`
+  } else {
+    assertUnreachable(channel.platform)
+  }
+}
 
 // terminology of method parameters:
 // primaryUserId: the method will check user ids against the provided id as-is, without doing any link-checking or conversions.

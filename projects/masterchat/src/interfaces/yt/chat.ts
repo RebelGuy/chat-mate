@@ -234,6 +234,9 @@ export interface YTAction {
 
   showLiveChatTooltipCommand?: YTShowLiveChatTooltipCommand;
 
+  // e.g. the message that says that moderator activity is hidden
+  showLiveChatDialogAction?: any;
+
   // Poll related
   showLiveChatActionPanelAction?: YTShowLiveChatActionPanelAction;
   updateLiveChatPollAction?: YTUpdateLiveChatPollAction;

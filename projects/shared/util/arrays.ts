@@ -139,14 +139,25 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
 
 /** Merges the two arrays on the given key. Both arrays must be the same lenght and overlap exactly on the key, but no other property.
  * The merged object has the same order as the first array, relative to the keys. */
-export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (first: T[], second: U[], key: Key): (T & U)[] {
-  if (first.length !== second.length) {
+export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (firstArray: T[], secondArray: U[], key: Key): (T & U)[]
+/** Merges the two arrays on the given keys, and optionally maps the key names to a new key. */
+export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key1 extends (string | number | symbol) & PrimitiveKeys<T>, Key2 extends (string | number | symbol) & PrimitiveKeys<U>, NewKey extends string | number | symbol> (firstArray: T[], secondArray: U[], firstKey: Key1, secondKey: Key2, newKey?: NewKey): (Omit<T, Key1> & Omit<U, Key2> & Record<NewKey, T[Key1] | U[Key2]>)[]
+export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (firstArray: T[], secondArray: U[], firstKey: Key, secondKey?: Key, newKey?: Key): (T & U)[] {
+  if (secondKey == null) {
+    secondKey = firstKey
+  }
+
+  if (newKey == null) {
+    newKey = firstKey
+  }
+
+  if (firstArray.length !== secondArray.length) {
     throw new Error('Cannot strict-zip arrays with different lengths')
   }
 
-  const firstKeys = unique(first.map(x => x[key]))
-  const secondKeys = unique(second.map(y => y[key]))
-  if (firstKeys.length !== secondKeys.length || firstKeys.length !== first.length) {
+  const firstKeys = unique(firstArray.map(x => x[firstKey]))
+  const secondKeys = unique(secondArray.map(y => y[secondKey!]))
+  if (firstKeys.length !== secondKeys.length || firstKeys.length !== firstArray.length) {
     throw new Error('Cannot strict-zip arrays with non-unique keys')
   }
 
@@ -161,7 +172,20 @@ export function zipOnStrict<T extends GenericObject, U extends GenericObject, Ke
     throw new Error('Cannot strict-zip arrays with differing keys')
   }
 
-  const result = first.map(x => ({ ...x, ...second.find(y => y[key] === x[key])! }))
+  const result = firstArray.map(x => {
+    let left = { ...x }
+    delete left[firstKey]
+
+    let right = { ...secondArray.find(y => y[secondKey!] === x[firstKey])! }
+    delete right[secondKey!]
+
+    const zippedValue = x[firstKey]
+    return {
+      ...left,
+      ...right,
+      [newKey!]: zippedValue,
+    }
+  })
   return result
 }
 
@@ -283,7 +307,7 @@ export function subGroupedSingle<T, G, S> (arr: T[], mainGrouper: (item: T) => G
   return result
 }
 
-export function nonNull<T> (arr: (T | null)[]): Exclude<T, null>[] {
+export function nonNull<T> (arr: (T | null | undefined)[]): Exclude<T, null>[] {
   return arr.filter(value => value != null) as Exclude<T, null>[]
 }
 

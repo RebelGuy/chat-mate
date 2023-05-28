@@ -1,18 +1,22 @@
 import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireRank } from '@rebel/server/controllers/preProcessors'
 import AdminService from '@rebel/server/services/rank/AdminService'
+import TwurpleService from '@rebel/server/services/TwurpleService'
 import { EmptyObject } from '@rebel/shared/types'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 
 export type GetAdministrativeModeResponse = ApiResponse<{ isAdministrativeMode: boolean }>
 
-export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string }>
+export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string, twitchUsername: string }>
 
 export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
+
+export type ReconnectTwitchChatClientResponse = ApiResponse<EmptyObject>
 
 type Deps = ControllerDependencies<{
   adminService: AdminService
   isAdministrativeMode: () => boolean
+  twurpleService: TwurpleService
 }>
 
 @Path(buildPath('admin'))
@@ -20,11 +24,13 @@ type Deps = ControllerDependencies<{
 export default class AdminController extends ControllerBase {
   private readonly adminService: AdminService
   private readonly isAdministrativeMode: () => boolean
+  private readonly twurpleService: TwurpleService
 
   constructor (deps: Deps) {
     super(deps, 'admin')
     this.adminService = deps.resolve('adminService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
+    this.twurpleService = deps.resolve('twurpleService')
   }
 
   @GET
@@ -46,7 +52,8 @@ export default class AdminController extends ControllerBase {
 
     try {
       const url = this.adminService.getTwitchLoginUrl()
-      return builder.success({ url })
+      const twitchUsername = this.adminService.getTwitchUsername()
+      return builder.success({ url, twitchUsername })
     } catch (e: any) {
       return builder.failure(e)
     }
@@ -61,6 +68,19 @@ export default class AdminController extends ControllerBase {
 
     try {
       await this.adminService.authoriseTwitchLogin(code)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/twitch/reconnectChatClient')
+  public async reconnectTwitchChatClient (): Promise<ReconnectTwitchChatClientResponse> {
+    const builder = this.registerResponseBuilder<ReconnectTwitchChatClientResponse>('POST /twitch/reconnectChatClient')
+
+    try {
+      await this.twurpleService.reconnectClient()
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

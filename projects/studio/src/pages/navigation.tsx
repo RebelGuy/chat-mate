@@ -5,8 +5,10 @@ import LinkUser from '@rebel/studio/pages/link/LinkUser'
 import LoginForm from '@rebel/studio/pages/login/LoginForm'
 import React from 'react'
 import Home from '@rebel/studio/pages/home/Home'
-import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Settings, StarBorder } from '@mui/icons-material'
+import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Settings, StarBorder, Videocam } from '@mui/icons-material'
 import TwitchAdminLogin from '@rebel/studio/pages/admin/twitch/TwitchAdminLogin'
+import { Props as RequireRankProps } from '@rebel/studio/components/RequireRank'
+import StreamerInfo from '@rebel/studio/pages/streamer-info/StreamerInfo'
 
 export type Page = {
   id: string
@@ -14,6 +16,9 @@ export type Page = {
   element: React.ReactElement
   icon: React.ReactElement
   path: string
+  requiresLogin: boolean
+  requiresStreamer: boolean
+  requireRanksProps: Omit<RequireRankProps, 'children' | 'hideAdminOutline'> | null
 }
 
 // by typing out pages as `const`s, we can enforce the required route parameters to be provided when generating paths (via `generatePath`)
@@ -22,7 +27,10 @@ export const PageHome = {
   title: 'Home',
   element: <Home />,
   icon: <HomeIcon />,
-  path: '/'
+  path: '/',
+  requiresLogin: false,
+  requiresStreamer: false,
+  requireRanksProps: null
 } as const
 
 export const PageEmojis = {
@@ -30,7 +38,10 @@ export const PageEmojis = {
   title: 'Emojis',
   element: <CustomEmojiManager />,
   icon: <Mood />,
-  path: '/:streamer/emojis'
+  path: '/:streamer/emojis',
+  requiresLogin: true,
+  requiresStreamer: true,
+  requireRanksProps: null
 } as const
 
 export const PageApply = {
@@ -38,7 +49,10 @@ export const PageApply = {
   title: 'ChatMate Beta Program',
   element: <ApplyForStreamer />,
   icon: <StarBorder />,
-  path: '/apply'
+  path: '/apply',
+  requiresLogin: true,
+  requiresStreamer: false,
+  requireRanksProps: { admin: true }
 } as const
 
 export const PageLogin = {
@@ -46,7 +60,10 @@ export const PageLogin = {
   title: 'Login',
   element: <LoginForm />,
   icon: <AccountCircle />,
-  path: '/login'
+  path: '/login',
+  requiresLogin: false,
+  requiresStreamer: false,
+  requireRanksProps: null
 } as const
 
 export const PageLink = {
@@ -54,7 +71,21 @@ export const PageLink = {
   title: 'Link Channels',
   element: <LinkUser />,
   icon: <Link />,
-  path: '/link'
+  path: '/link',
+  requiresLogin: true,
+  requiresStreamer: false,
+  requireRanksProps: null
+} as const
+
+export const PageStreamerInfo = {
+  id: 'streamerInfo',
+  title: 'Streamer Info',
+  element: <StreamerInfo />,
+  icon: <Videocam />,
+  path: '/:streamer/info',
+  requiresLogin: true,
+  requiresStreamer: true,
+  requireRanksProps: null
 } as const
 
 export const PageManager = {
@@ -62,7 +93,11 @@ export const PageManager = {
   title: 'Stream Manager',
   element: <ChatMateManager />,
   icon: <Settings />,
-  path: '/manager'
+  // don't change this path without also updating StreamerService and application redirect URLs
+  path: '/manager',
+  requiresLogin: true,
+  requiresStreamer: false,
+  requireRanksProps: { anyOwner: true }
 } as const
 
 export const PageTwitchAuth = {
@@ -70,8 +105,11 @@ export const PageTwitchAuth = {
   title: 'Twitch Admin Login',
   element: <TwitchAdminLogin />,
   icon: <Camera />,
-  // don't change this path without also updating AdminService
-  path: '/admin/twitch'
+  // don't change this path without also updating AdminService and application redirect URLs
+  path: '/admin/twitch',
+  requiresLogin: true,
+  requiresStreamer: false,
+  requireRanksProps: { admin: true }
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageManager, PageTwitchAuth]
+export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth]

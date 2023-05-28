@@ -1,7 +1,7 @@
 import { ApiError, ApiRequest, ApiResponse, PublicObject, ResponseData } from '@rebel/server/controllers/ControllerBase'
 import { Primitive } from '@rebel/shared/types'
 import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
-import LoginContext from '@rebel/studio/contexts/LoginContext'
+import LoginContext, { LoginContextType } from '@rebel/studio/contexts/LoginContext'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { useContext, useEffect, useRef, useState } from 'react'
 
@@ -17,6 +17,10 @@ type RequestOptions<TResponseData> = {
   // don't auto-start the request on mount or when the props change (even if the `updateKey` changes).
   // instead, the request is made only when `triggerRequest()` is called
   onDemand?: boolean
+
+  // only required if using `useRequest` from within the LoginContext itself
+  loginToken?: string | null
+  streamer?: string | null
 
   // IMPORTANT: changing callback functions does NOT trigger a new request, so they do not need to be memoised.
 
@@ -57,8 +61,9 @@ export type RequestResult<TResponseData> = {
   // if `onDemand` is `true`, this is the only way to make a request.
   triggerRequest: () => void
 
-  // calling this function will reset the state to the initial state
-  reset: () => void
+  // calling this function will reset the state to the initial state or set the given data/error.
+  // setting both the data and error leads to undefined behaviour.
+  reset: (useData?: TResponseData, useError?: ApiError) => void
 
   // manually change the response data
   mutate: (newData: TResponseData | null) => void
@@ -96,14 +101,24 @@ export default function useRequest<
   const [data, setData] = useState<TResponseData | null>(null)
   const [apiError, setError] = useState<ApiError | null>(null)
   const [onRetry, setOnRetry] = useState<(() => void) | null>(null)
-  const loginContext = useContext(LoginContext)
-  const [invariantToken, setInvariantToken] = useState(0)
-  const invariantRef = useRef<number>()
+  let loginContext = useContext(LoginContext)
 
-  // we need to make sure we have a way of getting the current state.
-  // the `invariantToken` const may be outdated by the time we have awaited an async operation.
+  // this is essentially `useState` but it updates the value immediately.
   // concept stolen from https://stackoverflow.com/a/60643670
-  invariantRef.current = invariantToken
+  const invariantRef = useRef<number>(0)
+
+  if (loginContext == null) {
+    if (request.requiresLogin === true && options?.loginToken == null) {
+      throw new Error('`userRequest` cannot use LoginContext because it is null and no `loginToken` has been provided')
+    } else if (request.requiresStreamer === true && options?.streamer == null) {
+      throw new Error('`userRequest` cannot use LoginContext because it is null and no `streamer` has been provided')
+    }
+
+    loginContext = {
+      loginToken: options!.loginToken,
+      streamer: options!.streamer
+    } as LoginContextType
+  }
 
   // if adding non-callbacks onto these constants, make sure to update the dependency array of the `makeRequest` function
   const path = request.path
@@ -133,20 +148,20 @@ export default function useRequest<
       headers[STREAMER_HEADER] = streamer
     }
 
-    const invariant = invariantToken + 1 // only track one request at a time (the most recently started)
-    setInvariantToken(invariant)
+    const invariant = invariantRef.current + 1 // only track one request at a time (the most recently started)
+    invariantRef.current = invariant
 
     try {
+      if (onRequest() === true) {
+        return
+      }
+
       if (requiresLogin && loginToken == null) {
         throw new Error('You must be logged in to do that.')
       } else if (requiresStreamer === true && streamer == null) {
         throw new Error('You must select a streamer to do that.')
       } else if (requiresStreamer === 'self' && !loginContext.isStreamer) {
         throw new Error('You must be a streamer to do that.')
-      }
-
-      if (onRequest() === true) {
-        return
       }
 
       setIsLoading(true)
@@ -178,7 +193,7 @@ export default function useRequest<
       }
 
       setData(null)
-      const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', message: e.message }
+      const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', internalErrorType: 'Unknown', message: e.message }
       setError(error)
       onError(error, type)
     } finally {
@@ -196,11 +211,11 @@ export default function useRequest<
     setOnRetry(() => () => makeRequest('retry'))
   }
 
-  const reset = () => {
-    setInvariantToken(token => token + 1)
+  const reset = (useData?: TResponseData, useError?: ApiError) => {
+    invariantRef.current = invariantRef.current + 1
     setIsLoading(false)
-    setData(null)
-    setError(null)
+    setData(useData ?? null)
+    setError(useError ?? null)
   }
 
   const mutate = (newData: TResponseData | null) => {

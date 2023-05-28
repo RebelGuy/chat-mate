@@ -1,4 +1,5 @@
 import { Box, CircularProgress } from '@mui/material'
+import { nonNull } from '@rebel/shared/util/arrays'
 import { RequestResult } from '@rebel/studio/hooks/useRequest'
 import { ReactNode } from 'react'
 
@@ -8,7 +9,7 @@ type Props = {
 } & ({
   isLoading: boolean
 } | {
-  requestObj: RequestResult<any> | RequestResult<any>[]
+  requestObj: RequestResult<any> | (RequestResult<any> | null | undefined)[]
   initialOnly?: boolean
 })
 
@@ -17,7 +18,7 @@ export default function ApiLoading (props: Props) {
   if ('isLoading' in props) {
     isLoading = props.isLoading
   } else {
-    const objs = Array.isArray(props.requestObj) ? props.requestObj : [props.requestObj]
+    const objs = Array.isArray(props.requestObj) ? nonNull(props.requestObj) : [props.requestObj]
 
     // if we have data for all requests, don't show the loading spinner
     if (props.initialOnly && objs.find(o => o.data == null && o.error == null) == null) {

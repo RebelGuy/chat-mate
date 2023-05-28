@@ -2,11 +2,11 @@ import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import WebService from '@rebel/server/services/WebService'
-import { single2 } from '@rebel/shared/util/arrays'
+import { single } from '@rebel/shared/util/arrays'
 
 const primaryUser1 = 1
 const primaryUser2 = 2
@@ -15,6 +15,8 @@ const primaryUser3 = 3
 const adminRank = cast<Rank>({ name: 'admin' })
 const modRank = cast<Rank>({ name: 'mod' })
 const ownerRank = cast<Rank>({ name: 'owner' })
+
+const twitchUsername = 'testUser'
 
 let mockRankStore: MockProxy<RankStore>
 let mockAuthStore: MockProxy<AuthStore>
@@ -39,6 +41,7 @@ beforeEach(() => {
     studioUrl: mockStudioUrl,
     twitchClientId: mockTwitchClientId,
     twitchClientSecret: mockTwitchClientSecret,
+    twitchUsername: twitchUsername,
     isAdministrativeMode: mockIsAdministrativeMode
   }))
 })
@@ -65,7 +68,16 @@ describe(nameof(AdminService, 'getTwitchLoginUrl'), () => {
   test('Returns a URL', () => {
     const url = adminService.getTwitchLoginUrl()
 
-    expect(url).not.toBeNull()
+    expect(url).toEqual(expect.stringContaining(mockStudioUrl))
+    expect(url).toEqual(expect.stringContaining(mockTwitchClientId))
+  })
+})
+
+describe(nameof(AdminService, 'getTwitchUsername'), () => {
+  test('Returns the injected username', () => {
+    const result = adminService.getTwitchUsername()
+
+    expect(result).toBe(twitchUsername)
   })
 })
 
@@ -80,7 +92,7 @@ describe(nameof(AdminService, 'authoriseTwitchLogin'), () => {
 
     await adminService.authoriseTwitchLogin(code)
 
-    const storedToken = single2(mockAuthStore.saveTwitchAccessToken.mock.calls)
-    expect(storedToken).toEqual(expectObject(storedToken, { accessToken: access_token, refreshToken: refresh_token }))
+    const args = single(mockAuthStore.saveTwitchAccessToken.mock.calls)
+    expect(args).toEqual(expectObjectDeep(args, [null, twitchUsername, { accessToken: access_token, refreshToken: refresh_token }]))
   })
 })

@@ -42,10 +42,10 @@ CREATE TABLE `viewing_block` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `experience_transaction` ADD CONSTRAINT `experience_transaction_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `Channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `experience_transaction` ADD CONSTRAINT `experience_transaction_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `experience_snapshot` ADD CONSTRAINT `experience_snapshot_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `Channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `experience_snapshot` ADD CONSTRAINT `experience_snapshot_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `experience_data_chat_message` ADD CONSTRAINT `experience_data_chat_message_chatMessageId_fkey` FOREIGN KEY (`chatMessageId`) REFERENCES `chat_message`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -54,7 +54,7 @@ ALTER TABLE `experience_data_chat_message` ADD CONSTRAINT `experience_data_chat_
 ALTER TABLE `experience_data_chat_message` ADD CONSTRAINT `experience_data_chat_message_experienceTransactionId_fkey` FOREIGN KEY (`experienceTransactionId`) REFERENCES `experience_transaction`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `viewing_block` ADD CONSTRAINT `viewing_block_livestreamId_fkey` FOREIGN KEY (`livestreamId`) REFERENCES `Livestream`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `viewing_block` ADD CONSTRAINT `viewing_block_livestreamId_fkey` FOREIGN KEY (`livestreamId`) REFERENCES `livestream`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `viewing_block` ADD CONSTRAINT `viewing_block_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `Channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `viewing_block` ADD CONSTRAINT `viewing_block_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
