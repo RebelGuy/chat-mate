@@ -230,7 +230,7 @@ jobs:
           package: .
 
   deploy-studio:
-    if: inputs.deploy && inputs.studio
+    if: always() && inputs.deploy && inputs.studio
     name: Deploy Studio
     runs-on: ubuntu-latest
     needs: [build-studio]
