@@ -9,7 +9,7 @@ import RelativeTime from '@rebel/studio/components/RelativeTime'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient } from '@rebel/studio/utility/api'
+import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient, resetTwitchSubscriptions } from '@rebel/studio/utility/api'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -38,6 +38,7 @@ export default function TwitchEventStatuses () {
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const getStatusesRequest = useRequest(getTwitchEventStatuses(), { updateKey: refreshToken })
   const reconnectChatClientRequest = useRequest(reconnectChatClient(), { onDemand: true })
+  const resetTwitchSubscriptionsRequest = useRequest(resetTwitchSubscriptions(), { onDemand: true })
   const primaryChannelsRequest = useRequest(getPrimaryChannels(), { onDemand: true })
   const getLoginUrlRequest = useRequest(getTwitchStreamerLoginUrl(), { onDemand: true })
   const authoriseTwitchRequest = useRequest(authoriseTwitchStreamer(code!), { onDemand: true })
@@ -168,6 +169,15 @@ export default function TwitchEventStatuses () {
           Reconnect Twitch chat client
         </Button>
         <ApiError requestObj={reconnectChatClientRequest} />
+
+        <Button
+          onClick={resetTwitchSubscriptionsRequest.triggerRequest}
+          disabled={resetTwitchSubscriptionsRequest.isLoading}
+          sx={{ ml: 2 }}
+        >
+          Reset all Twitch event subscriptions
+        </Button>
+        <ApiError requestObj={resetTwitchSubscriptionsRequest} />
       </>
     </RequireRank>
   </>

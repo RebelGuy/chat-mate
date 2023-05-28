@@ -209,6 +209,11 @@ Reconnects the Twitch chat client. Note that this will have no effect if the sto
 
 Returns an empty response body.
 
+### `POST /twitch/resetSubscriptions`
+Deletes and re-initialises all streamer event subscriptions.
+
+Returns an empty response body.
+
 ## Chat Endpoints
 Path: `/chat`.
 

@@ -176,13 +176,12 @@ export default class HelixEventService extends ContextClass {
         })
         this.eventSubBase = middleware
         middleware.apply(this.app)
-        this.subscribeToGlobalEvents()
 
         try {
           await middleware.markAsReady()
 
           const subscriptions = await this.eventSubApi.getSubscriptions()
-          const readableSubscriptions = subscriptions.data.map(s => `${s.id}: ${s.status}`)
+          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
           this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions (broken subscriptions will be deleted):', readableSubscriptions)
           if (subscriptions.total !== subscriptions.data.length) {
             throw new Error('Time to implement pagination')
@@ -191,6 +190,7 @@ export default class HelixEventService extends ContextClass {
           await this.eventSubApi.deleteBrokenSubscriptions()
 
           // from what I understand we can safely re-subscribe to events when using the middleware
+          this.subscribeToGlobalEvents()
           await this.initialiseSubscriptions()
           this.logService.logInfo(this, 'Finished initial subscriptions to Helix events via the EventSub API [Middleware listener]')
         } catch (e) {
@@ -243,6 +243,14 @@ export default class HelixEventService extends ContextClass {
     }
 
     return result
+  }
+
+  public async resetAllSubscriptions () {
+    this.logService.logInfo(this, 'Resetting all Twitch event subscriptions')
+
+    await this.eventSubApi.deleteAllSubscriptions()
+    this.streamerSubscriptionInfos = new Map()
+    await this.initialiseSubscriptions()
   }
 
   private subscribeToGlobalEvents () {
