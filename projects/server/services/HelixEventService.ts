@@ -181,7 +181,7 @@ export default class HelixEventService extends ContextClass {
           await middleware.markAsReady()
 
           const subscriptions = await this.eventSubApi.getSubscriptions()
-          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
+          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status} ${JSON.stringify(s.condition)}`)
           this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions:', readableSubscriptions)
           if (subscriptions.total !== subscriptions.data.length) {
             throw new Error('Time to implement pagination')
