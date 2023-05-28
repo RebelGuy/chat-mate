@@ -214,6 +214,6 @@ function constructPath (path: string, queryParams?: Record<string, string | numb
     }
   }
 
-  definedParams.forEach((pair, i) => path += `${i === 0 ? '?' : '&'}${pair[0]}=${pair[1]}` )
+  definedParams.forEach((pair, i) => path += `${i === 0 ? '?' : '&'}${pair[0]}=${pair[1]}`)
   return path
 }
