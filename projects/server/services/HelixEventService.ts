@@ -169,6 +169,7 @@ export default class HelixEventService extends ContextClass {
           secret: this.getSecret(),
           legacySecrets: 'migrate',
           strictHostCheck: false,
+          usePathPrefixInHandlers: false,
           logger: {
             custom: {
               log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
