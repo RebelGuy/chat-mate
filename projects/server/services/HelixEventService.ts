@@ -165,7 +165,7 @@ export default class HelixEventService extends ContextClass {
         const middleware = new EventSubMiddleware({
           apiClient: this.twurpleApiClientProvider.getClientApi(),
           pathPrefix: '/twitch',
-          hostName: this.hostName!,
+          hostName: 'https://chat-mate-sandbox.azurewebsites.net',
           secret: this.getSecret(),
           legacySecrets: 'migrate',
           strictHostCheck: false,
