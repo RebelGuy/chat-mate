@@ -135,19 +135,17 @@ export default class HelixEventService extends ContextClass {
     this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
     this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
 
-    // there is no need to initialise everything right now - wait for the server to be set up first,
-    // then subscribe to events (this could take a long time if there are many streamers)
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    setTimeout(async () => {
-      await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
-      this.logService.logInfo(this, 'Starting initial subscriptions to Helix events...')
+    // https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html
+    // we have to use the clientCredentialsApiClient, for some reason the refreshing one doesn't work
+    const client = this.twurpleApiClientProvider.getClientApi()
+    this.eventSubApi = client.eventSub
 
-      // https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html
-      // we have to use the clientCredentialsApiClient, for some reason the refreshing one doesn't work
-      const client = this.twurpleApiClientProvider.getClientApi()
-      this.eventSubApi = client.eventSub
+    if (this.nodeEnv === 'local') {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      setTimeout(async () => {
+        await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
+        this.logService.logInfo(this, 'Starting initial subscriptions to Helix events...')
 
-      if (this.nodeEnv === 'local') {
         // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
         // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
         // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
@@ -160,23 +158,34 @@ export default class HelixEventService extends ContextClass {
         this.subscribeToGlobalEvents()
         await this.initialiseSubscriptions()
         this.logService.logInfo(this, 'Finished initial subscriptions to Helix events via the EventSub API [Ngrok listener]')
-      } else {
-        // can't use the listener - have to inject the middleware
-        const middleware = new EventSubMiddleware({
-          apiClient: this.twurpleApiClientProvider.getClientApi(),
-          hostName: this.hostName!,
-          secret: this.getSecret(),
-          legacySecrets: false,
-          strictHostCheck: false,
-          usePathPrefixInHandlers: false,
-          logger: {
-            custom: {
-              log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
-            }
+
+        this.initialisedStreamerEvents = true
+      }, 0)
+
+    } else {
+      // can't use the listener - have to inject the middleware
+      const middleware = new EventSubMiddleware({
+        apiClient: this.twurpleApiClientProvider.getClientApi(),
+        hostName: this.hostName!,
+        secret: this.getSecret(),
+        legacySecrets: false,
+        strictHostCheck: false,
+        usePathPrefixInHandlers: false,
+        logger: {
+          custom: {
+            log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
           }
-        })
-        this.eventSubBase = middleware
-        middleware.apply(this.app)
+        }
+      })
+      this.eventSubBase = middleware
+      middleware.apply(this.app)
+
+      // there is no need to initialise everything right now - wait for the server to be set up first,
+      // then subscribe to events (this could take a long time if there are many streamers)
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      setTimeout(async () => {
+        await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
+        this.logService.logInfo(this, 'Starting initial subscriptions to Helix events...')
 
         try {
           await middleware.markAsReady()
@@ -197,10 +206,10 @@ export default class HelixEventService extends ContextClass {
         } catch (e) {
           this.logService.logError(this, 'Failed to initialise Helix events.', e)
         }
-      }
 
-      this.initialisedStreamerEvents = true
-    }, 0)
+        this.initialisedStreamerEvents = true
+      }, 0)
+    }
   }
 
   public getEventSubscriptions (streamerId: number): Record<EventSubType, SubscriptionStatus> {
