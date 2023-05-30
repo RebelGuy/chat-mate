@@ -222,52 +222,52 @@ const main = async () => {
     }
   })
 
-  app.use((req, res, next) => {
-    // intercept the JSON body so we can customise the error code
-    // "inspired" by https://stackoverflow.com/a/57553226
-    const send = res.send.bind(res)
+  // app.use((req, res, next) => {
+  //   // intercept the JSON body so we can customise the error code
+  //   // "inspired" by https://stackoverflow.com/a/57553226
+  //   const send = res.send.bind(res)
 
-    res.send = (body) => {
-      if (res.headersSent) {
-        // already sent
-        return res
-      }
+  //   res.send = (body) => {
+  //     if (res.headersSent) {
+  //       // already sent
+  //       return res
+  //     }
 
-      let responseBody: ApiResponse<any> | null
-      if (body == null) {
-        responseBody = null
-      } else {
-        try {
-          responseBody = JSON.parse(body)
-        } catch (e: any) {
-          // the response body was just a message (string), so we must construct the error object explicitly
-          if (res.statusCode === 200) {
-            throw new Error('It is expected that only errors are ever sent with a simple message.')
-          }
+  //     let responseBody: ApiResponse<any> | null
+  //     if (body == null) {
+  //       responseBody = null
+  //     } else {
+  //       try {
+  //         responseBody = JSON.parse(body)
+  //       } catch (e: any) {
+  //         // the response body was just a message (string), so we must construct the error object explicitly
+  //         if (res.statusCode === 200) {
+  //           throw new Error('It is expected that only errors are ever sent with a simple message.')
+  //         }
 
-          responseBody = {
-            timestamp: new Date().getTime(),
-            success: false,
-            error: {
-              errorCode: res.statusCode as any,
-              errorType: res.statusMessage ?? 'Internal Server Error',
-              internalErrorType: 'Error',
-              message: body
-            }
-          }
-          res.set('Content-Type', 'application/json')
-        }
-      }
+  //         responseBody = {
+  //           timestamp: new Date().getTime(),
+  //           success: false,
+  //           error: {
+  //             errorCode: res.statusCode as any,
+  //             errorType: res.statusMessage ?? 'Internal Server Error',
+  //             internalErrorType: 'Error',
+  //             message: body
+  //           }
+  //         }
+  //         res.set('Content-Type', 'application/json')
+  //       }
+  //     }
 
-      if (responseBody?.success === false) {
-        res.status(responseBody.error.errorCode ?? 500)
-      }
+  //     if (responseBody?.success === false) {
+  //       res.status(responseBody.error.errorCode ?? 500)
+  //     }
 
-      return send(JSON.stringify(responseBody))
-    }
+  //     return send(JSON.stringify(responseBody))
+  //   }
 
-    next()
-  })
+  //   next()
+  // })
 
   app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
   app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
@@ -380,9 +380,8 @@ const main = async () => {
     return 'abort'
   })
 
-  isContextInitialised = true
-
   app.listen(port, () => {
+    isContextInitialised = true
     logContext.logInfo(`Server is listening on ${port}`)
   })
 }
