@@ -164,10 +164,9 @@ export default class HelixEventService extends ContextClass {
         // can't use the listener - have to inject the middleware
         const middleware = new EventSubMiddleware({
           apiClient: this.twurpleApiClientProvider.getClientApi(),
-          pathPrefix: '/twitch',
           hostName: this.hostName!,
           secret: this.getSecret(),
-          legacySecrets: 'migrate',
+          legacySecrets: false,
           strictHostCheck: false,
           usePathPrefixInHandlers: false,
           logger: {
