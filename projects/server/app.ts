@@ -206,7 +206,11 @@ const main = async () => {
     .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .build()
 
+  const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
+
   app.use((req, res, next) => {
+    logContext.logInfo('URL called:', req.method, req.path, req.body)
+
     res.header('Access-Control-Allow-Origin', '*')
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
     res.header('Access-Control-Allow-Headers', '*')
@@ -271,8 +275,6 @@ const main = async () => {
   app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
   app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
   app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
-
-  const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
   app.use(async (req, res, next) => {
     const context = globalContext.asParent()
