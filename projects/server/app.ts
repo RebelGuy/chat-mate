@@ -221,14 +221,14 @@ const main = async () => {
     }
     logContext.logInfo('URL called:', req.method, req.path, data, type)
 
-    if (req.method === 'POST' && req.path.startsWith('/twitch/event/') && type === 'webhook_callback_verification') {
-      res.setHeader('Content-Length', data.challenge.length)
-      res.setHeader('Content-Type', 'text/plain')
-      res.writeHead(200, undefined)
-      res.end(data.challenge)
-      next()
-      return
-    }
+    // if (req.method === 'POST' && req.path.startsWith('/twitch/event/') && type === 'webhook_callback_verification') {
+    //   res.setHeader('Content-Length', data.challenge.length)
+    //   res.setHeader('Content-Type', 'text/plain')
+    //   res.writeHead(200, undefined)
+    //   res.end(data.challenge)
+    //   next()
+    //   return
+    // }
 
     res.header('Access-Control-Allow-Origin', '*')
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
