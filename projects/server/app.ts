@@ -399,9 +399,8 @@ const main = async () => {
     return 'abort'
   })
 
-  isContextInitialised = true
-
   app.listen(port, () => {
+    isContextInitialised = true
     logContext.logInfo(`Server is listening on ${port}`)
   })
 }
