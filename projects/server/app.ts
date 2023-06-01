@@ -346,23 +346,23 @@ const main = async () => {
 
   // at this point, none of the routes have matched, so we want to return a custom formatted error
   // from https://expressjs.com/en/starter/faq.html#how-do-i-handle-404-responses
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    // res.status(404).send('Not found.')
-  })
+  // app.use((req: Request, res: Response, next: NextFunction) => {
+  //   // res.status(404).send('Not found.')
+  // })
 
-  // error handler
-  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    // any errors reaching here are unhandled - just return a 500
-    logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
+  // // error handler
+  // app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  //   // any errors reaching here are unhandled - just return a 500
+  //   logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
 
-    if (!res.headersSent) {
-      // res.status(500).send(err.message)
-    }
+  //   if (!res.headersSent) {
+  //     // res.status(500).send(err.message)
+  //   }
 
-    // don't call `next(error)` - the next middleware would be the default express error handler,
-    // which just logs the error to the console.
-    // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
-  })
+  //   // don't call `next(error)` - the next middleware would be the default express error handler,
+  //   // which just logs the error to the console.
+  //   // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
+  // })
 
   process.on('unhandledRejection', (error) => {
     if (error instanceof TimeoutError) {
