@@ -2,15 +2,16 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { NgrokAdapter } from '@twurple/eventsub-ngrok'
-import { ConnectionAdapter, DirectConnectionAdapter, EventSubHttpListener } from '@twurple/eventsub-http'
+import { ConnectionAdapter, DirectConnectionAdapter, EventSubHttpListener, EventSubMiddleware } from '@twurple/eventsub-http'
 import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUserAuthorizationRevokeEvent } from '@twurple/eventsub-base'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
-import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
+import { HelixEventSubApi } from '@twurple/api/lib'
 import { disconnect, kill } from 'ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
+import { EventSubHttpBase } from '@twurple/eventsub-http/lib/EventSubHttpBase'
 import { NodeEnv } from '@rebel/server/globals'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
@@ -23,8 +24,6 @@ import { LogLevel } from '@twurple/chat/lib'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { waitUntil } from '@rebel/shared/util/typescript'
-import { EventSubMiddleware } from '@rebel/server/eventsub/EventSubMiddleware'
-import { EventSubHttpBase } from '@rebel/server/eventsub/EventSubHttpBase'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -155,7 +154,7 @@ export default class HelixEventService extends ContextClass {
         await this.eventSubApi.deleteAllSubscriptions()
 
         this.listener = this.createNewListener()
-        this.eventSubBase = this.listener as any // trust me bro
+        this.eventSubBase = this.listener
         this.listener.start()
         this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
         this.subscribeToGlobalEvents()
@@ -168,7 +167,6 @@ export default class HelixEventService extends ContextClass {
           pathPrefix: '/twitch',
           hostName: this.hostName!,
           secret: this.getSecret(),
-          strictHostCheck: false,
           logger: {
             custom: {
               log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
@@ -360,7 +358,7 @@ export default class HelixEventService extends ContextClass {
 
       // this will create a new Ngrok server/tunnel with a different address
       this.listener = this.createNewListener()
-      this.eventSubBase = this.listener as any
+      this.eventSubBase = this.listener
       this.listener.start()
       await this.initialiseSubscriptions()
       this.logService.logInfo(this, 'Successfully refreshed the Ngrok server. The EventSub events will continue to work normally.')

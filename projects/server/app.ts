@@ -89,7 +89,6 @@ import { createLogContext } from '@rebel/shared/ILogService'
 import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
-import getRawBody from '@d-fischer/raw-body'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -207,29 +206,7 @@ const main = async () => {
     .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .build()
 
-  const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
-
-  app.use(async (req, res, next) => {
-    const type = req.headers['twitch-eventsub-message-type']
-    // const body = await getRawBody(req, true)
-    // let data
-    // try {
-    //   data = body == null || body === '' ? null : JSON.parse(body)
-    // } catch {
-    //   logContext.logWarning('Failed to parse JSON', body)
-    //   data = body
-    // }
-    logContext.logInfo('URL called:', req.method, req.path, req.body, type)
-
-    // if (req.method === 'POST' && req.path.startsWith('/twitch/event/') && type === 'webhook_callback_verification') {
-    //   res.setHeader('Content-Length', data.challenge.length)
-    //   res.setHeader('Content-Type', 'text/plain')
-    //   res.writeHead(200, undefined)
-    //   res.end(data.challenge)
-    //   next()
-    //   return
-    // }
-
+  app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*')
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
     res.header('Access-Control-Allow-Headers', '*')
@@ -241,52 +218,52 @@ const main = async () => {
     }
   })
 
-  // app.use((req, res, next) => {
-  //   // intercept the JSON body so we can customise the error code
-  //   // "inspired" by https://stackoverflow.com/a/57553226
-  //   const send = res.send.bind(res)
+  app.use((req, res, next) => {
+    // intercept the JSON body so we can customise the error code
+    // "inspired" by https://stackoverflow.com/a/57553226
+    const send = res.send.bind(res)
 
-  //   res.send = (body) => {
-  //     if (res.headersSent) {
-  //       // already sent
-  //       return res
-  //     }
+    res.send = (body) => {
+      if (res.headersSent) {
+        // already sent
+        return res
+      }
 
-  //     let responseBody: ApiResponse<any> | null
-  //     if (body == null) {
-  //       responseBody = null
-  //     } else {
-  //       try {
-  //         responseBody = JSON.parse(body)
-  //       } catch (e: any) {
-  //         // the response body was just a message (string), so we must construct the error object explicitly
-  //         if (res.statusCode === 200) {
-  //           throw new Error('It is expected that only errors are ever sent with a simple message.')
-  //         }
+      let responseBody: ApiResponse<any> | null
+      if (body == null) {
+        responseBody = null
+      } else {
+        try {
+          responseBody = JSON.parse(body)
+        } catch (e: any) {
+          // the response body was just a message (string), so we must construct the error object explicitly
+          if (res.statusCode === 200) {
+            throw new Error('It is expected that only errors are ever sent with a simple message.')
+          }
 
-  //         responseBody = {
-  //           timestamp: new Date().getTime(),
-  //           success: false,
-  //           error: {
-  //             errorCode: res.statusCode as any,
-  //             errorType: res.statusMessage ?? 'Internal Server Error',
-  //             internalErrorType: 'Error',
-  //             message: body
-  //           }
-  //         }
-  //         res.set('Content-Type', 'application/json')
-  //       }
-  //     }
+          responseBody = {
+            timestamp: new Date().getTime(),
+            success: false,
+            error: {
+              errorCode: res.statusCode as any,
+              errorType: res.statusMessage ?? 'Internal Server Error',
+              internalErrorType: 'Error',
+              message: body
+            }
+          }
+          res.set('Content-Type', 'application/json')
+        }
+      }
 
-  //     if (responseBody?.success === false) {
-  //       res.status(responseBody.error.errorCode ?? 500)
-  //     }
+      if (responseBody?.success === false) {
+        res.status(responseBody.error.errorCode ?? 500)
+      }
 
-  //     return send(JSON.stringify(responseBody))
-  //   }
+      return send(JSON.stringify(responseBody))
+    }
 
-  //   next()
-  // })
+    next()
+  })
 
   app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
   app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
@@ -294,6 +271,8 @@ const main = async () => {
   app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
   app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
   app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
+
+  const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
   app.use(async (req, res, next) => {
     const context = globalContext.asParent()
@@ -346,23 +325,32 @@ const main = async () => {
 
   // at this point, none of the routes have matched, so we want to return a custom formatted error
   // from https://expressjs.com/en/starter/faq.html#how-do-i-handle-404-responses
-  // app.use((req: Request, res: Response, next: NextFunction) => {
-  //   // res.status(404).send('Not found.')
-  // })
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // keep propagating if this is a twitch webhook request
+    if (req.path.startsWith('/twitch')) {
+      next()
+    }
 
-  // // error handler
-  // app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  //   // any errors reaching here are unhandled - just return a 500
-  //   logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
+    res.status(404).send('Not found.')
+  })
 
-  //   if (!res.headersSent) {
-  //     // res.status(500).send(err.message)
-  //   }
+  // error handler
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/twitch')) {
+      next()
+    }
 
-  //   // don't call `next(error)` - the next middleware would be the default express error handler,
-  //   // which just logs the error to the console.
-  //   // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
-  // })
+    // any errors reaching here are unhandled - just return a 500
+    logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
+
+    if (!res.headersSent) {
+      res.status(500).send(err.message)
+    }
+
+    // don't call `next(error)` - the next middleware would be the default express error handler,
+    // which just logs the error to the console.
+    // also by not calling `next`, we indicate to express that the request handling is over and the response should be sent
+  })
 
   process.on('unhandledRejection', (error) => {
     if (error instanceof TimeoutError) {
@@ -400,8 +388,8 @@ const main = async () => {
   })
 
   app.listen(port, () => {
-    isContextInitialised = true
     logContext.logInfo(`Server is listening on ${port}`)
+    isContextInitialised = true
   })
 }
 
