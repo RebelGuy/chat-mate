@@ -216,6 +216,7 @@ export abstract class EventSubHttpBase extends EventSubBase {
         if (new Date(timestamp).getTime() < Date.now() - 10 * 60 * 1000) {
           this._logger.debug(`Old notification(s) prevented for event: ${id}`)
         } else {
+          this._logger.info(`Processing event: ${id}`)
           const payload = data as EventSubNotificationPayload
           if ('events' in payload) {
             for (const event of payload.events) {
