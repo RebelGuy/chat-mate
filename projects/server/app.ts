@@ -227,6 +227,7 @@ const main = async () => {
       res.writeHead(200, undefined)
       res.end(data.challenge)
       next()
+      return
     }
 
     res.header('Access-Control-Allow-Origin', '*')
