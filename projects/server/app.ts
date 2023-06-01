@@ -89,6 +89,7 @@ import { createLogContext } from '@rebel/shared/ILogService'
 import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
+import getRawBody from '@d-fischer/raw-body'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -208,11 +209,17 @@ const main = async () => {
 
   const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
-  app.use((req, res, next) => {
-    logContext.logInfo('URL called:', req.method, req.path, req.body, req.headers['Twitch-Eventsub-Message-Type'])
+  app.use(async (req, res, next) => {
+    const type = req.headers['twitch-eventsub-message-type']
+    const body = await getRawBody(req, true)
+    const data = body == null ? null : JSON.parse(body)
+    logContext.logInfo('URL called:', req.method, req.path, data, type)
 
-    if (req.method === 'POST' && req.path.startsWith('/event/') && req.headers['Twitch-Eventsub-Message-Type'] === 'webhook_callback_verification') {
-      res.sendStatus(200)
+    if (req.method === 'POST' && req.path.startsWith('/event/') && type === 'webhook_callback_verification') {
+      res.setHeader('Content-Length', data.challenge.length)
+      res.setHeader('Content-Type', 'text/plain')
+      res.writeHead(200, undefined)
+      res.end(data.challenge)
       return
     }
 

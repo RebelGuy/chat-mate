@@ -32,6 +32,7 @@
     "snapshot:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/RefreshSnapshots.js"
   },
   "dependencies": {
+    "@d-fischer/raw-body": "^2.4.3",
     "@prisma/client": "3.15.2",
     "@twurple/api": "^6.2.1",
     "@twurple/auth": "^6.2.1",
