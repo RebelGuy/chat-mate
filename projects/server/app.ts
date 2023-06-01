@@ -211,15 +211,15 @@ const main = async () => {
 
   app.use(async (req, res, next) => {
     const type = req.headers['twitch-eventsub-message-type']
-    const body = await getRawBody(req, true)
-    let data
-    try {
-      data = body == null || body === '' ? null : JSON.parse(body)
-    } catch {
-      logContext.logWarning('Failed to parse JSON', body)
-      data = body
-    }
-    logContext.logInfo('URL called:', req.method, req.path, data, type)
+    // const body = await getRawBody(req, true)
+    // let data
+    // try {
+    //   data = body == null || body === '' ? null : JSON.parse(body)
+    // } catch {
+    //   logContext.logWarning('Failed to parse JSON', body)
+    //   data = body
+    // }
+    logContext.logInfo('URL called:', req.method, req.path, req.body, type)
 
     // if (req.method === 'POST' && req.path.startsWith('/twitch/event/') && type === 'webhook_callback_verification') {
     //   res.setHeader('Content-Length', data.challenge.length)
