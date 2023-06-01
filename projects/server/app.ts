@@ -336,10 +336,6 @@ const main = async () => {
 
   // error handler
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/twitch')) {
-      next()
-    }
-
     // any errors reaching here are unhandled - just return a 500
     logContext.logError(`Express encountered error for the ${req.method} request at ${req.url}:`, err)
 
