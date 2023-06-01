@@ -418,37 +418,42 @@ export default class HelixEventService extends ContextClass {
       if (subscription == null) {
         subscription = onCreateSubscription()
 
-        // this is kinda nasty... but also kinda not!
-        error = await new Promise<string | null>(resolve => {
-          // no need to listen to the creationSuccess event - if we are verified, then it must have also been created successfully.
-          const verificationListener = (success: boolean, verifiedSubscription: EventSubSubscription) => {
-            if (verifiedSubscription.id === subscription!.id) {
-              cleanUp()
-              resolve(success ? null : 'Failed to verify subscription.')
+        if (subscription.verified) {
+          this.logService.logDebug(this, `Subscription to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}) is already verified. Subscription id: ${subscription.id}`)
+
+        } else {
+          // this is kinda nasty... but also kinda not!
+          error = await new Promise<string | null>(resolve => {
+            // no need to listen to the creationSuccess event - if we are verified, then it must have also been created successfully.
+            const verificationListener = (success: boolean, verifiedSubscription: EventSubSubscription) => {
+              if (verifiedSubscription.id === subscription!.id) {
+                cleanUp()
+                resolve(success ? null : 'Failed to verify subscription.')
+              }
             }
-          }
 
-          const creationFailureListener = (failedSubscription: EventSubSubscription, e: Error) => {
-            if (failedSubscription.id === subscription!.id) {
-              cleanUp()
-              resolve(`Failed to create subscription: ${e.message}`)
+            const creationFailureListener = (failedSubscription: EventSubSubscription, e: Error) => {
+              if (failedSubscription.id === subscription!.id) {
+                cleanUp()
+                resolve(`Failed to create subscription: ${e.message}`)
+              }
             }
-          }
 
-          const clearTimeout = this.timerHelpers.setTimeout(() => {
-            cleanUp()
-            resolve('Failed to create subscription because it took to long.')
-          }, 20000)
+            const clearTimeout = this.timerHelpers.setTimeout(() => {
+              cleanUp()
+              resolve('Failed to create subscription because it took to long.')
+            }, 20000)
 
-          const cleanUp = () => {
-            this.verificationListeners.delete(verificationListener)
+            const cleanUp = () => {
+              this.verificationListeners.delete(verificationListener)
+              this.subscriptionCreationFailureListeners.add(creationFailureListener)
+              clearTimeout()
+            }
+
+            this.verificationListeners.add(verificationListener)
             this.subscriptionCreationFailureListeners.add(creationFailureListener)
-            clearTimeout()
-          }
-
-          this.verificationListeners.add(verificationListener)
-          this.subscriptionCreationFailureListeners.add(creationFailureListener)
-        })
+          })
+        }
       }
 
       this.setSubscriptionInfo(streamerId, eventType, subscription, error)
