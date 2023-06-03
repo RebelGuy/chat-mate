@@ -256,7 +256,7 @@ export default class HelixEventService extends ContextClass {
     // from https://github.com/twurple/twurple/blob/main/packages/eventsub-http/src/EventSubHttpBase.ts#L132
     const rawSubscriptions = await this.eventSubApi.getSubscriptionsPaginated().getAll()
 
-    const urlPrefix = `${this.hostName}/twitch/event/`
+    const urlPrefix = `https://${this.hostName}/twitch/event/`
     return nonNull(rawSubscriptions.map(sub => {
       if (sub._transport.method === 'webhook') {
         const url = sub._transport.callback
@@ -580,7 +580,7 @@ export default class HelixEventService extends ContextClass {
       apiClient: this.twurpleApiClientProvider.getClientApi(),
       adapter: this.createAdapter(),
       secret: this.getSecret(),
-      legacySecrets: 'migrate',
+      legacySecrets: false,
       logger: {
         custom: {
           log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
