@@ -234,7 +234,7 @@ export default class HelixEventService extends ContextClass {
           }
         } else {
           result[type] = {
-            status: subscription.verified ? 'active' : 'pending',
+            status: subscription.verified || this.enabledSubscriptionIds.has(subscription.id) ? 'active' : 'pending',
             lastChange: lastChange
           }
         }
