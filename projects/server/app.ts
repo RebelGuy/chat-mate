@@ -329,6 +329,7 @@ const main = async () => {
     // keep propagating if this is a twitch webhook request
     if (req.path.startsWith('/twitch')) {
       next()
+      return
     }
 
     res.status(404).send('Not found.')
