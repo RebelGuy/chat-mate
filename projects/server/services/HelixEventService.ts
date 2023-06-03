@@ -6,7 +6,7 @@ import { ConnectionAdapter, DirectConnectionAdapter, EventSubHttpListener, Event
 import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUserAuthorizationRevokeEvent } from '@twurple/eventsub-base'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
-import { HelixEventSubApi } from '@twurple/api/lib'
+import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
 import { disconnect, kill } from 'ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
@@ -24,6 +24,7 @@ import { LogLevel } from '@twurple/chat/lib'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { waitUntil } from '@rebel/shared/util/typescript'
+import { nonNull } from '@rebel/shared/util/arrays'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -93,6 +94,7 @@ export default class HelixEventService extends ContextClass {
 
   // note: the `subscription.verify` property will update on the initial (unverified) subscription object
   private streamerSubscriptionInfos: Map<number, Partial<Record<EventSubType, SubscriptionInfo>>> = new Map()
+  private enabledSubscriptionIds: Set<string> = new Set()
 
   // internal event listeners
   private verificationListeners: Set<typeof this.onVerify> = new Set()
@@ -179,16 +181,14 @@ export default class HelixEventService extends ContextClass {
         try {
           await middleware.markAsReady()
 
-          const subscriptions = await this.eventSubApi.getSubscriptions()
-          const readableSubscriptions = subscriptions.data.map(s => `${s.type}: ${s.status}`)
-          this.logService.logInfo(this, 'Retrieved', subscriptions.data.length, 'existing EventSub subscriptions (broken subscriptions will be deleted):', readableSubscriptions)
-          if (subscriptions.total !== subscriptions.data.length) {
-            throw new Error('Time to implement pagination')
-          }
+          const subscriptions = await this.getAllSubscriptionsFromTwitch()
+          const readableSubscriptions = subscriptions.map(([id, sub]) => `${id}: ${sub.status}`)
+          this.logService.logInfo(this, 'Retrieved', readableSubscriptions.length, 'existing EventSub subscriptions (broken subscriptions will be deleted):', readableSubscriptions)
 
           await this.eventSubApi.deleteBrokenSubscriptions()
 
-          // from what I understand we can safely re-subscribe to events when using the middleware
+          subscriptions.filter(([_, sub]) => sub.status === 'enabled').forEach(([id]) => this.enabledSubscriptionIds.add(id))
+
           this.subscribeToGlobalEvents()
           await this.initialiseSubscriptions()
           this.logService.logInfo(this, 'Finished initial subscriptions to Helix events via the EventSub API [Middleware listener]')
@@ -252,6 +252,23 @@ export default class HelixEventService extends ContextClass {
     await this.initialiseSubscriptions()
   }
 
+  private async getAllSubscriptionsFromTwitch (): Promise<[twurpleId: string, subscription: HelixEventSubSubscription][]> {
+    // from https://github.com/twurple/twurple/blob/main/packages/eventsub-http/src/EventSubHttpBase.ts#L132
+    const rawSubscriptions = await this.eventSubApi.getSubscriptionsPaginated().getAll()
+
+    const urlPrefix = `${this.hostName}/twitch/event/`
+    return nonNull(rawSubscriptions.map(sub => {
+      if (sub._transport.method === 'webhook') {
+        const url = sub._transport.callback
+        if (url.startsWith(urlPrefix)) {
+          const id = url.slice(urlPrefix.length)
+          return [id, sub]
+        }
+      }
+      return undefined
+    }))
+  }
+
   private subscribeToGlobalEvents () {
     /* eslint-disable @typescript-eslint/no-misused-promises */
     this.eventSubBase.onVerify(this.onVerify)
@@ -270,21 +287,25 @@ export default class HelixEventService extends ContextClass {
 
   private onVerify = (success: boolean, subscription: EventSubSubscription) => {
     this.logService.logInfo(this, `eventSub.onVerify - success: ${success}, subscription: ${subscription.id}`)
+    this.enabledSubscriptionIds.add(subscription.id)
     this.verificationListeners.forEach(listener => listener(success, subscription))
   }
 
   private onRevoke = (subscription: EventSubSubscription) => {
     this.logService.logWarning(this, `eventSub.onRevoke - subscription: ${subscription.id}`)
+    this.enabledSubscriptionIds.delete(subscription.id)
     this.revocationListeners.forEach(listener => listener(subscription))
   }
 
   private onSubscriptionCreateFailure = (subscription: EventSubSubscription, error: Error) => {
     this.logService.logError(this, `eventSub.onSubscriptionCreateFailure - subscription: ${subscription.id}`, error)
+    this.enabledSubscriptionIds.delete(subscription.id)
     this.subscriptionCreationFailureListeners.forEach(listener => listener(subscription, error))
   }
 
   private onSubscriptionDeleteSuccess = (subscription: EventSubSubscription) => {
     this.logService.logInfo(this, `eventSub.onSubscriptionDeleteSuccess - subscription: ${subscription.id}`)
+    this.enabledSubscriptionIds.delete(subscription.id)
     this.subscriptionDeleteSuccessListeners.forEach(listener => listener(subscription))
   }
 
@@ -418,7 +439,7 @@ export default class HelixEventService extends ContextClass {
       if (subscription == null) {
         subscription = onCreateSubscription()
 
-        if (subscription.verified) {
+        if (this.enabledSubscriptionIds.has(subscription.id)) {
           this.logService.logDebug(this, `Subscription to '${eventType}' events for Twitch user '${channelName}' (streamer ${streamerId}) is already verified. Subscription id: ${subscription.id}`)
 
         } else {
@@ -542,6 +563,8 @@ export default class HelixEventService extends ContextClass {
     }
 
     if (subscription == null && errorMessage == null) {
+      const existing = this.streamerSubscriptionInfos.get(streamerId)![type]
+      this.enabledSubscriptionIds.delete(existing?.subscription?.id ?? '')
       delete this.streamerSubscriptionInfos.get(streamerId)![type]
     } else {
       this.streamerSubscriptionInfos.get(streamerId)![type] = {
