@@ -16,7 +16,7 @@ export default function StreamlabsWebsocketForm () {
   const [currentSocketInput, setCurrentSocketInput] = useState('')
   const [socketMessage, setSocketMessage] = useState<string | null>(null)
 
-  const [socketKey, updateSocketKey] = useUpdateKey({ repeatInterval: 5000 })
+  const [socketKey, updateSocketKey] = useUpdateKey()
 
   const getStreamlabsStatusRequest = useRequest(getStreamlabsStatus(), { updateKey: socketKey })
   const setStreamlabsSocketTokenRequest = useRequest(setStreamlabsSocketToken({ websocketToken: nullIfEmpty(currentSocketInput) }), {
