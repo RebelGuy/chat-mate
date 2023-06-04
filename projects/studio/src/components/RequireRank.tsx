@@ -1,11 +1,17 @@
-import { LoginContext, RankName } from '@rebel/studio/LoginProvider'
+import { SxProps } from '@mui/material'
+import { Box } from '@mui/system'
+import LoginContext, { RankName } from '@rebel/studio/contexts/LoginContext'
 import { useContext } from 'react'
 
-type Props = {
+export type Props = {
   children: React.ReactElement
   forbidden?: React.ReactElement
   inverted?: boolean
   adminsCanBypass?: boolean
+  hideAdminOutline?: boolean
+
+  // only applied to the admin outline, if shown
+  adminSx?: SxProps
 
   // is an owner on one streamer, regardless of the current streamer context
   anyOwner?: boolean
@@ -14,7 +20,7 @@ type Props = {
 export default function RequireRank (props: Props) {
   const loginContext = useContext(LoginContext)
 
-  const requiredRanks = (Object.keys(props) as (keyof Props)[]).filter(key => 
+  const requiredRanks = (Object.keys(props) as (keyof Props)[]).filter(key =>
     key !== 'children'
     && key !== 'forbidden'
     && key !== 'inverted'
@@ -37,7 +43,15 @@ export default function RequireRank (props: Props) {
   }
 
   if (loginContext.loginToken != null && hasAnyRequiredRank) {
-    return props.children
+    if (props.admin && props.hideAdminOutline !== true) {
+      return (
+        <Box sx={{ border: '2px red dashed', ...(props.adminSx ?? {}) }}>
+          {props.children}
+        </Box>
+      )
+    } else {
+      return props.children
+    }
   } else {
     return props.forbidden ?? null
   }

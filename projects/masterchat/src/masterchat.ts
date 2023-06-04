@@ -749,7 +749,7 @@ export class Masterchat extends EventEmitter {
    * This gets the allowed actions when clicking on the menu next to a message.
    * NOTE: urlParams: pbj=1|0
    */
-  private async getActionCatalog(
+  public async getActionCatalog(
     contextMenuEndpointParams: string
   ): Promise<ActionCatalog | undefined> {
     const query = new URLSearchParams({

@@ -1,4 +1,4 @@
-import { ObjectComparator, ValueComparator } from '@rebel/shared/types'
+import { ObjectComparator, Primitive, ValueComparator } from '@rebel/shared/types'
 import { values } from '@rebel/shared/util/arrays'
 
 export const NO_OP = () => { /* Do nothing */ }
@@ -12,7 +12,7 @@ export function assert (condition: any, msg: string): asserts condition {
 }
 
 // returns false for null values
-export function isPrimitive (value: any): value is boolean | number | string | symbol | bigint {
+export function isPrimitive (value: any): value is Primitive {
   return (typeof value !== 'object' && typeof value !== 'function') || value == null
 }
 
@@ -99,6 +99,11 @@ export function firstOrDefault<T, Default> (map: Map<any, T>, def: Default): T |
 
 export function waitUntil (predicate: () => boolean, pollInterval: number, timeout: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
+    if (predicate()) {
+      resolve()
+      return
+    }
+
     const start = new Date().getTime()
 
     const interval = setInterval(() => {
@@ -106,7 +111,7 @@ export function waitUntil (predicate: () => boolean, pollInterval: number, timeo
 
       if (now - start > timeout) {
         clearInterval(interval)
-        reject(`Waiting for predicated timed out after ${timeout} ms.`)
+        reject(`Waiting for predicate timed out after ${timeout} ms.`)
       } else if (predicate()) {
         clearInterval(interval)
         resolve()

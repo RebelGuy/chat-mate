@@ -73,6 +73,9 @@ export function parseAction(logContext: LogContext, action: YTAction): Action | 
 
     case "closeLiveChatActionPanelAction":
       return parseCloseLiveChatActionPanelAction(action[type]!);
+    
+    case "showLiveChatDialogAction":
+      return { type: "unknown", payload: "showLiveChatDialogAction payload" } as UnknownAction
 
     default: {
       const _: never = type;

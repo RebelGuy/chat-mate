@@ -1,5 +1,3 @@
-import { URL } from 'node:url'
-
 // extracts the video/livestream ID from the given string
 export function getLiveId (linkOrId: string): string {
   const ID_LENGTH = 11
@@ -20,7 +18,7 @@ export function getLiveId (linkOrId: string): string {
   try {
     url = new URL(linkOrId)
   } catch (e: any) {
-    throw new Error(`The provided link is ${linkOrId} is malformed: ${e.message}`)
+    throw new Error(`The provided link ${linkOrId} is malformed.`)
   }
 
   if (linkOrId.includes('watch?v=') && linkOrId.includes('youtu')) {
@@ -117,4 +115,8 @@ export function capitaliseWord (word: string): string {
 
 export function ensureMaxTextWidth (text: string, maxLength: number): string {
   return text.length > maxLength ? text.substring(0, maxLength) : text
+}
+
+export function toSentenceCase (text: string) {
+  return text[0].toUpperCase() + text.substring(1)
 }

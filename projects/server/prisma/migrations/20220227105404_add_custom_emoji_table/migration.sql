@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE `CustomEmoji` (
+CREATE TABLE `customemoji` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `symbol` VARCHAR(10) NOT NULL,
     `name` VARCHAR(63) NOT NULL,

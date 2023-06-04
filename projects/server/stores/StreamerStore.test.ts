@@ -112,6 +112,16 @@ export default () => {
     })
   })
 
+  describe(nameof(StreamerStore, 'getStreamerCount'), () => {
+    test('Returns the number of streamers in the db', async () => {
+      await db.streamer.createMany({ data: [{ registeredUserId: 1 }, { registeredUserId: 2 }]})
+
+      const result = await streamerStore.getStreamerCount()
+
+      expect(result).toBe(2)
+    })
+  })
+
   describe(nameof(StreamerStore, 'getStreamerApplications'), () => {
     test('Gets all streamer applications if an undefined registeredUserId is provided', async () => {
       await db.streamerApplication.createMany({ data: [

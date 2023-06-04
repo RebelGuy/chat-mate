@@ -14,8 +14,13 @@ datasource db {
 
 /// Persists access tokens for twitch authentication
 model TwitchAuth {
-  // there can only be one access token per client
-  clientId String @id
+  id Int @id @default(autoincrement())
+
+  /// Only allowed to be null (temporarily) for the admin account.
+  twitchUserId String?
+
+  /// Must be set for the admin account.
+  twitchUsername String
 
   accessToken         String
   refreshToken        String
@@ -23,6 +28,8 @@ model TwitchAuth {
   obtainmentTimestamp BigInt
   scope               String
 
+  @@unique([twitchUserId], map: "twitch_auth_twitchUserId_key")
+  @@unique([twitchUsername], map: "twitch_auth_twitchUsername_key")
   @@map("twitch_auth")
 }
 
@@ -39,14 +46,13 @@ model YoutubeAuth {
 // since we never run a twitch livestream without also running a youtube livestream, we point the twitch
 // livestream to the youtube livestream.
 model Livestream {
-  id        Int            @id @default(autoincrement())
-  liveId    String         @db.VarChar(11) // unique
-  createdAt DateTime       @default(now())
+  id        Int       @id @default(autoincrement())
+  liveId    String    @db.VarChar(11) // unique
+  createdAt DateTime  @default(now())
   start     DateTime?
   end       DateTime?
-  type      LivestreamType
 
-  // if false, we don't listen to messages anymore (e.g. for when a livestream has concluded)
+  // if false, we don't listen to messages anymore (e.g. for when a livestream has concluded/not yet started)
   isActive Boolean
 
   // for fetching the youtube chat of this livestream
@@ -61,10 +67,6 @@ model Livestream {
   @@unique([liveId], map: "livestream_liveId_key")
   @@index([streamerId], map: "livestream_streamerId_fkey")
   @@map("livestream")
-}
-
-enum LivestreamType {
-  publicLivestream
 }
 
 model LiveViewers {
@@ -270,6 +272,7 @@ model YoutubeChannel {
   id        Int    @id @default(autoincrement())
   youtubeId String @db.VarChar(63) // unique
 
+  // always a default user
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "youtube_channel_userId_fkey")
 
@@ -308,6 +311,7 @@ model TwitchChannel {
   id       Int    @id @default(autoincrement())
   twitchId String @db.VarChar(32) // unique
 
+  // always a default user
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channel_userId_fkey")
 
@@ -508,6 +512,8 @@ model ChatMessage {
   // youtube and twitch ids are used to ensure we know what actual platform account authored the message.
   // it is possible that they are both null - in that case, this is not a regular livestream message
   // (probably it is a donation message - see below)
+  // note that we need to link the channel directly; linking to the user is not enough to determine the author's channel,
+  // because the user may be an aggregate user.
   youtubeChannelId Int?
   youtubeChannel   YoutubeChannel? @relation(fields: [youtubeChannelId], references: [id], map: "chat_message_youtubeChannelId_fkey")
 

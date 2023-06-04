@@ -1,41 +1,47 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import { TwitchMetadata } from '@rebel/server/interfaces'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
-import { nameof } from '@rebel/server/_test/utils'
+import { cast, nameof } from '@rebel/server/_test/utils'
 import { HelixStream } from '@twurple/api/lib/api/helix/stream/HelixStream'
-import { ApiClient } from '@twurple/api'
+import { ApiClient, HelixUser } from '@twurple/api'
 import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'
 import { ChatClient } from '@twurple/chat/lib'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
+import { HelixUserData } from '@twurple/api/lib/interfaces/helix/user.external'
+
+const chatMateModeratorId: string = 'moderator id'
 
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
-let twurpleApiProxyService: TwurpleApiProxyService
 let mockApiClient: DeepMockProxy<ApiClient>
 let mockChatClient: MockProxy<ChatClient>
+let mockTwitchUsername: string
+let twurpleApiProxyService: TwurpleApiProxyService
 
 beforeEach(() => {
   jest.useFakeTimers()
   mockLogService = mock()
   mockStatusService = mock()
-  mockApiClient = mock({ streams: mock() }) as any // the compiler wants us to mock every property individually?
-  const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => mockApiClient })
+  mockApiClient = mock({ streams: mock(), users: mock() }) as any // the compiler wants us to mock every property individually?
+  const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => Promise.resolve(mockApiClient) })
   mockChatClient = mock()
   const mockTwurpleChatClientProvider = mock<TwurpleChatClientProvider>({ get: () => mockChatClient })
+  mockTwitchUsername = 'twitchUsername'
 
   twurpleApiProxyService = new TwurpleApiProxyService(new Dependencies({
     logService: mockLogService,
     twurpleApiClientProvider: mockTwurpleApiClientProvider,
     twurpleChatClientProvider: mockTwurpleChatClientProvider,
     twurpleStatusService: mockStatusService,
+    isAdministrativeMode: () => false,
+    twitchUsername: mockTwitchUsername
   }))
   twurpleApiProxyService.initialise()
 })
 
-// this test mirrors the MasterchatProxyService tests implementation
+// this test mirrors the MasterchatService tests implementation
 describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
   test('successful request', async () => {
     const streamerChannelName = 'streamerChannelName'

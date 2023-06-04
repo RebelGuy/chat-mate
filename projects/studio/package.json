@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "1.23.1",
+  "version": "1.25.0",
   "main": "../../dist/studio/index.js",
   "scripts": {
     "start": "react-app-rewired start",
@@ -15,26 +15,25 @@
     "serve": "^13.0.2"
   },
   "dependencies": {
+    "@emotion/react": "^11.10.6",
+    "@emotion/styled": "^11.10.6",
+    "@mui/icons-material": "^5.11.9",
+    "@mui/material": "^5.11.10",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^12.0.0",
     "@testing-library/user-event": "^13.2.1",
     "@types/jest": "^27.0.1",
     "@types/node": "^16.7.13",
-    "@types/react": "^17.0.20",
-    "@types/react-dom": "^17.0.9",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.1",
     "react-scripts": "5.0.0",
     "stream-browserify": "^3.0.0",
     "typescript": "^4.7.4",
     "url-polyfill": "^1.1.12",
     "web-vitals": "^2.1.0"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [

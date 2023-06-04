@@ -94,7 +94,11 @@ function findParams(obj: any): string | undefined {
   return params;
 }
 
-export function buildMeta(endpoint: YTLiveChatServiceEndpointContainer) {
+export function buildMeta(endpoint: YTLiveChatServiceEndpointContainer | null) {
+  if (endpoint == null) {
+    return undefined
+  }
+
   return {
     isPost: endpoint.commandMetadata.webCommandMetadata.sendPost,
     url: endpoint.commandMetadata.webCommandMetadata.apiUrl,

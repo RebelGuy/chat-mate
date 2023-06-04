@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.23.1",
+  "version": "1.25.0",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
@@ -10,8 +10,8 @@
     "auth:twitch:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   electron ../../dist/server/TwitchAuth.js",
     "auth:twitch:release": "cross-env NODE_ENV=release dotenv -e release.env electron ../../dist/server/TwitchAuth.js",
 
-    "watch":       "webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=true",
-    "watch:check": "webpack --watch --progress --env NODE_ENV=local",
+    "watch":       "webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=true  SKIP_TESTS=false",
+    "watch:check": "webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=false SKIP_TESTS=false",
     "watch:tsc": "tsc --build --watch",
     "start:local":  "cross-env NODE_ENV=local                           nodemon --watch ../../dist --inspect ../../dist/server/app.js",
     "start:mock":   "cross-env NODE_ENV=local USE_FAKE_CONTROLLERS=true nodemon --watch ../../dist --inspect ../../dist/server/app.js",
@@ -33,11 +33,11 @@
   },
   "dependencies": {
     "@prisma/client": "3.15.2",
-    "@twurple/api": "^5.0.18",
-    "@twurple/auth": "^5.0.18",
-    "@twurple/chat": "^5.0.18",
-    "@twurple/eventsub": "^5.0.18",
-    "@twurple/eventsub-ngrok": "^5.0.18",
+    "@twurple/api": "^6.1.1",
+    "@twurple/auth": "^6.1.1",
+    "@twurple/chat": "^6.1.1",
+    "@twurple/eventsub-http": "^6.1.1",
+    "@twurple/eventsub-ngrok": "^6.1.1",
     "@types/eslint": "^8.4.1",
     "@types/node": "^16.11.7",
     "@types/socket.io-client": "^1.4.36",
@@ -51,6 +51,7 @@
     "html-webpack-plugin": "^5.5.0",
     "immutable": "^4.0.0",
     "module-alias": "^2.2.2",
+    "ngrok": "5.0.0-beta.2",
     "socket.io-client": "^2.3.1",
     "source-map-support": "^0.5.21",
     "tslib": "^2.3.1",

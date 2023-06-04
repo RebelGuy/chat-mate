@@ -53,6 +53,10 @@ export default class EmojiController extends ControllerBase {
       return builder.failure(400, 'Symbol must be between 1 and 32 characters.')
     }
 
+    if (symbol.includes(':')) {
+      return builder.failure(400, `Symbol cannot include the character ':'`)
+    }
+
     const imageData = request.newEmoji.imageData ?? ''
     if (imageData.length === 0) {
       return builder.failure(400, 'Image data must be defined')

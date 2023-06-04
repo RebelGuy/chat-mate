@@ -1,4 +1,3 @@
-import ApiService from '@rebel/server/controllers/ApiService'
 import { GetChatEndpoint, GetCommandStatusEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
 import { buildPath, ControllerBase, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
 import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
@@ -53,9 +52,12 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     }
     const primaryUserIds = unique(users.map(getPrimaryUserId))
 
-    const levels = await this.experienceService.getLevels(streamerId, primaryUserIds)
-    const ranks = await this.rankStore.getUserRanks(primaryUserIds, streamerId)
-    const registeredUsers = await this.accountStore.getRegisteredUsers(primaryUserIds)
+    const [levels, ranks, registeredUsers, firstSeens] = await Promise.all([
+      this.experienceService.getLevels(streamerId, primaryUserIds),
+      this.rankStore.getUserRanks(primaryUserIds, streamerId),
+      this.accountStore.getRegisteredUsers(primaryUserIds),
+      this.chatStore.getTimeOfFirstChat(streamerId, primaryUserIds)
+    ])
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
@@ -63,7 +65,8 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
       const level = levels.find(l => l.primaryUserId === primaryUserId)!.level
       const activeRanks = ranks.find(r => r.primaryUserId === primaryUserId)!.ranks.map(userRankToPublicObject)
       const registeredUser = registeredUsers.find(r => r.primaryUserId === primaryUserId)!.registeredUser
-      chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks, registeredUser))
+      const firstSeen = firstSeens.find(f => f.primaryUserId === primaryUserId)!.firstSeen
+      chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks, registeredUser, firstSeen))
     }
 
     return builder.success({

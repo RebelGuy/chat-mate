@@ -100,6 +100,10 @@ export default class AccountStore extends ContextClass {
     })
   }
 
+  public async getRegisteredUserCount (): Promise<number> {
+    return await this.db.registeredUser.count()
+  }
+
   public async checkPassword (username: string, password: string): Promise<boolean> {
     const hashedPassword = hashString(username + password)
     const match = await this.db.registeredUser.findUnique({

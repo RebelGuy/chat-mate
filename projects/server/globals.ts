@@ -15,14 +15,18 @@ type OptionalVariable<T extends Primitive | null, TDefault extends T> = { type: 
 
 export type NodeEnv = 'local' | 'debug' | 'release'
 
-// these can be set either statically in the .env file, or dynamically within the npm script using the `cross-env` package.
+// these can be set either statically in the .env file or Azure configuration, or dynamically within the npm script using the `cross-env` package.
 type EnvironmentVariables = {
   nodeEnv: NodeEnv
 
   port: number
+  studioUrl: string
 
   twitchClientId: string
   twitchClientSecret: string
+  twitchUsername: string
+
+  chatMateRegisteredUserName: string
 
   streamlabsAccessToken: string
 
@@ -56,10 +60,13 @@ function getAllKeys () {
     'websiteHostname': true,
     'nodeEnv': true,
     'port': true,
+    'studioUrl': true,
     'twitchClientId': true,
     'twitchClientSecret': true,
     'useFakeControllers': true,
-    'streamlabsAccessToken': true
+    'streamlabsAccessToken': true,
+    'twitchUsername': true,
+    'chatMateRegisteredUserName': true
   }
   return Object.keys(allEnvVariables) as (keyof EnvironmentVariables)[]
 }

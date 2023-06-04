@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE `Livestream` (
+CREATE TABLE `livestream` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `liveId` VARCHAR(11) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -24,7 +24,7 @@ CREATE TABLE `channel_info` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Channel` (
+CREATE TABLE `channel` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `youtubeId` VARCHAR(191) NOT NULL,
 
@@ -84,7 +84,7 @@ CREATE TABLE `chat_message` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `channel_info` ADD CONSTRAINT `channel_info_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `Channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `channel_info` ADD CONSTRAINT `channel_info_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `chat_message_part` ADD CONSTRAINT `chat_message_part_chatMessageId_fkey` FOREIGN KEY (`chatMessageId`) REFERENCES `chat_message`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -96,7 +96,7 @@ ALTER TABLE `chat_message_part` ADD CONSTRAINT `chat_message_part_textId_fkey` F
 ALTER TABLE `chat_message_part` ADD CONSTRAINT `chat_message_part_emojiId_fkey` FOREIGN KEY (`emojiId`) REFERENCES `chat_emoji`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `chat_message` ADD CONSTRAINT `chat_message_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `Channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `chat_message` ADD CONSTRAINT `chat_message_channelId_fkey` FOREIGN KEY (`channelId`) REFERENCES `channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `chat_message` ADD CONSTRAINT `chat_message_livestreamId_fkey` FOREIGN KEY (`livestreamId`) REFERENCES `Livestream`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `chat_message` ADD CONSTRAINT `chat_message_livestreamId_fkey` FOREIGN KEY (`livestreamId`) REFERENCES `livestream`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

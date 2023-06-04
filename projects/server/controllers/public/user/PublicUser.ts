@@ -12,11 +12,14 @@ export type PublicUser = PublicObject<{
   registeredUser: PublicRegisteredUser | null
 
   /** Current information about the user's active channel. */
-  channel: PublicObject<PublicChannel>
+  channel: PublicChannel
 
   /** Current level of the user. */
-  levelInfo: PublicObject<PublicLevelInfo>
+  levelInfo: PublicLevelInfo
 
   /** The list of active user-ranks, not sorted in any particular order. */
   activeRanks: PublicUserRank[]
+
+  /** The timestamp at which the user has posted their first message. */
+  firstSeen: number
 }>

@@ -2,8 +2,8 @@
 import { app, BrowserWindow } from 'electron'
 import { URL } from 'url'
 import fetch from 'node-fetch'
-import { TWITCH_SCOPE } from '@rebel/server/providers/TwurpleAuthProvider'
-import { DB, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } from '@rebel/server/scripts/consts'
+import { TWITCH_SCOPE } from '@rebel/server/constants'
+import { DB, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_USERNAME } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { Dependencies } from '@rebel/shared/context/context'
@@ -94,7 +94,7 @@ async function createWindow () {
         expiresIn: 0,
         obtainmentTimestamp: 0
       }
-      await authStore.saveTwitchAccessToken(token)
+      await authStore.saveTwitchAccessToken(null, TWITCH_USERNAME, token)
 
       console.log('-------------------')
       console.log('Successfully saved Twitch credentials.')

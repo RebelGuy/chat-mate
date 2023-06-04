@@ -1,6 +1,6 @@
 export type GenericObject = Record<string | number | symbol, any>
 
-export type Primitive = string | number | boolean
+export type Primitive = string | number | boolean | null
 
 export type EmptyObject = Record<string, never>
 

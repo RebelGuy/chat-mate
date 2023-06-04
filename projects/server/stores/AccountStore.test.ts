@@ -72,6 +72,20 @@ export default () => {
     })
   })
 
+  describe(nameof(AccountStore, 'getRegisteredUserCount'), () => {
+    test('Returns the number of registered accounts', async () => {
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.registeredUser.createMany({ data: [
+        { username: 'user1', hashedPassword: 'pass1', aggregateChatUserId: 1 },
+        { username: 'user2', hashedPassword: 'pass2', aggregateChatUserId: 2 }
+      ]})
+
+      const result = await accountStore.getRegisteredUserCount()
+
+      expect(result).toBe(2)
+    })
+  })
+
   describe(nameof(AccountStore, 'checkPassword'), () => {
     test('Returns true if user exists and password matches', async () => {
       const username = 'username'

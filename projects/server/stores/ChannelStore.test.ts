@@ -194,6 +194,27 @@ export default () => {
     })
   })
 
+  describe(nameof(ChannelStore, 'getChannelCount'), () => {
+    test('Returns the number of channels, including both Youtube and Twitch channels', async () => {
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}}
+      }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}}
+      }})
+
+      const result = await channelStore.getChannelCount()
+
+      expect(result).toBe(3)
+    })
+  })
+
   describe(nameof(ChannelStore, 'getAllChannels'), () => {
     test('Returns every channel that has authored a chat message for the given streamer', async () => {
       await db.chatUser.create({ data: { }}) // aggregate user 1 (streamer1)

@@ -29,11 +29,19 @@ module.exports = (env) => {
 
   const isLocal = nodeEnv === 'local'
   const NAME = process.env.NAME ?? '' // env variable defined in CI (e.g. '74d8a7029d5c30e332fe59c075a42a75aa6deffd - push - master')
-  const STUDIO_URL = process.env.STUDIO_URL ?? env.STUDIO_URL ?? '' // defined in CI or in the .env file when building locally
+  const STUDIO_URL = process.env.STUDIO_URL
   const NOW = new Date()
 
   // special env variable passed to webpack during local development for faster building
   const skipTypeChecks = parseBoolean(env.SKIP_TYPE_CHECKS) ?? false
+  if (skipTypeChecks) {
+    console.log('Skipping type checks')
+  }
+
+  const skipTests = parseBoolean(env.SKIP_TESTS) ?? false
+  if (skipTests) {
+    console.log('Skipping tests')
+  }
 
   const outPath = path.resolve(__dirname, `../../dist/server`)
 
@@ -129,6 +137,9 @@ module.exports = (env) => {
         // this is the equivalent of adding the --build flag to tsc.
         // see https://medium.com/@nickexcell/using-typescript-project-references-with-ts-loader-and-webpack-part-1-5d0c3cd7c603
         projectReferences: true,
+
+        // these two config files are identical, except the webpack one excludes *.test.ts files in the build (don't ask)
+        configFile: skipTests ? './tsconfig.webpack.json' : './tsconfig.json'
       }
     }
   }

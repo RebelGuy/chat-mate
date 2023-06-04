@@ -1,6 +1,8 @@
 {
   "compilerOptions": { "strict": true },
   "include": [
-    "./projects/**/*.ts"
+    "./projects/**/*.ts",
+    "./projects/**/*.tsx",
+    "./projects/**/*.js",
   ]
 }

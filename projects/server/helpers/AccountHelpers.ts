@@ -11,9 +11,13 @@ export default class AccountHelpers extends ContextClass {
     username = username.trim().toLowerCase()
 
     let errors: string[] = []
+    if (username.length > 20) {
+      errors.push('Username cannot be longer than 20 characters')
+    }
+
     for (const c of username) {
       if (!allowedCharacters.includes(c)) {
-        errors.push(`Invalid character ${c}`)
+        errors.push(`Invalid character '${c}'`)
       }
     }
 

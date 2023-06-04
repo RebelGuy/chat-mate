@@ -516,6 +516,34 @@ export default () => {
     })
   })
 
+  describe(nameof(ExperienceStore, 'getTotalGlobalExperience'), () => {
+    test('Returns the total amount of experience delta', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer2, userId: user2, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+      ]})
+      await db.experienceDataChatMessage.createMany({ data: [
+        { baseExperience: 100, chatMessageId: 1, experienceTransactionId: 1, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 },
+        { baseExperience: 100, chatMessageId: 2, experienceTransactionId: 2, messageQualityMultiplier: 1, participationStreakMultiplier: 1, spamMultiplier: 1, viewershipStreakMultiplier: 1, repetitionPenalty: 1 }
+      ]})
+
+      const result = await experienceStore.getTotalGlobalExperience()
+
+      expect(result).toBe(3)
+    })
+
+    test('Ignores non-chat message transactions', async () => {
+      await db.experienceTransaction.createMany({ data: [
+        { streamerId: streamer2, userId: user2, delta: 1, time: data.time1 },
+        { streamerId: streamer2, userId: user2, delta: 2, time: data.time1 }
+      ]})
+
+      const result = await experienceStore.getTotalGlobalExperience()
+
+      expect(result).toBe(0)
+    })
+  })
+
   describe(nameof(ExperienceStore, 'getAllUserChatExperience'), () => {
     test('Returns the chat experience for the user', async () => {
       await db.experienceTransaction.createMany({ data: [

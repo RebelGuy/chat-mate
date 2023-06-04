@@ -4,6 +4,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import ApiService from '@rebel/server/controllers/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
+import { Primitive } from '@rebel/shared/types'
 
 export const BASE_PATH = '/api'
 
@@ -30,10 +31,10 @@ export type ResponseData<T extends ResponseData<T>> = {
   // each property must be one of the following types:
   [K in keyof T]
     // nullable primitive types
-    : T[K] extends number | string | boolean | null ? T[K]
+    : T[K] extends Primitive | null ? T[K]
 
     // primitive arrays
-    : T[K] extends number[] | string[] | boolean[] ? T[K]
+    : T[K] extends Primitive[] ? T[K]
 
     // nullable PulicObject types
     : T[K] extends PublicObject<infer PO> ? PO
@@ -73,9 +74,10 @@ const API_ERRORS = {
 export type ErrorCode = keyof typeof API_ERRORS
 
 export type ApiError = {
-  message: string,
-  errorCode: ErrorCode,
+  message: string
+  errorCode: ErrorCode
   errorType: string
+  internalErrorType: string
 }
 
 export type ErrorType = Error | string
@@ -168,18 +170,19 @@ export class ResponseBuilder<T extends ResponseData<T>> {
       error: {
         errorCode,
         errorType: API_ERRORS[errorCode],
+        internalErrorType: error.type ?? 'Error',
         message: error.message
       }
     }
   }
 
-  private getErrorObject (error: ErrorType): { message: string, stack?: string } {
+  private getErrorObject (error: ErrorType): { message: string, type?: string, stack?: string } {
     if (typeof error === 'string') {
       return { message: error }
     } else if (error instanceof Error) {
       // for some reason we can't directly stringify the error object - it just returns a string of an empty object
       // so copy its properties
-      return { message: error.message, stack: error.stack }
+      return { message: error.message, stack: error.stack, type: error.constructor.name }
     } else {
       return { message: 'CANNOT CONVERT ERROR TO STRING' }
     }

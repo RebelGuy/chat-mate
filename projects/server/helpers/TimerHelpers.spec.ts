@@ -30,6 +30,21 @@ describe(nameof(TimerHelpers, 'setTimeout'), () => {
     jest.advanceTimersByTime(1)
     expect(calls).toBe(1)
   })
+
+  test('Does not call the callback if the timeout was cancelled', () => {
+    let calls = 0
+    const cb = () => { calls++ }
+
+    const clearTimeout = timerHelpers.setTimeout(cb, 1000)
+
+    jest.advanceTimersByTime(999)
+    expect(calls).toBe(0)
+
+    clearTimeout()
+
+    jest.advanceTimersByTime(1)
+    expect(calls).toBe(0)
+  })
 })
 
 describe(nameof(TimerHelpers, 'createRepeatingTimer'), () => {

@@ -29,7 +29,7 @@ export default class LinkStore extends ContextClass {
     })
   }
 
-  /** Returns true if the given token is valid. A valid token is one that has been saved against the default user, and has not been previously used to link the users. */
+  /** Returns the LinkToken object if the given token is valid. A valid token is one that has been saved against the default user, and has not been previously used to link the users. */
   public async validateLinkToken (defaultChatUserId: number, token: string): Promise<LinkToken | null> {
     const linkToken = await this.db.linkToken.findFirst({
       where: {
@@ -45,6 +45,19 @@ export default class LinkStore extends ContextClass {
     } else {
       return linkToken
     }
+  }
+
+  /** Returns true if the token was deleted, and false otherwise (e.g. if the token doesn't exist for the specified user, or if it has already been used up). */
+  public async deleteLinkToken (aggregateChatUserId: number, token: string): Promise<boolean> {
+    const result = await this.db.linkToken.deleteMany({
+      where: {
+        aggregateChatUserId: aggregateChatUserId,
+        token: token,
+        linkAttempt: null
+      }
+    })
+
+    return result.count === 1
   }
 
   public async getOrCreateLinkToken (aggregateChatUserId: number, defaultChatUserId: number): Promise<LinkToken> {

@@ -2,7 +2,11 @@ At the moment, the main project in `chat-mate` is `./projects/server`. It commun
 
 A work-in-progress is the `./projects/studio` project. It is a web interface to manage some data within the database and view account information. It communicates with the server endpoints.
 
-To get things running, ensure Node 18 is installed, and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
+To get things running, ensure Node 18 is installed* (recommend [nvm](https://github.com/nvm-sh/nvm), and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
+
+*If updating the Node version, please make sure to also update the Azure environment.
+
+Ensure the VSCode Typescript version is the same as the one used in the workspace to avoid getting "Type instantiation is excessively deep and possibly infinite" errors all over the place.
 
 Recommended VSCode extensions:
 - `ESLint`
@@ -17,6 +21,14 @@ Github Actions is used for automatically building and deploying the Server/Studi
 Pushing to any branch will trigger the build process. Pushing to `master` or `develop` will also trigger automatic deployment to the production or sandbox environments, respectively, unless the string `--skip-deploy` is contained in the commit message.
 
 Deployment of the Server includes an automatic migration of the database.
+
+If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped on Github.
+
+If the string `--skip-migrations` is included in the commit message, new migrations will not be applied (applies to both the server build and test runs). Note that migrations in the server build are already skipped if `--skip-deploy` is included in the commit message.
+
+If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed.
+
+If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
 
 ## Quick livestream setup
 Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
@@ -45,7 +57,63 @@ A manual fix is to add the following property to the JSON object in `.git/source
 ]
 ```
 
+## ChatMate admin channels
+
+External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`.
+
+| Environment | Email | YouTube Name* | YouTube Channel ID | Twitch Name | Twitch App Name | Twitch App Client ID |
+| --- | --- | --- | --- | --- | --- | --- |
+| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig) | UCobq78RdXWvXlG1jcRjkTig | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
+| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA) | UCEM2zbU-YVO6BMF_fukrdUA | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
+| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g) | UCY-5SHtJqoKGqm2YmOMOm_g | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
+
+*YouTube appears to be prohibiting the word "mate" in the channel name.
+
+Passwords:
+- Email: `P`
+- Twitch: `T`
+- YouTube: `C`
+
 # Change Log
+## V1.25 - The Multistream Update [27/5/2023]
+- Server
+  - Twitch access tokens are now saved against all streamers, and most requests are done on behalf of the streamer
+  - Link tokens can now be deleted
+  - Optimised the server startup time
+  - Added new ChatMate event type for first-time viewers
+  - Fixed streamers being able to set an active livestream that was not hosted by their primary Youtube channel
+  - Updated Twurple to the latest version
+- Studio
+  - Ability for streamers to see the Twitch and Youtube status and remedy any problems
+    - For Youtube, we check that the streamer has modded the ChatMate youtube channel
+    - For Twitch, we show a list of all actions that ChatMate is participating in, and whether a problem has occurred
+  - New Streamer Info page for the steamer's current status, and links to the livestream(s)
+  - New home page
+    - Demonstration video to show the capabilities of ChatMate
+    - List of current ChatMate stats
+  - The emoji page now includes an option for filtering only emojis that the current user is eligible for
+  - Improvements to the Link User page UX
+
+## v1.24 - The Studio Update [5/4/2023]
+- Server
+  - Added the ability to query the status of a command
+  - Added endpoints for authenticating the ChatMate Twitch Application externally, instead of using the local scripts
+  - Bug fixes
+- Studio
+  - Major redesign of the entire project
+    - Uses Material UI frontend
+    - Better navigation and streamer selection
+    - Improved overall user experience
+    - Better user instructions for how linking works
+  - Major refactoring of the entire project
+    - Studio now uses React Router
+      - e.g. `/<streamer>/emojis` automatically selects the specified streamer and shows their emojis
+    - Added developer-friendly hooks
+    - Converted class-based components to functional components
+  - The ChatMate Twitch Application can now be authenticated from within Studio
+- Masterchat
+  - Logging is now saved alongside server logs (previously, Masterchat logs were not saved anywhere)
+
 ## v1.23 - The Cleanup Update [11/2/2023]
 - Server
   - Streamers must now select a primary channel (at most one per platform) to stream on

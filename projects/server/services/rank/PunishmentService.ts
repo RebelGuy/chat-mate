@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
-import MasterchatProxyService from '@rebel/server/services/MasterchatProxyService'
+import MasterchatService from '@rebel/server/services/MasterchatService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -10,10 +10,8 @@ import RankStore, { AddUserRankArgs, groupFilter, RemoveUserRankArgs, UserRankWi
 import { addTime } from '@rebel/shared/util/datetime'
 import { assert, assertUnreachable } from '@rebel/shared/util/typescript'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 
 // It is not an issue on Twitch, but on Youtube we come across the interesting problem of being unable to check
@@ -31,7 +29,7 @@ import UserService from '@rebel/server/services/UserService'
 
 type Deps = Dependencies<{
   logService: LogService
-  masterchatProxyService: MasterchatProxyService
+  masterchatService: MasterchatService
   twurpleService: TwurpleService
   channelStore: ChannelStore
   rankStore: RankStore
@@ -45,7 +43,7 @@ export default class PunishmentService extends ContextClass {
   public readonly name = PunishmentService.name
 
   private readonly logService: LogService
-  private readonly masterchat: MasterchatProxyService
+  private readonly masterchat: MasterchatService
   private readonly twurpleService: TwurpleService
   private readonly rankStore: RankStore
   private readonly channelStore: ChannelStore
@@ -58,7 +56,7 @@ export default class PunishmentService extends ContextClass {
     super()
 
     this.logService = deps.resolve('logService')
-    this.masterchat = deps.resolve('masterchatProxyService')
+    this.masterchat = deps.resolve('masterchatService')
     this.twurpleService = deps.resolve('twurpleService')
     this.rankStore = deps.resolve('rankStore')
     this.channelStore = deps.resolve('channelStore')
@@ -320,11 +318,11 @@ export default class PunishmentService extends ContextClass {
     try {
       let result: boolean
       if (type === 'ban') {
-        result = await this.masterchat.banYoutubeChannel(lastChatItem.contextToken)
+        result = await this.masterchat.banYoutubeChannel(streamerId, lastChatItem.contextToken)
       } else if (type === 'unban') {
-        result = await this.masterchat.unbanYoutubeChannel(lastChatItem.contextToken)
+        result = await this.masterchat.unbanYoutubeChannel(streamerId, lastChatItem.contextToken)
       } else if (type === 'timeout' || type === 'refreshTimeout') {
-        result = await this.masterchat.timeout(lastChatItem.contextToken)
+        result = await this.masterchat.timeout(streamerId, lastChatItem.contextToken)
       } else {
         assertUnreachable(type)
       }
@@ -353,7 +351,7 @@ export default class PunishmentService extends ContextClass {
         assert(durationSeconds != null, 'Timeout duration must be defined')
         await this.twurpleService.timeout(streamerId, twitchChannelId, reason, durationSeconds)
       } else if (type === 'untimeout') {
-        await this.twurpleService.untimeout(streamerId, twitchChannelId, reason)
+        await this.twurpleService.untimeout(streamerId, twitchChannelId)
       } else {
         assertUnreachable(type)
       }

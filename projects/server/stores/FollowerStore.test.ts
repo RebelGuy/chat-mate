@@ -77,7 +77,7 @@ export default () => {
 
       await followerStore.saveNewFollower(streamer1, '12345', 'ichangedmyname', 'IChangedMyName')
 
-      expectRowCount(db.twitchFollower).toBe(1)
+      await expectRowCount(db.twitchFollower).toBe(1)
     })
   })
 

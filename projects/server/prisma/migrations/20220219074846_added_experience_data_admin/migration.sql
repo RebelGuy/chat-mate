@@ -10,7 +10,7 @@ CREATE TABLE `experience_data_admin` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `experience_data_admin` ADD CONSTRAINT `experience_data_admin_adminChannelId_fkey` FOREIGN KEY (`adminChannelId`) REFERENCES `Channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `experience_data_admin` ADD CONSTRAINT `experience_data_admin_adminChannelId_fkey` FOREIGN KEY (`adminChannelId`) REFERENCES `channel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `experience_data_admin` ADD CONSTRAINT `experience_data_admin_experienceTransactionId_fkey` FOREIGN KEY (`experienceTransactionId`) REFERENCES `experience_transaction`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

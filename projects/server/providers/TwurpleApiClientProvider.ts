@@ -11,15 +11,17 @@ type Deps = Dependencies<{
   disableExternalApis: boolean
   twurpleAuthProvider: TwurpleAuthProvider
   logService: LogService
+  isAdministrativeMode: () => boolean
 }>
 
-export default class TwurpleApiClientProvider extends ContextClass implements IProvider<ApiClient> {
+export default class TwurpleApiClientProvider extends ContextClass {
   public readonly name = TwurpleApiClientProvider.name
 
   private readonly disableExternalApis: boolean
   private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly logService: LogService
   private readonly logContext: LogContext
+  private readonly isAdministrativeMode: () => boolean
   private apiClient!: ApiClient
   private clientApiClient!: ApiClient
 
@@ -29,16 +31,20 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.logService = deps.resolve('logService')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.logContext = createLogContext(this.logService, this)
   }
 
   public override initialise () {
     if (this.disableExternalApis) {
       return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
+      return
     }
 
     this.apiClient = new ApiClient({
-      authProvider: this.twurpleAuthProvider.get(),
+      authProvider: this.twurpleAuthProvider.getUserTokenAuthProviderForAdmin(),
 
       // inject custom logging
       logger: {
@@ -49,7 +55,7 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
     })
 
     this.clientApiClient = new ApiClient({
-      authProvider: this.twurpleAuthProvider.getClientAuthProvider(),
+      authProvider: this.twurpleAuthProvider.getAppTokenAuthProvider(),
 
       // inject custom logging
       logger: {
@@ -60,11 +66,15 @@ export default class TwurpleApiClientProvider extends ContextClass implements IP
     })
   }
 
-  /** This is probably the one you want. */
-  public get () {
+  /** Uses the refreshable user access token. This is probably the one you want. Requests are performed on behalf of the give user's Twitch channel, or, if not provided, the ChatMate admin Twitch channel. */
+  public get = async (twitchUserId: string | null) => {
+    if (twitchUserId != null) {
+      await this.twurpleAuthProvider.getUserTokenAuthProvider(twitchUserId)
+    }
     return this.apiClient
   }
 
+  /** Uses the app access token. Only required for event-based API access. */
   public getClientApi () {
     return this.clientApiClient
   }

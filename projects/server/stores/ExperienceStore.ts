@@ -125,6 +125,15 @@ export default class ExperienceStore extends ContextClass {
     return result._sum?.delta ?? 0
   }
 
+  public async getTotalGlobalExperience (): Promise<number> {
+    const queryResult = await this.db.experienceTransaction.aggregate({
+      _sum: { delta: true },
+      where: { NOT: { experienceDataChatMessage: null }}
+    })
+
+    return queryResult._sum?.delta ?? 0
+  }
+
   /** Gets the total experience of the specified users, sorted in descending order. */
   public async getExperience (streamerId: number, primaryUserIds: number[]): Promise<UserExperience[]> {
     if (primaryUserIds.length === 0) {

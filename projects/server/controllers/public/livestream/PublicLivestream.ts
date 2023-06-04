@@ -6,7 +6,7 @@ export type PublicLivestream = PublicObject<{
 
   /** Link to the YouTube watch page of the livestream. */
   livestreamLink: string
-  
+
   /** The current status of the livestream. */
   status: 'not_started' | 'live' | 'finished'
 
