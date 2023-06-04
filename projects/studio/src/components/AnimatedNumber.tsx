@@ -12,9 +12,9 @@ type Props = {
 export default function AnimatedNumber (props: Props) {
   const [startTime, setStartTime] = useState(Date.now())
   const [currentTime, setCurrentTime] = useState(Date.now())
-  const overridingStart = useRef<number | null>(null)
-
-  const start = overridingStart?.current ?? props.initial
+  const [overridingStart, setOverridingStart] = useState<number | null>(null)
+  const prevNumber = useRef<number | null>(null)
+  const prevTarget = useRef(props.target)
 
   requestAnimationFrame(() => {
     if (currentTime < startTime + props.duration) {
@@ -26,11 +26,22 @@ export default function AnimatedNumber (props: Props) {
   useEffect(() => {
     const newStart = Date.now()
     setStartTime(newStart)
-    overridingStart.current = getNumber(newStart, currentTime, props.duration, start, props.target, props.decimals)
+    setCurrentTime(newStart)
+    setOverridingStart(prevNumber.current)
+    prevTarget.current = props.target
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.target])
 
-  const result = getNumber(startTime, currentTime, props.duration, start, props.target, props.decimals)
+  // use the cached value if the target has changed, but the above side effect has not yet executed
+  let result: number
+  if (prevTarget.current !== props.target) {
+    result = prevNumber.current ?? props.initial
+  } else {
+    const start = overridingStart ?? props.initial
+    result = getNumber(startTime, Date.now(), props.duration, start, props.target, props.decimals)
+    prevNumber.current = result
+  }
+
   return props.children(result)
 }
 

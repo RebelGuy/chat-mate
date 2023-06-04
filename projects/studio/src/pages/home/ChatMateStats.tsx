@@ -22,7 +22,7 @@ export default function ChatMateStats () {
     <Stat label="Number of unique channels" number={data?.uniqueChannelCount ?? 0} />
     <Stat label="Number of messages sent" number={data?.chatMessageCount ?? 0} />
     <Stat label="Total experience gained" number={data?.totalExperience ?? 0} />
-    <Stat label="Total days livestreamed" number={data?.totalDaysLivestreamed ?? 0} decimals={1} />
+    <Stat label="Total days livestreamed" number={data?.totalDaysLivestreamed ?? 0} decimals={3} />
   </>
 }
 
@@ -35,7 +35,7 @@ type StatProps = {
 function Stat (props: StatProps) {
   const contents = (num: number) => (
     <StatWrapper>
-      <>{props.label}: {num}</>
+      <>{props.label}: {num.toLocaleString()}</>
     </StatWrapper>
   )
 
