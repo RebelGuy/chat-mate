@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.25.0",
+  "version": "1.25.1",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
@@ -39,7 +39,7 @@
     "@twurple/eventsub-http": "^6.1.1",
     "@twurple/eventsub-ngrok": "^6.1.1",
     "@types/eslint": "^8.4.1",
-    "@types/node": "^16.11.7",
+    "@types/node": "^20.2.5",
     "@types/socket.io-client": "^1.4.36",
     "applicationinsights": "^2.3.3",
     "copy-webpack-plugin": "^10.2.0",

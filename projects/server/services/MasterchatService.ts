@@ -39,7 +39,7 @@ export default class MasterchatService extends ApiService {
     const logService = deps.resolve('logService')
     const statusService = deps.resolve('masterchatStatusService')
     const timeout = null
-    super(name, logService, statusService, timeout)
+    super(name, logService, statusService, timeout, true)
 
     this.masterchatFactory = deps.resolve('masterchatFactory')
     this.chatStore = deps.resolve('chatStore')

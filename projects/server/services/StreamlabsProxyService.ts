@@ -130,7 +130,7 @@ export default class StreamlabsProxyService extends ApiService {
     const logService = deps.resolve('logService')
     const statusService = deps.resolve('streamlabsStatusService')
     const timeout = null
-    super(name, logService, statusService, timeout)
+    super(name, logService, statusService, timeout, false)
 
     this.accessToken = deps.resolve('streamlabsAccessToken')
     this.nodeEnv = deps.resolve('nodeEnv')
