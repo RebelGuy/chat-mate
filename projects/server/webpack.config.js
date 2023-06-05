@@ -61,7 +61,7 @@ module.exports = (env) => {
 
   // similarly, only copy ngrok if it doesn't already exist
   const ngrokPath = path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it
-  if (isLocal && (!fs.existsSync(ngrokPath) || !fs.readdirSync(ngrokPath).find(file => file.includes('ngrok.exe')))) {
+  if (isLocal && (!fs.existsSync(ngrokPath) || !fs.readdirSync(ngrokPath).find(file => file.endsWith('ngrok.exe') || file.endsWith('ngrok')))) {
     copyPatterns.push({
       from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
       to: ngrokPath // folder is automatically created
