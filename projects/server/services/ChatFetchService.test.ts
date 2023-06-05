@@ -13,6 +13,7 @@ import { single } from '@rebel/shared/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { ChatItem } from '@rebel/server/models/chat'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -67,6 +68,8 @@ let mockMasterchatService: MockProxy<MasterchatService>
 let mockLogService: MockProxy<LogService>
 let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockChatService: MockProxy<ChatService>
+let mockChatMateRegisteredUserName = 'mockChatMateRegisteredUserName'
+let mockStreamerStore: MockProxy<StreamerStore>
 let chatFetchService: ChatFetchService
 
 beforeEach(() => {
@@ -76,9 +79,11 @@ beforeEach(() => {
   mockLogService = mock<LogService>()
   mockTimerHelpers = mock<TimerHelpers>()
   mockChatService = mock<ChatService>()
+  mockStreamerStore = mock<StreamerStore>()
 
   mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue(currentLivestreams)
   mockChatStore.getChatSince.calledWith(expect.any(Number), expect.any(Number), undefined, undefined).mockResolvedValue([])
+  mockLivestreamStore.getActiveLivestream.mockImplementation(streamerId => Promise.resolve(currentLivestreams.find(l => l.streamerId === streamerId)!))
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -94,7 +99,9 @@ beforeEach(() => {
     logService: mockLogService,
     masterchatService: mockMasterchatService,
     timerHelpers: mockTimerHelpers,
-    disableExternalApis: false
+    disableExternalApis: false,
+    chatMateRegisteredUserName: mockChatMateRegisteredUserName,
+    streamerStore: mockStreamerStore
   }))
 })
 
@@ -107,7 +114,9 @@ describe(nameof(ChatFetchService, 'initialise'), () => {
       logService: mockLogService,
       masterchatService: mockMasterchatService,
       timerHelpers: mockTimerHelpers,
-      disableExternalApis: true
+      disableExternalApis: true,
+      chatMateRegisteredUserName: mockChatMateRegisteredUserName,
+      streamerStore: mockStreamerStore
     }))
 
     await chatFetchService.initialise()
@@ -116,15 +125,13 @@ describe(nameof(ChatFetchService, 'initialise'), () => {
     expect(mockMasterchatService.fetchMetadata.mock.calls.length).toBe(0)
   })
 
-  test('uses continuation token when fetching and schedules new fetch', async () => {
+  test('Schedules chat fetch for each active livestream', async () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2))
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4))
 
     await chatFetchService.initialise()
 
-    // don't need to explicitly check return type of the callback because the type guard already checks this
-    const expectedTimerOptions: TimerOptions = { behaviour: 'dynamicEnd', callback: expect.any(Function) }
-    expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expectedTimerOptions, true])
+    expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(3)
 
     const calls = mockMasterchatService.fetch.mock.calls
     expect(calls.length).toBe(2)
@@ -134,7 +141,7 @@ describe(nameof(ChatFetchService, 'initialise'), () => {
     ]))
   })
 
-  test('quietly handles fetching error and reset continuation token', async () => {
+  test('Quietly handles fetching error and reset continuation token', async () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockRejectedValue(new Error('Fetching failed'))
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4))
 
@@ -148,7 +155,7 @@ describe(nameof(ChatFetchService, 'initialise'), () => {
     ]))
   })
 
-  test('quietly handles no active livestream', async () => {
+  test('Quietly handles no active livestream', async () => {
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([])
 
     await chatFetchService.initialise()
@@ -157,7 +164,7 @@ describe(nameof(ChatFetchService, 'initialise'), () => {
     expect(mockTimerHelpers.dispose.mock.calls.length).toBe(0)
   })
 
-  test('passes ordered chat items to ChatService and updates continuation token', async () => {
+  test('Passes ordered chat items to ChatService and updates continuation token', async () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction2, chatAction1]))
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
     mockChatService.onNewChatItem.calledWith(expect.anything(), expect.anything()).mockResolvedValue(true)
@@ -181,7 +188,7 @@ describe(nameof(ChatFetchService, 'initialise'), () => {
     ]))
   })
 
-  test('does not update continuation token if chat service throws error', async () => {
+  test('Does not update continuation token if chat service throws error', async () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction1]))
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
     mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction1.id }), streamer1).mockRejectedValue(new Error())

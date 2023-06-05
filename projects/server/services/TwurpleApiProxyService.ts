@@ -34,7 +34,7 @@ export default class TwurpleApiProxyService extends ApiService {
     const logService = deps.resolve('logService')
     const statusService = deps.resolve('twurpleStatusService')
     const timeout = 5000 // thanks to Twitch's messaging system (or a bug in Twurple?) we don't always hear back, so assume the request failed after 5 seconds
-    super(name, logService, statusService, timeout)
+    super(name, logService, statusService, timeout, false)
 
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
     this.twurpleChatClientProvider = deps.resolve('twurpleChatClientProvider')

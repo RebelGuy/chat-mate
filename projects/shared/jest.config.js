@@ -11,12 +11,12 @@ module.exports = {
     // https://github.com/kulshekhar/ts-jest/issues/2709
     '@rebel/shared/(.*)$': '<rootDir>/$1'
   },
-  globals: {
-    'ts-jest': {
+  transform: {
+    '.ts': ['ts-jest', {
       diagnostics: false,
       isolatedModules: true,
       tsconfig: '<rootDir>/tsconfig.json',
       stringifyContentPathRegex: '\\.html$'
-    },
+    }]
   }
 }

@@ -2,19 +2,20 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItem, getEmojiLabel, PartialChatMessage } from '@rebel/server/models/chat'
-import { isList, List } from 'immutable'
-import { clamp, clampNormFn, min, sum } from '@rebel/shared/util/math'
+import { clamp, clampNormFn, sum } from '@rebel/shared/util/math'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
-import { Livestream } from '@prisma/client'
-import { createLogContext, LogContext } from '@rebel/shared/ILogService'
+import StreamerStore from '@rebel/server/stores/StreamerStore'
+
+const LIVESTREAM_CHECK_INTERVAL = 10_000
 
 const MIN_INTERVAL = 500
 const MAX_INTERVAL = 3_000
+const MAX_INTERVAL_FOR_CHAT_MATE = 30_000
 
 // this can approximately be interpreted as the number of chat messages per minute
 const MIN_CHAT_RATE = 0.5 / 60
@@ -24,13 +25,15 @@ const MAX_CHAT_RATE = 10 / 60
 const LIMIT = 120_000
 
 type Deps = Dependencies<{
-  chatService: ChatService,
-  chatStore: ChatStore,
-  logService: LogService,
-  masterchatService: MasterchatService,
-  timerHelpers: TimerHelpers,
-  livestreamStore: LivestreamStore,
+  chatService: ChatService
+  chatStore: ChatStore
+  logService: LogService
+  masterchatService: MasterchatService
+  timerHelpers: TimerHelpers
+  livestreamStore: LivestreamStore
   disableExternalApis: boolean
+  streamerStore: StreamerStore
+  chatMateRegisteredUserName: string
 }>
 
 export default class ChatFetchService extends ContextClass {
@@ -42,6 +45,12 @@ export default class ChatFetchService extends ContextClass {
   private readonly timerHelpers: TimerHelpers
   private readonly livestreamStore: LivestreamStore
   private readonly disableExternalApis: boolean
+  private readonly streamerStore: StreamerStore
+  private readonly chatMateRegisteredUserName: string
+
+  private livestreamCheckTimer!: number
+  private chatTimers: Map<string, number> = new Map()
+  private chatMateStreamerId: number | null = null
 
   constructor (deps: Deps) {
     super()
@@ -52,6 +61,8 @@ export default class ChatFetchService extends ContextClass {
     this.timerHelpers = deps.resolve('timerHelpers')
     this.livestreamStore = deps.resolve('livestreamStore')
     this.disableExternalApis = deps.resolve('disableExternalApis')
+    this.streamerStore = deps.resolve('streamerStore')
+    this.chatMateRegisteredUserName = deps.resolve('chatMateRegisteredUserName')
   }
 
   public override async initialise (): Promise<void> {
@@ -60,39 +71,58 @@ export default class ChatFetchService extends ContextClass {
     }
 
     const timerOptions: TimerOptions = {
-      behaviour: 'dynamicEnd',
-      callback: this.updateMessages
+      behaviour: 'end',
+      interval: LIVESTREAM_CHECK_INTERVAL,
+      callback: this.checkLivestreams
     }
-    await this.timerHelpers.createRepeatingTimer(timerOptions, true)
+    this.livestreamCheckTimer = await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  private fetchLatest = async (livestream: Livestream) => {
-    const token = livestream.continuationToken
-    const liveId = livestream.liveId
+  public override dispose (): void | Promise<void> {
+    this.timerHelpers.disposeSingle(this.livestreamCheckTimer)
 
-    try {
-      const result = await this.masterchatService.fetch(livestream.streamerId, token ?? undefined)
-      return result
-    } catch (e: any) {
-      this.logService.logWarning(this, `Encountered error while fetching chat for livestream ${livestream.id} for streamer ${livestream.streamerId}:`, e.message)
-      await this.livestreamStore.setContinuationToken(liveId, null)
-      return null
+    for (const timer of this.chatTimers.values()) {
+      this.timerHelpers.disposeSingle(timer)
     }
+    this.chatTimers.clear()
+    this.chatMateStreamerId = null
   }
 
-  private updateMessages = async (): Promise<number> => {
+  /** Esures that there is one timer active for every YouTube livestream. */
+  private checkLivestreams = async (): Promise<void> => {
     const livestreams = await this.livestreamStore.getActiveLivestreams()
+    const currentIds = [...this.chatTimers.keys()]
 
-    if (livestreams.length === 0) {
-      return MAX_INTERVAL
+    for (const livestream of livestreams) {
+      const id = livestream.liveId
+      if (currentIds.includes(id)) {
+        continue
+      }
+
+      this.logService.logDebug(this, `Starting fetch timer for livestream ${livestream.id} for streamer ${livestream.streamerId}`)
+      const timerOptions: TimerOptions = {
+        behaviour: 'dynamicEnd',
+        callback: () => this.updateLivestreamMessages(livestream.streamerId, id)
+      }
+      const timer = await this.timerHelpers.createRepeatingTimer(timerOptions, true)
+      this.chatTimers.set(id, timer)
     }
 
-    const intervals = await Promise.all(livestreams.map(l => this.updateLivestreamMessages(l)))
-    return min(intervals)[0]!
+    for (const currentId of currentIds) {
+      const matchingLivestream = livestreams.find(livestream => livestream.liveId === currentId)
+      if (matchingLivestream != null) {
+        continue
+      }
+
+      this.logService.logDebug(this, `Stopping fetch timer for livestream ${currentId}`)
+      const timer = this.chatTimers.get(currentId)!
+      this.timerHelpers.disposeSingle(timer)
+      this.chatTimers.delete(currentId)
+    }
   }
 
-  private updateLivestreamMessages = async (livestream: Livestream): Promise<number> => {
-    const response = await this.fetchLatest(livestream)
+  private updateLivestreamMessages = async (streamerId: number, liveId: string): Promise<number> => {
+    const response = await this.fetchLatestMessages(streamerId)
 
     let hasNewChat: boolean = false
     if (response != null) {
@@ -104,12 +134,14 @@ export default class ChatFetchService extends ContextClass {
       if (response.continuation?.token == null) {
         this.logService.logWarning(this, `Fetched ${chatItems.length} new chat items but continuation token is null. Ignoring chat items.`)
       } else {
-        this.logService.logInfo(this, `Adding ${chatItems.length} new chat items`)
+        if (chatItems.length > 0) {
+          this.logService.logInfo(this, `Adding ${chatItems.length} new chat items for streamer ${streamerId}`)
+        }
 
         let anyFailed = false
         for (const item of chatItems) {
           try {
-            const addedNewChat = await this.chatService.onNewChatItem(item, livestream.streamerId)
+            const addedNewChat = await this.chatService.onNewChatItem(item, streamerId)
             if (addedNewChat) {
               hasNewChat = true
             }
@@ -122,7 +154,7 @@ export default class ChatFetchService extends ContextClass {
           // purposefully only set this AFTER everything has been added. if we set it before,
           // and something goes wrong with adding chat, the chat messages will be lost forever.
           // todo: maybe we want it to be lost forever - perhaps there was bad data in the chat message, and now we are stuck in an infinite loop...
-          await this.livestreamStore.setContinuationToken(livestream.liveId, response.continuation.token)
+          await this.livestreamStore.setContinuationToken(liveId, response.continuation.token)
         }
       }
     }
@@ -132,9 +164,28 @@ export default class ChatFetchService extends ContextClass {
       return MIN_INTERVAL
     } else {
       const now = Date.now()
-      const chat = await this.chatStore.getChatSince(livestream.streamerId, now - LIMIT)
+      const chat = await this.chatStore.getChatSince(streamerId, now - LIMIT)
       const timestamps = chat.map(c => c.time.getTime())
-      return getNextInterval(now, timestamps, createLogContext(this.logService, this))
+      return this.getNextInterval(streamerId, now, timestamps)
+    }
+  }
+
+  private fetchLatestMessages = async (streamerId: number) => {
+    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    if (livestream == null) {
+      return null
+    }
+
+    const liveId = livestream.liveId
+    const token = livestream.continuationToken
+
+    try {
+      const result = await this.masterchatService.fetch(livestream.streamerId, token ?? undefined)
+      return result
+    } catch (e: any) {
+      this.logService.logError(this, `Encountered error while fetching chat for livestream ${livestream.id} for streamer ${livestream.streamerId}:`, e.message)
+      await this.livestreamStore.setContinuationToken(liveId, null)
+      return null
     }
   }
 
@@ -175,6 +226,42 @@ export default class ChatFetchService extends ContextClass {
       messageParts
     }
   }
+
+  private async getNextInterval (streamerId: number, currentTime: number, timestamps: number[]): Promise<number> {
+    if (await this.isChatMateStreamer(streamerId) && timestamps.length === 0) {
+      // to avoid spamming the logs and reduce the chance of YouTube getting upset with us, we don't poll the chat of the official
+      // ChatMate streamer very often if there haven't been recent messages.
+      return MAX_INTERVAL_FOR_CHAT_MATE
+    }
+
+    const startTimestamp = currentTime - LIMIT
+
+    const weightFn = clampNormFn(t => Math.sqrt(t), startTimestamp, currentTime)
+    const weights = timestamps.filter(t => t >= startTimestamp).map(t => weightFn(t))
+
+    // pretend each message was the only one sent in the period, and scale the average based on the weight. then add all.
+    // this has the effect that, if there is a quick burst of messages, it won't increase the refresh rate for the whole
+    // `limit` interval, but smoothly return back to normal over time.
+    const chatRate = sum(weights.map(w => w / (LIMIT / 1000)))
+    const nextInterval = (1 - clamp((chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 0, 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
+
+    return nextInterval
+  }
+
+  private async isChatMateStreamer (streamerId: number): Promise<boolean> {
+    // the streamer id is cached
+    if (this.chatMateStreamerId == null) {
+      const chatMateStreamer = await this.streamerStore.getStreamerByName(this.chatMateRegisteredUserName)
+      if (chatMateStreamer == null) {
+        this.logService.logWarning(this, 'Could not find the official ChatMate streamer.')
+        return false
+      }
+
+      this.chatMateStreamerId = chatMateStreamer.id
+    }
+
+    return this.chatMateStreamerId === streamerId
+  }
 }
 
 function isTextRun (run: YTRun): run is YTTextRun {
@@ -183,24 +270,4 @@ function isTextRun (run: YTRun): run is YTTextRun {
 
 function isAddChatAction (action: Action): action is AddChatItemAction {
   return action.type === 'addChatItemAction' && (action.message?.length ?? 0) > 0
-}
-
-function getNextInterval (currentTime: number, timestamps: List<number> | number[], logContext: LogContext): number {
-  if (!isList(timestamps)) {
-    timestamps = List(timestamps)
-  }
-
-  const startTimestamp = currentTime - LIMIT
-
-  const weightFn = clampNormFn(t => Math.sqrt(t), startTimestamp, currentTime)
-  const weights = timestamps.filter(t => t >= startTimestamp).map(t => weightFn(t))
-
-  // pretend each message was the only one sent in the period, and scale the average based on the weight. then add all.
-  // this has the effect that, if there is a quick burst of messages, it won't increase the refresh rate for the whole
-  // `limit` interval, but smoothly return back to normal over time.
-  const chatRate = sum(weights.map(w => w / (LIMIT / 1000)))
-  const nextInterval = (1 - clamp((chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 0, 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
-
-  logContext.logDebug(`Chat rate: ${chatRate.toFixed(4)} | Next interval: ${nextInterval.toFixed(0)}`)
-  return nextInterval
 }

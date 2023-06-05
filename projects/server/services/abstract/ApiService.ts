@@ -2,6 +2,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { NO_OP } from '@rebel/shared/util/typescript'
+import { transformPrimitiveValues } from '@rebel/shared/util/objects'
 
 export default abstract class ApiService extends ContextClass {
   public readonly name: string
@@ -9,15 +10,17 @@ export default abstract class ApiService extends ContextClass {
   protected readonly logService: LogService
   private readonly statusService: StatusService
   private readonly timeoutMs: number | null
+  private readonly trimLogs: boolean
 
   private requestId: number
 
-  constructor (name: string, logService: LogService, statusService: StatusService, timeoutMs: number | null) {
+  constructor (name: string, logService: LogService, statusService: StatusService, timeoutMs: number | null, trimLogs: boolean) {
     super()
     this.name = name
     this.logService = logService
     this.statusService = statusService
     this.timeoutMs = timeoutMs
+    this.trimLogs = trimLogs
 
     this.requestId = 0
   }
@@ -35,7 +38,8 @@ export default abstract class ApiService extends ContextClass {
       // do request
       let error: any | null = null
       let response: TResponse | null = null
-      this.logService.logApiRequest(this, id, requestName, { ...query })
+      const queryToLog = this.wrapQuery(query)
+      this.logService.logApiRequest(this, id, requestName, queryToLog)
       try {
         let timeoutPromise
         if (this.timeoutMs == null) {
@@ -45,7 +49,8 @@ export default abstract class ApiService extends ContextClass {
         }
 
         response = await Promise.race([request(...query), timeoutPromise]) as TResponse
-        this.logService.logApiResponse(this, id, false, response)
+        const responseToLog = this.getResponseToLog(response)
+        this.logService.logApiResponse(this, id, false, responseToLog)
       } catch (e) {
         error = e
         this.logService.logApiResponse(this, id, true, e)
@@ -64,5 +69,52 @@ export default abstract class ApiService extends ContextClass {
         return response!
       }
     }
+  }
+
+  private getResponseToLog (response: unknown): unknown {
+    if (!this.trimLogs || typeof response !== 'object' || response == null) {
+      return response
+    }
+
+    try {
+      return transformPrimitiveValues(response as Record<any, any>, (key, value) => {
+        if (typeof value !== 'string' || value.length <= 10) {
+          return value
+        }
+
+        if (key === 'token' || key === 'contextMenuEndpointParams') {
+          return value.substring(0, 10) + '...'
+        } else {
+          return value
+        }
+      })
+    } catch (e: any) {
+      if (e instanceof SyntaxError) {
+        return response
+      }
+
+      this.logService.logWarning(this, 'Attempted to trim response but encountered error:', e)
+      return response
+    }
+  }
+
+  private wrapQuery (params: any[]): Record<string, any> {
+    let obj = { ...params } as Record<string, any>
+
+    if (this.trimLogs) {
+      try {
+        obj = transformPrimitiveValues(obj, (key, value) => {
+          if (typeof value === 'string' && value.length > 50) {
+            return value.substring(0, 10) + '...'
+          } else {
+            return value
+          }
+        })
+      } catch (e: any) {
+        this.logService.logWarning(this, 'Attempted to trim query but encountered error:', e)
+      }
+    }
+
+    return obj
   }
 }
