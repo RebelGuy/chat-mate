@@ -99,6 +99,7 @@ export default class ChatFetchService extends ContextClass {
         continue
       }
 
+      this.logService.logDebug(this, `Starting fetch timer for livestream ${livestream.id} for streamer ${livestream.streamerId}`)
       const timerOptions: TimerOptions = {
         behaviour: 'dynamicEnd',
         callback: () => this.updateLivestreamMessages(livestream.streamerId, id)
@@ -113,6 +114,7 @@ export default class ChatFetchService extends ContextClass {
         continue
       }
 
+      this.logService.logDebug(this, `Stopping fetch timer for livestream ${currentId}`)
       const timer = this.chatTimers.get(currentId)!
       this.timerHelpers.disposeSingle(timer)
       this.chatTimers.delete(currentId)
