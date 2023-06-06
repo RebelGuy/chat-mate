@@ -44,7 +44,7 @@ function Stat (props: StatProps) {
   } else {
     return (
       <StatWrapper>
-        <AnimatedNumber initial={0} target={props.number} duration={ANIMATION_DURATION} decimals={props.decimals}>
+        <AnimatedNumber initial={0} target={props.number} duration={ANIMATION_DURATION} decimals={props.decimals} smoothVelocity>
           {contents}
         </AnimatedNumber>
       </StatWrapper>
