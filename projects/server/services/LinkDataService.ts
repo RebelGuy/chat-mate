@@ -124,6 +124,12 @@ export default class LinkDataService extends ContextClass {
 
     const linkTokens = await this.linkStore.getAllLinkTokens(aggregateUserId)
     linkHistory.push(...linkTokens.map<Singular<LinkHistory> | null>(t => {
+      // make sure we don't include the same token multiple times
+      const token = t.token
+      if (linkHistory.find(item => (item.type === 'pending' || item.type === 'running') && item.maybeToken === token) != null) {
+        return null
+      }
+
       if (t.linkAttempt == null) {
         return {
           type: 'waiting',
