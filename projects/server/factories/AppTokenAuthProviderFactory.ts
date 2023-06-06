@@ -1,8 +1,8 @@
-import Factory from '@rebel/shared/Factory'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import { AppTokenAuthProvider } from '@twurple/auth'
 
-export default class AppTokenAuthProviderFactory extends Factory<typeof AppTokenAuthProvider> {
-  constructor () {
-    super(AppTokenAuthProvider)
+export default class AppTokenAuthProviderFactory extends ContextClass {
+  public create (clientId: string, clientSecret: string, impliedScopes?: string[] | undefined) {
+    return new AppTokenAuthProvider(clientId, clientSecret, impliedScopes)
   }
 }

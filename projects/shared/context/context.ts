@@ -1,5 +1,4 @@
 import ContextClass from '@rebel/shared/context/ContextClass'
-import Factory from '@rebel/shared/Factory'
 import { Branded, GenericObject, Primitive } from '@rebel/shared/types'
 import { reverse } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
@@ -51,12 +50,6 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
 
   // add the given helper class to the context. it should not have ANY dependencies
   public withHelpers<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, HelperClassType extends ContextClass> (name: Name, ctor: new () => HelperClassType) {
-    this.assertMutable()
-    return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
-  }
-
-  // add the given factory class to the context. it should not have ANY dependencies
-  public withFactory<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, FactoryClassType extends Factory<any>> (name: Name, ctor: new () => FactoryClassType) {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }

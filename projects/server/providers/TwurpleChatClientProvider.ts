@@ -1,11 +1,9 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import IProvider from '@rebel/server/providers/IProvider'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { ChatClient, LogLevel } from '@twurple/chat'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
-import { waitUntil } from '@rebel/shared/util/typescript'
 
 type Deps = Dependencies<{
   twurpleAuthProvider: TwurpleAuthProvider
@@ -14,7 +12,7 @@ type Deps = Dependencies<{
   isAdministrativeMode: () => boolean
 }>
 
-export default class TwurpleChatClientProvider extends ContextClass implements IProvider<ChatClient> {
+export default class TwurpleChatClientProvider extends ContextClass {
   readonly name = TwurpleChatClientProvider.name
 
   private readonly twurkpleAuthProvider: TwurpleAuthProvider
