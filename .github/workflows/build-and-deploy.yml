@@ -75,6 +75,7 @@ jobs:
         run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=${{ !inputs.tests }}
 
       - name: Upload artifact for deployment job
+        if: inputs.deploy
         uses: actions/upload-artifact@v2
         with:
           name: built-server-files
@@ -150,7 +151,7 @@ jobs:
         run: yarn workspace studio build
 
       - name: Upload artifact for deployment job
-        if: inputs.deploy == true
+        if: inputs.deploy
         uses: actions/upload-artifact@v2
         with:
           name: built-studio-files
