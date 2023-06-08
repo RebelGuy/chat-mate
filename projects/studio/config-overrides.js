@@ -12,6 +12,12 @@ const aliasMap = configPaths('./tsconfig.paths.json')
 module.exports = (...args) => {
   const config = aliasDangerous(aliasMap)(...args) // dangerous because we are importing from outside the /src folder
 
+  // https://github.com/TypeStrong/fork-ts-checker-webpack-plugin/issues/525#issuecomment-1008331771
+  let forkTsPlugInInstances = config.plugins.find(p => p.constructor.name === 'ForkTsCheckerWebpackPlugin')
+  if (forkTsPlugInInstances) {
+    forkTsPlugInInstances.options.typescript.build = true
+  }
+
   // some packages are node-specific, so we need to polyfill them to work in browsers: https://stackoverflow.com/a/70485253
   return {
     ...config,
