@@ -5,7 +5,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import CustomEmojiStore, { CustomEmojiCreateData, CustomEmojiUpdateData, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { anyDate, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { anyDate, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { symbolName } from 'typescript'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>

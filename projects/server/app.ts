@@ -64,9 +64,8 @@ import DonationController from '@rebel/server/controllers/DonationController'
 import LivestreamController from '@rebel/server/controllers/LivestreamController'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
-import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 import AccountController from '@rebel/server/controllers/AccountController'
-import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import AccountHelpers from '@rebel/shared/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ApiService from '@rebel/server/controllers/ApiService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -89,6 +88,7 @@ import { createLogContext } from '@rebel/shared/ILogService'
 import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
+import { ApiResponse } from '@rebel/api-models/types'
 
 //
 // "Over-engineering is the best thing since sliced bread."

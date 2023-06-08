@@ -4,7 +4,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs, StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
 import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { expectObject, nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/shared/testUtils'
 
 export default () => {
   const username1 = 'username1'

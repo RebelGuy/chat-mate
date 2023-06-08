@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import UserService from '@rebel/server/services/UserService'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import { nameof } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockLinkStore: MockProxy<LinkStore>

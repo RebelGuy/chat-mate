@@ -1,16 +1,14 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
-import { PublicChatMateEvent } from '@rebel/server/controllers/public/event/PublicChatMateEvent'
-import { PublicDonationData } from '@rebel/server/controllers/public/event/PublicDonationData'
-import { PublicLevelUpData } from '@rebel/server/controllers/public/event/PublicLevelUpData'
-import { PublicNewTwitchFollowerData } from '@rebel/server/controllers/public/event/PublicNewTwitchFollowerData'
-import { PublicNewViewerData } from '@rebel/server/controllers/public/event/PublicNewViewerData'
-import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
-import { PublicLivestreamStatus } from '@rebel/server/controllers/public/status/PublicLivestreamStatus'
-import { PublicStreamerSummary } from '@rebel/server/controllers/public/streamer/PublicStreamerSummary'
-import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
-import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
-import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
+import { PublicChatMateEvent } from '@rebel/api-models/public/event/PublicChatMateEvent'
+import { PublicDonationData } from '@rebel/api-models/public/event/PublicDonationData'
+import { PublicLevelUpData } from '@rebel/api-models/public/event/PublicLevelUpData'
+import { PublicNewTwitchFollowerData } from '@rebel/api-models/public/event/PublicNewTwitchFollowerData'
+import { PublicNewViewerData } from '@rebel/api-models/public/event/PublicNewViewerData'
+import { PublicLivestreamStatus } from '@rebel/api-models/public/status/PublicLivestreamStatus'
+import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
+import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
+import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
 import { livestreamToPublic } from '@rebel/server/models/livestream'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
@@ -27,60 +25,13 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs } from '@rebel/server/stores/StreamerStore'
-import { EmptyObject } from '@rebel/shared/types'
 import { filterTypes, nonNull, single, unique, zipOnStrict } from '@rebel/shared/util/arrays'
 import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
 import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, PATCH, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-
-export type GetStreamersResponse = ApiResponse<{ streamers: PublicStreamerSummary[] }>
-
-export type CreateApplicationRequest = ApiRequest<{ message: string }>
-export type CreateApplicationResponse = ApiResponse<{ newApplication: PublicStreamerApplication }>
-
-export type GetApplicationsResponse = ApiResponse<{ streamerApplications: PublicStreamerApplication[] }>
-
-export type ApproveApplicationRequest = ApiRequest<{ message: string }>
-export type ApproveApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
-
-export type RejectApplicationRequest = ApiRequest<{ message: string }>
-export type RejectApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
-
-export type WithdrawApplicationRequest = ApiRequest<{ message: string }>
-export type WithdrawApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
-
-export type GetPrimaryChannelsResponse = ApiResponse<{ youtubeChannelId: number | null, twitchChannelId: number | null, twitchChannelName: string | null }>
-
-export type SetPrimaryChannelResponse = ApiResponse<EmptyObject>
-
-export type UnsetPrimaryChannelResponse = ApiResponse<EmptyObject>
-
-export type GetTwitchStatusResponse = ApiResponse<{ statuses: PublicTwitchEventStatus[] }>
-
-export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string }>
-
-export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
-
-export type GetYoutubeStatusResponse = ApiResponse<{ chatMateIsModerator: boolean, timestamp: number }>
-
-export type GetStatusResponse = ApiResponse<{
-  livestreamStatus: PublicObject<PublicLivestreamStatus> | null
-  youtubeApiStatus: PublicObject<PublicApiStatus>
-  twitchApiStatus: PublicObject<PublicApiStatus>
-}>
-
-type GetEventsResponse = ApiResponse<{
-  // include the timestamp so it can easily be used for the next request
-  reusableTimestamp: number
-  events: PublicObject<PublicChatMateEvent>[]
-}>
-
-export type GetEventsRequest = ApiRequest<{ since: number }>
-
-export type SetActiveLivestreamRequest = ApiRequest<{ livestream: string | null }>
-export type SetActiveLivestreamResponse = ApiResponse<{ livestreamLink: string | null }>
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/api-models/schema/streamer'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore

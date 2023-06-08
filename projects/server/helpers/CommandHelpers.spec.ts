@@ -1,7 +1,7 @@
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import { InvalidCommandArgumentsError } from '@rebel/shared/util/error'
-import { nameof, cast } from '@rebel/server/_test/utils'
+import { nameof, cast } from '@rebel/shared/testUtils'
 
 let commandHelpers: CommandHelpers
 

@@ -1,6 +1,6 @@
 import { Donation } from '@prisma/client'
-import { PublicDonation } from '@rebel/server/controllers/public/donation/PublicDonation'
-import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
+import { PublicDonation } from '@rebel/api-models/public/donation/PublicDonation'
+import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
 import { DonationWithMessage } from '@rebel/server/stores/DonationStore'
 

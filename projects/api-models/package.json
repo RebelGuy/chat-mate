@@ -1,0 +1,10 @@
+{
+  "name": "public",
+  "version": "1.25.1",
+  "files": [
+    "../../dist/api-models"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.2.5"
+  }
+}

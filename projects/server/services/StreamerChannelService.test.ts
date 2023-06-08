@@ -9,7 +9,7 @@ import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/Stre
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ForbiddenError } from '@rebel/shared/util/error'
-import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockStreamerStore: MockProxy<StreamerStore>

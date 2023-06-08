@@ -159,6 +159,7 @@ module.exports = (env) => {
         "@rebel/masterchat": path.resolve(__dirname, '../../projects/masterchat/src'),
         "@rebel/studio": path.resolve(__dirname, '../../projects/studio'),
         "@rebel/shared": path.resolve(__dirname, '../../projects/shared'),
+        "@rebel/api-models": path.resolve(__dirname, '../../projects/api-models'),
       }
     },
 

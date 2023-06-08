@@ -1,5 +1,5 @@
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
-import { nameof, promised } from '@rebel/server/_test/utils'
+import { nameof, promised } from '@rebel/shared/testUtils'
 
 let timeoutSpy: jest.SpyInstance
 let timerHelpers: TimerHelpers

@@ -1,5 +1,5 @@
 import ExperienceHelpers, { MULTIPLIER_CHANGE_AT_MAX, MULTIPLIER_CHANGE_AT_MIN, SpamMult, TARGET_CHAT_PERIOD_MAX, TARGET_CHAT_PERIOD_MIN } from '@rebel/server/helpers/ExperienceHelpers'
-import { expectStrictIncreasing, nameof } from '@rebel/server/_test/utils'
+import { expectStrictIncreasing, nameof } from '@rebel/shared/testUtils'
 import * as data from '@rebel/server/_test/testData'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import { asGte, asLt, asLte, asRange, eps } from '@rebel/shared/util/math'

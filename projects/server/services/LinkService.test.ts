@@ -16,7 +16,7 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { addTime } from '@rebel/shared/util/datetime'
 import { LinkAttemptInProgressError } from '@rebel/shared/util/error'
-import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockAccountStore: MockProxy<AccountStore>

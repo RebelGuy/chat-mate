@@ -3,7 +3,7 @@ import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebe
 import ExperienceService, { RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore, { LivestreamParticipation } from '@rebel/server/stores/LivestreamStore'
-import { cast, nameof, expectObject, expectArray } from '@rebel/server/_test/utils'
+import { cast, nameof, expectObject, expectArray } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'

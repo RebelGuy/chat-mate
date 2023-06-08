@@ -9,7 +9,7 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { addTime } from '@rebel/shared/util/datetime'
 import { NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
-import { cast, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockAccountStore: MockProxy<AccountStore>

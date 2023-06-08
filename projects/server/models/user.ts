@@ -1,13 +1,13 @@
 import { RegisteredUser } from '@prisma/client'
-import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
-import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
-import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
+import { PublicChannel } from '@rebel/api-models/public/user/PublicChannel'
+import { PublicRegisteredUser } from '@rebel/api-models/public/user/PublicRegisteredUser'
+import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import { UserLevel } from '@rebel/server/services/ExperienceService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { UserRanks } from '@rebel/server/stores/RankStore'
-import { assertUnreachable } from '@rebel/shared/util/typescript'
+import { getChannelUrlFromPublic } from '@rebel/shared/util/channel'
 
 export type AllUserData = UserChannel & UserRanks & UserLevel & { registeredUser: RegisteredUser | null, firstSeen: number }
 
@@ -47,16 +47,6 @@ export function channelToPublicChannel (channel: UserChannel): PublicChannel {
 function getChannelUrl (channel: UserChannel) {
   const id = getExternalIdOrUserName(channel)
   return getChannelUrlFromPublic({ externalIdOrUserName: id, platform: channel.platformInfo.platform })
-}
-
-export function getChannelUrlFromPublic (channel: Pick<PublicChannel, 'platform' | 'externalIdOrUserName'>) {
-  if (channel.platform === 'youtube') {
-    return `https://www.youtube.com/channel/${channel.externalIdOrUserName}`
-  } else if (channel.platform === 'twitch') {
-    return `https://www.twitch.tv/${channel.externalIdOrUserName}`
-  } else {
-    assertUnreachable(channel.platform)
-  }
 }
 
 // terminology of method parameters:

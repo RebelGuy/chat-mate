@@ -1,13 +1,9 @@
-import { ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
-import { requireAuth, requireStreamer } from '@rebel/server/controllers/preProcessors'
-import { PublicLivestream } from '@rebel/server/controllers/public/livestream/PublicLivestream'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { livestreamToPublic } from '@rebel/server/models/livestream'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { GET, Path, PreProcessor } from 'typescript-rest'
-
-type GetLivestreamsResponse = ApiResponse<{
-  livestreams: PublicObject<PublicLivestream>[]
-}>
+import { GetLivestreamsResponse } from '@rebel/api-models/schema/livestream'
 
 type Deps = ControllerDependencies<{
   livestreamStore: LivestreamStore

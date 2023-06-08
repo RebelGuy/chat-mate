@@ -1,5 +1,5 @@
-import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
-import { GetApplicationsResponse } from '@rebel/server/controllers/StreamerController'
+import { PublicStreamerApplication } from '@rebel/api-models/public/user/PublicStreamerApplication'
+import { GetApplicationsResponse } from '@rebel/api-models/schema/streamer'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { capitaliseWord } from '@rebel/shared/util/text'
 import { approveStreamerApplication, createStreamerApplication, getStreamerApplications, rejectStreamerApplication, withdrawStreamerApplication } from '@rebel/studio/utility/api'

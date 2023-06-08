@@ -1,4 +1,4 @@
-import { ResponseData, ApiResponse } from '@rebel/server/controllers/ControllerBase'
+import { ApiResponse, ResponseData } from '@rebel/api-models/types'
 import ApiRequest from '@rebel/studio/components/ApiRequest'
 import * as React from 'react'
 

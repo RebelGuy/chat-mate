@@ -1,23 +1,11 @@
 import ChatControllerReal, { ChatControllerDeps } from '@rebel/server/controllers/ChatControllerReal'
 import ChatControllerFake from '@rebel/server/controllers/ChatControllerFake'
-import { ApiResponse, buildPath, ControllerBase, Endpoint, PublicObject } from '@rebel/server/controllers/ControllerBase'
-import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
+import { buildPath, ControllerBase, Endpoint } from '@rebel/server/controllers/ControllerBase'
 import env from '@rebel/server/globals'
 import { GET, Path, PathParam, PreProcessor, QueryParam } from 'typescript-rest'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
-
-export type GetChatResponse = ApiResponse<{
-  // include the timestamp so it can easily be used for the next request
-  reusableTimestamp: number
-  chat: PublicObject<PublicChatItem>[]
-}>
-
-export type GetCommandStatusResponse = ApiResponse<{
-  status: 'success' | 'error' | 'pending'
-  message: string | null
-  durationMs: number | null
-}>
+import { GetChatResponse, GetCommandStatusResponse } from '@rebel/api-models/schema/chat'
 
 export type GetChatEndpoint = Endpoint<{ since?: number, limit?: number }, GetChatResponse>
 

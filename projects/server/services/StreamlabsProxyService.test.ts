@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
 import StatusService from '@rebel/server/services/StatusService'
 import StreamlabsProxyService, { DonationCallback, StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
-import { expectObject } from '@rebel/server/_test/utils'
+import { expectObject } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 const streamlabsAccessToken = 'accessToken'

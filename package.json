@@ -17,7 +17,8 @@
   "_moduleAliases": {
     "@rebel/server": "./dist/server",
     "@rebel/masterchat": "./dist/masterchat/src",
-    "@rebel/shared": "./dist/shared"
+    "@rebel/shared": "./dist/shared",
+    "@rebel/api-models": "./dist/api-models"
   },
   "devDependencies": {
     "@types/eslint": "^8.4.1",
