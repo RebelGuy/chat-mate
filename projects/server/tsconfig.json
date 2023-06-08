@@ -14,7 +14,7 @@
     "lib": ["ES6", "DOM"], // DOM is required to make `fetch` work
     "noImplicitOverride": true
   },
-  "include": ["./**/*", "../shared/utils.ts", "../shared/helpers/AccountHelpers.spec.ts"],
+  "include": ["./**/*"],
   "exclude": [
     // uncomment this during development to skip type-checking tests
     // "./**/*.test.ts",
