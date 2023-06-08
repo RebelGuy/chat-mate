@@ -241,8 +241,8 @@ module.exports = (env) => {
         favicon: `./favicon_${nodeEnv}.ico`,
         chunks: [], // don't inject javascript
         version: version,
-        date: NOW.toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', hour12: false }),
-        build: NAME,
+        buildDate: NOW.getTime(),
+        buildName: NAME,
         studioUrl: STUDIO_URL
       })
     ]

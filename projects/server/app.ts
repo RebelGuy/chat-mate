@@ -95,6 +95,8 @@ import { ApiResponse } from '@rebel/api-models/types'
 //   - some Rebel Guy
 //
 
+const STARTUP_TIME = Date.now()
+
 const main = async () => {
   const app: Express = express()
 
@@ -265,7 +267,11 @@ const main = async () => {
     next()
   })
 
-  app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
+  app.get('/', (_, res) => {
+    let contents = fs.readFileSync(path.join(__dirname, 'default.html')).toString()
+    contents = contents.replace('__SERVER_STARTUP_TIME_PLACEHOLDER__', STARTUP_TIME.toString())
+    res.end(contents)
+  })
   app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
   app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
   app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('favicon_local.ico')))
