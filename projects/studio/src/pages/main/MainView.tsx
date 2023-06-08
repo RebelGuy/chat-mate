@@ -12,6 +12,7 @@ import useRequest from '@rebel/studio/hooks/useRequest'
 import { getAdministrativeMode } from '@rebel/studio/utility/api'
 import useCurrentPage from '@rebel/studio/hooks/useCurrentPage'
 import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
+import ErrorBoundary from '@rebel/studio/components/ErrorBoundary'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -52,7 +53,9 @@ export default function MainView () {
 
         <Container style={{ minWidth: 300, maxWidth: 10000, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
           <Panel style={{ height: '100%' }}>
-            <CurrentPage />
+            <ErrorBoundary>
+              <CurrentPage />
+            </ErrorBoundary>
           </Panel>
         </Container>
       </div>

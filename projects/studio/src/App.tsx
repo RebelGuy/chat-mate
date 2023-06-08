@@ -4,6 +4,7 @@ import MainView from '@rebel/studio/pages/main/MainView'
 import { pages } from '@rebel/studio/pages/navigation'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { Alert, GlobalStyles } from '@mui/material'
+import ErrorBoundary from '@rebel/studio/components/ErrorBoundary'
 
 // https://mui.com/material-ui/customization/theme-components/
 // https://zenoo.github.io/mui-theme-creator/#BottomNavigation
@@ -34,18 +35,20 @@ const globalStyles = <GlobalStyles styles={{
 
 export default function App () {
   return (
-    <ThemeProvider theme={theme}>
-      {globalStyles}
-      <LoginProvider>
-        <Routes>
-          <Route path="/" element={<MainView />}>
-            {pages.map(page =>
-              <Route key={page.id} path={page.path} element={page.element} />
-            )}
-            <Route path="*" element={<Alert severity="error">Page not found.</Alert>} />
-          </Route>
-        </Routes>
-      </LoginProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        {globalStyles}
+        <LoginProvider>
+          <Routes>
+            <Route path="/" element={<MainView />}>
+              {pages.map(page =>
+                <Route key={page.id} path={page.path} element={page.element} />
+              )}
+              <Route path="*" element={<Alert severity="error">Page not found.</Alert>} />
+            </Route>
+          </Routes>
+        </LoginProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
