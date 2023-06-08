@@ -48,23 +48,7 @@ module.exports = (...args) => {
             throw new Error(`Not found ${mod}`)
         }
       })
-    ],
-    module: {
-      rules: [...(config.module?.rules ?? []),
-        {
-          test: /\.ts$/,
-          exclude: /node_modules/,
-          use: { 
-            loader: 'ts-loader',
-            options: {
-              // this is the equivalent of adding the --build flag to tsc.
-              // see https://medium.com/@nickexcell/using-typescript-project-references-with-ts-loader-and-webpack-part-1-5d0c3cd7c603
-              projectReferences: true
-            }
-          }
-        }
-      ]
-    }
+    ]
   }
 }
 module.exports.jest = aliasJest(aliasMap)
