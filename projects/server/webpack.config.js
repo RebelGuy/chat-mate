@@ -11,12 +11,8 @@ function parseBoolean (str) {
 }
 
 // add the version number to the top of the app.js file
-const PACKAGE = require('./package.json')
-const numCommits = execSync(`git rev-list HEAD --count`).toString().trim()
-const versionParts = PACKAGE.version.split('.')
-versionParts[2] = `${numCommits}`
-const version = versionParts.join('.')
-const banner =  `${PACKAGE.name} - ${version} generated at ${new Date().toISOString()}`
+const version = execSync('node ./scripts/getVersion').toString().split(' ')[0]
+const banner =  `${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
   // from `env` because it's injected

@@ -25,7 +25,8 @@
     "dist/*",
     "data/*",
     "projects/masterchat/*",
-    "*.config.js"
+    "*.config.js",
+    "scripts/*"
   ],
   "rules": {
     // see https://eslint.org/docs/rules/
