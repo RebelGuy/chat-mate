@@ -11,7 +11,7 @@ function parseBoolean (str) {
 }
 
 // add the version number to the top of the app.js file
-const version = execSync('node ./scripts/getVersion').toString().split(' ')[0]
+const version = execSync('node ../../scripts/getVersion').toString().split(' ')[0]
 const banner =  `${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
