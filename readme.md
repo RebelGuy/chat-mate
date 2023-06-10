@@ -1,8 +1,18 @@
-At the moment, the main project in `chat-mate` is `./projects/server`. It communicates with YouTube, the Minecraft client, and the database.
+ChatMate is a helper tool for livestreamers and viewers. It consists of three main parts:
+- Server (`./projects/server`): Node.js express app that runs the core logic for ChatMate and directly interacts with YouTube, Twitch, and the database.azurewebsites.net/).
+- Studio (`./projects/studio`): React web interface for managing streamer and viewer data. It communicates with the server endpoints.
+- Client ([`chat-mate-client`](https://github.com/RebelGuy/chat-mate-client)): Minecraft 1.8.9 mod for viewing and managing livestreams and viewers. Contains additional streamer tools that do not communicate with the server.
 
-A work-in-progress is the `./projects/studio` project. It is a web interface to manage some data within the database and view account information. It communicates with the server endpoints.
+Other projects in this repo:
+- Masterchat (`./projects/masterchat`): A fork of [Masterchat](https://github.com/sigvt/masterchat/) (apparently discontinued) which allows access to YouTube livestream data without using the API. The forked version has some tweaks and fixes to make it a better fit for ChatMate.
+- API Models (`./projects/api-models`): Contains the schema definition of each of the Server's API endpoints. Further, it defines all Public Objects, which are serialisable data objects used by the API endpoints.
+- Shared (`./projects/shared`): General code that is used by both the Server and Studio projects.
 
-To get things running, ensure Node 18 is installed* (recommend [nvm](https://github.com/nvm-sh/nvm), and a global version of yarn exists (`npm install --global yarn`). If running `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. Note that packages should be added using `yarn add <packageName> [--dev]` **in their respective workspace**.
+For more info about each project, refer to the project's Readme file.
+
+## Running ChatMate locally
+
+To get things running, ensure Node 18 is installed* (recommend [nvm](https://github.com/nvm-sh/nvm)), and a global version of yarn exists (`npm install --global yarn`). If `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. New packages should be added either using `yarn add <packageName> [--dev]` in their respective workspace or, to avoid changing the formatting in the `package.json`'s scripts, manually added to the `dependencies` object.
 
 *If updating the Node version, please make sure to also update the Azure environment.
 
@@ -10,52 +20,24 @@ Ensure the VSCode Typescript version is the same as the one used in the workspac
 
 Recommended VSCode extensions:
 - `ESLint`
-- `GitLens`
-- `Prisma`
-- `GitHub Actions`
-- `Thunder Client`
+- `GitLens` and `Git Graph`
+- `DotENV`
+- `Prisma` (only useful if you intend to make changes to the database schema)
+- `GitHub Actions` (only useful if you intend to make changes to the CI build process)
+- `Thunder Client` (there are some old API tests, but they are probably broken)
 
 ## CI and deployment
 Github Actions is used for automatically building and deploying the Server/Studio projects when pushed.
 
-Pushing to any branch will trigger the build process. Pushing to `master` or `develop` will also trigger automatic deployment to the production or sandbox environments, respectively, unless the string `--skip-deploy` is contained in the commit message.
+Pushing to any branch will trigger the build process. Pushing to `master` (production) or `develop` (sandbox) will also trigger automatic deployment to the respective environment, unless the string `--skip-deploy` is contained in the commit message.
 
-Deployment of the Server includes an automatic migration of the database.
+By default, the deployment of the Server includes an automatic migration of the database. If the string `--skip-migrations` is included in the commit message, new migrations will not be applied (for both the server build and test runs). Note that migrations in the server build are already skipped if `--skip-deploy` is included in the commit message.
 
-If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped on Github.
-
-If the string `--skip-migrations` is included in the commit message, new migrations will not be applied (applies to both the server build and test runs). Note that migrations in the server build are already skipped if `--skip-deploy` is included in the commit message.
+If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped.
 
 If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed.
 
 If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
-
-## Quick livestream setup
-Follow these steps to set up a new livestream. This assumes the latest `chat-mate-client` version is already built and added to the Minecraft /mods folder.
-- Set up the livestream on YouTube (e.g. via scheduling) and get its link or ID
-- ~~Set the ID to the `LIVE_ID` variable in the `release.env` file~~
-- ~~Ensure the database is running by starting up Workbench and closing it again~~
-- ~~`yarn install`~~
-- ~~`yarn workspace server migrate:release` to get the database up-to-date~~
-- ~~`yarn workspace server build:release` to transpile and bundle up the application~~
-- ~~`yarn workspace server start:release` in a console window during the livestream~~
-- ~~Once done, CTRL+C or close the console window~~
-- Set the livestream ID either via the Client's dashboard page, or via the Studio form
-
-## Adding the `masterchat` Subtree link
-
-By default, the `masterchat` subtree link is not shown in Sourcetree when cloning the project to a fresh folder.
-A manual fix is to add the following property to the JSON object in `.git/sourcetreeconfig.json`:
-```JSON
-"SubtreeLinks": [
-  {
-    "$id": "386",
-    "SourcePathUrl": "https://github.com/holodata/masterchat.git",
-    "Prefix": "projects/masterchat",
-    "Refspec": "master"
-  }
-]
-```
 
 ## ChatMate admin channels
 
@@ -63,9 +45,9 @@ External ChatMate channels are used to join streamers' chat rooms, listen for da
 
 | Environment | Email | YouTube Name* | YouTube Channel ID | Twitch Name | Twitch App Name | Twitch App Client ID |
 | --- | --- | --- | --- | --- | --- | --- |
-| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig) | UCobq78RdXWvXlG1jcRjkTig | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
-| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA) | UCEM2zbU-YVO6BMF_fukrdUA | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
-| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g) | UCY-5SHtJqoKGqm2YmOMOm_g | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
+| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig)* | UCobq78RdXWvXlG1jcRjkTig | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
+| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA)* | UCEM2zbU-YVO6BMF_fukrdUA | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
+| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g)* | UCY-5SHtJqoKGqm2YmOMOm_g | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
 
 *YouTube appears to be prohibiting the word "mate" in the channel name.
 
