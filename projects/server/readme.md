@@ -4,7 +4,7 @@ The Server is responsible for fetching data from Youtube via the `masterchat` pr
 Built JavaScript files live in the `./dist` folder, while generated data (e.g. logs) live in the `./data` folder.
 
 ## Deployments
-- [Local](localhost:3010)
+- [Local](http://localhost:3010)
 - [Sandbox](https://chat-mate-sandbox.azurewebsites.net)
 - [Production](https://chat-mate-prod.azurewebsites.net)
 

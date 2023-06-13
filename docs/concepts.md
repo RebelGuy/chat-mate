@@ -57,6 +57,12 @@ Generally, all chat user data (experience, donations, ranks, etc) is saved again
 - `defaultUserId`: The method is valid only for default users (is is implied that `user.registeredUser == null`, `youtubeChannel` or `twitchChannel` are non-null, and `aggregateUser` is possibly also non-null). Generally speaking, only channel-related methods deal with non-primary user IDs.
 - `anyUserId`: The provided IDs can be a mismatch of default and aggregate users, regardless of whether they are primary users or not. The method will automatically handle links as required.
 
+The following diagram represents a collection of various chat users, registered users, channels, and links. Every registered user is always linked to an aggregate user. Every channel is always linked to a default user. An aggregate user can be linked to one or more default users, thus connecting one or more channels to a registered user.
+
+The top white region marks registered accounts that users have explicitly created on ChatMate. The grey region marks the internal chat users required for linking, and which we do not expose on any UI. The bottom white region marks external channels owned by users.
+
+<img src="./assets/users.png" />
+
 # Channel linking
 YouTube and Twitch channels can be linked to a registered user. Internally, the link is established between the registered user's aggregate user, and each channel's default user. A conequence of the [relationship between user types](#users) is that a channel can only be linked to one registered user.
 
