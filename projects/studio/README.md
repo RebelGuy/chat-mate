@@ -2,7 +2,7 @@
 A public work-in-progress web-interface for streamers and viewers that interacts with the ChatMate API. The frontend uses the `mui` package for pre-built components and styles.
 
 ## Deployments
-- [Local](localhost:3000)
+- [Local](http://localhost:3000)
 - [Sandbox](https://www.chat-mate-sandbox.com)
 - [Production](https://www.chat-mate.com)
 

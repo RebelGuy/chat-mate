@@ -14,7 +14,7 @@ For more info about each project, refer to the project's Readme file.
 
 To get things running, ensure Node 18 is installed* (recommend [nvm](https://github.com/nvm-sh/nvm)), and a global version of yarn exists (`npm install --global yarn`). If `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. New packages should be added either using `yarn add <packageName> [--dev]` in their respective workspace or, to avoid changing the formatting in the `package.json`'s scripts, manually added to the `dependencies` object.
 
-*If updating the Node version, please make sure to also update the Azure environment.
+*If updating the Node version, please make sure to also update the Azure environment and CI build scripts.
 
 Ensure the VSCode Typescript version is the same as the one used in the workspace to avoid getting "Type instantiation is excessively deep and possibly infinite" errors all over the place.
 

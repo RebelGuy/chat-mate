@@ -85,7 +85,7 @@ For testing, define a `test.env` file that sets only a subset of the above varia
 
 ## Database
 
-The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
+The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#env) file.
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
@@ -197,7 +197,7 @@ Returns data with the following properties:
 - `isAdministrativeMode` (`boolean`): Whether we are currently in administrative mode.
 
 ### `GET /twitch/login`
-Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
+Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](../../docs/twitch-auth.md) for more info.
 
 Returns data with the following properties:
 - `url` (`string`): The login URL. It will redirect back to Studio.
@@ -728,7 +728,7 @@ Can return the following errors:
 - `404`: When no Twitch statuses were found. Most likely this is because the streamer has not set a primary Twitch channel.
 
 ### `GET /twitch/login`
-Retrieves the Twitch login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
+Retrieves the Twitch login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](../../docs/twitch-auth.md) for more info.
 
 Returns data with the following properties:
 - `url` (`string`): The login URL. It will redirect back to Studio.

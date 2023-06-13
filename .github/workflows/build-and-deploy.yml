@@ -120,6 +120,29 @@ jobs:
           yarn workspace server test
           yarn workspace shared test
 
+  # note: this does not block any later steps if it fails since we wouldn't expect broken links to lead to broken code
+  # a known limitation is that anchor tags referenced in other files are not checked, e.g. [text](../other-file.md#not-checked)
+  check-markdown-links:
+    if: inputs.tests
+    name: Check markdown links
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install node modules
+        run: yarn install
+      
+      - name: Check links
+        run: yarn check-links
+
   build-studio:
     if: inputs.studio
     name: Build Studio

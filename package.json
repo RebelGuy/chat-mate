@@ -12,7 +12,8 @@
   },
   "scripts": {
     "lint-server": "eslint ./projects/server/**/*.ts",
-    "lint-server-error": "eslint ./projects/server/**/*.ts --quiet"
+    "lint-server-error": "eslint ./projects/server/**/*.ts --quiet",
+    "check-links": "find . -name \\*.md -not -path \"*/node_modules/**\" -not -path \"./projects/masterchat/**\" -print0 | xargs -0 -n1 yarn markdown-link-check --config markdown-link-check.config.json"
   },
   "_moduleAliases": {
     "@rebel/server": "./dist/server",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/eslint": "^8.4.1",
     "@typescript-eslint/eslint-plugin": "^5.10.2",
-    "@typescript-eslint/parser": "^5.10.2"
+    "@typescript-eslint/parser": "^5.10.2",
+    "markdown-link-check": "^3.11.2"
   }
 }
