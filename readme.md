@@ -1,6 +1,6 @@
 ChatMate is a helper tool for livestreamers and viewers. It consists of three main parts:
-- Server (`./projects/server`): Node.js express app that runs the core logic for ChatMate and directly interacts with YouTube, Twitch, and the database.azurewebsites.net/).
-- Studio (`./projects/studio`): React web interface for managing streamer and viewer data. It communicates with the server endpoints.
+- Server (`./projects/server`): Node.js express app that runs the core logic for ChatMate and directly interacts with YouTube (via [Masterchat](https://github.com/sigvt/masterchat/)), Twitch (via [Twurple](https://github.com/twurple/twurple)), and the MySQL database (via [Prisma](https://github.com/prisma/prisma)). Exposes a collection of REST API endpoints.
+- Studio (`./projects/studio`): [React](https://github.com/facebook/react) web interface for managing streamer and viewer data. It communicates with the server API endpoints.
 - Client ([`chat-mate-client`](https://github.com/RebelGuy/chat-mate-client)): Minecraft 1.8.9 mod for viewing and managing livestreams and viewers. Contains additional streamer tools that do not communicate with the server.
 
 Other projects in this repo:
