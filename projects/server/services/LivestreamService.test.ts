@@ -2,11 +2,11 @@ import { Dependencies } from '@rebel/shared/context/context'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { cast, mockGetter, nameof } from '@rebel/shared/testUtils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
-import { LiveStatus, Metadata } from '@rebel/masterchat'
+import { LiveStatus, MasterchatError, Metadata } from '@rebel/masterchat'
 import { Livestream } from '@prisma/client'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatService from '@rebel/server/services/MasterchatService'
@@ -152,6 +152,17 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     const livestream = makeStream(startDate, endDate)
     mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
     mockLivestreamStore.getActiveLivestream.calledWith(streamer1).mockResolvedValue(livestream)
+
+    await livestreamService.initialise()
+
+    expect(mockLivestreamStore.deactivateLivestream.mock.calls.length).toBe(1)
+  })
+
+  test('deactivates livestream if not available', async () => {
+    const livestream = makeStream(new Date(), null)
+    mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([livestream])
+    mockLivestreamStore.getActiveLivestream.calledWith(livestream.streamerId).mockResolvedValue(livestream)
+    mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockRejectedValue(new MasterchatError('denied', ''))
 
     await livestreamService.initialise()
 

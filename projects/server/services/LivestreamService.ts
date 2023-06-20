@@ -1,5 +1,5 @@
 import { Livestream } from '@prisma/client'
-import { LiveStatus, Metadata } from '@rebel/masterchat'
+import { LiveStatus, MasterchatError, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
@@ -100,7 +100,13 @@ export default class LivestreamService extends ContextClass {
     try {
       return await this.masterchatService.fetchMetadata(streamerId)
     } catch (e: any) {
-      this.logService.logWarning(this, 'Encountered error while fetching youtube metadata.', e.message)
+      if (e instanceof MasterchatError) {
+        // we won't be able to recover from this - deactivate
+        this.logService.logError(this, `Cannot fetch metadata for streamer ${streamerId} because of a masterchat error. Deactivating livestream.`, e.name, e.message)
+        await this.deactivateLivestream(streamerId)
+      } else {
+        this.logService.logError(this, `Encountered error while fetching youtube metadata for streamer ${streamerId}.`, e.message)
+      }
       return null
     }
   }
