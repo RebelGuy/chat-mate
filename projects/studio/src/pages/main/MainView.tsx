@@ -62,7 +62,7 @@ export default function MainView () {
       </div>
 
       {/* footer */}
-      <div style={{ display: 'flex' }}>
+      <div style={{ display: 'flex', color: 'grey' }}>
         <div style={{ width: '100%', bottom: 8, textAlign: 'center' }}>
           {/* empty */}
         </div>
