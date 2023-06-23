@@ -1,6 +1,7 @@
 {
   "ignorePatterns": [
     { "pattern": "http://localhost" },
-    { "pattern": "github\\.com" }
+    { "pattern": "github\\.com" },
+    { "pattern": "twitter\\.com" }
   ]
 }
