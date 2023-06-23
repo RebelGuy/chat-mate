@@ -10,6 +10,8 @@ Other projects in this repo:
 
 For more info about each project, refer to the project's Readme file.
 
+Want to contribute? Check out the [contribution guide](./docs/contributing.md) for more info.
+
 ## Running ChatMate locally
 
 To get things running, ensure Node 18 is installed* (recommend [nvm](https://github.com/nvm-sh/nvm)), and a global version of yarn exists (`npm install --global yarn`). If `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. New packages should be added either using `yarn add <packageName> [--dev]` in their respective workspace or, to avoid changing the formatting in the `package.json`'s scripts, manually added to the `dependencies` object.
