@@ -7,8 +7,13 @@
   </head>
   <body>
     <p><strong>Version: </strong><%= htmlWebpackPlugin.options.version %></p>
-    <p><strong>Date: </strong><%= htmlWebpackPlugin.options.date %></p>
-    <p><strong>Build: </strong><%= htmlWebpackPlugin.options.build %></p>
+    <p><strong>Build Date: </strong><span id="server-build-date"></span></p>
+    <p><strong>Build Name: </strong><%= htmlWebpackPlugin.options.buildName %></p>
+    <p><strong>Server Startup Date: </strong><span id="server-startup-date"></span></p>
     <a href="<%= htmlWebpackPlugin.options.studioUrl %>">Studio</a>
   </body>
+  <script>
+    document.getElementById('server-build-date').innerText = new Date(<%= htmlWebpackPlugin.options.buildDate %>).toLocaleString()
+    document.getElementById('server-startup-date').innerText = new Date(__SERVER_STARTUP_TIME_PLACEHOLDER__).toLocaleString()
+  </script>
 </html>

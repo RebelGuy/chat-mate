@@ -4,7 +4,7 @@ import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationH
 import DonationService from '@rebel/server/services/DonationService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { any, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { single, single2 } from '@rebel/shared/util/arrays'

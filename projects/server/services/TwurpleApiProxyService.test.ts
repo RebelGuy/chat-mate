@@ -3,7 +3,7 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
-import { cast, nameof } from '@rebel/server/_test/utils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { HelixStream } from '@twurple/api/lib/api/helix/stream/HelixStream'
 import { ApiClient, HelixUser } from '@twurple/api'
 import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'

@@ -1,6 +1,5 @@
-import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { GET, Path, PreProcessor } from 'typescript-rest'
-import { EmptyObject } from '@rebel/shared/types'
 import { requireRank } from '@rebel/server/controllers/preProcessors'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -9,21 +8,7 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-
-export type PingResponse = ApiResponse<EmptyObject>
-
-export type ChatMateStatsResponse = ApiResponse<{
-  streamerCount: number
-  registeredUserCount: number
-  uniqueChannelCount: number
-  chatMessageCount: number
-  totalExperience: number
-  totalDaysLivestreamed: number
-}>
-
-export type GetMasterchatAuthenticationResponse = ApiResponse<{ authenticated: boolean | null }>
-
-export type GetChatMateRegisteredUsernameResponse = ApiResponse<{ username: string }>
+import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
 
 type Deps = ControllerDependencies<{
   masterchatService: MasterchatService

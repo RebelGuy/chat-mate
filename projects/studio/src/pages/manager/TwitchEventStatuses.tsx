@@ -1,6 +1,6 @@
 import { Close, Done, Error } from '@mui/icons-material'
 import { Alert, Button, CircularProgress, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip } from '@mui/material'
-import { PublicTwitchEventStatus } from '@rebel/server/controllers/public/streamer/PublicTwitchEventStatus'
+import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import PanelHeader from '@rebel/studio/components/PanelHeader'

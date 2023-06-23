@@ -11,12 +11,8 @@ function parseBoolean (str) {
 }
 
 // add the version number to the top of the app.js file
-const PACKAGE = require('./package.json')
-const numCommits = execSync(`git rev-list HEAD --count`).toString().trim()
-const versionParts = PACKAGE.version.split('.')
-versionParts[2] = `${numCommits}`
-const version = versionParts.join('.')
-const banner =  `${PACKAGE.name} - ${version} generated at ${new Date().toISOString()}`
+const version = execSync('node ../../scripts/getVersion').toString().split(' ')[0]
+const banner =  `${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
   // from `env` because it's injected
@@ -159,6 +155,7 @@ module.exports = (env) => {
         "@rebel/masterchat": path.resolve(__dirname, '../../projects/masterchat/src'),
         "@rebel/studio": path.resolve(__dirname, '../../projects/studio'),
         "@rebel/shared": path.resolve(__dirname, '../../projects/shared'),
+        "@rebel/api-models": path.resolve(__dirname, '../../projects/api-models'),
       }
     },
 
@@ -240,8 +237,8 @@ module.exports = (env) => {
         favicon: `./favicon_${nodeEnv}.ico`,
         chunks: [], // don't inject javascript
         version: version,
-        date: NOW.toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', hour12: false }),
-        build: NAME,
+        buildDate: NOW.getTime(),
+        buildName: NAME,
         studioUrl: STUDIO_URL
       })
     ]

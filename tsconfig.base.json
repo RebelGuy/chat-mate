@@ -6,6 +6,7 @@
     { "path": "./projects/masterchat" },
     { "path": "./projects/studio" },
     { "path": "./projects/shared" },
+    { "path": "./projects/api-models" },
   ],
   "compilerOptions": {
     "experimentalDecorators": true,
@@ -35,6 +36,7 @@
       "@rebel/masterchat/*": ["./projects/masterchat/src/*"],
       "@rebel/studio/*": ["./projects/studio/src/*"],
       "@rebel/shared/*": ["./projects/shared/*"],
+      "@rebel/api-models/*": ["./projects/api-models/*"],
     }
   }
 }

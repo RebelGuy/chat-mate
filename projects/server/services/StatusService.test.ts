@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import StatusService from '@rebel/server/services/StatusService'
-import { nameof } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/shared/testUtils'
 import * as data from '@rebel/server/_test/testData'
 
 let statusService: StatusService

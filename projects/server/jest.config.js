@@ -11,6 +11,9 @@ module.exports = {
     // https://github.com/kulshekhar/ts-jest/issues/2709
     '@rebel/server/(.*)$': '<rootDir>/$1',
     '@rebel/shared/(.*)$': '<rootDir>/../shared/$1',
+    '@rebel/api-models/(.*)$': '<rootDir>/../api-models/$1',
+    '@rebel/masterchat': '<rootDir>/../masterchat/src',
+    '@rebel/masterchat/(.*)$': '<rootDir>/../masterchat/src/$1',
   },
   // store tests are run concurrently in `stores.test.ts` instead
   testPathIgnorePatterns: ['<rootDir>/stores/*'],

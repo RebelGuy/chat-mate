@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { expectObject, nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/shared/testUtils'
 import { AccessToken } from '@twurple/auth'
 import { single } from '@rebel/shared/util/arrays'
 

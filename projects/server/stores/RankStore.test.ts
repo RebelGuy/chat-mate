@@ -7,7 +7,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/shared/util/datetime'
 import { Rank, RankName, UserRank } from '@prisma/client'
-import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { single, sortBy, unique } from '@rebel/shared/util/arrays'
 import { UserRankNotFoundError, UserRankAlreadyExistsError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 

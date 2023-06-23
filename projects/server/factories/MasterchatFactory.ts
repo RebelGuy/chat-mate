@@ -1,9 +1,9 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
 import { Masterchat } from '@rebel/masterchat'
-import Factory from '@rebel/shared/Factory'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { createLogContext } from '@rebel/shared/ILogService'
+import ContextClass from '@rebel/shared/context/ContextClass'
 
 type Deps = Dependencies<{
   channelId: string
@@ -11,7 +11,7 @@ type Deps = Dependencies<{
   authStore: AuthStore
 }>
 
-export default class MasterchatFactory extends Factory<Masterchat> {
+export default class MasterchatFactory extends ContextClass {
   readonly name = MasterchatFactory.name
 
   private readonly channelId: string
@@ -21,7 +21,7 @@ export default class MasterchatFactory extends Factory<Masterchat> {
   private accessToken!: string | null
 
   constructor (deps: Deps) {
-    super(null)
+    super()
     this.channelId = deps.resolve('channelId')
     this.logService = deps.resolve('logService')
     this.authStore = deps.resolve('authStore')
@@ -39,7 +39,7 @@ export default class MasterchatFactory extends Factory<Masterchat> {
     }
   }
 
-  public override create (liveId: string): Masterchat {
+  public create (liveId: string): Masterchat {
     this.logService.logDebug(this, 'Created new', this.accessToken ? 'authenticated' : 'unauthenticated', 'masterchat instance for liveId', liveId)
     const logContext = createLogContext(this.logService, { name: `masterchat[${liveId}]`})
     return new Masterchat(logContext, liveId, this.channelId, { mode: 'live', credentials: this.accessToken ?? undefined })

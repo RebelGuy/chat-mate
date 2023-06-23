@@ -4,7 +4,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import { randomString } from '@rebel/shared/util/random'
 import { DB_TEST_TIMEOUT, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { expectObject, nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/shared/testUtils'
 
 export default () => {
   let chatMessage: ChatMessage

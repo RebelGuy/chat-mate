@@ -3,7 +3,7 @@ import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthPro
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { AccessToken, AccessTokenWithUserId, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { mock, MockProxy } from 'jest-mock-extended'

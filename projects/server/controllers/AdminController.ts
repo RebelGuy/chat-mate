@@ -1,20 +1,10 @@
-import { ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireRank } from '@rebel/server/controllers/preProcessors'
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
-import { EmptyObject } from '@rebel/shared/types'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
-
-export type GetAdministrativeModeResponse = ApiResponse<{ isAdministrativeMode: boolean }>
-
-export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string, twitchUsername: string }>
-
-export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
-
-export type ReconnectTwitchChatClientResponse = ApiResponse<EmptyObject>
-
-export type ResetTwitchSubscriptionsResponse = ApiResponse<EmptyObject>
+import { GetAdministrativeModeResponse, GetTwitchLoginUrlResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, TwitchAuthorisationResponse } from '@rebel/api-models/schema/admin'
 
 type Deps = ControllerDependencies<{
   adminService: AdminService

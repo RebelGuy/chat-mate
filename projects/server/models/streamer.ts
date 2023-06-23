@@ -1,4 +1,4 @@
-import { PublicStreamerApplication } from '@rebel/server/controllers/public/user/PublicStreamerApplication'
+import { PublicStreamerApplication } from '@rebel/api-models/public/user/PublicStreamerApplication'
 import { StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
 
 export function streamerApplicationToPublicObject (application: StreamerApplicationWithUser): PublicStreamerApplication {

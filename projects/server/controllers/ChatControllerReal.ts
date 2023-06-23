@@ -1,6 +1,6 @@
 import { GetChatEndpoint, GetCommandStatusEndpoint, IChatController } from '@rebel/server/controllers/ChatController'
 import { buildPath, ControllerBase, ControllerDependencies, In, Out } from '@rebel/server/controllers/ControllerBase'
-import { PublicChatItem } from '@rebel/server/controllers/public/chat/PublicChatItem'
+import { PublicChatItem } from '@rebel/api-models/public/chat/PublicChatItem'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'

@@ -6,7 +6,7 @@ import { sortBy } from '@rebel/shared/util/arrays'
 import { UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { hashString } from '@rebel/shared/util/strings'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { expectObject, nameof } from '@rebel/server/_test/utils'
+import { expectObject, nameof } from '@rebel/shared/testUtils'
 
 export default () => {
   let db: Db

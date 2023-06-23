@@ -1,5 +1,5 @@
 import { Alert, Box } from '@mui/material'
-import { getChannelUrlFromPublic } from '@rebel/server/models/user'
+import { getChannelUrlFromPublic } from '@rebel/shared/util/channel'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'

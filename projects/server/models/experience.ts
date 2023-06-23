@@ -1,5 +1,5 @@
 import { RegisteredUser } from '@prisma/client'
-import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
+import { PublicRankedUser } from '@rebel/api-models/public/user/PublicRankedUser'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import { channelToPublicChannel, registeredUserToPublic } from '@rebel/server/models/user'
 import { RankedEntry } from '@rebel/server/services/ExperienceService'

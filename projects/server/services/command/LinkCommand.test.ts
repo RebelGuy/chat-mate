@@ -5,7 +5,7 @@ import LinkService from '@rebel/server/services/LinkService'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { single } from '@rebel/shared/util/arrays'
 import { InvalidCommandArgumentsError } from '@rebel/shared/util/error'
-import { cast, nameof } from '@rebel/server/_test/utils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockLinkService: MockProxy<LinkService>

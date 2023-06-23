@@ -1,5 +1,5 @@
 import { Alert, Box, Button, CircularProgress } from '@mui/material'
-import { ApiResponse, ResponseData } from '@rebel/server/controllers/ControllerBase'
+import { ApiResponse, ResponseData } from '@rebel/api-models/types'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import * as React from 'react'

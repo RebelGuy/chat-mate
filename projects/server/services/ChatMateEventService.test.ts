@@ -3,7 +3,7 @@ import ChatMateEventService, { ChatMateEvent } from '@rebel/server/services/Chat
 import ExperienceService, { LevelDiff } from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
-import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { asGte } from '@rebel/shared/util/math'

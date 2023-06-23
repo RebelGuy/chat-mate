@@ -5,8 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "@rebel/studio/*": ["./src/*"],
-      "@rebel/server/*": ["../server/*"],
-      "@rebel/shared/*": ["../shared/*"]
+      "@rebel/shared/*": ["../shared/*"],
+      "@rebel/api-models/*": ["../api-models/*"]
     }
   }
 }

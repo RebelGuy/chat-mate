@@ -2,7 +2,7 @@ import HelixEventService, { EventSubType } from '@rebel/server/services/HelixEve
 import StreamerTwitchEventService, { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
-import { cast, expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { Dependencies } from '@rebel/shared/context/context'
 import { mock, MockProxy } from 'jest-mock-extended'
 

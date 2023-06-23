@@ -1,6 +1,6 @@
 {
   "name": "chat-mate",
-  "version": "1.25.1",
+  "version": "1.26.0",
   "private": true,
   "workspaces": {
     "packages": [
@@ -12,16 +12,19 @@
   },
   "scripts": {
     "lint-server": "eslint ./projects/server/**/*.ts",
-    "lint-server-error": "eslint ./projects/server/**/*.ts --quiet"
+    "lint-server-error": "eslint ./projects/server/**/*.ts --quiet",
+    "check-links": "find . -name \\*.md -not -path \"*/node_modules/**\" -not -path \"./projects/masterchat/**\" -print0 | xargs -0 -n1 yarn markdown-link-check --config markdown-link-check.config.json"
   },
   "_moduleAliases": {
     "@rebel/server": "./dist/server",
     "@rebel/masterchat": "./dist/masterchat/src",
-    "@rebel/shared": "./dist/shared"
+    "@rebel/shared": "./dist/shared",
+    "@rebel/api-models": "./dist/api-models"
   },
   "devDependencies": {
     "@types/eslint": "^8.4.1",
     "@typescript-eslint/eslint-plugin": "^5.10.2",
-    "@typescript-eslint/parser": "^5.10.2"
+    "@typescript-eslint/parser": "^5.10.2",
+    "markdown-link-check": "^3.11.2"
   }
 }

@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import AccountService from '@rebel/server/services/AccountService'
 import AccountStore, { ConnectedChatUserIds } from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
-import { cast, nameof } from '@rebel/server/_test/utils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 const streamerId = 5

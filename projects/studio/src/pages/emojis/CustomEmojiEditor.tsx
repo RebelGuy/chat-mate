@@ -1,6 +1,6 @@
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
-import { PublicCustomEmoji } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
-import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
+import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
+import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'

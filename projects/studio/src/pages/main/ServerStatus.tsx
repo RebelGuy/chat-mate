@@ -1,4 +1,4 @@
-import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
+import { PublicApiStatus } from '@rebel/api-models/public/status/PublicApiStatus'
 import { getStatus, ping } from '@rebel/studio/utility/api'
 import ApiRequest from '@rebel/studio/components/ApiRequest'
 import * as React from 'react'

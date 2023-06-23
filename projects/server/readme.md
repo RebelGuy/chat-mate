@@ -1,50 +1,51 @@
-The server is responsible for fetching data from Youtube via the `masterchat` project, and from Twitch via the `@twurple` package. It exposes this chat data, as well as additional functionality, via a REST API.
-
-
+The Server is responsible for fetching data from Youtube via the `masterchat` project, and from Twitch via the `@twurple` package. It exposes this chat data, as well as additional functionality, via a REST API. This document is a technical overview, for an explanation of concepts refer to [`concepts.md`](../../docs/concepts.md).
 
 # Project Details
 Built JavaScript files live in the `./dist` folder, while generated data (e.g. logs) live in the `./data` folder.
 
-Note: If fetching Youtube metadata incurs a "Rate limit exceeded" error, then Youtube has flagged us as a bot. A (temporary?) solution is to regenerate an auth token (see below).
+## Deployments
+- [Local](http://localhost:3010)
+- [Sandbox](https://chat-mate-sandbox.azurewebsites.net)
+- [Production](https://chat-mate-prod.azurewebsites.net)
 
-Twitch's EventSub notifies us of new events via a webhook. To set up the listener on our local machine, we use `ngrok` (https://ngrok.com/download). See https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html for more details. If you get an `EACCESS` error on Linux when the local server is starting up, right click the `/dist/bin/ngrok` file and, in the Permissions tab, ensure you are allowing the file to be executed as a program.
+## Scripts for development
+1. `yarn install`
+2. `yarn generate` to generate the Prisma client
+3. `yarn auth:youtube:<local|debug|release>` to refresh the ChatMate YouTube channel's authentication credentials (has to be done once per month)
+4. `yarn watch:check` to build the code using `ts-loader` (checks types)
+  - Use `yarn watch:check SKIP_TESTS=true` to not include test files in the build process
+  - For faster development, you can use `swc` to skip type checking while bundling up the Javascript (about 4 times faster) by running `yarn watch`
+    - This does not emit source maps: debugging within VSCode will not work
+5. `yarn start:local` to run the server locally, or `yarn start:mock` to use fake implementations of controllers, where available.
+
+## Authentication
+This refers specifically to authentication of the ChatMate channel. While some functions such as fetching chat do not require ChatMate to be authenticated, other functions such as banning or timing out viewers do require authentication.
+
+### YouTube
+Each environment is associated with a ChatMate channel (see [here](../../readme.md#chatmate-admin-channels) for channel details). For testing, it is acceptable to use a different channel by changing the `CHANNEL_ID` [environment variable](#env).
+
+To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID. Note that any changes will only come into effect when the Server is next restarted.
+
+If the Server receives a "Rate limit exceeded" error when fetching video metadata, then Youtube has flagged us as a bot. You will need to manually log into the YouTube account again, prove you are not a bot, and then refresh the authentication token using the above command.
+
+### Twitch
+Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and `TWITCH_USERNAME` [environment variables](#env). There should be a separate application for the `release`, `debug`, and `local` environments.
+
+When running the Server for the first time, it will be placed into "maintenance mode". This means that the ChatMate Twitch application has not yet been authorised to use App Tokens. You will need to complete authentication in Studio, under the Twitch Admin Login section, and authenticate your application using the Twitch account associated with the `TWITCH_USERNAME` environment variable. Once completed, the server will require a restart.
+
+Important: The application scope is hardcoded in [`constants.ts`](./constants.ts) at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
+
+## Logging
+When deployed, we use Application Insights to track all error and warning messages via the Trace event.
+
+At all times, we are logging all messages to the file system. On Azure, the data folder lives under `/site/data` and can be accessed via FileZilla.
+
+## Local EventSub
+Twitch's EventSub notifies us of new events via a webhook. To [set up the listener locally](https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html), we use [`ngrok`](https://ngrok.com/download). If you get an `EACCESS` error on Linux when the local server is starting up, right click the `/dist/bin/ngrok` file and, in the Permissions tab, ensure you are allowing the file to be executed as a program.
 
 An SSL certificate for use by the Twitch EventSub can be generated by opening a git terminal and running the command `openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem`.
 
 Note: Importing modules from Twurple must be done from the package level, `@twurple/<package-name>`, rather than `@twurple/<package-name>/lib` (unfortunately VSCode defaults to this type of importing, which will result in a runtime error). 
-
-
-## Scripts for development:
-1. `yarn install`.
-2. `yarn auth:youtube:<local|debug|release>` to refresh the authentication credentials
-3. `yarn watch` while developing
-  - This uses `swc` to bundle up the Javascript, which skips type checking for performance (about 4 times faster)
-  - Rely on VSCode for checking types if using this mode
-  - Use `yarn watch:check` to use `ts-loader` and enable type checking
-  - Use `yarn watch:check SKIP_TESTS=true` to not include test files in the build process
-4. `yarn start:local` to run the server locally, or `yarn start:mock` to use fake implementations of controllers, where available.
-
-If building fails because the Prisma client could not be found, please run `yarn generate`.
-
-
-## Authentication
-### YouTube
-Run `yarn auth:youtube:<local|debug|release>` and log in using the streaming account, or a moderator account. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID.
-
-### Twitch
-Enure you create an application on the [Twitch Developer Console](https://dev.twitch.tv/console/apps). Note down the application ID and secret and set the relevant environment variables. These will not change in the future. There should be a separate application for the `release`, `debug`, and `local` environments.
-
-For the initial authentication, you will need to start the Electron app via `yarn auth:twitch:<local|debug|release>` and sign in manually with the relevant ChatMate account. The access token and refresh token will automatically be stored in the database (`twitch_auth` table) and retrieved/updated automatically thereon.
-
-Important: The application scope is hardcoded in `constants.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
-
-At the moment, the Twitch auth script is broken because Twitch rejects Electron as a valid browser. An alternative way of refreshing the Twitch Application authentication is via the `/admin/twitch` page on Studio.
-
-## Logging
-
-When deployed, we use Application Insights to track all error and warning messages via the Trace event.
-
-At all times, we are logging all messages to the file system. On Azure, the data folder lives under `/site/data` and can be accessed via FileZilla.
 
 # .env
 Define `local.env`, `debug.env` and `release.env` files that set the following environment variables, one per line, in the format `KEY=value`. The `template.env` file can be used as a template. **On Azure, these variables must be set manually in the app service's configuration.**
@@ -52,12 +53,12 @@ Define `local.env`, `debug.env` and `release.env` files that set the following e
 The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `STUDIO_URL`: The URL to ChatMate Studio (not ending in `/`).
-- `CHAT_MATE_REGISTERED_USER_NAME`: The registered username of the official ChatMate account on the server.
+- `CHAT_MATE_REGISTERED_USER_NAME`: The registered username of the official ChatMate account.
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube. If this is ever changed, you will need to re-authenticate and purge all Context Tokens from the `chat_message` table.
-- `TWITCH_CLIENT_ID`: The client ID for twitch auth (from https://dev.twitch.tv/console/apps).
-- `TWITCH_CLIENT_SECRET`: The client secret for twitch auth.
+- `TWITCH_CLIENT_ID`: The client ID for Twitch auth (from https://dev.twitch.tv/console/apps).
+- `TWITCH_CLIENT_SECRET`: The client secret for Twitch auth.
 - `TWITCH_USERNAME`: The channel name of the ChatMate Twitch account. This will be used to connect to streamers' chat rooms and perform moderation operations.
-- `STREAMLABS_ACCESS_TOKEN`: The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
+- `STREAMLABS_ACCESS_TOKEN`: [currently unused] The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
@@ -66,11 +67,10 @@ The following environment variables must be set in the `.env` file:
 - `DB_SEMAPHORE_TIMEOUT`: [Optional, defaults to `null`] The maximum number of milliseconds that a database request can be queued before timing it out. If null, does not timeout requests in the queue.
 - `DB_TRANSACTION_TIMEOUT`: [Optional, defaults to `5000`] The maximum number of milliseconds a Prisma transaction can run before being cancelled and rolled back.
 
-The following set of environment variables is available only for **local development** (that is, where `NODE_ENV`=`local`):
-- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `fa
-lse`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
+The following environment variables are available only for **local development** (that is, where `NODE_ENV`=`local`):
+- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
 
-The following set of environmnet variables is available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
+The following environmnet variables are available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
 - `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`. *This is set automatically by Azure.*
 
@@ -85,17 +85,16 @@ For testing, define a `test.env` file that sets only a subset of the above varia
 
 ## Database
 
-The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#.env) file.
+The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `release` database is named `chat_mate`, and the `test` databases are named `chat_mate_test` and `chat_mate_test_debug`. Ensure the `DATABASE_URL` connection string is set in the respective [`.env`](#env) file.
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
-At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. This should also be run if the project structure changes in some way. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, see https://www.prisma.io/docs/concepts/components/prisma-client.
-
+At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. This should also be run if the project structure changes in some way. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, refer to the [Prisma docs](https://www.prisma.io/docs/concepts/components/prisma-client).
 
 ### Migrations
 Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:apply`.
 
-During a migration, ensure that the `.sql` is checked and edited to avoid data loss, but avoid making manual changes that affect the database schema, other than the ones already present.
+During a migration, ensure that the `.sql` is checked and edited to avoid data loss. Any schema changes in the `.sql` file should exactly correspond to the schema changes in the `schema.prisma` file.
 
 Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow an expand and contract pattern.
 
@@ -103,38 +102,46 @@ Migrations are autoamtically run in CI during the deployment process. This occur
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
 
 Currently there are 3 punishment types:
-1. `mute`: This is an internal punishment, and is used by the client to hide messages of a certain user. A mute can be temporary or permanent.
+1. `mute`: This is an internal punishment, and is used by the Client to hide messages of a certain user. A mute can be temporary or permanent.
 2. `timeout`: This is both internal and external (i.e. sent to YouTube and Twitch) and completely stops the user from sending messages in the livestream chat. It is always temporary. Due to limitations with the Masterchat implementation, timeouts must be at least 5 minutes long. Furthermore, we have a service that refreshes YouTube timeouts periodically if they are longer than 5 minutes.
 3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
 `yarn test` performs the test suite.
-`yarn test:db` Sets up the test database.
+`yarn test:db` Sets up the test database (i.e. by applying migrations, if required).
 `yarn test <file regex>` includes only tests within files matching the expression.
 
-Further, to filter individual tests, temporarily replace `test()` with `test.only()`. All `test()`s will then be skipped.
+Further, to filter individual tests, temporarily replace `test()` with `test.only()`. All other `test()`s will then be skipped.
 
-Due to concurrency issues, all tests using the test database will need to be run from the central `_test/stores.test.ts` file. It imports the `<StoreName>.suite.ts` files which contain the actual test, then run them one-by-one.
+Due to concurrency issues, all tests using the test database will need to be run from the central `_test/stores.test.ts` file. It imports the `<StoreName>.suite.ts` files which contain the actual tests, then run them one-by-one. Store tests are not currently performed as part of the CI build due to timing issues (locally, with minimal latency, they already take ~10 minutes).
+
+## Stores
+Stores are classes that abstract away direct interactions with the database via Prisma to segragate the testing of business logic and data access. Integration tests involving the live testing database must be defined in `stores.tests.ts` instead of their individual files to guarantee that they are run in series.
+
+The number of concurrent queries that the database allows is limited, and there is some latency when communicating between the server and database (on the order of 10-20 ms, it seems). Preferrably, Prisma queries should return collections of results instead of individual results, so that aggregation of data is done directly on the database to reduce the number of queries and improve performance.
+
+For example, instead of allowing getting the experience for only a specific user and thus forcing multiple queries to get the experience of multiple users, write the store method in such a way that only a single query is required to get the experience of multiple users. Due to limitations with the Prisma ORM capabilities, this may require the use of raw SQL queries.
 
 # API Endpoints
+Use the API endpoints to communicate with the server while it is running. The local API base URL is `http://localhost:3010/api`.
 
-Use the API endpoints to communicate with the server while it is running. The API base URL is `http://localhost:3010/api`.
-
-A response contains the following properties:
+Every response contains the following properties:
 - `timestamp` (`number`): The unix timestamp (in ms) at which the response was generated.
 - `success` (`boolean`): True if the request was processed correctly, and false otherwise.
 - `data` (`object`): Only included if `success` is `true`. Contains the response data, outlined for each endpoint below.
 - `error` (`object`): Only included if `success` is `false`. Contains the following properties:
   - `errorCode` (`number`): The HTTP error code that most closely matches the type of problem encountered.
   - `errorType` (`string`): The general type of error encounterd.
-  - `internalErrorType` (`string`): The internal error type that was encountered, for example, the name of the CustomError classes in `/shared/util/error.ts`.
+  - `internalErrorType` (`string`): The internal error type that was encountered, for example, the name of the CustomError classes in `/projects/shared/util/error.ts`.
   - `message` (`string`): An optional error message describing what went wrong.
 
-Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
+Note that a `500` error can be expected for all endpoints and a `401` error for endpoints requiring authentication, but any other errors should be documented specifically in the below sections.
 
-All non-primitive properties of `data` are of type `PublicObject`, which are reusable objects which themselves contain either primitive types or other `PublicObject`s. The definitions for these objects can be found in the `./controllers/public` folder and will not be reproduced here. Please ensure the client's model is in sync at all times.
+All non-primitive properties of `data` are of type `PublicObject`, which are reusable objects which themselves contain either primitive types or other `PublicObject`s. The definitions for these objects can be found in the `/projects/api-models/public` folder and will not be reproduced here. Please ensure the Client's model is in sync at all times.
 
 Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-Login-Token` header.
+
+Any streamer-specific endpoints require the `X-Streamer` header. This should be set to the streamer's registered username for which the request should be made (for example, when getting custom emojis).
 
 ## Account Endpoints
 Path: `/account`.
@@ -190,7 +197,7 @@ Returns data with the following properties:
 - `isAdministrativeMode` (`boolean`): Whether we are currently in administrative mode.
 
 ### `GET /twitch/login`
-Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
+Retrieves the Twitch login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](../../docs/twitch-auth.md) for more info.
 
 Returns data with the following properties:
 - `url` (`string`): The login URL. It will redirect back to Studio.
@@ -721,7 +728,7 @@ Can return the following errors:
 - `404`: When no Twitch statuses were found. Most likely this is because the streamer has not set a primary Twitch channel.
 
 ### `GET /twitch/login`
-Retrieves the Twitch login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](/docs/twitch-auth.md) for more info.
+Retrieves the Twitch login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](../../docs/twitch-auth.md) for more info.
 
 Returns data with the following properties:
 - `url` (`string`): The login URL. It will redirect back to Studio.

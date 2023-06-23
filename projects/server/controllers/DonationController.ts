@@ -1,32 +1,17 @@
-import { Donation } from '@prisma/client'
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
-import { PublicDonation } from '@rebel/server/controllers/public/donation/PublicDonation'
-import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { PublicDonation } from '@rebel/api-models/public/donation/PublicDonation'
+import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { donationToPublicObject } from '@rebel/server/models/donation'
 import { userDataToPublicUser } from '@rebel/server/models/user'
-import ChannelService from '@rebel/server/services/ChannelService'
 import DonationService from '@rebel/server/services/DonationService'
-import ExperienceService from '@rebel/server/services/ExperienceService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
-import RankStore from '@rebel/server/stores/RankStore'
-import { nonNull, unique, zipOnStrictMany } from '@rebel/shared/util/arrays'
+import { nonNull, unique } from '@rebel/shared/util/arrays'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { single } from '@rebel/shared/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
-import AccountStore from '@rebel/server/stores/AccountStore'
 import AccountService from '@rebel/server/services/AccountService'
-
-type GetDonationsResponse = ApiResponse<{ donations: PublicObject<PublicDonation>[] }>
-
-type LinkUserResponse = ApiResponse<{ updatedDonation: PublicObject<PublicDonation> }>
-
-type UnlinkUserResponse = ApiResponse<{ updatedDonation: PublicObject<PublicDonation> }>
-
-export type SetWebsocketTokenRequest = ApiRequest<{ websocketToken: string | null }>
-export type SetWebsocketTokenResponse = ApiResponse<{ result: 'success' | 'noChange' }>
-
-export type GetStreamlabsStatusResponse = ApiResponse<{ status: 'notListening' | 'listening' | 'error' }>
+import { GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
 
 type Deps = ControllerDependencies<{
   donationService: DonationService

@@ -75,6 +75,7 @@ jobs:
         run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=${{ !inputs.tests }}
 
       - name: Upload artifact for deployment job
+        if: inputs.deploy
         uses: actions/upload-artifact@v2
         with:
           name: built-server-files
@@ -119,12 +120,33 @@ jobs:
           yarn workspace server test
           yarn workspace shared test
 
+  # note: this does not block any later steps if it fails since we wouldn't expect broken links to lead to broken code
+  # a known limitation is that anchor tags referenced in other files are not checked, e.g. [text](../other-file.md#not-checked)
+  check-markdown-links:
+    if: inputs.tests
+    name: Check markdown links
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install node modules
+        run: yarn install
+      
+      - name: Check links
+        run: yarn check-links
+
   build-studio:
-    # from https://github.com/actions/runner/issues/491#issuecomment-850884422
-    if: always() && inputs.studio && (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') && (needs.test-server.result == 'success' || needs.test-server.result == 'skipped')
+    if: inputs.studio
     name: Build Studio
     runs-on: ubuntu-latest
-    needs: [build-server, test-server]
 
     steps:
       - name: Checkout code
@@ -141,31 +163,21 @@ jobs:
       - name: Install node modules
         run: yarn install
 
-      - name: Download built Server files
-        if: inputs.server
-        uses: actions/download-artifact@v2
-        with:
-          name: built-server-files
-          path: ./dist/
-
-      # ideally in the future we will only need the shared project, but at the moment the entire server has to be built
-      - name: Generate Server files
-        if: inputs.server == false
-        # skip tests because we are not here to validate the server code
-        run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=true
-
       - name: Create .env file
         run: |
           touch ./projects/studio/.env
           echo REACT_APP_SERVER_URL=${{ inputs.SERVER_URL }} >> ./projects/studio/.env
           echo DISABLE_ESLINT_PLUGIN=true >> ./projects/studio/.env
+          echo -n REACT_APP_STUDIO_VERSION_HASH=\" >> ./projects/studio/.env
+          node ./scripts/getVersion | tr -d '\n' >> ./projects/studio/.env
+          echo \" >> ./projects/studio/.env
           cat ./projects/studio/.env
       
       - name: Build typescript project
         run: yarn workspace studio build
 
       - name: Upload artifact for deployment job
-        if: inputs.deploy == true
+        if: inputs.deploy
         uses: actions/upload-artifact@v2
         with:
           name: built-studio-files
@@ -173,6 +185,7 @@ jobs:
 
   # this must be done in a different run so we don't upload the generated files here during deployment
   migrate-database:
+    # from https://github.com/actions/runner/issues/491#issuecomment-850884422
     if: always() && inputs.deploy && inputs.migrations && (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') && (needs.test-server.result == 'success' || needs.test-server.result == 'skipped') && (needs.build-studio.result == 'success' || needs.build-studio.result == 'skipped')
     name: Migrate database
     runs-on: ubuntu-latest

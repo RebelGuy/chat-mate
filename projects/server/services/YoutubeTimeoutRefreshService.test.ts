@@ -3,7 +3,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import YoutubeTimeoutRefreshService, { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import { addTime } from '@rebel/shared/util/datetime'
-import { nameof } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 

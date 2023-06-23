@@ -1,4 +1,4 @@
-import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/server/controllers/public/emoji/PublicCustomEmoji'
+import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { CustomEmojiCreateData, CustomEmojiUpdateData, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 
 export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist): PublicCustomEmoji {
