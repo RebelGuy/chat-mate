@@ -1,6 +1,6 @@
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { sortBy } from '@rebel/shared/util/arrays'
-import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
+import { PublicLinkHistoryItem } from '@rebel/api-models/public/user/PublicLinkHistoryItem'
 import { capitaliseWord } from '@rebel/shared/util/text'
 import { CircularProgress, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip } from '@mui/material'
 import CopyText from '@rebel/studio/components/CopyText'
@@ -13,7 +13,7 @@ import ApiLoading from '@rebel/studio/components/ApiLoading'
 import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
 import { useContext } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { getChannelUrlFromPublic } from '@rebel/server/models/user'
+import { getChannelUrlFromPublic } from '@rebel/shared/util/channel'
 import { Delete } from '@mui/icons-material'
 
 type Props = {

@@ -4,11 +4,11 @@ import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEli
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { cast, nameof } from '@rebel/server/_test/utils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { asGte, asLte } from '@rebel/shared/util/math'
 import { CustomEmoji, CustomEmojiVersion, Rank } from '@prisma/client'
-import { expectArray } from '@rebel/server/_test/utils'
+import { expectArray } from '@rebel/shared/testUtils'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name' | 'canUseInDonationMessage'>
 

@@ -3,7 +3,7 @@ import DonationFetchService from '@rebel/server/services/DonationFetchService'
 import DonationService from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import { single } from '@rebel/shared/util/arrays'
-import { cast, expectArray, nameof } from '@rebel/server/_test/utils'
+import { cast, expectArray, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 const streamerId = 1

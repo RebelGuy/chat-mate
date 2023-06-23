@@ -1,57 +1,19 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import { single, sortBy } from '@rebel/shared/util/arrays'
 import { Path, GET, QueryParam, POST, PathParam, PreProcessor } from 'typescript-rest'
 import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
-import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
+import { PublicChannelRankChange } from '@rebel/api-models/public/rank/PublicChannelRankChange'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
 import { channelToPublicChannel } from '@rebel/server/models/user'
-
-export type GetSinglePunishment = ApiResponse<{ punishment: PublicObject<PublicUserRank> }>
-
-export type GetUserPunishments = ApiResponse<{ punishments: PublicObject<PublicUserRank>[] }>
-
-export type BanUserRequest = ApiRequest<{ userId: number, message: string | null }>
-export type BanUserResponse = ApiResponse<{
-  newPunishment: PublicObject<PublicUserRank> | null
-  newPunishmentError: string | null
-  channelPunishments: PublicObject<PublicChannelRankChange>[]
-}>
-
-export type UnbanUserRequest = ApiRequest<{ userId: number, message: string | null }>
-export type UnbanUserResponse = ApiResponse<{
-  removedPunishment: PublicObject<PublicUserRank> | null
-  removedPunishmentError: string | null
-  channelPunishments: PublicObject<PublicChannelRankChange>[]
-}>
-
-export type TimeoutUserRequest = ApiRequest<{ userId: number, message: string | null, durationSeconds: number }>
-export type TimeoutUserResponse = ApiResponse<{
-  newPunishment: PublicObject<PublicUserRank> | null
-  newPunishmentError: string | null
-  channelPunishments: PublicObject<PublicChannelRankChange>[]
-}>
-
-export type RevokeTimeoutRequest = ApiRequest<{ userId: number, message: string | null }>
-export type RevokeTimeoutResponse = ApiResponse<{
-  removedPunishment: PublicObject<PublicUserRank> | null
-  removedPunishmentError: string | null
-  channelPunishments: PublicObject<PublicChannelRankChange>[]
-}>
-
-export type MuteUserRequest = ApiRequest<{ userId: number, message: string | null, durationSeconds: number | null }>
-export type MuteUserResponse = ApiResponse<{ newPunishment: PublicObject<PublicUserRank> }>
-
-export type UnmuteUserRequest = ApiRequest<{ userId: number, message: string | null }>
-export type UnmuteUserResponse = ApiResponse<{ removedPunishment: PublicObject<PublicUserRank> }>
+import { BanUserRequest, BanUserResponse, GetSinglePunishment, GetUserPunishments, MuteUserRequest, MuteUserResponse, RevokeTimeoutRequest, RevokeTimeoutResponse, TimeoutUserRequest, TimeoutUserResponse, UnbanUserRequest, UnbanUserResponse, UnmuteUserRequest, UnmuteUserResponse } from '@rebel/api-models/schema/punishment'
 
 type Deps = ControllerDependencies<{
   rankStore: RankStore

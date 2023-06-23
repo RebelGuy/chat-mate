@@ -18,7 +18,10 @@ export function CreateLinkToken (props: { linkedCount: number, isLoading: boolea
 
   const createLinkTokenRequest = useRequest(createLinkToken(channelId!), {
     onDemand: true,
-    onSuccess: props.onCreated
+    onSuccess: () => {
+      props.onCreated()
+      setChannelInput('')
+    }
   })
 
   return <div>

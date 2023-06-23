@@ -3,17 +3,17 @@ import { removeLinkedChannel, setPrimaryChannel, unsetPrimaryChannel } from '@re
 import * as React from 'react'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import { sortBy } from '@rebel/shared/util/arrays'
-import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
+import { PublicChannel } from '@rebel/api-models/public/user/PublicChannel'
 import { Button, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { Box } from '@mui/system'
 import useRequest, { onConfirmRequest, RequestResult, SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
-import { GetLinkedChannelsResponse } from '@rebel/server/controllers/UserController'
-import { GetPrimaryChannelsResponse } from '@rebel/server/controllers/StreamerController'
+import { GetLinkedChannelsResponse } from '@rebel/api-models/schema/user'
+import { GetPrimaryChannelsResponse } from '@rebel/api-models/schema/streamer'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
-import { getChannelUrlFromPublic } from '@rebel/server/models/user'
+import { getChannelUrlFromPublic } from '@rebel/shared/util/channel'
 
 type Props = {
   channelsRequestObj: RequestResult<SuccessfulResponseData<GetLinkedChannelsResponse>>

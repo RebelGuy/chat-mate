@@ -1,7 +1,7 @@
 import { RankName, RegisteredUser, Streamer } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import AccountHelpers from '@rebel/shared/helpers/AccountHelpers'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'

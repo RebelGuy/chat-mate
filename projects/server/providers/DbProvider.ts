@@ -1,5 +1,4 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import IProvider from '@rebel/server/providers/IProvider'
 import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
 import ContextClass from '@rebel/shared/context/ContextClass'
@@ -17,7 +16,7 @@ type Deps = Dependencies<{
   dbSemaphoreTimeout: number | null
 }>
 
-export default class DbProvider extends ContextClass implements IProvider<Db> {
+export default class DbProvider extends ContextClass {
   readonly name = DbProvider.name
 
   private readonly logService: LogService

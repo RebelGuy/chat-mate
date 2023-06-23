@@ -1,4 +1,4 @@
-import { ApiError, ApiRequest, ApiResponse, PublicObject, ResponseData } from '@rebel/server/controllers/ControllerBase'
+import { ApiError, ApiResponse, PublicObject, ResponseData } from '@rebel/api-models/types'
 import { Primitive } from '@rebel/shared/types'
 import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
 import LoginContext, { LoginContextType } from '@rebel/studio/contexts/LoginContext'

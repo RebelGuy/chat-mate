@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "references": [
+    { "path": "../shared" },
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "../../dist/api-models",
+    "module": "commonjs",
+    "target": "es2020", // required because masterchat uses BigInt
+    "lib": ["ES6"],
+    "noImplicitOverride": true
+  },
+  "include": ["./**/*"]
+}

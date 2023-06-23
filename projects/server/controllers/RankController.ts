@@ -1,6 +1,5 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
-import { PublicChannelRankChange } from '@rebel/server/controllers/public/rank/PublicChannelRankChange'
-import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { PublicChannelRankChange } from '@rebel/api-models/public/rank/PublicChannelRankChange'
 import { userRankToPublicObject, rankToPublicObject } from '@rebel/server/models/rank'
 import LogService from '@rebel/server/services/LogService'
 import ModService from '@rebel/server/services/rank/ModService'
@@ -11,57 +10,13 @@ import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-re
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { isOneOf } from '@rebel/shared/util/validation'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
-import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
 import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/shared/util/datetime'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 import { channelToPublicChannel } from '@rebel/server/models/user'
-
-export type GetUserRanksResponse = ApiResponse<{ ranks: PublicUserRank[] }>
-
-export type GetAccessibleRanksResponse = ApiResponse<{ accessibleRanks: PublicRank[] }>
-
-type AddUserRankRequest = ApiRequest<{
-  userId: number,
-  message: string | null,
-  durationSeconds: number | null,
-  rank: 'famous' | 'donator' | 'supporter' | 'member'
-}>
-type AddUserRankResponse = ApiResponse<{
-  newRank: PublicObject<PublicUserRank>
-}>
-
-type RemoveUserRankRequest = ApiRequest<{
-  removedByRegisteredUserId: number
-  userId: number,
-  message: string | null,
-  rank: 'famous' | 'donator' | 'supporter' | 'member'
-}>
-type RemoveUserRankResponse = ApiResponse<{
-  removedRank: PublicObject<PublicUserRank>
-}>
-
-type AddModRankRequest = ApiRequest<{
-  userId: number,
-  message: string | null
-}>
-type AddModRankResponse = ApiResponse<{
-  newRank: PublicObject<PublicUserRank> | null
-  newRankError: string | null
-  channelModChanges: PublicObject<PublicChannelRankChange>[]
-}>
-
-type RemoveModRankRequest = ApiRequest<{
-  userId: number,
-  message: string | null
-}>
-type RemoveModRankResponse = ApiResponse<{
-  removedRank: PublicObject<PublicUserRank> | null
-  removedRankError: string | null
-  channelModChanges: PublicObject<PublicChannelRankChange>[]
-}>
+import { AddModRankRequest, AddModRankResponse, AddUserRankRequest, AddUserRankResponse, GetAccessibleRanksResponse, GetUserRanksResponse, RemoveModRankRequest, RemoveModRankResponse, RemoveUserRankRequest, RemoveUserRankResponse } from '@rebel/api-models/schema/rank'
 
 type Deps = ControllerDependencies<{
   logService: LogService

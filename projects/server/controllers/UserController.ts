@@ -1,10 +1,7 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
-import { PublicChannel } from '@rebel/server/controllers/public/user/PublicChannel'
-import { PublicLinkHistoryItem } from '@rebel/server/controllers/public/user/PublicLinkHistoryItem'
-import { PublicRegisteredUser } from '@rebel/server/controllers/public/user/PublicRegisteredUser'
-import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
-import { PublicUserSearchResult } from '@rebel/server/controllers/public/user/PublicUserSearchResult'
+import { PublicLinkHistoryItem } from '@rebel/api-models/public/user/PublicLinkHistoryItem'
+import { PublicUserSearchResult } from '@rebel/api-models/public/user/PublicUserSearchResult'
 import { channelToPublicChannel, registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
 import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -14,7 +11,6 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
-import { EmptyObject } from '@rebel/shared/types'
 import { intersection, nonNull, single, symmetricDifference, unique } from '@rebel/shared/util/arrays'
 import { ChatMessageForStreamerNotFoundError, LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
 import { asGte, asLte } from '@rebel/shared/util/math'
@@ -22,37 +18,7 @@ import { sleep } from '@rebel/shared/util/node'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-
-export type GetUserResponse = ApiResponse<{
-  user: PublicUser
-}>
-
-export type SearchUserRequest = ApiRequest<{
-  searchTerm: string
-}>
-
-export type SearchUserResponse = ApiResponse<{
-  results: PublicObject<PublicUserSearchResult>[]
-}>
-
-export type GetLinkedChannelsResponse = ApiResponse<{
-  registeredUser: PublicRegisteredUser
-  channels: PublicChannel[]
-}>
-
-export type AddLinkedChannelResponse = ApiResponse<EmptyObject>
-
-export type RemoveLinkedChannelResponse = ApiResponse<EmptyObject>
-
-export type GetLinkHistoryResponse = ApiResponse<{
-  items: PublicLinkHistoryItem[]
-}>
-
-export type CreateLinkTokenResponse = ApiResponse<{
-  token: string
-}>
-
-export type DeleteLinkTokenResponse = ApiResponse<EmptyObject>
+import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse } from '@rebel/api-models/schema/user'
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService,

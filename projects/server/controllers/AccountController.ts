@@ -1,14 +1,14 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireAuth } from '@rebel/server/controllers/preProcessors'
-import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import AccountHelpers from '@rebel/shared/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { EmptyObject } from '@rebel/shared/types'
 import { InvalidUsernameError, TimeoutError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { sleep } from '@rebel/shared/util/node'
 import Semaphore from '@rebel/shared/util/Semaphore'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { Path, POST, PreProcessor } from 'typescript-rest'
+import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/api-models/schema/account'
 
 // prevent brute-force login attacks by limiting the number of concurrent requests
 const loginSemaphore = new Semaphore(3, 10000)
@@ -19,16 +19,6 @@ type Deps = ControllerDependencies<{
   accountHelpers: AccountHelpers
   streamerStore: StreamerStore
 }>
-
-export type RegisterRequest = ApiRequest<{ username: string, password: string }>
-export type RegisterResponse = ApiResponse<{ loginToken: string }>
-
-export type LoginRequest = ApiRequest<{ username: string, password: string }>
-export type LoginResponse = ApiResponse<{ loginToken: string, isStreamer: boolean }>
-
-export type LogoutResponse = ApiResponse<EmptyObject>
-
-export type AuthenticateResponse = ApiResponse<{ username: string, isStreamer: boolean }>
 
 @Path(buildPath('account'))
 export default class AccountController extends ControllerBase {

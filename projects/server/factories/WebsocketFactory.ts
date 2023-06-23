@@ -1,7 +1,6 @@
-import Factory from '@rebel/shared/Factory'
-
 // we have to use this ancient version thanks to the fantastic work of the streamlabs devs!
 // https://stackoverflow.com/a/67447804
+import ContextClass from '@rebel/shared/context/ContextClass'
 import io from 'socket.io-client'
 
 export type DisconnectReason = 'transport close' | 'ping timeout' | 'transport error' | string
@@ -13,13 +12,9 @@ export type WebsocketAdapter<TMessage> = {
   onError?: (e: any) => void | Promise<void>
 }
 
-export default class WebsocketFactory extends Factory<SocketIOClient.Socket> {
-  constructor () {
-    super(null)
-  }
-
+export default class WebsocketFactory extends ContextClass {
   /** Does not automatically connect. */
-  public override create (uri: string, websocketAdapter: WebsocketAdapter<any>, options?: SocketIOClient.ConnectOpts): SocketIOClient.Socket {
+  public create (uri: string, websocketAdapter: WebsocketAdapter<any>, options?: SocketIOClient.ConnectOpts): SocketIOClient.Socket {
     const webSocket = io(uri, options)
 
     if (websocketAdapter.onMessage != null) {

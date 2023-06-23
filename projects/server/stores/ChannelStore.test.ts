@@ -4,7 +4,7 @@ import ChannelStore, { CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchCha
 import { sortBy } from '@rebel/shared/util/arrays'
 import { randomString } from '@rebel/shared/util/random'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/server/_test/utils'
+import { expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { addTime } from '@rebel/shared/util/datetime'
 import * as data from '@rebel/server/_test/testData'

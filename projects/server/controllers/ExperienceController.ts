@@ -1,7 +1,5 @@
-import { ApiRequest, ApiResponse, buildPath, ControllerBase, ControllerDependencies, PublicObject } from '@rebel/server/controllers/ControllerBase'
+import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
-import { PublicRankedUser } from '@rebel/server/controllers/public/user/PublicRankedUser'
-import { PublicUser } from '@rebel/server/controllers/public/user/PublicUser'
 import { rankedEntryToPublic } from '@rebel/server/models/experience'
 import { userDataToPublicUser } from '@rebel/server/models/user'
 import AccountService from '@rebel/server/services/AccountService'
@@ -13,25 +11,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single, zipOnStrictMany } from '@rebel/shared/util/arrays'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
-
-type GetLeaderboardResponse = ApiResponse<{
-  rankedUsers: PublicObject<PublicRankedUser>[]
-}>
-
-type GetRankResponse = ApiResponse<{
-  relevantIndex: number
-  rankedUsers: PublicObject<PublicRankedUser>[]
-}>
-
-type ModifyExperienceRequest = ApiRequest<{
-  userId: number,
-  deltaLevels: number,
-  message: string | null
-}>
-
-type ModifyExperienceResponse = ApiResponse<{
-  updatedUser: PublicObject<PublicUser>
-}>
+import { GetLeaderboardResponse, GetRankResponse, ModifyExperienceRequest, ModifyExperienceResponse } from '@rebel/api-models/schema/experience'
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService

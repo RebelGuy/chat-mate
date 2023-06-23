@@ -64,9 +64,8 @@ import DonationController from '@rebel/server/controllers/DonationController'
 import LivestreamController from '@rebel/server/controllers/LivestreamController'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import ChatMateEventService from '@rebel/server/services/ChatMateEventService'
-import { ApiResponse } from '@rebel/server/controllers/ControllerBase'
 import AccountController from '@rebel/server/controllers/AccountController'
-import AccountHelpers from '@rebel/server/helpers/AccountHelpers'
+import AccountHelpers from '@rebel/shared/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ApiService from '@rebel/server/controllers/ApiService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -89,11 +88,14 @@ import { createLogContext } from '@rebel/shared/ILogService'
 import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
+import { ApiResponse } from '@rebel/api-models/types'
 
 //
 // "Over-engineering is the best thing since sliced bread."
 //   - some Rebel Guy
 //
+
+const STARTUP_TIME = Date.now()
 
 const main = async () => {
   const app: Express = express()
@@ -144,9 +146,9 @@ const main = async () => {
     .withHelpers('donationHelpers', DonationHelpers)
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
-    .withFactory('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
-    .withFactory('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
-    .withFactory('websocketFactory', WebsocketFactory)
+    .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
+    .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
+    .withClass('websocketFactory', WebsocketFactory)
     .withClass('eventDispatchService', EventDispatchService)
     .withClass('fileService', FileService)
     .withClass('applicationInsightsService', ApplicationInsightsService)
@@ -265,12 +267,16 @@ const main = async () => {
     next()
   })
 
-  app.get('/', (_, res) => res.sendFile('default.html', { root: __dirname }))
+  app.get('/', (_, res) => {
+    let contents = fs.readFileSync(path.join(__dirname, 'default.html')).toString()
+    contents = contents.replace('__SERVER_STARTUP_TIME_PLACEHOLDER__', STARTUP_TIME.toString())
+    res.end(contents)
+  })
   app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
   app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
-  app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('./favicon_local.ico')))
-  app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('./favicon_debug.ico')))
-  app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('./favicon_release.ico')))
+  app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('favicon_local.ico')))
+  app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('favicon_debug.ico')))
+  app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('favicon_release.ico')))
 
   const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 

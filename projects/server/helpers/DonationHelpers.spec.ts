@@ -1,5 +1,5 @@
 import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationHelpers'
-import { nameof } from '@rebel/server/_test/utils'
+import { nameof } from '@rebel/shared/testUtils'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/shared/util/datetime'
 

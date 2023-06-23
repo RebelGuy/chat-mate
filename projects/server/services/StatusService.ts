@@ -1,10 +1,15 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { PublicApiStatus } from '@rebel/server/controllers/public/status/PublicApiStatus'
 import { GenericObject } from '@rebel/shared/types'
 import { avg } from '@rebel/shared/util/math'
 
 type Deps = Dependencies<GenericObject>
+
+type ApiStatus = {
+  status: 'ok' | 'error' | null;
+  lastOk: number | null;
+  avgRoundtrip: number | null;
+}
 
 export default class StatusService extends ContextClass {
   private responseTimes: number[]
@@ -18,7 +23,7 @@ export default class StatusService extends ContextClass {
     this.lastStatus = null
   }
 
-  public getApiStatus (): PublicApiStatus {
+  public getApiStatus (): ApiStatus {
     return {
       status: this.lastStatus,
       lastOk: this.lastOk,

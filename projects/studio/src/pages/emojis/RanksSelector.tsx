@@ -1,5 +1,5 @@
 import { Box, Checkbox, FormControlLabel } from '@mui/material'
-import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
+import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { toSentenceCase } from '@rebel/shared/util/text'
 
 type Props = {

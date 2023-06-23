@@ -9,7 +9,8 @@ module.exports = {
   moduleNameMapper: {
     // tell ts-jest how to resolve the path alias
     // https://github.com/kulshekhar/ts-jest/issues/2709
-    '@rebel/shared/(.*)$': '<rootDir>/$1'
+    '@rebel/shared/(.*)$': '<rootDir>/$1',
+    '@rebel/api-models/(.*)$': '<rootDir>/../api-models/$1',
   },
   transform: {
     '.ts': ['ts-jest', {

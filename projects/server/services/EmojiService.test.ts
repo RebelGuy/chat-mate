@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import EmojiService from '@rebel/server/services/EmojiService'
-import { expectArray, expectObject, nameof } from '@rebel/server/_test/utils'
+import { expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Entity } from '@rebel/server/models/entities'

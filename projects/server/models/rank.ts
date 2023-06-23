@@ -1,6 +1,6 @@
 import { Rank } from '@prisma/client'
-import { PublicRank } from '@rebel/server/controllers/public/rank/PublicRank'
-import { PublicUserRank } from '@rebel/server/controllers/public/rank/PublicUserRank'
+import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
+import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
 import RankHelpers from '@rebel/server/helpers/RankHelpers'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
