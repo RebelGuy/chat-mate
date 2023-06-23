@@ -33,7 +33,7 @@ Enure you create an application on the [Twitch Developer Console](https://dev.tw
 
 When running the Server for the first time, it will be placed into "maintenance mode". This means that the ChatMate Twitch application has not yet been authorised to use App Tokens. You will need to complete authentication in Studio, under the Twitch Admin Login section, and authenticate your application using the Twitch account associated with the `TWITCH_USERNAME` environment variable. Once completed, the server will require a restart.
 
-Important: The application scope is hardcoded in `constants.ts` at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
+Important: The application scope is hardcoded in [`constants.ts`](./constants.ts) at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
 
 ## Logging
 When deployed, we use Application Insights to track all error and warning messages via the Trace event.
@@ -135,7 +135,7 @@ Every response contains the following properties:
   - `internalErrorType` (`string`): The internal error type that was encountered, for example, the name of the CustomError classes in `/projects/shared/util/error.ts`.
   - `message` (`string`): An optional error message describing what went wrong.
 
-Note that a `500` error can be expected for all endpoints, but any other errors should be documented specifically in the below sections.
+Note that a `500` error can be expected for all endpoints and a `401` error for endpoints requiring authentication, but any other errors should be documented specifically in the below sections.
 
 All non-primitive properties of `data` are of type `PublicObject`, which are reusable objects which themselves contain either primitive types or other `PublicObject`s. The definitions for these objects can be found in the `/projects/api-models/public` folder and will not be reproduced here. Please ensure the Client's model is in sync at all times.
 

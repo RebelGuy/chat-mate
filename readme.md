@@ -13,8 +13,7 @@ For more info about each project, refer to the project's Readme file.
 Want to contribute? Check out the [contribution guide](./docs/contributing.md) for more info.
 
 ## Running ChatMate locally
-
-To get things running, ensure Node 18 is installed* (recommend [nvm](https://github.com/nvm-sh/nvm)), and a global version of yarn exists (`npm install --global yarn`). If `yarn --version` fails, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. New packages should be added either using `yarn add <packageName> [--dev]` in their respective workspace or, to avoid changing the formatting in the `package.json`'s scripts, manually added to the `dependencies` object.
+To get things running, ensure Node 18 is installed* (recommend [nvm](https://github.com/nvm-sh/nvm)), and a global version of `yarn` exists (`npm install --global yarn`). If `yarn --version` fails on Windows, run PowerShell as an administrator and execute the command `Set-ExecutionPolicy Unrestricted`. New packages should be added either using `yarn add <packageName> [--dev]` in their respective workspace or, to avoid changing the formatting in the `package.json`'s scripts, manually added to the `dependencies` object.
 
 *If updating the Node version, please make sure to also update the Azure environment and CI build scripts.
 
@@ -29,7 +28,7 @@ Recommended VSCode extensions:
 - `Thunder Client` (there are some old API tests, but they are probably broken)
 
 ## CI and deployment
-Github Actions is used for automatically building and deploying the Server/Studio projects when pushed.
+Github Actions are used for automatically building and deploying the Server/Studio projects when pushed.
 
 Pushing to any branch will trigger the build process. Pushing to `master` (production) or `develop` (sandbox) will also trigger automatic deployment to the respective environment, unless the string `--skip-deploy` is contained in the commit message.
 
@@ -42,8 +41,7 @@ If the string `--skip-server` is included in the commit message, the Server proj
 If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
 
 ## ChatMate admin channels
-
-External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`.
+External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`. ChatMate assumes that this registered user exists in the database.
 
 | Environment | Email | YouTube Name* | YouTube Channel ID | Twitch Name | Twitch App Name | Twitch App Client ID |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -59,7 +57,19 @@ Passwords:
 - YouTube: `C`
 
 # Change Log
-## V1.25 - The Multistream Update [27/5/2023]
+## v1.26 - The Open Source Update [23/6/2023]
+- Server
+  - Added documentation
+  - Fixed error spam when an active livestream is deleted on YouTube
+  - Fixed favicon
+- Studio
+  - Added global error handling
+  - Fixed stats number animations on the home page resetting when refreshing
+  - Removed dependency on the Server project
+  - Added links to socials
+  - Added version number
+
+## v1.25 - The Multistream Update [27/5/2023]
 - Server
   - Twitch access tokens are now saved against all streamers, and most requests are done on behalf of the streamer
   - Link tokens can now be deleted

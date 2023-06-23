@@ -22,3 +22,6 @@ Here are some starting points to consider.
 - Testing
   - More rigorous testing suite
   - Improved performance of Store tests
+- Migrations
+  - Find a way to speed up the schema migration (`yarn migrate:schema`)
+  - It is slow because Prisma replays all previous migrations to generate the expected database schema, which it then compares against the actual database schema

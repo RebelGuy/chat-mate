@@ -1,5 +1,5 @@
 # Project
-A public work-in-progress web-interface for streamers and viewers that interacts with the ChatMate API. The frontend uses the `mui` package for pre-built components and styles.
+ChatMate Studio is a public work-in-progress React web-interface for streamers and viewers that interacts with the ChatMate API. The frontend uses the `mui` package for pre-built components and styles.
 
 ## Deployments
 - [Local](http://localhost:3000)

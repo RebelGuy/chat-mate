@@ -2,9 +2,9 @@
 ChatMate features a collection of [API endpoints](../projects/server/readme.md#api-endpoints) for querying and modifying data and to perform actions. Endpoint accessibility can be restricted by any of the following:
 - No restrictions: The endpoint is accessible publicly by anyone.
 - Authentication: The user must be logged in by providing a valid login token in the request headers.
-- Rank: The user must be logged in and assigned a certain rank, either in the context of the request's streamer (if applicable, see below), or globally. 
+- Rank: The user must be logged in and assigned a certain rank, either in the context of the request's streamer (if applicable - see below), or globally. 
 
-To authenticate a request, first log in via the `/account/register` or `/account/login` endpoints, then add the returned login token to API requests via the `X-Login-Token` header. Accessing a restricted endpoint without the necessary permissions will return a 401 error.
+To authenticate a request, first log in via the `/account/register` or `/account/login` endpoints, then add the returned login token to API requests via the `X-Login-Token` header. Accessing a restricted endpoint without the necessary permissions will return a `401` error.
 
 Since the majority of ChatMate's data is saved against a particular streamer, and kept isolated therein, most API endpoints only make sense within a streamer context. As such, they require the `X-Streamer` header to be set to the streamer's registered user's username when making a request. In ChatMate Studio, this is managed via the streamer dropdown menu. In the Client, it is set to the logged-in user's name.
 

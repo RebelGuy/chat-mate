@@ -24,7 +24,6 @@ export default function AnimatedNumber (props: Props) {
   const shouldRenderFrame = nextFrameTime.current < currentTime
 
   requestAnimationFrame(() => {
-    // todo: make sure we never use the last frame (i.e. after the animation finishes, update the value to the target)
     if (!animationHasCompleted) {
       setCurrentTime(Date.now())
     }
