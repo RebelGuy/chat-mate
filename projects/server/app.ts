@@ -274,9 +274,9 @@ const main = async () => {
   })
   app.get('/robots933456.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
   app.get('/robots.txt', (_, res) => res.sendFile('robots.txt', { root: __dirname }))
-  app.get('/favicon_local.ico', (_, res) => res.end(fs.readFileSync('favicon_local.ico')))
-  app.get('/favicon_debug.ico', (_, res) => res.end(fs.readFileSync('favicon_debug.ico')))
-  app.get('/favicon_release.ico', (_, res) => res.end(fs.readFileSync('favicon_release.ico')))
+  app.get('/favicon_local.ico', (_, res) => res.sendFile('favicon_local.ico', { root: __dirname }))
+  app.get('/favicon_debug.ico', (_, res) => res.sendFile('favicon_debug.ico', { root: __dirname }))
+  app.get('/favicon_release.ico', (_, res) => res.sendFile('favicon_release.ico', { root: __dirname }))
 
   const logContext = createLogContext(globalContext.getClassInstance('logService'), { name: 'App' })
 
@@ -332,6 +332,10 @@ const main = async () => {
   // at this point, none of the routes have matched, so we want to return a custom formatted error
   // from https://expressjs.com/en/starter/faq.html#how-do-i-handle-404-responses
   app.use((req: Request, res: Response, next: NextFunction) => {
+    if (res.headersSent) {
+      return
+    }
+
     // keep propagating if this is a twitch webhook request
     if (req.path.startsWith('/twitch')) {
       next()
