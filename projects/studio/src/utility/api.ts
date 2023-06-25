@@ -41,7 +41,7 @@ function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends
 
 export const getChatMateRegisteredUsername = requestBuilder<GetChatMateRegisteredUsernameResponse>('GET', `/chatMate/username`)
 
-export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`)
+export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`, true, false)
 
 export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, UpdateCustomEmojiRequest> ('PATCH', `/emoji/custom`, 'self')
 
@@ -53,7 +53,7 @@ export const getChatMateStats = requestBuilder<ChatMateStatsResponse>('GET', `/c
 
 export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
 
-export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`)
+export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`, true, false)
 
 export const getRanksForStreamer = requestBuilder<GetUserRanksResponse>('GET', `/rank`)
 
@@ -69,7 +69,7 @@ export async function authenticate (loginToken: string): Promise<AuthenticateRes
   return await POST('/account/authenticate', {}, loginToken)
 }
 
-export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false)
+export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false, false)
 
 export const getStreamerApplications = requestBuilder<GetApplicationsResponse>('GET', `/streamer/application`, false)
 

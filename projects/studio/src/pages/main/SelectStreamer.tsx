@@ -38,7 +38,7 @@ export default function SelectStreamer () {
     }
   }, [loginContext, navigate, currentPath, streamerParam])
 
-  if (loginContext.loginToken == null || loginContext.allStreamers.length === 0) {
+  if (loginContext.allStreamers.length === 0) {
     return null
   }
 

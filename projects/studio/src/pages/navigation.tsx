@@ -39,7 +39,7 @@ export const PageEmojis = {
   element: <CustomEmojiManager />,
   icon: <Mood />,
   path: '/:streamer/emojis',
-  requiresLogin: true,
+  requiresLogin: false,
   requiresStreamer: true,
   requireRanksProps: null
 } as const
@@ -83,7 +83,7 @@ export const PageStreamerInfo = {
   element: <StreamerInfo />,
   icon: <Videocam />,
   path: '/:streamer/info',
-  requiresLogin: true,
+  requiresLogin: false,
   requiresStreamer: true,
   requireRanksProps: null
 } as const

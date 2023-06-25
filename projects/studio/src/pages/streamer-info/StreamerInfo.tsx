@@ -1,3 +1,4 @@
+import { Alert } from '@mui/material'
 import { Box } from '@mui/system'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
@@ -15,14 +16,15 @@ export default function StreamerInfo () {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const info = loginContext.allStreamers.find(streamer => streamer.username === loginContext.streamer)
-  if (info == null) {
-    throw new Error(`Unable to get info for streamer ${loginContext.streamer}`)
-  }
-
   const header = <PanelHeader>Streamer Info {<RefreshButton isLoading={loginContext.loadingData.includes('streamerList')} onRefresh={() => loginContext.refreshData('streamerList')} />}</PanelHeader>
 
-  if (info.youtubeChannel == null && info.twitchChannel == null) {
+  const info = loginContext.allStreamers.find(streamer => streamer.username === loginContext.streamer)
+  if (info == null) {
+    return <>
+      {header}
+      <Alert severity="error">Invalid streamer selected.</Alert>
+    </>
+  } else if (info.youtubeChannel == null && info.twitchChannel == null) {
     return <>
       {header}
       Streamer <b>{loginContext.streamer}</b> has not yet set up their primary livestream channels for ChatMate. Please check back later.

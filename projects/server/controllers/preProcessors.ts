@@ -14,10 +14,9 @@ export function requireAuth (req: Request, res?: Response) {
   })
 }
 
-/** User must be logged in, and specify the streamer (of which they are a viewer). Both the `registeredUser` and `streamerId` context variables will be available during the request. */
+/** User must specify the streamer (of which they are a viewer). The `streamerId` context variable will be available during the request. */
 export function requireStreamer (req: Request, res?: Response) {
   return preProcessorWrapper(req, res, async (apiService) => {
-    await requireAuth(req, res)
     await apiService.extractStreamerId(false)
   })
 }

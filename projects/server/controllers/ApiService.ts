@@ -89,11 +89,6 @@ export default class ApiService extends ContextClass {
       return
     }
 
-    const user = this.registeredUser
-    if (user == null) {
-      throw new Error('Context user must be set')
-    }
-
     const streamerHeader = this.request.headers[STREAMER_HEADER.toLowerCase()]
     if (streamerHeader == null) {
       if (optional) {

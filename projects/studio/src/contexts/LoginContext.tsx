@@ -48,7 +48,6 @@ export function LoginProvider (props: Props) {
   const getStreamersRequest = useRequest(getStreamers(), {
     updateKey: streamerListUpdateKey,
     loginToken: loginToken,
-    onRequest: () => loginToken == null,
     onError: (error, type) => console.error(error)
   })
 
@@ -148,6 +147,7 @@ export function LoginProvider (props: Props) {
   // authenticate the saved token, if any exists
   React.useEffect(() => {
     const loadContext = async () => {
+      getStreamersRequest.triggerRequest()
       await onLogin()
 
       let streamer: string | null = null
@@ -172,12 +172,12 @@ export function LoginProvider (props: Props) {
       onPersistStreamer(streamer)
     }
     void loadContext()
-  }, [onLogin])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   React.useEffect(() => {
     if (loginToken == null) {
       getGlobalRanksRequest.reset()
-      getStreamersRequest.reset()
       getRanksForStreamerRequest.reset()
       getUserRequest.reset()
       return
@@ -186,7 +186,6 @@ export function LoginProvider (props: Props) {
     // always load global ranks, and use them as a fallback if we don't have a streamer selected
     // (streamer ranks include global ranks)
     getGlobalRanksRequest.triggerRequest()
-    getStreamersRequest.triggerRequest()
 
     // this ensures we don't end up being un-hydrated if not selecting a streamer
     if (selectedStreamer == null) {
@@ -201,7 +200,7 @@ export function LoginProvider (props: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loginToken, selectedStreamer])
 
-  const requests = [getUserRequest, getGlobalRanksRequest, getRanksForStreamerRequest, getStreamersRequest]
+  const requests = username == null ? [getStreamersRequest] : [getUserRequest, getGlobalRanksRequest, getRanksForStreamerRequest, getStreamersRequest]
   const isHydrated = requests.find(r => r.data == null && r.error == null) == null
   const isLoading = requests.find(r => r.isLoading) != null
   const errors = nonNull(requests.map(r => r.error))
