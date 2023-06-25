@@ -19,6 +19,8 @@ import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventSe
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
+import { waitUntil } from '@rebel/shared/util/typescript'
+import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 export type TwitchMetadata = {
   streamId: string
@@ -40,8 +42,10 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   streamerChannelService: StreamerChannelService
   isAdministrativeMode: () => boolean
+  isContextInitialised: () => boolean
   dateTimeHelpers: DateTimeHelpers
   twitchUsername: string
+  timerHelpers: TimerHelpers
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -59,7 +63,9 @@ export default class TwurpleService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly streamerChannelService: StreamerChannelService
   private readonly isAdministrativeMode: () => boolean
+  private readonly isContextInitialised: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
+  private readonly timerHelpers: TimerHelpers
   private userApi!: HelixUserApi
   private chatClient!: ChatClient
 
@@ -80,7 +86,9 @@ export default class TwurpleService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
+    this.isContextInitialised = deps.resolve('isContextInitialised')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+    this.timerHelpers = deps.resolve('timerHelpers')
   }
 
   public override async initialise () {
@@ -116,10 +124,19 @@ export default class TwurpleService extends ContextClass {
     this.chatClient.onBan((channel, user) => this.logService.logInfo(this, 'chatClient.onBan', channel, user))
     this.chatClient.onTimeout((channel, user, duration) => this.logService.logInfo(this, 'chatClient.onTimeout', channel, user, duration))
 
-    await this.joinStreamerChannels()
-
     this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
     this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
+
+    // there is no need to initialise everything right now - wait for the server to be set up first,
+    // then join chat rooms (this could take a long time if there are many streamers)
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.timerHelpers.setTimeout(async () => {
+      await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
+
+      this.logService.logInfo(this, 'Joining chat rooms...')
+      await this.joinStreamerChannels()
+      this.logService.logInfo(this, 'Finished joining chat rooms')
+    }, 0)
   }
 
   public async banChannel (streamerId: number, twitchChannelId: number, reason: string | null) {
