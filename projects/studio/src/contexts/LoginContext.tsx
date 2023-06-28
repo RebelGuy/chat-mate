@@ -1,7 +1,8 @@
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
+import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
 import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
-import { nonNull } from '@rebel/shared/util/arrays'
+import { nonNull, unique } from '@rebel/shared/util/arrays'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
@@ -204,7 +205,7 @@ export function LoginProvider (props: Props) {
   const isHydrated = requests.find(r => r.data == null && r.error == null) == null
   const isLoading = requests.find(r => r.isLoading) != null
   const errors = nonNull(requests.map(r => r.error))
-  const ranks = [...(getGlobalRanksRequest.data?.ranks ?? []), ...(getRanksForStreamerRequest.data?.ranks ?? [])]
+  const ranks = unique([...(getGlobalRanksRequest.data?.ranks ?? []), ...(getRanksForStreamerRequest.data?.ranks ?? [])], r => r.id)
 
   return (
     <LoginContext.Provider
@@ -220,6 +221,7 @@ export function LoginProvider (props: Props) {
         allStreamers: getStreamersRequest.data?.streamers ?? [],
         isStreamer: isStreamer,
         authError: authError,
+        allRanks: ranks,
         setLogin: onSetLogin,
         setStreamer: onPersistStreamer,
         logout: onClearAuthInfo,
@@ -248,6 +250,7 @@ export type LoginContextType = {
   loadingData: RefreshableDataType[]
   errors: ApiRequestError[] | null
   authError: string | null
+  allRanks: PublicUserRank[]
 
   setLogin: (username: string, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void

@@ -1,6 +1,6 @@
 import * as crypto from 'crypto'
 
-export function isNullOrEmpty (str: string | null | undefined): boolean {
+export function isNullOrEmpty (str: string | null | undefined): str is '' | null | undefined {
   return str == null || str.trim() === ''
 }
 

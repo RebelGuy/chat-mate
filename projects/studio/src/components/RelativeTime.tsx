@@ -15,6 +15,7 @@ const ONE_MINUTE = 1000 * 60
 const ONE_HOUR = ONE_MINUTE * 60
 const ONE_DAY = ONE_HOUR * 24
 const ONE_MONTH = ONE_DAY * (365.25/12)
+const ONE_YEAR = ONE_DAY * 365.25
 
 export default function RelativeTime (props: Props) {
   const [elapsed, setElapsed] = useState(Date.now() - props.time)
@@ -50,9 +51,7 @@ function getTimerInterval (elapsed: number) {
 function getElapsedText (elapsed: number) {
   let unit: string
   let amount: number
-  if (elapsed < 5000) {
-    return 'just now'
-  } else if (elapsed < ONE_MINUTE) {
+  if (elapsed < ONE_MINUTE) {
     unit = 'second'
     amount = Math.floor(elapsed / 1000)
   } else if (elapsed < ONE_HOUR) {
@@ -64,14 +63,17 @@ function getElapsedText (elapsed: number) {
   } else if (elapsed < ONE_MONTH) {
     unit = 'day'
     amount = Math.floor(elapsed / ONE_DAY)
-  } else {
+  } else if (elapsed < ONE_YEAR) {
     unit = 'month'
     amount = Math.floor(elapsed / ONE_MONTH)
+  } else {
+    unit = 'year'
+    amount = Math.floor(elapsed / ONE_YEAR)
   }
 
   if (amount !== 1) {
     unit += 's'
   }
 
-  return `${amount} ${unit} ago`
+  return `${amount} ${unit}`
 }

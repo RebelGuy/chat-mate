@@ -1,19 +1,26 @@
-import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
+import { GenericObject, NumberOnly, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import { Key } from 'readline'
 
 // uses default equality comparison
-export function unique<T> (array: T[]): T[] {
-  const values: Set<T> = new Set()
-  for (const value of array) {
-    if (values.has(value)) {
+export function unique<T> (array: T[], transformer?: (item: T) => any): T[] {
+  if (transformer == null) {
+    transformer = item => item
+  }
+
+  const uniqueItems: Set<T> = new Set()
+  const uniqueValues: Set<unknown> = new Set()
+
+  for (const item of array) {
+    const value = transformer(item)
+    if (uniqueValues.has(value)) {
       continue
     } else {
-      values.add(value)
+      uniqueValues.add(value)
+      uniqueItems.add(item)
     }
   }
 
-  return Array.from(values)
+  return Array.from(uniqueItems)
 }
 
 export function single<T> (array: T[]): T {
