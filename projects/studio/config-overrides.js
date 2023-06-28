@@ -52,7 +52,7 @@ module.exports = (...args) => {
 
       new CopyWebpackPlugin({ patterns: [
         // the favicon is automatically picked up by the `index.html`
-        { from: `favicon_${process.env.CHAT_MATE_ENV}.ico`, to: 'favicon.ico' }
+        { from: `favicon_${process.env.REACT_APP_ENV}.ico`, to: 'favicon.ico' }
       ] })
     ]
   }
