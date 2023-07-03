@@ -100,6 +100,10 @@ export default class LinkStore extends ContextClass {
     })
   }
 
+  public async getLinkAttempts () {
+    return await this.db.linkAttempt.findMany({ include: { linkToken: true }})
+  }
+
   public async isLinkInProgress (anyUserId: number): Promise<boolean> {
     const linkAttempt = await this.db.linkAttempt.findFirst({ where: {
       OR: [
@@ -174,6 +178,13 @@ export default class LinkStore extends ContextClass {
 
   public async deleteLinkAttempt (linkAttemptId: number) {
     await this.db.linkAttempt.delete({ where: { id: linkAttemptId }})
+  }
+
+  public async releaseLink (linkAttemptId: number) {
+    await this.db.linkAttempt.update({
+      where: { id: linkAttemptId },
+      data: { released: true }
+    })
   }
 
   /** Returns the aggregate user's id that was unlinked. Throws if the user is not linked.

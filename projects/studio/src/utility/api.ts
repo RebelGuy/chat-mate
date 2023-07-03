@@ -6,7 +6,7 @@ import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/api-models/schema/account'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/api-models/schema/donation'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, DeleteLinkTokenResponse } from '@rebel/api-models/schema/user'
-import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse } from '@rebel/api-models/schema/admin'
+import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, GetLinkAttemptLogsResponse, ReleaseLinkAttemptResponse } from '@rebel/api-models/schema/admin'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse } from '@rebel/api-models/types'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
@@ -170,6 +170,14 @@ export const authoriseTwitchAdmin = requestBuilder<TwitchAuthorisationResponse, 
 export const reconnectChatClient = requestBuilder<ReconnectTwitchChatClientResponse>('POST', '/admin/twitch/reconnectChatClient', false)
 
 export const resetTwitchSubscriptions = requestBuilder<ResetTwitchSubscriptionsResponse>('POST', '/admin/twitch/resetSubscriptions', false)
+
+export const getLinkAttemptLogs = requestBuilder<GetLinkAttemptLogsResponse>('GET', '/admin/link/logs', false)
+
+export const releaseLinkAttempt = requestBuilder<ReleaseLinkAttemptResponse, false, [linkAttemptId: number]>(
+  'POST',
+  linkAttemptId => constructPath('/admin/link/release', { linkAttemptId }),
+  false
+)
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
   return await request('GET', path, null, loginToken, streamer)

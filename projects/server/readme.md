@@ -221,11 +221,24 @@ Deletes and re-initialises all streamer event subscriptions.
 
 Returns an empty response body.
 
+### `GET /link/logs`
+Gets the list of all link attempt logs.
+
+Returns data with the following properties:
+- `logs` (`PublicLinkAttemptLog[]`): The list of link attempt logs.
+
+### `POST /link/release`
+Releases a failed link attempt, acknowledging that any further link attempts are able to go ahead safely.
+
+Query parameters:
+- `linkAttemptId` (`number`): *Required.* The id of the link attempt that is to be released.
+
+Returns an empty response body.
+
 ## Chat Endpoints
 Path: `/chat`.
 
 ### `GET`
-
 Retrieves the latest chat items.
 
 Query parameters:
@@ -237,7 +250,6 @@ Returns data with the following properties:
 - `chat` (`PublicChatItem[]`): The chat data that satisfy the request filter, sorted in ascending order by time.
 
 ### `GET /command/:commandId`
-
 Gets the current status of the specified command.
 
 Path parameters:
