@@ -193,4 +193,12 @@ export default class ApiService extends ContextClass {
       throw new Error('Unable to get all data.')
     }
   }
+
+  public getRequest (): Request {
+    return this.request
+  }
+
+  public getResponse (): Response {
+    return this.response
+  }
 }
