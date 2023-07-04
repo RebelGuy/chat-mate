@@ -111,6 +111,7 @@ const main = async () => {
   const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
   const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
   const dbTransactionTimeout = env('dbTransactionTimeout')
+  const dbSlowQueryThreshold = env('dbSlowQueryThreshold')
   const streamlabsAccessToken = env('streamlabsAccessToken')
   const twitchUsername = env('twitchUsername')
 
@@ -135,6 +136,7 @@ const main = async () => {
     .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
     .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
     .withProperty('dbTransactionTimeout', dbTransactionTimeout)
+    .withProperty('dbSlowQueryThreshold', dbSlowQueryThreshold)
     .withProperty('hostName', hostName)
     .withProperty('streamlabsAccessToken', streamlabsAccessToken)
     .withProperty('twitchUsername', twitchUsername)
