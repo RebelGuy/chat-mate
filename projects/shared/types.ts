@@ -49,7 +49,7 @@ export type Nullify<T> = {
   [P in keyof T]: T[P] | null
 }
 
-export type DeepPartial<T> = {
+export type DeepPartial<T> = T extends Primitive | null | undefined ? T : {
   [P in keyof T]?:
     T[P] extends (...args: any[]) => any ? T[P] :
     // if the object is null or undefined, the result is the partial object plus null or undefined, whichever applied

@@ -368,7 +368,7 @@ export type OmitTrackingParams<T> = Omit<
 /**
  * Remove `clickTrackingParams` and `trackingParams` from object
  */
-export function omitTrackingParams<T>(obj: T): OmitTrackingParams<T> {
+export function omitTrackingParams<T extends object>(obj: T): OmitTrackingParams<T> {
   return Object.entries(obj)
     .filter(([k]) => k !== "clickTrackingParams" && k !== "trackingParams")
     .reduce(

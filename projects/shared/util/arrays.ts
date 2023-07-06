@@ -183,7 +183,8 @@ export function zipOnStrict<T extends GenericObject, U extends GenericObject, Ke
     let left = { ...x }
     delete left[firstKey]
 
-    let right = { ...secondArray.find(y => y[secondKey!] === x[firstKey])! }
+    // any-typing required to make typescript happy
+    let right = { ...secondArray.find(y => y[secondKey!] as any === x[firstKey])! }
     delete right[secondKey!]
 
     const zippedValue = x[firstKey]

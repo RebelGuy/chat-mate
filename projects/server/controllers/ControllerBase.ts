@@ -108,7 +108,7 @@ export class ResponseBuilder<T extends ResponseData<T>> {
       success: true,
       timestamp: new Date().getTime(),
       data
-    }
+    } as ApiResponse<T> // i don't understand why we need to cast lol
   }
 
   public failure (error: ErrorType): ApiResponse<any>
