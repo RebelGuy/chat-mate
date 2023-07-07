@@ -127,7 +127,8 @@ export default class DonationStore extends ContextClass {
       messageParts: donation.chatMessage?.chatMessageParts ?? [],
       linkIdentifier: linkIdentifier,
       primaryUserId: donationLink?.linkedUserId ?? null,
-      linkedAt: donationLink?.linkedAt ?? null
+      linkedAt: donationLink?.linkedAt ?? null,
+      isRefunded: donation.isRefunded
     }
   }
 
@@ -165,7 +166,8 @@ export default class DonationStore extends ContextClass {
         messageParts: donation.chatMessage?.chatMessageParts ?? [],
         linkIdentifier: linkIdentifier,
         primaryUserId: donationLink?.linkedUserId ?? null,
-        linkedAt: donationLink?.linkedAt ?? null
+        linkedAt: donationLink?.linkedAt ?? null,
+        isRefunded: donation.isRefunded
       }
     })
   }
@@ -207,6 +209,13 @@ export default class DonationStore extends ContextClass {
       linkedUserId: primaryUserId,
       linkedAt: linkedAt
     }})
+  }
+
+  public async refundDonation (donationId: number) {
+    await this.db.donation.update({
+      where: { id: donationId },
+      data: { isRefunded: true }
+    })
   }
 
   /** Updates donation links such that donations originally linked to `fromUserId` now point to `toUserId`. */

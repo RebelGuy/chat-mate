@@ -298,6 +298,18 @@ export default () => {
     })
   })
 
+  describe(nameof(DonationStore, 'refundDonation'), () => {
+    test('Marks the donation as refunded', async () => {
+      const user = await db.chatUser.create({ data: {}})
+      const donation = await createDonation({}, { userId: user.id, type: 'internal' })
+
+      await donationStore.refundDonation(donation.id)
+
+      const storedDonation = await db.donation.findUnique({ where: { id: donation.id } })
+      expect(storedDonation!.isRefunded).toBe(true)
+    })
+  })
+
   describe(nameof(DonationStore, 'relinkDonation'), () => {
     test('Updates all donation links of the given user', async () => {
       const user1 = await db.chatUser.create({ data: {}})

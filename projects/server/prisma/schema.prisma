@@ -777,6 +777,7 @@ model Donation {
   amount           Float
   formattedAmount  String
   name             String   @db.VarChar(256)
+  isRefunded       Boolean  @default(false)
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "donation_streamerId_fkey")

@@ -325,6 +325,19 @@ Returns data with the following properties:
 Can return the following errors:
 - `404`: When the request data is not sent, or when no user was linked to the given donation.
 
+### `POST /refund`
+Marks the donation as being refunded.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation to mark as refunded.
+
+Returns data with the following properties:
+- `updatedDonation` (`PublicDonation`): The updated donation that is now marked as refunded.
+
+Can return the following errors:
+- `400`: When the donation is already marked as refunded.
+- `404`: When no donation was found for the given ID.
+
 ### `POST /streamlabs/socketToken`
 Sets the streamlab socket token for listening to the current streamer's donations. The server is unable to get donations if the token is not set, or is invalid.
 

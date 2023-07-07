@@ -7,6 +7,8 @@ export type LinkUserResponse = ApiResponse<{ updatedDonation: PublicObject<Publi
 
 export type UnlinkUserResponse = ApiResponse<{ updatedDonation: PublicObject<PublicDonation> }>
 
+export type RefundDonationResponse = ApiResponse<{ updatedDonation: PublicDonation }>
+
 export type SetWebsocketTokenRequest = ApiRequest<{ websocketToken: string | null }>
 export type SetWebsocketTokenResponse = ApiResponse<{ result: 'success' | 'noChange' }>
 

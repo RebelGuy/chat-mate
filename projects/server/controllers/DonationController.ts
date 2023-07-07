@@ -11,7 +11,7 @@ import { single } from '@rebel/shared/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
+import { GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, RefundDonationResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -98,6 +98,30 @@ export default class DonationController extends ControllerBase {
   }
 
   @POST
+  @Path('/refund')
+  public async refundDonation (
+    @QueryParam('donationId') donationId: number
+  ): Promise<RefundDonationResponse> {
+    const builder = this.registerResponseBuilder<RefundDonationResponse>('POST /refund')
+
+    try {
+      const donation = await this.donationStore.getDonation(donationId)
+      if (donation.streamerId !== this.getStreamerId()) {
+        return builder.failure(404, 'Not found.')
+      } else if (donation.isRefunded) {
+        return builder.failure(400, 'Donation is already refunded.')
+      }
+
+      await this.donationStore.refundDonation(donationId)
+
+      const updatedDonation = await this.getPublicDonations([{ ...donation, isRefunded: true }]).then(single)
+      return builder.success({ updatedDonation })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
   @Path('/streamlabs/socketToken')
   public async setWebsocketToken (request: SetWebsocketTokenRequest): Promise<SetWebsocketTokenResponse> {
     const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /streamlabs/socketToken')
@@ -129,7 +153,6 @@ export default class DonationController extends ControllerBase {
   }
 
   private async getPublicDonations (donations: DonationWithUser[]): Promise<PublicDonation[]> {
-    const streamerId = this.getStreamerId()
     const primaryUserIds = unique(nonNull(donations.map(d => d.primaryUserId)))
     let userData: PublicUser[]
     if (primaryUserIds.length === 0) {
