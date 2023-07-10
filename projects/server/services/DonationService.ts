@@ -104,7 +104,7 @@ export default class DonationService extends ContextClass {
     const time = this.dateTimeHelpers.now()
     await this.donationStore.linkUserToDonation(donationId, primaryUserId, time)
 
-    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId])
+    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId], false)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
     const currentRanks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
 
@@ -195,7 +195,7 @@ export default class DonationService extends ContextClass {
   public async reEvaluateDonationRanks (anyUserId: number, message: string | null, reEvaluationId: string): Promise<number> {
     const time = this.dateTimeHelpers.now()
     const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
-    const allDonations = await this.donationStore.getDonationsByUserIds(null, [primaryUserId])
+    const allDonations = await this.donationStore.getDonationsByUserIds(null, [primaryUserId], false)
     const groupedDonations = group(allDonations, d => d.streamerId)
 
     let warnings = 0
@@ -287,7 +287,7 @@ export default class DonationService extends ContextClass {
 
     const primaryUserId = await this.donationStore.unlinkUserFromDonation(donationId)
 
-    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId])
+    const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId], false)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
     const currentRanks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
     const now = new Date()

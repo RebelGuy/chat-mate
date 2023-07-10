@@ -77,8 +77,9 @@ export default class DonationStore extends ContextClass {
   }
 
   /** Returns donations that have been linked to any of the given exact users, orderd by time in ascending order. Does not take into account the user connections - exact userIds must be provided.
-   * If `streamerId` is `null`, returns donations across all streamers. */
-  public async getDonationsByUserIds (streamerId: number | null, exactUserIds: number[]): Promise<Donation[]> {
+   * If `streamerId` is `null`, returns donations across all streamers.
+   * Refunded donations are only included if `includeRefunded` is true. */
+  public async getDonationsByUserIds (streamerId: number | null, exactUserIds: number[], includeRefunded: boolean): Promise<Donation[]> {
     const donationLinks = await this.db.donationLink.findMany({
       where: { linkedUserId: { in: exactUserIds }}
     })
@@ -89,6 +90,7 @@ export default class DonationStore extends ContextClass {
     return await this.db.donation.findMany({
       where: {
         streamerId: streamerId ?? undefined,
+        isRefunded: includeRefunded ? undefined : false,
         OR: [
           { id: { in: donationIds } },
           { streamlabsUserId: { in: streamlabsUserIds }}
@@ -132,12 +134,14 @@ export default class DonationStore extends ContextClass {
     }
   }
 
-  /** Returns donations after the given time, ordered by time in ascending order. */
-  public async getDonationsSince (streamerId: number, time: number): Promise<DonationWithUser[]> {
+  /** Returns donations after the given time, ordered by time in ascending order.
+   * Refunded donations are only included if `includeRefunded` is true. */
+  public async getDonationsSince (streamerId: number, time: number, includeRefunded: boolean): Promise<DonationWithUser[]> {
     const donations = await this.db.donation.findMany({
       where: {
         streamerId: streamerId,
-        time: { gt: new Date(time) }
+        time: { gt: new Date(time) },
+        isRefunded: includeRefunded ? undefined : false
       },
       orderBy: { time: 'asc' },
       include: { chatMessage: {

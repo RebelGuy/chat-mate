@@ -38,7 +38,7 @@ export default class DonationController extends ControllerBase {
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /')
     try {
-      const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0)
+      const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0, true)
       return builder.success({
         donations: await this.getPublicDonations(donations)
       })
@@ -113,6 +113,10 @@ export default class DonationController extends ControllerBase {
       }
 
       await this.donationStore.refundDonation(donationId)
+
+      if (donation.primaryUserId) {
+        await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation refunded', 'Refund')
+      }
 
       const updatedDonation = await this.getPublicDonations([{ ...donation, isRefunded: true }]).then(single)
       return builder.success({ updatedDonation })

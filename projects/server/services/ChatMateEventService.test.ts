@@ -50,7 +50,7 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
 
     mockExperienceService.getLevelDiffs.calledWith(streamerId, since).mockResolvedValue([levelDiff1, levelDiff2])
     mockFollowerStore.getFollowersSince.calledWith(streamerId, since).mockResolvedValue([follower1, follower2])
-    mockDonationStore.getDonationsSince.calledWith(streamerId, since).mockResolvedValue([donation1, donation2])
+    mockDonationStore.getDonationsSince.calledWith(streamerId, since, false).mockResolvedValue([donation1, donation2])
     mockChatStore.getChatSince.calledWith(streamerId, since).mockResolvedValue([chat1, chat2, chat3]) // duplicate chat user ids should be ignored
     mockChatStore.getTimeOfFirstChat.calledWith(streamerId, expectArray<number>([userId1, userId2])).mockResolvedValue([
       { primaryUserId: userId1, firstSeen: chat1.time.getTime() }, // before the `since` time - no first message in the window we are looking

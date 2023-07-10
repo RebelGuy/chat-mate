@@ -13,7 +13,6 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import { PartialChatMessage } from '@rebel/server/models/chat'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import AccountStore from '@rebel/server/stores/AccountStore'
 import { UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
@@ -136,7 +135,7 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
     // user is currently donator, and eligible for donator and supporter
     const ranks = cast<UserRankWithRelations[]>([{ id: 20, rank: { name: 'donator' } }])
     mockDateTimeHelpers.now.calledWith().mockReturnValue(time)
-    mockDonationStore.getDonationsByUserIds.calledWith(streamerId, expectArray<number>([primaryUserId])).mockResolvedValue(allDonations)
+    mockDonationStore.getDonationsByUserIds.calledWith(streamerId, expectArray<number>([primaryUserId]), false).mockResolvedValue(allDonations)
     mockRankStore.getUserRanks.calledWith(expectArray<number>([primaryUserId]), streamerId).mockResolvedValue([{ primaryUserId: primaryUserId, ranks }])
     mockDonationHelpers.isEligibleForDonator
       .calledWith(expectArray<DonationAmount>([[data.time1, 1], [data.time2, 2], [data.time3, 3]]), any())
@@ -215,7 +214,7 @@ describe(nameof(DonationService, 'reEvaluateDonationRanks'), () => {
 
     mockDateTimeHelpers.now.calledWith().mockReturnValue(new Date())
     mockAccountService.getPrimaryUserIdFromAnyUser.calledWith(expectArray<number>([userId])).mockResolvedValue([primaryUserId])
-    mockDonationStore.getDonationsByUserIds.calledWith(null, expectArray<number>([primaryUserId])).mockResolvedValue([donation1, donation2, donation3])
+    mockDonationStore.getDonationsByUserIds.calledWith(null, expectArray<number>([primaryUserId]), false).mockResolvedValue([donation1, donation2, donation3])
     mockDonationHelpers.isEligibleForDonator
       .calledWith(expect.objectContaining<DonationAmount[]>([[data.time1, 1]]), expect.any(Date))
       .mockReturnValue(true)
@@ -241,7 +240,7 @@ describe(nameof(DonationService, 'reEvaluateDonationRanks'), () => {
 
     mockDateTimeHelpers.now.calledWith().mockReturnValue(new Date())
     mockAccountService.getPrimaryUserIdFromAnyUser.calledWith(expectArray<number>([userId])).mockResolvedValue([primaryUserId])
-    mockDonationStore.getDonationsByUserIds.calledWith(null, expectArray<number>([primaryUserId])).mockResolvedValue([donation])
+    mockDonationStore.getDonationsByUserIds.calledWith(null, expectArray<number>([primaryUserId]), false).mockResolvedValue([donation])
     mockDonationHelpers.isEligibleForDonator.calledWith(expect.anything(), expect.any(Date)).mockReturnValue(true)
     mockDonationHelpers.isEligibleForMember.calledWith(expect.anything(), expect.any(Date)).mockReturnValue(true)
     mockDonationHelpers.isEligibleForSupporter.calledWith(expect.anything(), expect.any(Date)).mockReturnValue(true)
@@ -270,7 +269,7 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
     ])
     mockDonationStore.getDonation.calledWith(donationId).mockResolvedValue(cast<DonationWithUser>({ primaryUserId }))
     mockDonationStore.unlinkUserFromDonation.calledWith(donationId).mockResolvedValue(primaryUserId)
-    mockDonationStore.getDonationsByUserIds.calledWith(streamerId, expectArray<number>([primaryUserId])).mockResolvedValue(allDonations)
+    mockDonationStore.getDonationsByUserIds.calledWith(streamerId, expectArray<number>([primaryUserId]), false).mockResolvedValue(allDonations)
     mockRankStore.getUserRanks.calledWith(expectArray<number>([primaryUserId]), streamerId).mockResolvedValue([{ primaryUserId: primaryUserId, ranks }])
     mockDonationHelpers.isEligibleForDonator
       .calledWith(expectArray<DonationAmount>([[data.time1, 1], [data.time2, 2], [data.time3, 3]]), any())

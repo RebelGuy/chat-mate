@@ -295,7 +295,7 @@ Returns data with the following properties:
 Path: `/donation`.
 
 ### `GET /`
-Gets all donations.
+Gets all donations, including refunded donations.
 
 Returns data with the following properties:
 - `donations` (`PublicDonation[]`): The list of all donations.

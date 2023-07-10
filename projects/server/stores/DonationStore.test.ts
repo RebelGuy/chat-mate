@@ -1,6 +1,5 @@
-import { Donation, StreamlabsSocketToken } from '@prisma/client'
+import { StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
-import { New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
 import DonationStore, { DonationCreateArgs, DonationWithUser } from '@rebel/server/stores/DonationStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
@@ -183,10 +182,22 @@ export default () => {
       const donation8 = await createDonation({ time: data.time2, streamerId: streamer1 }, { userId: user2.id, type: 'streamlabs', streamlabsUser: 3 })
       const donation9 = await createDonation({ time: addTime(data.time3, 'seconds', 1) })
 
-      const result = await donationStore.getDonationsByUserIds(streamer1, [user1.id, user3.id])
+      const result = await donationStore.getDonationsByUserIds(streamer1, [user1.id, user3.id], false)
 
       expect(result.length).toBe(3)
       expect(result).toEqual([donation4, donation2, donation6])
+    })
+
+    test('Includes refunded donations only if the `includeRefunded` flag is true', async () => {
+      const user = await db.chatUser.create({ data: {} })
+      await createDonation({ time: data.time2, streamerId: streamer1, isRefunded: true }, { userId: user.id, type: 'internal' })
+      await createDonation({ time: data.time2, streamerId: streamer1, isRefunded: false }, { userId: user.id, type: 'internal' })
+
+      const result1 = await donationStore.getDonationsByUserIds(streamer1, [user.id], false)
+      const result2 = await donationStore.getDonationsByUserIds(streamer1, [user.id], true)
+
+      expect(result1.length).toBe(1)
+      expect(result2.length).toBe(2)
     })
   })
 
@@ -197,13 +208,25 @@ export default () => {
       const donation3 = await createDonation({ time: data.time2 })
       const donation4 = await createDonation({ time: data.time2, streamerId: streamer2 })
 
-      const result = await donationStore.getDonationsSince(streamer1, donation1.time.getTime())
+      const result = await donationStore.getDonationsSince(streamer1, donation1.time.getTime(), false)
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectArray<DonationWithUser>([
         { ...donation3, linkIdentifier: 'internal-3', primaryUserId: null, linkedAt: null, messageParts: [] },
         { ...donation2, linkIdentifier: 'internal-2', primaryUserId: null, linkedAt: null, messageParts: [] }
       ]))
+    })
+
+    test('Includes refunded donations only if the `includeRefunded` flag is true', async () => {
+      const user = await db.chatUser.create({ data: {} })
+      await createDonation({ time: data.time2, streamerId: streamer1, isRefunded: true }, { userId: user.id, type: 'internal' })
+      await createDonation({ time: data.time2, streamerId: streamer1, isRefunded: false }, { userId: user.id, type: 'internal' })
+
+      const result1 = await donationStore.getDonationsSince(streamer1, data.time1.getTime(), false)
+      const result2 = await donationStore.getDonationsSince(streamer1, data.time1.getTime(), true)
+
+      expect(result1.length).toBe(1)
+      expect(result2.length).toBe(2)
     })
   })
 
@@ -456,13 +479,13 @@ export default () => {
 
       expect(result.primaryUserId).toBe(user2.id)
 
-      const donationsByUser = await donationStore.getDonationsByUserIds(streamer1, [user2.id])
+      const donationsByUser = await donationStore.getDonationsByUserIds(streamer1, [user2.id], false)
       expect(donationsByUser.length).toBe(2)
     })
   })
 
   /** Does not support message parts (I'm not re-implementing all that for a test) */
-  async function createDonation (donationData: Partial<DonationCreateArgs>, linkedUser?: { userId: number, type: 'streamlabs', streamlabsUser: number } | { userId: number, type: 'internal' }) {
+  async function createDonation (donationData: Partial<DonationCreateArgs & { isRefunded: boolean }>, linkedUser?: { userId: number, type: 'streamlabs', streamlabsUser: number } | { userId: number, type: 'internal' }) {
     const donation = await db.donation.create({
       data: {
         streamerId: donationData.streamerId ?? 1,
@@ -472,7 +495,8 @@ export default () => {
         name: donationData.name ?? 'Test name',
         streamlabsId: donationData.streamlabsId ?? randomInt(0, 100000000),
         streamlabsUserId: linkedUser?.type === 'streamlabs' ? linkedUser.streamlabsUser : donationData.streamlabsUserId,
-        time: donationData.time ?? new Date()
+        time: donationData.time ?? new Date(),
+        isRefunded: donationData.isRefunded ?? undefined
       }
     })
 
