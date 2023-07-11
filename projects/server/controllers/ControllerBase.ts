@@ -117,7 +117,7 @@ export class ResponseBuilder<T extends ResponseData<T>> {
     const errorCode: ErrorCode = typeof arg1 === 'number' ? arg1 : 500
     const error = this.getErrorObject(typeof arg1 === 'number' ? arg2! : arg1)
 
-    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error after ${this.getDuration()} ms: `, error, this.getRequestInfo())
+    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error after ${this.getDuration()} ms:`, error, this.getRequestInfo())
 
     return {
       success: false,
