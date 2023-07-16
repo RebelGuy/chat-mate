@@ -300,6 +300,18 @@ Gets all donations, including refunded donations.
 Returns data with the following properties:
 - `donations` (`PublicDonation[]`): The list of all donations.
 
+### `DELETE /`
+Deletes a donation. Deleted donations are not returned by any other donation endpoints.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation to mark as refunded.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent.
+- `404`: When no donation was found for the given ID.
+
 ### `POST /link`
 Links a user to a donation.
 
@@ -312,6 +324,7 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `400`: When the request data is not sent, or when a user is already linked to the given donation.
+- `404`: When no donation was found for the given ID.
 
 ### `DELETE /link`
 Unlinks a user to a donation.
@@ -323,7 +336,8 @@ Returns data with the following properties:
 - `updatedDonation` (`PublicDonation`): The updated donation that no longer includes the linked user.
 
 Can return the following errors:
-- `404`: When the request data is not sent, or when no user was linked to the given donation.
+- `400`: When the request data is not sent, or when no user was linked to the given donation.
+- `404`: When no donation was found for the given ID.
 
 ### `POST /refund`
 Marks the donation as being refunded.
@@ -335,7 +349,7 @@ Returns data with the following properties:
 - `updatedDonation` (`PublicDonation`): The updated donation that is now marked as refunded.
 
 Can return the following errors:
-- `400`: When the donation is already marked as refunded.
+- `400`: When the request data is not sent or when the donation is already marked as refunded.
 - `404`: When no donation was found for the given ID.
 
 ### `POST /streamlabs/socketToken`

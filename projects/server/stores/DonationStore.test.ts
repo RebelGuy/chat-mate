@@ -165,6 +165,32 @@ export default () => {
     test(`Throws if donation doesn't exist`, async () => {
       await expect(() => donationStore.getDonation(5)).rejects.toThrow()
     })
+
+    test('Throws if donation is deleted', async () => {
+      const user = await db.chatUser.create({ data: {}})
+      const donation = await createDonation({ isDeleted: true }, { userId: user.id, type: 'internal' })
+
+      await expect(() => donationStore.getDonation(donation.id)).rejects.toThrow()
+    })
+  })
+
+  describe(nameof(DonationStore, 'deleteDonation'), () => {
+    test('Marks the donation as deleted', async () => {
+      const user = await db.chatUser.create({ data: {}})
+      const donation = await createDonation({}, { userId: user.id, type: 'internal' })
+
+      await donationStore.deleteDonation(donation.id)
+
+      const storedDonation = await db.donation.findUnique({ where: { id: donation.id } })
+      expect(storedDonation!.deletedAt).not.toBe(null)
+    })
+
+    test('Throws if the donation is already deleted', async () => {
+      const user = await db.chatUser.create({ data: {}})
+      const donation = await createDonation({ isDeleted: true }, { userId: user.id, type: 'internal' })
+
+      await expect(() => donationStore.deleteDonation(donation.id)).rejects.toThrow()
+    })
   })
 
   describe(nameof(DonationStore, 'getDonationsByUserIds'), () => {
@@ -199,6 +225,15 @@ export default () => {
       expect(result1.length).toBe(1)
       expect(result2.length).toBe(2)
     })
+
+    test('Does not include deleted donations', async () => {
+      const user = await db.chatUser.create({ data: {} })
+      await createDonation({ time: data.time2, streamerId: streamer1, isDeleted: true }, { userId: user.id, type: 'internal' })
+
+      const result = await donationStore.getDonationsByUserIds(streamer1, [user.id], false)
+
+      expect(result.length).toBe(0)
+    })
   })
 
   describe(nameof(DonationStore, 'getDonationsSince'), () => {
@@ -227,6 +262,15 @@ export default () => {
 
       expect(result1.length).toBe(1)
       expect(result2.length).toBe(2)
+    })
+
+    test('Does not include deleted donations', async () => {
+      const user = await db.chatUser.create({ data: {} })
+      const donation = await createDonation({ time: data.time2, streamerId: streamer1, isDeleted: true }, { userId: user.id, type: 'internal' })
+
+      const result = await donationStore.getDonationsSince(streamer1, donation.time.getTime(), false)
+
+      expect(result.length).toBe(0)
     })
   })
 
@@ -329,7 +373,21 @@ export default () => {
       await donationStore.refundDonation(donation.id)
 
       const storedDonation = await db.donation.findUnique({ where: { id: donation.id } })
-      expect(storedDonation!.isRefunded).toBe(true)
+      expect(storedDonation!.refundedAt).not.toBe(null)
+    })
+
+    test('Throws if the donation is already refunded', async () => {
+      const user = await db.chatUser.create({ data: {}})
+      const donation = await createDonation({ isRefunded: true }, { userId: user.id, type: 'internal' })
+
+      await expect(() => donationStore.refundDonation(donation.id)).rejects.toThrow()
+    })
+
+    test('Throws if the donation is deleted', async () => {
+      const user = await db.chatUser.create({ data: {}})
+      const donation = await createDonation({ isDeleted: true }, { userId: user.id, type: 'internal' })
+
+      await expect(() => donationStore.refundDonation(donation.id)).rejects.toThrow()
     })
   })
 
@@ -485,7 +543,7 @@ export default () => {
   })
 
   /** Does not support message parts (I'm not re-implementing all that for a test) */
-  async function createDonation (donationData: Partial<DonationCreateArgs & { isRefunded: boolean }>, linkedUser?: { userId: number, type: 'streamlabs', streamlabsUser: number } | { userId: number, type: 'internal' }) {
+  async function createDonation (donationData: Partial<DonationCreateArgs & { isRefunded: boolean, isDeleted: boolean }>, linkedUser?: { userId: number, type: 'streamlabs', streamlabsUser: number } | { userId: number, type: 'internal' }) {
     const donation = await db.donation.create({
       data: {
         streamerId: donationData.streamerId ?? 1,
@@ -496,7 +554,8 @@ export default () => {
         streamlabsId: donationData.streamlabsId ?? randomInt(0, 100000000),
         streamlabsUserId: linkedUser?.type === 'streamlabs' ? linkedUser.streamlabsUser : donationData.streamlabsUserId,
         time: donationData.time ?? new Date(),
-        isRefunded: donationData.isRefunded ?? undefined
+        refundedAt: donationData.isRefunded ? new Date() : undefined,
+        deletedAt: donationData.isDeleted ? new Date() : undefined
       }
     })
 

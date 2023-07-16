@@ -1,13 +1,11 @@
-import { ChatCustomEmoji, ChatMessage, ChatMessagePart, ChatText, CustomEmojiVersion, Donation, StreamlabsSocketToken } from '@prisma/client'
+import { Donation, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import ChatStore, { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/server/stores/ChatStore'
-import { Singular } from '@rebel/shared/types'
+import { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/server/stores/ChatStore'
 import { single } from '@rebel/shared/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
-import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
   messageParts: ChatItemWithRelations['chatMessageParts']
@@ -76,6 +74,17 @@ export default class DonationStore extends ContextClass {
     })
   }
 
+  public async deleteDonation (donationId: number) {
+    const result = await this.db.donation.updateMany({
+      where: { id: donationId, deletedAt: null },
+      data: { deletedAt: new Date() }
+    })
+
+    if (result.count !== 1) {
+      throw new Error(`Could not delete donation ${donationId} because it doesn't exist.`)
+    }
+  }
+
   /** Returns donations that have been linked to any of the given exact users, orderd by time in ascending order. Does not take into account the user connections - exact userIds must be provided.
    * If `streamerId` is `null`, returns donations across all streamers.
    * Refunded donations are only included if `includeRefunded` is true. */
@@ -90,7 +99,8 @@ export default class DonationStore extends ContextClass {
     return await this.db.donation.findMany({
       where: {
         streamerId: streamerId ?? undefined,
-        isRefunded: includeRefunded ? undefined : false,
+        refundedAt: includeRefunded ? undefined : null,
+        deletedAt: null,
         OR: [
           { id: { in: donationIds } },
           { streamlabsUserId: { in: streamlabsUserIds }}
@@ -101,8 +111,8 @@ export default class DonationStore extends ContextClass {
   }
 
   public async getDonation (donationId: number): Promise<DonationWithUser> {
-    const donation = await this.db.donation.findUnique({
-      where: { id: donationId },
+    const donation = await this.db.donation.findFirst({
+      where: { id: donationId, deletedAt: null },
       rejectOnNotFound: true,
       include: { chatMessage: {
         // hehe
@@ -130,7 +140,8 @@ export default class DonationStore extends ContextClass {
       linkIdentifier: linkIdentifier,
       primaryUserId: donationLink?.linkedUserId ?? null,
       linkedAt: donationLink?.linkedAt ?? null,
-      isRefunded: donation.isRefunded
+      refundedAt: donation.refundedAt,
+      deletedAt: donation.deletedAt
     }
   }
 
@@ -141,7 +152,8 @@ export default class DonationStore extends ContextClass {
       where: {
         streamerId: streamerId,
         time: { gt: new Date(time) },
-        isRefunded: includeRefunded ? undefined : false
+        refundedAt: includeRefunded ? undefined : null,
+        deletedAt: null
       },
       orderBy: { time: 'asc' },
       include: { chatMessage: {
@@ -171,7 +183,8 @@ export default class DonationStore extends ContextClass {
         linkIdentifier: linkIdentifier,
         primaryUserId: donationLink?.linkedUserId ?? null,
         linkedAt: donationLink?.linkedAt ?? null,
-        isRefunded: donation.isRefunded
+        refundedAt: donation.refundedAt,
+        deletedAt: donation.deletedAt
       }
     })
   }
@@ -216,10 +229,14 @@ export default class DonationStore extends ContextClass {
   }
 
   public async refundDonation (donationId: number) {
-    await this.db.donation.update({
-      where: { id: donationId },
-      data: { isRefunded: true }
+    const result = await this.db.donation.updateMany({
+      where: { id: donationId, refundedAt: null, deletedAt: null },
+      data: { refundedAt: new Date() }
     })
+
+    if (result.count !== 1) {
+      throw new Error(`Could not refund donation ${donationId}. Either it doesn't exist or it has already been refunded.`)
+    }
   }
 
   /** Updates donation links such that donations originally linked to `fromUserId` now point to `toUserId`. */
@@ -295,7 +312,7 @@ export default class DonationStore extends ContextClass {
   /** Returns the donationId-linkIdentifier pairs. */
   private async getLinkIdentifiers (donationIds: number[]): Promise<[number, string][]> {
     const donations = await this.db.donation.findMany({
-      where: { id: { in: donationIds }}
+      where: { id: { in: donationIds } }
     })
 
     return donations.map(donation => {

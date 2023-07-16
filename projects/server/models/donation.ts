@@ -15,6 +15,7 @@ export function donationToPublicObject (donation: DonationWithMessage, linkIdent
     linkIdentifier: linkIdentifier,
     linkedUser: linkedUser ?? null,
     linkedAt: linkedAt?.getTime() ?? null,
-    isRefunded: donation.isRefunded
+    refundedAt: donation.refundedAt?.getTime() ?? null,
+    deletedAt: donation.deletedAt?.getTime() ?? null
   }
 }

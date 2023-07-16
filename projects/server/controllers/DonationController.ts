@@ -11,7 +11,7 @@ import { single } from '@rebel/shared/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, RefundDonationResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
+import { DeleteDonationResponse, GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, RefundDonationResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -35,6 +35,7 @@ export default class DonationController extends ControllerBase {
   }
 
   @GET
+  @Path('/')
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /')
     try {
@@ -47,8 +48,37 @@ export default class DonationController extends ControllerBase {
     }
   }
 
+  @DELETE
+  @Path('/')
+  public async deleteDonation (
+    @QueryParam('donationId') donationId: number
+  ): Promise<DeleteDonationResponse> {
+    const builder = this.registerResponseBuilder<DeleteDonationResponse>('DELETE /')
+
+    if (donationId == null) {
+      builder.failure(400, 'A donation ID must be provided.')
+    }
+
+    try {
+      const donation = await this.donationStore.getDonation(donationId)
+      if (donation.streamerId !== this.getStreamerId()) {
+        return builder.failure(404, 'Not found.')
+      }
+
+      await this.donationStore.deleteDonation(donationId)
+
+      if (donation.primaryUserId) {
+        await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation deleted', `Delete ${donationId}`)
+      }
+
+      return builder.success({ })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
   @POST
-  @Path('link')
+  @Path('/link')
   public async linkUser (
     @QueryParam('donationId') donationId: number,
     @QueryParam('userId') anyUserId: number
@@ -60,8 +90,14 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
+      const donation = await this.donationStore.getDonation(donationId)
+      if (donation.streamerId !== this.getStreamerId()) {
+        return builder.failure(404, 'Not found.')
+      }
+
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
       await this.donationService.linkUserToDonation(donationId, primaryUserId, this.getStreamerId())
+
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -74,18 +110,24 @@ export default class DonationController extends ControllerBase {
   }
 
   @DELETE
-  @Path('link')
+  @Path('/link')
   public async unlinkUser (
     @QueryParam('donationId') donationId: number
   ): Promise<LinkUserResponse> {
     const builder = this.registerResponseBuilder<UnlinkUserResponse>('DELETE /link')
 
     if (donationId == null) {
-      builder.failure('A donation ID must be provided.')
+      builder.failure(400, 'A donation ID must be provided.')
     }
 
     try {
+      const donation = await this.donationStore.getDonation(donationId)
+      if (donation.streamerId !== this.getStreamerId()) {
+        return builder.failure(404, 'Not found.')
+      }
+
       await this.donationService.unlinkUserFromDonation(donationId, this.getStreamerId())
+
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
@@ -104,21 +146,25 @@ export default class DonationController extends ControllerBase {
   ): Promise<RefundDonationResponse> {
     const builder = this.registerResponseBuilder<RefundDonationResponse>('POST /refund')
 
+    if (donationId == null) {
+      builder.failure(400, 'A donation ID must be provided.')
+    }
+
     try {
       const donation = await this.donationStore.getDonation(donationId)
       if (donation.streamerId !== this.getStreamerId()) {
         return builder.failure(404, 'Not found.')
-      } else if (donation.isRefunded) {
+      } else if (donation.refundedAt != null) {
         return builder.failure(400, 'Donation is already refunded.')
       }
 
       await this.donationStore.refundDonation(donationId)
 
       if (donation.primaryUserId) {
-        await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation refunded', 'Refund')
+        await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation refunded', `Refund ${donationId}`)
       }
 
-      const updatedDonation = await this.getPublicDonations([{ ...donation, isRefunded: true }]).then(single)
+      const updatedDonation = await this.getPublicDonations([{ ...donation, refundedAt: new Date() }]).then(single)
       return builder.success({ updatedDonation })
     } catch (e: any) {
       return builder.failure(e)
