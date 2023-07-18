@@ -1,4 +1,3 @@
-import { Donation } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
@@ -7,15 +6,30 @@ import { PartialChatMessage } from '@rebel/server/models/chat'
 import AccountService from '@rebel/server/services/AccountService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import LogService from '@rebel/server/services/LogService'
-import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
+import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
 import UserService from '@rebel/server/services/UserService'
-import AccountStore from '@rebel/server/stores/AccountStore'
 import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { first, group, single } from '@rebel/shared/util/arrays'
+import { group, single } from '@rebel/shared/util/arrays'
 import { addTime, maxTime } from '@rebel/shared/util/datetime'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
+import { UserRankAlreadyExistsError } from '@rebel/shared/util/error'
+import { CurrencyCode } from '@rebel/server/constants'
+
+export type NewDonation = {
+  createdAt: number
+  currency: CurrencyCode
+  amount: number
+  formattedAmount: string
+  name: string
+  message: string | null
+
+  // defined only for streamlabs donations
+  streamlabsDonationId: number | null
+
+  // optional, even for streamlabs donations
+  streamlabsUserId: number | null
+}
 
 type Deps = Dependencies<{
   donationStore: DonationStore
@@ -74,7 +88,8 @@ export default class DonationService extends ContextClass {
     }
   }
 
-  public async addDonation (donation: StreamlabsDonation, streamerId: number) {
+  /** Returns the new created donation's ID. */
+  public async addDonation (donation: NewDonation, streamerId: number): Promise<number> {
     let messageParts: PartialChatMessage[] = []
     if (donation.message != null && donation.message.trim().length > 0) {
       messageParts = await this.emojiService.applyCustomEmojisToDonation(donation.message, streamerId)
@@ -86,12 +101,12 @@ export default class DonationService extends ContextClass {
       currency: donation.currency,
       formattedAmount: donation.formattedAmount,
       name: donation.name,
-      streamlabsId: donation.donationId,
+      streamlabsId: donation.streamlabsDonationId,
       streamlabsUserId: donation.streamlabsUserId,
       time: new Date(donation.createdAt),
       messageParts: messageParts
     }
-    await this.donationStore.addDonation(data)
+    return await this.donationStore.addDonation(data)
   }
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.

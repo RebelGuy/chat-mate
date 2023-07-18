@@ -770,7 +770,7 @@ model UserRank {
 model Donation {
   id Int @id @default(autoincrement())
 
-  streamlabsId     Int // unique
+  streamlabsId     Int? // unique
   streamlabsUserId Int?
   time             DateTime
   currency         String

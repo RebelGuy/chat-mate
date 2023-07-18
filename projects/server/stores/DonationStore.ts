@@ -18,8 +18,8 @@ export type DonationWithUser = DonationWithMessage & {
 }
 
 export type DonationCreateArgs = {
-  streamlabsId: number
-  streamlabsUserId: number | null
+  streamlabsId: number | null // null if not a streamlabs donation
+  streamlabsUserId: number | null // null if not a streamlabs donation, or if streamlabs did not report the user
   streamerId: number
   time: Date
   currency: string
@@ -46,8 +46,9 @@ export default class DonationStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async addDonation (data: DonationCreateArgs): Promise<void> {
-    await this.db.$transaction(async db => {
+  /** Returns the created donation's ID. */
+  public async addDonation (data: DonationCreateArgs): Promise<number> {
+    const id = await this.db.$transaction(async db => {
       const donation = await db.donation.create({ data: {
         streamlabsId: data.streamlabsId,
         streamlabsUserId: data.streamlabsUserId ?? null,
@@ -71,7 +72,11 @@ export default class DonationStore extends ContextClass {
           db.chatMessagePart.create({ data: createChatMessagePart(part, i, chatMessage.id) })
         ))
       }
+
+      return donation.id
     })
+
+    return id
   }
 
   public async deleteDonation (donationId: number) {

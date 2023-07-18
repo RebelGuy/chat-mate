@@ -1,9 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import DonationService from '@rebel/server/services/DonationService'
+import DonationService, { NewDonation } from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
-import DonationStore from '@rebel/server/stores/DonationStore'
-import { eps } from '@rebel/shared/util/math'
 
 type Deps = Dependencies<{
   streamlabsProxyService: StreamlabsProxyService
@@ -32,7 +30,18 @@ export default class DonationFetchService extends ContextClass {
     this.streamlabsProxyService.setDonationCallback(this.onDonation)
   }
 
-  private onDonation = async (donation: StreamlabsDonation, streamerId: number) => {
-    await this.donationService.addDonation(donation, streamerId)
+  private onDonation = async (streamlabsDonation: StreamlabsDonation, streamerId: number) => {
+    const newDonation: NewDonation = {
+      amount: streamlabsDonation.amount,
+      createdAt: streamlabsDonation.createdAt,
+      currency: streamlabsDonation.currency,
+      formattedAmount: streamlabsDonation.formattedAmount,
+      message: streamlabsDonation.message,
+      name: streamlabsDonation.name,
+      streamlabsDonationId: streamlabsDonation.donationId,
+      streamlabsUserId: streamlabsDonation.streamlabsUserId
+    }
+
+    await this.donationService.addDonation(newDonation, streamerId)
   }
 }

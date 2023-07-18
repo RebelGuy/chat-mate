@@ -66,12 +66,22 @@ export default () => {
         }}
       }})
 
-      await donationStore.addDonation(donationData)
+      const result = await donationStore.addDonation(donationData)
 
+      expect(result).toBe(1)
       await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCustomEmoji, db.donation).toEqual([1, 3, 3, 1, 1])
     })
 
     test('Adds the donation without a message to the database', async () => {
+      await db.donation.create({ data: {
+        amount: 1,
+        currency: 'AUD',
+        formattedAmount: '1',
+        name: 'Test',
+        time: new Date(),
+        streamerId: streamer1
+      }})
+
       const donationData: DonationCreateArgs = {
         streamerId: streamer1,
         amount: 1.45,
@@ -84,9 +94,10 @@ export default () => {
         messageParts: []
       }
 
-      await donationStore.addDonation(donationData)
+      const result = await donationStore.addDonation(donationData)
 
-      await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCustomEmoji, db.donation).toEqual([0, 0, 0, 0, 1])
+      expect(result).toBe(2)
+      await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatText, db.chatCustomEmoji, db.donation).toEqual([0, 0, 0, 0, 2])
     })
   })
 

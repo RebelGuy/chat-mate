@@ -300,6 +300,21 @@ Gets all donations, including refunded donations.
 Returns data with the following properties:
 - `donations` (`PublicDonation[]`): The list of all donations.
 
+### `POST /`
+Manually create a new donation.
+
+Request data (body):
+- `amount` (`number`): *Required.* The username of the account to log into.
+- `currencyCode` (`string`): *Required.* The currency code for the donation. Must be a valid code returned by the [`GET /currencies` endpoint](#get-currencies).
+- `name` (`string`): *Required.* The display name of the donator.
+- `message` (`string`): *Optional.* The raw donation message.
+
+Returns data with the following properties:
+- `newDonation` (`PublicDonation`): The newly created donation.
+
+Can return the following errors:
+- `400`: When the request data is not sent or formatted incorrectly.
+
 ### `DELETE /`
 Deletes a donation. Deleted donations are not returned by any other donation endpoints.
 
@@ -311,6 +326,12 @@ Returns an empty body.
 Can return the following errors:
 - `400`: When the request data is not sent.
 - `404`: When no donation was found for the given ID.
+
+### `GET /currencies`
+Gets the list of currencies that can be used when creating a new donation manually.
+
+Returns data with the following properties:
+- `currencies` (`PublicCurrency[]`): The list of supported currencies.
 
 ### `POST /link`
 Links a user to a donation.

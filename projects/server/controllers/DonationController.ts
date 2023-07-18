@@ -3,7 +3,7 @@ import { PublicDonation } from '@rebel/api-models/public/donation/PublicDonation
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { donationToPublicObject } from '@rebel/server/models/donation'
 import { userDataToPublicUser } from '@rebel/server/models/user'
-import DonationService from '@rebel/server/services/DonationService'
+import DonationService, { NewDonation } from '@rebel/server/services/DonationService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import { nonNull, unique } from '@rebel/shared/util/arrays'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
@@ -11,7 +11,10 @@ import { single } from '@rebel/shared/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { DeleteDonationResponse, GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, RefundDonationResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
+import { CreateDonationRequest, CreateDonationResponse, DeleteDonationResponse, GetCurrenciesResponse, GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, RefundDonationResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
+import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { CURRENCIES, CurrencyCode } from '@rebel/server/constants'
+import { mapOverKeys } from '@rebel/shared/util/objects'
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -48,6 +51,42 @@ export default class DonationController extends ControllerBase {
     }
   }
 
+  @POST
+  @Path('/')
+  public async createDonation (request: CreateDonationRequest): Promise<CreateDonationResponse> {
+    const builder = this.registerResponseBuilder<CreateDonationResponse>('POST /')
+
+    if (request == null || request.amount == null || request.amount <= 0 || isNullOrEmpty(request.currencyCode) || isNullOrEmpty(request.name)) {
+      return builder.failure(400, 'Invalid or missing data.')
+    }
+
+    try {
+      const currencyCodes = Object.keys(CURRENCIES)
+      const requestCurrency = request.currencyCode.toUpperCase().trim()
+      if (!currencyCodes.includes(requestCurrency)) {
+        return builder.failure(400, `Invalid currency code ${requestCurrency}. Must be one of the following: ${currencyCodes.join(', ')}.`)
+      }
+
+      const formattedAmount = request.amount.toLocaleString('en-US', { style: 'currency', currency: requestCurrency, minimumFractionDigits: 2 })
+
+      const donationData: NewDonation = {
+        createdAt: Date.now(),
+        amount: request.amount,
+        currency: requestCurrency as CurrencyCode,
+        formattedAmount: formattedAmount,
+        message: request.message,
+        name: request.name,
+        streamlabsDonationId: null,
+        streamlabsUserId: null
+      }
+
+      const newId = await this.donationService.addDonation(donationData, this.getStreamerId())
+      return builder.success({ newDonation: await this.getPublicDonation(newId) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
   @DELETE
   @Path('/')
   public async deleteDonation (
@@ -56,7 +95,7 @@ export default class DonationController extends ControllerBase {
     const builder = this.registerResponseBuilder<DeleteDonationResponse>('DELETE /')
 
     if (donationId == null) {
-      builder.failure(400, 'A donation ID must be provided.')
+      return builder.failure(400, 'A donation ID must be provided.')
     }
 
     try {
@@ -77,6 +116,19 @@ export default class DonationController extends ControllerBase {
     }
   }
 
+  @GET
+  @Path('/currencies')
+  public getCurrencyCodes (): GetCurrenciesResponse {
+    const builder = this.registerResponseBuilder<GetCurrenciesResponse>('GET /currencies')
+
+    try {
+      const currencies = mapOverKeys(CURRENCIES, (key, value) => ({ code: key, description: value }))
+      return builder.success({ currencies })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
   @POST
   @Path('/link')
   public async linkUser (
@@ -86,7 +138,7 @@ export default class DonationController extends ControllerBase {
     const builder = this.registerResponseBuilder<LinkUserResponse>('POST /link')
 
     if (donationId == null || anyUserId == null) {
-      builder.failure('A donation ID and user ID must be provided.')
+      return builder.failure('A donation ID and user ID must be provided.')
     }
 
     try {
@@ -117,7 +169,7 @@ export default class DonationController extends ControllerBase {
     const builder = this.registerResponseBuilder<UnlinkUserResponse>('DELETE /link')
 
     if (donationId == null) {
-      builder.failure(400, 'A donation ID must be provided.')
+      return builder.failure(400, 'A donation ID must be provided.')
     }
 
     try {
@@ -147,7 +199,7 @@ export default class DonationController extends ControllerBase {
     const builder = this.registerResponseBuilder<RefundDonationResponse>('POST /refund')
 
     if (donationId == null) {
-      builder.failure(400, 'A donation ID must be provided.')
+      return builder.failure(400, 'A donation ID must be provided.')
     }
 
     try {
