@@ -56,7 +56,7 @@ export default class DonationController extends ControllerBase {
   public async createDonation (request: CreateDonationRequest): Promise<CreateDonationResponse> {
     const builder = this.registerResponseBuilder<CreateDonationResponse>('POST /')
 
-    if (request == null || request.amount == null || request.amount <= 0 || isNullOrEmpty(request.currencyCode) || isNullOrEmpty(request.name)) {
+    if (request == null || request.amount == null || request.amount <= 0 || request.amount >= 100_000 || isNullOrEmpty(request.currencyCode) || isNullOrEmpty(request.name)) {
       return builder.failure(400, 'Invalid or missing data.')
     }
 
@@ -74,8 +74,8 @@ export default class DonationController extends ControllerBase {
         amount: request.amount,
         currency: requestCurrency as CurrencyCode,
         formattedAmount: formattedAmount,
-        message: request.message,
-        name: request.name,
+        message: isNullOrEmpty(request.message) ? null : request.message.trim(),
+        name: request.name.trim(),
         streamlabsDonationId: null,
         streamlabsUserId: null
       }
