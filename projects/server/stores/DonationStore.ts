@@ -95,7 +95,10 @@ export default class DonationStore extends ContextClass {
    * Refunded donations are only included if `includeRefunded` is true. */
   public async getDonationsByUserIds (streamerId: number | null, exactUserIds: number[], includeRefunded: boolean): Promise<Donation[]> {
     const donationLinks = await this.db.donationLink.findMany({
-      where: { linkedUserId: { in: exactUserIds }}
+      where: {
+        streamerId: streamerId ?? undefined,
+        linkedUserId: { in: exactUserIds }
+      }
     })
     const linkIdentifiers = donationLinks.map(u => u.linkIdentifier)
     const donationIds = linkIdentifiers.filter(id => id.startsWith(INTERNAL_USER_PREFIX)).map(id => Number(id.substring(INTERNAL_USER_PREFIX.length)))
@@ -127,7 +130,9 @@ export default class DonationStore extends ContextClass {
 
     const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
     const donationLink = await this.db.donationLink.findUnique({
-      where: { linkIdentifier: linkIdentifier },
+      where: {
+        linkIdentifier_streamerId: { linkIdentifier: linkIdentifier, streamerId: streamerId }
+      },
       rejectOnNotFound: false
     })
 
@@ -168,7 +173,10 @@ export default class DonationStore extends ContextClass {
 
     const linkIdentifiers = await this.getLinkIdentifiers(streamerId, donations.map(d => d.id))
     const donationLinks = await this.db.donationLink.findMany({
-      where: { linkIdentifier: { in: linkIdentifiers.map(ids => ids[1]) }}
+      where: {
+        streamerId: streamerId,
+        linkIdentifier: { in: linkIdentifiers.map(ids => ids[1]) }
+      }
     })
 
     return donations.map(donation => {
@@ -221,12 +229,13 @@ export default class DonationStore extends ContextClass {
   public async linkUserToDonation (streamerId: number, donationId: number, primaryUserId: number, linkedAt: Date): Promise<void> {
     const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
 
-    const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
+    const existingLink = await this.db.donationLink.findFirst({where: { streamerId, linkIdentifier }})
     if (existingLink != null) {
       throw new DonationUserLinkAlreadyExistsError()
     }
 
     await this.db.donationLink.create({ data: {
+      streamerId: streamerId,
       linkIdentifier: linkIdentifier,
       linkedUserId: primaryUserId,
       linkedAt: linkedAt
@@ -299,7 +308,9 @@ export default class DonationStore extends ContextClass {
   public async unlinkUserFromDonation (streamerId: number, donationId: number): Promise<number> {
     const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
 
-    const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
+    const existingLink = await this.db.donationLink.findFirst({
+      where: { streamerId, linkIdentifier }
+    })
     if (existingLink == null) {
       throw new DonationUserLinkNotFoundError()
     }

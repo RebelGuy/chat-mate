@@ -228,6 +228,7 @@ model Streamer {
   chatMessages               ChatMessage[]
   streamerYoutubeChannelLink StreamerYoutubeChannelLink?
   streamerTwitchChannelLink  StreamerTwitchChannelLink?
+  donationLinks              DonationLink[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -807,9 +808,12 @@ model StreamlabsSocketToken {
 model DonationLink {
   id Int @id @default(autoincrement())
 
-  linkIdentifier String // unique
+  linkIdentifier String // unique with `streamerId`
 
   linkedAt DateTime
+
+  streamerId Int // unique with `linkIdentifier`
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "donation_link_streamerId_fkey")
 
   /// The user to which the link identifier is currently linked to
   linkedUserId Int
@@ -819,9 +823,8 @@ model DonationLink {
   originalLinkedUserId Int?
   originalLinkedUser   ChatUser? @relation(name: "donation_link_originalLinkedUser", fields: [originalLinkedUserId], references: [id], map: "donation_link_originalLinkedUserId_fkey")
 
-  @@unique([linkIdentifier], map: "donation_link_linkIdentifier_key")
-  // one-to-one mapping
-  @@unique([linkIdentifier, linkedUserId], map: "donation_link_linkIdentifier_linkedUserId_key")
+  @@unique([linkIdentifier, streamerId], map: "donation_link_linkIdentifier_streamerId_key")
+  @@index([streamerId], map: "donation_link_streamerId_fkey")
   @@index([originalLinkedUserId], map: "donation_link_originalLinkedUserId_fkey")
   @@map("donation_link")
 }
