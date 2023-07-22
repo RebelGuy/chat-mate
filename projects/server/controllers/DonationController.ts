@@ -15,6 +15,7 @@ import { CreateDonationRequest, CreateDonationResponse, DeleteDonationResponse, 
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { CURRENCIES, CurrencyCode } from '@rebel/server/constants'
 import { mapOverKeys } from '@rebel/shared/util/objects'
+import { isPrismaNotFoundError } from '@rebel/server/prismaUtil'
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -99,12 +100,8 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const donation = await this.donationStore.getDonation(donationId)
-      if (donation.streamerId !== this.getStreamerId()) {
-        return builder.failure(404, 'Not found.')
-      }
-
-      await this.donationStore.deleteDonation(donationId)
+      const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
+      await this.donationStore.deleteDonation(this.getStreamerId(), donationId)
 
       if (donation.primaryUserId) {
         await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation deleted', `Delete ${donationId}`)
@@ -112,7 +109,11 @@ export default class DonationController extends ControllerBase {
 
       return builder.success({ })
     } catch (e: any) {
-      return builder.failure(e)
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 
@@ -142,19 +143,16 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const donation = await this.donationStore.getDonation(donationId)
-      if (donation.streamerId !== this.getStreamerId()) {
-        return builder.failure(404, 'Not found.')
-      }
-
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
-      await this.donationService.linkUserToDonation(donationId, primaryUserId, this.getStreamerId())
+      await this.donationService.linkUserToDonation(this.getStreamerId(), donationId, primaryUserId)
 
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (e instanceof DonationUserLinkAlreadyExistsError) {
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else if (e instanceof DonationUserLinkAlreadyExistsError) {
         return builder.failure(400, e)
       }
       return builder.failure(e)
@@ -173,18 +171,15 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const donation = await this.donationStore.getDonation(donationId)
-      if (donation.streamerId !== this.getStreamerId()) {
-        return builder.failure(404, 'Not found.')
-      }
-
-      await this.donationService.unlinkUserFromDonation(donationId, this.getStreamerId())
+      await this.donationService.unlinkUserFromDonation(this.getStreamerId(), donationId)
 
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (e instanceof DonationUserLinkNotFoundError) {
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else if (e instanceof DonationUserLinkNotFoundError) {
         return builder.failure(404, e)
       }
       return builder.failure(e)
@@ -203,14 +198,12 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const donation = await this.donationStore.getDonation(donationId)
-      if (donation.streamerId !== this.getStreamerId()) {
-        return builder.failure(404, 'Not found.')
-      } else if (donation.refundedAt != null) {
+      const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
+      if (donation.refundedAt != null) {
         return builder.failure(400, 'Donation is already refunded.')
       }
 
-      await this.donationStore.refundDonation(donationId)
+      await this.donationStore.refundDonation(this.getStreamerId(), donationId)
 
       if (donation.primaryUserId) {
         await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation refunded', `Refund ${donationId}`)
@@ -219,7 +212,11 @@ export default class DonationController extends ControllerBase {
       const updatedDonation = await this.getPublicDonations([{ ...donation, refundedAt: new Date() }]).then(single)
       return builder.success({ updatedDonation })
     } catch (e: any) {
-      return builder.failure(e)
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 
@@ -250,7 +247,7 @@ export default class DonationController extends ControllerBase {
   }
 
   private async getPublicDonation (donationId: number): Promise<PublicDonation> {
-    const donation = await this.donationStore.getDonation(donationId)
+    const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
     return single(await this.getPublicDonations([donation]))
   }
 

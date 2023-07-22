@@ -5,7 +5,7 @@ import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/server/stores/ChatStore'
 import { single } from '@rebel/shared/util/arrays'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
+import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, NotFoundError } from '@rebel/shared/util/error'
 
 export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
   messageParts: ChatItemWithRelations['chatMessageParts']
@@ -79,9 +79,9 @@ export default class DonationStore extends ContextClass {
     return id
   }
 
-  public async deleteDonation (donationId: number) {
+  public async deleteDonation (streamerId: number, donationId: number) {
     const result = await this.db.donation.updateMany({
-      where: { id: donationId, deletedAt: null },
+      where: { id: donationId, deletedAt: null, streamerId: streamerId },
       data: { deletedAt: new Date() }
     })
 
@@ -115,9 +115,9 @@ export default class DonationStore extends ContextClass {
     })
   }
 
-  public async getDonation (donationId: number): Promise<DonationWithUser> {
+  public async getDonation (streamerId: number, donationId: number): Promise<DonationWithUser> {
     const donation = await this.db.donation.findFirst({
-      where: { id: donationId, deletedAt: null },
+      where: { id: donationId, deletedAt: null, streamerId: streamerId },
       rejectOnNotFound: true,
       include: { chatMessage: {
         // hehe
@@ -125,7 +125,7 @@ export default class DonationStore extends ContextClass {
       }}
     })
 
-    const linkIdentifier = await this.getLinkIdentifier(donationId)
+    const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
     const donationLink = await this.db.donationLink.findUnique({
       where: { linkIdentifier: linkIdentifier },
       rejectOnNotFound: false
@@ -166,7 +166,7 @@ export default class DonationStore extends ContextClass {
       }}
     })
 
-    const linkIdentifiers = await this.getLinkIdentifiers(donations.map(d => d.id))
+    const linkIdentifiers = await this.getLinkIdentifiers(streamerId, donations.map(d => d.id))
     const donationLinks = await this.db.donationLink.findMany({
       where: { linkIdentifier: { in: linkIdentifiers.map(ids => ids[1]) }}
     })
@@ -218,8 +218,8 @@ export default class DonationStore extends ContextClass {
 
   /** Links the user to the donation. It is the responsibility of the caller to ensure the correct primary user is used.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, primaryUserId: number, linkedAt: Date): Promise<void> {
-    const linkIdentifier = await this.getLinkIdentifier(donationId)
+  public async linkUserToDonation (streamerId: number, donationId: number, primaryUserId: number, linkedAt: Date): Promise<void> {
+    const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
 
     const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
     if (existingLink != null) {
@@ -233,9 +233,9 @@ export default class DonationStore extends ContextClass {
     }})
   }
 
-  public async refundDonation (donationId: number) {
+  public async refundDonation (streamerId: number, donationId: number) {
     const result = await this.db.donation.updateMany({
-      where: { id: donationId, refundedAt: null, deletedAt: null },
+      where: { id: donationId, refundedAt: null, deletedAt: null, streamerId: streamerId },
       data: { refundedAt: new Date() }
     })
 
@@ -296,8 +296,8 @@ export default class DonationStore extends ContextClass {
 
   /** Returns the primaryUserId that was unlinked.
    * @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
-  public async unlinkUserFromDonation (donationId: number): Promise<number> {
-    const linkIdentifier = await this.getLinkIdentifier(donationId)
+  public async unlinkUserFromDonation (streamerId: number, donationId: number): Promise<number> {
+    const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
 
     const existingLink = await this.db.donationLink.findFirst({ where: { linkIdentifier }})
     if (existingLink == null) {
@@ -310,15 +310,25 @@ export default class DonationStore extends ContextClass {
     return existingLink.linkedUserId
   }
 
-  private async getLinkIdentifier (donationId: number): Promise<string> {
-    return single(await this.getLinkIdentifiers([donationId]))[1]
+  private async getLinkIdentifier (streamerId: number, donationId: number): Promise<string> {
+    return single(await this.getLinkIdentifiers(streamerId, [donationId]))[1]
   }
 
   /** Returns the donationId-linkIdentifier pairs. */
-  private async getLinkIdentifiers (donationIds: number[]): Promise<[number, string][]> {
+  private async getLinkIdentifiers (streamerId: number, donationIds: number[]): Promise<[number, string][]> {
     const donations = await this.db.donation.findMany({
-      where: { id: { in: donationIds } }
+      where: {
+        streamerId: streamerId,
+        deletedAt: null,
+        id: { in: donationIds }
+      }
     })
+
+    // this doesn't really come up in practice for `donations.length` > 1 because any functions that
+    // provide an array of ids have already filtered by non-deleted ids for that streamer.
+    if (donationIds.length !== donations.length) {
+      throw new NotFoundError('One or more donations could not be found.')
+    }
 
     return donations.map(donation => {
       return [donation.id, donation.streamlabsUserId == null ? `${INTERNAL_USER_PREFIX}${donation.id}` : `${EXTERNAL_USER_PREFIX}${donation.streamlabsUserId}`]

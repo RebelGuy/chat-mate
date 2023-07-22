@@ -111,13 +111,13 @@ export default class DonationService extends ContextClass {
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
-  public async linkUserToDonation (donationId: number, primaryUserId: number, streamerId: number): Promise<void> {
+  public async linkUserToDonation (streamerId: number, donationId: number, primaryUserId: number): Promise<void> {
     if (await this.userService.isUserBusy(primaryUserId)) {
       throw new Error('Cannot link the user at this time. Please try again later.')
     }
 
     const time = this.dateTimeHelpers.now()
-    await this.donationStore.linkUserToDonation(donationId, primaryUserId, time)
+    await this.donationStore.linkUserToDonation(streamerId, donationId, primaryUserId, time)
 
     const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId], false)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
@@ -294,13 +294,13 @@ export default class DonationService extends ContextClass {
 
   /** Unlinks the user currently linked to the given donation, and removes all donation ranks that the primary user is no longer eligible for.
   /* @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
-  public async unlinkUserFromDonation (donationId: number, streamerId: number): Promise<void> {
-    const donation = await this.donationStore.getDonation(donationId)
+  public async unlinkUserFromDonation (streamerId: number, donationId: number): Promise<void> {
+    const donation = await this.donationStore.getDonation(streamerId, donationId)
     if (donation.primaryUserId != null && await this.userService.isUserBusy(donation.primaryUserId)) {
       throw new Error('Cannot unlink the user at this time. Please try again later.')
     }
 
-    const primaryUserId = await this.donationStore.unlinkUserFromDonation(donationId)
+    const primaryUserId = await this.donationStore.unlinkUserFromDonation(streamerId, donationId)
 
     const allDonations = await this.donationStore.getDonationsByUserIds(streamerId, [primaryUserId], false)
     const donationAmounts = allDonations.map(d => [d.time, d.amount] as DonationAmount)
