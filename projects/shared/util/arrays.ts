@@ -380,3 +380,13 @@ export function symmetricDifference<T> (first: T[], second: T[], comparator?: (a
 export function filterTypes<T extends { type: string }, Types extends T['type'][]> (items: T[], ...types: Types): Extract<T, { type: Types[number] }>[] {
   return items.filter(x => types.includes(x.type)) as any // the any-cast is exactly why I decided to write this function
 }
+
+/** Create an object from the given array, where each entry is transformed into a key-value pair. Does not check for duplicate keys. */
+export function toObject<K extends string | number | symbol, V, T> (items: T[], mapper: (item: T) => [key: K, value: V]): Record<K, V> {
+  let obj = {} as Record<K, V>
+  items.forEach(item => {
+    const [key, value] = mapper(item)
+    obj[key] = value
+  })
+  return obj
+}

@@ -4,14 +4,19 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { singleOrNull, unique } from '@rebel/shared/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
-import { randomString } from '@rebel/shared/util/random'
+import { InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { isOneOf } from '@rebel/shared/util/validation'
+import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import UserService from '@rebel/server/services/UserService'
 
 /** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
 export type RegularRank = Extract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
 
 const rankNames = Object.keys(RankName) as RankName[] // RankName the const vs RankName the type. not confusing at all
+
+export type CustomisableRank = Extract<RankName, 'donator' | 'supporter' | 'member'>
+
+const customisableRankNames: CustomisableRank[] = ['donator', 'supporter', 'member']
 
 export type CombinedMergeResult = {
   individualResults: MergeResult[]
@@ -52,6 +57,8 @@ export type TwitchRankResult = { twitchChannelId: number, error: string | null }
 type Deps = Dependencies<{
   rankStore: RankStore
   logService: LogService
+  rankHelpers: RankHelpers
+  userService: UserService
 }>
 
 export default class RankService extends ContextClass {
@@ -59,11 +66,31 @@ export default class RankService extends ContextClass {
 
   private readonly rankStore: RankStore
   private readonly logService: LogService
+  private readonly rankHelpers: RankHelpers
+  private readonly userService: UserService
 
   constructor (deps: Deps) {
     super()
     this.rankStore = deps.resolve('rankStore')
     this.logService = deps.resolve('logService')
+    this.rankHelpers = deps.resolve('rankHelpers')
+    this.userService = deps.resolve('userService')
+  }
+
+  /** @throws {@link InvalidCustomRankNameError}: When the given custom rank name is invalid.
+   *  @throws {@link InvalidCustomRankError}: When the given custom rank is not customisable. */
+  public async addOrUpdateCustomRankName (streamerId: number, primaryUserId: number, rankName: CustomisableRank, name: string, isActive: boolean): Promise<void> {
+    if (await this.userService.isUserBusy(primaryUserId)) {
+      throw new Error('Cannot set or update the rank name at this time. Please try again later.')
+    }
+
+    name = this.rankHelpers.validateCustomRankName(name)
+
+    if (!customisableRankNames.includes(rankName)) {
+      throw new InvalidCustomRankError(rankName)
+    }
+
+    await this.rankStore.addOrUpdateCustomRankName(streamerId, primaryUserId, rankName, name, isActive)
   }
 
   public async getAccessibleRanks (): Promise<Rank[]> {
@@ -72,6 +99,12 @@ export default class RankService extends ContextClass {
     // todo: CHAT-499 use logged-in user details to determine accessible ranks.
     // also create rank hierarchy, so that ranks have only access to ranks on an equal/lower level
     return ranks.filter(rank => isOneOf<RegularRank[]>(rank.name, 'famous', 'donator', 'member', 'supporter') || rank.group === 'punishment' || rank.name === 'mod')
+  }
+
+  /** Returns the list of ranks whose name can be customised. */
+  public async getCustomisableRanks (): Promise<Rank[]> {
+    const ranks = await this.rankStore.getRanks()
+    return ranks.filter(rank => customisableRankNames.includes(rank.name as CustomisableRank))
   }
 
   /** Revokes the ranks of the first user if specified, and re-adds them to the second user.

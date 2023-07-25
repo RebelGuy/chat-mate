@@ -44,6 +44,18 @@ export class UserRankRequiresStreamerError extends CustomError {
   }
 }
 
+export class InvalidCustomRankError extends CustomError {
+  constructor (invalidRankName: string){
+    super(InvalidCustomRankError.prototype, `Invalid rank: ${invalidRankName}`)
+  }
+}
+
+export class InvalidCustomRankNameError extends CustomError {
+  constructor (msg: string){
+    super(InvalidCustomRankNameError.prototype, `Invalid rank name: ${msg}`)
+  }
+}
+
 export class ApiResponseError extends CustomError {
   constructor (status: number, errorType?: string, errorDescription?: string) {
     super(ApiResponseError.prototype, `Request failed with code ${status}: ${errorType ?? 'Unknown error'}. ${errorDescription ?? 'No further details available'}`)

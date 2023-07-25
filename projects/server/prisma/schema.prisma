@@ -111,6 +111,7 @@ model ChatUser {
   registeredUser                 RegisteredUser?
   linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
   linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
+  customRankNames                CustomRankName[]
 
   // only used if this is an aggregate user
   linkTokensAggregateUser LinkToken[] @relation("link_token_aggregateChatUser")
@@ -229,6 +230,7 @@ model Streamer {
   streamerYoutubeChannelLink StreamerYoutubeChannelLink?
   streamerTwitchChannelLink  StreamerTwitchChannelLink?
   donationLinks              DonationLink[]
+  customRankNames            CustomRankName[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -699,6 +701,7 @@ model Rank {
 
   userRanks                UserRank[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
+  customRankNames          CustomRankName[]
 
   @@unique([name], map: "rank_name_key")
   @@map("rank")
@@ -766,6 +769,28 @@ model UserRank {
   @@index([expirationTime], map: "user_rank_expirationTime_key")
   @@index([revokedTime], map: "user_rank_revokedTime_key")
   @@map("user_rank")
+}
+
+model CustomRankName {
+  id Int @id @default(autoincrement())
+
+  name     String  @db.VarChar(8)
+  isActive Boolean
+
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "custom_rank_name_userId_fkey")
+
+  rankId Int
+  rank   Rank @relation(fields: [rankId], references: [id], map: "custom_rank_name_rankId_fkey")
+
+  /// the streamer context in which to show this custom rank name (if null, applies to global ranks).
+  streamerId Int?
+  streamer   Streamer? @relation(fields: [streamerId], references: [id], map: "custom_rank_name_streamerId_fkey")
+
+  @@index([userId], map: "custom_rank_name_userId_fkey")
+  @@index([rankId], map: "custom_rank_name_rankId_fkey")
+  @@index([streamerId], map: "custom_rank_name_streamerId_fkey")
+  @@map("custom_rank_name")
 }
 
 model Donation {

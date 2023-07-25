@@ -51,14 +51,16 @@ export default class ExperienceController extends ControllerBase {
   public async getLeaderboard (): Promise<GetLeaderboardResponse> {
     const builder = this.registerResponseBuilder<GetLeaderboardResponse>('GET /leaderboard')
     try {
-      const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
+      const streamerId = this.getStreamerId()
+      const leaderboard = await this.experienceService.getLeaderboard(streamerId)
       const primaryUserIds = leaderboard.map(r => r.primaryUserId)
-      const [activeRanks, registeredUsers, firstSeen] = await Promise.all([
-        this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
+      const [activeRanks, registeredUsers, firstSeen, customRankNames] = await Promise.all([
+        this.rankStore.getUserRanks(primaryUserIds, streamerId),
         this.accountStore.getRegisteredUsers(primaryUserIds),
-        this.chatStore.getTimeOfFirstChat(this.getStreamerId(), primaryUserIds)
+        this.chatStore.getTimeOfFirstChat(streamerId, primaryUserIds),
+        this.rankStore.getCustomRankNamesForUsers(streamerId, primaryUserIds)
       ])
-      const publicLeaderboard = zipOnStrictMany(leaderboard, 'primaryUserId', activeRanks, registeredUsers, firstSeen)
+      const publicLeaderboard = zipOnStrictMany(leaderboard, 'primaryUserId', activeRanks, registeredUsers, firstSeen, customRankNames)
         .map(data => rankedEntryToPublic(data))
       return builder.success({ rankedUsers: publicLeaderboard })
     } catch (e: any) {
@@ -77,14 +79,15 @@ export default class ExperienceController extends ControllerBase {
     }
 
     try {
+      const streamerId = this.getStreamerId()
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
 
-      let userChannels = await this.channelService.getActiveUserChannels(this.getStreamerId(), [primaryUserId])
+      let userChannels = await this.channelService.getActiveUserChannels(streamerId, [primaryUserId])
       if (userChannels.length === 0) {
         return builder.failure(404, `Could not find an active channel for primary user ${primaryUserId}.`)
       }
 
-      const leaderboard = await this.experienceService.getLeaderboard(this.getStreamerId())
+      const leaderboard = await this.experienceService.getLeaderboard(streamerId)
       const match = leaderboard.find(l => l.primaryUserId === primaryUserId)
       if (match == null) {
         return builder.failure(404, `Could not find primary user ${primaryUserId} on the streamer's leaderboard.`)
@@ -104,12 +107,13 @@ export default class ExperienceController extends ControllerBase {
       const prunedLeaderboard = leaderboard.filter(l => l.rank >= lowerRank && l.rank <= upperRank)
 
       const primaryUserIds = prunedLeaderboard.map(entry => entry.primaryUserId)
-      const [activeRanks, registeredUsers, firstSeen] = await Promise.all([
-        this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
+      const [activeRanks, registeredUsers, firstSeen, customRankNames] = await Promise.all([
+        this.rankStore.getUserRanks(primaryUserIds, streamerId),
         this.accountStore.getRegisteredUsers(primaryUserIds),
-        this.chatStore.getTimeOfFirstChat(this.getStreamerId(), primaryUserIds)
+        this.chatStore.getTimeOfFirstChat(streamerId, primaryUserIds),
+        this.rankStore.getCustomRankNamesForUsers(streamerId, primaryUserIds)
       ])
-      const publicLeaderboard = zipOnStrictMany(prunedLeaderboard, 'primaryUserId', activeRanks, registeredUsers, firstSeen).map(rankedEntryToPublic)
+      const publicLeaderboard = zipOnStrictMany(prunedLeaderboard, 'primaryUserId', activeRanks, registeredUsers, firstSeen, customRankNames).map(rankedEntryToPublic)
 
       return builder.success({
         relevantIndex: prunedLeaderboard.findIndex(l => l === match),

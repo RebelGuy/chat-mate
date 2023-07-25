@@ -47,7 +47,7 @@ export default class ChatControllerFake extends ControllerBase implements IChatC
         level: asGte(newLevel, 0),
         levelProgress: asLt(asGte(Math.random(), 0), 1)
       }
-      const ranks = single(await this.rankStore.getUserRanks([item.userId!], this.getStreamerId())).ranks.map(userRankToPublicObject)
+      const ranks = single(await this.rankStore.getUserRanks([item.userId!], this.getStreamerId())).ranks.map(r => userRankToPublicObject(r, null))
       const registeredUser = item.user?.aggregateChatUserId == null ? null : cast<RegisteredUser>({ aggregateChatUserId: item.user!.aggregateChatUserId!, username: 'test username' })
       const firstSeen = addTime(new Date(), 'hours', -Math.random() * 24).getTime()
       items.push(chatAndLevelToPublicChatItem(item, level, ranks, registeredUser, firstSeen))

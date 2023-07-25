@@ -609,7 +609,6 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
-
 ### `GET /accessible`
 Gets the ranks accessible to the current user. At the moment, it returns all Regular ranks and Punishment ranks.
 
@@ -676,6 +675,35 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
+### `GET /customise`
+Gets the list of ranks whose name can be customised by users.
+
+Returns data with the following properties:
+- `customisableRanks` (`PublicRank[]`): The list of ranks whose name can be customised.
+
+### `POST /customise`
+Adds a custom rank name or updates an existing one. Custom ranks will apply only in the context of the current streamer.
+
+Request data (body):
+- `rank` (`string)`: *Required.* The rank whose name to customise. Must be one of the ranks returned by the [`GET /customise`](#get-customise) endpoint.
+- `name` (`string`): *Required.* The name of the rank. If the rank has already been named previously, the old name will be overwritten.
+- `isActive` (`boolean`): *Optional.* Whether the custom rank name is currently active or not.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent or is formatted incorrectly, or when the provided name is invalid.
+
+### `DELETE /customise`
+Deletes a custom rank name in the context of the current streamer.
+
+Query parameters:
+- `rank` (`string`): *Required.* The rank whoe custom name should be deleted.
+
+Returns an empty body.
+
+Can return the following errors:
+- `404`: When a custom name for the given rank was not found in the context of the current streamer.
 
 ## Streamer Endpoints
 Path: `/streamer`.

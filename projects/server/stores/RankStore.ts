@@ -4,8 +4,8 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { group, unique } from '@rebel/shared/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
+import { group, toObject, unique } from '@rebel/shared/util/arrays'
+import { InvalidCustomRankError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 
 export type UserRanks = {
   primaryUserId: number
@@ -46,6 +46,11 @@ export type RemoveUserRankArgs = {
   removedBy: number | null
 }
 
+export type CustomRankNames = {
+  primaryUserId: number
+  customRankNames: Partial<Record<RankName, string>>
+}
+
 /** These ranks may not be associated with a specific streamer. */
 const GlobalRanks: Record<RankName, boolean> = {
   admin: true,
@@ -73,6 +78,40 @@ export default class RankStore extends ContextClass {
     super()
     this.db = deps.resolve('dbProvider').get()
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+  }
+
+  /** @throws {@link InvalidCustomRankError}: When the provided `rankName` could not be found in the database. */
+  public async addOrUpdateCustomRankName (streamerId: number, primaryUserId: number, rankName: RankName, customName: string, isActive: boolean): Promise<void> {
+    const existing = await this.db.customRankName.findFirst({
+      where: {
+        streamerId: streamerId,
+        userId: primaryUserId,
+        rank: { name: rankName }
+      }
+    })
+
+    if (existing != null) {
+      await this.db.customRankName.update({
+        where: { id: existing.id },
+        data: {
+          name: customName,
+          isActive: isActive
+        }
+      })
+    } else {
+      const rank = await this.db.rank.findFirst({ where: { name: rankName } })
+      if (rank == null) {
+        throw new InvalidCustomRankError(rankName)
+      }
+
+      await this.db.customRankName.create({ data: {
+        streamerId: streamerId,
+        userId: primaryUserId,
+        rankId: rank.id,
+        name: customName,
+        isActive: isActive
+      }})
+    }
   }
 
   /** Adds the rank to the user.
@@ -110,6 +149,44 @@ export default class RankStore extends ContextClass {
 
       throw e
     }
+  }
+
+  public async deleteCustomRankName (streamerId: number, primaryUserId: number, rankName: RankName): Promise<void> {
+    const existing = await this.db.customRankName.findFirst({
+      where: {
+        streamerId: streamerId,
+        userId: primaryUserId,
+        rank: { name: rankName }
+      }
+    })
+
+    if (existing == null) {
+      throw new NotFoundError('Could not find a custom rank name.')
+    }
+
+    await this.db.customRankName.delete({ where: { id: existing.id }})
+  }
+
+  /** Returns all active custom rank names by the specified users. */
+  public async getCustomRankNamesForUsers (streamerId: number | null, primaryUserIds: number[]): Promise<CustomRankNames[]> {
+    const results = await this.db.customRankName.findMany({
+      where: {
+        streamerId: streamerId,
+        userId: { in: primaryUserIds },
+        isActive: true
+      },
+      select: {
+        userId: true,
+        name: true,
+        rank: { select: { name: true }}
+      }
+    })
+
+    const groups = group(results, item => item.userId)
+    return groups.map(x => ({
+      primaryUserId: x.group,
+      customRankNames: toObject(x.items, item => [item.rank.name, item.name])
+    }))
   }
 
   /** Gets all ranks. */
