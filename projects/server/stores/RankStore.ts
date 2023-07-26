@@ -167,7 +167,7 @@ export default class RankStore extends ContextClass {
     await this.db.customRankName.delete({ where: { id: existing.id }})
   }
 
-  /** Returns all active custom rank names by the specified users. */
+  /** Returns all active custom rank names by the specified users. */ // todo: test case: must return empty array for primary user that does not have custom ranks set
   public async getCustomRankNamesForUsers (streamerId: number | null, primaryUserIds: number[]): Promise<CustomRankNames[]> {
     const results = await this.db.customRankName.findMany({
       where: {
@@ -283,6 +283,13 @@ export default class RankStore extends ContextClass {
     await this.db.userRank.updateMany({
       where: { revokedByUserId: fromUserId },
       data: { revokedByUserId: toUserId }
+    })
+  }
+
+  public async relinkCustomRankNames (fromUserId: number, toUserId: number) {
+    await this.db.customRankName.updateMany({
+      where: { userId: fromUserId },
+      data: { userId: toUserId }
     })
   }
 

@@ -489,6 +489,21 @@ export default () => {
     })
   })
 
+  describe(nameof(RankStore, 'relinkCustomRankNames'), () => {
+    test('Relinks the correct user ids', async () => {
+      await db.customRankName.createMany({ data: [
+        { streamerId: streamer1, rankId: donatorRank.id, userId: user1, isActive: true, name: 'test' },
+        { streamerId: streamer2, rankId: donatorRank.id, userId: user1, isActive: true, name: 'test' },
+        { streamerId: streamer1, rankId: donatorRank.id, userId: user2, isActive: true, name: 'test' }
+      ]})
+
+      await rankStore.relinkCustomRankNames(user1, user3)
+
+      const stored = await db.customRankName.findMany()
+      expect(stored).toEqual(expectObject(stored, [{ userId: user3 }, { userId: user3 }, { userId: user2 }]))
+    })
+  })
+
   describe(nameof(RankStore, 'removeUserRank'), () => {
     test('Throws UserRankNotFoundError if no active rank of the specified type exists for the user', async () => {
       await db.userRank.createMany({

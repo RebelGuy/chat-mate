@@ -16,7 +16,7 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { addTime } from '@rebel/shared/util/datetime'
 import { LinkAttemptInProgressError } from '@rebel/shared/util/error'
-import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
 let mockAccountStore: MockProxy<AccountStore>
@@ -84,6 +84,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockDonationStore.relinkDonation.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankStore.relinkAdminUsers.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true, expect.anything()])
+    expect(single(mockRankStore.relinkCustomRankNames.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
 
@@ -107,6 +108,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockRankService.mergeRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.anything(), expect.any(String)])
     expect(single(mockDonationService.reEvaluateDonationRanks.mock.calls)).toEqual([aggregateUserId, expect.any(String), expect.any(String)])
     expect(single(mockExperienceService.recalculateChatExperience.mock.calls)).toEqual([aggregateUserId])
+    expect(single(mockRankStore.relinkCustomRankNames.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
 
