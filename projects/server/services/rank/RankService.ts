@@ -12,7 +12,7 @@ import UserService from '@rebel/server/services/UserService'
 /** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
 export type RegularRank = Extract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
 
-const rankNames = Object.keys(RankName) as RankName[] // RankName the const vs RankName the type. not confusing at all
+export const ALL_RANK_NAMES = Object.keys(RankName) as RankName[] // RankName the const vs RankName the type. not confusing at all
 
 export type CustomisableRank = Extract<RankName, 'donator' | 'supporter' | 'member'>
 
@@ -78,7 +78,7 @@ export default class RankService extends ContextClass {
   }
 
   /** @throws {@link InvalidCustomRankNameError}: When the given custom rank name is invalid.
-   *  @throws {@link InvalidCustomRankError}: When the given custom rank is not customisable. */
+   *  @throws {@link InvalidCustomRankError}: When the given custom rank does not exist or is not customisable. */
   public async addOrUpdateCustomRankName (streamerId: number, primaryUserId: number, rankName: CustomisableRank, name: string, isActive: boolean): Promise<void> {
     if (await this.userService.isUserBusy(primaryUserId)) {
       throw new Error('Cannot set or update the rank name at this time. Please try again later.')
@@ -86,7 +86,7 @@ export default class RankService extends ContextClass {
 
     name = this.rankHelpers.validateCustomRankName(name)
 
-    if (!customisableRankNames.includes(rankName)) {
+    if (!ALL_RANK_NAMES.includes(rankName) || !customisableRankNames.includes(rankName)) {
       throw new InvalidCustomRankError(rankName)
     }
 
@@ -186,7 +186,7 @@ export default class RankService extends ContextClass {
       let extensions: UserRankWithRelations[] = []
       let unchanged: UserRankWithRelations[] = []
 
-      for (const rankName of rankNames) {
+      for (const rankName of ALL_RANK_NAMES) {
         const oldRank = getRank(ranks1, streamerId, rankName)
         const baseRank = getRank(ranks2, streamerId, rankName)
 

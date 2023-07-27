@@ -5,7 +5,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { group, toObject, unique } from '@rebel/shared/util/arrays'
-import { InvalidCustomRankError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
+import { NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 
 export type UserRanks = {
   primaryUserId: number
@@ -80,7 +80,6 @@ export default class RankStore extends ContextClass {
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
   }
 
-  /** @throws {@link InvalidCustomRankError}: When the provided `rankName` could not be found in the database. */
   public async addOrUpdateCustomRankName (streamerId: number, primaryUserId: number, rankName: RankName, customName: string, isActive: boolean): Promise<void> {
     const existing = await this.db.customRankName.findFirst({
       where: {
@@ -100,14 +99,10 @@ export default class RankStore extends ContextClass {
       })
     } else {
       const rank = await this.db.rank.findFirst({ where: { name: rankName } })
-      if (rank == null) {
-        throw new InvalidCustomRankError(rankName)
-      }
-
       await this.db.customRankName.create({ data: {
         streamerId: streamerId,
         userId: primaryUserId,
-        rankId: rank.id,
+        rankId: rank!.id,
         name: customName,
         isActive: isActive
       }})
@@ -167,7 +162,7 @@ export default class RankStore extends ContextClass {
     await this.db.customRankName.delete({ where: { id: existing.id }})
   }
 
-  /** Returns all active custom rank names by the specified users. */ // todo: test case: must return empty array for primary user that does not have custom ranks set
+  /** Returns all active custom rank names by the specified users. */
   public async getCustomRankNamesForUsers (streamerId: number | null, primaryUserIds: number[]): Promise<CustomRankNames[]> {
     const results = await this.db.customRankName.findMany({
       where: {
@@ -183,10 +178,14 @@ export default class RankStore extends ContextClass {
     })
 
     const groups = group(results, item => item.userId)
-    return groups.map(x => ({
-      primaryUserId: x.group,
-      customRankNames: toObject(x.items, item => [item.rank.name, item.name])
-    }))
+    return primaryUserIds.map(userId => {
+      const groupForUser = groups.find(g => g.group === userId)
+
+      return {
+        primaryUserId: userId,
+        customRankNames: groupForUser != null ? toObject(groupForUser.items, item => [item.rank.name, item.name]) : {}
+      }
+    })
   }
 
   /** Gets all ranks. */

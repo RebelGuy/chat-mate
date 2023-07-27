@@ -1,10 +1,10 @@
 import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
-import RankService from '@rebel/server/services/rank/RankService'
+import RankService, { CustomisableRank } from '@rebel/server/services/rank/RankService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
-import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
+import { InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { Singular } from '@rebel/shared/types'
@@ -18,6 +18,10 @@ const adminRank = cast<Rank>({ name: 'admin', group: 'administration' })
 const bannedRank = cast<Rank>({ name: 'ban', group: 'punishment' })
 const modRank = cast<Rank>({ name: 'mod', group: 'administration' })
 const memberRank = cast<Rank>({ name: 'member', group: 'donation' })
+
+const streamer1 = 124
+const streamer2 = 125
+const user1 = 85
 
 let mockRankStore: MockProxy<RankStore>
 let mockRankHelpers: MockProxy<RankHelpers>
@@ -37,6 +41,28 @@ beforeEach(() => {
   }))
 })
 
+describe(nameof(RankService, 'addOrUpdateCustomRankName'), () => {
+  test('Validates the custom rank name and makes a request to the RankStore', async () => {
+    mockRankHelpers.validateCustomRankName.mockImplementation(x => x)
+
+    await rankService.addOrUpdateCustomRankName(streamer1, user1, 'donator', 'test1', true)
+
+    expect(mockRankHelpers.validateCustomRankName).toBeCalledWith('test1')
+    const rankStoreCall = single(mockRankStore.addOrUpdateCustomRankName.mock.calls)
+    expect(rankStoreCall).toEqual(expectObjectDeep(rankStoreCall, [streamer1, user1, 'donator', 'test1', true]))
+  })
+
+  test('Throws if the user is currently busy', async () => {
+    mockUserService.isUserBusy.calledWith(user1).mockResolvedValue(true)
+
+    await expect(() => rankService.addOrUpdateCustomRankName(streamer1, user1, 'donator', 'test1', true)).rejects.toThrow()
+  })
+
+  test('Throws if the given rank name is invalid', async () => {
+    await expect(() => rankService.addOrUpdateCustomRankName(streamer1, user1, 'abc' as CustomisableRank, 'test1', true)).rejects.toThrowError(InvalidCustomRankError)
+  })
+})
+
 describe(nameof(RankService, 'getAccessibleRanks'), () => {
   test('Returns Regular ranks', async () => {
     mockRankStore.getRanks.calledWith().mockResolvedValue([ownerRank, famousRank, donatorRank, adminRank, bannedRank])
@@ -47,12 +73,20 @@ describe(nameof(RankService, 'getAccessibleRanks'), () => {
   })
 })
 
+describe(nameof(RankService, 'getCustomisableRanks'), () => {
+  test('Returns the ranks that are customisable', async () => {
+    mockRankStore.getRanks.calledWith().mockResolvedValue(cast<Rank[]>([{ name: 'ban' }, { name: 'supporter' }, { name: 'donator' }]))
+
+    const result = await rankService.getCustomisableRanks()
+
+    expect(result).toEqual(expectObject(result, [{ name: 'supporter' }, { name: 'donator' }]))
+  })
+})
+
 describe(nameof(RankService, 'transferRanks'), () => {
   test('Revokes the ranks of the old user and re-applies them to the new user', async () => {
     const fromUserId = 5
     const toUserId = 19
-    const streamer1 = 124
-    const streamer2 = 125
 
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
@@ -85,7 +119,6 @@ describe(nameof(RankService, 'transferRanks'), () => {
   test('Copies the ranks of the old user to the new user', async () => {
     const fromUserId = 5
     const toUserId = 19
-    const streamer1 = 124
 
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
@@ -106,17 +139,16 @@ describe(nameof(RankService, 'transferRanks'), () => {
   test(`Ignores ${UserRankAlreadyExistsError.name}s and ${UserRankNotFoundError.name}s`, async () => {
     const fromUserId = 5
     const toUserId = 19
-    const streamerId = 124
 
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
-      streamerId: streamerId,
+      streamerId: streamer1,
       assignedByUserId: 2,
       expirationTime: null
     })
     mockRankStore.getAllUserRanks.calledWith(fromUserId).mockResolvedValue({ primaryUserId: fromUserId, ranks: [rank1] })
-    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ streamerId: streamerId, primaryUserId: fromUserId, rank: 'famous' })).mockRejectedValue(new UserRankNotFoundError())
-    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamerId, primaryUserId: toUserId, rank: 'famous' })).mockRejectedValue(new UserRankAlreadyExistsError())
+    mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ streamerId: streamer1, primaryUserId: fromUserId, rank: 'famous' })).mockRejectedValue(new UserRankNotFoundError())
+    mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ streamerId: streamer1, primaryUserId: toUserId, rank: 'famous' })).mockRejectedValue(new UserRankAlreadyExistsError())
 
     const result = await rankService.transferRanks(fromUserId, toUserId, '', true, [])
 
@@ -126,8 +158,6 @@ describe(nameof(RankService, 'transferRanks'), () => {
   test('Does not process ranks in the `ignoreRanks` parameter', async () => {
     const fromUserId = 5
     const toUserId = 19
-    const streamer1 = 124
-    const streamer2 = 125
 
     const rank1 = cast<UserRankWithRelations>({
       rank: famousRank,
@@ -157,8 +187,6 @@ describe(nameof(RankService, 'mergeRanks'), () => {
   const aggregateUser = 7
 
   test('Treats ranks for each streamer separately', async () => {
-    const streamer1 = 100
-    const streamer2 = 502
     const ranks1 = cast<UserRanks>({ ranks: []})
     const ranks2 = cast<UserRanks>({ ranks: [{
       id: 1,

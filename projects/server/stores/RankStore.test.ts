@@ -6,10 +6,10 @@ import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/shared/util/datetime'
-import { Rank, RankName, UserRank } from '@prisma/client'
+import { Rank, RankName } from '@prisma/client'
 import { expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { single, sortBy, unique } from '@rebel/shared/util/arrays'
-import { UserRankNotFoundError, UserRankAlreadyExistsError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
+import { UserRankNotFoundError, UserRankAlreadyExistsError, UserRankRequiresStreamerError, NotFoundError } from '@rebel/shared/util/error'
 
 
 export default () => {
@@ -70,6 +70,33 @@ export default () => {
 
   afterEach(() => {
     stopTestDb()
+  })
+
+  describe(nameof(RankStore, 'addOrUpdateCustomRankName'), () => {
+    test('Adds the new custom rank to the database', async () => {
+      await db.customRankName.createMany({ data: [
+        { userId: user1, isActive: true, name: 'test1', rankId: famousRank.id, streamerId: streamer2 }, // wrong streamer
+        { userId: user2, isActive: true, name: 'test2', rankId: famousRank.id, streamerId: streamer1 }, // wrong user
+      ]})
+
+      await rankStore.addOrUpdateCustomRankName(streamer1, user1, famousRank.name, 'test3', true)
+
+      await expectRowCount(db.customRankName).toBe(3)
+    })
+
+    test('Updates the existing custom name', async () => {
+      await db.customRankName.createMany({ data: [
+        { userId: user1, isActive: true, name: 'test1', rankId: famousRank.id, streamerId: streamer1 },
+        { userId: user1, isActive: true, name: 'test2', rankId: famousRank.id, streamerId: streamer2 }, // wrong streamer
+        { userId: user2, isActive: true, name: 'test3', rankId: famousRank.id, streamerId: streamer1 }, // wrong user
+      ]})
+
+      await rankStore.addOrUpdateCustomRankName(streamer1, user1, famousRank.name, 'test4', false)
+
+      await expectRowCount(db.customRankName).toBe(3)
+      const firstEntry = await db.customRankName.findFirst()
+      expect(firstEntry).toEqual(expectObject(firstEntry, { name: 'test4', isActive: false }))
+    })
   })
 
   describe(nameof(RankStore, 'addUserRank'), () => {
@@ -282,6 +309,59 @@ export default () => {
       mockDateTimeHelpers.now.calledWith().mockReturnValue(time2)
 
       await expect(async () => await rankStore.addUserRank(args)).rejects.toThrowError(UserRankRequiresStreamerError)
+    })
+  })
+
+  describe(nameof(RankStore, 'deleteCustomRankName'), () => {
+    test('Deletes the custom rank name from the database', async () => {
+      await db.customRankName.createMany({ data: [
+        { userId: user1, isActive: true, name: 'test1', rankId: famousRank.id, streamerId: streamer1 },
+        { userId: user1, isActive: true, name: 'test2', rankId: famousRank.id, streamerId: streamer2 }, // wrong streamer
+        { userId: user2, isActive: true, name: 'test3', rankId: famousRank.id, streamerId: streamer1 }, // wrong user
+      ]})
+
+      await rankStore.deleteCustomRankName(streamer1, user1, 'famous')
+
+      const stored = await db.customRankName.findMany()
+      expect(stored.length).toBe(2)
+      expect(stored).toEqual(expectObject(stored, [{ userId: user1, streamerId: streamer2 }, { userId: user2 }]))
+    })
+
+    test('Throws if no custom rank name exists', async () => {
+      await db.customRankName.createMany({ data: [
+        { userId: user1, isActive: true, name: 'test1', rankId: donatorRank.id, streamerId: streamer1 },
+        { userId: user1, isActive: true, name: 'test2', rankId: famousRank.id, streamerId: streamer2 }, // wrong streamer
+        { userId: user2, isActive: true, name: 'test3', rankId: famousRank.id, streamerId: streamer1 }, // wrong user
+      ]})
+
+      await expect(() => rankStore.deleteCustomRankName(streamer1, user1, 'famous')).rejects.toThrowError(NotFoundError)
+    })
+  })
+
+  describe(nameof(RankStore, 'getCustomRankNamesForUsers'), () => {
+    test('Returns the active custom rank names for the given users in the context of the specified streamer', async () => {
+      await db.customRankName.createMany({ data: [
+        { userId: user1, isActive: true, name: 'test1', rankId: donatorRank.id, streamerId: streamer1 },
+        { userId: user1, isActive: true, name: 'test2', rankId: bannedRank.id, streamerId: streamer2 }, // wrong streamer
+        { userId: user1, isActive: true, name: 'test3', rankId: famousRank.id, streamerId: streamer1 },
+        { userId: user2, isActive: true, name: 'test4', rankId: modRank.id, streamerId: streamer1 },
+        { userId: user3, isActive: true, name: 'test5', rankId: mutedRank.id, streamerId: streamer1 }, // wrong user
+      ]})
+
+      const result = await rankStore.getCustomRankNamesForUsers(streamer1, [user1, user2])
+
+      expect(result).toEqual([
+        { primaryUserId: user1, customRankNames: { [donatorRank.name]: 'test1', [famousRank.name]: 'test3' }},
+        { primaryUserId: user2, customRankNames: { [modRank.name]: 'test4' }}
+      ])
+    })
+
+    test('Returns empty rank names object if the user does not have any active custom ranks', async () => {
+      await db.customRankName.create({ data: { userId: user1, isActive: false, name: 'test', rankId: donatorRank.id, streamerId: streamer1 }})
+
+      const result = await rankStore.getCustomRankNamesForUsers(streamer1, [user1, user2])
+
+      expect(result).toEqual([{ primaryUserId: user1, customRankNames: {} }, { primaryUserId: user2, customRankNames: {} }])
     })
   })
 
