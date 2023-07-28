@@ -151,7 +151,7 @@ function Rank (props: RankProps) {
   return (
     <Chip
       onClick={() => props.onClick(props.rank)}
-      label={<Box display="flex">{toSentenceCase(props.rank.rank.displayNameNoun)}{globalSuffix}{customNameSuffix}</Box>}
+      label={<Box display="flex">{props.rank.customRankName?.trim() ?? toSentenceCase(props.rank.rank.displayNameNoun)}{globalSuffix}{customNameSuffix}</Box>}
       sx={{ p: 0.5, m: 0.5, border: `1px ${color} solid` }}
     />
   )
