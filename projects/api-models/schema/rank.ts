@@ -50,11 +50,11 @@ export type RemoveModRankResponse = ApiResponse<{
 
 export type GetCustomisableRanksResponse = ApiResponse<{ customisableRanks: PublicRank[] }>
 
-export type SetCustomNameRequest = ApiRequest<{
+export type SetCustomRankNameRequest = ApiRequest<{
   name: string
   rank: string
   isActive: boolean | null
 }>
-export type SetCustomNameResponse = ApiResponse<EmptyObject>
+export type SetCustomRankNameResponse = ApiResponse<EmptyObject>
 
-export type DeleteCustomNameResponse = ApiResponse<EmptyObject>
+export type DeleteCustomRankNameResponse = ApiResponse<EmptyObject>

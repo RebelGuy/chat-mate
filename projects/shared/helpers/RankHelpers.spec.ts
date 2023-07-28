@@ -1,6 +1,5 @@
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers, { PartialUserRankWithRelations } from '@rebel/shared/helpers/RankHelpers'
 import { cast, nameof } from '@rebel/shared/testUtils'
-import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { addTime } from '@rebel/shared/util/datetime'
 import { InvalidCustomRankNameError } from '@rebel/shared/util/error'
 
@@ -83,8 +82,8 @@ describe(nameof(RankHelpers, 'isRankActive'), () => {
   })
 })
 
-function makeRank (appliedAt: Date, expiredAt: Date | null, revokedAt: Date | null): UserRankWithRelations {
-  return cast<UserRankWithRelations>({
+function makeRank (appliedAt: Date, expiredAt: Date | null, revokedAt: Date | null): PartialUserRankWithRelations {
+  return cast<PartialUserRankWithRelations>({
     issuedAt: appliedAt,
     expirationTime: expiredAt,
     revokedTime: revokedAt

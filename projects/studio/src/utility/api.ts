@@ -1,6 +1,6 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/api-models/schema/emoji'
 import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
-import { GetAccessibleRanksResponse, GetUserRanksResponse } from '@rebel/api-models/schema/rank'
+import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchStatusResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/api-models/schema/streamer'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/api-models/schema/account'
@@ -58,6 +58,16 @@ export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GE
 export const getRanksForStreamer = requestBuilder<GetUserRanksResponse>('GET', `/rank`)
 
 export const getGlobalRanks = requestBuilder<GetUserRanksResponse>('GET', `/rank`, false)
+
+export const getCustomisableRankNames = requestBuilder<GetCustomisableRanksResponse>('GET', `/rank/customise`, false)
+
+export const setCustomRankName = requestBuilder<SetCustomRankNameResponse, SetCustomRankNameRequest>('POST', `/rank/customise`, true)
+
+export const deleteCustomRankName = requestBuilder<DeleteCustomRankNameResponse, false, [rankName: string]>(
+  'DELETE',
+  (rankName) => constructPath(`/rank/customise`, { rank: rankName }),
+  true
+)
 
 export const registerAccount = requestBuilder<RegisterResponse, RegisterRequest>('POST', `/account/register`, false, false)
 

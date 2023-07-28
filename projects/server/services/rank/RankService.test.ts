@@ -8,7 +8,7 @@ import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/test
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { Singular } from '@rebel/shared/types'
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import UserService from '@rebel/server/services/UserService'
 
 const ownerRank = cast<Rank>({ name: 'owner', group: 'administration' })

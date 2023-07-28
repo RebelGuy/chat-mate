@@ -1,7 +1,7 @@
 import { Rank } from '@prisma/client'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
 export function userRankToPublicObject (userRank: UserRankWithRelations, customRankName: string | null | undefined): PublicUserRank {

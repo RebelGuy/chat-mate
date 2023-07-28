@@ -6,7 +6,7 @@ import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWith
 import { singleOrNull, unique } from '@rebel/shared/util/arrays'
 import { InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { isOneOf } from '@rebel/shared/util/validation'
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import UserService from '@rebel/server/services/UserService'
 
 /** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
@@ -16,7 +16,7 @@ export const ALL_RANK_NAMES = Object.keys(RankName) as RankName[] // RankName th
 
 export type CustomisableRank = Extract<RankName, 'donator' | 'supporter' | 'member'>
 
-const customisableRankNames: CustomisableRank[] = ['donator', 'supporter', 'member']
+const customisableRankNames: CustomisableRank[] = ['donator', 'supporter', 'member', 'famous'] as any
 
 export type CombinedMergeResult = {
   individualResults: MergeResult[]

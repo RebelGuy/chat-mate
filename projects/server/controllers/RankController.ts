@@ -16,7 +16,7 @@ import { requireAuth, requireRank, requireStreamer } from '@rebel/server/control
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 import { channelToPublicChannel } from '@rebel/server/models/user'
-import { AddModRankRequest, AddModRankResponse, AddUserRankRequest, AddUserRankResponse, DeleteCustomNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, RemoveModRankRequest, RemoveModRankResponse, RemoveUserRankRequest, RemoveUserRankResponse, SetCustomNameRequest, SetCustomNameResponse } from '@rebel/api-models/schema/rank'
+import { AddModRankRequest, AddModRankResponse, AddUserRankRequest, AddUserRankResponse, DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, RemoveModRankRequest, RemoveModRankResponse, RemoveUserRankRequest, RemoveUserRankResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
 import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
 
 type Deps = ControllerDependencies<{
@@ -226,9 +226,10 @@ export default class RankController extends ControllerBase {
 
   @POST
   @Path('/customise')
+  @PreProcessor(requireAuth)
   @PreProcessor(requireStreamer)
-  public async setCustomName (request: SetCustomNameRequest): Promise<SetCustomNameResponse> {
-    const builder = this.registerResponseBuilder<SetCustomNameResponse>('POST /customise')
+  public async setCustomName (request: SetCustomRankNameRequest): Promise<SetCustomRankNameResponse> {
+    const builder = this.registerResponseBuilder<SetCustomRankNameResponse>('POST /customise')
     if (request == null || request.name == null || typeof request.name !== 'string' || request.rank == null || typeof request.rank !== 'string') {
       return builder.failure(400, 'Invalid request data.')
     }
@@ -253,11 +254,12 @@ export default class RankController extends ControllerBase {
 
   @DELETE
   @Path('/customise')
+  @PreProcessor(requireAuth)
   @PreProcessor(requireStreamer)
   public async deleteCustomName (
     @QueryParam('rank') rank: CustomisableRank
-  ): Promise<DeleteCustomNameResponse> {
-    const builder = this.registerResponseBuilder<SetCustomNameResponse>('DELETE /customise')
+  ): Promise<DeleteCustomRankNameResponse> {
+    const builder = this.registerResponseBuilder<SetCustomRankNameResponse>('DELETE /customise')
 
     try {
       await this.rankStore.deleteCustomRankName(this.getStreamerId(), this.getCurrentUser().aggregateChatUserId, rank)

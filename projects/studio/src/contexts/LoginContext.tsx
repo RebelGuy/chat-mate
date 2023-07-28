@@ -8,12 +8,12 @@ import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
 import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { authenticate, getGlobalRanks, getRanksForStreamer, getStreamers, getUser } from '@rebel/studio/utility/api'
+import { authenticate, getCustomisableRankNames, getGlobalRanks, getRanksForStreamer, getStreamers, getUser } from '@rebel/studio/utility/api'
 import * as React from 'react'
 
 export type RankName = PublicRank['name']
 
-export type RefreshableDataType = 'streamerList'
+export type RefreshableDataType = 'streamerList' | 'userRanks'
 
 type Props = {
   children: React.ReactNode
@@ -28,6 +28,7 @@ export function LoginProvider (props: Props) {
   const [authError, setAuthError] = React.useState<string | null>(null)
 
   const [streamerListUpdateKey, incrementStreamerListUpdateKey] = useUpdateKey({ repeatInterval: 60_000 })
+  const [customisableRankNamesUpdateKey] = useUpdateKey({ repeatInterval: 60_000 })
 
   const getGlobalRanksRequest = useRequest(getGlobalRanks(), {
     onDemand: true,
@@ -49,6 +50,12 @@ export function LoginProvider (props: Props) {
   const getStreamersRequest = useRequest(getStreamers(), {
     updateKey: streamerListUpdateKey,
     loginToken: loginToken,
+    onError: (error, type) => console.error(error)
+  })
+  const getCustomisableRankNamesRequest = useRequest(getCustomisableRankNames(), {
+    updateKey: customisableRankNamesUpdateKey,
+    loginToken: loginToken,
+    onRequest: () => username == null,
     onError: (error, type) => console.error(error)
   })
 
@@ -136,9 +143,16 @@ export function LoginProvider (props: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const refreshData = (dataType: RefreshableDataType) => {
+  const refreshData = async (dataType: RefreshableDataType): Promise<boolean> => {
     if (dataType === 'streamerList') {
-      incrementStreamerListUpdateKey()
+      const result = await getStreamersRequest.triggerRequest()
+      return result.type === 'success'
+    } else if (dataType === 'userRanks') {
+      const results = await Promise.all([
+        getGlobalRanksRequest.triggerRequest(),
+        getRanksForStreamerRequest.triggerRequest()
+      ])
+      return results.find(r => r.type !== 'success') == null
     } else {
       assertUnreachable(dataType)
     }
@@ -149,6 +163,7 @@ export function LoginProvider (props: Props) {
   React.useEffect(() => {
     const loadContext = async () => {
       getStreamersRequest.triggerRequest()
+      getCustomisableRankNamesRequest.triggerRequest()
       await onLogin()
 
       let streamer: string | null = null
@@ -201,7 +216,7 @@ export function LoginProvider (props: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loginToken, selectedStreamer])
 
-  const requests = username == null ? [getStreamersRequest] : [getUserRequest, getGlobalRanksRequest, getRanksForStreamerRequest, getStreamersRequest]
+  const requests = username == null ? [getStreamersRequest] : [getUserRequest, getGlobalRanksRequest, getRanksForStreamerRequest, getStreamersRequest, getCustomisableRankNamesRequest]
   const isHydrated = requests.find(r => r.data == null && r.error == null) == null
   const isLoading = requests.find(r => r.isLoading) != null
   const errors = nonNull(requests.map(r => r.error))
@@ -222,6 +237,7 @@ export function LoginProvider (props: Props) {
         isStreamer: isStreamer,
         authError: authError,
         allRanks: ranks,
+        customisableRanks: getCustomisableRankNamesRequest.data?.customisableRanks?.map(r => r.name) ?? [],
         setLogin: onSetLogin,
         setStreamer: onPersistStreamer,
         logout: onClearAuthInfo,
@@ -251,12 +267,15 @@ export type LoginContextType = {
   errors: ApiRequestError[] | null
   authError: string | null
   allRanks: PublicUserRank[]
+  customisableRanks: RankName[]
 
   setLogin: (username: string, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void
   logout: () => void
   hasRank: (rankName: RankName) => boolean
-  refreshData: (dataType: RefreshableDataType) => void
+
+  // resolves to true if the refresh succeeded
+  refreshData: (dataType: RefreshableDataType) => Promise<boolean>
 }
 
 const LoginContext = React.createContext<LoginContextType>(null!)

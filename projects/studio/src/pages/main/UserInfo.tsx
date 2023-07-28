@@ -1,17 +1,23 @@
-import { Public } from '@mui/icons-material'
-import { Alert, Avatar, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Grid, SxProps } from '@mui/material'
+import { Edit, Public } from '@mui/icons-material'
+import { Alert, Avatar, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Grid, SxProps, TextField, Typography } from '@mui/material'
 import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { toSentenceCase } from '@rebel/shared/util/text'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
+import ApiError from '@rebel/studio/components/ApiError'
+import ApiLoading from '@rebel/studio/components/ApiLoading'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import { PageLogin } from '@rebel/studio/pages/navigation'
-import { logout } from '@rebel/studio/utility/api'
+import { deleteCustomRankName, logout, setCustomRankName } from '@rebel/studio/utility/api'
 import React, { CSSProperties, ReactElement, useState } from 'react'
 import { useContext } from 'react'
 import { useNavigate, generatePath } from 'react-router-dom'
+import RankHelpers from '@rebel/shared/helpers/RankHelpers'
+import { InvalidCustomRankNameError } from '@rebel/shared/util/error'
+
+const rankHelpers = new RankHelpers()
 
 export default function UserInfo () {
   const loginContext = useContext(LoginContext)
@@ -80,11 +86,14 @@ function Level (props: { level: number | undefined }) {
 
 function UserRanks (props: { sx: SxProps }) {
   const loginContext = React.useContext(LoginContext)
-  const [selectedRank, setSelectedRank] = useState<PublicUserRank | null>(null)
+  let [selectedRank, setSelectedRank] = useState<PublicUserRank | null>(null)
 
   const globalRanks = loginContext.allRanks.filter(r => r.streamer == null)
   const streamerRanks = loginContext.allRanks.filter(r => r.streamer != null && r.streamer === loginContext.streamer)
   const ranks = [...globalRanks, ...streamerRanks]
+
+  // reference the loginContext's ranks so that when we update the rank (e.g. by customising the name), the selection automatically changes as well
+  selectedRank = selectedRank != null ? ranks.find(r => r.id === selectedRank!.id) ?? null : null
 
   // have to add up to 12
   const gridLeft = 4
@@ -113,6 +122,8 @@ function UserRanks (props: { sx: SxProps }) {
               : <>This rank applies only to streamer {selectedRank!.streamer}.</>
             }
           </Box>
+
+          <CustomiseRank rank={selectedRank} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelectedRank(null)}>Close</Button>
@@ -128,13 +139,19 @@ type RankProps = {
 }
 
 function Rank (props: RankProps) {
-  const suffix = props.rank.streamer == null ? <Public style={{ fontSize: 18, marginTop: 2, marginLeft: 4 }} /> : ''
+  const loginContext = useContext(LoginContext)
+
+  const globalSuffix = props.rank.streamer == null ? <Public style={{ fontSize: 18, marginTop: 2, marginLeft: 4 }} /> : ''
   const color = getRankColor(props.rank)
+
+  const isCustomised = props.rank.customRankName != null
+  const isCustomisable = loginContext.customisableRanks.includes(props.rank.rank.name)
+  const customNameSuffix = isCustomised || isCustomisable ? <Edit style={{ fontSize: 18, marginTop: 2, marginLeft: 4 }} /> : ''
 
   return (
     <Chip
       onClick={() => props.onClick(props.rank)}
-      label={<Box display="flex">{toSentenceCase(props.rank.rank.displayNameNoun)}{suffix}</Box>}
+      label={<Box display="flex">{toSentenceCase(props.rank.rank.displayNameNoun)}{globalSuffix}{customNameSuffix}</Box>}
       sx={{ p: 0.5, m: 0.5, border: `1px ${color} solid` }}
     />
   )
@@ -211,4 +228,95 @@ function extractLinkInfo (message: string): { message: string, linkInfo: string[
       }
     }
   }
+}
+
+type CustomiseRankProps = {
+  rank: PublicUserRank
+}
+
+function CustomiseRank (props: CustomiseRankProps) {
+  const loginContext = useContext(LoginContext)
+  const [name, setName] = useState(props.rank.customRankName ?? '')
+
+  // after changing the rank name, we trigger a refresh of the user's ranks. we don't want to enable controls
+  // until the initial rank name change AND the refresh have succeeded. the dependency here is the rank refresh.
+  const [isLoadingDependency, setIsLoadingDependency] = useState(false)
+
+  const setCustomRankNameRequest = useRequest(setCustomRankName({ rank: props.rank.rank.name, name: name, isActive: true }), {
+    onDemand: true,
+    onRequest: () => setIsLoadingDependency(true),
+    onSuccess: () => loginContext.refreshData('userRanks').then(_ => setIsLoadingDependency(false)),
+    onError: () => setIsLoadingDependency(false)
+  })
+  const deleteCustomRankNameRequest = useRequest(deleteCustomRankName(props.rank.rank.name), {
+    onDemand: true,
+    onRequest: () => setIsLoadingDependency(true),
+    onSuccess: () => loginContext.refreshData('userRanks').then(_ => {
+      setIsLoadingDependency(false)
+      setName('')
+    }),
+    onError: () => setIsLoadingDependency(false)
+  })
+
+  const isCustomised = props.rank.customRankName != null
+  const isCustomisable = loginContext.customisableRanks.includes(props.rank.rank.name)
+
+  if (!isCustomised && !isCustomisable) {
+    return null
+  }
+
+  const isLoading = setCustomRankNameRequest.isLoading || deleteCustomRankNameRequest.isLoading || isLoadingDependency
+
+  let validationError: string | null = null
+  if (name.length > 0) {
+    try {
+      rankHelpers.validateCustomRankName(name)
+    } catch (e: any) {
+      if (e instanceof InvalidCustomRankNameError) {
+        validationError = e.message
+      } else {
+        throw e
+      }
+    }
+  }
+
+  return (
+    <Box sx={{ mt: 4 }}>
+      <h3>Customisation</h3>
+      <Typography>You can customise the name of the rank here.</Typography>
+      <Box sx={{ mt: 1 }}>
+        <TextField
+          placeholder="Enter a custom rank name"
+          value={name}
+          error={validationError != null}
+          helperText={validationError}
+          onChange={e => setName(e.target.value)}
+          disabled={isLoading || !isCustomisable}
+        />
+      </Box>
+      <Box sx={{ mt: 1 }}>
+        {isCustomisable &&
+          <Button
+            onClick={setCustomRankNameRequest.triggerRequest}
+            disabled={isLoading || name === (props.rank.customRankName ?? '') || validationError != null || name.length === 0}
+            sx={{ mr: 1 }}
+          >
+            Save name
+          </Button>
+        }
+        {isCustomised &&
+          <Button
+            onClick={deleteCustomRankNameRequest.triggerRequest}
+            disabled={isLoading}
+          >
+            Delete name
+          </Button>
+        }
+      </Box>
+      <Box sx={{ mt: 1 }}>
+        <ApiLoading requestObj={[setCustomRankNameRequest, deleteCustomRankNameRequest]} isLoading={isLoadingDependency} />
+        <ApiError requestObj={[setCustomRankNameRequest, deleteCustomRankNameRequest]} hideRetryButton />
+      </Box>
+    </Box>
+  )
 }
