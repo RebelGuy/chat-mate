@@ -110,7 +110,9 @@ export default class TwurpleService extends ContextClass {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
 
-    this.chatClient.onConnect(() => this.logService.logInfo(this, 'Connected.'))
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.chatClient.onConnect(() => this.onConnected())
+
     this.chatClient.onDisconnect((manually, reason) => this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason))
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onJoinFailure((channel, reason) => this.logService.logError(this, 'chatClient.onJoinFailure', channel, reason))
@@ -126,17 +128,6 @@ export default class TwurpleService extends ContextClass {
 
     this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
     this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
-
-    // there is no need to initialise everything right now - wait for the server to be set up first,
-    // then join chat rooms (this could take a long time if there are many streamers)
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    this.timerHelpers.setTimeout(async () => {
-      await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
-
-      this.logService.logInfo(this, 'Joining chat rooms...')
-      await this.joinStreamerChannels()
-      this.logService.logInfo(this, 'Finished joining chat rooms')
-    }, 0)
   }
 
   public async banChannel (streamerId: number, twitchChannelId: number, reason: string | null) {
@@ -344,9 +335,18 @@ export default class TwurpleService extends ContextClass {
     }
   }
 
+  private async onConnected () {
+    this.logService.logInfo(this, 'Connected.')
+
+    await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
+    await this.joinStreamerChannels()
+  }
+
   private async joinStreamerChannels (): Promise<void> {
+    this.logService.logInfo(this, 'Joining chat rooms...')
     const channels = await this.streamerChannelService.getAllTwitchStreamerChannels()
     await Promise.all(channels.map(c => this.joinSafe(c.twitchChannelName, c.streamerId)))
+    this.logService.logInfo(this, 'Finished joining chat rooms')
   }
 
   private async joinSafe (channelName: string, streamerId: number): Promise<void> {

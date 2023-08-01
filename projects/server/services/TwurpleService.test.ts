@@ -170,8 +170,8 @@ describe(nameof(TwurpleService, 'initialise'), () => {
 
     await twurpleService.initialise()
 
-    const joinStreamersCallback = single(mockTimerHelpers.setTimeout.mock.calls)[0]
-    await joinStreamersCallback()
+    const onConnectCallback = single(mockChatClient.onConnect.mock.calls)[0]
+    await onConnectCallback()
 
     // verify that we joined the streamers' channels
     const joinCalls: string[] = mockChatClient.join.mock.calls.map(args => single(args))
