@@ -371,6 +371,8 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const streamerId5 = 5
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId5).mockResolvedValue(null)
 
+    mockGetter(mockChatClient, 'currentChannels').mockReturnValue([channelName1, channelName4])
+
     await twurpleService.initialise()
 
     const onAddPrimaryChannel = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'addPrimaryChannel')![1]
@@ -415,6 +417,51 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
 
     await twurpleService.initialise()
+
+    const result = await twurpleService.getChatStatus(streamerId)
+
+    expect(result).toEqual(expectObject(result, { status: 'inactive', message: expect.any(String) }))
+  })
+
+  test(`Returns inactive when the streamer's chat room has not been joined`, async () => {
+    const streamerId = 1
+    const channelName = 'test'
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(channelName)
+    mockGetter(mockChatClient, 'currentChannels').mockReturnValue([])
+    mockGetter(mockChatClient, 'isConnected').mockReturnValue(true)
+    mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
+
+    await twurpleService.initialise()
+
+    const onConnect = single(mockChatClient.onConnect.mock.calls)[0]
+    await onConnect()
+
+    const onPart = single(mockChatClient.onPart.mock.calls)[0]
+    await onPart(channelName, '')
+
+    const result = await twurpleService.getChatStatus(streamerId)
+
+    expect(result).toEqual(expectObject(result, { status: 'inactive' }))
+    expect(result!.message).toBeUndefined()
+  })
+
+  test(`Returns inactive when ChatMate's state is different to Twurple's state`, async () => {
+    const streamerId = 1
+    const channelName = 'test'
+    const user = cast<HelixUser>({ id: 'userId' })
+    mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(channelName)
+    mockStreamerChannelService.getAllTwitchStreamerChannels.mockReset()
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([{ streamerId: streamerId, twitchChannelName: channelName }])
+    mockUserApi.getUserByName.calledWith(channelName).mockResolvedValue(user)
+    mockGetter(mockChatClient, 'currentChannels').mockReturnValue([]) // importantly, this is empty even though we think we connected
+    mockGetter(mockChatClient, 'isConnected').mockReturnValue(true)
+    mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
+    mockTwurpleAuthProvider.hasTokenForUser.calledWith(user.id).mockReturnValue(true)
+
+    await twurpleService.initialise()
+
+    const onConnect = single(mockChatClient.onConnect.mock.calls)[0]
+    await onConnect()
 
     const result = await twurpleService.getChatStatus(streamerId)
 

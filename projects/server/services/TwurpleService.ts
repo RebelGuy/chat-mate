@@ -113,11 +113,11 @@ export default class TwurpleService extends ContextClass {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onConnect(() => this.onConnected())
 
-    this.chatClient.onDisconnect((manually, reason) => this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason))
+    this.chatClient.onDisconnect((manually, reason) => this.onDisconnected(manually, reason))
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onJoinFailure((channel, reason) => this.logService.logError(this, 'chatClient.onJoinFailure', channel, reason))
     this.chatClient.onJoin((channel, user) => this.logService.logInfo(this, 'chatClient.onJoin', channel, user))
-    this.chatClient.onPart((channel, user) => this.logService.logInfo(this, 'chatClient.onPart', channel, user))
+    this.chatClient.onPart((channel, user) => this.onParted(channel, user))
     this.chatClient.onMessageFailed((channel, reason) => this.logService.logError(this, 'chatClient.onMessageFailed', channel, reason))
     this.chatClient.onMessageRatelimit((channel, msg) => this.logService.logError(this, 'chatClient.onMessageRatelimit', channel, msg))
     this.chatClient.onNoPermission((channel, msg) => this.logService.logError(this, 'chatClient.onNoPermission', channel, msg))
@@ -155,7 +155,8 @@ export default class TwurpleService extends ContextClass {
     } else if (!this.chatClient.isConnected) {
       return {
         status: 'inactive',
-        message: 'ChatMate is not connected to the Twitch chat server.', lastChange: this.dateTimeHelpers.ts()
+        message: 'ChatMate is not connected to the Twitch chat server.',
+        lastChange: this.dateTimeHelpers.ts()
       }
     }
 
@@ -199,6 +200,14 @@ export default class TwurpleService extends ContextClass {
         lastChange: this.dateTimeHelpers.ts(),
         message: errorMessage,
         requiresAuthorisation: true
+      }
+    }
+
+    if (status.status === 'active' && !this.chatClient.currentChannels.map(c => c.toLowerCase()).includes(twitchChannelName)) {
+      return {
+        status: 'inactive',
+        lastChange: this.dateTimeHelpers.ts(),
+        message: 'The ChatMate state is out of sync with the Twitch state.'
       }
     }
 
@@ -340,6 +349,16 @@ export default class TwurpleService extends ContextClass {
 
     await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
     await this.joinStreamerChannels()
+  }
+
+  private onDisconnected (manually: boolean, reason: Error | undefined): void {
+    this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason)
+    this.channelChatStatus.clear()
+  }
+
+  private onParted (channel: string, user: string): void {
+    this.logService.logInfo(this, 'chatClient.onPart', channel, user)
+    this.channelChatStatus.delete(channel.toLowerCase())
   }
 
   private async joinStreamerChannels (): Promise<void> {
