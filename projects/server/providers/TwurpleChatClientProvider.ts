@@ -52,10 +52,11 @@ export default class TwurpleChatClientProvider extends ContextClass {
       }
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.chatClient.connect()
-
     this.logService.logInfo(this, 'Successfully connected to the Twurple chat client')
+  }
+
+  public override onReady (): void {
+    void this.chatClient.connect()
   }
 
   override dispose (): void {
