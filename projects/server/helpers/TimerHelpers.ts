@@ -36,6 +36,12 @@ export default class TimerHelpers extends ContextClass {
     return () => clearTimeout(id)
   }
 
+  /** Returns a function that, when invoked, will cancel the interval. */
+  public setInterval (callback: () => Promise<any> | any, interval: number): () => void {
+    const id = setInterval(() => callback(), interval)
+    return () => clearInterval(id)
+  }
+
   /**
    * Create a new timer. The caller is responsible for catching errors in the `callback`.
    *
