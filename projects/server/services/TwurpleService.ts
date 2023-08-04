@@ -19,6 +19,8 @@ import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventSe
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
+import { waitUntil } from '@rebel/shared/util/typescript'
+import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 export type TwitchMetadata = {
   streamId: string
@@ -40,8 +42,10 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   streamerChannelService: StreamerChannelService
   isAdministrativeMode: () => boolean
+  isContextInitialised: () => boolean
   dateTimeHelpers: DateTimeHelpers
   twitchUsername: string
+  timerHelpers: TimerHelpers
 }>
 
 export default class TwurpleService extends ContextClass {
@@ -59,7 +63,9 @@ export default class TwurpleService extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly streamerChannelService: StreamerChannelService
   private readonly isAdministrativeMode: () => boolean
+  private readonly isContextInitialised: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
+  private readonly timerHelpers: TimerHelpers
   private userApi!: HelixUserApi
   private chatClient!: ChatClient
 
@@ -80,7 +86,9 @@ export default class TwurpleService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
+    this.isContextInitialised = deps.resolve('isContextInitialised')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+    this.timerHelpers = deps.resolve('timerHelpers')
   }
 
   public override async initialise () {
@@ -102,12 +110,14 @@ export default class TwurpleService extends ContextClass {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
 
-    this.chatClient.onConnect(() => this.logService.logInfo(this, 'Connected.'))
-    this.chatClient.onDisconnect((manually, reason) => this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason))
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.chatClient.onConnect(() => this.onConnected())
+
+    this.chatClient.onDisconnect((manually, reason) => this.onDisconnected(manually, reason))
     this.chatClient.onAuthenticationFailure(msg => this.logService.logError(this, 'chatClient.onAuthenticationFailure', msg))
     this.chatClient.onJoinFailure((channel, reason) => this.logService.logError(this, 'chatClient.onJoinFailure', channel, reason))
     this.chatClient.onJoin((channel, user) => this.logService.logInfo(this, 'chatClient.onJoin', channel, user))
-    this.chatClient.onPart((channel, user) => this.logService.logInfo(this, 'chatClient.onPart', channel, user))
+    this.chatClient.onPart((channel, user) => this.onParted(channel, user))
     this.chatClient.onMessageFailed((channel, reason) => this.logService.logError(this, 'chatClient.onMessageFailed', channel, reason))
     this.chatClient.onMessageRatelimit((channel, msg) => this.logService.logError(this, 'chatClient.onMessageRatelimit', channel, msg))
     this.chatClient.onNoPermission((channel, msg) => this.logService.logError(this, 'chatClient.onNoPermission', channel, msg))
@@ -115,8 +125,6 @@ export default class TwurpleService extends ContextClass {
     // todo: how do these compare to the EventSub?
     this.chatClient.onBan((channel, user) => this.logService.logInfo(this, 'chatClient.onBan', channel, user))
     this.chatClient.onTimeout((channel, user, duration) => this.logService.logInfo(this, 'chatClient.onTimeout', channel, user, duration))
-
-    await this.joinStreamerChannels()
 
     this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
     this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
@@ -147,7 +155,8 @@ export default class TwurpleService extends ContextClass {
     } else if (!this.chatClient.isConnected) {
       return {
         status: 'inactive',
-        message: 'ChatMate is not connected to the Twitch chat server.', lastChange: this.dateTimeHelpers.ts()
+        message: 'ChatMate is not connected to the Twitch chat server.',
+        lastChange: this.dateTimeHelpers.ts()
       }
     }
 
@@ -191,6 +200,14 @@ export default class TwurpleService extends ContextClass {
         lastChange: this.dateTimeHelpers.ts(),
         message: errorMessage,
         requiresAuthorisation: true
+      }
+    }
+
+    if (status.status === 'active' && !this.chatClient.currentChannels.map(c => c.toLowerCase()).includes(twitchChannelName)) {
+      return {
+        status: 'inactive',
+        lastChange: this.dateTimeHelpers.ts(),
+        message: 'The ChatMate state is out of sync with the Twitch state.'
       }
     }
 
@@ -327,9 +344,28 @@ export default class TwurpleService extends ContextClass {
     }
   }
 
+  private async onConnected () {
+    this.logService.logInfo(this, 'Connected.')
+
+    await waitUntil(() => this.isContextInitialised(), 500, 5 * 60_000)
+    await this.joinStreamerChannels()
+  }
+
+  private onDisconnected (manually: boolean, reason: Error | undefined): void {
+    this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason)
+    this.channelChatStatus.clear()
+  }
+
+  private onParted (channel: string, user: string): void {
+    this.logService.logInfo(this, 'chatClient.onPart', channel, user)
+    this.channelChatStatus.delete(channel.toLowerCase())
+  }
+
   private async joinStreamerChannels (): Promise<void> {
+    this.logService.logInfo(this, 'Joining chat rooms...')
     const channels = await this.streamerChannelService.getAllTwitchStreamerChannels()
     await Promise.all(channels.map(c => this.joinSafe(c.twitchChannelName, c.streamerId)))
+    this.logService.logInfo(this, 'Finished joining chat rooms')
   }
 
   private async joinSafe (channelName: string, streamerId: number): Promise<void> {

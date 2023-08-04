@@ -13,7 +13,7 @@ import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, sum } from 
 import { calculateWalkingScore } from '@rebel/shared/util/score'
 import { single, sortBy } from '@rebel/shared/util/arrays'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'

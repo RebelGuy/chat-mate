@@ -47,7 +47,10 @@ export function LinkHistory (props: Props) {
   return <>
     {header}
     {getLinkHistoryRequest.data != null &&
-      <Table style={{ margin: 'auto' }}>
+      <Table
+        stickyHeader
+        sx={{ width: '100%', transform: 'translateY(-5px)' }}
+      >
         <TableHead>
           <TableRow>
             <TableCell>Channel</TableCell>

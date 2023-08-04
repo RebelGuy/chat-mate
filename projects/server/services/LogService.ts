@@ -7,6 +7,7 @@ import { deconstructDate, formatDate, formatTime } from '@rebel/shared/util/date
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { LogLevel } from '@twurple/chat'
 import ILogService, { ILoggable, LogContext } from '@rebel/shared/ILogService'
+import { Prisma } from '@prisma/client'
 
 type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
 
@@ -53,6 +54,19 @@ export default class LogService extends ContextClass implements ILogService {
     this.log(logger, 'error', args)
   }
 
+  public logSlowQuery (durationMs: number, params: Prisma.MiddlewareParams) {
+    const prefix = `${formatTime()} (${durationMs} ms) >`
+    const content = stringifyArgs([params])
+    const message = `${prefix} ${content}`
+
+    try {
+      this.fileService.writeLine(this.getSlowQueryLogFile(), message, { append: true })
+    } catch (e: any) {
+      console.error('LogService encountered an error while logging a slow query:', e)
+      this.applicationInsightsService.trackException(['LogService failed to log a slow query message.', message, e])
+    }
+  }
+
   private log (logger: ILoggable, logType: LogType, args: any[]) {
     if (!this.enableDbLogging && logger.name === DbProvider.name && logType === 'debug') {
       return
@@ -69,20 +83,7 @@ export default class LogService extends ContextClass implements ILogService {
       consoleLogger(prefix, ...args)
     }
 
-    const content = args.map(a => {
-      try {
-        if (typeof a === 'string') {
-          return a
-        } else if (a instanceof Error) {
-          return `{ name: ${a.name}, message: ${a.message}, stack: ${a.stack} }`
-        } else {
-          return JSON.stringify(a) ?? 'undefined'
-        }
-      } catch (e: any) {
-        const type = a?.constructor?.name ?? 'Unknown'
-        return `<<LogService: Unable to stringify object of type ${type}: ${e.message}>>`
-      }
-    }).join(' ')
+    const content = stringifyArgs(args)
     const message = `${prefix} ${content}`
 
     try {
@@ -97,13 +98,19 @@ export default class LogService extends ContextClass implements ILogService {
       }
     } catch (e: any) {
       console.error('LogService encountered an error:', e)
+      this.applicationInsightsService.trackException(['LogService failed to log a message.', message, e])
     }
   }
 
-  // automatically write to a new file every day so they don't get too large
+  // automatically write to a new file every hour so they don't get too large
   private getLogFile () {
     const { hours } = deconstructDate(new Date(), false)
     return this.fileService.getDataFilePath(`log_${formatDate()}_${String(hours).padStart(2, '0')}.txt`)
+  }
+
+  private getSlowQueryLogFile () {
+    const { hours } = deconstructDate(new Date(), false)
+    return this.fileService.getDataFilePath('slow-query', `slow_query_${formatDate()}_${String(hours).padStart(2, '0')}.txt`)
   }
 }
 
@@ -133,4 +140,21 @@ export function onTwurpleClientLog (context: LogContext, level: LogLevel, messag
     default:
       assertUnreachable(level)
   }
+}
+
+function stringifyArgs (args: any[]): string {
+  return args.map(a => {
+    try {
+      if (typeof a === 'string') {
+        return a
+      } else if (a instanceof Error) {
+        return `{ name: ${a.name}, message: ${a.message}, stack: ${a.stack} }`
+      } else {
+        return JSON.stringify(a) ?? 'undefined'
+      }
+    } catch (e: any) {
+      const type = a?.constructor?.name ?? 'Unknown'
+      return `<<LogService: Unable to stringify object of type ${type}: ${e.message}>>`
+    }
+  }).join(' ')
 }

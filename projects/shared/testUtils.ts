@@ -1,10 +1,12 @@
-import { DeepPartial, GenericObject, Singular } from '@rebel/shared/types'
+import { DeepPartial, GenericObject, Primitive, Singular } from '@rebel/shared/types'
 import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
 import { Matcher, MatcherCreator, MockProxy } from 'jest-mock-extended'
 
 type Class = new (...args: any[]) => any
 
 type ClassMember<C extends Class> = Exclude<keyof InstanceType<C> & string, 'name'>
+
+type AnyValue = object | Primitive | null | undefined
 
 /** Typed name of a class or function. */
 export function nameof<C extends Class, MemberName extends ClassMember<C>> (obj: C, memberName: MemberName): string
@@ -67,11 +69,11 @@ export function cast<T> (data: DeepPartial<T>): T {
 
 // the overload is just for convenience so that we don't need to specify the generic type but instead just pass in a value that has the generic type
 // this will NOT work if providing partial items to a nested array, only if `T` itself is of type array. to get around this, call `expectObject()` on the nested array as well, or use `expectObjectDeep()`.
-export function expectObject<T> (fullObj: T, partialObj: DeepPartial<T>): T
-export function expectObject<T> (data: DeepPartial<T>): T
-export function expectObject<T> (fullOrPartialObject: T | DeepPartial<T>, partialObj?: DeepPartial<T>): T {
+export function expectObject<T extends AnyValue> (fullObj: T, partialObj: DeepPartial<T>): T
+export function expectObject<T extends AnyValue> (data: DeepPartial<T>): T
+export function expectObject<T extends AnyValue> (fullOrPartialObject: T | DeepPartial<T>, partialObj?: DeepPartial<T>): T {
   if (partialObj == null) {
-    partialObj = fullOrPartialObject
+    partialObj = fullOrPartialObject as DeepPartial<T> // I don't understand why casting is required lol
   }
 
   if (Array.isArray(partialObj)) {
@@ -84,11 +86,11 @@ export function expectObject<T> (fullOrPartialObject: T | DeepPartial<T>, partia
 
 // the overload is just for convenience so that we don't need to specify the generic type but instead just pass in a value that has the generic type.
 // deep nesting of partials prevents you from using `expect.*` matchers. if this is required, use the shallow `expectObject()` method instead.
-export function expectObjectDeep<T> (fullObj: T, partialObj: DeepPartial<T>): T
-export function expectObjectDeep<T> (data: DeepPartial<T>): T
-export function expectObjectDeep<T> (fullOrPartialObject: T | DeepPartial<T>, partialObj?: DeepPartial<T>): T {
+export function expectObjectDeep<T extends AnyValue> (fullObj: T, partialObj: DeepPartial<T>): T
+export function expectObjectDeep<T extends AnyValue> (data: DeepPartial<T>): T
+export function expectObjectDeep<T extends AnyValue> (fullOrPartialObject: T | DeepPartial<T>, partialObj?: DeepPartial<T>): T {
   if (partialObj == null) {
-    partialObj = fullOrPartialObject
+    partialObj = fullOrPartialObject as DeepPartial<T>
   }
 
   if (Array.isArray(partialObj)) {
@@ -110,11 +112,12 @@ export function expectObjectDeep<T> (fullOrPartialObject: T | DeepPartial<T>, pa
   }
 }
 
-export function expectArray<T> (fullObj: T[], partialObj: DeepPartial<T>[]): T[]
-export function expectArray<T> (data: DeepPartial<T>[]): T[]
-export function expectArray<T> (fullOrPartialObject: T[] | DeepPartial<T>[], partialObj?: DeepPartial<T>[]): T[] {
+export function expectArray<T extends AnyValue> (fullObj: T[], partialObj: DeepPartial<T>[]): T[]
+export function expectArray<T extends AnyValue[]> (fullObj: T, partialObj: DeepPartial<Singular<T>>[]): T
+export function expectArray<T extends AnyValue> (data: DeepPartial<T>[]): T[]
+export function expectArray<T extends AnyValue> (fullOrPartialObject: T[] | DeepPartial<T>[], partialObj?: DeepPartial<T>[]): T[] {
   if (partialObj == null) {
-    partialObj = fullOrPartialObject
+    partialObj = fullOrPartialObject as DeepPartial<T>[]
   }
 
   return expect.arrayContaining(partialObj)

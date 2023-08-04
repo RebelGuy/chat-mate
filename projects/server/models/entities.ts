@@ -60,41 +60,58 @@ type Models = 'Livestream' |
   'ExperienceTransaction' | 'ExperienceSnapshot' | 'ExperienceDataChatMessage' |
   'CustomEmoji'
 
-type Includes = DbDefine<{
-  Livestream: Prisma.LivestreamInclude,
-  ChatUser: Prisma.ChatUserInclude,
-  YoutubeChannel: Prisma.YoutubeChannelInclude,
-  YoutubeChannelInfo: Prisma.YoutubeChannelInfoInclude,
-  TwitchChannel: Prisma.TwitchChannelInclude,
-  TwitchChannelInfo: Prisma.TwitchChannelInfoInclude,
-  ChatMessage: Prisma.ChatMessageInclude,
-  ChatMessagePart: Prisma.ChatMessagePartInclude,
-  ChatEmoji: Prisma.ChatEmojiInclude,
-  ChatText: Prisma.ChatTextInclude,
-  ChatCheer: Prisma.ChatCheerInclude,
-  ExperienceTransaction: Prisma.ExperienceTransactionInclude,
-  ExperienceSnapshot: Prisma.ExperienceSnapshotInclude,
-  ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageInclude,
-  CustomEmoji: Prisma.CustomEmojiInclude
-}>
+  type Includes = DbDefine<{
+    Livestream: Prisma.LivestreamInclude,
+    ChatUser: Prisma.ChatUserInclude,
+    YoutubeChannel: Prisma.YoutubeChannelInclude,
+    YoutubeChannelInfo: Prisma.YoutubeChannelInfoInclude,
+    TwitchChannel: Prisma.TwitchChannelInclude,
+    TwitchChannelInfo: Prisma.TwitchChannelInfoInclude,
+    ChatMessage: Prisma.ChatMessageInclude,
+    ChatMessagePart: Prisma.ChatMessagePartInclude,
+    ChatEmoji: Prisma.ChatEmojiInclude,
+    ChatText: Prisma.ChatTextInclude,
+    ChatCheer: Prisma.ChatCheerInclude,
+    ExperienceTransaction: Prisma.ExperienceTransactionInclude,
+    ExperienceSnapshot: Prisma.ExperienceSnapshotInclude,
+    ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageInclude,
+    CustomEmoji: Prisma.CustomEmojiInclude
+  }>
 
+  type Args = DbDefine<{
+    Livestream: Prisma.LivestreamArgs,
+    ChatUser: Prisma.ChatUserArgs,
+    YoutubeChannel: Prisma.YoutubeChannelArgs,
+    YoutubeChannelInfo: Prisma.YoutubeChannelInfoArgs,
+    TwitchChannel: Prisma.TwitchChannelArgs,
+    TwitchChannelInfo: Prisma.TwitchChannelInfoArgs,
+    ChatMessage: Prisma.ChatMessageArgs,
+    ChatMessagePart: Prisma.ChatMessagePartArgs,
+    ChatEmoji: Prisma.ChatEmojiArgs,
+    ChatText: Prisma.ChatTextArgs,
+    ChatCheer: Prisma.ChatCheerArgs,
+    ExperienceTransaction: Prisma.ExperienceTransactionArgs,
+    ExperienceSnapshot: Prisma.ExperienceSnapshotArgs,
+    ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageArgs,
+    CustomEmoji: Prisma.CustomEmojiArgs
+  }>
 
 type GetPayloads<T> = DbDefine<{
-  Livestream: Prisma.LivestreamGetPayload<T>,
-  ChatUser: Prisma.ChatUserGetPayload<T>,
-  YoutubeChannel: Prisma.YoutubeChannelGetPayload<T>,
-  YoutubeChannelInfo: Prisma.YoutubeChannelInfoGetPayload<T>,
-  TwitchChannel: Prisma.TwitchChannelGetPayload<T>,
-  TwitchChannelInfo: Prisma.TwitchChannelInfoGetPayload<T>,
-  ChatMessage: Prisma.ChatMessageGetPayload<T>,
-  ChatMessagePart: Prisma.ChatMessagePartGetPayload<T>,
-  ChatEmoji: Prisma.ChatEmojiGetPayload<T>,
-  ChatText: Prisma.ChatTextGetPayload<T>,
-  ChatCheer: Prisma.ChatCheerGetPayload<T>,
-  ExperienceTransaction: Prisma.ExperienceTransactionGetPayload<T>,
-  ExperienceSnapshot: Prisma.ExperienceSnapshotGetPayload<T>,
-  ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageGetPayload<T>,
-  CustomEmoji: Prisma.CustomEmojiGetPayload<T>
+  Livestream: Prisma.LivestreamGetPayload<T extends Args['Livestream'] ? T : never>,
+  ChatUser: Prisma.ChatUserGetPayload<T extends Args['ChatUser'] ? T : never>,
+  YoutubeChannel: Prisma.YoutubeChannelGetPayload<T extends Args['YoutubeChannel'] ? T : never>,
+  YoutubeChannelInfo: Prisma.YoutubeChannelInfoGetPayload<T extends Args['YoutubeChannelInfo'] ? T : never>,
+  TwitchChannel: Prisma.TwitchChannelGetPayload<T extends Args['TwitchChannel'] ? T : never>,
+  TwitchChannelInfo: Prisma.TwitchChannelInfoGetPayload<T extends Args['TwitchChannelInfo'] ? T : never>,
+  ChatMessage: Prisma.ChatMessageGetPayload<T extends Args['ChatMessage'] ? T : never>,
+  ChatMessagePart: Prisma.ChatMessagePartGetPayload<T extends Args['ChatMessagePart'] ? T : never>,
+  ChatEmoji: Prisma.ChatEmojiGetPayload<T extends Args['ChatEmoji'] ? T : never>,
+  ChatText: Prisma.ChatTextGetPayload<T extends Args['ChatText'] ? T : never>,
+  ChatCheer: Prisma.ChatCheerGetPayload<T extends Args['ChatCheer'] ? T : never>,
+  ExperienceTransaction: Prisma.ExperienceTransactionGetPayload<T extends Args['ExperienceTransaction'] ? T : never>,
+  ExperienceSnapshot: Prisma.ExperienceSnapshotGetPayload<T extends Args['ExperienceSnapshot'] ? T : never>,
+  ExperienceDataChatMessage: Prisma.ExperienceDataChatMessageGetPayload<T extends Args['ExperienceDataChatMessage'] ? T : never>,
+  CustomEmoji: Prisma.CustomEmojiGetPayload<T extends Args['CustomEmoji'] ? T : never>
 }>
 
 type Selects = DbDefine<{

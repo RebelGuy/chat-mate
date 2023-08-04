@@ -4,13 +4,17 @@ import HelixEventService from '@rebel/server/services/HelixEventService'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { GetAdministrativeModeResponse, GetTwitchLoginUrlResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, TwitchAuthorisationResponse } from '@rebel/api-models/schema/admin'
+import { GetAdministrativeModeResponse, GetLinkAttemptLogsResponse, GetTwitchLoginUrlResponse, ReconnectTwitchChatClientResponse, ReleaseLinkAttemptResponse, ResetTwitchSubscriptionsResponse, TwitchAuthorisationResponse } from '@rebel/api-models/schema/admin'
+import LinkStore from '@rebel/server/stores/LinkStore'
+import { PublicLinkAttemptLog } from '@rebel/api-models/public/user/PublicLinkAttemptLog'
+import { PublicLinkAttemptStep } from '@rebel/api-models/public/user/PublicLinkAttemptStep'
 
 type Deps = ControllerDependencies<{
   adminService: AdminService
   isAdministrativeMode: () => boolean
   twurpleService: TwurpleService
   helixEventService: HelixEventService
+  linkStore: LinkStore
 }>
 
 @Path(buildPath('admin'))
@@ -20,6 +24,7 @@ export default class AdminController extends ControllerBase {
   private readonly isAdministrativeMode: () => boolean
   private readonly twurpleService: TwurpleService
   private readonly helixEventService: HelixEventService
+  private readonly linkStore: LinkStore
 
   constructor (deps: Deps) {
     super(deps, 'admin')
@@ -27,6 +32,7 @@ export default class AdminController extends ControllerBase {
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.twurpleService = deps.resolve('twurpleService')
     this.helixEventService = deps.resolve('helixEventService')
+    this.linkStore = deps.resolve('linkStore')
   }
 
   @GET
@@ -90,6 +96,49 @@ export default class AdminController extends ControllerBase {
 
     try {
       await this.helixEventService.resetAllSubscriptions()
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/link/logs')
+  public async getLinkAttemptLogs (): Promise<GetLinkAttemptLogsResponse> {
+    const builder = this.registerResponseBuilder<GetLinkAttemptLogsResponse>('GET /link/log')
+
+    try {
+      const result = await this.linkStore.getLinkAttempts()
+      return builder.success({ logs: result.map<PublicLinkAttemptLog>(attempt => ({
+        id: attempt.id,
+        startTime: attempt.startTime.getTime(),
+        endTime: attempt.endTime?.getTime() ?? null,
+        errorMessage: attempt.errorMessage,
+        defaultChatUserId: attempt.defaultChatUserId,
+        aggregateChatUserId: attempt.aggregateChatUserId,
+        steps: (JSON.parse(attempt.log) as [string, string, number][]).map<PublicLinkAttemptStep>(log => ({
+          timestamp: new Date(log[0]).getTime(),
+          description: log[1],
+          accumulatedWarnings: log[2]
+        })),
+        type: attempt.type,
+        linkToken: attempt.linkToken?.token ?? null,
+        released: attempt.released
+      }))})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/link/release')
+  public async releaseLinkAttempt (
+    @QueryParam('linkAttemptId') linkAttemptId: number
+  ): Promise<ReleaseLinkAttemptResponse> {
+    const builder = this.registerResponseBuilder<ReleaseLinkAttemptResponse>('POST /link/release')
+
+    try {
+      await this.linkStore.releaseLink(linkAttemptId)
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

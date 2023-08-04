@@ -220,7 +220,7 @@ function StatusRow (props: StatusProps) {
           </IconButton>
         </Tooltip>
       </TableCell>
-      <TableCell><RelativeTime time={lastChange} useSentenceCase /></TableCell>
+      <TableCell><RelativeTime time={lastChange} useSentenceCase /> ago</TableCell>
     </TableRow>
   )
 }

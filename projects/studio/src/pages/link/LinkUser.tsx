@@ -13,6 +13,7 @@ import useRequest, { onConfirmRequest } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 import StreamerLinks from '@rebel/studio/components/StreamerLinks'
+import LinkAttemptLogs from '@rebel/studio/pages/link/LinkAttemptLogs'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
@@ -124,7 +125,10 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
       {/* These must be null to avoid infinite recursion */}
       {props.admin_selectedAggregateUserId == null && props.admin_selectedDefaultUserId == null &&
         <RequireRank admin>
-          <AdminLink />
+          <>
+            <AdminLink />
+            <LinkAttemptLogs />
+          </>
         </RequireRank>
       }
     </div>

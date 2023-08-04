@@ -42,29 +42,29 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
 
   // add the given class to the context. note that its dependencies can only depend on classes
   // that are already part of the context (will throw otherwise).
-  public withClass<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, ClassType extends ContextClass> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties & TVariables>) => ClassType) {
+  public withClass<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, ClassType extends ContextClass> (name: Name, ctor: new (dep: Dependencies<TClasses & TObjects & TProperties & TVariables>) => ClassType): ContextProvider<TClasses & StoredClass<Name, ClassType>, TObjects, TProperties, TVariables> {
     this.assertMutable()
     // todo: this should just extend the types, but not do any instantiation...
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
 
   // add the given helper class to the context. it should not have ANY dependencies
-  public withHelpers<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, HelperClassType extends ContextClass> (name: Name, ctor: new () => HelperClassType) {
+  public withHelpers<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, HelperClassType extends ContextClass> (name: Name, ctor: new () => HelperClassType): ContextProvider<TClasses & StoredClass<Name, HelperClassType>, TObjects, TProperties, TVariables> {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withClass(name, ctor))
   }
 
-  public withObject<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, T extends Injectable> (name: Name, object: T) {
+  public withObject<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, T extends Injectable> (name: Name, object: T): ContextProvider<TClasses, TObjects & StoredObject<Name, T>, TProperties, TVariables> {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withObject(name, object))
   }
 
-  public withProperty<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, T extends string | boolean | number | null> (name: Name, prop: T) {
+  public withProperty<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, T extends string | boolean | number | null> (name: Name, prop: T): ContextProvider<TClasses, TObjects, TProperties & StoredProperty<Name, T>, TVariables> {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withProperty(name, prop))
   }
 
-  public withVariable<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, T extends VariableResult> (name: Name, variable: () => T) {
+  public withVariable<Name extends UniqueName<Name, TClasses, TObjects, TProperties, TVariables>, T extends VariableResult> (name: Name, variable: () => T): ContextProvider<TClasses, TObjects, TProperties, TVariables & StoredVariable<Name, T>> {
     this.assertMutable()
     return this.extendAndReturnMutableContext(() => this.builder.withVariable(name, variable))
   }

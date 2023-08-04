@@ -89,11 +89,6 @@ export default class ApiService extends ContextClass {
       return
     }
 
-    const user = this.registeredUser
-    if (user == null) {
-      throw new Error('Context user must be set')
-    }
-
     const streamerHeader = this.request.headers[STREAMER_HEADER.toLowerCase()]
     if (streamerHeader == null) {
       if (optional) {
@@ -180,22 +175,32 @@ export default class ApiService extends ContextClass {
     }
 
     primaryUserIds = unique(primaryUserIds)
+    const streamerId = this.getStreamerId()
 
     // it's not pretty but it's efficient!
-    const [activeUserChannels, levels, ranks, registeredUsers, firstSeen] = await Promise.all([
-      this.channelService.getActiveUserChannels(this.getStreamerId(), primaryUserIds)
+    const [activeUserChannels, levels, ranks, registeredUsers, firstSeen, customRankNames] = await Promise.all([
+      this.channelService.getActiveUserChannels(streamerId, primaryUserIds)
         .then(channels => channels.map(c => ({ ...c, primaryUserId: getPrimaryUserId(c) }))),
-      this.experienceService.getLevels(this.getStreamerId(), primaryUserIds),
-      this.rankStore.getUserRanks(primaryUserIds, this.getStreamerId()),
+      this.experienceService.getLevels(streamerId, primaryUserIds),
+      this.rankStore.getUserRanks(primaryUserIds, streamerId),
       this.accountStore.getRegisteredUsers(primaryUserIds),
-      this.chatStore.getTimeOfFirstChat(this.getStreamerId(), primaryUserIds)
+      this.chatStore.getTimeOfFirstChat(streamerId, primaryUserIds),
+      this.rankStore.getCustomRankNamesForUsers(streamerId, primaryUserIds)
     ])
 
     try {
-      return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers, firstSeen)
+      return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers, firstSeen, customRankNames)
     } catch (e: any) {
       this.logService.logError(this, `Failed to get all data for primaryUserIds [${primaryUserIds.join(', ')}]. Most likely one or more of the ids were not primary (leading to duplicate effective primary user ids) or a link/unlink was not successful such that fetching data for a (probably default) primary user returned data for another (proabbly aggregate) primary user.`, e)
       throw new Error('Unable to get all data.')
     }
+  }
+
+  public getRequest (): Request {
+    return this.request
+  }
+
+  public getResponse (): Response {
+    return this.response
   }
 }

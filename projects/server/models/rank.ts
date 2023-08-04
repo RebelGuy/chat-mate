@@ -1,10 +1,10 @@
 import { Rank } from '@prisma/client'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
-export function userRankToPublicObject (userRank: UserRankWithRelations): PublicUserRank {
+export function userRankToPublicObject (userRank: UserRankWithRelations, customRankName: string | null | undefined): PublicUserRank {
   return {
     rank: rankToPublicObject(userRank.rank),
     id: userRank.id,
@@ -14,7 +14,8 @@ export function userRankToPublicObject (userRank: UserRankWithRelations): Public
     message: userRank.message,
     revokedAt: userRank.revokedTime?.getTime() ?? null,
     revokeMessage: userRank.revokeMessage,
-    isActive: new RankHelpers().isRankActive(userRank) // I guess we can do this with helpers..
+    isActive: new RankHelpers().isRankActive(userRank), // I guess we can do this with helpers..
+    customRankName: customRankName ?? null
   }
 }
 

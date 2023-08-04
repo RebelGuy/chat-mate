@@ -3,6 +3,18 @@ import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export const MAX_DATE = new Date(8640000000000000)
 
+export const ONE_SECOND = 1000
+
+export const ONE_MINUTE = ONE_SECOND * 60
+
+export const ONE_HOUR = ONE_MINUTE * 60
+
+export const ONE_DAY = ONE_HOUR * 24
+
+export const ONE_MONTH = ONE_DAY * (365.25/12)
+
+export const ONE_YEAR = ONE_DAY * 365.25
+
 // formats to YYYY-MM-dd
 export function formatDate (date?: Date, utc?: boolean) {
   const dateToFormat = date ?? new Date()
@@ -82,4 +94,38 @@ export function minTime (...times: Date[]): Date {
 
 export function sortTimes (...times: Date[]): Date[] {
   return [...times].sort((a, b) => a.getTime() - b.getTime())
+}
+
+export function getElapsedText (elapsed: number, allowMs?: boolean) {
+  let unit: string
+  let amount: number
+
+  if (allowMs && elapsed < ONE_SECOND * 10) {
+    unit = 'ms'
+    amount = Math.floor(elapsed)
+  } else if (elapsed < ONE_MINUTE) {
+    unit = 'second'
+    amount = Math.floor(elapsed / 1000)
+  } else if (elapsed < ONE_HOUR) {
+    unit = 'minute'
+    amount = Math.floor(elapsed / ONE_MINUTE)
+  } else if (elapsed < ONE_DAY) {
+    unit = 'hour'
+    amount = Math.floor(elapsed / ONE_HOUR)
+  } else if (elapsed < ONE_MONTH) {
+    unit = 'day'
+    amount = Math.floor(elapsed / ONE_DAY)
+  } else if (elapsed < ONE_YEAR) {
+    unit = 'month'
+    amount = Math.floor(elapsed / ONE_MONTH)
+  } else {
+    unit = 'year'
+    amount = Math.floor(elapsed / ONE_YEAR)
+  }
+
+  if (amount !== 1 && !allowMs) {
+    unit += 's'
+  }
+
+  return `${amount} ${unit}`
 }

@@ -1,12 +1,12 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/api-models/schema/emoji'
 import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
-import { GetAccessibleRanksResponse, GetUserRanksResponse } from '@rebel/api-models/schema/rank'
+import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchStatusResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/api-models/schema/streamer'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/api-models/schema/account'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/api-models/schema/donation'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, DeleteLinkTokenResponse } from '@rebel/api-models/schema/user'
-import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse } from '@rebel/api-models/schema/admin'
+import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, GetLinkAttemptLogsResponse, ReleaseLinkAttemptResponse } from '@rebel/api-models/schema/admin'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse } from '@rebel/api-models/types'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
@@ -41,7 +41,7 @@ function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends
 
 export const getChatMateRegisteredUsername = requestBuilder<GetChatMateRegisteredUsernameResponse>('GET', `/chatMate/username`)
 
-export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`)
+export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`, true, false)
 
 export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, UpdateCustomEmojiRequest> ('PATCH', `/emoji/custom`, 'self')
 
@@ -53,11 +53,21 @@ export const getChatMateStats = requestBuilder<ChatMateStatsResponse>('GET', `/c
 
 export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
 
-export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`)
+export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`, true, false)
 
 export const getRanksForStreamer = requestBuilder<GetUserRanksResponse>('GET', `/rank`)
 
 export const getGlobalRanks = requestBuilder<GetUserRanksResponse>('GET', `/rank`, false)
+
+export const getCustomisableRankNames = requestBuilder<GetCustomisableRanksResponse>('GET', `/rank/customise`, false)
+
+export const setCustomRankName = requestBuilder<SetCustomRankNameResponse, SetCustomRankNameRequest>('POST', `/rank/customise`, true)
+
+export const deleteCustomRankName = requestBuilder<DeleteCustomRankNameResponse, false, [rankName: string]>(
+  'DELETE',
+  (rankName) => constructPath(`/rank/customise`, { rank: rankName }),
+  true
+)
 
 export const registerAccount = requestBuilder<RegisterResponse, RegisterRequest>('POST', `/account/register`, false, false)
 
@@ -69,7 +79,7 @@ export async function authenticate (loginToken: string): Promise<AuthenticateRes
   return await POST('/account/authenticate', {}, loginToken)
 }
 
-export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false)
+export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false, false)
 
 export const getStreamerApplications = requestBuilder<GetApplicationsResponse>('GET', `/streamer/application`, false)
 
@@ -170,6 +180,14 @@ export const authoriseTwitchAdmin = requestBuilder<TwitchAuthorisationResponse, 
 export const reconnectChatClient = requestBuilder<ReconnectTwitchChatClientResponse>('POST', '/admin/twitch/reconnectChatClient', false)
 
 export const resetTwitchSubscriptions = requestBuilder<ResetTwitchSubscriptionsResponse>('POST', '/admin/twitch/resetSubscriptions', false)
+
+export const getLinkAttemptLogs = requestBuilder<GetLinkAttemptLogsResponse>('GET', '/admin/link/logs', false)
+
+export const releaseLinkAttempt = requestBuilder<ReleaseLinkAttemptResponse, false, [linkAttemptId: number]>(
+  'POST',
+  linkAttemptId => constructPath('/admin/link/release', { linkAttemptId }),
+  false
+)
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
   return await request('GET', path, null, loginToken, streamer)

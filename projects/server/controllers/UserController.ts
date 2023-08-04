@@ -163,7 +163,8 @@ export default class UserController extends ControllerBase {
                 }]
               }},
             registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser,
-            firstSeen: 0
+            firstSeen: 0,
+            customRankNames: {}
           }),
           matchedChannel: null,
           allChannels: channels.channels.map(channelToPublicChannel)

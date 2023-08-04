@@ -49,7 +49,6 @@ type Deps = ControllerDependencies<{
 }>
 
 @Path(buildPath('streamer'))
-@PreProcessor(requireAuth)
 export default class StreamerController extends ControllerBase {
   private readonly streamerStore: StreamerStore
   private readonly streamerService: StreamerService
@@ -112,6 +111,7 @@ export default class StreamerController extends ControllerBase {
 
   @GET
   @Path('application')
+  @PreProcessor(requireAuth)
   public async getApplications (): Promise<GetApplicationsResponse> {
     const builder = this.registerResponseBuilder<GetApplicationsResponse>('GET /application')
 
@@ -127,6 +127,7 @@ export default class StreamerController extends ControllerBase {
 
   @POST
   @Path('application')
+  @PreProcessor(requireAuth)
   public async createApplication (request: CreateApplicationRequest): Promise<CreateApplicationResponse> {
     const builder = this.registerResponseBuilder<CreateApplicationResponse>('POST /application')
 
@@ -192,6 +193,7 @@ export default class StreamerController extends ControllerBase {
 
   @POST
   @Path('application/:streamerApplicationId/withdraw')
+  @PreProcessor(requireAuth)
   public async withdrawApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
       request: WithdrawApplicationRequest
@@ -222,6 +224,7 @@ export default class StreamerController extends ControllerBase {
 
   @GET
   @Path('/primaryChannels')
+  @PreProcessor(requireAuth)
   public async getPrimaryChannels (): Promise<GetPrimaryChannelsResponse> {
     const builder = this.registerResponseBuilder<GetPrimaryChannelsResponse>('POST /primaryChannels')
 
@@ -244,6 +247,7 @@ export default class StreamerController extends ControllerBase {
 
   @POST
   @Path('/primaryChannels/:platform/:channelId')
+  @PreProcessor(requireAuth)
   public async setPrimaryChannel (
     @PathParam('platform') platform: string,
     @PathParam('channelId') channelId: number
@@ -278,6 +282,7 @@ export default class StreamerController extends ControllerBase {
 
   @DELETE
   @Path('/primaryChannels/:platform')
+  @PreProcessor(requireAuth)
   public async unsetPrimaryChannel (
     @PathParam('platform') platform: string
   ): Promise<UnsetPrimaryChannelResponse> {
@@ -307,6 +312,7 @@ export default class StreamerController extends ControllerBase {
 
   @GET
   @Path('/twitch/status')
+  @PreProcessor(requireAuth)
   public async getTwitchStatus (): Promise<GetTwitchStatusResponse> {
     const builder = this.registerResponseBuilder<GetTwitchStatusResponse>('GET /twitch/status')
 
@@ -340,6 +346,7 @@ export default class StreamerController extends ControllerBase {
 
   @GET
   @Path('/twitch/login')
+  @PreProcessor(requireAuth)
   public async getTwitchLoginUrl (): Promise<GetTwitchLoginUrlResponse> {
     const builder = this.registerResponseBuilder<GetTwitchLoginUrlResponse>('GET /twitch/login')
 
@@ -358,6 +365,7 @@ export default class StreamerController extends ControllerBase {
 
   @POST
   @Path('/twitch/authorise')
+  @PreProcessor(requireAuth)
   public async authoriseTwitch (
     @QueryParam('code') code: string
   ): Promise<TwitchAuthorisationResponse> {
@@ -378,6 +386,7 @@ export default class StreamerController extends ControllerBase {
 
   @GET
   @Path('/youtube/status')
+  @PreProcessor(requireAuth)
   public async getYoutubeStatus (): Promise<GetYoutubeStatusResponse> {
     const builder = this.registerResponseBuilder<GetYoutubeStatusResponse>('GET /youtube/status')
 
@@ -397,6 +406,7 @@ export default class StreamerController extends ControllerBase {
   @GET
   @Path('status')
   @PreProcessor(requireStreamer)
+  @PreProcessor(requireAuth)
   public async getStatus (): Promise<GetStatusResponse> {
     const builder = this.registerResponseBuilder<GetStatusResponse>('GET /status')
     try {

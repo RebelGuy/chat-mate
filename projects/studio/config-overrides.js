@@ -6,6 +6,7 @@
 
 const { aliasDangerous, aliasJest, configPaths } = require('react-app-rewire-alias/lib/aliasDangerous')
 const webpack = require('webpack')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 const aliasMap = configPaths('./tsconfig.paths.json')
 
@@ -47,7 +48,12 @@ module.exports = (...args) => {
           default:
             throw new Error(`Not found ${mod}`)
         }
-      })
+      }),
+
+      new CopyWebpackPlugin({ patterns: [
+        // the favicon is automatically picked up by the `index.html`
+        { from: `favicon_${process.env.REACT_APP_ENV}.ico`, to: 'favicon.ico' }
+      ] })
     ]
   }
 }

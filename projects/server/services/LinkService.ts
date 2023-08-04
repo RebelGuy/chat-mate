@@ -147,6 +147,8 @@ export default class LinkService extends ContextClass {
         logs.push([new Date(), nameof(ExperienceService, 'recalculateChatExperience'), cumWarnings])
       }
 
+      await this.rankStore.relinkCustomRankNames(defaultUserId, aggregateUserId)
+
     } catch (e: any) {
       this.logService.logError(this, `[${linkAttemptId}] Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)
 

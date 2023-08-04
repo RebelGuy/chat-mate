@@ -1,8 +1,16 @@
-import { Primitive } from '@rebel/shared/types'
+import { Primitive, RecordValueType } from '@rebel/shared/types'
 import { isPrimitive } from '@rebel/shared/util/typescript'
 
 export function keysOf<TObj extends Record<any, any>> (obj: TObj): (keyof TObj)[] {
   return Object.keys(obj)
+}
+
+export function mapOverKeys<TObj extends Record<any, any>, TResult> (obj: TObj, mapper: (key: keyof TObj, value: RecordValueType<TObj>) => TResult): TResult[] {
+  let result = []
+  for (const key of keysOf(obj)) {
+    result.push(mapper(key, obj[key]))
+  }
+  return result
 }
 
 /** Visits every primitive value and replaces it with the output of the `transformer`. Throws if any functional values are encountered.

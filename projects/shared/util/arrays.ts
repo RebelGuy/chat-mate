@@ -1,19 +1,26 @@
-import { GenericObject, Nullify, NumberOnly, Primitive, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
+import { GenericObject, NumberOnly, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import { Key } from 'readline'
 
 // uses default equality comparison
-export function unique<T> (array: T[]): T[] {
-  const values: Set<T> = new Set()
-  for (const value of array) {
-    if (values.has(value)) {
+export function unique<T> (array: T[], transformer?: (item: T) => any): T[] {
+  if (transformer == null) {
+    transformer = item => item
+  }
+
+  const uniqueItems: Set<T> = new Set()
+  const uniqueValues: Set<unknown> = new Set()
+
+  for (const item of array) {
+    const value = transformer(item)
+    if (uniqueValues.has(value)) {
       continue
     } else {
-      values.add(value)
+      uniqueValues.add(value)
+      uniqueItems.add(item)
     }
   }
 
-  return Array.from(values)
+  return Array.from(uniqueItems)
 }
 
 export function single<T> (array: T[]): T {
@@ -176,7 +183,8 @@ export function zipOnStrict<T extends GenericObject, U extends GenericObject, Ke
     let left = { ...x }
     delete left[firstKey]
 
-    let right = { ...secondArray.find(y => y[secondKey!] === x[firstKey])! }
+    // any-typing required to make typescript happy
+    let right = { ...secondArray.find(y => y[secondKey!] as any === x[firstKey])! }
     delete right[secondKey!]
 
     const zippedValue = x[firstKey]
@@ -371,4 +379,14 @@ export function symmetricDifference<T> (first: T[], second: T[], comparator?: (a
 /** A common operation is to filter an array of a union of types by a certain type (or multiple). The vanilla return type of that filter is the same union of types, which is undesirable. */
 export function filterTypes<T extends { type: string }, Types extends T['type'][]> (items: T[], ...types: Types): Extract<T, { type: Types[number] }>[] {
   return items.filter(x => types.includes(x.type)) as any // the any-cast is exactly why I decided to write this function
+}
+
+/** Create an object from the given array, where each entry is transformed into a key-value pair. Does not check for duplicate keys. */
+export function toObject<K extends string | number | symbol, V, T> (items: T[], mapper: (item: T) => [key: K, value: V]): Record<K, V> {
+  let obj = {} as Record<K, V>
+  items.forEach(item => {
+    const [key, value] = mapper(item)
+    obj[key] = value
+  })
+  return obj
 }

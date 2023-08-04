@@ -50,7 +50,7 @@ import { Express } from 'express-serve-static-core'
 import { TimeoutError } from '@rebel/shared/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import RankController from '@rebel/server/controllers/RankController'
 import ModService from '@rebel/server/services/rank/ModService'
 import RankService from '@rebel/server/services/rank/RankService'
@@ -111,6 +111,7 @@ const main = async () => {
   const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
   const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
   const dbTransactionTimeout = env('dbTransactionTimeout')
+  const dbSlowQueryThreshold = env('dbSlowQueryThreshold')
   const streamlabsAccessToken = env('streamlabsAccessToken')
   const twitchUsername = env('twitchUsername')
 
@@ -135,6 +136,7 @@ const main = async () => {
     .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
     .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
     .withProperty('dbTransactionTimeout', dbTransactionTimeout)
+    .withProperty('dbSlowQueryThreshold', dbSlowQueryThreshold)
     .withProperty('hostName', hostName)
     .withProperty('streamlabsAccessToken', streamlabsAccessToken)
     .withProperty('twitchUsername', twitchUsername)

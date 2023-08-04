@@ -31,6 +31,7 @@ const emojiSorter = (data: SuccessfulResponseData<GetCustomEmojisResponse>) => (
 
 export default function CustomEmojiManager () {
   const loginContext = useContext(LoginContext)
+  const isLoggedIn = loginContext.username != null
   const [editingEmoji, setEditingEmoji] = useState<EmojiData | null>(null)
   const [editingError, setEditingError] = useState<ReactNode>(null)
   const [openEditor, setOpenEditor] = useState<boolean>(false)
@@ -83,6 +84,13 @@ export default function CustomEmojiManager () {
   }
 
   const meetsEmojiRequirements = (emoji: PublicCustomEmoji): Eligibility => {
+    if (!isLoggedIn) {
+      return {
+        meetsLevelRequirement: true,
+        meetsRankRequirement: true
+      }
+    }
+
     if (accessibleRanksRequest.data == null) {
       return {
         meetsLevelRequirement: false,
@@ -135,7 +143,7 @@ export default function CustomEmojiManager () {
             </Button>
           </RequireRank>
 
-          <FormControlLabel
+          {isLoggedIn && <FormControlLabel
             label="Show only eligible emojis"
             sx={{ mb: 1, display: 'block' }}
             control={
@@ -145,7 +153,7 @@ export default function CustomEmojiManager () {
                 onChange={() => setShowOnlyEligibleEmojis(!showOnlyEligibleEmojis)}
               />
             }
-          />
+          />}
 
           <Table
             stickyHeader
@@ -170,7 +178,7 @@ export default function CustomEmojiManager () {
                   accessibleRanks={accessibleRanksRequest.data?.accessibleRanks ?? []}
                   isLoading={isLoading}
                   meetsRequirements={meetsEmojiRequirements(emoji)}
-                  showOnlyEligibleEmojis={showOnlyEligibleEmojis}
+                  showOnlyEligibleEmojis={isLoggedIn ? showOnlyEligibleEmojis : false}
                   onEdit={() => onEdit(emoji.id)}
                 />)
               }

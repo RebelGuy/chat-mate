@@ -47,6 +47,39 @@ describe(nameof(TimerHelpers, 'setTimeout'), () => {
   })
 })
 
+describe(nameof(TimerHelpers, 'setInterval'), () => {
+  test('Calls the callback multiple times after the specified interval', () => {
+    let calls = 0
+    const cb = () => { calls++ }
+
+    timerHelpers.setInterval(cb, 1000)
+
+    jest.advanceTimersByTime(999)
+    expect(calls).toBe(0)
+
+    jest.advanceTimersByTime(1)
+    expect(calls).toBe(1)
+
+    jest.advanceTimersByTime(1000)
+    expect(calls).toBe(2)
+  })
+
+  test('Does not call the callback if the interval was cancelled', () => {
+    let calls = 0
+    const cb = () => { calls++ }
+
+    const clearInterval = timerHelpers.setInterval(cb, 1000)
+
+    jest.advanceTimersByTime(999)
+    expect(calls).toBe(0)
+
+    clearInterval()
+
+    jest.advanceTimersByTime(1)
+    expect(calls).toBe(0)
+  })
+})
+
 describe(nameof(TimerHelpers, 'createRepeatingTimer'), () => {
   test('fixed timer is rescheduled after callback', () => {
     const interval = 300

@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { expectObject, nameof } from '@rebel/shared/testUtils'
+import { expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { LinkAttemptInProgressError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/shared/util/error'
 import { LinkAttempt, ChatUser, LinkToken } from '@prisma/client'
@@ -179,6 +179,38 @@ export default () => {
     })
   })
 
+
+  describe(nameof(LinkStore, 'getLinkAttempts'), () => {
+    test('Gets the list of all link attempts', async () => {
+      await db.chatUser.createMany({ data: [{}, {}, {}] })
+      await db.linkToken.create({ data: { token: 'test token', aggregateChatUserId: 1, defaultChatUserId: 2 }})
+      await db.linkAttempt.create({ data: {
+        startTime: new Date(),
+        aggregateChatUserId: 1,
+        defaultChatUserId: 2,
+        log: '',
+        errorMessage: null,
+        type: 'link',
+        linkTokenId: 1
+      }})
+      await db.linkAttempt.create({ data: {
+        startTime: new Date(),
+        aggregateChatUserId: 1,
+        defaultChatUserId: 2,
+        log: '',
+        errorMessage: null,
+        type: 'link'
+      }})
+
+      const result = await linkStore.getLinkAttempts()
+
+      expect(result).toEqual(expectObjectDeep(result, [
+        { id: 1, linkToken: { id: 1 }},
+        { id: 2 }
+      ]))
+    })
+  })
+
   describe(nameof(LinkStore, 'isLinkInProgress'), () => {
     test('Returns true if the aggregate user is involved in an active link attempt', async () => {
       await db.chatUser.createMany({ data: [{}, {}]})
@@ -234,6 +266,37 @@ export default () => {
       const result = await linkStore.isLinkInProgress(1)
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe(nameof(LinkStore, 'releaseLink'), () => {
+    test('Releases the link attempt', async () => {
+      await db.chatUser.createMany({ data: [{}, {}, {}]})
+      await db.linkAttempt.create({ data: {
+        aggregateChatUserId: 1,
+        defaultChatUserId: 2,
+        startTime: new Date(),
+        endTime: new Date(),
+        log: '',
+        errorMessage: 'test',
+        type: 'link',
+        released: true
+      }})
+      const linkToRelease = await db.linkAttempt.create({ data: {
+        aggregateChatUserId: 3,
+        defaultChatUserId: 2,
+        startTime: new Date(),
+        endTime: new Date(),
+        log: '',
+        errorMessage: 'test',
+        type: 'link',
+        released: false
+      }})
+
+      await linkStore.releaseLink(linkToRelease.id)
+
+      const stored = await db.linkAttempt.findUnique({ where: { id: linkToRelease.id }})
+      expect(stored!.released).toBeTruthy()
     })
   })
 

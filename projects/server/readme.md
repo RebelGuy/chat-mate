@@ -62,10 +62,11 @@ The following environment variables must be set in the `.env` file:
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
-- `ENABLE_DB_LOGGING`: [Optional, defaults to `false`] Whether to include database-related actions in the logs. Note that, even if this is `false`, any warning and errors will still be included.
+- `ENABLE_DB_LOGGING`: [Optional, defaults to `false`] Whether to include database-related actions in the logs. Note that, even if this is `false`, any warning and errors will still be included, as will slow query logs.
 - `DB_SEMAPHORE_CONCURRENT`: [Optional, defaults to `1000`] How many concurrent database requests to allow, before queuing any new requests. Note that operations on the Prisma Client generate many direct database requests, so this number shouldn't be too low (> 50).
 - `DB_SEMAPHORE_TIMEOUT`: [Optional, defaults to `null`] The maximum number of milliseconds that a database request can be queued before timing it out. If null, does not timeout requests in the queue.
 - `DB_TRANSACTION_TIMEOUT`: [Optional, defaults to `5000`] The maximum number of milliseconds a Prisma transaction can run before being cancelled and rolled back.
+- `DB_SLOW_QUERY_THRESHOLD`: [Optional, defaults to `10000`] The threshold in milliseconds at which database queries are considered to be slow and will be logged as such.
 
 The following environment variables are available only for **local development** (that is, where `NODE_ENV`=`local`):
 - `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
@@ -221,11 +222,24 @@ Deletes and re-initialises all streamer event subscriptions.
 
 Returns an empty response body.
 
+### `GET /link/logs`
+Gets the list of all link attempt logs.
+
+Returns data with the following properties:
+- `logs` (`PublicLinkAttemptLog[]`): The list of link attempt logs.
+
+### `POST /link/release`
+Releases a failed link attempt, acknowledging that any further link attempts are able to go ahead safely.
+
+Query parameters:
+- `linkAttemptId` (`number`): *Required.* The id of the link attempt that is to be released.
+
+Returns an empty response body.
+
 ## Chat Endpoints
 Path: `/chat`.
 
 ### `GET`
-
 Retrieves the latest chat items.
 
 Query parameters:
@@ -237,7 +251,6 @@ Returns data with the following properties:
 - `chat` (`PublicChatItem[]`): The chat data that satisfy the request filter, sorted in ascending order by time.
 
 ### `GET /command/:commandId`
-
 Gets the current status of the specified command.
 
 Path parameters:
@@ -282,10 +295,43 @@ Returns data with the following properties:
 Path: `/donation`.
 
 ### `GET /`
-Gets all donations.
+Gets all donations, including refunded donations.
 
 Returns data with the following properties:
 - `donations` (`PublicDonation[]`): The list of all donations.
+
+### `POST /`
+Manually create a new donation.
+
+Request data (body):
+- `amount` (`number`): *Required.* The username of the account to log into.
+- `currencyCode` (`string`): *Required.* The currency code for the donation. Must be a valid code returned by the [`GET /currencies` endpoint](#get-currencies).
+- `name` (`string`): *Required.* The display name of the donator.
+- `message` (`string`): *Optional.* The raw donation message.
+
+Returns data with the following properties:
+- `newDonation` (`PublicDonation`): The newly created donation.
+
+Can return the following errors:
+- `400`: When the request data is not sent or formatted incorrectly.
+
+### `DELETE /`
+Deletes a donation. Deleted donations are not returned by any other donation endpoints.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation to mark as refunded.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent.
+- `404`: When no donation was found for the given ID.
+
+### `GET /currencies`
+Gets the list of currencies that can be used when creating a new donation manually.
+
+Returns data with the following properties:
+- `currencies` (`PublicCurrency[]`): The list of supported currencies.
 
 ### `POST /link`
 Links a user to a donation.
@@ -299,6 +345,7 @@ Returns data with the following properties:
 
 Can return the following errors:
 - `400`: When the request data is not sent, or when a user is already linked to the given donation.
+- `404`: When no donation was found for the given ID.
 
 ### `DELETE /link`
 Unlinks a user to a donation.
@@ -310,7 +357,21 @@ Returns data with the following properties:
 - `updatedDonation` (`PublicDonation`): The updated donation that no longer includes the linked user.
 
 Can return the following errors:
-- `404`: When the request data is not sent, or when no user was linked to the given donation.
+- `400`: When the request data is not sent, or when no user was linked to the given donation.
+- `404`: When no donation was found for the given ID.
+
+### `POST /refund`
+Marks the donation as being refunded.
+
+Query parameters:
+- `donationId` (`number`): The ID of the donation to mark as refunded.
+
+Returns data with the following properties:
+- `updatedDonation` (`PublicDonation`): The updated donation that is now marked as refunded.
+
+Can return the following errors:
+- `400`: When the request data is not sent or when the donation is already marked as refunded.
+- `404`: When no donation was found for the given ID.
 
 ### `POST /streamlabs/socketToken`
 Sets the streamlab socket token for listening to the current streamer's donations. The server is unable to get donations if the token is not set, or is invalid.
@@ -548,7 +609,6 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
-
 ### `GET /accessible`
 Gets the ranks accessible to the current user. At the moment, it returns all Regular ranks and Punishment ranks.
 
@@ -615,6 +675,35 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
+### `GET /customise`
+Gets the list of ranks whose name can be customised by users.
+
+Returns data with the following properties:
+- `customisableRanks` (`PublicRank[]`): The list of ranks whose name can be customised.
+
+### `POST /customise`
+Adds a custom rank name or updates an existing one. Custom ranks will apply only in the context of the current streamer.
+
+Request data (body):
+- `rank` (`string)`: *Required.* The rank whose name to customise. Must be one of the ranks returned by the [`GET /customise`](#get-customise) endpoint.
+- `name` (`string`): *Required.* The name of the rank. If the rank has already been named previously, the old name will be overwritten.
+- `isActive` (`boolean`): *Optional.* Whether the custom rank name is currently active or not.
+
+Returns an empty body.
+
+Can return the following errors:
+- `400`: When the request data is not sent or is formatted incorrectly, or when the provided name is invalid.
+
+### `DELETE /customise`
+Deletes a custom rank name in the context of the current streamer.
+
+Query parameters:
+- `rank` (`string`): *Required.* The rank whoe custom name should be deleted.
+
+Returns an empty body.
+
+Can return the following errors:
+- `404`: When a custom name for the given rank was not found in the context of the current streamer.
 
 ## Streamer Endpoints
 Path: `/streamer`.

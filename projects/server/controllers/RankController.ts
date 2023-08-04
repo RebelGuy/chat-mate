@@ -4,19 +4,20 @@ import { userRankToPublicObject, rankToPublicObject } from '@rebel/server/models
 import LogService from '@rebel/server/services/LogService'
 import ModService from '@rebel/server/services/rank/ModService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
-import { single, sortBy } from '@rebel/shared/util/arrays'
+import { single, sortBy, unique } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { isOneOf } from '@rebel/shared/util/validation'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
-import RankService, { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import { InvalidCustomRankNameError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import RankService, { CustomisableRank, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/shared/util/datetime'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 import { channelToPublicChannel } from '@rebel/server/models/user'
-import { AddModRankRequest, AddModRankResponse, AddUserRankRequest, AddUserRankResponse, GetAccessibleRanksResponse, GetUserRanksResponse, RemoveModRankRequest, RemoveModRankResponse, RemoveUserRankRequest, RemoveUserRankResponse } from '@rebel/api-models/schema/rank'
+import { AddModRankRequest, AddModRankResponse, AddUserRankRequest, AddUserRankResponse, DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, RemoveModRankRequest, RemoveModRankResponse, RemoveUserRankRequest, RemoveUserRankResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
+import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
 
 type Deps = ControllerDependencies<{
   logService: LogService
@@ -60,16 +61,17 @@ export default class RankController extends ControllerBase {
         anyUserId = this.getCurrentUser().aggregateChatUserId
       }
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
+      const streamerId = this.getStreamerId(true)
 
       let ranks: UserRankWithRelations[]
       if (includeInactive === true) {
-        ranks = await this.rankStore.getUserRankHistory(primaryUserId, this.getStreamerId(true))
+        ranks = await this.rankStore.getUserRankHistory(primaryUserId, streamerId)
       } else {
-        ranks = single(await this.rankStore.getUserRanks([primaryUserId], this.getStreamerId(true))).ranks
+        ranks = single(await this.rankStore.getUserRanks([primaryUserId], streamerId)).ranks
       }
 
       ranks = sortBy(ranks, p => p.issuedAt.getTime(), 'desc')
-      return builder.success({ ranks: ranks.map(e => userRankToPublicObject(e)) })
+      return builder.success({ ranks: await this.userRanksToPublicObjects(streamerId, ranks) })
     } catch (e: any) {
       return builder.failure(e)
     }
@@ -80,8 +82,9 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireStreamer)
   public async getAccessibleRanks (): Promise<GetAccessibleRanksResponse> {
     const builder = this.registerResponseBuilder<GetAccessibleRanksResponse>('GET /accessible')
-    const accessibleRanks = await this.rankService.getAccessibleRanks()
+
     try {
+      const accessibleRanks = await this.rankService.getAccessibleRanks()
       return builder.success({
         accessibleRanks: accessibleRanks.map(rankToPublicObject)
       })
@@ -105,17 +108,18 @@ export default class RankController extends ControllerBase {
         throw new Error('Cannot add the user rank at this time. Please try again later.')
       }
 
+      const streamerId = this.getStreamerId()
       const args: AddUserRankArgs = {
         rank: request.rank,
         primaryUserId: primaryUserId,
-        streamerId: this.getStreamerId(),
+        streamerId: streamerId,
         message: request.message,
         expirationTime: request.durationSeconds ? addTime(new Date(), 'seconds', request.durationSeconds) : null,
         assignee: this.getCurrentUser().id
       }
       const result = await this.rankStore.addUserRank(args)
 
-      return builder.success({ newRank: userRankToPublicObject(result) })
+      return builder.success({ newRank: await this.userRankToPublicObject(result) })
     } catch (e: any) {
       if (e instanceof UserRankAlreadyExistsError) {
         return builder.failure(400, e)
@@ -149,7 +153,7 @@ export default class RankController extends ControllerBase {
       }
       const result = await this.rankStore.removeUserRank(args)
 
-      return builder.success({ removedRank: userRankToPublicObject(result) })
+      return builder.success({ removedRank: await this.userRankToPublicObject(result) })
     } catch (e: any) {
       if (e instanceof UserRankNotFoundError) {
         return builder.failure(404, e)
@@ -173,7 +177,7 @@ export default class RankController extends ControllerBase {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
       const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, true, request.message)
       return builder.success({
-        newRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
+        newRank: result.rankResult.rank ==  null ? null : await this.userRankToPublicObject(result.rankResult.rank),
         newRankError: result.rankResult.error,
         channelModChanges: await this.getChannelRankChanges(result)
       })
@@ -196,12 +200,76 @@ export default class RankController extends ControllerBase {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
       const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, false, request.message)
       return builder.success({
-        removedRank: result.rankResult.rank ==  null ? null : userRankToPublicObject(result.rankResult.rank),
+        removedRank: result.rankResult.rank ==  null ? null : await this.userRankToPublicObject(result.rankResult.rank),
         removedRankError: result.rankResult.error,
         channelModChanges: await this.getChannelRankChanges(result)
       })
     } catch (e: any) {
       return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/customise')
+  public async getCustomisableRanks (): Promise<GetCustomisableRanksResponse> {
+    const builder = this.registerResponseBuilder<GetCustomisableRanksResponse>('GET /customise')
+
+    try {
+      const customisableRanks = await this.rankService.getCustomisableRanks()
+      return builder.success({
+        customisableRanks: customisableRanks.map(rankToPublicObject)
+      })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/customise')
+  @PreProcessor(requireAuth)
+  @PreProcessor(requireStreamer)
+  public async setCustomName (request: SetCustomRankNameRequest): Promise<SetCustomRankNameResponse> {
+    const builder = this.registerResponseBuilder<SetCustomRankNameResponse>('POST /customise')
+    if (request == null || request.name == null || typeof request.name !== 'string' || request.rank == null || typeof request.rank !== 'string') {
+      return builder.failure(400, 'Invalid request data.')
+    }
+
+    try {
+      const streamerId = this.getStreamerId()
+      const primaryUserId = this.getCurrentUser().aggregateChatUserId
+      const rank = request.rank as CustomisableRank
+      const name = request.name
+      const isActive = request.isActive === true
+
+      await this.rankService.addOrUpdateCustomRankName(streamerId, primaryUserId, rank, name, isActive)
+      return builder.success({})
+    } catch (e: any) {
+      if (e instanceof InvalidCustomRankNameError) {
+        return builder.failure(400, e.message)
+      } else {
+        return builder.failure(e)
+      }
+    }
+  }
+
+  @DELETE
+  @Path('/customise')
+  @PreProcessor(requireAuth)
+  @PreProcessor(requireStreamer)
+  public async deleteCustomName (
+    @QueryParam('rank') rank: CustomisableRank
+  ): Promise<DeleteCustomRankNameResponse> {
+    const builder = this.registerResponseBuilder<SetCustomRankNameResponse>('DELETE /customise')
+
+    try {
+      await this.rankStore.deleteCustomRankName(this.getStreamerId(), this.getCurrentUser().aggregateChatUserId, rank)
+      return builder.success({})
+    } catch (e: any) {
+      if (e instanceof NotFoundError) {
+        return builder.failure(404, e)
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 
@@ -226,5 +294,19 @@ export default class RankController extends ControllerBase {
       ...results.youtubeResults.map(c => makePublicResult(c.youtubeChannelId, 'youtube', c.error)),
       ...results.twitchResults.map(c => makePublicResult(c.twitchChannelId, 'twitch', c.error))
     ])
+  }
+
+  private async userRanksToPublicObjects (streamerId: number | null, ranks: UserRankWithRelations[]): Promise<PublicUserRank[]> {
+    const primaryUserIds = unique(ranks.map(r => r.primaryUserId))
+    const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, primaryUserIds)
+
+    return ranks.map(r => {
+      const entry = customRankNames.find(c => c.primaryUserId === r.primaryUserId)?.customRankNames ?? {}
+      return userRankToPublicObject(r, entry[r.rank.name] ?? null)
+    })
+  }
+
+  private async userRankToPublicObject (rank: UserRankWithRelations): Promise<PublicUserRank> {
+    return await this.userRanksToPublicObjects(rank.streamerId, [rank]).then(single)
   }
 }

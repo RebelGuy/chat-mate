@@ -49,7 +49,7 @@ export type Nullify<T> = {
   [P in keyof T]: T[P] | null
 }
 
-export type DeepPartial<T> = {
+export type DeepPartial<T> = T extends Primitive | null | undefined ? T : {
   [P in keyof T]?:
     T[P] extends (...args: any[]) => any ? T[P] :
     // if the object is null or undefined, the result is the partial object plus null or undefined, whichever applied
@@ -82,3 +82,5 @@ export type Singular<T> = T extends Array<infer K> ? K : never
 
 // stolen from https://stackoverflow.com/a/50732491, I have no idea how this works
 export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never
+
+export type RecordValueType<T> = T extends Record<any, infer V> ? V : never

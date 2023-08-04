@@ -71,7 +71,7 @@ export default class ChatMateEventService extends ContextClass {
       })
     }
 
-    const newDonations = await this.donationStore.getDonationsSince(streamerId, since)
+    const newDonations = await this.donationStore.getDonationsSince(streamerId, since, false)
     for (let i = 0; i < newDonations.length; i++) {
       const donation = newDonations[i]
       events.push({

@@ -1,7 +1,7 @@
-import { Primitive } from '@rebel/shared/types'
+import { Primitive, Singular } from '@rebel/shared/types'
 
 /** Public objects are containers for primitive values or other public objects. */
-export type PublicObject<T extends ResponseData<T>> = ResponseData<T>
+export type PublicObject<T extends ResponseData<T>> = T extends ResponseData<infer U> ? U : never
 
 /** The root of the response data must consist exclusively of primitives and PublicObjects. */
 export type ResponseData<T extends ResponseData<T>> = {
@@ -15,18 +15,18 @@ export type ResponseData<T extends ResponseData<T>> = {
     // primitive arrays
     : T[K] extends Primitive[] ? T[K]
 
-    // nullable PulicObject types
-    : T[K] extends PublicObject<infer PO> ? PO
-    : T[K] extends PublicObject<infer PO> | null ? PO | null
+    // arrays of PublicObject types (this must be moved before the object types in the lines below, otherwise we get an excessive depth error)
+    : T[K] extends Array<infer ArrObj> ? (ArrObj extends ResponseData<infer PO> ? (PO extends ArrObj ? PO[] : never) : never)
 
-    // arrays of PublicObject types
-    : T[K] extends Array<infer ArrObj> ? (ArrObj extends PublicObject<infer PO> ? PO[] : never)
+    // nullable PulicObject types
+    : T[K] extends ResponseData<infer PO> ? (PO extends T[K] ? PO : never)
+    : T[K] extends ResponseData<infer PO> | null ? (PO extends Exclude<T[K], null> ? PO | null : never)
 
     // don't allow anything else
     : never
 }
 
-export type ApiResponse<T extends ResponseData<T>> = {
+export type ApiResponse<T> = T extends ResponseData<infer U> ? T extends U ? ({
   timestamp: number
 } & ({
   success: true
@@ -34,9 +34,9 @@ export type ApiResponse<T extends ResponseData<T>> = {
 } | {
   success: false
   error: ApiError
-})
+})) : never : never
 
-export type ApiRequest<T extends PublicObject<T>> = T
+export type ApiRequest<T extends PublicObject<any>> = T
 
 export const API_ERRORS = {
   500: 'Internal Error',

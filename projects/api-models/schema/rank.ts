@@ -2,6 +2,7 @@ import { PublicChannelRankChange } from '@rebel/api-models/public/rank/PublicCha
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
 import { ApiResponse, ApiRequest, PublicObject } from '@rebel/api-models/types'
+import { EmptyObject } from '@rebel/shared/types'
 
 export type GetUserRanksResponse = ApiResponse<{ ranks: PublicUserRank[] }>
 
@@ -46,3 +47,14 @@ export type RemoveModRankResponse = ApiResponse<{
   removedRankError: string | null
   channelModChanges: PublicObject<PublicChannelRankChange>[]
 }>
+
+export type GetCustomisableRanksResponse = ApiResponse<{ customisableRanks: PublicRank[] }>
+
+export type SetCustomRankNameRequest = ApiRequest<{
+  name: string
+  rank: string
+  isActive: boolean | null
+}>
+export type SetCustomRankNameResponse = ApiResponse<EmptyObject>
+
+export type DeleteCustomRankNameResponse = ApiResponse<EmptyObject>

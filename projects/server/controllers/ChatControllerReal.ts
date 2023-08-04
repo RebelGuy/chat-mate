@@ -52,18 +52,20 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     }
     const primaryUserIds = unique(users.map(getPrimaryUserId))
 
-    const [levels, ranks, registeredUsers, firstSeens] = await Promise.all([
+    const [levels, ranks, registeredUsers, firstSeens, customRankNames] = await Promise.all([
       this.experienceService.getLevels(streamerId, primaryUserIds),
       this.rankStore.getUserRanks(primaryUserIds, streamerId),
       this.accountStore.getRegisteredUsers(primaryUserIds),
-      this.chatStore.getTimeOfFirstChat(streamerId, primaryUserIds)
+      this.chatStore.getTimeOfFirstChat(streamerId, primaryUserIds),
+      this.rankStore.getCustomRankNamesForUsers(streamerId, primaryUserIds)
     ])
 
     let chatItems: PublicChatItem[] = []
     for (const chat of items) {
       const primaryUserId = getPrimaryUserId(chat.user!)
       const level = levels.find(l => l.primaryUserId === primaryUserId)!.level
-      const activeRanks = ranks.find(r => r.primaryUserId === primaryUserId)!.ranks.map(userRankToPublicObject)
+      const customRankNamesForUser = customRankNames.find(r => r.primaryUserId === primaryUserId)!.customRankNames
+      const activeRanks = ranks.find(r => r.primaryUserId === primaryUserId)!.ranks.map(r => userRankToPublicObject(r, customRankNamesForUser[r.rank.name]))
       const registeredUser = registeredUsers.find(r => r.primaryUserId === primaryUserId)!.registeredUser
       const firstSeen = firstSeens.find(f => f.primaryUserId === primaryUserId)!.firstSeen
       chatItems.push(chatAndLevelToPublicChatItem(chat, level, activeRanks, registeredUser, firstSeen))
