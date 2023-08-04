@@ -203,7 +203,7 @@ export default class TwurpleService extends ContextClass {
       }
     }
 
-    if (status.status === 'active' && !this.chatClient.currentChannels.map(c => c.toLowerCase()).includes(twitchChannelName)) {
+    if (status.status === 'active' && !this.chatClient.currentChannels.map(c => c.toLowerCase().replace('#', '')).includes(twitchChannelName.toLowerCase())) {
       return {
         status: 'inactive',
         lastChange: this.dateTimeHelpers.ts(),

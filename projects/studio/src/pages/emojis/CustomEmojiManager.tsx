@@ -145,7 +145,7 @@ export default function CustomEmojiManager () {
 
           {isLoggedIn && <FormControlLabel
             label="Show only eligible emojis"
-            sx={{ mb: 1, display: 'block' }}
+            sx={{ mb: 1 }}
             control={
               <Checkbox
                 checked={showOnlyEligibleEmojis}
