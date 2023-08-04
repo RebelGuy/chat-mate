@@ -29,16 +29,18 @@ export default function LinkAttemptLogs () {
         sx={{ width: '100%', transform: 'translateY(-5px)' }}
       >
         <TableHead>
-          <TableCell>Id</TableCell>
-          <TableCell>Start Time</TableCell>
-          <TableCell>Duration</TableCell>
-          <TableCell>Type</TableCell>
-          <TableCell>Error</TableCell>
-          <TableCell>Default User</TableCell>
-          <TableCell>Aggregate User</TableCell>
-          <TableCell>Link Token</TableCell>
-          <TableCell>Released</TableCell>
-          <TableCell>Details</TableCell>
+          <TableRow>
+            <TableCell>Id</TableCell>
+            <TableCell>Start Time</TableCell>
+            <TableCell>Duration</TableCell>
+            <TableCell>Type</TableCell>
+            <TableCell>Error</TableCell>
+            <TableCell>Default User</TableCell>
+            <TableCell>Aggregate User</TableCell>
+            <TableCell>Link Token</TableCell>
+            <TableCell>Released</TableCell>
+            <TableCell>Details</TableCell>
+          </TableRow>
         </TableHead>
         <TableBody>
           {sortBy(getLogsRequest.data.logs, l => l.startTime, 'desc').map((log, i) => <LinkAttemptLog key={i} log={log} onViewDetails={setViewingLogDetails} />)}
@@ -103,10 +105,12 @@ function Details (props: DetailsProps) {
 
     <Table>
       <TableHead>
-        <TableCell>Step</TableCell>
-        <TableCell>Duration (ms)<br /><Typography variant="caption">(since last step)</Typography></TableCell>
-        <TableCell>Description</TableCell>
-        <TableCell>Warnings</TableCell>
+        <TableRow>
+          <TableCell>Step</TableCell>
+          <TableCell>Duration (ms)<br /><Typography variant="caption">(since last step)</Typography></TableCell>
+          <TableCell>Description</TableCell>
+          <TableCell>Warnings</TableCell>
+        </TableRow>
       </TableHead>
       <TableBody>
         {props.log.steps.map((step, i) => <TableRow key={i}>
