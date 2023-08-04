@@ -111,6 +111,7 @@ model ChatUser {
   registeredUser                 RegisteredUser?
   linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
   linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
+  customRankNames                CustomRankName[]
 
   // only used if this is an aggregate user
   linkTokensAggregateUser LinkToken[] @relation("link_token_aggregateChatUser")
@@ -228,6 +229,8 @@ model Streamer {
   chatMessages               ChatMessage[]
   streamerYoutubeChannelLink StreamerYoutubeChannelLink?
   streamerTwitchChannelLink  StreamerTwitchChannelLink?
+  donationLinks              DonationLink[]
+  customRankNames            CustomRankName[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -698,6 +701,7 @@ model Rank {
 
   userRanks                UserRank[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
+  customRankNames          CustomRankName[]
 
   @@unique([name], map: "rank_name_key")
   @@map("rank")
@@ -767,16 +771,40 @@ model UserRank {
   @@map("user_rank")
 }
 
+model CustomRankName {
+  id Int @id @default(autoincrement())
+
+  name     String  @db.VarChar(8)
+  isActive Boolean
+
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "custom_rank_name_userId_fkey")
+
+  rankId Int
+  rank   Rank @relation(fields: [rankId], references: [id], map: "custom_rank_name_rankId_fkey")
+
+  /// the streamer context in which to show this custom rank name (if null, applies to global ranks).
+  streamerId Int?
+  streamer   Streamer? @relation(fields: [streamerId], references: [id], map: "custom_rank_name_streamerId_fkey")
+
+  @@index([userId], map: "custom_rank_name_userId_fkey")
+  @@index([rankId], map: "custom_rank_name_rankId_fkey")
+  @@index([streamerId], map: "custom_rank_name_streamerId_fkey")
+  @@map("custom_rank_name")
+}
+
 model Donation {
   id Int @id @default(autoincrement())
 
-  streamlabsId     Int // unique
+  streamlabsId     Int? // unique
   streamlabsUserId Int?
   time             DateTime
   currency         String
   amount           Float
   formattedAmount  String
-  name             String   @db.VarChar(256)
+  name             String    @db.VarChar(256)
+  refundedAt       DateTime?
+  deletedAt        DateTime?
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "donation_streamerId_fkey")
@@ -805,9 +833,12 @@ model StreamlabsSocketToken {
 model DonationLink {
   id Int @id @default(autoincrement())
 
-  linkIdentifier String // unique
+  linkIdentifier String // unique with `streamerId`
 
   linkedAt DateTime
+
+  streamerId Int // unique with `linkIdentifier`
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "donation_link_streamerId_fkey")
 
   /// The user to which the link identifier is currently linked to
   linkedUserId Int
@@ -817,9 +848,8 @@ model DonationLink {
   originalLinkedUserId Int?
   originalLinkedUser   ChatUser? @relation(name: "donation_link_originalLinkedUser", fields: [originalLinkedUserId], references: [id], map: "donation_link_originalLinkedUserId_fkey")
 
-  @@unique([linkIdentifier], map: "donation_link_linkIdentifier_key")
-  // one-to-one mapping
-  @@unique([linkIdentifier, linkedUserId], map: "donation_link_linkIdentifier_linkedUserId_key")
+  @@unique([linkIdentifier, streamerId], map: "donation_link_linkIdentifier_streamerId_key")
+  @@index([streamerId], map: "donation_link_streamerId_fkey")
   @@index([originalLinkedUserId], map: "donation_link_originalLinkedUserId_fkey")
   @@map("donation_link")
 }

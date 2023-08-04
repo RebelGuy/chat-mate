@@ -11,3 +11,5 @@ function requireVariable (environmentVariable: `REACT_APP_${string}`): string {
 export const SERVER_URL = requireVariable('REACT_APP_SERVER_URL')
 
 export const [VERSION, COMMIT_HASH] = requireVariable('REACT_APP_STUDIO_VERSION_HASH').split(' ')
+
+export const NODE_ENV = requireVariable('REACT_APP_ENV') as 'local' | 'debug' | 'release'

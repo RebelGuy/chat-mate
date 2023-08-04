@@ -14,7 +14,8 @@ const dbProvider = new DbProvider(new Dependencies({
   logService: mockDeep<LogService>(),
   databaseUrl: process.env.DATABASE_URL!,
   dbSemaphoreConcurrent: 1000,
-  dbSemaphoreTimeout: null
+  dbSemaphoreTimeout: null,
+  dbSlowQueryThreshold: 100000
 }))
 let connected = false
 

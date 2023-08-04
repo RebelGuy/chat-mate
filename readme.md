@@ -57,6 +57,23 @@ Passwords:
 - YouTube: `C`
 
 # Change Log
+## v1.27 - The Donation Update v3 [4/8/2023]
+- Server
+  - Added support for donators to customise their rank name
+  - Donations are now linked to users on a per-streamer basis
+  - Donations can now be deleted, refunded, or manually created
+  - Fixed disconnections from the Twitch chat
+  - Improvements to logs
+    - Added a script for filtering logs
+    - API logs now capture additional information
+    - Slow database queries are now logged
+- Studio
+  - Added the ability to see and edit the custom rank name of eligible ranks
+  - Removed the login requirement from the emoji list and streamer info page - they are now viewable publically
+  - Admins can now see all link attempt logs
+  - Added favicon
+- Updated Typescript to the latest version
+
 ## v1.26 - The Open Source Update [23/6/2023]
 - Server
   - Added documentation

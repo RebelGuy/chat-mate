@@ -26,7 +26,7 @@ export function isReferenceType (value: any): value is object {
 }
 
 // null and undefined are considered primitive, but distingushable
-export function comparePrimitives<T> (a: T, b: T, ...ignoreKeys: (keyof T)[]): boolean {
+export function comparePrimitives<T extends object> (a: T, b: T, ...ignoreKeys: (keyof T)[]): boolean {
   const allKeys = Object.keys(a) as (keyof T)[]
   for (const prop of allKeys.filter(k => !ignoreKeys.includes(k))) {
     const value1: unknown = a[prop]

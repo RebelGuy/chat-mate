@@ -171,6 +171,7 @@ jobs:
           echo -n REACT_APP_STUDIO_VERSION_HASH=\" >> ./projects/studio/.env
           node ./scripts/getVersion | tr -d '\n' >> ./projects/studio/.env
           echo \" >> ./projects/studio/.env
+          echo REACT_APP_ENV=${{ inputs.NODE_ENV }} >> ./projects/studio/.env
           cat ./projects/studio/.env
       
       - name: Build typescript project

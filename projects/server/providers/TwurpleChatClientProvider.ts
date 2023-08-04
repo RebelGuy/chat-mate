@@ -4,11 +4,13 @@ import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { ChatClient, LogLevel } from '@twurple/chat'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
+import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 type Deps = Dependencies<{
   twurpleAuthProvider: TwurpleAuthProvider
   logService: LogService
   disableExternalApis: boolean
+  timerHelpers: TimerHelpers
   isAdministrativeMode: () => boolean
 }>
 
@@ -19,8 +21,12 @@ export default class TwurpleChatClientProvider extends ContextClass {
   private readonly logService: LogService
   private readonly logContext: LogContext
   private readonly disableExternalApis: boolean
+  private readonly timerHelpers: TimerHelpers
   private readonly isAdministrativeMode: () => boolean
   private chatClient!: ChatClient
+
+  private disconnects = 0
+  private cancelCheckInterval!: () => void
 
   constructor (deps: Deps) {
     super()
@@ -28,6 +34,7 @@ export default class TwurpleChatClientProvider extends ContextClass {
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
     this.disableExternalApis = deps.resolve('disableExternalApis')
+    this.timerHelpers = deps.resolve('timerHelpers')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
@@ -51,20 +58,46 @@ export default class TwurpleChatClientProvider extends ContextClass {
         }
       }
     })
+  }
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.chatClient.connect()
+  public override onReady (): void {
+    this.logService.logInfo(this, 'Initiating connection to the Twurple chat client')
 
-    this.logService.logInfo(this, 'Successfully connected to the Twurple chat client')
+    void this.chatClient.connect()
+    this.cancelCheckInterval = this.timerHelpers.setInterval(() => this.onCheckHealth(), 10_000)
   }
 
   override dispose (): void {
-    this.chatClient.quit()
+    this.cancelCheckInterval()
 
-    this.logService.logInfo(this, 'Disconnected from the Twurple chat client')
+    try {
+      this.chatClient.quit()
+      this.logService.logInfo(this, 'Disconnected from the Twurple chat client')
+    } catch (e: any) {
+      this.logService.logError(this, 'Failed to disconnect from the Twurple chat client:', e)
+    }
   }
 
   get () {
     return this.chatClient
+  }
+
+  private async onCheckHealth () {
+    if (this.chatClient.isConnected) {
+      this.disconnects = 0
+    } else {
+      this.disconnects++
+
+      if (this.disconnects >= 3) {
+        this.logService.logError(this, 'Detected that the ChatClient was disconnected for at least the last 3 intervals. Reconnecting.')
+        try {
+          await this.chatClient.reconnect()
+        } catch (e: any) {
+          this.logService.logError(this, 'Failed to reconnect to the ChatClient:', e)
+        }
+
+        this.disconnects = 0
+      }
+    }
   }
 }

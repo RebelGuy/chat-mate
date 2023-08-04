@@ -1,6 +1,6 @@
 import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import { single, sortBy } from '@rebel/shared/util/arrays'
+import { single, sortBy, unique } from '@rebel/shared/util/arrays'
 import { Path, GET, QueryParam, POST, PathParam, PreProcessor } from 'typescript-rest'
 import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
@@ -46,11 +46,13 @@ export default class PunishmentController extends ControllerBase {
   ): Promise<GetSinglePunishment> {
     const builder = this.registerResponseBuilder<GetSinglePunishment>('GET /:id')
     try {
+      const streamerId = this.getStreamerId()
       const punishment = await this.rankStore.getUserRankById(id)
-      if (punishment == null || punishment.streamerId !== this.getStreamerId()) {
+      if (punishment == null || punishment.streamerId !== streamerId) {
         return builder.failure(404, `Cannot find an active punishment with id ${id}.`)
       } else {
-        return builder.success({ punishment: userRankToPublicObject(punishment) })
+        const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [punishment.primaryUserId]).then(r => single(r).customRankNames)
+        return builder.success({ punishment: userRankToPublicObject(punishment, customRankNames[punishment.rank.name]) })
       }
     } catch (e: any) {
       return builder.failure(e)
@@ -64,6 +66,7 @@ export default class PunishmentController extends ControllerBase {
   ): Promise<GetUserPunishments> {
     const builder = this.registerResponseBuilder<GetUserPunishments>('GET')
     try {
+      const streamerId = this.getStreamerId()
       const primaryUserId = anyUserId == null ? null : await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
 
       let punishments: UserRankWithRelations[]
@@ -71,17 +74,23 @@ export default class PunishmentController extends ControllerBase {
         if (primaryUserId == null) {
           return builder.failure(400, 'A user ID must be provided when getting the punishment history')
         }
-        punishments = await this.punishmentService.getPunishmentHistory(primaryUserId, this.getStreamerId())
+        punishments = await this.punishmentService.getPunishmentHistory(primaryUserId, streamerId)
 
       } else {
-        punishments = await this.punishmentService.getCurrentPunishments(this.getStreamerId())
+        punishments = await this.punishmentService.getCurrentPunishments(streamerId)
         if (anyUserId != null) {
           punishments = punishments.filter(p => p.primaryUserId === primaryUserId)
         }
       }
 
       punishments = sortBy(punishments, p => p.issuedAt.getTime(), 'desc')
-      return builder.success({ punishments: punishments.map(e => userRankToPublicObject(e)) })
+
+      const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, unique(punishments.map(p => p.primaryUserId)))
+
+      return builder.success({ punishments: punishments.map(e => {
+        const customRankNamesForUser = customRankNames.find(r => r.primaryUserId === e.primaryUserId)!.customRankNames
+        return userRankToPublicObject(e, customRankNamesForUser[e.rank.name] ?? null)
+      }) })
     } catch (e: any) {
       return builder.failure(e)
     }
@@ -96,10 +105,12 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
+      const streamerId = this.getStreamerId()
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.punishmentService.banUser(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, request.message)
+      const result = await this.punishmentService.banUser(primaryUserId, streamerId, this.getCurrentUser().id, request.message)
+      const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(r => single(r).customRankNames)
       return builder.success({
-        newPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
+        newPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank, customRankNames['ban']),
         newPunishmentError: result.rankResult.error,
         channelPunishments: await this.getChannelPunishments(result)
       })
@@ -117,10 +128,12 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
+      const streamerId = this.getStreamerId()
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.punishmentService.unbanUser(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, request.message)
+      const result = await this.punishmentService.unbanUser(primaryUserId, streamerId, this.getCurrentUser().id, request.message)
+      const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(r => single(r).customRankNames)
       return builder.success({
-        removedPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
+        removedPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank, customRankNames['ban']),
         removedPunishmentError: result.rankResult.error,
         channelPunishments: await this.getChannelPunishments(result)
       })
@@ -141,10 +154,12 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
+      const streamerId = this.getStreamerId()
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.punishmentService.timeoutUser(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, request.message, request.durationSeconds)
+      const result = await this.punishmentService.timeoutUser(primaryUserId, streamerId, this.getCurrentUser().id, request.message, request.durationSeconds)
+      const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(r => single(r).customRankNames)
       return builder.success({
-        newPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
+        newPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank, customRankNames['timeout']),
         newPunishmentError: result.rankResult.error,
         channelPunishments: await this.getChannelPunishments(result)
       })
@@ -162,10 +177,12 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
+      const streamerId = this.getStreamerId()
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.punishmentService.untimeoutUser(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, request.message)
+      const result = await this.punishmentService.untimeoutUser(primaryUserId, streamerId, this.getCurrentUser().id, request.message)
+      const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(r => single(r).customRankNames)
       return builder.success({
-        removedPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank),
+        removedPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank, customRankNames['timeout']),
         removedPunishmentError: result.rankResult.error,
         channelPunishments: await this.getChannelPunishments(result)
       })
@@ -183,10 +200,12 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
+      const streamerId = this.getStreamerId()
       const duration = request.durationSeconds == null || request.durationSeconds === 0 ? null : request.durationSeconds
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.punishmentService.muteUser(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, request.message, duration)
-      return builder.success({ newPunishment: userRankToPublicObject(result) })
+      const result = await this.punishmentService.muteUser(primaryUserId, streamerId, this.getCurrentUser().id, request.message, duration)
+      const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(r => single(r).customRankNames)
+      return builder.success({ newPunishment: userRankToPublicObject(result, customRankNames['mute']) })
     } catch (e: any) {
       if (e instanceof UserRankAlreadyExistsError) {
         return builder.failure(400, e)
@@ -205,9 +224,11 @@ export default class PunishmentController extends ControllerBase {
     }
 
     try {
+      const streamerId = this.getStreamerId()
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.punishmentService.unmuteUser(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, request.message)
-      return builder.success({ removedPunishment: userRankToPublicObject(result) })
+      const result = await this.punishmentService.unmuteUser(primaryUserId, streamerId, this.getCurrentUser().id, request.message)
+      const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(r => single(r).customRankNames)
+      return builder.success({ removedPunishment: userRankToPublicObject(result, customRankNames['mute']) })
     } catch (e: any) {
       if (e instanceof UserRankNotFoundError) {
         return builder.failure(404, e)

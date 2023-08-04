@@ -12,6 +12,15 @@ export function buildPath (...pathParts: string[]) {
   return BASE_PATH + pathParts.map(p => '/' + p).join()
 }
 
+type RequestInfo = {
+  // always null if the endpoint doesn't require authentication
+  username: string | null
+
+  // always null if the endpoint doesn't require a streamer context
+  streamerId: number | null
+  ip: string
+}
+
 /** Extracts the `data` component from an `ApiResponse` object. */
 export type ExtractedData<T extends ApiResponse<any>> = Extract<T, { success: true }>['data']
 
@@ -75,29 +84,31 @@ export abstract class ControllerBase extends ContextClass {
     R extends ApiResponse<T>,
     T extends ResponseData<T> = Extract<R, { success: true }>['data'] // wow!
   > (endpointName: string): ResponseBuilder<T> {
-    return new ResponseBuilder(this.logContext, endpointName)
+    return new ResponseBuilder(this.logContext, endpointName, this.apiService)
   }
 }
 
 export class ResponseBuilder<T extends ResponseData<T>> {
   private readonly logContext: LogContext
   private readonly endpointName: string
+  private readonly apiService: ApiService
   private readonly start: number
 
-  constructor (logContext: LogContext, endpointName: string) {
+  constructor (logContext: LogContext, endpointName: string, apiService: ApiService) {
     this.logContext = logContext
     this.endpointName = endpointName
+    this.apiService = apiService
     this.start = new Date().getTime()
   }
 
   public success (data: T): ApiResponse<T> {
-    this.logContext.logDebug(`Endpoint ${this.endpointName} processed the request successfully after ${this.getDuration()} ms.`)
+    this.logContext.logDebug(`Endpoint ${this.endpointName} processed the request successfully after ${this.getDuration()} ms.`, this.getRequestInfo())
 
     return {
       success: true,
       timestamp: new Date().getTime(),
       data
-    }
+    } as ApiResponse<T> // i don't understand why we need to cast lol
   }
 
   public failure (error: ErrorType): ApiResponse<any>
@@ -106,7 +117,7 @@ export class ResponseBuilder<T extends ResponseData<T>> {
     const errorCode: ErrorCode = typeof arg1 === 'number' ? arg1 : 500
     const error = this.getErrorObject(typeof arg1 === 'number' ? arg2! : arg1)
 
-    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error after ${this.getDuration()} ms: `, error)
+    this.logContext.logError(`Endpoint ${this.endpointName} encountered a ${errorCode} error after ${this.getDuration()} ms:`, error, this.getRequestInfo())
 
     return {
       success: false,
@@ -134,5 +145,13 @@ export class ResponseBuilder<T extends ResponseData<T>> {
 
   private getDuration (): number {
     return new Date().getTime() - this.start
+  }
+
+  private getRequestInfo (): RequestInfo {
+    return {
+      username: this.apiService.getCurrentUser(true)?.username ?? null,
+      streamerId: this.apiService.getStreamerId(true) ?? null,
+      ip: this.apiService.getRequest().ip
+    }
   }
 }

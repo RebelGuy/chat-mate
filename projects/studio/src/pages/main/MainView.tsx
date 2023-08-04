@@ -13,7 +13,7 @@ import { getAdministrativeMode } from '@rebel/studio/utility/api'
 import useCurrentPage from '@rebel/studio/hooks/useCurrentPage'
 import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
 import ErrorBoundary from '@rebel/studio/components/ErrorBoundary'
-import { VERSION, COMMIT_HASH } from '@rebel/studio/utility/global'
+import { VERSION, COMMIT_HASH, NODE_ENV } from '@rebel/studio/utility/global'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -22,6 +22,12 @@ const Panel = styled('div')({
   boxShadow: '3px 3px 5px rgba(0, 0, 0, 0.1)',
   overflow: 'auto'
 })
+
+const titleSuffix: Record<typeof NODE_ENV, string> = {
+  release: '',
+  debug: ' Sandbox',
+  local: ' Local'
+}
 
 export default function MainView () {
   const [headerHeight, setHeaderHeight] = useState(0)
@@ -38,7 +44,7 @@ export default function MainView () {
     <Box sx={{ overflow: 'hidden', height: '100vh', display: 'flex', flexDirection: 'column', typography: 'body1' }}>
       {/* header */}
       <Typography variant="h3" style={{ fontWeight: 500, margin: 'auto', color: isAdministrativeMode ? 'red' : undefined }} ref={node => setHeaderHeight(node?.clientHeight ?? 0)}>
-        ChatMate{isAdministrativeMode ? ' (Administrative Mode)' : ''}
+        ChatMate{isAdministrativeMode ? ' (Administrative Mode)' : ''}{titleSuffix[NODE_ENV]}
       </Typography>
 
       {/* body */}

@@ -16,3 +16,31 @@ export const TWITCH_SCOPE = [
   // for subscribing to follow events
   'moderator:read:followers'
 ]
+
+// https://dev.streamlabs.com/docs/currency-codes
+export const CURRENCIES = {
+  AUD: 'Australian Dollar',
+  BRL: 'Brazilian Real',
+  CAD: 'Canadian Dollar',
+  CZK: 'Czech Koruna',
+  DKK: 'Danish Krone',
+  EUR: 'Euro',
+  HKD: 'Hong Kong Dollar',
+  ILS: 'Israeli New Sheqel',
+  MYR: 'Malaysian Ringgit',
+  MXN: 'Mexican Peso',
+  NOK: 'Norwegian Krone',
+  NZD: 'New Zealand Dollar',
+  PHP: 'Philippine Peso',
+  PLN: 'Polish Zloty',
+  GBP: 'Pound Sterling',
+  RUB: 'Russian Ruble',
+  SGD: 'Singapore Dollar',
+  SEK: 'Swedish Krona',
+  CHF: 'Swiss Franc',
+  THB: 'Thai Baht',
+  TRY: 'Turkish Lira',
+  USD: 'US Dollar'
+}
+
+export type CurrencyCode = keyof typeof CURRENCIES

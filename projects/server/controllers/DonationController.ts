@@ -3,7 +3,7 @@ import { PublicDonation } from '@rebel/api-models/public/donation/PublicDonation
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { donationToPublicObject } from '@rebel/server/models/donation'
 import { userDataToPublicUser } from '@rebel/server/models/user'
-import DonationService from '@rebel/server/services/DonationService'
+import DonationService, { NewDonation } from '@rebel/server/services/DonationService'
 import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import { nonNull, unique } from '@rebel/shared/util/arrays'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
@@ -11,7 +11,11 @@ import { single } from '@rebel/shared/util/arrays'
 import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import AccountService from '@rebel/server/services/AccountService'
-import { GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
+import { CreateDonationRequest, CreateDonationResponse, DeleteDonationResponse, GetCurrenciesResponse, GetDonationsResponse, GetStreamlabsStatusResponse, LinkUserResponse, RefundDonationResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse, UnlinkUserResponse } from '@rebel/api-models/schema/donation'
+import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { CURRENCIES, CurrencyCode } from '@rebel/server/constants'
+import { mapOverKeys } from '@rebel/shared/util/objects'
+import { isPrismaNotFoundError } from '@rebel/server/prismaUtil'
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -35,10 +39,11 @@ export default class DonationController extends ControllerBase {
   }
 
   @GET
+  @Path('/')
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /')
     try {
-      const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0)
+      const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0, true)
       return builder.success({
         donations: await this.getPublicDonations(donations)
       })
@@ -48,7 +53,85 @@ export default class DonationController extends ControllerBase {
   }
 
   @POST
-  @Path('link')
+  @Path('/')
+  public async createDonation (request: CreateDonationRequest): Promise<CreateDonationResponse> {
+    const builder = this.registerResponseBuilder<CreateDonationResponse>('POST /')
+
+    if (request == null || request.amount == null || request.amount <= 0 || request.amount >= 100_000 || isNullOrEmpty(request.currencyCode) || isNullOrEmpty(request.name)) {
+      return builder.failure(400, 'Invalid or missing data.')
+    }
+
+    try {
+      const currencyCodes = Object.keys(CURRENCIES)
+      const requestCurrency = request.currencyCode.toUpperCase().trim()
+      if (!currencyCodes.includes(requestCurrency)) {
+        return builder.failure(400, `Invalid currency code ${requestCurrency}. Must be one of the following: ${currencyCodes.join(', ')}.`)
+      }
+
+      const formattedAmount = request.amount.toLocaleString('en-US', { style: 'currency', currency: requestCurrency, minimumFractionDigits: 2 })
+
+      const donationData: NewDonation = {
+        createdAt: Date.now(),
+        amount: request.amount,
+        currency: requestCurrency as CurrencyCode,
+        formattedAmount: formattedAmount,
+        message: isNullOrEmpty(request.message) ? null : request.message.trim(),
+        name: request.name.trim(),
+        streamlabsDonationId: null,
+        streamlabsUserId: null
+      }
+
+      const newId = await this.donationService.addDonation(donationData, this.getStreamerId())
+      return builder.success({ newDonation: await this.getPublicDonation(newId) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @DELETE
+  @Path('/')
+  public async deleteDonation (
+    @QueryParam('donationId') donationId: number
+  ): Promise<DeleteDonationResponse> {
+    const builder = this.registerResponseBuilder<DeleteDonationResponse>('DELETE /')
+
+    if (donationId == null) {
+      return builder.failure(400, 'A donation ID must be provided.')
+    }
+
+    try {
+      const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
+      await this.donationStore.deleteDonation(this.getStreamerId(), donationId)
+
+      if (donation.primaryUserId) {
+        await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation deleted', `Delete ${donationId}`)
+      }
+
+      return builder.success({ })
+    } catch (e: any) {
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else {
+        return builder.failure(e)
+      }
+    }
+  }
+
+  @GET
+  @Path('/currencies')
+  public getCurrencyCodes (): GetCurrenciesResponse {
+    const builder = this.registerResponseBuilder<GetCurrenciesResponse>('GET /currencies')
+
+    try {
+      const currencies = mapOverKeys(CURRENCIES, (key, value) => ({ code: key, description: value }))
+      return builder.success({ currencies })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/link')
   public async linkUser (
     @QueryParam('donationId') donationId: number,
     @QueryParam('userId') anyUserId: number
@@ -56,17 +139,20 @@ export default class DonationController extends ControllerBase {
     const builder = this.registerResponseBuilder<LinkUserResponse>('POST /link')
 
     if (donationId == null || anyUserId == null) {
-      builder.failure('A donation ID and user ID must be provided.')
+      return builder.failure('A donation ID and user ID must be provided.')
     }
 
     try {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
-      await this.donationService.linkUserToDonation(donationId, primaryUserId, this.getStreamerId())
+      await this.donationService.linkUserToDonation(this.getStreamerId(), donationId, primaryUserId)
+
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (e instanceof DonationUserLinkAlreadyExistsError) {
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else if (e instanceof DonationUserLinkAlreadyExistsError) {
         return builder.failure(400, e)
       }
       return builder.failure(e)
@@ -74,26 +160,63 @@ export default class DonationController extends ControllerBase {
   }
 
   @DELETE
-  @Path('link')
+  @Path('/link')
   public async unlinkUser (
     @QueryParam('donationId') donationId: number
   ): Promise<LinkUserResponse> {
     const builder = this.registerResponseBuilder<UnlinkUserResponse>('DELETE /link')
 
     if (donationId == null) {
-      builder.failure('A donation ID must be provided.')
+      return builder.failure(400, 'A donation ID must be provided.')
     }
 
     try {
-      await this.donationService.unlinkUserFromDonation(donationId, this.getStreamerId())
+      await this.donationService.unlinkUserFromDonation(this.getStreamerId(), donationId)
+
       return builder.success({
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (e instanceof DonationUserLinkNotFoundError) {
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else if (e instanceof DonationUserLinkNotFoundError) {
         return builder.failure(404, e)
       }
       return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/refund')
+  public async refundDonation (
+    @QueryParam('donationId') donationId: number
+  ): Promise<RefundDonationResponse> {
+    const builder = this.registerResponseBuilder<RefundDonationResponse>('POST /refund')
+
+    if (donationId == null) {
+      return builder.failure(400, 'A donation ID must be provided.')
+    }
+
+    try {
+      const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
+      if (donation.refundedAt != null) {
+        return builder.failure(400, 'Donation is already refunded.')
+      }
+
+      await this.donationStore.refundDonation(this.getStreamerId(), donationId)
+
+      if (donation.primaryUserId) {
+        await this.donationService.reEvaluateDonationRanks(donation.primaryUserId, 'Donation refunded', `Refund ${donationId}`)
+      }
+
+      const updatedDonation = await this.getPublicDonations([{ ...donation, refundedAt: new Date() }]).then(single)
+      return builder.success({ updatedDonation })
+    } catch (e: any) {
+      if (isPrismaNotFoundError(e)) {
+        return builder.failure(404, 'Not found.')
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 
@@ -124,12 +247,11 @@ export default class DonationController extends ControllerBase {
   }
 
   private async getPublicDonation (donationId: number): Promise<PublicDonation> {
-    const donation = await this.donationStore.getDonation(donationId)
+    const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
     return single(await this.getPublicDonations([donation]))
   }
 
   private async getPublicDonations (donations: DonationWithUser[]): Promise<PublicDonation[]> {
-    const streamerId = this.getStreamerId()
     const primaryUserIds = unique(nonNull(donations.map(d => d.primaryUserId)))
     let userData: PublicUser[]
     if (primaryUserIds.length === 0) {

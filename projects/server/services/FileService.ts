@@ -22,8 +22,8 @@ export default class FileService extends ContextClass {
     this.ensureDir(this.dataPath)
   }
 
-  public getDataFilePath (fileName: string) {
-    return path.resolve(this.dataPath, fileName)
+  public getDataFilePath (...relPath: string[]) {
+    return path.resolve(this.dataPath, ...relPath)
   }
 
   public getDataFiles (): string[] {

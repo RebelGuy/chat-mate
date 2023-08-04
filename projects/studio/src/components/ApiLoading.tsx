@@ -10,22 +10,27 @@ type Props = {
   isLoading: boolean
 } | {
   requestObj: RequestResult<any> | (RequestResult<any> | null | undefined)[]
+  isLoading?: boolean // optionally force the loading state
   initialOnly?: boolean
 })
 
 export default function ApiLoading (props: Props) {
   let isLoading: boolean
-  if ('isLoading' in props) {
-    isLoading = props.isLoading
-  } else {
-    const objs = Array.isArray(props.requestObj) ? nonNull(props.requestObj) : [props.requestObj]
+  if ('requestObj' in props) {
+    if (props.isLoading) {
+      isLoading = true
+    } else {
+      const objs = Array.isArray(props.requestObj) ? nonNull(props.requestObj) : [props.requestObj]
 
-    // if we have data for all requests, don't show the loading spinner
-    if (props.initialOnly && objs.find(o => o.data == null && o.error == null) == null) {
-      return null
+      // if we have data for all requests, don't show the loading spinner
+      if (props.initialOnly && objs.find(o => o.data == null && o.error == null) == null) {
+        return null
+      }
+
+      isLoading = objs.find(o => o.isLoading) != null
     }
-
-    isLoading = objs.find(o => o.isLoading) != null
+  } else {
+    isLoading = props.isLoading
   }
 
   if (!isLoading) {

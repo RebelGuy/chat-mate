@@ -33,4 +33,10 @@ export type PublicDonation = PublicObject<{
 
   /** The timestamp at which the currently linked user was linked. This is the exact time at which any rank changes would have occurred. Null if no user is currently linked. */
   linkedAt: number | null
+
+  /** The timestamp at which the donation was refunded by the streamer. Null if the donation is not refunded. */
+  refundedAt: number | null
+
+  /** The timestamp at which the donation was deleted by the streamer. Null if the donation is not deleted. */
+  deletedAt: number | null
 }>

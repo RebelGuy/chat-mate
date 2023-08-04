@@ -3,6 +3,7 @@ import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { NO_OP } from '@rebel/shared/util/typescript'
 import { transformPrimitiveValues } from '@rebel/shared/util/objects'
+import { DataObject, rawDataSymbol } from '@twurple/common'
 
 export default abstract class ApiService extends ContextClass {
   public readonly name: string
@@ -72,6 +73,10 @@ export default abstract class ApiService extends ContextClass {
   }
 
   private getResponseToLog (response: unknown): unknown {
+    if (response instanceof DataObject) {
+      return response[rawDataSymbol]
+    }
+
     if (!this.trimLogs || typeof response !== 'object' || response == null) {
       return response
     }

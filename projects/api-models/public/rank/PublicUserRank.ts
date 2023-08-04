@@ -2,8 +2,6 @@ import { PublicObject } from '@rebel/api-models/types'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 
 export type PublicUserRank = PublicObject<{
-  rank: PublicObject<PublicRank>
-
   /** The id of the user rank object. */
   id: number
 
@@ -27,4 +25,10 @@ export type PublicUserRank = PublicObject<{
 
   /** The user rank revoke message, if revoked and set. */
   revokeMessage: string | null
+
+  /** The rank which this UserRank represents. */
+  rank: PublicRank
+
+  /** The user-picked name for this rank, if any. */
+  customRankName: string | null
 }>

@@ -11,7 +11,10 @@ export default function UserPanel () {
 
   let content: ReactElement
   if (loginContext.username == null) {
-    content = <UserInfo />
+    content = <>
+      <UserInfo />
+      <SelectStreamer />
+    </>
   } else if (!loginContext.isHydrated && loginContext.isLoading) {
     // i can't work out how to centre it vertically, but this looks ok
     content = <Box style={{ marginTop: '50%' }}>

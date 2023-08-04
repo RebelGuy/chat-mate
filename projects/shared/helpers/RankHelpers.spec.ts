@@ -1,12 +1,31 @@
-import RankHelpers from '@rebel/server/helpers/RankHelpers'
+import RankHelpers, { PartialUserRankWithRelations } from '@rebel/shared/helpers/RankHelpers'
 import { cast, nameof } from '@rebel/shared/testUtils'
-import * as data from '@rebel/server/_test/testData'
-import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { addTime } from '@rebel/shared/util/datetime'
+import { InvalidCustomRankNameError } from '@rebel/shared/util/error'
 
 let rankHelpers: RankHelpers
 beforeEach(() => {
   rankHelpers = new RankHelpers()
+})
+
+describe(nameof(RankHelpers, 'validateCustomRankName'), () => {
+  test('Returns the sanitised name if input is valid', () => {
+    const result = rankHelpers.validateCustomRankName('  test123  ')
+
+    expect(result).toBe('test123')
+  })
+
+  test('Throws if invalid characters are encountered', () => {
+    expect(() => rankHelpers.validateCustomRankName('文')).toThrowError(InvalidCustomRankNameError)
+  })
+
+  test('Throws if the input is too long', () => {
+    expect(() => rankHelpers.validateCustomRankName('1223456789123456789')).toThrowError(InvalidCustomRankNameError)
+  })
+
+  test('Throws if input is a mineplex rank', () => {
+    expect(() => rankHelpers.validateCustomRankName('ADMIN')).toThrowError(InvalidCustomRankNameError)
+  })
 })
 
 describe(nameof(RankHelpers, 'isRankActive'), () => {
@@ -63,8 +82,8 @@ describe(nameof(RankHelpers, 'isRankActive'), () => {
   })
 })
 
-function makeRank (appliedAt: Date, expiredAt: Date | null, revokedAt: Date | null): UserRankWithRelations {
-  return cast<UserRankWithRelations>({
+function makeRank (appliedAt: Date, expiredAt: Date | null, revokedAt: Date | null): PartialUserRankWithRelations {
+  return cast<PartialUserRankWithRelations>({
     issuedAt: appliedAt,
     expirationTime: expiredAt,
     revokedTime: revokedAt

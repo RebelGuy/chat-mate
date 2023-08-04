@@ -14,6 +14,7 @@ type Deps = Dependencies<{
   databaseUrl: string
   dbSemaphoreConcurrent: number
   dbSemaphoreTimeout: number | null
+  dbSlowQueryThreshold: number
 }>
 
 export default class DbProvider extends ContextClass {
@@ -23,12 +24,14 @@ export default class DbProvider extends ContextClass {
   private readonly databaseUrl: string
   private readonly prismaClient: PrismaClient
   private readonly semaphore: Semaphore
+  private readonly dbSlowQueryThreshold: number
 
   constructor (deps: Deps) {
     super()
     this.logService = deps.resolve('logService')
     this.databaseUrl = deps.resolve('databaseUrl')
     this.semaphore = new Semaphore(deps.resolve('dbSemaphoreConcurrent'), deps.resolve('dbSemaphoreTimeout'))
+    this.dbSlowQueryThreshold = deps.resolve('dbSlowQueryThreshold')
 
     // inline options and definition required to enable event subscription below
     const client = new PrismaClient({
@@ -60,6 +63,7 @@ export default class DbProvider extends ContextClass {
       // not cause too much traffic to build up - it is generally more desirable to time out after a number
       // of seconds, instead of having to wait for potentially minutes.
       await this.semaphore.enter()
+      const startTime = Date.now()
 
       try {
         const result = await next(params)
@@ -67,9 +71,7 @@ export default class DbProvider extends ContextClass {
         return result
       } catch (e: any) {
         this.semaphore.exit()
-        this.logService.logWarning(this, 'Prisma encountered an error while trying to execute a request.')
-        this.logService.logWarning(this, 'PARAMS:', params)
-        this.logService.logWarning(this, 'ERROR:', e)
+        this.logService.logWarning(this, 'Prisma encountered an error while trying to execute a request. Params:', params, 'Error:', e)
 
         // CHAT-362 During periods of dense traffic, the db can timeout and will remain in a broken state
         // until either the app is restarted, or the connection is reset.
@@ -79,6 +81,11 @@ export default class DbProvider extends ContextClass {
           await this.prismaClient.$disconnect()
         }
         throw e
+      } finally {
+        const duration = Date.now() - startTime
+        if (duration >= this.dbSlowQueryThreshold) {
+          this.logService.logSlowQuery(duration, params)
+        }
       }
     })
 

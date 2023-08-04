@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
-import DonationService from '@rebel/server/services/DonationService'
+import DonationService, { NewDonation } from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import { single } from '@rebel/shared/util/arrays'
 import { cast, expectArray, nameof } from '@rebel/shared/testUtils'
@@ -34,7 +34,7 @@ describe(nameof(DonationFetchService, 'initialise'), () => {
 
     await donationFetchService.initialise()
 
-    const initialAddedDonations = mockDonationService.addDonation.mock.calls.map((args: [donation: StreamlabsDonation, streamerId: number]) => [args[0].donationId, args[1]])
+    const initialAddedDonations = mockDonationService.addDonation.mock.calls.map((args: [donation: NewDonation, streamerId: number]) => [args[0].streamlabsDonationId, args[1]])
     expect(initialAddedDonations).toEqual(expectArray(initialDonations.map(d => [d.donationId, 1]))) // todo: properly handle streamerId
 
     // part 2: subscription
@@ -44,7 +44,7 @@ describe(nameof(DonationFetchService, 'initialise'), () => {
 
     await callback(additionalDonation, streamerId)
 
-    const additionalAddedDonation: [donation: StreamlabsDonation, streamerId: number] = single(mockDonationService.addDonation.mock.calls)
-    expect(additionalAddedDonation).toEqual([additionalDonation, streamerId])
+    const additionalAddedDonation: [donation: NewDonation, streamerId: number] = single(mockDonationService.addDonation.mock.calls)
+    expect(additionalAddedDonation).toEqual([{ streamlabsDonationId: additionalDonation.donationId }, streamerId])
   })
 })

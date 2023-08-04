@@ -6,41 +6,11 @@ import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { single } from '@rebel/shared/util/arrays'
 import { ApiResponseError } from '@rebel/shared/util/error'
-import { throws } from 'node:assert'
-
-
-
-// https://dev.streamlabs.com/docs/currency-codes
-const CURRENCIES = {
-  AUD: 'Australian Dollar',
-  BRL: 'Brazilian Real',
-  CAD: 'Canadian Dollar',
-  CZK: 'Czech Koruna',
-  DKK: 'Danish Krone',
-  EUR: 'Euro',
-  HKD: 'Hong Kong Dollar',
-  ILS: 'Israeli New Sheqel',
-  MYR: 'Malaysian Ringgit',
-  MXN: 'Mexican Peso',
-  NOK: 'Norwegian Krone',
-  NZD: 'New Zealand Dollar',
-  PHP: 'Philippine Peso',
-  PLN: 'Polish Zloty',
-  GBP: 'Pound Sterling',
-  RUB: 'Russian Ruble',
-  SGD: 'Singapore Dollar',
-  SEK: 'Swedish Krona',
-  CHF: 'Swiss Franc',
-  THB: 'Thai Baht',
-  TRY: 'Turkish Lira',
-  USD: 'US Dollar'
-}
+import { CurrencyCode } from '@rebel/server/constants'
 
 const REST_BASE_URL = 'https://streamlabs.com/api/v1.0'
 
 const SOCKET_BASE_URL = 'https://sockets.streamlabs.com'
-
-export type CurrencyCode = keyof typeof CURRENCIES
 
 export type StreamlabsDonation = {
   donationId: number

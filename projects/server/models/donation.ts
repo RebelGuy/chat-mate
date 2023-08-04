@@ -1,4 +1,3 @@
-import { Donation } from '@prisma/client'
 import { PublicDonation } from '@rebel/api-models/public/donation/PublicDonation'
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
@@ -15,6 +14,8 @@ export function donationToPublicObject (donation: DonationWithMessage, linkIdent
     name: donation.name,
     linkIdentifier: linkIdentifier,
     linkedUser: linkedUser ?? null,
-    linkedAt: linkedAt?.getTime() ?? null
+    linkedAt: linkedAt?.getTime() ?? null,
+    refundedAt: donation.refundedAt?.getTime() ?? null,
+    deletedAt: donation.deletedAt?.getTime() ?? null
   }
 }

@@ -10,6 +10,17 @@ const STREAMER_HEADER = 'X-Streamer'
 
 const baseUrl = SERVER_URL + '/api'
 
+type TriggerResult<TResponseData> = {
+  type: 'success'
+  data: TResponseData
+} | {
+  type: 'error'
+  error: ApiError
+} | {
+  // when the triggered request was cancelled via the `options.onRequest` callback return value
+  type: 'cancelled'
+}
+
 type RequestOptions<TResponseData> = {
   // forces the request to refresh. has no effect when `onDemand` is true
   updateKey?: Primitive
@@ -59,7 +70,9 @@ export type RequestResult<TResponseData> = {
 
   // calling this function will force-trigger a request. similar to `error.onRetry()` but uses the current props.
   // if `onDemand` is `true`, this is the only way to make a request.
-  triggerRequest: () => void
+  // resolves to 'cancelled' only if the request was user-cancelled (via the `options.onRequest` callback return value),
+  // regardless of whether another request is started before the triggered request has completed.
+  triggerRequest: () => Promise<TriggerResult<TResponseData>>
 
   // calling this function will reset the state to the initial state or set the given data/error.
   // setting both the data and error leads to undefined behaviour.
@@ -137,7 +150,7 @@ export default function useRequest<
   const loginToken = requiresLogin ? loginContext.loginToken : null
   const streamer = requiresStreamer === true ? loginContext.streamer : requiresStreamer === 'self' ? loginContext.username : null
 
-  const makeRequest = async (type: RequestType) => {
+  const makeRequest = async (type: RequestType): Promise<TriggerResult<TResponseData>> => {
     let headers: HeadersInit = {
       'Content-Type': 'application/json'
     }
@@ -150,10 +163,13 @@ export default function useRequest<
 
     const invariant = invariantRef.current + 1 // only track one request at a time (the most recently started)
     invariantRef.current = invariant
+    const shouldUpdateState = () => invariantRef.current === invariant
+
+    let returnObj: { type: 'success', data: TResponseData } | { type: 'error', error: ApiError }
 
     try {
       if (onRequest() === true) {
-        return
+        return { type: 'cancelled' }
       }
 
       if (requiresLogin && loginToken == null) {
@@ -173,42 +189,46 @@ export default function useRequest<
       })
       const response: ApiResponse<TResponseData> = JSON.parse(await rawResponse.text())
 
-      if (invariantRef.current !== invariant) {
-        return
-      }
-
       if (response.success) {
         const responseData = transformer == null ? response.data : transformer(response.data)
-        setData(responseData)
-        setError(null)
-        onSuccess(responseData, type)
+        if (shouldUpdateState()) {
+          setData(responseData)
+          setError(null)
+          onSuccess(responseData, type)
+        }
+        returnObj = { type: 'success', data: responseData }
       } else {
-        setData(null)
-        setError(response.error)
-        onError(response.error, type)
+        if (shouldUpdateState()) {
+          setData(null)
+          setError(response.error)
+          onError(response.error, type)
+        }
+        returnObj = { type: 'error', error: response.error }
       }
     } catch (e: any) {
-      if (invariantRef.current !== invariant) {
-        return
-      }
-
-      setData(null)
       const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', internalErrorType: 'Unknown', message: e.message }
-      setError(error)
-      onError(error, type)
+      if (shouldUpdateState()) {
+        setData(null)
+        setError(error)
+        onError(error, type)
+      }
+      returnObj = { type: 'error', error: error }
     } finally {
-      if (invariantRef.current === invariant) {
+      if (shouldUpdateState()) {
         setIsLoading(false)
         setRequestType(type)
         onDone()
       }
     }
+
+    return returnObj
   }
 
   // for handling a manual request
   const triggerRequest = () => {
-    void makeRequest('triggered')
+    let result = makeRequest('triggered')
     setOnRetry(() => () => makeRequest('retry'))
+    return result
   }
 
   const reset = (useData?: TResponseData, useError?: ApiError) => {
