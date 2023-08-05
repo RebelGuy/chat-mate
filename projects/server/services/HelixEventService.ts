@@ -376,6 +376,7 @@ export default class HelixEventService extends ContextClass {
       await this.eventSubApi.deleteAllSubscriptions()
       await disconnect()
       await kill()
+      this.listener!.stop()
 
       // this will create a new Ngrok server/tunnel with a different address
       this.listener = this.createNewListener()
