@@ -49,11 +49,13 @@ export function LoginProvider (props: Props) {
   })
   const getStreamersRequest = useRequest(getStreamers(), {
     updateKey: streamerListUpdateKey,
+    skipLoadOnMount: true,
     loginToken: loginToken,
     onError: (error, type) => console.error(error)
   })
   const getCustomisableRankNamesRequest = useRequest(getCustomisableRankNames(), {
     updateKey: customisableRankNamesUpdateKey,
+    skipLoadOnMount: true,
     loginToken: loginToken,
     onRequest: () => username == null,
     onError: (error, type) => console.error(error)
