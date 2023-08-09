@@ -5,53 +5,71 @@ import ApplicationInsightsService from '@rebel/server/services/ApplicationInsigh
 import FileService from '@rebel/server/services/FileService'
 import { deconstructDate, formatDate, formatTime } from '@rebel/shared/util/datetime'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import { LogLevel } from '@twurple/chat'
+import { LogLevel as TwurpleLogLevel } from '@twurple/chat'
 import ILogService, { ILoggable, LogContext } from '@rebel/shared/ILogService'
 import { Prisma } from '@prisma/client'
+import { LogLevel, LogOutput } from '@rebel/server/globals'
 
-type LogType = 'info' | 'api' | 'debug' | 'warning' | 'error'
+type LogType = 'debug' | 'info' | 'warning' | 'error'
+
+type LoggerType = 'db' | 'api' | 'standard'
 
 type Deps = Dependencies<{
   fileService: FileService
   applicationInsightsService: ApplicationInsightsService
-  enableDbLogging: boolean
+  dbLogLevel: LogLevel
+  apiLogLevel: LogLevel
+  debugLogOutput: LogOutput
+  infoLogOutput: LogOutput
+  warningLogOutput: LogOutput
+  errorLogOutput: LogOutput
 }>
 
 export default class LogService extends ContextClass implements ILogService {
   private readonly fileService: FileService
   private readonly applicationInsightsService: ApplicationInsightsService
-  private readonly enableDbLogging: boolean
+  private readonly dbLogLevel: LogLevel
+  private readonly apiLogLevel: LogLevel
+  private readonly debugLogOutput: LogOutput
+  private readonly infoLogOutput: LogOutput
+  private readonly warningLogOutput: LogOutput
+  private readonly errorLogOutput: LogOutput
 
   constructor (deps: Deps) {
     super()
     this.fileService = deps.resolve('fileService')
     this.applicationInsightsService = deps.resolve('applicationInsightsService')
-    this.enableDbLogging = deps.resolve('enableDbLogging')
+    this.dbLogLevel = deps.resolve('dbLogLevel')
+    this.apiLogLevel = deps.resolve('apiLogLevel')
+    this.debugLogOutput = deps.resolve('debugLogOutput')
+    this.infoLogOutput = deps.resolve('infoLogOutput')
+    this.warningLogOutput = deps.resolve('warningLogOutput')
+    this.errorLogOutput = deps.resolve('errorLogOutput')
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
-    this.log(logger, 'debug', args)
+    this.log(getLoggerType(logger), logger, 'debug', args)
   }
 
   public logInfo (logger: ILoggable, ...args: any[]) {
-    this.log(logger, 'info', args)
+    this.log(getLoggerType(logger), logger, 'info', args)
   }
 
   public logApiRequest (logger: ILoggable, requestId: number, request: string, params: Record<string, any> | null) {
     const stringifiedParams = params ? ` with params: ${JSON.stringify(params)}` : ''
-    this.log(logger, 'api',  [`Id #${requestId}`, `API request '${request}'${stringifiedParams} dispatched`])
+    this.log('api', logger, 'debug',  [`Id #${requestId}`, `API request '${request}'${stringifiedParams} dispatched`])
   }
 
   public logApiResponse (logger: ILoggable, requestId: number, error: boolean, response: any) {
-    this.log(logger, 'api',  [`Id #${requestId}`, error ? 'failed' : 'succeeded', 'with response', response])
+    this.log('api', logger, error ? 'error' : 'debug',  [`Id #${requestId}`, error ? 'failed' : 'succeeded', 'with response', response])
   }
 
   public logWarning (logger: ILoggable, ...args: any[]) {
-    this.log(logger, 'warning', args)
+    this.log(getLoggerType(logger), logger, 'warning', args)
   }
 
   public logError (logger: ILoggable, ...args: any[]) {
-    this.log(logger, 'error', args)
+    this.log(getLoggerType(logger), logger, 'error', args)
   }
 
   public logSlowQuery (durationMs: number, params: Prisma.MiddlewareParams) {
@@ -67,14 +85,14 @@ export default class LogService extends ContextClass implements ILogService {
     }
   }
 
-  private log (logger: ILoggable, logType: LogType, args: any[]) {
-    if (!this.enableDbLogging && logger.name === DbProvider.name && logType === 'debug') {
+  private log (loggerType: LoggerType, logger: ILoggable, logType: LogType, args: any[]) {
+    const action = this.getAction(loggerType, logType)
+    if (action === 'disable') {
       return
     }
 
-    const isVerbose = logType === 'api' || logType === 'debug'
     const prefix = `${formatTime()} ${logType.toUpperCase()} > [${logger.name}]`
-    if (!isVerbose) {
+    if (action === 'full') {
       // don't print api or debug logs to the console as they are very verbose
       const consoleLogger = logType === 'error' ? console.error
         : logType === 'warning' ? console.warn
@@ -93,12 +111,39 @@ export default class LogService extends ContextClass implements ILogService {
 
       this.fileService.writeLine(this.getLogFile(), message, { append: true })
 
-      if (!isVerbose) {
+      if (logType === 'info') {
         this.applicationInsightsService.trackTrace(logType, message)
       }
     } catch (e: any) {
       console.error('LogService encountered an error:', e)
       this.applicationInsightsService.trackException(['LogService failed to log a message.', message, e])
+    }
+  }
+
+  /** Given the logger and type of log message, how should we log it? */
+  getAction (loggerType: LoggerType, logType: LogType): LogOutput {
+    if (loggerType === 'db') {
+      if (!shouldLog(logType, this.dbLogLevel)) {
+        return 'disable'
+      }
+    } else if (loggerType === 'api') {
+      if (!shouldLog(logType, this.apiLogLevel)) {
+        return 'disable'
+      }
+    } else if (loggerType !== 'standard') {
+      assertUnreachable(loggerType)
+    }
+
+    if (logType === 'debug') {
+      return this.debugLogOutput
+    } else if (logType === 'info') {
+      return this.infoLogOutput
+    } else if (logType === 'warning') {
+      return this.warningLogOutput
+    } else if (logType === 'error') {
+      return this.errorLogOutput
+    } else {
+      assertUnreachable(logType)
     }
   }
 
@@ -114,27 +159,27 @@ export default class LogService extends ContextClass implements ILogService {
   }
 }
 
-export function onTwurpleClientLog (context: LogContext, level: LogLevel, message: string): void {
+export function onTwurpleClientLog (context: LogContext, level: TwurpleLogLevel, message: string): void {
   message = `[Relayed from Twurple] ${message}`
 
   switch (level) {
-    case LogLevel.CRITICAL:
+    case TwurpleLogLevel.CRITICAL:
       // error so we can print the stack trace
       context.logError('[CRITICAL]', new Error(message))
       break
-    case LogLevel.ERROR:
+    case TwurpleLogLevel.ERROR:
       context.logError('[ERROR]', new Error(message))
       break
-    case LogLevel.WARNING:
+    case TwurpleLogLevel.WARNING:
       context.logWarning('[WARNING]', message)
       break
-    case LogLevel.INFO:
+    case TwurpleLogLevel.INFO:
       context.logInfo('[INFO]', message)
       break
-    case LogLevel.DEBUG:
+    case TwurpleLogLevel.DEBUG:
       context.logDebug('[DEBUG]', message)
       break
-    case LogLevel.TRACE:
+    case TwurpleLogLevel.TRACE:
       // don't log - trace events are extremely verbose and not helpful to us
       break
     default:
@@ -157,4 +202,48 @@ function stringifyArgs (args: any[]): string {
       return `<<LogService: Unable to stringify object of type ${type}: ${e.message}>>`
     }
   }).join(' ')
+}
+
+function getLoggerType (logger: ILoggable): LoggerType {
+  if (logger.name === DbProvider.name) {
+    return 'db'
+  } else {
+    return 'standard'
+  }
+}
+
+function shouldLog (type: LogType, level: LogLevel): boolean {
+  if (level === 'full') {
+    return true
+  } else if (level === 'disable') {
+    return false
+  }
+
+  if (type === 'debug') {
+    return false
+  } else if (type === 'info') {
+    if (level === 'info' || level === 'warning' || level === 'error') {
+      return true
+    } else {
+      assertUnreachable(level)
+    }
+  } else if (type === 'warning') {
+    if (level === 'info') {
+      return false
+    } else if (level === 'warning' || level === 'error') {
+      return true
+    } else {
+      assertUnreachable(level)
+    }
+  } else if (type === 'error') {
+    if (level === 'info' || level === 'warning') {
+      return false
+    } else if (level === 'error') {
+      return true
+    } else {
+      assertUnreachable(level)
+    }
+  } else {
+    assertUnreachable(type)
+  }
 }
