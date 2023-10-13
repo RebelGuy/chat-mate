@@ -149,7 +149,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireRank('admin'))
   public async approveApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-      request: ApproveApplicationRequest
+    request: ApproveApplicationRequest
   ): Promise<ApproveApplicationResponse> {
     const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve')
 
@@ -170,7 +170,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireRank('admin'))
   public async rejectApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-      request: RejectApplicationRequest
+    request: RejectApplicationRequest
   ): Promise<RejectApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/reject')
 
@@ -196,7 +196,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireAuth)
   public async withdrawApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-      request: WithdrawApplicationRequest
+    request: WithdrawApplicationRequest
   ): Promise<WithdrawApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/withdraw')
 
