@@ -7,6 +7,6 @@ export function parseMarkChatItemsByAuthorAsDeletedAction(
   return {
     type: "markChatItemsByAuthorAsDeletedAction",
     channelId: payload.externalChannelId,
-    timestamp: new Date(),
+    moderatorChannelName: payload.deletedStateMessage.runs[1].text
   };
 }

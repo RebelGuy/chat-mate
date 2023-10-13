@@ -534,10 +534,8 @@ export class Masterchat extends EventEmitter {
           if (parsed != null && parsed.type !== 'unknown') {
             actions.push(parsed)
           }
-        } catch (e) {
-          // todo CHAT-424: add Masterchat dependency to logService and log error here
-          // this is non-trivial because it means we will need to create a `shared` project first so we can reference the types
-          // also want to convert all calls to `debug` to use the logService instead
+        } catch (e: any) {
+          this.logContext.logError('Failed to parse action', action, e)
         }
       }
 

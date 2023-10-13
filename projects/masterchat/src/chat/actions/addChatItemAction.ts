@@ -13,11 +13,14 @@ import {
   MembershipGiftPurchaseAction,
   MembershipGiftRedemptionAction,
   MembershipGiftPurchaseTickerContent,
+  UnhideUserAction,
+  HideUserAction,
 } from "../../interfaces/actions";
 import {
   YTAddChatItemAction,
   YTLiveChatMembershipItemRenderer,
   YTLiveChatModeChangeMessageRenderer,
+  YTLiveChatModerationMessageRenderer,
   YTLiveChatPaidMessageRenderer,
   YTLiveChatPaidStickerRenderer,
   YTLiveChatPlaceholderItemRenderer,
@@ -72,20 +75,16 @@ export function parseAddChatItemAction(logContext: LogContext, payload: YTAddCha
     return parseLiveChatModeChangeMessageRenderer(logContext, renderer);
   } else if ("liveChatSponsorshipsGiftPurchaseAnnouncementRenderer" in item) {
     // Sponsorships gift purchase announcement
-    const renderer =
-      item["liveChatSponsorshipsGiftPurchaseAnnouncementRenderer"];
-    return parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(
-      logContext,
-      renderer
-    ) as MembershipGiftPurchaseAction;
+    const renderer = item["liveChatSponsorshipsGiftPurchaseAnnouncementRenderer"];
+    return parseLiveChatSponsorshipsGiftPurchaseAnnouncementRenderer(logContext, renderer) as MembershipGiftPurchaseAction;
   } else if ("liveChatSponsorshipsGiftRedemptionAnnouncementRenderer" in item) {
     // Sponsorships gift purchase announcement
-    const renderer =
-      item["liveChatSponsorshipsGiftRedemptionAnnouncementRenderer"];
-    return parseLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer(
-      logContext,
-      renderer
-    );
+    const renderer = item["liveChatSponsorshipsGiftRedemptionAnnouncementRenderer"];
+    return parseLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer( logContext, renderer);
+  } else if ("liveChatModerationMessageRenderer" in item) {
+    // Moderation action announcement
+    const renderer = item["liveChatModerationMessageRenderer"];
+    return parseLiveChatModerationMessageRenderer(renderer);
   }
 
   logContext.logError(
@@ -549,4 +548,39 @@ export function parseLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer(
     authorPhoto,
   };
   return parsed;
+}
+
+// Moderation action announcement
+export function parseLiveChatModerationMessageRenderer(
+  renderer: YTLiveChatModerationMessageRenderer
+): HideUserAction | UnhideUserAction {
+  const id = renderer.id;
+  const timestampUsec = renderer.timestampUsec;
+  const timestamp = tsToDate(timestampUsec);
+
+  const userChannelName = renderer.message.runs[0].text
+  const moderatorChannelName = renderer.message.runs[2].text
+  const action = renderer.message.runs[1].text
+
+  if (action === ' was hidden by ') {
+    const parsed: HideUserAction = {
+      type: 'hideUserAction',
+      timestamp,
+      timestampUsec,
+      userChannelName,
+      moderatorChannelName
+    }
+    return parsed
+  } else if (action === ' was unhidden by ') {
+    const parsed: UnhideUserAction = {
+      type: 'unhideUserAction',
+      timestamp,
+      timestampUsec,
+      userChannelName,
+      moderatorChannelName
+    }
+    return parsed
+  } else {
+    throw new Error(`Unknown LiveChatModerationMessage type with action '${action}'.`)
+  }
 }

@@ -13,6 +13,7 @@ import { parseReplaceChatItemAction } from "./actions/replaceChatItemAction";
 import { parseShowLiveChatActionPanelAction } from "./actions/showLiveChatActionPanelAction";
 import { parseShowLiveChatTooltipCommand } from "./actions/showLiveChatTooltipCommand";
 import { parseUpdateLiveChatPollAction } from "./actions/updateLiveChatPollAction";
+import { parseRemoveChatItemByAuthorAction } from "./actions/removeChatItemByAuthorAction";
 
 /**
  * Parse raw action object and returns Action
@@ -61,6 +62,9 @@ export function parseAction(logContext: LogContext, action: YTAction): Action | 
     case "removeBannerForLiveChatCommand":
       return parseRemoveBannerForLiveChatCommand(action[type]!);
 
+    case "removeChatItemByAuthorAction":
+      return parseRemoveChatItemByAuthorAction(action[type]!);
+
     case "showLiveChatTooltipCommand":
       return parseShowLiveChatTooltipCommand(action[type]!);
 
@@ -85,12 +89,6 @@ export function parseAction(logContext: LogContext, action: YTAction): Action | 
       );
     }
   }
-
-  // non-type payloads that are not currently categorised are info messages
-  // e.g. the "<user> was hidden by <mod>" grey message.
-  // in the future, we will need to listen to these as they mark events
-  // that are relevant for us. (CHAT-293)
-  // could parse them based on an expected template (similar to the quoted example above)
 
   return {
     type: "unknown",
