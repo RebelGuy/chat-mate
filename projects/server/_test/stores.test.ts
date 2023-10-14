@@ -13,6 +13,7 @@ import StreamerStoreSuite from '@rebel/server/stores/StreamerStore.test'
 import StreamerChannelStoreSuite from '@rebel/server/stores/StreamerChannelStore.test'
 import LinkStoreSuite from '@rebel/server/stores/LinkStore.test'
 import AuthStoreSuite from '@rebel/server/stores/AuthStore.test'
+import MasterchatStoreSuite from '@rebel/server/stores/MasterchatStore.test'
 
 // keep an eye on this one: https://github.com/prisma/prisma/issues/732
 // it would HUGELY improve efficiency if we can use an in-memory mock database for testing.
@@ -43,6 +44,8 @@ describeFn('GenericStore Suite', GenericStoreSuite)
 describeFn('LivestreamStore Suite', LivestreamStoreSuite)
 
 describeFn('LinkStore Suite', LinkStoreSuite)
+
+describeFn('MasterchatStore Suite', MasterchatStoreSuite)
 
 describeFn('RankStore Suite', RankStoreSuite)
 

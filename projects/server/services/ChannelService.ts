@@ -1,10 +1,12 @@
 import { TwitchChannel, TwitchChannelInfo, YoutubeChannel, YoutubeChannelInfo } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import AccountService from '@rebel/server/services/AccountService'
+import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { single } from '@rebel/shared/util/arrays'
 
 /** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
 export const LIVESTREAM_PARTICIPATION_TYPES = 'chatParticipation' as const
@@ -17,22 +19,37 @@ export type ConnectedUserChannels = {
   channels: UserChannel[]
 }
 
+export type ExternalRankEventData = {
+  // the user affected by this rank event. null if unknown
+  primaryUserId: number | null
+
+  // the current ranks of the user
+  ranksForUser: UserRankWithRelations[]
+
+  // the moderator that initiated this rank event. null if unkown
+  moderatorPrimaryUserId: number | null
+}
+
+
 type Deps = Dependencies<{
   chatStore: ChatStore
   channelStore: ChannelStore
   accountService: AccountService
+  rankStore: RankStore
 }>
 
 export default class ChannelService extends ContextClass {
   private readonly chatStore: ChatStore
   private readonly channelStore: ChannelStore
   private readonly accountService: AccountService
+  private readonly rankStore: RankStore
 
   public constructor (deps: Deps) {
     super()
     this.chatStore = deps.resolve('chatStore')
     this.channelStore = deps.resolve('channelStore')
     this.accountService = deps.resolve('accountService')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   /** Returns the active user channel for each primary user. A user's active channel is the one with which the user
@@ -93,6 +110,46 @@ export default class ChannelService extends ContextClass {
         ]
       }
     })
+  }
+
+  /** Transforms data of the rank event into the internal data types. */
+  public async getTwitchDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName)
+    if (channel == null || !isTwitchChannel(channel)) {
+      return { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    }
+
+    const userChannel = await this.channelStore.getTwitchChannelFromChannelId([channel.id]).then(single)
+    const primaryUserId = getPrimaryUserId(userChannel)
+
+    const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
+    const ranksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
+
+    const moderatorChannel = await this.channelStore.getChannelFromUserNameOrExternalId(moderatorChannelName)
+    const moderatorUserChannel = moderatorChannel != null && isTwitchChannel(moderatorChannel) ? await this.channelStore.getTwitchChannelFromChannelId([moderatorChannel.id]).then(single) : null
+    const moderatorPrimaryUserId = moderatorUserChannel != null ? getPrimaryUserId(moderatorUserChannel) : null
+
+    return { primaryUserId, ranksForUser, moderatorPrimaryUserId }
+  }
+
+  /** Transforms data of the rank event into the internal data types. */
+  public async getYoutubeDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName)
+    if (channel == null || !isYoutubeChannel(channel)) {
+      return { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    }
+
+    const userChannel = await this.channelStore.getYoutubeChannelFromChannelId([channel.id]).then(single)
+    const primaryUserId = getPrimaryUserId(userChannel)
+
+    const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
+    const ranksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
+
+    const moderatorChannel = await this.channelStore.getChannelFromUserNameOrExternalId(moderatorChannelName)
+    const moderatorUserChannel = moderatorChannel != null && isYoutubeChannel(moderatorChannel) ? await this.channelStore.getYoutubeChannelFromChannelId([moderatorChannel.id]).then(single) : null
+    const moderatorPrimaryUserId = moderatorUserChannel != null ? getPrimaryUserId(moderatorUserChannel) : null
+
+    return { primaryUserId, ranksForUser, moderatorPrimaryUserId }
   }
 
   /** Returns channels of the streamer whose current name matches the given name (case insensitive). */

@@ -3,28 +3,33 @@ import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelService from '@rebel/server/services/ChannelService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { cast, expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { single, sortBy } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import AccountService from '@rebel/server/services/AccountService'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { TwitchChannel, YoutubeChannel } from '@prisma/client'
 
 const streamerId = 5
 
 let mockChannelStore: MockProxy<ChannelStore>
 let mockChatStore: MockProxy<ChatStore>
 let mockAccountService: MockProxy<AccountService>
+let mockRankStore: MockProxy<RankStore>
 let channelService: ChannelService
 
 beforeEach(() => {
   mockChannelStore = mock()
   mockChatStore = mock()
   mockAccountService = mock()
+  mockRankStore = mock()
 
   channelService = new ChannelService(new Dependencies({
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
-    accountService: mockAccountService
+    accountService: mockAccountService,
+    rankStore: mockRankStore
   }))
 })
 
@@ -119,6 +124,118 @@ describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
       { aggregateUserId: 45, channels: [youtubeChannel1, twitchChannel1, twitchChannel2] },
       { aggregateUserId: null, channels: [youtubeChannel2] }
     ]))
+  })
+})
+
+describe(nameof(ChannelService, 'getTwitchDataForExternalRankEvent'), () => {
+  test('Returns unknown id if the channel was not found', async () => {
+    const userName = 'user'
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(null)
+
+    const result = await channelService.getTwitchDataForExternalRankEvent(2, userName, 'mod')
+
+    expect(result.primaryUserId).toBeNull()
+  })
+
+  test('Returns primary id of user and ranks without mod', async () => {
+    const userName = 'user'
+    const moderatorName = 'mod'
+    const channelId = 5
+    const primaryUserId = 8
+    const ranks = cast<UserRankWithRelations[]>([
+      { primaryUserId: primaryUserId },
+      { primaryUserId: primaryUserId + 1 }
+    ])
+
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<TwitchChannel>({ id: channelId, twitchId: '123' }))
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId }]))
+    mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(ranks)
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(null)
+
+    const result = await channelService.getTwitchDataForExternalRankEvent(streamerId, userName, moderatorName)
+
+    expect(result).toEqual(expectObject(result, { primaryUserId, moderatorPrimaryUserId: null }))
+    expect(result.ranksForUser.length).toBe(1)
+  })
+
+  test('Returns primary id of user and ranks with mod', async () => {
+    const userName = 'user'
+    const moderatorName = 'mod'
+    const channelId = 5
+    const modChannelId = 7
+    const primaryUserId = 8
+    const moderatorPrimaryUserId = 88
+    const ranks = cast<UserRankWithRelations[]>([
+      { primaryUserId: primaryUserId },
+      { primaryUserId: primaryUserId + 1 }
+    ])
+
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<TwitchChannel>({ id: channelId, twitchId: '123' }))
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId }]))
+    mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(ranks)
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(cast<TwitchChannel>({ id: modChannelId, twitchId: '456' }))
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([modChannelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: moderatorPrimaryUserId }]))
+
+    const result = await channelService.getTwitchDataForExternalRankEvent(streamerId, userName, moderatorName)
+
+    expect(result).toEqual(expectObject(result, { primaryUserId, moderatorPrimaryUserId }))
+    expect(result.ranksForUser.length).toBe(1)
+  })
+})
+
+describe(nameof(ChannelService, 'getYoutubeDataForExternalRankEvent'), () => {
+  test('Returns unknown id if the channel was not found', async () => {
+    const userName = 'user'
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(null)
+
+    const result = await channelService.getYoutubeDataForExternalRankEvent(2, userName, 'mod')
+
+    expect(result.primaryUserId).toBeNull()
+  })
+
+  test('Returns primary id of user and ranks without mod', async () => {
+    const userName = 'user'
+    const moderatorName = 'mod'
+    const channelId = 5
+    const primaryUserId = 8
+    const ranks = cast<UserRankWithRelations[]>([
+      { primaryUserId: primaryUserId },
+      { primaryUserId: primaryUserId + 1 }
+    ])
+
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<YoutubeChannel>({ id: channelId, youtubeId: '123' }))
+    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId: primaryUserId }]))
+    mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(ranks)
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(null)
+
+    const result = await channelService.getYoutubeDataForExternalRankEvent(streamerId, userName, moderatorName)
+
+    expect(result).toEqual(expectObject(result, { primaryUserId, moderatorPrimaryUserId: null }))
+    expect(result.ranksForUser.length).toBe(1)
+  })
+
+  test('Returns primary id of user and ranks with mod', async () => {
+    const userName = 'user'
+    const moderatorName = 'mod'
+    const channelId = 5
+    const modChannelId = 7
+    const primaryUserId = 8
+    const moderatorPrimaryUserId = 88
+    const ranks = cast<UserRankWithRelations[]>([
+      { primaryUserId: primaryUserId },
+      { primaryUserId: primaryUserId + 1 }
+    ])
+
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<YoutubeChannel>({ id: channelId, youtubeId: '123' }))
+    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId: primaryUserId }]))
+    mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(ranks)
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(cast<YoutubeChannel>({ id: modChannelId, youtubeId: '456' }))
+    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray<number>([modChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId: moderatorPrimaryUserId }]))
+
+    const result = await channelService.getYoutubeDataForExternalRankEvent(streamerId, userName, moderatorName)
+
+    expect(result).toEqual(expectObject(result, { primaryUserId, moderatorPrimaryUserId }))
+    expect(result.ranksForUser.length).toBe(1)
   })
 })
 

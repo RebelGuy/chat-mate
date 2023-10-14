@@ -1,13 +1,13 @@
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import LogService from '@rebel/server/services/LogService'
-import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import ChannelService from '@rebel/server/services/ChannelService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
 
 type Deps = Dependencies<{
   logService: LogService
-  streamerChannelService: StreamerChannelService
+  channelService: ChannelService
   punishmentService: PunishmentService
   dateTimeHelpers: DateTimeHelpers
 }>
@@ -16,14 +16,14 @@ export default class ExternalRankEventService extends ContextClass {
   public readonly name = ExternalRankEventService.name
 
   private readonly logService: LogService
-  private readonly streamerChannelService: StreamerChannelService
+  private readonly channelService: ChannelService
   private readonly punishmentService: PunishmentService
   private readonly dateTimeHelpers: DateTimeHelpers
 
   constructor (deps: Deps) {
     super()
     this.logService = deps.resolve('logService')
-    this.streamerChannelService = deps.resolve('streamerChannelService')
+    this.channelService = deps.resolve('channelService')
     this.punishmentService = deps.resolve('punishmentService')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
   }
@@ -31,7 +31,7 @@ export default class ExternalRankEventService extends ContextClass {
   // for these methods, it is assumed that all internal and external ranks were in sync at the time when the external rank was changed
 
   public async onTwitchChannelBanned (streamerId: number, channelName: string, moderatorChannelName: string, reason: string, endTime: number | null): Promise<void> {
-    const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.streamerChannelService.getDataForTwitchRankEvent(streamerId, channelName, moderatorChannelName)
+    const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getTwitchDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
     if (primaryUserId == null) {
       this.logService.logWarning(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was banned/timed out, but could not find channel. Ignoring.`)
       return
@@ -55,9 +55,9 @@ export default class ExternalRankEventService extends ContextClass {
   }
 
   public async onTwitchChannelUnbanned (streamerId: number, channelName: string, moderatorChannelName: string): Promise<void> {
-    const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.streamerChannelService.getDataForTwitchRankEvent(streamerId, channelName, moderatorChannelName)
+    const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getTwitchDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
     if (primaryUserId == null) {
-      this.logService.logWarning(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was banned/timed out, but could not find channel. Ignoring.`)
+      this.logService.logWarning(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was unbanned/untimed out, but could not find channel. Ignoring.`)
       return
     }
 
@@ -69,6 +69,38 @@ export default class ExternalRankEventService extends ContextClass {
     }
     if (ranksForUser.find(r => r.rank.name === 'timeout') != null) {
       await this.punishmentService.untimeoutUser(primaryUserId, streamerId, moderatorPrimaryUserId, null)
+    }
+  }
+
+  // todo: we probably have to exclude the username from being punished again in the PunishmentService, else we will be stuck in an infinite loop
+
+  public async onYoutubeChannelBanned (streamerId: number, channelName: string, moderatorChannelName: string) {
+    const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getYoutubeDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
+    if (primaryUserId == null) {
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned, but could not find channel. Ignoring.`)
+      return
+    }
+
+    if (ranksForUser.find(r => r.rank.name === 'ban') == null) {
+      await this.punishmentService.banUser(primaryUserId, streamerId, moderatorPrimaryUserId, null)
+    } else {
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned, but internal punishment is already active. Ignoring.`)
+      return
+    }
+  }
+
+  public async onYoutubeChannelUnbanned (streamerId: number, channelName: string, moderatorChannelName: string) {
+    const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getYoutubeDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
+    if (primaryUserId == null) {
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned, but could not find channel. Ignoring.`)
+      return
+    }
+
+    if (ranksForUser.find(r => r.rank.name === 'ban') != null) {
+      await this.punishmentService.unbanUser(primaryUserId, streamerId, moderatorPrimaryUserId, null)
+    } else {
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned, but internal punishment is not active. Ignoring.`)
+      return
     }
   }
 }

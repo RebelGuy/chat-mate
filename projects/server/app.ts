@@ -27,7 +27,7 @@ import UserController from '@rebel/server/controllers/UserController'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import EmojiController from '@rebel/server/controllers/EmojiController'
 import cors from 'cors'
-import ChatFetchService from '@rebel/server/services/ChatFetchService'
+import MasterchatFetchService from '@rebel/server/services/MasterchatFetchService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
@@ -90,6 +90,7 @@ import WebService from '@rebel/server/services/WebService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
 import { ApiResponse } from '@rebel/api-models/types'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
+import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -211,9 +212,10 @@ const main = async () => {
     .withClass('linkCommand', LinkCommand)
     .withClass('commandService', CommandService)
     .withClass('chatService', ChatService)
-    .withClass('chatFetchService', ChatFetchService)
+    .withClass('masterchatStore', MasterchatStore)
     .withClass('followerStore', FollowerStore)
     .withClass('externalRankEventService', ExternalRankEventService)
+    .withClass('masterchatFetchService', MasterchatFetchService)
     .withClass('helixEventService', HelixEventService)
     .withClass('donationFetchService', DonationFetchService)
     .withClass('chatMateEventService', ChatMateEventService)
