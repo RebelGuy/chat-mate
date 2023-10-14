@@ -6,10 +6,12 @@
 export const TWITCH_SCOPE = [
   'chat:read',
   'chat:edit',
+
+  // for subscribing to mod/unmod events
   'moderation:read',
   'moderator:manage:banned_users',
 
-  // for modding/unmodding users
+  // for modding/unmodding users and listening to ban/unban events
   'channel:manage:moderators',
   'channel:moderate',
 

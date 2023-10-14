@@ -1,12 +1,9 @@
-import { TwitchChannelInfo, YoutubeChannelInfo } from '@prisma/client'
+import { TwitchChannel, TwitchChannelInfo, YoutubeChannel, YoutubeChannelInfo } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import AccountService from '@rebel/server/services/AccountService'
 import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { nonNull, sortBy, values } from '@rebel/shared/util/arrays'
-import { min, sum } from '@rebel/shared/util/math'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 
 /** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
@@ -138,4 +135,12 @@ export function getExternalIdOrUserName (userChannel: UserChannel) {
   } else {
     assertUnreachable(userChannel.platformInfo)
   }
+}
+
+export function isYoutubeChannel (channel: YoutubeChannel | TwitchChannel): channel is YoutubeChannel {
+  return 'youtubeId' in channel
+}
+
+export function isTwitchChannel (channel: YoutubeChannel | TwitchChannel): channel is TwitchChannel {
+  return 'twitchId' in channel
 }

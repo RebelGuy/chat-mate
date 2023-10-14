@@ -26,7 +26,7 @@ export type AddUserRankArgs = {
   /** refer to the `GlobalRanks` constant to find out which ranks can have `streamerId = null` */
   streamerId: number | null
 
-  /** registered user id, `null` if assigned by system */
+  /** primary user id, `null` if assigned by system */
   assignee: number | null
 
   /** `null` if the rank shouldn't expire */
@@ -42,7 +42,7 @@ export type RemoveUserRankArgs = {
   streamerId: number | null
   message: string | null
 
-  /** registered user id, null if removed by system */
+  /** primary user id, `null` if removed by system */
   removedBy: number | null
 }
 

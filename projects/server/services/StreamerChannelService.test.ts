@@ -1,16 +1,17 @@
-import { ChatUser, Livestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
+import { Livestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore, { RegisteredUserResult } from '@rebel/server/stores/AccountStore'
-import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ForbiddenError } from '@rebel/shared/util/error'
-import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { cast, expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockStreamerChannelStore: MockProxy<StreamerChannelStore>
@@ -18,6 +19,7 @@ let mockEventDispatchService: MockProxy<EventDispatchService>
 let mockAccountStore: MockProxy<AccountStore>
 let mockChannelStore: MockProxy<ChannelStore>
 let mockLivestreamStore: MockProxy<LivestreamStore>
+let mockRankStore: MockProxy<RankStore>
 let streamerChannelService: StreamerChannelService
 
 beforeEach(() => {
@@ -27,6 +29,7 @@ beforeEach(() => {
   mockAccountStore = mock()
   mockChannelStore = mock()
   mockLivestreamStore = mock()
+  mockRankStore = mock()
 
   streamerChannelService = new StreamerChannelService(new Dependencies({
     streamerStore: mockStreamerStore,
@@ -34,7 +37,8 @@ beforeEach(() => {
     eventDispatchService: mockEventDispatchService,
     accountStore: mockAccountStore,
     channelStore: mockChannelStore,
-    livestreamStore: mockLivestreamStore
+    livestreamStore: mockLivestreamStore,
+    rankStore: mockRankStore
   }))
 })
 
@@ -45,20 +49,80 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
     const streamerId3 = 3
     const twitchName1 = 'name1'
     const twitchName2 = 'name2'
+    const internalTwitchId1 = 5
+    const internalTwitchId2 = 6
 
     mockStreamerStore.getStreamers.calledWith().mockResolvedValue([cast<Streamer>({ id: streamerId1 }), cast<Streamer>({ id: streamerId2 }), cast<Streamer>({ id: streamerId3 })])
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId1, streamerId2, streamerId3])).mockResolvedValue(cast<PrimaryChannels[]>([
-      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName1 }]}}} },
-      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName2 }]}}} },
+      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId1, infoHistory: [{ displayName: twitchName1 }]}}} },
+      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId2, infoHistory: [{ displayName: twitchName2 }]}}} },
       { streamerId: streamerId3, twitchChannel: null }
     ]))
 
     const result = await streamerChannelService.getAllTwitchStreamerChannels()
 
     expect(result).toEqual<TwitchStreamerChannel[]>([
-      {streamerId: streamerId1, twitchChannelName: twitchName1 },
-      {streamerId: streamerId2, twitchChannelName: twitchName2 }
+      {streamerId: streamerId1, twitchChannelName: twitchName1, internalChannelId: internalTwitchId1 },
+      {streamerId: streamerId2, twitchChannelName: twitchName2, internalChannelId: internalTwitchId2 }
     ])
+  })
+})
+
+describe(nameof(StreamerChannelService, 'getDataForTwitchRankEvent'), () => {
+  test('Returns unknown id if the channel was not found', async () => {
+    const userName = 'user'
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(null)
+
+    const result = await streamerChannelService.getDataForTwitchRankEvent(2, userName, 'mod')
+
+    expect(result.primaryUserId).toBeNull()
+  })
+
+  test('Returns primary id of user and ranks without mod', async () => {
+    const streamerId = 2
+    const userName = 'user'
+    const moderatorName = 'mod'
+    const channelId = 5
+    const primaryUserId = 8
+    const ranks = cast<UserRankWithRelations[]>([
+      { primaryUserId: primaryUserId },
+      { primaryUserId: primaryUserId + 1 }
+    ])
+
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<TwitchChannel>({ id: channelId, twitchId: '123' }))
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId }]))
+    mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(ranks)
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(null)
+
+    const result = await streamerChannelService.getDataForTwitchRankEvent(streamerId, userName, moderatorName)
+
+    expect(result).toEqual(expectObject(result, { primaryUserId, moderatorPrimaryUserId: null }))
+    expect(result.ranksForUser.length).toBe(1)
+  })
+
+  test('Returns primary id of user and ranks with mod', async () => {
+    const streamerId = 2
+    const userName = 'user'
+    const moderatorName = 'mod'
+    const channelId = 5
+    const modChannelId = 7
+    const primaryUserId = 8
+    const moderatorPrimaryUserId = 88
+    const ranks = cast<UserRankWithRelations[]>([
+      { primaryUserId: primaryUserId },
+      { primaryUserId: primaryUserId + 1 }
+    ])
+
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<TwitchChannel>({ id: channelId, twitchId: '123' }))
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId }]))
+    mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(ranks)
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(cast<TwitchChannel>({ id: modChannelId, twitchId: '456' }))
+    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([modChannelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: moderatorPrimaryUserId }]))
+
+    const result = await streamerChannelService.getDataForTwitchRankEvent(streamerId, userName, moderatorName)
+
+    expect(result).toEqual(expectObject(result, { primaryUserId, moderatorPrimaryUserId }))
+    expect(result.ranksForUser.length).toBe(1)
   })
 })
 

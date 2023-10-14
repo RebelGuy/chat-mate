@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { getUserName } from '@rebel/server/services/ChannelService'
+import { getUserName, isTwitchChannel } from '@rebel/server/services/ChannelService'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
@@ -10,10 +10,24 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { nonNull, single } from '@rebel/shared/util/arrays'
 import { ForbiddenError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
+import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 
 export type TwitchStreamerChannel = {
   streamerId: number
   twitchChannelName: string
+  internalChannelId: number
+}
+
+export type TwitchRankEventData = {
+  // the user affected by this rank event. null if unknown
+  primaryUserId: number | null
+
+  // the current ranks of the user
+  ranksForUser: UserRankWithRelations[]
+
+  // the moderator that initiated this rank event. null if unkown
+  moderatorPrimaryUserId: number | null
 }
 
 type Deps = Dependencies<{
@@ -23,6 +37,7 @@ type Deps = Dependencies<{
   accountStore: AccountStore
   channelStore: ChannelStore
   livestreamStore: LivestreamStore
+  rankStore: RankStore
 }>
 
 export default class StreamerChannelService extends ContextClass {
@@ -32,6 +47,7 @@ export default class StreamerChannelService extends ContextClass {
   private readonly channelStore: ChannelStore
   private readonly accountStore: AccountStore
   private readonly livestreamStore: LivestreamStore
+  private readonly rankStore: RankStore
 
   constructor (deps: Deps) {
     super()
@@ -41,13 +57,14 @@ export default class StreamerChannelService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.accountStore = deps.resolve('accountStore')
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   /** Gets the list of all streamers and their primary Twitch channel's name, for those that have a primary Twitch channel set.  */
   public async getAllTwitchStreamerChannels (): Promise<TwitchStreamerChannel[]> {
     const streamers = await this.streamerStore.getStreamers()
     const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(s => s.id))
-    return nonNull(primaryChannels.map(c => c.twitchChannel != null ? { streamerId: c.streamerId, twitchChannelName: getUserName(c.twitchChannel) } : null))
+    return nonNull(primaryChannels.map(c => c.twitchChannel != null ? { streamerId: c.streamerId, twitchChannelName: getUserName(c.twitchChannel), internalChannelId: c.twitchChannel.platformInfo.channel.id } : null))
   }
 
   /** Case insensitive. Returns a non-null value only if the channel exists and is the primary Twitch channel of the streamer. */
@@ -73,6 +90,26 @@ export default class StreamerChannelService extends ContextClass {
     }
 
     return streamer.id
+  }
+
+  /** Transforms data of the Twitch rank event into the internal data types. */
+  public async getDataForTwitchRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<TwitchRankEventData> {
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName)
+    if (channel == null || !isTwitchChannel(channel)) {
+      return { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    }
+
+    const userChannel = await this.channelStore.getTwitchChannelFromChannelId([channel.id]).then(single)
+    const primaryUserId = getPrimaryUserId(userChannel)
+
+    const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
+    const ranksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
+
+    const moderatorChannel = await this.channelStore.getChannelFromUserNameOrExternalId(moderatorChannelName)
+    const moderatorUserChannel = moderatorChannel != null && isTwitchChannel(moderatorChannel) ? await this.channelStore.getTwitchChannelFromChannelId([moderatorChannel.id]).then(single) : null
+    const moderatorPrimaryUserId = moderatorUserChannel != null ? getPrimaryUserId(moderatorUserChannel) : null
+
+    return { primaryUserId, ranksForUser, moderatorPrimaryUserId }
   }
 
   /** Returns null when the streamer does not have a primary Twitch channel. */

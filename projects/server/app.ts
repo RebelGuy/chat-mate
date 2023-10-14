@@ -89,6 +89,7 @@ import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
 import { ApiResponse } from '@rebel/api-models/types'
+import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -184,9 +185,9 @@ const main = async () => {
     .withClass('streamerStore', StreamerStore)
     .withClass('channelStore', ChannelStore)
     .withClass('streamerChannelStore', StreamerChannelStore)
+    .withClass('rankStore', RankStore)
     .withClass('streamerChannelService', StreamerChannelService)
     .withClass('livestreamService', LivestreamService)
-    .withClass('rankStore', RankStore)
     .withClass('adminService', AdminService)
     .withClass('experienceStore', ExperienceStore)
     .withClass('accountService', AccountService)
@@ -212,6 +213,7 @@ const main = async () => {
     .withClass('chatService', ChatService)
     .withClass('chatFetchService', ChatFetchService)
     .withClass('followerStore', FollowerStore)
+    .withClass('externalRankEventService', ExternalRankEventService)
     .withClass('helixEventService', HelixEventService)
     .withClass('donationFetchService', DonationFetchService)
     .withClass('chatMateEventService', ChatMateEventService)

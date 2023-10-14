@@ -26,6 +26,22 @@ const EVENT_INFO: Record<PublicTwitchEventStatus['eventType'], EventInfo> = {
   followers: {
     name: 'New Followers',
     description: 'ChatMate listens to new followers to your channel to show you notifications.'
+  },
+  ban: {
+    name: 'User Ban',
+    description: `ChatMate listens to bans to synchronise ranks and propagate a ban to the user's linked channels.`
+  },
+  unban: {
+    name: 'User Unban',
+    description: `ChatMate listens to unbans to synchronise ranks and propagate an unban to the user's linked channels.`
+  },
+  mod: {
+    name: 'User Mod',
+    description: `ChatMate listens to mod events to synchronise ranks and mod the user on their linked channels.`
+  },
+  unmod: {
+    name: 'Unmod',
+    description: `ChatMate listens to unmod events to synchronise ranks and unmod the user on their linked channels.`
   }
 }
 

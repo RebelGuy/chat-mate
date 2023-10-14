@@ -13,7 +13,7 @@ import EventDispatchService, { DataPair, EventData } from '@rebel/server/service
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { RegisteredUser, Streamer } from '@prisma/client'
-import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import { ApiClient, HelixModerationApi, HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { HelixUserData } from '@twurple/api/lib/interfaces/helix/user.external'
@@ -154,10 +154,10 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     const twitchChannelNames = ['test1', 'test2']
     const streamerId = 4
     mockStreamerChannelService.getAllTwitchStreamerChannels.mockReset()
-    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([
       { streamerId: streamerId, twitchChannelName: twitchChannelNames[0] },
       { streamerId: streamerId + 1, twitchChannelName: twitchChannelNames[1] }
-    ])
+    ]))
 
     // set up the channel name -> chat user -> registered user -> streamer conversion
     const chatUserId = 2
@@ -359,10 +359,10 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const channelName4 = 'test4'
     const streamerId4 = 4
     const user4 = cast<HelixUser>({ id: 'userId4' })
-    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([{
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{
       streamerId: streamerId4,
       twitchChannelName: channelName4
-    }])
+    }]))
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId4).mockResolvedValue(channelName4)
     mockUserApi.getUserByName.calledWith(channelName4).mockResolvedValue(user4)
     mockTwurpleAuthProvider.hasTokenForUser.calledWith(user4.id).mockReturnValue(true)
@@ -451,7 +451,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const user = cast<HelixUser>({ id: 'userId' })
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(channelName)
     mockStreamerChannelService.getAllTwitchStreamerChannels.mockReset()
-    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([{ streamerId: streamerId, twitchChannelName: channelName }])
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{ streamerId: streamerId, twitchChannelName: channelName }]))
     mockUserApi.getUserByName.calledWith(channelName).mockResolvedValue(user)
     mockGetter(mockChatClient, 'currentChannels').mockReturnValue([]) // importantly, this is empty even though we think we connected
     mockGetter(mockChatClient, 'isConnected').mockReturnValue(true)
