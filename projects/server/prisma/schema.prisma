@@ -501,6 +501,9 @@ model ChatMessage {
   externalId String   @db.VarChar(255) // unique
   time       DateTime
 
+  /// The time at which the message was deleted by a moderator or retracted by the author. Null if the message has not been deleted.
+  deletedTime DateTime?
+
   /// For Youtube messages only - required to retrieve the list of and execute options in the context menu next to messages.
   /// Internally in Youtube, this is called the `contextMenuEndpointParams`.
   contextToken String? @db.VarChar(511)

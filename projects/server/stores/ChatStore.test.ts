@@ -780,4 +780,28 @@ export default () => {
       await expect(() => chatStore.getChatById(2)).rejects.toThrow()
     })
   })
+
+  describe(nameof(ChatStore, 'removeChat'), () => {
+    test('Marks the message as removed and returns true', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.removeChat(chatItem1.id)
+
+      expect(result).toBe(true)
+      const storedMessage = await db.chatMessage.findFirst()
+      expect(storedMessage!.deletedTime).not.toBeNull()
+    })
+
+    test('Returns false if the message was not found', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.removeChat('unknown id')
+
+      expect(result).toBe(false)
+      const storedMessage = await db.chatMessage.findFirst()
+      expect(storedMessage!.deletedTime).toBeNull()
+    })
+  })
 }

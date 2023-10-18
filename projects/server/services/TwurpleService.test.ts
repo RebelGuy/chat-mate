@@ -146,13 +146,14 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
 
-  test(`joins all streamers' channels and passes new chat message to the EventDispatchService`, async () => {
+  test(`joins all streamers' channels and passes data to the EventDispatchService`, async () => {
     const channelId = '12345'
     const twitchMessage = { ...JSON.parse(onMessage_example), channelId: channelId }
     const chatItem: ChatItem = cast<ChatItem>({ id: 'id' })
     const evalMockFn = jest.spyOn(chat, 'evalTwitchPrivateMessage').mockImplementation(msg_ => chatItem)
     const twitchChannelNames = ['test1', 'test2']
     const streamerId = 4
+    const removedMessageId = 'removedMessageId'
     mockStreamerChannelService.getAllTwitchStreamerChannels.mockReset()
     mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([
       { streamerId: streamerId, twitchChannelName: twitchChannelNames[0] },
@@ -178,17 +179,24 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     expect(joinCalls).toEqual(twitchChannelNames)
 
     // post a mock chat message
-    const callback = mockChatClient.onMessage.mock.calls[0][0] as (...args: any) => Promise<void> //  :  -  (
-    await callback(twitchChannelNames[0], 'user', 'message', twitchMessage)
+    const onMessageCallback = mockChatClient.onMessage.mock.calls[0][0] as (...args: any) => Promise<void> //  :  -  (
+    await onMessageCallback(twitchChannelNames[0], 'user', 'message', twitchMessage)
+
+    // post a mock remove chat message event
+    const onMessageRemovedCallback = mockChatClient.onMessageRemove.mock.calls[0][0] as (...args: any) => Promise<void>
+    await onMessageRemovedCallback(twitchChannelNames[0], removedMessageId, { } as any)
 
     // check that the chat item is evaluated properly (trust the actual implementation)
     const providedTwitchMessage = single(single(evalMockFn.mock.calls))
     expect(providedTwitchMessage).toBe(twitchMessage)
 
+    const [chatItemData, removeChatItemData] = mockEventDispatchService.addData.mock.calls as [DataPair<'chatItem'>, DataPair<'chatItemRemoved'>]
+
     // check that the evaluated message is passed to the EventDispatchService
-    const data = single(mockEventDispatchService.addData.mock.calls) as DataPair<'chatItem'>
-    expect(data[0]).toBe(`chatItem`)
-    expect(data[1]).toEqual({ ...chatItem, streamerId })
+    expect(chatItemData).toEqual(expectObject(chatItemData, ['chatItem', { ...chatItem, streamerId }]))
+
+    // check that message deleted events are dispatched
+    expect(removeChatItemData).toEqual(expectObject(removeChatItemData, ['chatItemRemoved', { externalMessageId: removedMessageId }]))
   })
 
   test(`Joins the streamer's chat when a primary Twitch channel has been set`, async () => {

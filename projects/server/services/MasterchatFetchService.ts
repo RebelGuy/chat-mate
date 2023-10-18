@@ -196,6 +196,8 @@ export default class MasterchatFetchService extends ContextClass {
           await this.externalRankEventService.onYoutubeChannelBanned(streamerId, action.userChannelName, action.moderatorChannelName)
         } else if (action.type === 'unhideUserAction') {
           await this.externalRankEventService.onYoutubeChannelUnbanned(streamerId, action.userChannelName, action.moderatorChannelName)
+        } else if (action.type === 'markChatItemAsDeletedAction') {
+          await this.chatService.onChatItemRemoved(action.targetId)
         }
       }
     }

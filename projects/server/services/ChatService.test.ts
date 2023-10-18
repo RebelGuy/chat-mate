@@ -5,8 +5,8 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, expectArray, expectObject, nameof, promised } from '@rebel/shared/testUtils'
-import { single } from '@rebel/shared/util/arrays'
+import { cast, nameof, promised } from '@rebel/shared/testUtils'
+import { single, single2 } from '@rebel/shared/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import EmojiService from '@rebel/server/services/EmojiService'
@@ -107,21 +107,31 @@ beforeEach(() => {
 })
 
 describe(nameof(ChatService, 'initialise'), () => {
-  test('subscribes to chatItem events', () => {
+  test('subscribes to chatItem and messageDeleted events', () => {
     chatService.initialise()
 
-    const args = single(mockEventDispatchService.onData.mock.calls)
-    expect(args[0]).toBe('chatItem')
-    expect(args[1]).not.toBeNull()
+    const args = mockEventDispatchService.onData.mock.calls
+    expect(args.length).toBe(2)
+    expect(args[0][0]).toBe('chatItem')
+    expect(args[0][1]).not.toBeNull()
+    expect(args[1][0]).toBe('chatItemRemoved')
+    expect(args[1][1]).not.toBeNull()
+  })
+})
+
+describe(nameof(ChatService, 'onChatItemRemoved'), () => {
+  test('Removes the chat item', async () => {
+    const externalMessageId = 'messageId'
+
+    await chatService.onChatItemRemoved(externalMessageId)
+
+    const providedMessageId = single2(mockChatStore.removeChat.mock.calls)
+    expect(providedMessageId).toBe(externalMessageId)
   })
 })
 
 describe(nameof(ChatService, 'onNewChatItem'), () => {
   test('youtube: synthesises correct data and calls required services, then returns true', async () => {
-    const chatItemWithCustomEmoji = {
-      ...chatItem1,
-      messageParts: [textPart, customEmojiPart, emojiPart]
-    }
     const streamerId = 2
     const addedChatMessage = cast<ChatMessage>({})
     const livestream = cast<Livestream>({}); // required semicolon for some reason lol
@@ -143,10 +153,6 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
   })
 
   test('twitch: synthesises correct data and calls required services, then returns true', async () => {
-    const chatItemWithCustomEmoji = {
-      ...chatItem2,
-      messageParts: [textPart, customEmojiPart, emojiPart]
-    }
     const streamerId = 2
     const addedChatMessage = cast<ChatMessage>({})
     const livestream = cast<Livestream>({})

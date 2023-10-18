@@ -7,6 +7,7 @@ import { UserChannel } from '@rebel/server/stores/ChannelStore'
 
 export type EventData = {
   chatItem: ChatItem & { streamerId: number },
+  chatItemRemoved: { externalMessageId: string },
   addPrimaryChannel: { streamerId: number, userChannel: UserChannel },
   removePrimaryChannel: { streamerId: number, userChannel: UserChannel }
 }

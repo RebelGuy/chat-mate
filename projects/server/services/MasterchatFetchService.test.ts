@@ -1,5 +1,5 @@
 import { Livestream } from '@prisma/client'
-import { Action, AddChatItemAction, ChatResponse, HideUserAction, UnhideUserAction, YTRun } from '@rebel/masterchat'
+import { Action, AddChatItemAction, ChatResponse, HideUserAction, MarkChatItemAsDeletedAction, UnhideUserAction, YTRun } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatFetchService from '@rebel/server/services/MasterchatFetchService'
@@ -15,7 +15,7 @@ import { ChatItem } from '@rebel/server/models/chat'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
-import { single } from '@rebel/shared/util/arrays'
+import { single, single2 } from '@rebel/shared/util/arrays'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -76,6 +76,10 @@ const chatAction5 = cast<UnhideUserAction>({
   timestampUsec: `${data.time3.getTime() * 1000}`,
   moderatorChannelName: 'modName2',
   userChannelName: 'userName2'
+})
+const chatAction6 = cast<MarkChatItemAsDeletedAction>({
+  type: 'markChatItemAsDeletedAction',
+  targetId: 'externalId'
 })
 
 let mockChatStore: MockProxy<ChatStore>
@@ -251,6 +255,15 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
     expect(mockMasterchatStore.addMasterchatAction.mock.calls.length).toBe(0)
     expect(mockExternalRankEventService.onYoutubeChannelBanned.mock.calls.length).toBe(0)
     expect(mockExternalRankEventService.onYoutubeChannelUnbanned.mock.calls.length).toBe(0)
+  })
+
+  test('Processes remove chat item action', async () => {
+    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction6]))
+
+    await masterchatFetchService.initialise()
+
+    const externalId = single2(mockChatService.onChatItemRemoved.mock.calls)
+    expect(externalId).toBe(chatAction6.targetId)
   })
 })
 

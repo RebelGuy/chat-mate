@@ -11,7 +11,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { ChatClient } from '@twurple/chat'
+import { ChatClient, ClearMsg } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 import { HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
@@ -109,6 +109,8 @@ export default class TwurpleService extends ContextClass {
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.chatClient.onMessageRemove((channel: string, messageId: string, msg: ClearMsg) => this.onMessageRemoved(channel, messageId))
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onConnect(() => this.onConnected())
@@ -342,6 +344,11 @@ export default class TwurpleService extends ContextClass {
     } catch (e: any) {
       this.logService.logError(this, e)
     }
+  }
+
+  private async onMessageRemoved (channel: string, messageId: string) {
+    this.logService.logInfo(this, channel, `Removing chat item ${messageId}`)
+    await this.eventDispatchService.addData('chatItemRemoved', { externalMessageId: messageId })
   }
 
   private async onConnected () {

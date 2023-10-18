@@ -181,8 +181,9 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream. */
-  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[]): Promise<ChatItemWithRelations[]> {
+  /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream.
+   * If `deletedOnly` is not provided, returns only active chat messages. If true, returns only deleted messages (respecting all other provided filters). */
+  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[], deletedOnly?: boolean): Promise<ChatItemWithRelations[]> {
     const result = await this.db.chatMessage.findMany({
       where: {
         streamerId: streamerId,
@@ -191,7 +192,11 @@ export default class ChatStore extends ContextClass {
           gt: new Date(since),
           lte: beforeOrAt == null ? undefined : new Date(beforeOrAt)
         },
-        donationId: null
+        donationId: null,
+        deletedTime: deletedOnly ? {
+          gt: new Date(since),
+          lte: beforeOrAt == null ? undefined : new Date(beforeOrAt)
+        } : null
       },
       // we want to get the latest results
       orderBy: { time: 'desc' },
@@ -208,6 +213,16 @@ export default class ChatStore extends ContextClass {
       include: chatMessageIncludeRelations,
       rejectOnNotFound: true
     })
+  }
+
+  /** Marks the specified message as deleted. Returns true if the message was deleted. */
+  public async removeChat (externalMessageId: string): Promise<boolean> {
+    const newMessage = await this.db.chatMessage.update({
+      where: { externalId: externalMessageId },
+      data: { deletedTime: new Date() }
+    })
+
+    return newMessage.deletedTime != null
   }
 }
 
