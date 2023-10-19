@@ -110,7 +110,14 @@ export default class MasterchatFetchService extends ContextClass {
       this.logService.logDebug(this, `Starting fetch timer for livestream ${livestream.id} for streamer ${livestream.streamerId}`)
       const timerOptions: TimerOptions = {
         behaviour: 'dynamicEnd',
-        callback: () => this.updateLivestreamMessages(livestream.streamerId, id)
+        callback: async () => {
+          try {
+            return await this.updateLivestreamMessages(livestream.streamerId, id)
+          } catch (e: any) {
+            this.logService.logError(this, 'Failed to update livestream messages:', e)
+            return MAX_INTERVAL
+          }
+        }
       }
       const timer = await this.timerHelpers.createRepeatingTimer(timerOptions, true)
       this.chatTimers.set(id, timer)

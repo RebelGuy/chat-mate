@@ -5,6 +5,7 @@ import { expectObject, nameof } from '@rebel/shared/testUtils'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import { MasterchatAction } from '@prisma/client'
 import { addTime } from '@rebel/shared/util/datetime'
+import { randomString } from '@rebel/shared/util/random'
 
 export default () => {
   const liveId1 = 'id1'
@@ -45,6 +46,15 @@ export default () => {
       const [stored1, stored2] = await db.masterchatAction.findMany({})
       expect(stored1).toEqual(expectObject<MasterchatAction>({ type: 'test1', data: 'data1', time: null, livestreamId: 1 }))
       expect(stored2).toEqual(expectObject<MasterchatAction>({ type: 'test2', data: 'data2', time: time, livestreamId: 2 }))
+    })
+
+    test('Truncates the data if it is too long', async () => {
+      const longData = randomString(5000)
+
+      await masterchatStore.addMasterchatAction('', longData, null, liveId1)
+
+      const stored = await db.masterchatAction.findFirst()
+      expect(stored!.data.length).toBe(4096)
     })
   })
 

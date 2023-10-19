@@ -3,7 +3,7 @@ CREATE TABLE `masterchat_action` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `timeAdded` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `type` VARCHAR(64) NOT NULL,
-    `data` VARCHAR(1024) NOT NULL,
+    `data` VARCHAR(4096) NOT NULL,
     `time` DATETIME(3) NULL,
     `livestreamId` INTEGER NOT NULL,
 

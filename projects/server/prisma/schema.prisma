@@ -553,7 +553,7 @@ model MasterchatAction {
   id        Int      @id @default(autoincrement())
   timeAdded DateTime @default(now())
   type      String   @db.VarChar(64)
-  data      String   @db.VarChar(1024)
+  data      String   @db.VarChar(4096) // if you update the string length, be sure to udpate the constant in the MasterchatStore
 
   // the time contained in the action data
   time DateTime?
