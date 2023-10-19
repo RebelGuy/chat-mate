@@ -5,6 +5,7 @@ import { PublicDonationData } from '@rebel/api-models/public/event/PublicDonatio
 import { PublicLevelUpData } from '@rebel/api-models/public/event/PublicLevelUpData'
 import { PublicNewTwitchFollowerData } from '@rebel/api-models/public/event/PublicNewTwitchFollowerData'
 import { PublicNewViewerData } from '@rebel/api-models/public/event/PublicNewViewerData'
+import { PublicChatMessageDeletedData } from '@rebel/api-models/public/event/PublicChatMessageDeletedData'
 import { PublicLivestreamStatus } from '@rebel/api-models/public/status/PublicLivestreamStatus'
 import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
@@ -447,6 +448,7 @@ export default class StreamerController extends ControllerBase {
         let newTwitchFollowerData: PublicNewTwitchFollowerData | null = null
         let donationData: PublicDonationData | null = null
         let newViewerData: PublicNewViewerData | null = null
+        let chatMessageDeletedData: PublicChatMessageDeletedData | null = null
 
         if (event.type === 'levelUp') {
           const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
@@ -476,6 +478,10 @@ export default class StreamerController extends ControllerBase {
           newViewerData = {
             user: user
           }
+        } else if (event.type === 'chatMessageDeleted') {
+          chatMessageDeletedData = {
+            chatMessageId: event.chatMessageId
+          }
         } else {
           assertUnreachable(event)
         }
@@ -486,7 +492,8 @@ export default class StreamerController extends ControllerBase {
           levelUpData,
           newTwitchFollowerData,
           donationData,
-          newViewerData
+          newViewerData,
+          chatMessageDeletedData
         })
       }
 
