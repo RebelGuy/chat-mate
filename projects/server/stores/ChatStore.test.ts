@@ -803,5 +803,17 @@ export default () => {
       const storedMessage = await db.chatMessage.findFirst()
       expect(storedMessage!.deletedTime).toBeNull()
     })
+
+    test('Returns false if the message was already deleted', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+      await db.chatMessage.updateMany({ data: { deletedTime: data.time1 }})
+
+      const result = await chatStore.removeChat(chatItem1.id)
+
+      expect(result).toBe(false)
+      const storedMessage = await db.chatMessage.findFirst()
+      expect(storedMessage!.deletedTime).toEqual(data.time1)
+    })
   })
 }
