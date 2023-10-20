@@ -182,13 +182,13 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream.
-   * If `deletedOnly` is not provided, returns only active chat messages. If true, returns only deleted messages (respecting all other provided filters). */
+   * If `deletedOnly` is not provided, returns only active chat messages. If true, returns only deleted messages since the given time (respecting all other provided filters). */
   public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[], deletedOnly?: boolean): Promise<ChatItemWithRelations[]> {
     const result = await this.db.chatMessage.findMany({
       where: {
         streamerId: streamerId,
         userId: userIds == null ? undefined : { in: userIds },
-        time: {
+        time: deletedOnly ? undefined : {
           gt: new Date(since),
           lte: beforeOrAt == null ? undefined : new Date(beforeOrAt)
         },

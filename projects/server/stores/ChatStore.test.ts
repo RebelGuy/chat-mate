@@ -415,6 +415,39 @@ export default () => {
 
       expect(result.length).toBe(0)
     })
+
+    test.only('Ignores deleted messages if flag not set', async () => {
+      const chatItem = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
+      await chatStore.addChat(chatItem, streamer1, youtube1UserId, extYoutubeChannel1)
+      await db.chatMessage.updateMany({ data: { deletedTime: data.time3 }})
+
+      const result1 = await chatStore.getChatSince(streamer1, 0) // start searching since before addition
+      const result2 = await chatStore.getChatSince(streamer1, data.time2.getTime()) // start searching since after addition
+      const result3 = await chatStore.getChatSince(streamer1, data.time4.getTime()) // start searching since after deletion
+
+      expect(result1.length).toBe(0)
+      expect(result2.length).toBe(0)
+      expect(result3.length).toBe(0)
+    })
+
+    test.only('Returns only deleted messages if flag set', async () => {
+      // add deleted message
+      const chatItem1 = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
+      await chatStore.addChat(chatItem1, streamer1, youtube1UserId, extYoutubeChannel1)
+      await db.chatMessage.updateMany({ data: { deletedTime: data.time3 }})
+
+      // add undeleted message
+      const chatItem2 = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
+      await chatStore.addChat(chatItem2, streamer1, youtube1UserId, extYoutubeChannel1)
+
+      const result1 = await chatStore.getChatSince(streamer1, 0, undefined, undefined, undefined, true) // start searching since before addition
+      const result2 = await chatStore.getChatSince(streamer1, data.time2.getTime(), undefined, undefined, undefined, true) // start searching since after addition
+      const result3 = await chatStore.getChatSince(streamer1, data.time4.getTime(), undefined, undefined, undefined, true) // start searching since after deletion
+
+      expect(result1.length).toBe(1)
+      expect(result2.length).toBe(1)
+      expect(result3.length).toBe(0)
+    })
   })
 
   describe(nameof(ChatStore, 'getChatMessageCount'), () => {
