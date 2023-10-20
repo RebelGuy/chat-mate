@@ -416,7 +416,7 @@ export default () => {
       expect(result.length).toBe(0)
     })
 
-    test.only('Ignores deleted messages if flag not set', async () => {
+    test('Ignores deleted messages if flag not set', async () => {
       const chatItem = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
       await chatStore.addChat(chatItem, streamer1, youtube1UserId, extYoutubeChannel1)
       await db.chatMessage.updateMany({ data: { deletedTime: data.time3 }})
@@ -430,7 +430,7 @@ export default () => {
       expect(result3.length).toBe(0)
     })
 
-    test.only('Returns only deleted messages if flag set', async () => {
+    test('Returns only deleted messages if flag set', async () => {
       // add deleted message
       const chatItem1 = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
       await chatStore.addChat(chatItem1, streamer1, youtube1UserId, extYoutubeChannel1)
