@@ -1,0 +1,25 @@
+- Following https://github.com/googleapis/google-api-nodejs-client#oauth2-client
+- Go to the developer console: https://console.cloud.google.com/apis/credentials?pli=1&project=shorts-330419
+- Create a new project
+- Add the Youtube Data API v3 to the project's enabled apis (https://console.cloud.google.com/apis/library?authuser=2&project=chatmate-local&supportedpurview=project)
+- Create oauth consent screen
+  - Configure the consent screen (only need to fill in mandatory fields)
+  - Configure the scopes
+    - `https://www.googleapis.com/auth/youtube`: Manage the user's YouTube account
+    - `https://www.googleapis.com/auth/youtube.readonly`: View your YouTube account [not sure if necessary]
+  - Add test users (accounts that can authorise the new client)
+    - chat_mate_local@proton.me
+    - chat_mate_prod@proton.me
+    - chat_mate_sandbox@proton.me
+    - chatmatetest1@gmail.com
+    - chatmatetest2@gmail.com
+- Create oauth client id. This identifies ChatMate Studio to google
+  - Web Application
+  - redirect uris: http://localhost:3000/admin/youtube and http://localhost:3000/manager
+  - local:
+    - client id: 419723469636-bnl40h64tppr2ag795od7ruvsispjfsu.apps.googleusercontent.com
+    - client secret: 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
+
+
+- replicate twitch auth
+- it won't quite work the same because we need to explicitly generate a new oauth client for every user that is making requests, + subscribe to the token event to handle refresh token persisting.

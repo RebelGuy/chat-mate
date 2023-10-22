@@ -54,6 +54,8 @@ The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `STUDIO_URL`: The URL to ChatMate Studio (not ending in `/`).
 - `CHAT_MATE_REGISTERED_USER_NAME`: The registered username of the official ChatMate account.
+- `YOUTUBE_CLIENT_ID`: The client ID for the YouTube ChatMate app (from https://console.cloud.google.com/apis/credentials).
+- `YOUTUBE_CLIENT_SECRET`: The client secret for the YouTube ChatMate app.
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube. If this is ever changed, you will need to re-authenticate and purge all Context Tokens from the `chat_message` table.
 - `TWITCH_CLIENT_ID`: The client ID for Twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for Twitch auth.

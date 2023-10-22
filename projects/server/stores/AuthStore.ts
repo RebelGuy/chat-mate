@@ -48,6 +48,7 @@ export default class AuthStore extends ContextClass {
     }
   }
 
+  // todo: change model
   public async loadYoutubeAccessToken (channelId: string): Promise<string | null> {
     const result = await this.dbProvider.get().youtubeAuth.findUnique({ where: { channelId }})
     return result?.accessToken ?? null

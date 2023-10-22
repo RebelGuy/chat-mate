@@ -19,6 +19,11 @@ export const TWITCH_SCOPE = [
   'moderator:read:followers'
 ]
 
+export const YOUTUBE_SCOPE = [
+  'https://www.googleapis.com/auth/youtube',
+  'https://www.googleapis.com/auth/youtube.readonly'
+]
+
 // https://dev.streamlabs.com/docs/currency-codes
 export const CURRENCIES = {
   AUD: 'Australian Dollar',

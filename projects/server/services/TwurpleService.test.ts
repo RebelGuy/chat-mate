@@ -21,7 +21,7 @@ import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventSe
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { RefreshingAuthProvider } from '@twurple/auth/lib'
-import { NotAuthorisedError } from '@rebel/shared/util/error'
+import { TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 const onMessage_example = '{"msgId":"c2ddc7b6-51b6-4d75-9670-d262a6e98cf1","userInfo":{"userName":"chat_mate1","displayName":"chat_mate1","color":"#0000FF","badges":{},"badgeInfo":{},"userId":"781376034","userType":"","isBroadcaster":true,"isSubscriber":false,"isFounder":false,"isMod":false,"isVip":false},"channelId":"781376034","isCheer":false,"bits":0,"emoteOffsets":{},"messageParts":[{"type":"emote","position":0,"length":2,"id":"1","name":":)","displayInfo":{}},{"type":"text","position":2,"length":1,"text":" "},{"type":"emote","position":3,"length":6,"id":"301544927","name":"SirUwU","displayInfo":{}},{"type":"text","position":9,"length":1,"text":" "},{"type":"emote","position":10,"length":7,"id":"30259","name":"HeyGuys","displayInfo":{}}]}'
@@ -489,7 +489,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(channelName)
     mockUserApi.getUserByName.calledWith(channelName).mockResolvedValue(user)
-    mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith(user.id).mockRejectedValue(new NotAuthorisedError(user.id))
+    mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith(user.id).mockRejectedValue(new TwitchNotAuthorisedError(user.id))
 
     await twurpleService.initialise()
     const onAddPrimaryChannel = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'addPrimaryChannel')![1]

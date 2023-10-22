@@ -142,9 +142,15 @@ export class InvalidCommandArgumentsError extends CustomError {
   }
 }
 
-export class NotAuthorisedError extends CustomError {
+export class TwitchNotAuthorisedError extends CustomError {
   constructor (twitchUserId: string) {
-    super(NotAuthorisedError.prototype, `Twitch user ${twitchUserId} has not authorised ChatMate.`)
+    super(TwitchNotAuthorisedError.prototype, `Twitch user ${twitchUserId} has not authorised ChatMate.`)
+  }
+}
+
+export class YoutubeNotAuthorisedError extends CustomError {
+  constructor (youtubeChannelId: string) {
+    super(YoutubeNotAuthorisedError.prototype, `Youtube channel ${youtubeChannelId} has not authorised ChatMate.`)
   }
 }
 

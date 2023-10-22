@@ -173,6 +173,7 @@ const main = async () => {
     .withClass('masterchatFactory', MasterchatFactory)
     .withClass('masterchatStatusService', StatusService)
     .withClass('twurpleStatusService', StatusService)
+    .withClass('youtubeStatusService', StatusService)
     .withClass('streamlabsStatusService', StatusService)
     .withClass('livestreamStore', LivestreamStore)
     .withClass('chatStore', ChatStore)

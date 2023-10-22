@@ -18,7 +18,7 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
-import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
@@ -176,7 +176,7 @@ export default class TwurpleService extends ContextClass {
     try {
       await this.twurpleAuthProvider.getUserTokenAuthProvider(user!.id, true)
     } catch (e: any) {
-      if (e instanceof NotAuthorisedError) {
+      if (e instanceof TwitchNotAuthorisedError) {
         errorMessage = 'You have not yet authorised ChatMate to act on your behalf.'
         isActive = false
       } else if (e instanceof AuthorisationExpiredError) {

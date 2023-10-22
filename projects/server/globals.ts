@@ -39,7 +39,10 @@ type EnvironmentVariables = {
 
   streamlabsAccessToken: string
 
+  youtubeClientId: string
+  youtubeClientSecret: string
   channelId: string
+
   databaseUrl: string
 
   // replaces some controllers with fake ones
@@ -65,6 +68,8 @@ type EnvironmentVariables = {
 const allChatMateEnvVariables: { [K in keyof EnvironmentVariables]: readonly ValueType<K>[] | null } = {
   applicationinsightsConnectionString: null,
   channelId: null,
+  youtubeClientId: null,
+  youtubeClientSecret: null,
   databaseUrl: null,
   dbLogLevel: LOG_LEVEL_VALUES,
   apiLogLevel: LOG_LEVEL_VALUES,
