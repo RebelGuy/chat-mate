@@ -4,10 +4,11 @@ import HelixEventService from '@rebel/server/services/HelixEventService'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { GetAdministrativeModeResponse, GetLinkAttemptLogsResponse, GetTwitchLoginUrlResponse, ReconnectTwitchChatClientResponse, ReleaseLinkAttemptResponse, ResetTwitchSubscriptionsResponse, TwitchAuthorisationResponse } from '@rebel/api-models/schema/admin'
+import { GetAdministrativeModeResponse, GetLinkAttemptLogsResponse, GetTwitchLoginUrlResponse, GetYoutubeLoginUrlResponse, ReconnectTwitchChatClientResponse, ReleaseLinkAttemptResponse, ResetTwitchSubscriptionsResponse, TwitchAuthorisationResponse, YoutubeAuthorisationResponse } from '@rebel/api-models/schema/admin'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { PublicLinkAttemptLog } from '@rebel/api-models/public/user/PublicLinkAttemptLog'
 import { PublicLinkAttemptStep } from '@rebel/api-models/public/user/PublicLinkAttemptStep'
+import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 
 type Deps = ControllerDependencies<{
   adminService: AdminService
@@ -15,6 +16,7 @@ type Deps = ControllerDependencies<{
   twurpleService: TwurpleService
   helixEventService: HelixEventService
   linkStore: LinkStore
+  youtubeAuthProvider: YoutubeAuthProvider
 }>
 
 @Path(buildPath('admin'))
@@ -25,6 +27,7 @@ export default class AdminController extends ControllerBase {
   private readonly twurpleService: TwurpleService
   private readonly helixEventService: HelixEventService
   private readonly linkStore: LinkStore
+  private readonly youtubeAuthProvider: YoutubeAuthProvider
 
   constructor (deps: Deps) {
     super(deps, 'admin')
@@ -33,6 +36,7 @@ export default class AdminController extends ControllerBase {
     this.twurpleService = deps.resolve('twurpleService')
     this.helixEventService = deps.resolve('helixEventService')
     this.linkStore = deps.resolve('linkStore')
+    this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
   }
 
   @GET
@@ -96,6 +100,36 @@ export default class AdminController extends ControllerBase {
 
     try {
       await this.helixEventService.resetAllSubscriptions()
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/youtube/login')
+  public async getTYoutubeLoginUrl (): Promise<GetYoutubeLoginUrlResponse> {
+    const builder = this.registerResponseBuilder<GetYoutubeLoginUrlResponse>('GET /youtube/login')
+
+    try {
+      const url = this.youtubeAuthProvider.getAuthUrlForAdmin()
+      const youtubeChannelName = await this.adminService.getYoutubeChannelName()
+      return builder.success({ url, youtubeChannelName })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/youtube/authorise')
+  public async authoriseYoutube (
+    @QueryParam('code') code: string,
+    @QueryParam('state') state: string
+  ): Promise<YoutubeAuthorisationResponse> {
+    const builder = this.registerResponseBuilder<YoutubeAuthorisationResponse>('POST /youtube/authorise')
+
+    try {
+      await this.youtubeAuthProvider.authoriseAdmin(code, state)
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

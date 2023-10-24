@@ -1,12 +1,13 @@
-import { Rank } from '@prisma/client'
+import { Rank, YoutubeChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { cast, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import WebService from '@rebel/server/services/WebService'
 import { single } from '@rebel/shared/util/arrays'
+import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 
 const primaryUser1 = 1
 const primaryUser2 = 2
@@ -21,16 +22,19 @@ const twitchUsername = 'testUser'
 let mockRankStore: MockProxy<RankStore>
 let mockAuthStore: MockProxy<AuthStore>
 let mockWebService: MockProxy<WebService>
+let mockChannelStore: MockProxy<ChannelStore>
 let mockIsAdministrativeMode: MockProxy<() => boolean>
 const mockStudioUrl = 'studio'
 const mockTwitchClientId = 'clientId'
 const mockTwitchClientSecret = 'clientSecret'
+const mockChannelId = 'channelId'
 let adminService: AdminService
 
 beforeEach(() => {
   mockRankStore = mock()
   mockAuthStore = mock()
   mockWebService = mock()
+  mockChannelStore = mock()
   mockIsAdministrativeMode = mock()
 
   adminService = new AdminService(new Dependencies({
@@ -42,6 +46,8 @@ beforeEach(() => {
     twitchClientId: mockTwitchClientId,
     twitchClientSecret: mockTwitchClientSecret,
     twitchUsername: twitchUsername,
+    channelId: mockChannelId,
+    channelStore: mockChannelStore,
     isAdministrativeMode: mockIsAdministrativeMode
   }))
 })
@@ -78,6 +84,21 @@ describe(nameof(AdminService, 'getTwitchUsername'), () => {
     const result = adminService.getTwitchUsername()
 
     expect(result).toBe(twitchUsername)
+  })
+})
+
+describe(nameof(AdminService, 'getYoutubeChannelName'), () => {
+  test(`Returns the admin channel's name`, async () => {
+    const youtubeChannelId = 5
+    const youtubeChannelName = 'testName'
+    mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(mockChannelId)
+      .mockResolvedValue(cast<YoutubeChannel>({ id: youtubeChannelId }))
+    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectObject<number[]>([youtubeChannelId]))
+      .mockResolvedValue([cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: youtubeChannelName }]}} })])
+
+    const result = await adminService.getYoutubeChannelName()
+
+    expect(result).toBe(youtubeChannelName)
   })
 })
 

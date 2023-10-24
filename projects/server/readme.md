@@ -212,7 +212,7 @@ Returns data with the following properties:
 - `twitchUsername` (`string`): The username of the ChatMate Twitch account. This account must be used to authenticate on the admin page.
 
 ### `POST /twitch/authorise`
-Authorises the authorisation token and updates the stored Twitch `access_token` in the database.
+Authorises the authorisation code and updates the stored Twitch `access_token` in the database.
 
 Query parameters:
 - `code` (`string`): The authorisation code obtained from Twitch after logging on.
@@ -226,6 +226,22 @@ Returns an empty response body.
 
 ### `POST /twitch/resetSubscriptions`
 Deletes and re-initialises all streamer event subscriptions.
+
+Returns an empty response body.
+
+### `GET /youtube/login`
+Retrieves the Youtube login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](../../docs/youtube-auth.md) for more info.
+
+Returns data with the following properties:
+- `url` (`string`): The login URL. It will redirect back to Studio.
+- `youtubeChannelName` (`string`): The channel name of the ChatMate Youtube account. This account must be used to authenticate on the admin page.
+
+### `POST /youtube/authorise`
+Authorises the authorisation code and updates the stored Youtube `access_token` in the database.
+
+Query parameters:
+- `code` (`string`): The authorisation code obtained from Youtube after logging on.
+- `state` (`state`): The query parameter of the same name returned by Youtube after logging on and redirecting back to Studio.
 
 Returns an empty response body.
 
@@ -832,6 +848,17 @@ Returns data with the following properties:
 Can return the following errors:
 - `403`: When the logged-in user is not a streamer.
 
+### `POST /twitch/authorise`
+Authorises the authorisation code and updates the stored Twitch `access_token` in the database.
+
+Query parameters:
+- `code` (`string`): The authorisation code obtained from Twitch after logging on.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+
 ### `GET /youtube/status`
 Retrieves the status of the ChatMate admin YouTube channel in relation to the logged-in streamer's current primary YouTube channel. ChatMate requires that the streamer add the admin channel as a moderator. Note that we can only check the moderator status at the time of the last message received in the streamer's latest livestream.
 
@@ -840,6 +867,29 @@ Returns data with the following properties:
 - `timestamp` (`number`): The latest time for which the moderation status could be verified. It may have changed since then.
 
 Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+
+### `GET /youtube/login`
+Retrieves the Youtube login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](../../docs/youtube-auth.md) for more info.
+
+Returns data with the following properties:
+- `url` (`string`): The login URL. It will redirect back to Studio.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
+- `403`: When the logged-in user is not a streamer.
+
+### `POST /youtube/authorise`
+Authorises the authorisation code and updates the stored Youtube `access_token` in the database.
+
+Query parameters:
+- `code` (`string`): The authorisation code obtained from Youtube after logging on.
+- `state` (`state`): The query parameter of the same name returned by Youtube after logging on and redirecting back to Studio.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
 - `403`: When the logged-in user is not a streamer.
 
 ### `GET /status`

@@ -37,6 +37,10 @@ export type TwitchAuthorisationResponse = ApiResponse<EmptyObject>
 
 export type GetYoutubeStatusResponse = ApiResponse<{ chatMateIsModerator: boolean, timestamp: number }>
 
+export type GetYoutubeLoginUrlResponse = ApiResponse<{ url: string }>
+
+export type YoutubeAuthorisationResponse = ApiResponse<EmptyObject>
+
 export type GetStatusResponse = ApiResponse<{
   livestreamStatus: PublicObject<PublicLivestreamStatus> | null
   youtubeApiStatus: PublicObject<PublicApiStatus>

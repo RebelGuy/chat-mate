@@ -91,6 +91,10 @@ import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEve
 import { ApiResponse } from '@rebel/api-models/types'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
+import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
+import YoutubeService from '@rebel/server/services/YoutubeService'
+import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClientProvider'
+import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -132,6 +136,8 @@ const main = async () => {
     .withProperty('port', port)
     .withProperty('studioUrl', studioUrl)
     .withProperty('channelId', env('channelId'))
+    .withProperty('youtubeClientId', env('youtubeClientId'))
+    .withProperty('youtubeClientSecret', env('youtubeClientSecret'))
     .withProperty('dataPath', dataPath)
     .withProperty('nodeEnv', env('nodeEnv'))
     .withProperty('databaseUrl', env('databaseUrl'))
@@ -198,6 +204,10 @@ const main = async () => {
     .withClass('twurpleService', TwurpleService)
     .withClass('linkStore', LinkStore)
     .withClass('userService', UserService)
+    .withClass('youtubeAuthProvider', YoutubeAuthProvider)
+    .withClass('youtubeApiClientProvider', YoutubeApiClientProvider)
+    .withClass('youtubeApiProxyService', YoutubeApiProxyService)
+    .withClass('youtubeService', YoutubeService)
     .withClass('punishmentService', PunishmentService)
     .withClass('genericStore', GenericStore)
     .withClass('experienceService', ExperienceService)

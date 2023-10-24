@@ -11,8 +11,8 @@ import { OAuth2Client, Credentials, OAuth2ClientOptions } from 'google-auth-libr
 type Deps = Dependencies<{
   authStore: AuthStore
   channelId: string
-  clientId: string
-  clientSecret: string
+  youtubeClientId: string
+  youtubeClientSecret: string
   studioUrl: string
 }>
 
@@ -28,8 +28,8 @@ export default class YoutubeAuthProvider extends ContextClass {
     super()
     this.authStore = deps.resolve('authStore')
     this.adminChannelId = deps.resolve('channelId')
-    this.clientId = deps.resolve('clientId')
-    this.clientSecret = deps.resolve('clientSecret')
+    this.clientId = deps.resolve('youtubeClientId')
+    this.clientSecret = deps.resolve('youtubeClientSecret')
     this.studioUrl = deps.resolve('studioUrl')
   }
 
@@ -45,7 +45,27 @@ export default class YoutubeAuthProvider extends ContextClass {
     })
   }
 
-  public async authorise (code: string, state: string) {
+  public getAuthUrlForStreamer (streamerExternalChannelId: string) {
+    const client = this.getClient()
+
+    return client.generateAuthUrl({
+      client_id: this.clientId,
+      access_type: 'offline', // allow refreshing
+      redirect_uri: this.studioUrl + '/manager', // must match what is set up in the google dev console
+      scope: YOUTUBE_SCOPE,
+      state: '' // todo: store channel id
+    })
+  }
+
+  public async authoriseAdmin (code: string, state: string) {
+    const auth = this.getClient()
+
+    const token = await auth.getToken(code).then(res => res.tokens)
+
+    // todo: persist token
+  }
+
+  public async authoriseStreamer (streamerExternalChannelId: string, code: string, state: string) {
     const auth = this.getClient()
 
     const token = await auth.getToken(code).then(res => res.tokens)
