@@ -16,7 +16,7 @@ export class YoutubeApiClientProvider extends ContextClass {
   }
 
   public async getClientForAdmin (): Promise<youtube_v3.Youtube> {
-    const auth = await this.youtubeAuthProvider.getAuthForAdmin()
+    const auth = await this.youtubeAuthProvider.getAuth('admin')
     return youtube({
       version: 'v3',
       auth: auth

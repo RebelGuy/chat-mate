@@ -33,12 +33,27 @@ model TwitchAuth {
   @@map("twitch_auth")
 }
 
-/// Persists access tokens for Youtube authentication
-model YoutubeAuth {
+/// Persists web client access tokens for Youtube authentication
+model YoutubeWebAuth {
   channelId   String   @id
   accessToken String   @db.VarChar(511)
   updateTime  DateTime
 
+  @@map("youtube_web_auth")
+}
+
+model YoutubeAuth {
+  id Int @id @default(autoincrement())
+
+  externalYoutubeChannelId String // unique
+  timeObtained             DateTime @default(now())
+
+  refreshToken String   @db.VarChar(512)
+  expiryDate   DateTime
+  accessToken  String   @db.VarChar(512)
+  scope        String
+
+  @@unique([externalYoutubeChannelId], map: "youtube_auth_externalYoutubeChannelId")
   @@map("youtube_auth")
 }
 

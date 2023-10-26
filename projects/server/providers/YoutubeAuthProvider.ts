@@ -1,12 +1,13 @@
-import { GlobalOptions } from '@googleapis/youtube'
+import { YoutubeAuth } from '@prisma/client'
 import { YOUTUBE_SCOPE } from '@rebel/server/constants'
+import { New } from '@rebel/server/models/entities'
+import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
-import { compareArrays, single } from '@rebel/shared/util/arrays'
+import { compareArrays } from '@rebel/shared/util/arrays'
 import { InconsistentScopesError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
-import { OAuth2Client, Credentials, OAuth2ClientOptions } from 'google-auth-library'
+import { OAuth2Client, Credentials } from 'google-auth-library'
 
 type Deps = Dependencies<{
   authStore: AuthStore
@@ -14,15 +15,21 @@ type Deps = Dependencies<{
   youtubeClientId: string
   youtubeClientSecret: string
   studioUrl: string
+  logService: LogService
+  disableExternalApis: boolean
 }>
 
 // https://github.com/googleapis/google-api-nodejs-client#oauth2-client
 export default class YoutubeAuthProvider extends ContextClass {
+  public readonly name = YoutubeAuthProvider.name
+
   private readonly authStore: AuthStore
   private readonly adminChannelId: string
   private readonly clientId: string
   private readonly clientSecret: string
   private readonly studioUrl: string
+  private readonly logService: LogService
+  private readonly disableExternalApis: boolean
 
   constructor (deps: Deps) {
     super()
@@ -31,84 +38,116 @@ export default class YoutubeAuthProvider extends ContextClass {
     this.clientId = deps.resolve('youtubeClientId')
     this.clientSecret = deps.resolve('youtubeClientSecret')
     this.studioUrl = deps.resolve('studioUrl')
+    this.logService = deps.resolve('logService')
+    this.disableExternalApis = deps.resolve('disableExternalApis')
   }
 
-  public getAuthUrlForAdmin () {
-    const client = this.getClient()
-
-    return client.generateAuthUrl({
-      client_id: this.clientId,
-      access_type: 'offline', // allow refreshing
-      redirect_uri: this.studioUrl + '/admin/youtube', // must match what is set up in the google dev console
-      scope: YOUTUBE_SCOPE,
-      state: '' // todo: store channel id
-    })
-  }
-
-  public getAuthUrlForStreamer (streamerExternalChannelId: string) {
-    const client = this.getClient()
-
-    return client.generateAuthUrl({
-      client_id: this.clientId,
-      access_type: 'offline', // allow refreshing
-      redirect_uri: this.studioUrl + '/manager', // must match what is set up in the google dev console
-      scope: YOUTUBE_SCOPE,
-      state: '' // todo: store channel id
-    })
-  }
-
-  public async authoriseAdmin (code: string, state: string) {
-    const auth = this.getClient()
-
-    const token = await auth.getToken(code).then(res => res.tokens)
-
-    // todo: persist token
-  }
-
-  public async authoriseStreamer (streamerExternalChannelId: string, code: string, state: string) {
-    const auth = this.getClient()
-
-    const token = await auth.getToken(code).then(res => res.tokens)
-
-    // todo: persist token
-  }
-
-  // used for punishments
-  public async getAuthForAdmin (): Promise<OAuth2Client> {
-    return this.getAuth(this.adminChannelId)
-  }
-
-  // used for managing moderators
-  public async getAuth (channelId: string): Promise<OAuth2Client> {
-    const existingToken = await this.authStore.loadYoutubeAccessToken(channelId)
-    if (existingToken == null) {
-      throw new YoutubeNotAuthorisedError(channelId)
+  public override async initialise (): Promise<void> {
+    if (this.disableExternalApis) {
+      return
     }
-    // } else if (!compareScopes(YOUTUBE_SCOPE, existingToken.scope)) {
-    //   throw new InconsistentScopesError() // todo
-    // })
 
-    const client = this.getClient({ redirectUri: this.studioUrl + '/manager' })
+    const token = await this.authStore.loadYoutubeAccessToken(this.adminChannelId)
+    if (token == null) {
+      throw new YoutubeNotAuthorisedError(this.adminChannelId)
+    } else if (!compareScopes(YOUTUBE_SCOPE, token.scope.split(' '))) {
+      throw new Error('The stored application scope differs from the expected scope. Please reset the Youtube authentication.')
+    } else {
+      this.logService.logDebug(this, 'Loaded Youtube admin access token')
+    }
+  }
+
+  public getAuthUrl (isAdmin: boolean) {
+    const client = this.getClient(true)
+
+    return client.generateAuthUrl({
+      client_id: this.clientId,
+      access_type: 'offline', // allow refreshing
+      redirect_uri: this.getRedirectUri(isAdmin),
+      scope: YOUTUBE_SCOPE
+    })
+  }
+
+  public async authoriseChannel (code: string, externalChannelId: 'admin'): Promise<void>
+  public async authoriseChannel (code: string, externalChannelId: string): Promise<void>
+  public async authoriseChannel (code: string, externalChannelId: string | 'admin'): Promise<void> {
+    const isAdmin = externalChannelId === 'admin'
+
+    const client = this.getClient(isAdmin)
+    const token = await client.getToken(code).then(res => res.tokens)
+
+    if (!compareScopes(YOUTUBE_SCOPE, token.scope!.split(' '))) {
+      const result = await client.revokeToken(token.access_token!)
+      this.logService.logInfo(this, `User authorised ChatMate, but did not grant all requested permissions. Successfully revoked token: ${result.data.success}`)
+      throw new InconsistentScopesError('authenticated')
+    }
+
+    // note: we have no way of knowing what channel this code is actually for
+    // (technically it's not even for a channel, but a google user that might own multiple channels)
+    const youtubeAuth: New<YoutubeAuth> = {
+      externalYoutubeChannelId: isAdmin ? this.adminChannelId : externalChannelId,
+      accessToken: token.access_token!,
+      refreshToken: token.refresh_token!,
+      scope: token.scope!,
+      expiryDate: new Date(token.expiry_date!),
+      timeObtained: new Date()
+    }
+    await this.authStore.saveYoutubeAccessToken(youtubeAuth)
+  }
+
+  // admin auth: used for managing moderators. streamer auth: used for punishments
+  public async getAuth (externalChannelId: string): Promise<OAuth2Client>
+  public async getAuth (externalChannelId: 'admin'): Promise<OAuth2Client>
+  public async getAuth (externalChannelId: string | 'admin'): Promise<OAuth2Client> {
+    const isAdmin = externalChannelId === 'admin'
+    externalChannelId = isAdmin ? this.adminChannelId : externalChannelId
+
+    const existingToken = await this.authStore.loadYoutubeAccessToken(externalChannelId)
+    if (existingToken == null) {
+      throw new YoutubeNotAuthorisedError(externalChannelId)
+    } else if (!compareScopes(YOUTUBE_SCOPE, existingToken.scope.split(' '))) {
+      throw new InconsistentScopesError('stored')
+    }
+
+    const client = this.getClient(isAdmin)
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    client.on('tokens', tokens => this.onTokenUpdated(this.adminChannelId, tokens))
-
-    // client.setCredentials(existingToken) // todo
+    client.on('tokens', tokens => this.onTokenUpdated(externalChannelId, tokens))
+    client.setCredentials(existingToken)
 
     return client
   }
 
-  private async onTokenUpdated (externalChannelId: string, tokens: Credentials) {
-    // todo: save to AuthStore
+  private async onTokenUpdated (externalChannelId: string, token: Credentials) {
+    const youtubeAuth: New<YoutubeAuth> = {
+      externalYoutubeChannelId: externalChannelId,
+      accessToken: token.access_token!,
+      refreshToken: token.refresh_token!,
+      scope: token.scope!,
+      expiryDate: new Date(token.expiry_date!),
+      timeObtained: new Date()
+    }
+
+    try {
+      await this.authStore.saveYoutubeAccessToken(youtubeAuth)
+      this.logService.logDebug(this, `Refreshed and stored new access token for channel ${externalChannelId} (is admin: ${externalChannelId === this.adminChannelId})`)
+    } catch (e: any) {
+      this.logService.logError(this, `Refreshed access token for channel ${externalChannelId} (is admin: ${externalChannelId === this.adminChannelId}) but failed to save.`, e)
+    }
   }
 
   // the youtube api won't be used very often, there's no good reason to keep these clients in memorya
-  private getClient (options?: OAuth2ClientOptions): OAuth2Client {
+  private getClient (isAdmin: boolean): OAuth2Client {
     return new OAuth2Client({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
-      ...options
+      redirectUri: this.getRedirectUri(isAdmin)
     })
+  }
+
+  // must match exactly what is set up in the google dev console
+  private getRedirectUri (isAdmin: boolean) {
+    return isAdmin ? this.studioUrl + '/admin/youtube' : this.studioUrl + '/manager'
   }
 }
 

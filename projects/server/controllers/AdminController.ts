@@ -112,7 +112,7 @@ export default class AdminController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetYoutubeLoginUrlResponse>('GET /youtube/login')
 
     try {
-      const url = this.youtubeAuthProvider.getAuthUrlForAdmin()
+      const url = this.youtubeAuthProvider.getAuthUrl(true)
       const youtubeChannelName = await this.adminService.getYoutubeChannelName()
       return builder.success({ url, youtubeChannelName })
     } catch (e: any) {
@@ -123,13 +123,12 @@ export default class AdminController extends ControllerBase {
   @POST
   @Path('/youtube/authorise')
   public async authoriseYoutube (
-    @QueryParam('code') code: string,
-    @QueryParam('state') state: string
+    @QueryParam('code') code: string
   ): Promise<YoutubeAuthorisationResponse> {
     const builder = this.registerResponseBuilder<YoutubeAuthorisationResponse>('POST /youtube/authorise')
 
     try {
-      await this.youtubeAuthProvider.authoriseAdmin(code, state)
+      await this.youtubeAuthProvider.authoriseChannel(code, 'admin')
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

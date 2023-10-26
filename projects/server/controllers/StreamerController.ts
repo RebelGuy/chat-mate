@@ -425,7 +425,7 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(400, 'User does not have a primary Youtube channel.')
       }
 
-      const url = this.youtubeAuthProvider.getAuthUrlForStreamer(externalChannelId)
+      const url = this.youtubeAuthProvider.getAuthUrl(false)
 
       return builder.success({ url })
     } catch (e: any) {
@@ -453,7 +453,7 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(400, 'User does not have a primary Youtube channel.')
       }
 
-      await this.youtubeAuthProvider.authoriseStreamer(externalChannelId, code, state)
+      await this.youtubeAuthProvider.authoriseChannel(code, externalChannelId)
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

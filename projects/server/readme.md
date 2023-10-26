@@ -241,7 +241,6 @@ Authorises the authorisation code and updates the stored Youtube `access_token` 
 
 Query parameters:
 - `code` (`string`): The authorisation code obtained from Youtube after logging on.
-- `state` (`state`): The query parameter of the same name returned by Youtube after logging on and redirecting back to Studio.
 
 Returns an empty response body.
 
@@ -884,7 +883,6 @@ Authorises the authorisation code and updates the stored Youtube `access_token` 
 
 Query parameters:
 - `code` (`string`): The authorisation code obtained from Youtube after logging on.
-- `state` (`state`): The query parameter of the same name returned by Youtube after logging on and redirecting back to Studio.
 
 Returns an empty response body.
 

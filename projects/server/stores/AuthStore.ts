@@ -2,6 +2,8 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { AccessToken } from '@twurple/auth'
+import { YoutubeAuth } from '@prisma/client'
+import { New } from '@rebel/server/models/entities'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -48,9 +50,14 @@ export default class AuthStore extends ContextClass {
     }
   }
 
-  // todo: change model
-  public async loadYoutubeAccessToken (channelId: string): Promise<string | null> {
-    const result = await this.dbProvider.get().youtubeAuth.findUnique({ where: { channelId }})
+  public async loadYoutubeAccessToken (externalYoutubeChannelId: string): Promise<YoutubeAuth | null> {
+    return await this.dbProvider.get().youtubeAuth.findUnique({
+      where: { externalYoutubeChannelId }
+    })
+  }
+
+  public async loadYoutubeWebAccessToken (channelId: string): Promise<string | null> {
+    const result = await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
     return result?.accessToken ?? null
   }
 
@@ -92,9 +99,17 @@ export default class AuthStore extends ContextClass {
     }
   }
 
-  public async saveYoutubeAccessToken (channelId: string, accessToken: string) {
-    const updateTime = new Date()
+  public async saveYoutubeAccessToken (youtubeAuth: New<YoutubeAuth>): Promise<void> {
     await this.dbProvider.get().youtubeAuth.upsert({
+      where: { externalYoutubeChannelId: youtubeAuth.externalYoutubeChannelId },
+      update: youtubeAuth,
+      create: youtubeAuth
+    })
+  }
+
+  public async saveYoutubeWebAccessToken (channelId: string, accessToken: string) {
+    const updateTime = new Date()
+    await this.dbProvider.get().youtubeWebAuth.upsert({
       create: { channelId, accessToken, updateTime },
       where: { channelId },
       update: { accessToken, updateTime }

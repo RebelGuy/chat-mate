@@ -106,7 +106,7 @@ export default class TwurpleAuthProvider extends ContextClass {
     if (checkScopes) {
       const scopes = this.userTokenAuthProvider.getCurrentScopesForUser(twitchUserId)
       if (!this.compareScopes(TWITCH_SCOPE, scopes)) {
-        throw new InconsistentScopesError()
+        throw new InconsistentScopesError('stored')
       }
     }
 

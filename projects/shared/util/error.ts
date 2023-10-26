@@ -161,8 +161,11 @@ export class AuthorisationExpiredError extends CustomError {
 }
 
 export class InconsistentScopesError extends CustomError {
-  constructor () {
-    super(InconsistentScopesError.prototype, 'The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
+  constructor (type: 'stored' | 'authenticated') {
+    const message = type === 'stored'
+      ? 'The stored application scope differs from the expected scope. Please reset the authentication as described in the readme.'
+      : 'You must give ChatMate all requested permissions.'
+    super(InconsistentScopesError.prototype, message)
   }
 }
 

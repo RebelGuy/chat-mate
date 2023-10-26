@@ -103,7 +103,7 @@ async function createWindow () {
         dbProvider: partialDbProvider as DbProvider,
         twitchClientId: ''
       }))
-      await authStore.saveYoutubeAccessToken(channelId, accessToken)
+      await authStore.saveYoutubeWebAccessToken(channelId, accessToken)
 
       console.log('-------------------')
       console.log('Successfully saved YouTube credentials.')
