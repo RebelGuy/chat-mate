@@ -47,7 +47,7 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
-import { TimeoutError } from '@rebel/shared/util/error'
+import { TimeoutError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
@@ -413,7 +413,8 @@ const main = async () => {
 
   // ensure the server can still run if Twitch auth fails, so that we can re-authenticate via the Studio Twitch admin page
   await globalContext.initialise((erroredClass, stage, e) => {
-    if (erroredClass instanceof TwurpleAuthProvider && stage === 'initialise') {
+    if (erroredClass instanceof TwurpleAuthProvider && stage === 'initialise'
+      || erroredClass instanceof YoutubeAuthProvider && e instanceof YoutubeNotAuthorisedError && stage === 'initialise') {
       isAdministrativeMode = true
       return 'ignore'
     }

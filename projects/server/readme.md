@@ -244,6 +244,11 @@ Query parameters:
 
 Returns an empty response body.
 
+### `POST /youtube/revoke`
+Revokes the ChatMate authorisation for the admin's Youtube channel.
+
+Returns an empty response body.
+
 ### `GET /link/logs`
 Gets the list of all link attempt logs.
 
@@ -866,6 +871,7 @@ Returns data with the following properties:
 - `timestamp` (`number`): The latest time for which the moderation status could be verified. It may have changed since then.
 
 Can return the following errors:
+- `400`: When the logged-in streamer does not have a primary Youtube channel set.
 - `403`: When the logged-in user is not a streamer.
 
 ### `GET /youtube/login`
@@ -883,6 +889,15 @@ Authorises the authorisation code and updates the stored Youtube `access_token` 
 
 Query parameters:
 - `code` (`string`): The authorisation code obtained from Youtube after logging on.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
+- `403`: When the logged-in user is not a streamer.
+
+### `POST /youtube/revoke`
+Revokes the ChatMate authorisation for the admin's Youtube channel.
 
 Returns an empty response body.
 

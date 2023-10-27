@@ -38,6 +38,7 @@ type Deps = Dependencies<{
   masterchatStore: MasterchatStore
   externalRankEventService: ExternalRankEventService
   chatMateRegisteredUserName: string
+  isAdministrativeMode: () => boolean
 }>
 
 export default class MasterchatFetchService extends ContextClass {
@@ -53,6 +54,7 @@ export default class MasterchatFetchService extends ContextClass {
   private readonly masterchatStore: MasterchatStore
   private readonly chatMateRegisteredUserName: string
   private readonly externalRankEventService: ExternalRankEventService
+  private readonly isAdministrativeMode: () => boolean
 
   private livestreamCheckTimer!: number
   private chatTimers: Map<string, number> = new Map()
@@ -71,10 +73,14 @@ export default class MasterchatFetchService extends ContextClass {
     this.masterchatStore = deps.resolve('masterchatStore')
     this.externalRankEventService = deps.resolve('externalRankEventService')
     this.chatMateRegisteredUserName = deps.resolve('chatMateRegisteredUserName')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   public override async initialise (): Promise<void> {
     if (this.disableExternalApis) {
+      return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 

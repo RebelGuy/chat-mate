@@ -16,6 +16,8 @@ export type GetYoutubeLoginUrlResponse = ApiResponse<{ url: string, youtubeChann
 
 export type YoutubeAuthorisationResponse = ApiResponse<EmptyObject>
 
+export type YoutubeRevocationResponse = ApiResponse<EmptyObject>
+
 export type GetLinkAttemptLogsResponse = ApiResponse<{ logs: PublicLinkAttemptLog[] }>
 
 export type ReleaseLinkAttemptResponse = ApiResponse<EmptyObject>

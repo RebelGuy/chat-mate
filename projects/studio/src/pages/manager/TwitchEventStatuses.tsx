@@ -49,7 +49,10 @@ let successPoller: number | null = null
 
 export default function TwitchEventStatuses () {
   const [params, setParams] = useSearchParams()
-  const code = params.get('code')
+
+  // Youtube auth also uses the /manager page. the only way to distinguish twitch auth is by checking the presence of the scope param - it should not exist
+  const isTwitchAuth = useState(params.get('scope') == null)
+  const code = isTwitchAuth ? params.get('code') : null
 
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const getStatusesRequest = useRequest(getTwitchEventStatuses(), { updateKey: refreshToken })
@@ -68,7 +71,11 @@ export default function TwitchEventStatuses () {
 
   useEffect(() => {
     // for some reason we can't immediately clear the params here, else the states won't initialise. but it's working fine on the admin authentication page?!
-    const timeout = window.setTimeout(() => setParams({}), 500)
+    const timeout = window.setTimeout(() => {
+      if (isTwitchAuth) {
+        setParams({})
+      }
+    }, 500)
 
     primaryChannelsRequest.triggerRequest()
     getLoginUrlRequest.triggerRequest()

@@ -51,7 +51,8 @@ beforeEach(() => {
     streamerStore: mockStreamerStore,
     accountService: mockAccountService,
     userService: mockUserService,
-    logService: mock()
+    logService: mock(),
+    isAdministrativeMode: () => false
   }))
 })
 

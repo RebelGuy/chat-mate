@@ -4,7 +4,7 @@ import HelixEventService from '@rebel/server/services/HelixEventService'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import { GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { GetAdministrativeModeResponse, GetLinkAttemptLogsResponse, GetTwitchLoginUrlResponse, GetYoutubeLoginUrlResponse, ReconnectTwitchChatClientResponse, ReleaseLinkAttemptResponse, ResetTwitchSubscriptionsResponse, TwitchAuthorisationResponse, YoutubeAuthorisationResponse } from '@rebel/api-models/schema/admin'
+import { GetAdministrativeModeResponse, GetLinkAttemptLogsResponse, GetTwitchLoginUrlResponse, GetYoutubeLoginUrlResponse, ReconnectTwitchChatClientResponse, ReleaseLinkAttemptResponse, ResetTwitchSubscriptionsResponse, TwitchAuthorisationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/admin'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import { PublicLinkAttemptLog } from '@rebel/api-models/public/user/PublicLinkAttemptLog'
 import { PublicLinkAttemptStep } from '@rebel/api-models/public/user/PublicLinkAttemptStep'
@@ -129,6 +129,19 @@ export default class AdminController extends ControllerBase {
 
     try {
       await this.youtubeAuthProvider.authoriseChannel(code, 'admin')
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/youtube/revoke')
+  public async revokeYoutube (): Promise<YoutubeRevocationResponse> {
+    const builder = this.registerResponseBuilder<YoutubeRevocationResponse>('POST /youtube/revoke')
+
+    try {
+      await this.youtubeAuthProvider.revokeYoutubeAccessToken('admin')
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

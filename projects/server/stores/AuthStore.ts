@@ -118,6 +118,11 @@ export default class AuthStore extends ContextClass {
 
   public async tryDeleteTwitchAccessToken (twitchUserId: string) {
     // deleteMany supresses the not-found error
-    await this.dbProvider.get().twitchAuth.deleteMany({where: { twitchUserId }})
+    await this.dbProvider.get().twitchAuth.deleteMany({ where: { twitchUserId }})
+  }
+
+  public async tryDeleteYoutubeAccessToken (externalYoutubeChannelId: string) {
+    // deleteMany supresses the not-found error
+    await this.dbProvider.get().youtubeAuth.deleteMany({ where: { externalYoutubeChannelId }})
   }
 }

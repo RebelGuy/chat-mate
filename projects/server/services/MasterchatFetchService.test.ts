@@ -127,7 +127,8 @@ beforeEach(() => {
     chatMateRegisteredUserName: mockChatMateRegisteredUserName,
     streamerStore: mockStreamerStore,
     masterchatStore: mockMasterchatStore,
-    externalRankEventService: mockExternalRankEventService
+    externalRankEventService: mockExternalRankEventService,
+    isAdministrativeMode: () => false
   }))
 })
 
@@ -144,7 +145,8 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
       chatMateRegisteredUserName: mockChatMateRegisteredUserName,
       streamerStore: mockStreamerStore,
       masterchatStore: mockMasterchatStore,
-      externalRankEventService: mockExternalRankEventService
+      externalRankEventService: mockExternalRankEventService,
+      isAdministrativeMode: () => false
     }))
 
     await masterchatFetchService.initialise()

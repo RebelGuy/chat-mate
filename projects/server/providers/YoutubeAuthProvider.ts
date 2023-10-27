@@ -8,6 +8,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { compareArrays } from '@rebel/shared/util/arrays'
 import { InconsistentScopesError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
 import { OAuth2Client, Credentials } from 'google-auth-library'
+import { GaxiosError } from 'gaxios'
 
 type Deps = Dependencies<{
   authStore: AuthStore
@@ -51,7 +52,9 @@ export default class YoutubeAuthProvider extends ContextClass {
     if (token == null) {
       throw new YoutubeNotAuthorisedError(this.adminChannelId)
     } else if (!compareScopes(YOUTUBE_SCOPE, token.scope.split(' '))) {
-      throw new Error('The stored application scope differs from the expected scope. Please reset the Youtube authentication.')
+      await this.revokeYoutubeAccessToken(this.adminChannelId)
+      this.logService.logError(this, 'The stored application scope differs from the expected scope. The stored authentication details have been removed and ChatMate must be re-authorised by the admin channel.')
+      throw new YoutubeNotAuthorisedError(this.adminChannelId)
     } else {
       this.logService.logDebug(this, 'Loaded Youtube admin access token')
     }
@@ -116,6 +119,31 @@ export default class YoutubeAuthProvider extends ContextClass {
     client.setCredentials(existingToken)
 
     return client
+  }
+
+  public async revokeYoutubeAccessToken (externalChannelId: 'admin'): Promise<void>
+  public async revokeYoutubeAccessToken (externalChannelId: string): Promise<void>
+  public async revokeYoutubeAccessToken (externalChannelId: string | 'admin'): Promise<void> {
+    externalChannelId = externalChannelId === 'admin' ? this.adminChannelId : externalChannelId
+
+    const client = this.getClient(true)
+    const token = await this.authStore.loadYoutubeAccessToken(externalChannelId)
+    if (token == null) {
+      throw new YoutubeNotAuthorisedError(externalChannelId)
+    }
+
+    try {
+      await client.revokeToken(token.accessToken)
+    } catch (e: any) {
+      if (e instanceof GaxiosError && e.message === 'invalid_token') {
+        // ignore
+      } else {
+        throw e
+      }
+    }
+
+    await this.authStore.tryDeleteYoutubeAccessToken(externalChannelId)
+    this.logService.logInfo(this, `Revoked access token for channel ${externalChannelId}`)
   }
 
   private async onTokenUpdated (externalChannelId: string, token: Credentials) {
