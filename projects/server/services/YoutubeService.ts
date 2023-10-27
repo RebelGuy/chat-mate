@@ -1,5 +1,5 @@
 import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
-import ChannelStore from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
@@ -28,15 +28,21 @@ export default class YoutubeService extends ContextClass {
   }
 
   public async getMods (streamerId: number) {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getLatestLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot get moderators because streamer ${streamerId} has no active livestream.`)
+      throw new Error(`Cannot get moderators because streamer ${streamerId} has no livestreams.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
     const mods = await this.youtubeApiProxyService.getMods(streamerExternalChannelId, livestream.liveId)
 
-    // todo: attach internal ids to items
+    const allChannels: UserChannel<'youtube'>[] = await this.channelStore.getAllChannels(streamerId)
+      .then(channels => channels.filter(c => c.platformInfo.platform === 'youtube'))
+
+    return mods.map(mod => ({
+      externalChannelId: mod.externalChannelId,
+      channelId: allChannels.find(c => c.platformInfo.channel.youtubeId === mod.externalChannelId)?.platformInfo.channel.id ?? null
+    }))
   }
 
   public async mod (streamerId: number, youtubeChannelId: number) {

@@ -100,11 +100,20 @@ export default class AuthStore extends ContextClass {
   }
 
   public async saveYoutubeAccessToken (youtubeAuth: New<YoutubeAuth>): Promise<void> {
-    await this.dbProvider.get().youtubeAuth.upsert({
+    const existingToken = await this.dbProvider.get().youtubeAuth.findUnique({
       where: { externalYoutubeChannelId: youtubeAuth.externalYoutubeChannelId },
-      update: youtubeAuth,
-      create: youtubeAuth
+      rejectOnNotFound: false
     })
+
+    // for some reason, we can't use upsert here but I don't understand why (weird runtime error)
+    if (existingToken == null) {
+      await this.dbProvider.get().youtubeAuth.create({ data: youtubeAuth })
+    } else {
+      await this.dbProvider.get().youtubeAuth.update({
+        where: { externalYoutubeChannelId: youtubeAuth.externalYoutubeChannelId },
+        data: youtubeAuth
+      })
+    }
   }
 
   public async saveYoutubeWebAccessToken (channelId: string, accessToken: string) {

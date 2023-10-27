@@ -48,6 +48,7 @@ model YoutubeAuth {
   externalYoutubeChannelId String // unique
   timeObtained             DateTime @default(now())
 
+  /// Note: this refresh token should be static and is valid to use for refreshing the access token until authorisation is revoked.
   refreshToken String   @db.VarChar(512)
   expiryDate   DateTime
   accessToken  String   @db.VarChar(512)

@@ -32,8 +32,9 @@ import { keysOf } from '@rebel/shared/util/objects'
 import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, PATCH, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, GetYoutubeModeratorsResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
+import YoutubeService from '@rebel/server/services/YoutubeService'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -49,6 +50,7 @@ type Deps = ControllerDependencies<{
   chatMateEventService: ChatMateEventService
   livestreamService: LivestreamService
   youtubeAuthProvider: YoutubeAuthProvider
+  youtubeService: YoutubeService
 }>
 
 @Path(buildPath('streamer'))
@@ -66,6 +68,7 @@ export default class StreamerController extends ControllerBase {
   private readonly chatMateEventService: ChatMateEventService
   private readonly livestreamService: LivestreamService
   private readonly youtubeAuthProvider: YoutubeAuthProvider
+  private readonly youtubeService: YoutubeService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -82,6 +85,7 @@ export default class StreamerController extends ControllerBase {
     this.chatMateEventService = deps.resolve('chatMateEventService')
     this.livestreamService = deps.resolve('livestreamService')
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
+    this.youtubeService = deps.resolve('youtubeService')
   }
 
   @GET
@@ -497,6 +501,30 @@ export default class StreamerController extends ControllerBase {
 
       await this.youtubeAuthProvider.revokeYoutubeAccessToken(externalChannelId)
       return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/youtube/moderators')
+  @PreProcessor(requireAuth)
+  public async getYoutubeChannelModerators (): Promise<GetYoutubeModeratorsResponse> {
+    const builder = this.registerResponseBuilder<GetYoutubeModeratorsResponse>('GET /youtube/moderators')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamer.id)
+      if (externalChannelId == null) {
+        return builder.failure(400, 'User does not have a primary Youtube channel.')
+      }
+
+      const mods = await this.youtubeService.getMods(streamer.id)
+      return builder.success({ moderators: mods })
     } catch (e: any) {
       return builder.failure(e)
     }

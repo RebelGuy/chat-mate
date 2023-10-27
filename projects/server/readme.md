@@ -905,6 +905,16 @@ Can return the following errors:
 - `400`: When the logged-in user has not set a primary Youtube channel.
 - `403`: When the logged-in user is not a streamer.
 
+### `GET /youtube/moderators`
+Gets the list of moderator YouTube channels, as reported by YouTube.
+
+Returns data with the following properties:
+- `moderators` (`PublicYoutubeModerator[]`): The list of YouTube moderators.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
+- `403`: When the logged-in user is not a streamer.
+
 ### `GET /status`
 Gets the latest status information.
 

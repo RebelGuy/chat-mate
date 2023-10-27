@@ -3,6 +3,7 @@ import { PublicApiStatus } from '@rebel/api-models/public/status/PublicApiStatus
 import { PublicLivestreamStatus } from '@rebel/api-models/public/status/PublicLivestreamStatus'
 import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
+import { PublicYoutubeModerator } from '@rebel/api-models/public/streamer/PublicYoutubeModerator'
 import { PublicStreamerApplication } from '@rebel/api-models/public/user/PublicStreamerApplication'
 import { ApiResponse, ApiRequest, PublicObject } from '@rebel/api-models/types'
 import { EmptyObject } from '@rebel/shared/types'
@@ -42,6 +43,8 @@ export type GetYoutubeLoginUrlResponse = ApiResponse<{ url: string }>
 export type YoutubeAuthorisationResponse = ApiResponse<EmptyObject>
 
 export type YoutubeRevocationResponse = ApiResponse<EmptyObject>
+
+export type GetYoutubeModeratorsResponse = ApiResponse<{ moderators: PublicYoutubeModerator[] }>
 
 export type GetStatusResponse = ApiResponse<{
   livestreamStatus: PublicObject<PublicLivestreamStatus> | null
