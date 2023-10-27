@@ -116,7 +116,14 @@ export default class YoutubeAuthProvider extends ContextClass {
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     client.on('tokens', tokens => this.onTokenUpdated(externalChannelId, tokens))
-    client.setCredentials(existingToken)
+
+    const credentials: Credentials = {
+      access_token: existingToken.accessToken,
+      expiry_date: existingToken.expiryDate.getTime(),
+      refresh_token: existingToken.refreshToken,
+      scope: existingToken.scope
+    }
+    client.setCredentials(credentials)
 
     return client
   }
