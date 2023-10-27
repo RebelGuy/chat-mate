@@ -96,6 +96,8 @@ export default class YoutubeAuthProvider extends ContextClass {
       timeObtained: new Date()
     }
     await this.authStore.saveYoutubeAccessToken(youtubeAuth)
+
+    this.logService.logInfo(this, `Youtube channel ${externalChannelId} (isAdmin: ${isAdmin}) has authorised ChatMate.`)
   }
 
   // admin auth: used for managing moderators. streamer auth: used for punishments

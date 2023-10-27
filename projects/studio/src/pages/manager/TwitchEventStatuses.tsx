@@ -51,7 +51,7 @@ export default function TwitchEventStatuses () {
   const [params, setParams] = useSearchParams()
 
   // Youtube auth also uses the /manager page. the only way to distinguish twitch auth is by checking the presence of the scope param - it should not exist
-  const isTwitchAuth = useState(params.get('scope') == null)
+  const [isTwitchAuth] = useState(params.get('code') != null && params.get('scope') == null)
   const code = isTwitchAuth ? params.get('code') : null
 
   const [refreshToken, updateRefreshToken] = useUpdateKey()

@@ -52,12 +52,14 @@ export default class LivestreamStore extends ContextClass {
 
   /** Returns null if the streamer does not have any livestreams. */
   public async getLatestLivestream (streamerId: number): Promise<Livestream | null> {
-    return await this.db.$queryRaw<Livestream | null>`
+    const result = await this.db.$queryRaw<Livestream[]>`
       SELECT *, COALESCE(end, start, createdAt) AS PrimaryDate FROM chat_mate_debug.livestream
       WHERE streamerId = ${streamerId}
       ORDER BY PrimaryDate DESC
       LIMIT 1;
     `
+
+    return result[0] ?? null
   }
 
   /** Gets the list of all of the streamer's livestreams, sorted by time in ascending order (with no-yet-started livestreams placed at the end). */

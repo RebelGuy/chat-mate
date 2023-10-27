@@ -52,6 +52,7 @@ export default function YoutubeStatus () {
 
     if (code != null) {
       authoriseYoutubeStreamerRequest.triggerRequest()
+        .then(updateRefreshToken) // this ensures we retry the moderator list request
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
