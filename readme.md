@@ -25,7 +25,6 @@ Recommended VSCode extensions:
 - `DotENV`
 - `Prisma` (only useful if you intend to make changes to the database schema)
 - `GitHub Actions` (only useful if you intend to make changes to the CI build process)
-- `Thunder Client` (there are some old API tests, but they are probably broken)
 
 ## CI and deployment
 Github Actions are used for automatically building and deploying the Server/Studio projects when pushed.
