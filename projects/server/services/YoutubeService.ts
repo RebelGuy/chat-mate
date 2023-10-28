@@ -1,3 +1,4 @@
+import LogService from '@rebel/server/services/LogService'
 import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -6,18 +7,28 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
 import { single } from '@rebel/shared/util/arrays'
 
+type YoutubeMod = {
+  externalChannelId: string
+  externalModId: string
+  channelId: number | null // null if the user can't be matched to a ChatMate user
+}
+
 type Deps = Dependencies<{
   streamerChannelStore: StreamerChannelStore
   channelStore: ChannelStore
   youtubeApiProxyService: YoutubeApiProxyService
   livestreamStore: LivestreamStore
+  logService: LogService
 }>
 
 export default class YoutubeService extends ContextClass {
+  public readonly name = YoutubeService.name
+
   private readonly streamerChannelStore: StreamerChannelStore
   private readonly channelStore: ChannelStore
   private readonly youtubeApiProxyService: YoutubeApiProxyService
   private readonly livestreamStore: LivestreamStore
+  private readonly logService: LogService
 
   constructor (deps: Deps) {
     super()
@@ -25,12 +36,13 @@ export default class YoutubeService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.youtubeApiProxyService = deps.resolve('youtubeApiProxyService')
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.logService = deps.resolve('logService')
   }
 
-  public async getMods (streamerId: number) {
-    const livestream = await this.livestreamStore.getLatestLivestream(streamerId)
+  public async getMods (streamerId: number): Promise<YoutubeMod[]> {
+    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot get moderators because streamer ${streamerId} has no livestreams.`)
+      throw new Error(`Cannot get moderators because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
@@ -41,68 +53,78 @@ export default class YoutubeService extends ContextClass {
 
     return mods.map(mod => ({
       externalChannelId: mod.externalChannelId,
-      channelId: allChannels.find(c => c.platformInfo.channel.youtubeId === mod.externalChannelId)?.platformInfo.channel.id ?? null
+      channelId: allChannels.find(c => c.platformInfo.channel.youtubeId === mod.externalChannelId)?.platformInfo.channel.id ?? null,
+      externalModId: mod.externalModId
     }))
   }
 
-  public async mod (streamerId: number, youtubeChannelId: number) {
+  public async modYoutubeChannel (streamerId: number, youtubeChannelId: number) {
     const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot add moderator ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    const userExternalChannelId = await this.getExtermalChannelIdFromInternalChannelId(youtubeChannelId)
+    const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
     const externalModeratorId = await this.youtubeApiProxyService.mod(streamerExternalChannelId, userExternalChannelId, livestream.liveId)
-    // todo: store externalModeratorId
+    this.logService.logInfo(this, `Successfully modded youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalModeratorId: ${externalModeratorId})`)
   }
 
-  public async unmod (streamerId: number, youtubeChannelId: number) {
-    // todo: get external id
-    const externalModId = ''
+  public async unmodYoutubeChannel (streamerId: number, youtubeChannelId: number) {
+    const allMods = await this.getMods(streamerId)
+    const externalModeratorId = allMods.find(m => m.channelId === youtubeChannelId)?.externalModId
+    if (externalModeratorId == null) {
+      this.logService.logWarning(this, `Cannot unmod channel ${youtubeChannelId} for streamer ${streamerId} because the channel is not modded.`)
+      return
+    }
+
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    await this.youtubeApiProxyService.unmod(streamerExternalChannelId, externalModId)
-    // todo: remove externalModeratorId
+    await this.youtubeApiProxyService.unmod(streamerExternalChannelId, externalModeratorId)
+    this.logService.logInfo(this, `Successfully unmodded youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalModeratorId: ${externalModeratorId})`)
   }
 
-  public async ban (streamerId: number, youtubeChannelId: number) {
+  public async banYoutubeChannel (streamerId: number, youtubeChannelId: number) {
     const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot ban channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    const userExternalChannelId = await this.getExtermalChannelIdFromInternalChannelId(youtubeChannelId)
+    const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
     const externalBanId = await this.youtubeApiProxyService.ban(streamerExternalChannelId, userExternalChannelId, livestream.liveId)
-    // todo: store externalBanId
+    this.logService.logInfo(this, `Successfully banned youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalBanId: ${externalBanId})`)
   }
 
-  public async timeout (streamerId: number, youtubeChannelId: number, durationSeconds: number) {
+  public async timeoutYoutubeChannel (streamerId: number, youtubeChannelId: number, durationSeconds: number) {
     const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot timeout channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    const userExternalChannelId = await this.getExtermalChannelIdFromInternalChannelId(youtubeChannelId)
+    const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
     const externalTimeoutId = await this.youtubeApiProxyService.timeout(streamerExternalChannelId, userExternalChannelId, livestream.liveId, durationSeconds)
-    // todo: store externalTimeoutId
+    this.logService.logInfo(this, `Successfully timed out youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalTimeoutId: ${externalTimeoutId})`)
   }
 
-  public async unban (streamerId: number, youtubeChannelId: number) {
-    // todo: get externalPunishmentId
-    const externalPunishmentId = ''
+  public async unbanYoutubeChannel (streamerId: number, youtubeChannelId: number) {
+    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    if (livestream == null) {
+      throw new Error(`Cannot timeout channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
+    }
+
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    await this.youtubeApiProxyService.unbanOrUntimeout(streamerExternalChannelId, externalPunishmentId)
-    // todo: remove externalPunishmentId
+    const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
+    const externalBanId = this.constructExternalBanId(streamerExternalChannelId, userExternalChannelId, livestream.liveId)
+
+    await this.youtubeApiProxyService.unban(streamerExternalChannelId, externalBanId)
+    this.logService.logInfo(this, `Successfully unbanned youtube channel ${youtubeChannelId} for streamer ${streamerId} (generated externalBanId: ${externalBanId})`)
   }
 
-  public async untimeout (streamerId: number, youtubeChannelId: number) {
-    // todo: get externalPunishmentId
-    const externalPunishmentId = ''
-    const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    await this.youtubeApiProxyService.unbanOrUntimeout(streamerExternalChannelId, externalPunishmentId)
-    // todo: remove externalPunishmentId
+  public async untimeoutYoutubeChannel (streamerId: number, youtubeChannelId: number) {
+    // seems that it is not possible to remove a timeout using the API (lol). an alternative method is to apply a 0-second timeout
+    await this.timeoutYoutubeChannel(streamerId, youtubeChannelId, 0)
+    this.logService.logInfo(this, `Successfully removed timeout of youtube channel ${youtubeChannelId} for streamer ${streamerId}`)
   }
 
   private async getExternalChannelIdFromStreamer (streamerId: number) {
@@ -115,8 +137,18 @@ export default class YoutubeService extends ContextClass {
     return youtubeChannel.platformInfo.channel.youtubeId
   }
 
-  private async getExtermalChannelIdFromInternalChannelId (internalChannelId: number) {
+  private async getExternalChannelIdFromInternalChannelId (internalChannelId: number) {
     const userChannel = await this.channelStore.getYoutubeChannelFromChannelId([internalChannelId]).then(single)
     return userChannel.platformInfo.channel.youtubeId
+  }
+
+  private constructExternalBanId (streamerExternalChannelId: string, userExternalChannelId: string, liveId: string) {
+    // when applying a ban, we get back an external ban id. it is expected that we pass this id when unbanning a user.
+    // however, in the common case where we did not use the api to ban the user, we have no way of querying current bans to get the id.
+    // turns out, the id is just base64 encoded and can be deterministically generated by us!
+    // absolute legend https://stackoverflow.com/a/69802935
+    const utf8String = `\x08\x01\x12\x18${userExternalChannelId}\x1a8\n\r\n\x0b${liveId}*'\n\x18${streamerExternalChannelId}\x12\x0b${liveId}`
+    const base64String = Buffer.from(utf8String, 'utf-8').toString('base64')
+    return encodeURIComponent(base64String)
   }
 }

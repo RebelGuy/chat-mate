@@ -13,6 +13,7 @@ import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankR
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
 import UserService from '@rebel/server/services/UserService'
+import YoutubeService from '@rebel/server/services/YoutubeService'
 
 // It is not an issue on Twitch, but on Youtube we come across the interesting problem of being unable to check
 // the current list of on-platform punishments. This means that, when a punishment occurrs, the platform data
@@ -37,6 +38,7 @@ type Deps = Dependencies<{
   youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
   streamerStore: StreamerStore
   userService: UserService
+  youtubeService: YoutubeService
 }>
 
 export default class PunishmentService extends ContextClass {
@@ -51,6 +53,7 @@ export default class PunishmentService extends ContextClass {
   private readonly youtubeTimeoutRefreshService: YoutubeTimeoutRefreshService
   private readonly streamerStore: StreamerStore
   private readonly userService: UserService
+  private readonly youtubeService: YoutubeService
 
   constructor (deps: Deps) {
     super()
@@ -64,6 +67,7 @@ export default class PunishmentService extends ContextClass {
     this.youtubeTimeoutRefreshService = deps.resolve('youtubeTimeoutRefreshService')
     this.streamerStore = deps.resolve('streamerStore')
     this.userService = deps.resolve('userService')
+    this.youtubeService = deps.resolve('youtubeService')
   }
 
   public override async initialise () {
@@ -163,7 +167,7 @@ export default class PunishmentService extends ContextClass {
     const rankResult = await this.addInternalRank(args)
 
     const ownedChannels = await this.channelStore.getConnectedUserOwnedChannels([primaryUserId]).then(single)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout')))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout', durationSeconds)))
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
 
     if (rankResult.rank != null) {
@@ -177,7 +181,7 @@ export default class PunishmentService extends ContextClass {
   /** Like `timeoutUser` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. Must provide the `rankId` of the internal rank so. */
   public async timeoutUserExternal (defaultUserId: number, streamerId: number, rankId: number, message: string | null, durationSeconds: number): Promise<Omit<SetActionRankResult, 'rankResult'>> {
     const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels([defaultUserId]).then(single)
-    const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout')))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout', durationSeconds)))
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
 
     this.youtubeTimeoutRefreshService.startTrackingTimeout(rankId, addTime(new Date(), 'seconds', durationSeconds), false, () => this.onRefreshTimeoutForYoutube(streamerId, defaultUserId))
@@ -242,7 +246,7 @@ export default class PunishmentService extends ContextClass {
 
     const ownedChannels = await this.channelStore.getConnectedUserOwnedChannels([primaryUserId]).then(single)
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds.map(c => this.tryApplyTwitchPunishment(streamerId, c, revokeMessage, 'untimeout')))
-    const youtubeResults: YoutubeRankResult[] = ownedChannels.youtubeChannelIds.map(c => ({ youtubeChannelId: c, error: 'YouTube timeouts expire automatically 5 minutes after they were last applied.'}))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'untimeout')))
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -301,7 +305,9 @@ export default class PunishmentService extends ContextClass {
     }
   }
 
-  private async tryApplyYoutubePunishment (streamerId: number, youtubeChannelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout'): Promise<YoutubeRankResult> {
+  private async tryApplyYoutubePunishment (streamerId: number, youtubeChannelId: number, type: 'ban' | 'unban' | 'refreshTimeout' | 'untimeout'): Promise<YoutubeRankResult>
+  private async tryApplyYoutubePunishment (streamerId: number, youtubeChannelId: number, type: 'timeout', durationSeconds: number): Promise<YoutubeRankResult>
+  private async tryApplyYoutubePunishment (streamerId: number, youtubeChannelId: number, type: 'ban' | 'unban' | 'timeout' | 'refreshTimeout' | 'untimeout', durationSeconds?: number): Promise<YoutubeRankResult> {
     const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(streamerId, youtubeChannelId)
 
     if (lastChatItem == null) {
@@ -316,21 +322,19 @@ export default class PunishmentService extends ContextClass {
 
     let error: string | null = null
     try {
-      let result: boolean
       if (type === 'ban') {
-        result = await this.masterchat.banYoutubeChannel(streamerId, lastChatItem.contextToken)
+        await this.youtubeService.banYoutubeChannel(streamerId, youtubeChannelId)
       } else if (type === 'unban') {
-        result = await this.masterchat.unbanYoutubeChannel(streamerId, lastChatItem.contextToken)
+        await this.youtubeService.unbanYoutubeChannel(streamerId, youtubeChannelId)
       } else if (type === 'timeout' || type === 'refreshTimeout') {
-        result = await this.masterchat.timeout(streamerId, lastChatItem.contextToken)
+        await this.youtubeService.timeoutYoutubeChannel(streamerId, youtubeChannelId, durationSeconds!)
+      } else if (type === 'untimeout') {
+        await this.youtubeService.untimeoutYoutubeChannel(streamerId, youtubeChannelId)
       } else {
         assertUnreachable(type)
       }
 
-      this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)
-      if (!result) {
-        error = `Request succeeded, but action was not applied.`
-      }
+      this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded.`)
     } catch (e: any) {
       this.logService.logError(this, `Request to ${type} youtube channel ${youtubeChannelId} failed:`, e.message)
       error = e.message

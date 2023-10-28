@@ -6,6 +6,16 @@ import ApiService from '@rebel/server/services/abstract/ApiService'
 import { Dependencies } from '@rebel/shared/context/context'
 import { GaxiosError } from 'gaxios'
 
+// note: the youtube api is absolutely disgusting. this took a lot of trial and error to figure out
+// - why do we need to provide a liveId for punishments/moderators, when these actions apply to the channel globally anyway?
+// - why do we need to unmod/unpunish using youtube's convoluted internal id, instead of just specifying the channelId?
+// - why is their api so horribly slow?
+// - why is their api so horribly limited? (can't list banned channels?!)
+// - why is their api quota so unreasonable? (we would love to use it to fetch messages, but at the recommended fetch rate (2 per second) we would burn through our daily quota within 2-3 hours, for a single channel)
+// - why are their error messages inconsisten? (304 if we try to ban a channel that is already banned - wtf)
+// - why, if a timeout is just a temporary type of ban, can we remove permanent bans using the api, but not timeouts?
+// - why?
+
 type Deps = Dependencies<{
   logService: LogService
   youtubeStatusService: StatusService
@@ -30,7 +40,7 @@ export default class YoutubeApiProxyService extends ApiService {
   public async mod (ownerExternalChannelId: string, userExternalChannelId: string, liveId: string): Promise<string> {
     const api = await this.wrappedApi(ownerExternalChannelId)
 
-    const liveChatId = await this.getLiveChatId(ownerExternalChannelId, liveId)
+    const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
     // fucking dogshit client typings built diff
     // https://developers.google.com/youtube/v3/live/docs/liveChatModerators/insert#parameters
@@ -61,7 +71,7 @@ export default class YoutubeApiProxyService extends ApiService {
   public async getMods (ownerExternalChannelId: string, liveId: string): Promise<{ externalModId: string, externalChannelId: string }[]> {
     const api = await this.wrappedApi(ownerExternalChannelId)
 
-    const liveChatId = await this.getLiveChatId(ownerExternalChannelId, liveId)
+    const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
     // https://developers.google.com/youtube/v3/live/docs/liveChatModerators/list
     const result = await api.liveChatModerators.list({
@@ -85,7 +95,7 @@ export default class YoutubeApiProxyService extends ApiService {
   public async ban (ownerExternalChannelId: string, userExternalChannelId: string, liveId: string): Promise<string> {
     const api = await this.wrappedApi(ownerExternalChannelId)
 
-    const liveChatId = await this.getLiveChatId(ownerExternalChannelId, liveId)
+    const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
     // https://developers.google.com/youtube/v3/live/docs/liveChatBans/insert
     const result = await api.liveChatBans.insert({
@@ -107,7 +117,7 @@ export default class YoutubeApiProxyService extends ApiService {
   public async timeout (ownerExternalChannelId: string, userExternalChannelId: string, liveId: string, durationSeconds: number): Promise<string> {
     const api = await this.wrappedApi(ownerExternalChannelId)
 
-    const liveChatId = await this.getLiveChatId(ownerExternalChannelId, liveId)
+    const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
     // https://developers.google.com/youtube/v3/live/docs/liveChatBans/insert
     const result = await api.liveChatBans.insert({
@@ -127,7 +137,9 @@ export default class YoutubeApiProxyService extends ApiService {
     return result.data.id!
   }
 
-  public async unbanOrUntimeout (ownerExternalChannelId: string, externalPunishmentId: string): Promise<void> {
+  public async unban (ownerExternalChannelId: string, externalPunishmentId: string): Promise<void> {
+    // weirdly, we cannot use the same endpoint to remove timeouts - we have to instead create a new one with a duration of 0 seconds
+
     const api = await this.wrappedApi(ownerExternalChannelId)
 
     // https://developers.google.com/youtube/v3/live/docs/liveChatBans/insert
@@ -137,20 +149,26 @@ export default class YoutubeApiProxyService extends ApiService {
   }
 
   // confusingly we can't use the video id (`liveId`) when making requests to the API, we have to first fetch the associated `liveChatId` :(
-  private async getLiveChatId (externalChannelId: string, liveId: string): Promise<string> {
-    const api = await this.wrappedApi(externalChannelId)
+  private getLiveChatId (externalChannelId: string, liveId: string): string {
+    // const api = await this.wrappedApi(externalChannelId)
 
     // https://developers.google.com/youtube/v3/docs/videos/list
     // example: https://github.com/DustinWatts/YouTubeLiveChat/blob/master/livechat.js
-    // todo: we could save this value in the future to save on API requests
-    const livestreamVideo = await api.videos.list({
-      part: ['liveStreamingDetails'],
-      id: [liveId]
-    })
+    // const livestreamVideo = await api.videos.list({
+    //   part: ['liveStreamingDetails'],
+    //   id: [liveId]
+    // })
 
-    const liveChatId = (livestreamVideo.data.items ?? [])[0].liveStreamingDetails?.activeLiveChatId
+    // const liveChatId = (livestreamVideo.data.items ?? [])[0]?.liveStreamingDetails?.activeLiveChatId
+
+    // similar to constructing the LiveBanId in the YoutubeService. note that `liveId` must be an active livestream, otherwise, even though we
+    // can construct the `liveChatId`, any request using this id will fail with the message "The live chat user you are trying to ban cannot be found."
+    let liveChatId = Buffer.from(`\n\r\n\x0b${liveId}*'\n\x18${externalChannelId}\x12\x0b${liveId}`, 'utf-8')
+      .toString('base64')
+      .replace(/=+$/, '') // remove trailing '='
+
     if (liveChatId == null) {
-      throw new Error(`Could not retrieve liveChatId for liveId ${liveId}. Does it exist?`)
+      throw new Error(`Could not retrieve liveChatId for liveId ${liveId}. Does it exist and is it active?`)
     } else {
       return liveChatId
     }

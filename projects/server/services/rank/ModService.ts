@@ -9,6 +9,7 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
+import YoutubeService from '@rebel/server/services/YoutubeService'
 
 type Deps = Dependencies<{
   rankStore: RankStore
@@ -18,6 +19,7 @@ type Deps = Dependencies<{
   chatStore: ChatStore
   logService: LogService
   userService: UserService
+  youtubeService: YoutubeService
 }>
 
 export default class ModService extends ContextClass {
@@ -30,6 +32,7 @@ export default class ModService extends ContextClass {
   private readonly chatStore: ChatStore
   private readonly logService: LogService
   private readonly userService: UserService
+  private readonly youtubeService: YoutubeService
 
   constructor (deps: Deps) {
     super()
@@ -41,6 +44,7 @@ export default class ModService extends ContextClass {
     this.chatStore = deps.resolve('chatStore')
     this.logService = deps.resolve('logService')
     this.userService = deps.resolve('userService')
+    this.youtubeService = deps.resolve('youtubeService')
   }
 
   // todo: currently, ChatMate is assumed to be the source of truth of rank data.
@@ -132,17 +136,13 @@ export default class ModService extends ContextClass {
 
     let error: string | null = null
     try {
-      let result: boolean
       if (isMod) {
-        result = await this.masterchatService.mod(streamerId, lastChatItem.contextToken)
+        await this.youtubeService.modYoutubeChannel(streamerId, youtubeChannelId)
       } else {
-        result = await this.masterchatService.unmod(streamerId, lastChatItem.contextToken)
+        await this.youtubeService.unmodYoutubeChannel(streamerId, youtubeChannelId)
       }
 
-      this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded. Action applied: ${result}`)
-      if (!result) {
-        error = `Request succeeded, but action was not applied. Most likely, the user is already ${type}ded.` + errorSuffix
-      }
+      this.logService.logInfo(this, `Request to ${type} youtube channel ${youtubeChannelId} succeeded.`)
     } catch (e: any) {
       this.logService.logError(this, `Request to ${type} youtube channel ${youtubeChannelId} failed:`, e.message)
       error = e.message + errorSuffix

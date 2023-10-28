@@ -157,7 +157,8 @@ beforeEach(() => {
     twurpleService: mockTwurpleService,
     youtubeTimeoutRefreshService: mockYoutubeTimeoutRefreshService,
     streamerStore: mockStreamerStore,
-    userService: mockUserService
+    userService: mockUserService,
+    youtubeService: mock()
   }))
 })
 

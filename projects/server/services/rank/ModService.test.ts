@@ -37,7 +37,8 @@ beforeEach(() => {
     masterchatService: mockMasterchatService,
     rankStore: mockRankStore,
     twurpleService: mockTwurpleService,
-    userService: mockUserService
+    userService: mockUserService,
+    youtubeService: mock()
   }))
 })
 
