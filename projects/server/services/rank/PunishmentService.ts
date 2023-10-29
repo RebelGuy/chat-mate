@@ -257,7 +257,7 @@ export default class PunishmentService extends ContextClass {
 
     const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels([defaultUserId]).then(single)
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds.map(c => this.tryApplyTwitchPunishment(streamerId, c, revokeMessage, 'untimeout')))
-    const youtubeResults: YoutubeRankResult[] = ownedChannels.youtubeChannelIds.map(c => ({ youtubeChannelId: c, error: 'YouTube timeouts expire automatically 5 minutes after they were last applied.'}))
+    const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'untimeout')))
 
     return { youtubeResults, twitchResults }
   }
