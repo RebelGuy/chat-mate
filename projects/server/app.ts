@@ -26,7 +26,6 @@ import ExperienceController from '@rebel/server/controllers/ExperienceController
 import UserController from '@rebel/server/controllers/UserController'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import EmojiController from '@rebel/server/controllers/EmojiController'
-import cors from 'cors'
 import MasterchatFetchService from '@rebel/server/services/MasterchatFetchService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
@@ -95,6 +94,7 @@ import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClientProvider'
 import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
+import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -206,6 +206,7 @@ const main = async () => {
     .withClass('userService', UserService)
     .withClass('youtubeAuthProvider', YoutubeAuthProvider)
     .withClass('youtubeApiClientProvider', YoutubeApiClientProvider)
+    .withClass('youtubeApiStore', YoutubeApiStore)
     .withClass('youtubeApiProxyService', YoutubeApiProxyService)
     .withClass('youtubeService', YoutubeService)
     .withClass('punishmentService', PunishmentService)

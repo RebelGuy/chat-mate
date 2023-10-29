@@ -46,7 +46,7 @@ export default class YoutubeService extends ContextClass {
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    const mods = await this.youtubeApiProxyService.getMods(streamerExternalChannelId, livestream.liveId)
+    const mods = await this.youtubeApiProxyService.getMods(streamerId, streamerExternalChannelId, livestream.liveId)
 
     const allChannels: UserChannel<'youtube'>[] = await this.channelStore.getAllChannels(streamerId)
       .then(channels => channels.filter(c => c.platformInfo.platform === 'youtube'))
@@ -66,7 +66,7 @@ export default class YoutubeService extends ContextClass {
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
     const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
-    const externalModeratorId = await this.youtubeApiProxyService.mod(streamerExternalChannelId, userExternalChannelId, livestream.liveId)
+    const externalModeratorId = await this.youtubeApiProxyService.mod(streamerId, streamerExternalChannelId, userExternalChannelId, livestream.liveId)
     this.logService.logInfo(this, `Successfully modded youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalModeratorId: ${externalModeratorId})`)
   }
 
@@ -79,7 +79,7 @@ export default class YoutubeService extends ContextClass {
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
-    await this.youtubeApiProxyService.unmod(streamerExternalChannelId, externalModeratorId)
+    await this.youtubeApiProxyService.unmod(streamerId, streamerExternalChannelId, externalModeratorId)
     this.logService.logInfo(this, `Successfully unmodded youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalModeratorId: ${externalModeratorId})`)
   }
 
@@ -91,7 +91,7 @@ export default class YoutubeService extends ContextClass {
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
     const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
-    const externalBanId = await this.youtubeApiProxyService.ban(streamerExternalChannelId, userExternalChannelId, livestream.liveId)
+    const externalBanId = await this.youtubeApiProxyService.ban(streamerId, streamerExternalChannelId, userExternalChannelId, livestream.liveId)
     this.logService.logInfo(this, `Successfully banned youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalBanId: ${externalBanId})`)
   }
 
@@ -103,7 +103,7 @@ export default class YoutubeService extends ContextClass {
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
     const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
-    const externalTimeoutId = await this.youtubeApiProxyService.timeout(streamerExternalChannelId, userExternalChannelId, livestream.liveId, durationSeconds)
+    const externalTimeoutId = await this.youtubeApiProxyService.timeout(streamerId, streamerExternalChannelId, userExternalChannelId, livestream.liveId, durationSeconds)
     this.logService.logInfo(this, `Successfully timed out youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalTimeoutId: ${externalTimeoutId})`)
   }
 
@@ -117,7 +117,7 @@ export default class YoutubeService extends ContextClass {
     const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
     const externalBanId = this.constructExternalBanId(streamerExternalChannelId, userExternalChannelId, livestream.liveId)
 
-    await this.youtubeApiProxyService.unban(streamerExternalChannelId, externalBanId)
+    await this.youtubeApiProxyService.unban(streamerId, streamerExternalChannelId, externalBanId)
     this.logService.logInfo(this, `Successfully unbanned youtube channel ${youtubeChannelId} for streamer ${streamerId} (generated externalBanId: ${externalBanId})`)
   }
 

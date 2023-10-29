@@ -3,6 +3,7 @@ import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClie
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import ApiService from '@rebel/server/services/abstract/ApiService'
+import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { GaxiosError } from 'gaxios'
 
@@ -16,15 +17,38 @@ import { GaxiosError } from 'gaxios'
 // - why, if a timeout is just a temporary type of ban, can we remove permanent bans using the api, but not timeouts?
 // - why?
 
+type Endpoint =
+  'youtube_v3.liveChatModerators.list' |
+  'youtube_v3.liveChatModerators.insert' |
+  'youtube_v3.liveChatModerators.delete' |
+  'youtube_v3.liveChatBans.insert' |
+  'youtube_v3.liveChatBans.delete' |
+  'youtube_v3.videos.list'
+
+// the nice devs over at youtube didn't think it was necessary to document these, so i took it upon myself to find these
+// via the API quota dashboard: console.cloud.google.com -> APIs and services -> YouTube Data API v3 -> Quotas.
+// some are listed here though: https://developers.google.com/youtube/v3/determine_quota_cost
+const ENDPOINT_COSTS: Record<Endpoint, number> = {
+  'youtube_v3.liveChatModerators.list': 50,
+  'youtube_v3.liveChatModerators.insert': 200,
+  'youtube_v3.liveChatModerators.delete': 200,
+  'youtube_v3.liveChatBans.insert': 200,
+  'youtube_v3.liveChatBans.delete': 200,
+  'youtube_v3.videos.list': 1
+}
+
 type Deps = Dependencies<{
   logService: LogService
   youtubeStatusService: StatusService
   youtubeApiClientProvider: YoutubeApiClientProvider
+  youtubeApiStore: YoutubeApiStore
 }>
 
 export default class YoutubeApiProxyService extends ApiService {
   private readonly youtubeApiClientProvider: YoutubeApiClientProvider
-  private readonly wrappedApi: (requestOwnerExternalChannelId: string) => Promise<youtube_v3.Youtube>
+  private readonly youtubeApiStore: YoutubeApiStore
+
+  private readonly wrappedApi: (streamerId: number, requestOwnerExternalChannelId: string) => Promise<youtube_v3.Youtube>
 
   constructor (deps: Deps) {
     const name = YoutubeApiProxyService.name
@@ -33,12 +57,13 @@ export default class YoutubeApiProxyService extends ApiService {
     const timeout = null
     super(name, logService, statusService, timeout, false)
     this.youtubeApiClientProvider = deps.resolve('youtubeApiClientProvider')
+    this.youtubeApiStore = deps.resolve('youtubeApiStore')
 
     this.wrappedApi = this.createApiWrapper()
   }
 
-  public async mod (ownerExternalChannelId: string, userExternalChannelId: string, liveId: string): Promise<string> {
-    const api = await this.wrappedApi(ownerExternalChannelId)
+  public async mod (streamerId: number, ownerExternalChannelId: string, userExternalChannelId: string, liveId: string): Promise<string> {
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
 
     const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
@@ -59,8 +84,8 @@ export default class YoutubeApiProxyService extends ApiService {
     return result.data.id!
   }
 
-  public async unmod (ownerExternalChannelId: string, externalModId: string): Promise<void> {
-    const api = await this.wrappedApi(ownerExternalChannelId)
+  public async unmod (streamerId: number, ownerExternalChannelId: string, externalModId: string): Promise<void> {
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
 
     // https://developers.google.com/youtube/v3/live/docs/liveChatModerators/delete
     await api.liveChatModerators.delete({
@@ -68,8 +93,8 @@ export default class YoutubeApiProxyService extends ApiService {
     })
   }
 
-  public async getMods (ownerExternalChannelId: string, liveId: string): Promise<{ externalModId: string, externalChannelId: string }[]> {
-    const api = await this.wrappedApi(ownerExternalChannelId)
+  public async getMods (streamerId: number, ownerExternalChannelId: string, liveId: string): Promise<{ externalModId: string, externalChannelId: string }[]> {
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
 
     const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
@@ -92,8 +117,8 @@ export default class YoutubeApiProxyService extends ApiService {
     }))
   }
 
-  public async ban (ownerExternalChannelId: string, userExternalChannelId: string, liveId: string): Promise<string> {
-    const api = await this.wrappedApi(ownerExternalChannelId)
+  public async ban (streamerId: number, ownerExternalChannelId: string, userExternalChannelId: string, liveId: string): Promise<string> {
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
 
     const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
@@ -114,8 +139,8 @@ export default class YoutubeApiProxyService extends ApiService {
     return result.data.id!
   }
 
-  public async timeout (ownerExternalChannelId: string, userExternalChannelId: string, liveId: string, durationSeconds: number): Promise<string> {
-    const api = await this.wrappedApi(ownerExternalChannelId)
+  public async timeout (streamerId: number, ownerExternalChannelId: string, userExternalChannelId: string, liveId: string, durationSeconds: number): Promise<string> {
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
 
     const liveChatId = this.getLiveChatId(ownerExternalChannelId, liveId)
 
@@ -137,10 +162,10 @@ export default class YoutubeApiProxyService extends ApiService {
     return result.data.id!
   }
 
-  public async unban (ownerExternalChannelId: string, externalPunishmentId: string): Promise<void> {
+  public async unban (streamerId: number, ownerExternalChannelId: string, externalPunishmentId: string): Promise<void> {
     // weirdly, we cannot use the same endpoint to remove timeouts - we have to instead create a new one with a duration of 0 seconds
 
-    const api = await this.wrappedApi(ownerExternalChannelId)
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
 
     // https://developers.google.com/youtube/v3/live/docs/liveChatBans/insert
     await api.liveChatBans.delete({
@@ -174,22 +199,22 @@ export default class YoutubeApiProxyService extends ApiService {
     }
   }
 
-  private createApiWrapper (): (requestOwnerExternalChannelId: string) => Promise<youtube_v3.Youtube> {
-    return async (requestOwnerExternalChannelId: string) => {
+  private createApiWrapper (): (streamerId: number, requestOwnerExternalChannelId: string) => Promise<youtube_v3.Youtube> {
+    return async (streamerId: number, requestOwnerExternalChannelId: string) => {
       const client = await this.youtubeApiClientProvider.getClientForStreamer(requestOwnerExternalChannelId)
 
       return {
         liveChatModerators: {
-          list: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatmoderators$List) => client.liveChatModerators.list(params), 'youtube_v3.liveChatModerators.list'),
-          insert: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatmoderators$Insert) => client.liveChatModerators.insert(params), 'youtube_v3.liveChatModerators.insert'),
-          delete: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatmoderators$Delete) => client.liveChatModerators.delete(params), 'youtube_v3.liveChatModerators.delete')
+          list: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatmoderators$List) => client.liveChatModerators.list(params), streamerId, 'youtube_v3.liveChatModerators.list'),
+          insert: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatmoderators$Insert) => client.liveChatModerators.insert(params), streamerId, 'youtube_v3.liveChatModerators.insert'),
+          delete: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatmoderators$Delete) => client.liveChatModerators.delete(params), streamerId, 'youtube_v3.liveChatModerators.delete')
         },
         liveChatBans: {
-          insert: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatbans$Insert) => client.liveChatBans.insert(params), 'youtube_v3.liveChatBans.insert'),
-          delete: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatbans$Delete) => client.liveChatBans.delete(params), 'youtube_v3.liveChatBans.delete')
+          insert: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatbans$Insert) => client.liveChatBans.insert(params), streamerId, 'youtube_v3.liveChatBans.insert'),
+          delete: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livechatbans$Delete) => client.liveChatBans.delete(params), streamerId, 'youtube_v3.liveChatBans.delete')
         },
         videos: {
-          list: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Videos$List) => client.videos.list(params), 'youtube_v3.videos.list')
+          list: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Videos$List) => client.videos.list(params), streamerId, 'youtube_v3.videos.list')
         }
       } as youtube_v3.Youtube
     }
@@ -197,17 +222,31 @@ export default class YoutubeApiProxyService extends ApiService {
 
   // this is a wrapper around a wrapper because javascript serialisation of error objects is fucked,
   // and we need to intercept GaxiosErrors unless we want to log error info that is essentially empty
-  private wrapRequestWithErrorLogging<TParams, TResult> (request: (params: TParams) => Promise<TResult>, requestName: string): (params: TParams) => Promise<TResult> {
+  private wrapRequestWithErrorLogging<TParams, TResult> (request: (params: TParams) => Promise<TResult>, streamerId: number, endpoint: Endpoint): (params: TParams) => Promise<TResult> {
     return super.wrapRequest(async (params: TParams) => {
       try {
-        return await request(params)
+        const result = await request(params)
+        await this.logApiUsage(streamerId, endpoint, true)
+        return result
+
       } catch (e) {
         if (e instanceof GaxiosError) {
-          this.logService.logError(this, `Request ${requestName} received an error response:`, e.response?.data)
+          this.logService.logError(this, `Request ${endpoint} received an error response:`, e.response?.data)
         }
 
+        await this.logApiUsage(streamerId, endpoint, false)
         throw e
       }
-    }, requestName)
+    }, endpoint)
+  }
+
+  // track API requests for internal auditing purposes since the youtube API quota is _extremely_ low (10000 units per day).
+  // if we ever run into issues with the limit and can't increase it, we will need to fallback to making requests via masterchat, though that is a problem for a later time
+  private async logApiUsage (streamerId: number, endpoint: Endpoint, success: boolean) {
+    try {
+      await this.youtubeApiStore.addApiRequest(streamerId, endpoint, ENDPOINT_COSTS[endpoint], success)
+    } catch (e: any) {
+      this.logService.logError(this, 'Unable to log API usage via the YoutubeApiStore:', e)
+    }
   }
 }

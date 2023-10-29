@@ -248,6 +248,7 @@ model Streamer {
   streamerTwitchChannelLink  StreamerTwitchChannelLink?
   donationLinks              DonationLink[]
   customRankNames            CustomRankName[]
+  youtubeApiRequests         YoutubeApiRequest[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -579,6 +580,20 @@ model MasterchatAction {
 
   @@index([livestreamId], map: "masterchat_action_livestreamId_fkey")
   @@map("masterchat_action")
+}
+
+model YoutubeApiRequest {
+  id      Int      @id @default(autoincrement())
+  time    DateTime @default(now())
+  request String   @db.VarChar(128)
+  cost    Int
+  success Boolean
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "youtube_api_request_streamerId_fkey")
+
+  @@index([streamerId], map: "youtube_api_request_streamerId_fkey")
+  @@map("youtube_api_request")
 }
 
 // Experience
