@@ -200,7 +200,6 @@ const main = async () => {
     .withClass('experienceStore', ExperienceStore)
     .withClass('accountService', AccountService)
     .withClass('channelService', ChannelService)
-    .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
     .withClass('twurpleService', TwurpleService)
     .withClass('linkStore', LinkStore)
     .withClass('userService', UserService)
