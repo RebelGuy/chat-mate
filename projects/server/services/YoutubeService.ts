@@ -98,13 +98,13 @@ export default class YoutubeService extends ContextClass {
   public async timeoutYoutubeChannel (streamerId: number, youtubeChannelId: number, durationSeconds: number) {
     const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot timeout channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
+      throw new Error(`Cannot timeout channel ${youtubeChannelId} for ${durationSeconds} seconds because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
     const userExternalChannelId = await this.getExternalChannelIdFromInternalChannelId(youtubeChannelId)
     const externalTimeoutId = await this.youtubeApiProxyService.timeout(streamerId, streamerExternalChannelId, userExternalChannelId, livestream.liveId, durationSeconds)
-    this.logService.logInfo(this, `Successfully timed out youtube channel ${youtubeChannelId} for streamer ${streamerId} (externalTimeoutId: ${externalTimeoutId})`)
+    this.logService.logInfo(this, `Successfully timed out youtube channel ${youtubeChannelId} for streamer ${streamerId} for ${durationSeconds} seconds (externalTimeoutId: ${externalTimeoutId})`)
   }
 
   public async unbanYoutubeChannel (streamerId: number, youtubeChannelId: number) {

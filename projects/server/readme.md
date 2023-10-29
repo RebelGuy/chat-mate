@@ -111,7 +111,7 @@ Punishments are used to temporarily or permanently hide users' livestream messag
 
 Currently there are 3 punishment types:
 1. `mute`: This is an internal punishment, and is used by the Client to hide messages of a certain user. A mute can be temporary or permanent.
-2. `timeout`: This is both internal and external (i.e. sent to YouTube and Twitch) and completely stops the user from sending messages in the livestream chat. It is always temporary. Due to limitations with the Masterchat implementation, timeouts must be at least 5 minutes long. Furthermore, we have a service that refreshes YouTube timeouts periodically if they are longer than 5 minutes.
+2. `timeout`: This is both internal and external (i.e. sent to YouTube and Twitch) and completely stops the user from sending messages in the livestream chat. It is always temporary. Due to limitations with the Youtube API, timeouts must be at most 1 day long.
 3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
@@ -564,7 +564,7 @@ Applies a punishment of type `timeout` to the user, which is essentially a tempo
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
 - `message` (`string`): *Optional.* The reason for the punishment.
-- `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 5 minutes.
+- `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 1 second and at most 1 day.
 
 Returns data with the following properties:
 - `newPunishment` (`PublicUserRank | null`): The new punishment that was created as a result of this request, if successful.

@@ -146,17 +146,19 @@ export default class PunishmentController extends ControllerBase {
   @Path('/timeout')
   public async timeoutUser (request: TimeoutUserRequest): Promise<TimeoutUserResponse> {
     const builder = this.registerResponseBuilder<TimeoutUserResponse>('POST /timeout')
-    const minDuration = YOUTUBE_TIMEOUT_DURATION / 1000
+
     if (request == null || request.userId == null) {
       return builder.failure(400, 'Invalid request data.')
-    } else if (request.durationSeconds == null || request.durationSeconds < minDuration) {
-      return builder.failure(400, `Duration must be at least ${minDuration} seconds.`)
+    } else if (request.durationSeconds == null || request.durationSeconds < 1 || request.durationSeconds > 24 * 3600) {
+      // the 1 day limit is imposed to us by the fantastic youtube api!
+      return builder.failure(400, `Duration must be at least 1 second and at most 1 day.`)
     }
 
     try {
       const streamerId = this.getStreamerId()
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.punishmentService.timeoutUser(primaryUserId, streamerId, this.getCurrentUser().aggregateChatUserId, request.message, request.durationSeconds)
+      const durationSeconds = Math.round(request.durationSeconds)
+      const result = await this.punishmentService.timeoutUser(primaryUserId, streamerId, this.getCurrentUser().aggregateChatUserId, request.message, durationSeconds)
       const customRankNames = await this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(r => single(r).customRankNames)
       return builder.success({
         newPunishment: result.rankResult.rank == null ? null : userRankToPublicObject(result.rankResult.rank, customRankNames['timeout']),
