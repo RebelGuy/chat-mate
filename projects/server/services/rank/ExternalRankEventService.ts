@@ -82,6 +82,7 @@ export default class ExternalRankEventService extends ContextClass {
     }
 
     if (ranksForUser.find(r => r.rank.name === 'ban') == null) {
+      this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned. Syncing punishment.`)
       await this.punishmentService.banUser(primaryUserId, streamerId, moderatorPrimaryUserId, null)
     } else {
       this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned, but internal punishment is already active. Ignoring.`)
@@ -97,9 +98,26 @@ export default class ExternalRankEventService extends ContextClass {
     }
 
     if (ranksForUser.find(r => r.rank.name === 'ban') != null) {
+      this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned. Syncing punishment.`)
       await this.punishmentService.unbanUser(primaryUserId, streamerId, moderatorPrimaryUserId, null)
     } else {
       this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned, but internal punishment is not active. Ignoring.`)
+      return
+    }
+  }
+
+  public async onYoutubeChannelTimedOut (streamerId: number, channelName: string, moderatorChannelName: string, durationSeconds: number) {
+    const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getYoutubeDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
+    if (primaryUserId == null) {
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but could not find channel. Ignoring.`)
+      return
+    }
+
+    if (ranksForUser.find(r => r.rank.name === 'timeout') != null) {
+      this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds. Syncing punishment.`)
+      await this.punishmentService.timeoutUser(primaryUserId, streamerId, moderatorPrimaryUserId, null, durationSeconds)
+    } else {
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but internal punishment is not active. Ignoring.`)
       return
     }
   }

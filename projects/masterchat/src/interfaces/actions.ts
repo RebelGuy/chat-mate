@@ -43,7 +43,8 @@ export type Action =
   | MembershipGiftRedemptionAction
   | RemoveChatItemByAuthorAction
   | HideUserAction
-  | UnhideUserAction;
+  | UnhideUserAction
+  | TimeoutUserAction;
 
 export interface AddChatItemAction {
   type: "addChatItemAction";
@@ -397,6 +398,15 @@ export interface UnhideUserAction {
   timestampUsec: string;
   userChannelName: string;
   moderatorChannelName: string;
+}
+
+export interface TimeoutUserAction {
+  type: "timeoutUserAction";
+  timestamp: Date;
+  timestampUsec: string;
+  userChannelName: string;
+  moderatorChannelName: string;
+  durationSeconds: number;
 }
 
 export interface UnknownAction {

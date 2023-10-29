@@ -613,7 +613,7 @@ export interface YTLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer {
 export interface YTLiveChatModerationMessageRenderer {
   id: string;
   timestampUsec: string;
-  message: UserHiddenMessage | UserUnhiddenMessage;
+  message: UserHiddenMessage | UserUnhiddenMessage | UserTimedOutMessage;
 }
 
 export interface UserHiddenMessage {
@@ -631,6 +631,17 @@ export interface UserUnhiddenMessage {
     { text: " was unhidden by "; italics: true },
     { text: string; bold: true, italics: true }, // text: Moderator that unhid the user
     { text: "."; italics: true }
+  ]
+}
+
+export interface UserTimedOutMessage {
+  runs: [
+    { text: string; bold: true, italics: true }, // text: User that was timed out
+    { text: " was timed out by "; italics: true },
+    { text: string; bold: true, italics: true }, // text: Moderator that timed out the user
+    { text: " for "; italics: true },
+    { text: string; italics: true }, // text: Number of seconds
+    { text: " seconds."; italics: true }
   ]
 }
 

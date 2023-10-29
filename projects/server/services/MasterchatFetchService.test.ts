@@ -1,5 +1,5 @@
 import { Livestream } from '@prisma/client'
-import { Action, AddChatItemAction, ChatResponse, HideUserAction, MarkChatItemAsDeletedAction, UnhideUserAction, YTRun } from '@rebel/masterchat'
+import { Action, AddChatItemAction, ChatResponse, HideUserAction, MarkChatItemAsDeletedAction, UnhideUserAction, TimeoutUserAction, YTRun } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatFetchService from '@rebel/server/services/MasterchatFetchService'
@@ -77,7 +77,15 @@ const chatAction5 = cast<UnhideUserAction>({
   moderatorChannelName: 'modName2',
   userChannelName: 'userName2'
 })
-const chatAction6 = cast<MarkChatItemAsDeletedAction>({
+const chatAction6 = cast<TimeoutUserAction>({
+  type: 'timeoutUserAction',
+  timestamp: data.time3,
+  timestampUsec: `${data.time3.getTime() * 1000}`,
+  moderatorChannelName: 'modName3',
+  userChannelName: 'userName3',
+  durationSeconds: 100
+})
+const chatAction7 = cast<MarkChatItemAsDeletedAction>({
   type: 'markChatItemAsDeletedAction',
   targetId: 'externalId'
 })
@@ -229,43 +237,50 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
     expect(mockLivestreamStore.setContinuationToken.mock.calls.length).toBe(1)
   })
 
-  test('Persists hide user action and unhide user action and notifies service', async () => {
-    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction4, chatAction5]))
+  test('Persists hide/unhide/timeout user actions and notifies service', async () => {
+    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction4, chatAction5, chatAction6]))
     mockMasterchatStore.hasActionWithTime.calledWith(chatAction4.type, chatAction4.timestamp.getTime(), currentLivestreams[0].liveId).mockResolvedValue(false)
     mockMasterchatStore.hasActionWithTime.calledWith(chatAction5.type, chatAction5.timestamp.getTime(), currentLivestreams[0].liveId).mockResolvedValue(false)
+    mockMasterchatStore.hasActionWithTime.calledWith(chatAction6.type, chatAction6.timestamp.getTime(), currentLivestreams[0].liveId).mockResolvedValue(false)
 
     await masterchatFetchService.initialise()
 
-    const [addCall1, addCall2] = mockMasterchatStore.addMasterchatAction.mock.calls
+    const [addCall1, addCall2, addCall3] = mockMasterchatStore.addMasterchatAction.mock.calls
     expect(addCall1).toEqual<typeof addCall1>([chatAction4.type, JSON.stringify(chatAction4), chatAction4.timestamp.getTime(), currentLivestreams[0].liveId])
     expect(addCall2).toEqual<typeof addCall1>([chatAction5.type, JSON.stringify(chatAction5), chatAction5.timestamp.getTime(), currentLivestreams[0].liveId])
+    expect(addCall3).toEqual<typeof addCall1>([chatAction6.type, JSON.stringify(chatAction6), chatAction6.timestamp.getTime(), currentLivestreams[0].liveId])
 
     const banCall = single(mockExternalRankEventService.onYoutubeChannelBanned.mock.calls)
     expect(banCall).toEqual<typeof banCall>([currentLivestreams[0].streamerId, chatAction4.userChannelName, chatAction4.moderatorChannelName])
 
     const unbanCall = single(mockExternalRankEventService.onYoutubeChannelUnbanned.mock.calls)
     expect(unbanCall).toEqual<typeof unbanCall>([currentLivestreams[0].streamerId, chatAction5.userChannelName, chatAction5.moderatorChannelName])
+
+    const timeoutCall = single(mockExternalRankEventService.onYoutubeChannelTimedOut.mock.calls)
+    expect(timeoutCall).toEqual<typeof timeoutCall>([currentLivestreams[0].streamerId, chatAction6.userChannelName, chatAction6.moderatorChannelName, chatAction6.durationSeconds])
   })
 
-  test('Does not process hide or unhide action if already exists', async () => {
-    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction4, chatAction5]))
+  test('Does not process hide/unhide/timeout action if already exists', async () => {
+    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction4, chatAction5, chatAction6]))
     mockMasterchatStore.hasActionWithTime.calledWith(chatAction4.type, chatAction4.timestamp.getTime(), currentLivestreams[0].liveId).mockResolvedValue(true)
     mockMasterchatStore.hasActionWithTime.calledWith(chatAction5.type, chatAction5.timestamp.getTime(), currentLivestreams[0].liveId).mockResolvedValue(true)
+    mockMasterchatStore.hasActionWithTime.calledWith(chatAction6.type, chatAction6.timestamp.getTime(), currentLivestreams[0].liveId).mockResolvedValue(true)
 
     await masterchatFetchService.initialise()
 
     expect(mockMasterchatStore.addMasterchatAction.mock.calls.length).toBe(0)
     expect(mockExternalRankEventService.onYoutubeChannelBanned.mock.calls.length).toBe(0)
     expect(mockExternalRankEventService.onYoutubeChannelUnbanned.mock.calls.length).toBe(0)
+    expect(mockExternalRankEventService.onYoutubeChannelTimedOut.mock.calls.length).toBe(0)
   })
 
   test('Processes remove chat item action', async () => {
-    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction6]))
+    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction7]))
 
     await masterchatFetchService.initialise()
 
     const externalId = single2(mockChatService.onChatItemRemoved.mock.calls)
-    expect(externalId).toBe(chatAction6.targetId)
+    expect(externalId).toBe(chatAction7.targetId)
   })
 })
 

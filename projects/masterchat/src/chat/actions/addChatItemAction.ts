@@ -15,6 +15,7 @@ import {
   MembershipGiftPurchaseTickerContent,
   UnhideUserAction,
   HideUserAction,
+  TimeoutUserAction,
 } from "../../interfaces/actions";
 import {
   YTAddChatItemAction,
@@ -553,7 +554,7 @@ export function parseLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer(
 // Moderation action announcement
 export function parseLiveChatModerationMessageRenderer(
   renderer: YTLiveChatModerationMessageRenderer
-): HideUserAction | UnhideUserAction {
+): HideUserAction | UnhideUserAction | TimeoutUserAction {
   const id = renderer.id;
   const timestampUsec = renderer.timestampUsec;
   const timestamp = tsToDate(timestampUsec);
@@ -578,6 +579,16 @@ export function parseLiveChatModerationMessageRenderer(
       timestampUsec,
       userChannelName,
       moderatorChannelName
+    }
+    return parsed
+  } else if (action === ' was timed out by ') {
+    const parsed: TimeoutUserAction = {
+      type: 'timeoutUserAction',
+      timestamp,
+      timestampUsec,
+      userChannelName,
+      moderatorChannelName,
+      durationSeconds: Number(renderer.message.runs[4]!.text)
     }
     return parsed
   } else {

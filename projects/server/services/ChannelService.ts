@@ -134,7 +134,7 @@ export default class ChannelService extends ContextClass {
 
   /** Transforms data of the rank event into the internal data types. */
   public async getYoutubeDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
-    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName)
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName) // todo: wrong function
     if (channel == null || !isYoutubeChannel(channel)) {
       return { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
     }
