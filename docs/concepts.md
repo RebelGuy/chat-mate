@@ -27,7 +27,7 @@ For a normal user to get to the stage of livestreaming, the following steps must
   - A finished livestream will automatically be deactivated by ChatMate.
   - At most one active livestream can exist per streamer.
 - Optional: Set the Streamlabs socket token to listen to [donations](#donations).
-- Optional: [Authorise Twitch](twitch-auth.md) and add the ChatMate YouTube channel as a moderator to the primary YouTube channel.
+- Optional: [Authorise Twitch](twitch-auth.md), [authorise Youtube](youtube-auth.md) and add the ChatMate YouTube channel as a moderator to the primary YouTube channel.
 
 # Ranks and punishments
 Ranks are permanent or temporary tags added to users that can have side effects. The set of known tags is stored in the `rank` table, while manifestations of the ranks are stored in the `user_rank` table. Ranks allow us to permission-gate features, such as streamer-specific actions (setting a livestream, for example) or custom emojis (in the form of rank whitelists).
@@ -44,7 +44,6 @@ In the future, the parameters for the donator ranks (and possibly the set of don
 Punishment ranks are applied by streamers. For timeouts or bans (or revokations thereof), the punishment is propagated to YouTube and/or Twitch.
 - `ban` rank: All of the user's channels are banned on YouTube/Twitch.
 - `timeout` rank: All of the user's channels are timed out on YouTube/Twitch.
-  - On YouTube, timeouts can only be issued in blocks of 5 minutes, but we can simulate longer timeouts by automatically reapplying the punishment. This will be addressed in the future by using the YouTube API instead of Masterchat, which will allow timeouts with arbitrary duration.
 - `mute` rank: The user's messages are hidden in the Client (internal punishment only).
 - Users with an active punishment will not receive any experience.
 

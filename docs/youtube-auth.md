@@ -1,29 +1,4 @@
-- Following https://github.com/googleapis/google-api-nodejs-client#oauth2-client
-- Go to the developer console: https://console.cloud.google.com/apis/credentials?pli=1&project=shorts-330419
-- Create a new project
-- Add the Youtube Data API v3 to the project's enabled apis (https://console.cloud.google.com/apis/library?authuser=2&project=chatmate-local&supportedpurview=project)
-- Create oauth consent screen
-  - Configure the consent screen (only need to fill in mandatory fields)
-  - Configure the scopes
-    - `https://www.googleapis.com/auth/youtube`: Manage the user's YouTube account
-    - `https://www.googleapis.com/auth/youtube.readonly`: View your YouTube account [not sure if necessary]
-  - Add test users (accounts that can authorise the new client)
-    - chat_mate_local@proton.me
-    - chat_mate_prod@proton.me
-    - chat_mate_sandbox@proton.me
-    - chatmatetest1@gmail.com
-    - chatmatetest2@gmail.com
-- Create oauth client id. This identifies ChatMate Studio to google
-  - Web Application
-  - redirect uris: http://localhost:3000/admin/youtube and http://localhost:3000/manager
-  - local:
-    - client id: 419723469636-bnl40h64tppr2ag795od7ruvsispjfsu.apps.googleusercontent.com
-    - client secret: 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
-
-
-- it won't quite work the same because we need to explicitly generate a new oauth client for every user that is making requests, + subscribe to the token event to handle refresh token persisting.
-
-
+# Overview
 
 Similar to [Twitch auth](./twitch-auth.md), we expose endpoints for authorising ChatMate to act on behalf of a user for both the admin channel and (separately) any other streamer channel. The authorisation flow is very similar to that of Twitch.
 
@@ -38,3 +13,31 @@ In addition, streamers are expected to add the ChatMate Youtube channel as a mod
 The Youtube API quota is extremely limited (or API requests are extremely expensive). Should the API limit be reached, Masterchat could reasonably be used as a fallback, with the caveat that moderators will not be able to be added/removed, as this can only be done by the channel owner.
 
 Youtube access tokens are valid for only 1 hour, and are automatically refreshed by Google's `OAuth2Client`. Refresh tokens are static and valid indefinitely. That is, the same refresh token can be used multiple times to generate a valid access token.
+
+# Setting up a new Application
+(This is following the instructions in and around https://github.com/googleapis/google-api-nodejs-client#oauth2-client)
+
+1. Go to the developer console: https://console.cloud.google.com/apis/credentials?pli=1&project=shorts-330419
+2. Create a new project
+3. Add the Youtube Data API v3 to the project's enabled apis (https://console.cloud.google.com/apis/library?authuser=2&project=chatmate-local&supportedpurview=project)
+4. Create oauth consent screen
+  - Configure the consent screen (only need to fill in mandatory fields)
+  - Configure the scopes
+    - `https://www.googleapis.com/auth/youtube`: Manage the user's YouTube account
+    - `https://www.googleapis.com/auth/youtube.readonly`
+  - Add test users (accounts that can authorise the new client in the testing stage)
+    - chat_mate_local@proton.me
+    - chat_mate_prod@proton.me
+    - chat_mate_sandbox@proton.me
+    - chatmatetest1@gmail.com
+    - chatmatetest2@gmail.com
+    - rebelguysminecaft@gmail.com
+- Create oauth client id. This identifies ChatMate to google
+  - Web Application
+  - redirect URIs:
+    - {chat-mate-studio}/admin/youtube
+    - {chat-mate-studio}/manager
+- After testing the app and ensuring everything works, publish the application on the OAuth consent screen page
+
+## Verification
+Since our OAuth app is requesting access to sensitive data, Youtube is requiring us to jump one last major hurdle before things will work. Unverified apps show a warning to the user if they attempt to complete authorisation, and includes a 100 user cap. I don't think it is required that we get this done yet, but we will need to do it at some point. It appears that the process is length and complicated.
