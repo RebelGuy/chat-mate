@@ -35,6 +35,7 @@ import {
 } from "../../interfaces/yt/chat";
 import {
   durationToSeconds,
+  parseTruncatedNumber,
   splitRunsByNewLines,
   stringify,
   tsToDate,
@@ -588,7 +589,7 @@ export function parseLiveChatModerationMessageRenderer(
       timestampUsec,
       userChannelName,
       moderatorChannelName,
-      durationSeconds: Number(renderer.message.runs[4]!.text)
+      durationSeconds: parseTruncatedNumber(renderer.message.runs[4]!.text)
     }
     return parsed
   } else {

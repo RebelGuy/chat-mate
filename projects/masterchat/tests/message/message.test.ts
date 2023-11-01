@@ -1,5 +1,6 @@
 import { setupRecorder } from "nock-record";
 import { AddChatItemAction, delay, Masterchat } from "../../src";
+import { mock } from 'jest-mock-extended'
 
 const id = process.env.MC_MSG_TEST_ID;
 const channelId = process.env.MC_MSG_TEST_CHANNEL_ID;
@@ -72,8 +73,8 @@ describe("moderation (delete)", () => {
 
   beforeAll(async () => {
     recorder = await record("mod_send");
-    me = new Masterchat(id!, channelId!, { credentials });
-    other = new Masterchat(id!, channelId!, {
+    me = new Masterchat(mock(), id!, channelId!, { credentials });
+    other = new Masterchat(mock(), id!, channelId!, {
       credentials: credentials_second,
     });
   });

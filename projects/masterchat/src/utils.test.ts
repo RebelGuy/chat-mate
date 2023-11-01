@@ -1,4 +1,4 @@
-import { textRunToPlainText, toVideoId } from "./utils";
+import { parseTruncatedNumber, textRunToPlainText, toVideoId } from "./utils";
 
 it("toVideoId", () => {
   expect(
@@ -118,3 +118,23 @@ describe("textRunToPlainText", () => {
     ).toBe("https://twitter.com/natsuiromatsuri/status/1439578118063157250");
   });
 });
+
+describe("", () => {
+  it("normal number", () => {
+    const result = parseTruncatedNumber("100")
+
+    expect(result).toBe(100)
+  })
+
+  it("thousands number (k)", () => {
+    const result = parseTruncatedNumber("100k")
+
+    expect(result).toBe(100_000)
+  })
+
+  it("millions number (m)", () => {
+    const result = parseTruncatedNumber("100m")
+
+    expect(result).toBe(100_000_000)
+  })
+})
