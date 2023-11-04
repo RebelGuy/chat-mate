@@ -75,8 +75,12 @@ async function createWindow () {
             .then(() => {
               // this element is now available
               // getting the element by ID works in the normal browser, but not in electron. here's a workaround:
-              return Array.from(document.getElementsByClassName("yt-simple-endpoint style-scope ytd-compact-link-renderer"))
-                .filter(el => el.id === "endpoint" && el.nodeName === 'A' && el.href.includes("/channel/"))[0].href
+              const matches = Array.from(document.getElementsByClassName("yt-simple-endpoint style-scope yt-formatted-string"))
+                .filter(el => el.parentNode.id === 'manage-account' && el.nodeName === 'A' && el.href.includes("/channel/"))
+              if (matches.length !== 1) {
+                throw new Error('Matched ' + matches.length + ' elements.')
+              }
+              return matches[0].href
             })
         `)
         if (channelUrl == null) {
