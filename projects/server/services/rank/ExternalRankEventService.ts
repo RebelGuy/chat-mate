@@ -77,7 +77,7 @@ export default class ExternalRankEventService extends ContextClass {
   public async onYoutubeChannelBanned (streamerId: number, channelName: string, moderatorChannelName: string) {
     const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getYoutubeDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
     if (primaryUserId == null) {
-      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned, but could not find channel. Ignoring.`)
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned, but could not find channel or found multiple channels. Ignoring.`)
       return
     }
 
@@ -93,7 +93,7 @@ export default class ExternalRankEventService extends ContextClass {
   public async onYoutubeChannelUnbanned (streamerId: number, channelName: string, moderatorChannelName: string) {
     const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getYoutubeDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
     if (primaryUserId == null) {
-      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned, but could not find channel. Ignoring.`)
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned, but could not find channel or found multiple channels. Ignoring.`)
       return
     }
 
@@ -109,7 +109,7 @@ export default class ExternalRankEventService extends ContextClass {
   public async onYoutubeChannelTimedOut (streamerId: number, channelName: string, moderatorChannelName: string, durationSeconds: number) {
     const { primaryUserId, ranksForUser, moderatorPrimaryUserId } = await this.channelService.getYoutubeDataForExternalRankEvent(streamerId, channelName, moderatorChannelName)
     if (primaryUserId == null) {
-      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but could not find channel. Ignoring.`)
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but could not find channel or found multiple channels. Ignoring.`)
       return
     }
 

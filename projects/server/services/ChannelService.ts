@@ -7,6 +7,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
+import LogService from '@rebel/server/services/LogService'
 
 /** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
 export const LIVESTREAM_PARTICIPATION_TYPES = 'chatParticipation' as const
@@ -36,13 +37,17 @@ type Deps = Dependencies<{
   channelStore: ChannelStore
   accountService: AccountService
   rankStore: RankStore
+  logService: LogService
 }>
 
 export default class ChannelService extends ContextClass {
+  public readonly name = ChannelService.name
+
   private readonly chatStore: ChatStore
   private readonly channelStore: ChannelStore
   private readonly accountService: AccountService
   private readonly rankStore: RankStore
+  private readonly logService: LogService
 
   public constructor (deps: Deps) {
     super()
@@ -50,6 +55,7 @@ export default class ChannelService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.accountService = deps.resolve('accountService')
     this.rankStore = deps.resolve('rankStore')
+    this.logService = deps.resolve('logService')
   }
 
   /** Returns the active user channel for each primary user. A user's active channel is the one with which the user
@@ -134,20 +140,28 @@ export default class ChannelService extends ContextClass {
 
   /** Transforms data of the rank event into the internal data types. */
   public async getYoutubeDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
-    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName) // todo: wrong function
-    if (channel == null || !isYoutubeChannel(channel)) {
+    const channels = await this.searchChannelsByName(streamerId, channelName)
+    if (channels.length !== 0) {
       return { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
     }
 
-    const userChannel = await this.channelStore.getYoutubeChannelFromChannelId([channel.id]).then(single)
-    const primaryUserId = getPrimaryUserId(userChannel)
+    const channel = single(channels)
+    const primaryUserId = getPrimaryUserId(channel)
 
     const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
     const ranksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
 
-    const moderatorChannel = await this.channelStore.getChannelFromUserNameOrExternalId(moderatorChannelName)
-    const moderatorUserChannel = moderatorChannel != null && isYoutubeChannel(moderatorChannel) ? await this.channelStore.getYoutubeChannelFromChannelId([moderatorChannel.id]).then(single) : null
-    const moderatorPrimaryUserId = moderatorUserChannel != null ? getPrimaryUserId(moderatorUserChannel) : null
+    // we can search a bit more intelligently for moderator channels by reducing the pool of potential matches to actual moderators instead of all users
+    const administrationUserRanks = await this.rankStore.getUserRanksForGroup('administration', streamerId)
+    const modPrimaryUserIds = administrationUserRanks.filter(ur => ur.rank.name === 'mod').map(ur => ur.primaryUserId)
+    const matchingModeratorChannels = await this.searchChannelsByName(streamerId, moderatorChannelName)
+    const moderatorChannels = matchingModeratorChannels.filter(c => modPrimaryUserIds.includes(getPrimaryUserId(c)))
+    if (moderatorChannels.length !== 0) {
+      this.logService.logInfo(this, `Searched for moderator channel '${channelName}' for streamer ${streamerId} but found ${moderatorChannels.length} matches.`)
+    }
+
+    const moderatorChannel = moderatorChannels.length === 1 ? single(moderatorChannels) : null
+    const moderatorPrimaryUserId = moderatorChannel != null ? getPrimaryUserId(moderatorChannel) : null
 
     return { primaryUserId, ranksForUser, moderatorPrimaryUserId }
   }

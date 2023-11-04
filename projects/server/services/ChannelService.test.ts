@@ -29,7 +29,8 @@ beforeEach(() => {
     channelStore: mockChannelStore,
     chatStore: mockChatStore,
     accountService: mockAccountService,
-    rankStore: mockRankStore
+    rankStore: mockRankStore,
+    logService: mock()
   }))
 })
 
