@@ -424,12 +424,12 @@ export default class HelixEventService extends ContextClass {
           )
         } else if (eventType === 'ban') {
           onCreateSubscription = () => this.eventSubBase.onChannelBan(user, async (e) =>
-            await this.externalRankEventService.onTwitchChannelBanned(streamerId, channelName, e.moderatorName, e.reason, e.endDate?.getTime() ?? null)
+            await this.externalRankEventService.onTwitchChannelBanned(streamerId, e.userName, e.moderatorName, e.reason, e.endDate?.getTime() ?? null)
               .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
           )
         } else if (eventType === 'unban') {
           onCreateSubscription = () => this.eventSubBase.onChannelUnban(user, async (e) =>
-            await this.externalRankEventService.onTwitchChannelUnbanned(streamerId, channelName, e.moderatorName)
+            await this.externalRankEventService.onTwitchChannelUnbanned(streamerId, e.userName, e.moderatorName)
               .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
           )
         } else if (eventType === 'mod') {

@@ -40,10 +40,12 @@ export default class ExternalRankEventService extends ContextClass {
     // if the user has other channels, it will cause this event to fire for those channels as well. since the first thing we do
     // when applying a punishment is create a ChatMate rank, we don't have to worry about infinite loops here.
     if (endTime == null && ranksForUser.find(r => r.rank.name === 'ban') == null) {
+      this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was banned. Syncing punishment.`)
       await this.punishmentService.banUser(primaryUserId, streamerId, moderatorPrimaryUserId, reason)
     } else if (endTime != null && ranksForUser.find(r => r.rank.name === 'timeout') == null) {
-      const durationSeconds = (endTime - this.dateTimeHelpers.ts()) / 1000
+      const durationSeconds = Math.round((endTime - this.dateTimeHelpers.ts()) / 1000)
       if (durationSeconds > 0) {
+        this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds}. Syncing punishment.`)
         await this.punishmentService.timeoutUser(primaryUserId, streamerId, moderatorPrimaryUserId, reason, durationSeconds)
       } else {
         this.logService.logWarning(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was timed out, but internal punishment is already active. Ignoring.`)
@@ -64,6 +66,7 @@ export default class ExternalRankEventService extends ContextClass {
     // I think technically this doesn't work consistently/cleanly if the user is both banned and timed out internally, but only timed out on Twitch. in that case, removing the
     // ban rank will remove the Twitch punishment, but trigger another unban event before the internal timeout rank was removed. This means one of the two event handlers may
     // very well fail, but I think it's not an issue considering the rarity of the situation
+    this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was unbanned. Syncing ban/timeout punishments.`)
     if (ranksForUser.find(r => r.rank.name === 'ban') != null) {
       await this.punishmentService.unbanUser(primaryUserId, streamerId, moderatorPrimaryUserId, null)
     }

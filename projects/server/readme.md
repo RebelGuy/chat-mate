@@ -532,7 +532,7 @@ Can return the following errors:
 Applies a punishment of type `ban` to the user, which is essentially a permanent `timeout`. This endpoint may also be used to apply bans to any channels which may not currently be banned.
 
 Request data (body):
-- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `userId` (`int`): *Required.* The primary user to which the punishment should be applied.
 - `message` (`string`): *Optional.* The reason for the punishment.
 
 Returns data with the following properties:
