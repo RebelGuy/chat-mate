@@ -10,6 +10,7 @@ import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient, resetTwitchSubscriptions } from '@rebel/studio/utility/api'
+import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -50,8 +51,8 @@ let successPoller: number | null = null
 export default function TwitchEventStatuses () {
   const [params, setParams] = useSearchParams()
 
-  // Youtube auth also uses the /manager page. the only way to distinguish twitch auth is by checking the presence of the scope param - it should not exist
-  const [isTwitchAuth] = useState(params.get('code') != null && params.get('scope') == null)
+  // params are cleared upon mounting, but retained in state by setting them as the default value of each piece of state.
+  const [isTwitchAuth] = useState(getAuthTypeFromParams(params) === 'twitch')
   const code = isTwitchAuth ? params.get('code') : null
 
   const [refreshToken, updateRefreshToken] = useUpdateKey()

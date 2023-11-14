@@ -10,6 +10,7 @@ import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest, { onConfirmRequest } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { getYoutubeStatus, getChatMateRegisteredUsername, getPrimaryChannels, revokeYoutubeStreamer, authoriseYoutubeStreamer, getYoutubeStreamerLoginUrl, getYoutubeModerators } from '@rebel/studio/utility/api'
+import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -17,8 +18,7 @@ export default function YoutubeStatus () {
   const [params, setParams] = useSearchParams()
 
   // params are cleared upon mounting, but retained in state by setting them as the default value of each piece of state.
-  // Twitch auth also uses the /manager page. the only way to distinguish youtube auth is by checking the presence of the scope param - it should exist
-  const [isYoutubeAuth] = useState(params.get('scope') != null)
+  const [isYoutubeAuth] = useState(getAuthTypeFromParams(params) === 'youtube')
   const code = isYoutubeAuth ? params.get('code') : null
   const [hasCode] = useState(code != null)
 
