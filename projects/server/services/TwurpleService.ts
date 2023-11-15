@@ -360,7 +360,11 @@ export default class TwurpleService extends ContextClass {
 
   private onDisconnected (manually: boolean, reason: Error | undefined): void {
     this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason)
-    this.channelChatStatus.clear()
+    if (this.chatClient.isConnected) {
+      this.logService.logWarning(this, 'ChatClient is not actually disconnected... ignoring')
+    } else {
+      this.channelChatStatus.clear()
+    }
   }
 
   private onParted (channel: string, user: string): void {
