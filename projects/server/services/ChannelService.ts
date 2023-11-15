@@ -21,13 +21,13 @@ export type ConnectedUserChannels = {
 }
 
 export type ExternalRankEventData = {
-  // the user affected by this rank event. null if unknown
+  /** The user affected by this rank event. Null if unknown. */
   primaryUserId: number | null
 
-  // the current ranks of the user
-  ranksForUser: UserRankWithRelations[]
+  /** The current ranks of type 'punishment' of the user. Only provided if `primaryUserId` is not null. */
+  punishmentRanksForUser: UserRankWithRelations[]
 
-  // the moderator that initiated this rank event. null if unkown
+  /** The moderator that initiated this rank event. Null if unkown. */
   moderatorPrimaryUserId: number | null
 }
 
@@ -122,48 +122,48 @@ export default class ChannelService extends ContextClass {
   public async getTwitchDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
     const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName)
     if (channel == null || !isTwitchChannel(channel)) {
-      return { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+      return { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
     }
 
     const userChannel = await this.channelStore.getTwitchChannelFromChannelId([channel.id]).then(single)
     const primaryUserId = getPrimaryUserId(userChannel)
 
     const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
-    const ranksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
+    const punishmentRanksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
 
     const moderatorChannel = await this.channelStore.getChannelFromUserNameOrExternalId(moderatorChannelName)
     const moderatorUserChannel = moderatorChannel != null && isTwitchChannel(moderatorChannel) ? await this.channelStore.getTwitchChannelFromChannelId([moderatorChannel.id]).then(single) : null
     const moderatorPrimaryUserId = moderatorUserChannel != null ? getPrimaryUserId(moderatorUserChannel) : null
 
-    return { primaryUserId, ranksForUser, moderatorPrimaryUserId }
+    return { primaryUserId, punishmentRanksForUser, moderatorPrimaryUserId }
   }
 
   /** Transforms data of the rank event into the internal data types. */
   public async getYoutubeDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
     const channels = await this.searchChannelsByName(streamerId, channelName)
-    if (channels.length !== 0) {
-      return { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    if (channels.length !== 1) {
+      return { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
     }
 
     const channel = single(channels)
     const primaryUserId = getPrimaryUserId(channel)
 
     const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
-    const ranksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
+    const punishmentRanksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
 
     // we can search a bit more intelligently for moderator channels by reducing the pool of potential matches to actual moderators instead of all users
     const administrationUserRanks = await this.rankStore.getUserRanksForGroup('administration', streamerId)
-    const modPrimaryUserIds = administrationUserRanks.filter(ur => ur.rank.name === 'mod').map(ur => ur.primaryUserId)
-    const matchingModeratorChannels = await this.searchChannelsByName(streamerId, moderatorChannelName)
-    const moderatorChannels = matchingModeratorChannels.filter(c => modPrimaryUserIds.includes(getPrimaryUserId(c)))
-    if (moderatorChannels.length !== 0) {
+    const modPrimaryUserIds = administrationUserRanks.filter(ur => ur.rank.name === 'mod' || ur.rank.name === 'owner').map(ur => ur.primaryUserId)
+    const matchingChannelsForModerator = await this.searchChannelsByName(streamerId, moderatorChannelName)
+    const moderatorChannels = matchingChannelsForModerator.filter(c => modPrimaryUserIds.includes(getPrimaryUserId(c)))
+    if (moderatorChannels.length !== 1) {
       this.logService.logInfo(this, `Searched for moderator channel '${channelName}' for streamer ${streamerId} but found ${moderatorChannels.length} matches.`)
     }
 
     const moderatorChannel = moderatorChannels.length === 1 ? single(moderatorChannels) : null
     const moderatorPrimaryUserId = moderatorChannel != null ? getPrimaryUserId(moderatorChannel) : null
 
-    return { primaryUserId, ranksForUser, moderatorPrimaryUserId }
+    return { primaryUserId, punishmentRanksForUser, moderatorPrimaryUserId }
   }
 
   /** Returns channels of the streamer whose current name matches the given name (case insensitive). */

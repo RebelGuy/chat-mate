@@ -38,7 +38,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelBanned'), () => {
   const endTime = now + 10_000
 
   test('Returns early if primary user not found', async () => {
-    const data: ExternalRankEventData = { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    const data: ExternalRankEventData = { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onTwitchChannelBanned(streamerId, channelName, moderatorChannelName, reason, null)
@@ -49,7 +49,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelBanned'), () => {
 
   test('Does not ban the user if they are already banned internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'ban' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onTwitchChannelBanned(streamerId, channelName, moderatorChannelName, reason, null)
@@ -60,7 +60,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelBanned'), () => {
 
   test('Bans the user if they are not banned internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'mute' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onTwitchChannelBanned(streamerId, channelName, moderatorChannelName, reason, null)
@@ -72,7 +72,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelBanned'), () => {
 
   test('Does not time the user out if they are already timed out internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'timeout' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onTwitchChannelBanned(streamerId, channelName, moderatorChannelName, reason, endTime)
@@ -83,7 +83,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelBanned'), () => {
 
   test('Times the user out if they are not timed out internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'mute' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
     mockDateTimeHelpers.ts.calledWith().mockReturnValue(now)
 
@@ -97,7 +97,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelBanned'), () => {
 
 describe(nameof(ExternalRankEventService, 'onTwitchChannelUnbanned'), () => {
   test('Returns early if primary user not found', async () => {
-    const data: ExternalRankEventData = { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    const data: ExternalRankEventData = { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onTwitchChannelUnbanned(streamerId, channelName, moderatorChannelName)
@@ -108,7 +108,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelUnbanned'), () => {
 
   test('Does not unban or untimeout the user if they are not banned or timed out internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'mute' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onTwitchChannelUnbanned(streamerId, channelName, moderatorChannelName)
@@ -120,7 +120,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelUnbanned'), () => {
   test('Unbans and untimeouts the user if they are banned or timed out internally', async () => {
     const rank1 = cast<UserRankWithRelations>({ rank: { name: 'ban' } })
     const rank2 = cast<UserRankWithRelations>({ rank: { name: 'timeout' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank1, rank2], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank1, rank2], moderatorPrimaryUserId }
     mockChannelService.getTwitchDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onTwitchChannelUnbanned(streamerId, channelName, moderatorChannelName)
@@ -134,7 +134,7 @@ describe(nameof(ExternalRankEventService, 'onTwitchChannelUnbanned'), () => {
 
 describe(nameof(ExternalRankEventService, 'onYoutubeChannelBanned'), () => {
   test('Returns early if primary user not found', async () => {
-    const data: ExternalRankEventData = { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    const data: ExternalRankEventData = { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
     mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onYoutubeChannelBanned(streamerId, channelName, moderatorChannelName)
@@ -144,7 +144,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelBanned'), () => {
 
   test('Does not ban user if they are already banned internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'ban' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onYoutubeChannelBanned(streamerId, channelName, moderatorChannelName)
@@ -154,7 +154,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelBanned'), () => {
 
   test('Bans user if they are not banned internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'mute' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onYoutubeChannelBanned(streamerId, channelName, moderatorChannelName)
@@ -166,7 +166,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelBanned'), () => {
 
 describe(nameof(ExternalRankEventService, 'onYoutubeChannelUnbanned'), () => {
   test('Returns early if primary user not found', async () => {
-    const data: ExternalRankEventData = { primaryUserId: null, ranksForUser: [], moderatorPrimaryUserId: null }
+    const data: ExternalRankEventData = { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
     mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onYoutubeChannelUnbanned(streamerId, channelName, moderatorChannelName)
@@ -176,7 +176,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelUnbanned'), () => {
 
   test('Does not unban user if they are not banned internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'mute' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onYoutubeChannelUnbanned(streamerId, channelName, moderatorChannelName)
@@ -186,7 +186,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelUnbanned'), () => {
 
   test('Unbans user if they are banned internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'ban' } })
-    const data: ExternalRankEventData = { primaryUserId, ranksForUser: [rank], moderatorPrimaryUserId }
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
     mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
 
     await externalRankEventService.onYoutubeChannelUnbanned(streamerId, channelName, moderatorChannelName)
