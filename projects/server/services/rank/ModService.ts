@@ -1,12 +1,10 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
-import MasterchatService from '@rebel/server/services/MasterchatService'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import UserService from '@rebel/server/services/UserService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
-import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
 import YoutubeService from '@rebel/server/services/YoutubeService'
@@ -14,9 +12,7 @@ import YoutubeService from '@rebel/server/services/YoutubeService'
 type Deps = Dependencies<{
   rankStore: RankStore
   channelStore: ChannelStore
-  masterchatService: MasterchatService
   twurpleService: TwurpleService
-  chatStore: ChatStore
   logService: LogService
   userService: UserService
   youtubeService: YoutubeService
@@ -27,9 +23,7 @@ export default class ModService extends ContextClass {
 
   private readonly rankStore: RankStore
   private readonly channelStore: ChannelStore
-  private readonly masterchatService: MasterchatService
   private readonly twurpleService: TwurpleService
-  private readonly chatStore: ChatStore
   private readonly logService: LogService
   private readonly userService: UserService
   private readonly youtubeService: YoutubeService
@@ -39,9 +33,7 @@ export default class ModService extends ContextClass {
 
     this.rankStore = deps.resolve('rankStore')
     this.channelStore = deps.resolve('channelStore')
-    this.masterchatService = deps.resolve('masterchatService')
     this.twurpleService = deps.resolve('twurpleService')
-    this.chatStore = deps.resolve('chatStore')
     this.logService = deps.resolve('logService')
     this.userService = deps.resolve('userService')
     this.youtubeService = deps.resolve('youtubeService')
@@ -120,20 +112,8 @@ export default class ModService extends ContextClass {
   }
 
   private async trySetYoutubeMod (streamerId: number, youtubeChannelId: number, isMod: boolean): Promise<YoutubeRankResult> {
-    const lastChatItem = await this.chatStore.getLastChatByYoutubeChannel(streamerId, youtubeChannelId)
-
     const errorSuffix = ' If this is unexpected, please retry the action. Failure to do so may lead to an out-of-sync state with undefined behaviour.'
     const type = isMod ? 'mod' : 'unmod'
-    if (lastChatItem == null) {
-      const error = `Could not ${type} youtube channel ${youtubeChannelId} because no chat item was found for the channel.` + errorSuffix
-      this.logService.logWarning(this, error)
-      return { error, youtubeChannelId }
-    } else if (lastChatItem.contextToken == null) {
-      const error = `Could not ${type} youtube channel ${youtubeChannelId} because the most recent chat item did not contain a context token.` + errorSuffix
-      this.logService.logWarning(this, error)
-      return { error, youtubeChannelId }
-    }
-
     let error: string | null = null
     try {
       if (isMod) {
