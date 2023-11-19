@@ -195,3 +195,37 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelUnbanned'), () => {
     expect(call).toEqual<typeof call>([primaryUserId, streamerId, moderatorPrimaryUserId, null])
   })
 })
+
+describe(nameof(ExternalRankEventService, 'onYoutubeChannelTimedOut'), () => {
+  const timeoutDuration = 60
+
+  test('Returns early if primary user not found', async () => {
+    const data: ExternalRankEventData = { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
+    mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
+
+    await externalRankEventService.onYoutubeChannelTimedOut(streamerId, channelName, moderatorChannelName, timeoutDuration)
+
+    expect(mockPunishmentService.timeoutUser).not.toBeCalled()
+  })
+
+  test('Does not timeout the user if they are already timed out internally', async () => {
+    const rank = cast<UserRankWithRelations>({ rank: { name: 'timeout' } })
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
+    mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
+
+    await externalRankEventService.onYoutubeChannelTimedOut(streamerId, channelName, moderatorChannelName, timeoutDuration)
+
+    expect(mockPunishmentService.timeoutUser).not.toBeCalled()
+  })
+
+  test('Times out the user if they are not already timed out internally', async () => {
+    const rank = cast<UserRankWithRelations>({ rank: { name: 'mute' } })
+    const data: ExternalRankEventData = { primaryUserId, punishmentRanksForUser: [rank], moderatorPrimaryUserId }
+    mockChannelService.getYoutubeDataForExternalRankEvent.calledWith(streamerId, channelName, moderatorChannelName).mockResolvedValue(data)
+
+    await externalRankEventService.onYoutubeChannelTimedOut(streamerId, channelName, moderatorChannelName, timeoutDuration)
+
+    const call = single(mockPunishmentService.timeoutUser.mock.calls)
+    expect(call).toEqual<typeof call>([primaryUserId, streamerId, moderatorPrimaryUserId, null, timeoutDuration])
+  })
+})

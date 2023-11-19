@@ -117,11 +117,11 @@ export default class ExternalRankEventService extends ContextClass {
       return
     }
 
-    if (punishmentRanksForUser.find(r => r.rank.name === 'timeout') != null) {
+    if (punishmentRanksForUser.find(r => r.rank.name === 'timeout') == null) {
       this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds. Syncing punishment.`)
       await this.punishmentService.timeoutUser(primaryUserId, streamerId, moderatorPrimaryUserId, null, durationSeconds)
     } else {
-      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but internal punishment is not active. Ignoring.`)
+      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but internal punishment is already active. Ignoring.`)
       return
     }
   }
