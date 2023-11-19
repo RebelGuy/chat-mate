@@ -95,6 +95,7 @@ import YoutubeService from '@rebel/server/services/YoutubeService'
 import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClientProvider'
 import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
 import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
+import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientFactory'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -203,6 +204,7 @@ const main = async () => {
     .withClass('twurpleService', TwurpleService)
     .withClass('linkStore', LinkStore)
     .withClass('userService', UserService)
+    .withClass('youtubeAuthClientFactory', YoutubeAuthClientFactory)
     .withClass('youtubeAuthProvider', YoutubeAuthProvider)
     .withClass('youtubeApiClientProvider', YoutubeApiClientProvider)
     .withClass('youtubeApiStore', YoutubeApiStore)
@@ -413,8 +415,9 @@ const main = async () => {
 
   // ensure the server can still run if Twitch auth fails, so that we can re-authenticate via the Studio Twitch admin page
   await globalContext.initialise((erroredClass, stage, e) => {
-    if (erroredClass instanceof TwurpleAuthProvider && stage === 'initialise'
-      || erroredClass instanceof YoutubeAuthProvider && e instanceof YoutubeNotAuthorisedError && stage === 'initialise') {
+    if (stage === 'initialise' &&
+      (erroredClass instanceof TwurpleAuthProvider || erroredClass instanceof YoutubeAuthProvider)
+    ) {
       isAdministrativeMode = true
       return 'ignore'
     }

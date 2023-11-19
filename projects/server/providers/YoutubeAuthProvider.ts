@@ -9,6 +9,7 @@ import { compareArrays } from '@rebel/shared/util/arrays'
 import { InconsistentScopesError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
 import { OAuth2Client, Credentials } from 'google-auth-library'
 import { GaxiosError } from 'gaxios'
+import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientFactory'
 
 type Deps = Dependencies<{
   authStore: AuthStore
@@ -18,6 +19,7 @@ type Deps = Dependencies<{
   studioUrl: string
   logService: LogService
   disableExternalApis: boolean
+  youtubeAuthClientFactory: YoutubeAuthClientFactory
 }>
 
 // https://github.com/googleapis/google-api-nodejs-client#oauth2-client
@@ -31,6 +33,7 @@ export default class YoutubeAuthProvider extends ContextClass {
   private readonly studioUrl: string
   private readonly logService: LogService
   private readonly disableExternalApis: boolean
+  private readonly youtubeAuthClientFactory: YoutubeAuthClientFactory
 
   constructor (deps: Deps) {
     super()
@@ -41,6 +44,7 @@ export default class YoutubeAuthProvider extends ContextClass {
     this.studioUrl = deps.resolve('studioUrl')
     this.logService = deps.resolve('logService')
     this.disableExternalApis = deps.resolve('disableExternalApis')
+    this.youtubeAuthClientFactory = deps.resolve('youtubeAuthClientFactory')
   }
 
   public override async initialise (): Promise<void> {
@@ -54,14 +58,15 @@ export default class YoutubeAuthProvider extends ContextClass {
     } else if (!compareScopes(YOUTUBE_SCOPE, token.scope.split(' '))) {
       await this.revokeYoutubeAccessToken(this.adminChannelId)
       this.logService.logError(this, 'The stored application scope differs from the expected scope. The stored authentication details have been removed and ChatMate must be re-authorised by the admin channel.')
-      throw new YoutubeNotAuthorisedError(this.adminChannelId)
+      throw new InconsistentScopesError('stored')
     } else {
       this.logService.logDebug(this, 'Loaded Youtube admin access token')
+      // note: as of now, the token is not used for anything. in the future, it can be used for sending messages from the ChatMate admin channel, for example
     }
   }
 
   public getAuthUrl (isAdmin: boolean) {
-    const client = this.getClient(true)
+    const client = this.getClient(isAdmin)
 
     return client.generateAuthUrl({
       client_id: this.clientId,
@@ -175,11 +180,7 @@ export default class YoutubeAuthProvider extends ContextClass {
 
   // the youtube api won't be used very often, there's no good reason to keep these clients in memorya
   private getClient (isAdmin: boolean): OAuth2Client {
-    return new OAuth2Client({
-      clientId: this.clientId,
-      clientSecret: this.clientSecret,
-      redirectUri: this.getRedirectUri(isAdmin)
-    })
+    return this.youtubeAuthClientFactory.create(this.clientId, this.clientSecret, this.getRedirectUri(isAdmin))
   }
 
   // must match exactly what is set up in the google dev console
