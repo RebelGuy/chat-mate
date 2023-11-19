@@ -2,9 +2,11 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { expectObject, nameof } from '@rebel/shared/testUtils'
+import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
 import { AccessToken } from '@twurple/auth'
 import { single } from '@rebel/shared/util/arrays'
+import { New } from '@rebel/server/models/entities'
+import { YoutubeAuth } from '@prisma/client'
 
 const accessToken: AccessToken = {
   accessToken: 'accessToken1',
@@ -71,6 +73,35 @@ export default () => {
     })
   })
 
+  describe(nameof(AuthStore, 'loadYoutubeAccessToken'), () => {
+    test('Returns access token for channelId', async () => {
+      const channel = 'channel1'
+      const token = 'token1'
+      const refreshToken = 'refreshTOken1'
+      const scope = 'scope1'
+      await db.youtubeAuth.createMany({ data: [
+        { externalYoutubeChannelId: channel, accessToken: token, expiryDate: new Date(), refreshToken: refreshToken, scope: scope },
+        { externalYoutubeChannelId: 'channel2', accessToken: 'token2', expiryDate: new Date(), refreshToken: '', scope: '' }
+      ]})
+
+      const result = await authStore.loadYoutubeAccessToken(channel)
+
+      expect(result).toEqual(expectObject(result, {
+        accessToken: token,
+        refreshToken,
+        scope
+      }))
+    })
+
+    test('Returns null if no token exists for the given channel', async () => {
+      await db.youtubeAuth.create({ data: { externalYoutubeChannelId: 'channel2', accessToken: 'token2', expiryDate: new Date(), refreshToken: '', scope: '' }})
+
+      const result = await authStore.loadYoutubeAccessToken('channel1')
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(AuthStore, 'loadYoutubeWebAccessToken'), () => {
     test('Returns access token for channelId', async () => {
       await db.youtubeWebAuth.createMany({ data: [
@@ -116,6 +147,30 @@ export default () => {
 
     test('Throws if attempting to create a new token without providing a Twitch channel name', async () => {
       await expect(() => authStore.saveTwitchAccessToken(twitchUserId1, null, otherAccessToken)).rejects.toThrow()
+    })
+  })
+
+  describe(nameof(AuthStore, 'saveYoutubeAccessToken'), () => {
+    test('Creates new entry if no access token for the given channel exists yet', async () => {
+      await db.youtubeAuth.create({ data: { externalYoutubeChannelId: 'otherChannel', accessToken: '', expiryDate: new Date(), refreshToken: '', scope: '' }})
+      const channelId = 'channelId'
+      const data: New<YoutubeAuth> = { accessToken: 'accessToken', refreshToken: 'refreshToken', scope: 'scope', expiryDate: new Date(), externalYoutubeChannelId: channelId, timeObtained: new Date() }
+
+      await authStore.saveYoutubeAccessToken(data)
+
+      const stored = await db.youtubeAuth.findUnique({ where: { externalYoutubeChannelId: channelId }})
+      expect(stored).toEqual(expectObject(data))
+    })
+
+    test('Updates existing entry for the given channel', async () => {
+      const channelId = 'channelId'
+      const data: New<YoutubeAuth> = { accessToken: 'accessToken', refreshToken: 'refreshToken', scope: 'scope', expiryDate: new Date(), externalYoutubeChannelId: channelId, timeObtained: new Date() }
+      await db.youtubeAuth.create({ data: { externalYoutubeChannelId: channelId, accessToken: 'oldToken', expiryDate: new Date(), refreshToken: 'oldRefreshToken', scope: 'oldScope' }})
+
+      await authStore.saveYoutubeAccessToken(data)
+
+      const stored = await db.youtubeAuth.findUnique({ where: { externalYoutubeChannelId: channelId }})
+      expect(stored).toEqual(expectObject(data))
     })
   })
 

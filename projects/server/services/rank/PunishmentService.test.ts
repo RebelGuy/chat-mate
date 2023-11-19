@@ -161,7 +161,6 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     expect(youtubeCalls).toEqual<typeof youtubeCalls>([[streamerId1, 3], [streamerId1, 4]])
 
     const twitchCalls = mockTwurpleService.banChannel.mock.calls
-    expect(twitchCalls.length).toBe(2)
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1, 'test'], [streamerId1, 2, 'test']])
   })
 
@@ -510,8 +509,8 @@ describe(nameof(PunishmentService, 'untimeoutUserExternal'), () => {
 
     expect(single(result.twitchResults).error).toBeNull()
     expect(single(result.youtubeResults).error).toBeNull()
-    expect(mockYoutubeService.untimeoutYoutubeChannel.mock.calls.length).toBe(1)
-    expect(mockTwurpleService.untimeout.mock.calls.length).toBe(1)
+    expect(single(mockYoutubeService.untimeoutYoutubeChannel.mock.calls)).toEqual([streamerId, youtubeChannel])
+    expect(single(mockTwurpleService.untimeout.mock.calls)).toEqual([streamerId, twitchChannel])
     expect(mockRankStore.removeUserRank.mock.calls.length).toBe(0)
   })
 })
