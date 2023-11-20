@@ -2,7 +2,7 @@ import { Rank, YoutubeChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { cast, expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import WebService from '@rebel/server/services/WebService'
@@ -92,8 +92,8 @@ describe(nameof(AdminService, 'getYoutubeChannelName'), () => {
     const youtubeChannelId = 5
     const youtubeChannelName = 'testName'
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(mockChannelId)
-      .mockResolvedValue(cast<YoutubeChannel>({ id: youtubeChannelId }))
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectObject<number[]>([youtubeChannelId]))
+      .mockResolvedValue(cast<YoutubeChannel>({ id: youtubeChannelId, youtubeId: mockChannelId }))
+    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId]))
       .mockResolvedValue([cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: youtubeChannelName }]}} })])
 
     const result = await adminService.getYoutubeChannelName()
