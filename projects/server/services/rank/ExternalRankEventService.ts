@@ -51,10 +51,10 @@ export default class ExternalRankEventService extends ContextClass {
         this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds}. Syncing punishment.`)
         await this.punishmentService.timeoutUser(primaryUserId, streamerId, moderatorPrimaryUserId, reason, durationSeconds, ignoreOptions)
       } else {
-        this.logService.logWarning(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was timed out, but internal punishment is already active. Ignoring.`)
+        this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was timed out, but internal punishment is already active. Ignoring.`)
       }
     } else {
-      this.logService.logWarning(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was banned/timed out, but internal punishment is already active. Ignoring.`)
+      this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was banned/timed out, but internal punishment is already active. Ignoring.`)
       return
     }
   }
@@ -72,11 +72,19 @@ export default class ExternalRankEventService extends ContextClass {
     // I think technically this doesn't work consistently/cleanly if the user is both banned and timed out internally, but only timed out on Twitch. in that case, removing the
     // ban rank will remove the Twitch punishment, but trigger another unban event before the internal timeout rank was removed. This means one of the two event handlers may
     // very well fail, but I think it's not an issue considering the rarity of the situation
-    this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was unbanned. Syncing ban/timeout punishments.`)
-    if (punishmentRanksForUser.find(r => r.rank.name === 'ban') != null) {
+    const requiresBanSync = punishmentRanksForUser.find(r => r.rank.name === 'ban') != null
+    const requiresTimeoutSync = punishmentRanksForUser.find(r => r.rank.name === 'timeout') != null
+
+    if (requiresBanSync || requiresTimeoutSync) {
+      this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was unbanned. Syncing ban/timeout punishments.`)
+    } else {
+      this.logService.logInfo(this, `Received notification that Twitch channel ${channelName} for streamer ${streamerId} was unbanned, but an internal ban/timeout punishment is not active. Ignoring.`)
+    }
+
+    if (requiresBanSync) {
       await this.punishmentService.unbanUser(primaryUserId, streamerId, moderatorPrimaryUserId, null, ignoreOptions)
     }
-    if (punishmentRanksForUser.find(r => r.rank.name === 'timeout') != null) {
+    if (requiresTimeoutSync) {
       await this.punishmentService.untimeoutUser(primaryUserId, streamerId, moderatorPrimaryUserId, null, ignoreOptions)
     }
   }
@@ -96,7 +104,7 @@ export default class ExternalRankEventService extends ContextClass {
       this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned. Syncing punishment.`)
       await this.punishmentService.banUser(primaryUserId, streamerId, moderatorPrimaryUserId, null, ignoreOptions)
     } else {
-      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned, but internal punishment is already active. Ignoring.`)
+      this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was banned, but internal punishment is already active. Ignoring.`)
       return
     }
   }
@@ -115,7 +123,7 @@ export default class ExternalRankEventService extends ContextClass {
       this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned. Syncing punishment.`)
       await this.punishmentService.unbanUser(primaryUserId, streamerId, moderatorPrimaryUserId, null, ignoreOptions)
     } else {
-      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned, but internal punishment is not active. Ignoring.`)
+      this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was unbanned, but internal punishment is not active. Ignoring.`)
       return
     }
   }
@@ -134,7 +142,7 @@ export default class ExternalRankEventService extends ContextClass {
       this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds. Syncing punishment.`)
       await this.punishmentService.timeoutUser(primaryUserId, streamerId, moderatorPrimaryUserId, null, durationSeconds, ignoreOptions)
     } else {
-      this.logService.logWarning(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but internal punishment is already active. Ignoring.`)
+      this.logService.logInfo(this, `Received notification that Youtube channel ${channelName} for streamer ${streamerId} was timed out for ${durationSeconds} seconds, but internal punishment is already active. Ignoring.`)
       return
     }
   }
