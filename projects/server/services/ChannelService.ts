@@ -21,10 +21,13 @@ export type ConnectedUserChannels = {
 }
 
 export type ExternalRankEventData = {
-  /** The user affected by this rank event. Null if unknown. */
-  primaryUserId: number | null
+  /** The user affected by this rank event. */
+  primaryUserId: number
 
-  /** The current ranks of type 'punishment' of the user. Only provided if `primaryUserId` is not null. */
+  /** The internal Youtube/Twitch channel id. */
+  channelId: number
+
+  /** The current ranks of type 'punishment' of the user. */
   punishmentRanksForUser: UserRankWithRelations[]
 
   /** The moderator that initiated this rank event. Null if unkown. */
@@ -118,14 +121,15 @@ export default class ChannelService extends ContextClass {
   }
 
   /** Transforms data of the rank event into the internal data types. */
-  public async getTwitchDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
+  public async getTwitchDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData | null> {
     const channel = await this.channelStore.getChannelFromUserNameOrExternalId(channelName)
     if (channel == null || !isTwitchChannel(channel)) {
-      return { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
+      return null
     }
 
     const userChannel = await this.channelStore.getTwitchChannelFromChannelId([channel.id]).then(single)
     const primaryUserId = getPrimaryUserId(userChannel)
+    const channelId = userChannel.platformInfo.channel.id
 
     const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
     const punishmentRanksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
@@ -134,18 +138,19 @@ export default class ChannelService extends ContextClass {
     const moderatorUserChannel = moderatorChannel != null && isTwitchChannel(moderatorChannel) ? await this.channelStore.getTwitchChannelFromChannelId([moderatorChannel.id]).then(single) : null
     const moderatorPrimaryUserId = moderatorUserChannel != null ? getPrimaryUserId(moderatorUserChannel) : null
 
-    return { primaryUserId, punishmentRanksForUser, moderatorPrimaryUserId }
+    return { primaryUserId, channelId, punishmentRanksForUser, moderatorPrimaryUserId }
   }
 
   /** Transforms data of the rank event into the internal data types. */
-  public async getYoutubeDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData> {
+  public async getYoutubeDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string): Promise<ExternalRankEventData | null> {
     const channels = await this.searchChannelsByName(streamerId, channelName)
     if (channels.length !== 1) {
-      return { primaryUserId: null, punishmentRanksForUser: [], moderatorPrimaryUserId: null }
+      return null
     }
 
     const channel = single(channels)
     const primaryUserId = getPrimaryUserId(channel)
+    const channelId = channel.platformInfo.channel.id
 
     const ranks = await this.rankStore.getUserRanksForGroup('punishment', streamerId)
     const punishmentRanksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
@@ -162,7 +167,7 @@ export default class ChannelService extends ContextClass {
     const moderatorChannel = moderatorChannels.length === 1 ? single(moderatorChannels) : null
     const moderatorPrimaryUserId = moderatorChannel != null ? getPrimaryUserId(moderatorChannel) : null
 
-    return { primaryUserId, punishmentRanksForUser, moderatorPrimaryUserId }
+    return { primaryUserId, channelId, punishmentRanksForUser, moderatorPrimaryUserId }
   }
 
   /** Returns channels of the streamer whose current name matches the given name (case insensitive). */
