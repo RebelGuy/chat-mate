@@ -65,6 +65,27 @@ Problem: Streamlabs donations are not being received by ChatMate.
 Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
 
 # Change Log
+## v1.28 - The Youtube Update [20/11/2023]
+- Server
+  - ChatMate now listens to punishment updates on Twitch and Youtube
+    - If a user is puished externally, ChatMate will trigger a sync which propagates the rank update internally, and externally to any other connected channels
+    - Youtube does not provide a proper API for this, and the Youtube implementation is crude and unreliable, but technically functional in the majority of cases
+  - ChatMate now listens to deleted messages
+    - Deleted messages are no longer accessible via the ChatMate API
+  - Added ChatMate as a Google OAuth application
+    - Streamers can authorise ChatMate to access the API on their behalf  
+  - ChatMate now performs rank-related actions on Youtube via the official API instead of Masterchat
+    - The default API quota is extremely limited
+    - Timeouts can now be an arbitrary duration between 1 second and 1 day, instead of the previous static 5 minutes
+  - Added the ability to control verbosity of logging via environment variables
+- Studio
+  - The Youtube status section now offers the ability for streamers to authorise ChatMate to act on their behalf when making requests to Youtube
+  - The moderator status of ChatMate on a streamer's channel is now more reliable
+  - Minor UI fixes
+- Masterchat
+  - Added listeners for ban/unban/timeout actions
+  - Added a listener for deleted message actions
+
 ## v1.27 - The Donation Update v3 [4/8/2023]
 - Server
   - Added support for donators to customise their rank name
