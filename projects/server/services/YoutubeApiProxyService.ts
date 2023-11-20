@@ -13,7 +13,7 @@ import { GaxiosError } from 'gaxios'
 // - why is their api so horribly slow?
 // - why is their api so horribly limited? (can't list banned channels?!)
 // - why is their api quota so unreasonable? (we would love to use it to fetch messages, but at the recommended fetch rate (2 per second) we would burn through our daily quota within 2-3 hours, for a single channel)
-// - why are their error messages inconsisten? (304 if we try to ban a channel that is already banned - wtf)
+// - why are their error messages inconsistent? (304 if we try to ban a channel that is already banned - wtf)
 // - why, if a timeout is just a temporary type of ban, can we remove permanent bans using the api, but not timeouts?
 // - why?
 

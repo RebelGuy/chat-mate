@@ -105,7 +105,6 @@ export default class YoutubeAuthProvider extends ContextClass {
     this.logService.logInfo(this, `Youtube channel ${externalChannelId} (isAdmin: ${isAdmin}) has authorised ChatMate.`)
   }
 
-  // admin auth: used for managing moderators. streamer auth: used for punishments
   public async getAuth (externalChannelId: string): Promise<OAuth2Client>
   public async getAuth (externalChannelId: 'admin'): Promise<OAuth2Client>
   public async getAuth (externalChannelId: string | 'admin'): Promise<OAuth2Client> {

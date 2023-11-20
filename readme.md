@@ -61,6 +61,9 @@ Passwords:
 Problem: 401 (Unauthorised) error from Twitch when a streamer attempts to initiate a moderation request, such as banning a user. The error message reads something like "The ID in moderator_id must match the user ID found in the request’s OAuth token".
 Solution: Most likely the user has authorised ChatMate using the wrong Twitch account. They should refresh their authorisation via the Studio stream manager using the correct account.
 
+Problem: Streamlabs donations are not being received by ChatMate.
+Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
+
 # Change Log
 ## v1.27 - The Donation Update v3 [4/8/2023]
 - Server

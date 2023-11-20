@@ -108,7 +108,7 @@ export default class AdminController extends ControllerBase {
 
   @GET
   @Path('/youtube/login')
-  public async getTYoutubeLoginUrl (): Promise<GetYoutubeLoginUrlResponse> {
+  public async getYoutubeLoginUrl (): Promise<GetYoutubeLoginUrlResponse> {
     const builder = this.registerResponseBuilder<GetYoutubeLoginUrlResponse>('GET /youtube/login')
 
     try {

@@ -179,17 +179,6 @@ export default class MasterchatFetchService extends ContextClass {
         }
       }
 
-      // the moderation messages are inconsistent and it is simply not feasible to detect reliably if a user was banned/timed out.
-      // the first action received as part of a ban/time out is markChatItemsByAuthorAsDeletedAction. this has no timing information,
-      // so we don't even know when it occurred (which is a problem because we sometimes receive duplicate messages and don't want
-      // to double-process a moderation action).
-      // there is, however, one special case where we can tell: the hideUserAction/unhideUserAction. they are only emitted
-      // *sometimes* (why?!) and contain enough information for us to act.
-      // there is no such mechanism for time outs - we simply don't have enough information to act on these actions.
-
-      // hideAction: if accompanied by markChatItemsByAuthorAsDeletedAction, we can get the user id from that action
-      // unhideAction: no accompanying action
-
       for (const action of response.actions.filter(a => !isAddChatAction(a))) {
         let actionTime: number | null = null
         if ('timestampUsec' in action) {

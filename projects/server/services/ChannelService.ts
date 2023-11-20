@@ -31,7 +31,6 @@ export type ExternalRankEventData = {
   moderatorPrimaryUserId: number | null
 }
 
-
 type Deps = Dependencies<{
   chatStore: ChatStore
   channelStore: ChannelStore

@@ -411,6 +411,8 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(400, 'User does not have a primary Youtube channel.')
       }
 
+      // certainly we could just get the list of moderators from the Youtube API, but that is very
+      // expensive and we are calling this endpoint quite often in the debug card
       const status = await this.masterchatService.getChatMateModeratorStatus(streamer.id)
 
       let chatMateIsAuthorised: boolean

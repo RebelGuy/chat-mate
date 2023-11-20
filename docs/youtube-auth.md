@@ -40,4 +40,4 @@ Youtube access tokens are valid for only 1 hour, and are automatically refreshed
 - After testing the app and ensuring everything works, publish the application on the OAuth consent screen page
 
 ## Verification
-Since our OAuth app is requesting access to sensitive data, Youtube is requiring us to jump one last major hurdle before things will work. Unverified apps show a warning to the user if they attempt to complete authorisation, and includes a 100 user cap. I don't think it is required that we get this done yet, but we will need to do it at some point. It appears that the process is length and complicated.
+Since our OAuth app is requesting access to sensitive data, Youtube is requiring us to jump one last major hurdle before things will work. Unverified apps show a warning to the user if they attempt to complete authorisation, and includes a 100 user cap. I don't think it is required that we get this done yet, but we will need to do it at some point. It appears that the process is lengthy and complicated.
