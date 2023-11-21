@@ -17,14 +17,15 @@ Youtube access tokens are valid for only 1 hour, and are automatically refreshed
 # Setting up a new Application
 (This is following the instructions in and around https://github.com/googleapis/google-api-nodejs-client#oauth2-client)
 
-1. Go to the developer console: https://console.cloud.google.com/apis/credentials?pli=1&project=shorts-330419
+1. Go to the developer console: https://console.cloud.google.com
 2. Create a new project
-3. Add the Youtube Data API v3 to the project's enabled apis (https://console.cloud.google.com/apis/library?authuser=2&project=chatmate-local&supportedpurview=project)
-4. Create oauth consent screen
+3. Add the Youtube Data API v3 to the project's enabled apis (https://console.cloud.google.com/apis/library)
+4. Create the OAuth consent screen (this is incidentally also the page we should go to later on when preparing for verification)
+  - Select the External user type
   - Configure the consent screen (only need to fill in mandatory fields)
   - Configure the scopes
     - `https://www.googleapis.com/auth/youtube`: Manage the user's YouTube account
-    - `https://www.googleapis.com/auth/youtube.readonly`
+    - `https://www.googleapis.com/auth/youtube.readonly`: Probably need it for something
   - Add test users (accounts that can authorise the new client in the testing stage)
     - chat_mate_local@proton.me
     - chat_mate_prod@proton.me
@@ -32,7 +33,7 @@ Youtube access tokens are valid for only 1 hour, and are automatically refreshed
     - chatmatetest1@gmail.com
     - chatmatetest2@gmail.com
     - rebelguysminecaft@gmail.com
-- Create oauth client id. This identifies ChatMate to google
+- Create OAuth client ID. This identifies ChatMate to Google
   - Web Application
   - redirect URIs:
     - {chat-mate-studio}/admin/youtube

@@ -1,5 +1,5 @@
 ChatMate is a helper tool for livestreamers and viewers. It consists of three main parts:
-- Server (`./projects/server`): Node.js express app that runs the core logic for ChatMate and directly interacts with YouTube (via [Masterchat](https://github.com/sigvt/masterchat/)), Twitch (via [Twurple](https://github.com/twurple/twurple)), and the MySQL database (via [Prisma](https://github.com/prisma/prisma)). Exposes a collection of REST API endpoints.
+- Server (`./projects/server`): Node.js express app that runs the core logic for ChatMate and directly interacts with YouTube (via the [Youtube API](https://developers.google.com/youtube/v3/live/docs) and [Masterchat](https://github.com/sigvt/masterchat/)), Twitch (via [Twurple](https://github.com/twurple/twurple)), and the MySQL database (via [Prisma](https://github.com/prisma/prisma)). Exposes a collection of REST API endpoints.
 - Studio (`./projects/studio`): [React](https://github.com/facebook/react) web interface for managing streamer and viewer data. It communicates with the server API endpoints.
 - Client ([`chat-mate-client`](https://github.com/RebelGuy/chat-mate-client)): Minecraft 1.8.9 mod for viewing and managing livestreams and viewers. Contains additional streamer tools that do not communicate with the server.
 
@@ -42,11 +42,13 @@ If the string `--skip-studio` is included in the commit message, the Studio proj
 ## ChatMate admin channels
 External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`. ChatMate assumes that this registered user exists in the database.
 
-| Environment | Email | YouTube Name* | YouTube Channel ID | Twitch Name | Twitch App Name | Twitch App Client ID |
-| --- | --- | --- | --- | --- | --- | --- |
-| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig)* | UCobq78RdXWvXlG1jcRjkTig | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
-| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA)* | UCEM2zbU-YVO6BMF_fukrdUA | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
-| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g)* | UCY-5SHtJqoKGqm2YmOMOm_g | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
+For more info about the OAuth applications, refer to the docs for [Youtube](./docs/youtube-auth.md)/[Twitch](./docs/youtube-auth.md).
+
+| Environment | Email | YouTube Name* | YouTube Channel ID | Youtube App Client ID | Twitch Name | Twitch App Name | Twitch App Client ID |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig)* | UCobq78RdXWvXlG1jcRjkTig | 419723469636-bnl40h64tppr2ag795od7ruvsispjfsu.apps.googleusercontent.com | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
+| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA)* | UCEM2zbU-YVO6BMF_fukrdUA | 54178587733-gnkp3m4mrkh5hmic2gb680gqlrfiqo2h.apps.googleusercontent.com | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
+| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g)* | UCY-5SHtJqoKGqm2YmOMOm_g | 909444975820-bmvfuvu7a1qee34acn75gmtn0e39lk0b.apps.googleusercontent.com | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
 
 *YouTube appears to be prohibiting the word "mate" in the channel name.
 

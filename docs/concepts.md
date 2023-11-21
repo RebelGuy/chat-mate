@@ -9,7 +9,7 @@ To authenticate a request, first log in via the `/account/register` or `/account
 Since the majority of ChatMate's data is saved against a particular streamer, and kept isolated therein, most API endpoints only make sense within a streamer context. As such, they require the `X-Streamer` header to be set to the streamer's registered user's username when making a request. In ChatMate Studio, this is managed via the streamer dropdown menu. In the Client, it is set to the logged-in user's name.
 
 # Streamers and livestreams
-Streamers are users that have special permissions not otherwise granted to normal users. They are identified by an entry in the `streamer` table and assigned an `owner` rank in the context of that `streamer` entry.
+Streamers are users that have special permissions not otherwise granted to normal users. They are identified by an entry in the `streamer` table and assigned an `owner` rank in the context of that `streamer`.
 
 For a normal user to get to the stage of livestreaming, the following steps must be taken:
 - [Link](#channel-linking) the streaming channels to their ChatMate account.
@@ -32,22 +32,34 @@ For a normal user to get to the stage of livestreaming, the following steps must
 # Ranks and punishments
 Ranks are permanent or temporary tags added to users that can have side effects. The set of known tags is stored in the `rank` table, while manifestations of the ranks are stored in the `user_rank` table. Ranks allow us to permission-gate features, such as streamer-specific actions (setting a livestream, for example) or custom emojis (in the form of rank whitelists).
 
-A rank is considered active if it is permanent (no expiration time) or its expiration time is in the future, and if it is not revoked (its `revokedTime` column is `null`). A user can only have one active rank per context at any given time. Attempting to add a duplicate rank will be rejected on the database-level. A context can be either a streamer context, or global context (streamer-agnostic).
+A rank is considered active if it is permanent (no expiration time) or its expiration time is in the future, and if it is not revoked (its `revokedTime` column is `null`). A user can only have one active rank per context per type at any given time. Attempting to add a duplicate rank will be rejected on the database-level. A context can be either a streamer context, or global context (streamer-agnostic, where `streamer` is set to `null`).
 
-Donation ranks are applied automatically when a ChatMate user is linked to a Streamlabs donation (and similarly will be revoked if a user is unlinked).
+Ranks are sub-divided into groups according to their usage. The current groups are `administration`, `donation`, `punishment`, and `cosmetic`.
+
+Donation ranks are applied automatically when a ChatMate user is [linked to a Streamlabs donation](#donations) (and similarly will be revoked if a user is unlinked).
 - `donator` rank: The user has made a donation. Active for 6 months.
 - `supporter` rank: The user has made at least $50 in donations over the last 6 months. Active for 6 months.
 - `member` rank: The user has made a donation at least once every month for at least 3 months in a row. Active for 1 month.
 
 In the future, the parameters for the donator ranks (and possibly the set of donator ranks themselves) will be customisable by streamers.
 
-Punishment ranks are applied by streamers. For timeouts or bans (or revokations thereof), the punishment is propagated to YouTube and/or Twitch.
+Punishment ranks are applied by streamers. For timeouts or bans (or revokations thereof), the punishment is propagated to all ofthe user's connected YouTube/Twitch channels to be applied externally.
 - `ban` rank: All of the user's channels are banned on YouTube/Twitch.
 - `timeout` rank: All of the user's channels are timed out on YouTube/Twitch.
 - `mute` rank: The user's messages are hidden in the Client (internal punishment only).
 - Users with an active punishment will not receive any experience.
 
-Assigning the `mod` rank to a user will add all of the user's channels as a livestream moderator on YouTube/Twitch. Since the ChatMate YouTube channel from which we are making requests does not have access to mod/unmod other channels, this is currently broken on YouTube until using the YouTube API.
+ChatMate listens to Youtube/Twitch for punishments initiated externally, and synchronises the punishment across all other connected channels and internally. Masterchat attempts to listen to Youtube punishments (since the functionality is not possible via the Youtube API), but has been behaving inconsistently. If an external punishment was failed to be detected by ChatMate, streamers can manually trigger a synchronisation by issuing the ChatMate punishment rank manually.
+
+While techically possible, issuing both the `ban` and `timeout` punishments to the same user is discouraged as it leads to undefined behaviour.
+
+Administration ranks represent those ranks with special permissions that provide access to exclusive features.
+- `mod` rank: The user can issue punishments to other users. Assigning this rank to a user will add all of the user's channels as a livestream moderator on YouTube/Twitch, similar to the punishment ranks.
+- `owner` rank: Given to the streamer for managing their livestream settings in ChatMate.
+- `admin` rank: Global rank (i.e. valid across all streamers) that gives the user access to everything and provides special management abilities, such as manually linking or unlinking channels.
+
+Cosmetic ranks do not grant additional access to any resources, but is purely visual.
+- `famous` rank: Intended to be given to users that are well-known. Streamers (`owner` rank recipients) have access to issue this rank to any other user.
 
 # Users
 There are two main groups of users: **registered users** (defined in the `registered_user` table) and **chat users** (`chat_user` table).
@@ -89,4 +101,6 @@ The linking feature is yet to be properly tested "in the field". As such, each e
 > Should the `LinkCommand` fail to execute due to an unknown error, the link attempt will not be `release`d, and any future link attempts by any other users will be immediately rejected to protect the DB data integrity. An admin is required to review the link attempt's logs and check the data integrity. Depending on the location of the error, some data may need to be manually unlinked. Once the all-clear is given, the link attempt can be released.
 
 # Donations
-If a streamer has provided a valid socket token, ChatMate will be able to listen to Streamlabs donations for the streamer via a Websocket connection. The streamer then has the ability to link Streamlabs donations to a ChatMate user, which will trigger [side effects](#ranks-and-punishments). If the donator is logged into Streamlabs, the donation data will be accompanied by a streamlabs user ID. A donation from that user must be linked only once to a ChatMate user for ChatMate to infer the link for all of the user's other donations.
+If a streamer has provided a valid socket token, ChatMate will be able to listen to Streamlabs donations for the streamer via a Websocket connection. The streamer then has the ability to link Streamlabs donations to a ChatMate user, which will trigger [side effects](#ranks-and-punishments). If the donator is logged into Streamlabs, the donation data will be accompanied by a streamlabs user ID. A donation from that user needs to be linked only once to a ChatMate user for ChatMate to infer the link for all of the user's other donations.
+
+Donations can be soft-deleted, after which they will no longer be available as part of any donation endpoints. Upon deleting a donation, the linked user's [donation ranks](#ranks-and-punishments) will be re-calculated.
