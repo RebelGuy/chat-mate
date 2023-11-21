@@ -14,6 +14,7 @@ import { assertUnreachable } from '@rebel/shared/util/typescript'
 export type TwitchStreamerChannel = {
   streamerId: number
   twitchChannelName: string
+  internalChannelId: number
 }
 
 type Deps = Dependencies<{
@@ -47,7 +48,7 @@ export default class StreamerChannelService extends ContextClass {
   public async getAllTwitchStreamerChannels (): Promise<TwitchStreamerChannel[]> {
     const streamers = await this.streamerStore.getStreamers()
     const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(s => s.id))
-    return nonNull(primaryChannels.map(c => c.twitchChannel != null ? { streamerId: c.streamerId, twitchChannelName: getUserName(c.twitchChannel) } : null))
+    return nonNull(primaryChannels.map(c => c.twitchChannel != null ? { streamerId: c.streamerId, twitchChannelName: getUserName(c.twitchChannel), internalChannelId: c.twitchChannel.platformInfo.channel.id } : null))
   }
 
   /** Case insensitive. Returns a non-null value only if the channel exists and is the primary Twitch channel of the streamer. */

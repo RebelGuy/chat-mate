@@ -5,6 +5,7 @@ import { PublicDonationData } from '@rebel/api-models/public/event/PublicDonatio
 import { PublicLevelUpData } from '@rebel/api-models/public/event/PublicLevelUpData'
 import { PublicNewTwitchFollowerData } from '@rebel/api-models/public/event/PublicNewTwitchFollowerData'
 import { PublicNewViewerData } from '@rebel/api-models/public/event/PublicNewViewerData'
+import { PublicChatMessageDeletedData } from '@rebel/api-models/public/event/PublicChatMessageDeletedData'
 import { PublicLivestreamStatus } from '@rebel/api-models/public/status/PublicLivestreamStatus'
 import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
@@ -31,7 +32,9 @@ import { keysOf } from '@rebel/shared/util/objects'
 import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, PATCH, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse } from '@rebel/api-models/schema/streamer'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, GetYoutubeModeratorsResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
+import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
+import YoutubeService from '@rebel/server/services/YoutubeService'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -46,6 +49,8 @@ type Deps = ControllerDependencies<{
   twurpleStatusService: StatusService
   chatMateEventService: ChatMateEventService
   livestreamService: LivestreamService
+  youtubeAuthProvider: YoutubeAuthProvider
+  youtubeService: YoutubeService
 }>
 
 @Path(buildPath('streamer'))
@@ -62,6 +67,8 @@ export default class StreamerController extends ControllerBase {
   private readonly twurpleStatusService: StatusService
   private readonly chatMateEventService: ChatMateEventService
   private readonly livestreamService: LivestreamService
+  private readonly youtubeAuthProvider: YoutubeAuthProvider
+  private readonly youtubeService: YoutubeService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -77,6 +84,8 @@ export default class StreamerController extends ControllerBase {
     this.twurpleStatusService = deps.resolve('twurpleStatusService')
     this.chatMateEventService = deps.resolve('chatMateEventService')
     this.livestreamService = deps.resolve('livestreamService')
+    this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
+    this.youtubeService = deps.resolve('youtubeService')
   }
 
   @GET
@@ -149,7 +158,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireRank('admin'))
   public async approveApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-      request: ApproveApplicationRequest
+    request: ApproveApplicationRequest
   ): Promise<ApproveApplicationResponse> {
     const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve')
 
@@ -170,7 +179,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireRank('admin'))
   public async rejectApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-      request: RejectApplicationRequest
+    request: RejectApplicationRequest
   ): Promise<RejectApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/reject')
 
@@ -196,7 +205,7 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireAuth)
   public async withdrawApplication (
     @PathParam('streamerApplicationId') streamerApplicationId: number,
-      request: WithdrawApplicationRequest
+    request: WithdrawApplicationRequest
   ): Promise<WithdrawApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/withdraw')
 
@@ -238,7 +247,8 @@ export default class StreamerController extends ControllerBase {
       return builder.success({
         youtubeChannelId: primaryChannels.youtubeChannel?.platformInfo.channel.id ?? null,
         twitchChannelId: primaryChannels.twitchChannel?.platformInfo.channel.id ?? null,
-        twitchChannelName: primaryChannels.twitchChannel != null ? getUserName(primaryChannels.twitchChannel) : null
+        twitchChannelName: primaryChannels.twitchChannel != null ? getUserName(primaryChannels.twitchChannel) : null,
+        youtubeChannelName: primaryChannels.youtubeChannel != null ? getUserName(primaryChannels.youtubeChannel) : null
       })
     } catch (e: any) {
       return builder.failure(e)
@@ -396,8 +406,127 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(403, 'User is not a streamer.')
       }
 
+      const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamer.id)
+      if (externalChannelId == null) {
+        return builder.failure(400, 'User does not have a primary Youtube channel.')
+      }
+
+      // certainly we could just get the list of moderators from the Youtube API, but that is very
+      // expensive and we are calling this endpoint quite often in the debug card
       const status = await this.masterchatService.getChatMateModeratorStatus(streamer.id)
-      return builder.success({ chatMateIsModerator: status.isModerator, timestamp: status.time })
+
+      let chatMateIsAuthorised: boolean
+      try {
+        await this.youtubeAuthProvider.getAuth(externalChannelId)
+        chatMateIsAuthorised = true
+      } catch (e: any) {
+        chatMateIsAuthorised = false
+      }
+
+      return builder.success({
+        chatMateIsModerator: status.isModerator,
+        timestamp: status.time,
+        chatMateIsAuthorised
+      })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/youtube/login')
+  @PreProcessor(requireAuth)
+  public async getYoutubeLoginUrl (): Promise<GetYoutubeLoginUrlResponse> {
+    const builder = this.registerResponseBuilder<GetYoutubeLoginUrlResponse>('GET /youtube/login')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamer.id)
+      if (externalChannelId == null) {
+        return builder.failure(400, 'User does not have a primary Youtube channel.')
+      }
+
+      const url = this.youtubeAuthProvider.getAuthUrl(false)
+
+      return builder.success({ url })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/youtube/authorise')
+  @PreProcessor(requireAuth)
+  public async authoriseYoutube (
+    @QueryParam('code') code: string
+  ): Promise<YoutubeAuthorisationResponse> {
+    const builder = this.registerResponseBuilder<YoutubeAuthorisationResponse>('POST /youtube/authorise')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamer.id)
+      if (externalChannelId == null) {
+        return builder.failure(400, 'User does not have a primary Youtube channel.')
+      }
+
+      await this.youtubeAuthProvider.authoriseChannel(code, externalChannelId)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/youtube/revoke')
+  @PreProcessor(requireAuth)
+  public async revoke (): Promise<YoutubeRevocationResponse> {
+    const builder = this.registerResponseBuilder<YoutubeRevocationResponse>('POST /youtube/revoke')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamer.id)
+      if (externalChannelId == null) {
+        return builder.failure(400, 'User does not have a primary Youtube channel.')
+      }
+
+      await this.youtubeAuthProvider.revokeYoutubeAccessToken(externalChannelId)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/youtube/moderators')
+  @PreProcessor(requireAuth)
+  public async getYoutubeChannelModerators (): Promise<GetYoutubeModeratorsResponse> {
+    const builder = this.registerResponseBuilder<GetYoutubeModeratorsResponse>('GET /youtube/moderators')
+
+    try {
+      const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
+      if (streamer == null) {
+        return builder.failure(403, 'User is not a streamer.')
+      }
+
+      const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamer.id)
+      if (externalChannelId == null) {
+        return builder.failure(400, 'User does not have a primary Youtube channel.')
+      }
+
+      const mods = await this.youtubeService.getMods(streamer.id)
+      return builder.success({ moderators: mods })
     } catch (e: any) {
       return builder.failure(e)
     }
@@ -447,6 +576,7 @@ export default class StreamerController extends ControllerBase {
         let newTwitchFollowerData: PublicNewTwitchFollowerData | null = null
         let donationData: PublicDonationData | null = null
         let newViewerData: PublicNewViewerData | null = null
+        let chatMessageDeletedData: PublicChatMessageDeletedData | null = null
 
         if (event.type === 'levelUp') {
           const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
@@ -476,6 +606,10 @@ export default class StreamerController extends ControllerBase {
           newViewerData = {
             user: user
           }
+        } else if (event.type === 'chatMessageDeleted') {
+          chatMessageDeletedData = {
+            chatMessageId: event.chatMessageId
+          }
         } else {
           assertUnreachable(event)
         }
@@ -486,7 +620,8 @@ export default class StreamerController extends ControllerBase {
           levelUpData,
           newTwitchFollowerData,
           donationData,
-          newViewerData
+          newViewerData,
+          chatMessageDeletedData
         })
       }
 

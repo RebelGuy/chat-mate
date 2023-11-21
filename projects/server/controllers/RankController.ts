@@ -175,7 +175,7 @@ export default class RankController extends ControllerBase {
 
     try {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, true, request.message)
+      const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().aggregateChatUserId, true, request.message)
       return builder.success({
         newRank: result.rankResult.rank ==  null ? null : await this.userRankToPublicObject(result.rankResult.rank),
         newRankError: result.rankResult.error,
@@ -198,7 +198,7 @@ export default class RankController extends ControllerBase {
 
     try {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
-      const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().id, false, request.message)
+      const result = await this.modService.setModRank(primaryUserId, this.getStreamerId(), this.getCurrentUser().aggregateChatUserId, false, request.message)
       return builder.success({
         removedRank: result.rankResult.rank ==  null ? null : await this.userRankToPublicObject(result.rankResult.rank),
         removedRankError: result.rankResult.error,

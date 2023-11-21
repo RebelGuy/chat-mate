@@ -42,6 +42,7 @@ type Deps = Dependencies<{
   logService: LogService
   accountService: AccountService
   userService: UserService
+  isAdministrativeMode: () => boolean
 }>
 
 export default class DonationService extends ContextClass {
@@ -57,6 +58,7 @@ export default class DonationService extends ContextClass {
   private readonly logService: LogService
   private readonly accountService: AccountService
   private readonly userService: UserService
+  private readonly isAdministrativeMode: () => boolean
 
   constructor (deps: Deps) {
     super()
@@ -71,9 +73,15 @@ export default class DonationService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.accountService = deps.resolve('accountService')
     this.userService = deps.resolve('userService')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   public override async initialise () {
+    if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
+      return
+    }
+
     const streamers = await this.streamerStore.getStreamers()
 
     // todo: this doesn't scale

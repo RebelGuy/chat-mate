@@ -11,14 +11,14 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { ChatClient } from '@twurple/chat'
+import { ChatClient, ClearMsg } from '@twurple/chat'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 import { HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
-import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
@@ -109,6 +109,8 @@ export default class TwurpleService extends ContextClass {
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.chatClient.onMessageRemove((channel: string, messageId: string, msg: ClearMsg) => this.onMessageRemoved(channel, messageId))
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onConnect(() => this.onConnected())
@@ -174,7 +176,7 @@ export default class TwurpleService extends ContextClass {
     try {
       await this.twurpleAuthProvider.getUserTokenAuthProvider(user!.id, true)
     } catch (e: any) {
-      if (e instanceof NotAuthorisedError) {
+      if (e instanceof TwitchNotAuthorisedError) {
         errorMessage = 'You have not yet authorised ChatMate to act on your behalf.'
         isActive = false
       } else if (e instanceof AuthorisationExpiredError) {
@@ -344,6 +346,11 @@ export default class TwurpleService extends ContextClass {
     }
   }
 
+  private async onMessageRemoved (channel: string, messageId: string) {
+    this.logService.logInfo(this, channel, `Removing chat item ${messageId}`)
+    await this.eventDispatchService.addData('chatItemRemoved', { externalMessageId: messageId })
+  }
+
   private async onConnected () {
     this.logService.logInfo(this, 'Connected.')
 
@@ -353,7 +360,11 @@ export default class TwurpleService extends ContextClass {
 
   private onDisconnected (manually: boolean, reason: Error | undefined): void {
     this.logService.logInfo(this, 'Disconnected. Manually:', manually, 'Reason:', reason)
-    this.channelChatStatus.clear()
+    if (this.chatClient.isConnected) {
+      this.logService.logWarning(this, 'ChatClient is not actually disconnected... ignoring')
+    } else {
+      this.channelChatStatus.clear()
+    }
   }
 
   private onParted (channel: string, user: string): void {

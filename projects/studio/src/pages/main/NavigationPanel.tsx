@@ -2,7 +2,7 @@ import { Box } from '@mui/material'
 import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth, PageStreamerInfo } from '@rebel/studio/pages/navigation'
+import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth, PageStreamerInfo, PageYoutubeAuth } from '@rebel/studio/pages/navigation'
 import { PathParam } from '@rebel/studio/utility/types'
 import { cloneElement, useContext } from 'react'
 import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
@@ -23,6 +23,7 @@ export default function Navigation () {
       <NavItem page={PageManager} />
       <NavItem page={PageApply} />
       <NavItem page={PageTwitchAuth} />
+      <NavItem page={PageYoutubeAuth} />
       <NavItem page={PageLink} />
     </nav>
   )

@@ -8,7 +8,7 @@ import { single, single2 } from '@rebel/shared/util/arrays'
 import { AccessToken, AccessTokenWithUserId, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
-import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 
 const adminTwitchUserId = 'admin id' as string & AccessToken
 
@@ -164,11 +164,11 @@ describe(nameof(TwurpleAuthProvider, 'getUserTokenAuthProvider'), () => {
     expect(args).toEqual(expectArray(args, [userId, accessToken]))
   })
 
-  test(`Throws ${NotAuthorisedError.name} if the user has not yet provided authorisation for ChatMate`, async () => {
+  test(`Throws ${TwitchNotAuthorisedError.name} if the user has not yet provided authorisation for ChatMate`, async () => {
     mockRefreshingAuthProvider.hasUser.calledWith(userId).mockReturnValue(false)
     mockAuthStore.loadTwitchAccessToken.calledWith(userId).mockRejectedValue(new Error())
 
-    await expect(() => twurpleAuthProvider.getUserTokenAuthProvider(userId)).rejects.toThrowError(NotAuthorisedError)
+    await expect(() => twurpleAuthProvider.getUserTokenAuthProvider(userId)).rejects.toThrowError(TwitchNotAuthorisedError)
   })
 
   test(`Throws ${AuthorisationExpiredError.name} if the user has provided authorisation, but it has expired`, async () => {

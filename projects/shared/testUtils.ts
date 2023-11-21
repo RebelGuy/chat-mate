@@ -79,6 +79,8 @@ export function expectObject<T extends AnyValue> (fullOrPartialObject: T | DeepP
   if (Array.isArray(partialObj)) {
     // expect.objectContaining doesn't seem to work properly with an array, so instead apply expect.objectContaining on the array items
     return partialObj.map(x => expectObject(x)) as any
+  } else if (isPrimitive(partialObj) || isNullable(partialObj)) {
+    return partialObj as T
   } else {
     return expect.objectContaining(partialObj)
   }
@@ -97,7 +99,7 @@ export function expectObjectDeep<T extends AnyValue> (fullOrPartialObject: T | D
     // expect.objectContaining doesn't seem to work properly with an array, so instead apply expect.objectContaining on the array items
     return partialObj.map(x => expectObjectDeep(x)) as any
   } else if (isPrimitive(partialObj) || isNullable(partialObj)) {
-    return partialObj as any
+    return partialObj as T
   } else {
     let deepExpect: GenericObject = {}
     for (const key of Object.keys(partialObj)) {

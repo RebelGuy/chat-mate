@@ -2,7 +2,7 @@ import { PublicObject } from '@rebel/api-models/types'
 
 export type PublicTwitchEventStatus = PublicObject<{
   /** The event type that this status object describes. */
-  eventType: 'chat' | 'followers'
+  eventType: 'chat' | 'followers' | 'ban' | 'mod' | 'unban' | 'unmod'
 
   /** The current status of the event. */
   status: 'active' | 'pending' | 'inactive'

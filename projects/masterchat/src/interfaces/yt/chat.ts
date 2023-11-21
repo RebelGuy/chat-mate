@@ -221,6 +221,7 @@ export interface YTAction {
   addChatItemAction?: YTAddChatItemAction;
   markChatItemsByAuthorAsDeletedAction?: YTMarkChatItemsByAuthorAsDeletedAction;
   markChatItemAsDeletedAction?: YTMarkChatItemAsDeletedAction;
+  removeChatItemByAuthorAction?: YTRemoveChatItemByAuthorAction;
 
   // Ticker
   addLiveChatTickerItemAction?: YTAddLiveChatTickerItemAction;
@@ -257,7 +258,8 @@ export type YTAddChatItemActionItem =
   | YTLiveChatViewerEngagementMessageRendererContainer
   | YTLiveChatModeChangeMessageRendererContainer
   | YTLiveChatSponsorshipsGiftPurchaseAnnouncementRendererContainer
-  | YTLiveChatSponsorshipsGiftRedemptionAnnouncementRendererContainer;
+  | YTLiveChatSponsorshipsGiftRedemptionAnnouncementRendererContainer
+  | YTLiveChatModerationMessageRendererContainer;
 
 export interface YTAddLiveChatTickerItemAction {
   item: YTAddLiveChatTickerItem;
@@ -278,7 +280,15 @@ export interface YTMarkChatItemAsDeletedAction {
 }
 
 export interface YTMarkChatItemsByAuthorAsDeletedAction {
+  // consists of three parts:
+  // 1: "message deleted by "
+  // 2: "<channel name of moderator>"
+  // 3: "."
   deletedStateMessage: YTRunContainer<YTTextRun>;
+  externalChannelId: string;
+}
+
+export interface YTRemoveChatItemByAuthorAction {
   externalChannelId: string;
 }
 
@@ -356,6 +366,10 @@ export interface YTLiveChatSponsorshipsGiftPurchaseAnnouncementRendererContainer
 
 export interface YTLiveChatSponsorshipsGiftRedemptionAnnouncementRendererContainer {
   liveChatSponsorshipsGiftRedemptionAnnouncementRenderer: YTLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer;
+}
+
+export interface YTLiveChatModerationMessageRendererContainer {
+  liveChatModerationMessageRenderer: YTLiveChatModerationMessageRenderer;
 }
 
 // LiveChat Renderers
@@ -593,6 +607,42 @@ export interface YTLiveChatSponsorshipsGiftRedemptionAnnouncementRenderer {
   contextMenuEndpoint: YTLiveChatItemContextMenuEndpointContainer;
   contextMenuAccessibility: YTAccessibilityData;
   trackingParams: string;
+}
+
+// Moderation action announcement
+export interface YTLiveChatModerationMessageRenderer {
+  id: string;
+  timestampUsec: string;
+  message: UserHiddenMessage | UserUnhiddenMessage | UserTimedOutMessage;
+}
+
+export interface UserHiddenMessage {
+  runs: [
+    { text: string; bold: true, italics: true }, // text: User that was hidden
+    { text: " was hidden by "; italics: true },
+    { text: string; bold: true, italics: true }, // text: Moderator that hid the user
+    { text: "."; italics: true }
+  ]
+}
+
+export interface UserUnhiddenMessage {
+  runs: [
+    { text: string; bold: true, italics: true }, // text: User that was unhidden
+    { text: " was unhidden by "; italics: true },
+    { text: string; bold: true, italics: true }, // text: Moderator that unhid the user
+    { text: "."; italics: true }
+  ]
+}
+
+export interface UserTimedOutMessage {
+  runs: [
+    { text: string; bold: true, italics: true }, // text: User that was timed out
+    { text: " was timed out by "; italics: true },
+    { text: string; bold: true, italics: true }, // text: Moderator that timed out the user
+    { text: " for "; italics: true },
+    { text: string; italics: true }, // text: Number of seconds
+    { text: " seconds."; italics: true }
+  ]
 }
 
 // Ticker Renderers

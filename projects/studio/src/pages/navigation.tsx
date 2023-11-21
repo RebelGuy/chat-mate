@@ -9,6 +9,8 @@ import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Settings, StarBord
 import TwitchAdminLogin from '@rebel/studio/pages/admin/twitch/TwitchAdminLogin'
 import { Props as RequireRankProps } from '@rebel/studio/components/RequireRank'
 import StreamerInfo from '@rebel/studio/pages/streamer-info/StreamerInfo'
+import YouTube from '@rebel/studio/icons/YouTube'
+import YoutubeAdminLogin from '@rebel/studio/pages/admin/youtube/YoutubeAdminLogin'
 
 export type Page = {
   id: string
@@ -112,4 +114,16 @@ export const PageTwitchAuth = {
   requireRanksProps: { admin: true }
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth]
+export const PageYoutubeAuth = {
+  id: 'youtube',
+  title: 'Youtube Admin Login',
+  element: <YoutubeAdminLogin />,
+  icon: <YouTube />,
+  // don't change this path without also updating AdminService and application redirect URLs
+  path: '/admin/youtube',
+  requiresLogin: true,
+  requiresStreamer: false,
+  requireRanksProps: { admin: true }
+} as const
+
+export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth, PageYoutubeAuth]

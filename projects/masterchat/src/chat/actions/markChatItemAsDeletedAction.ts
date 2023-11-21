@@ -27,8 +27,7 @@ export function parseMarkChatItemAsDeletedAction(
   const parsed: MarkChatItemAsDeletedAction = {
     type: "markChatItemAsDeletedAction",
     retracted,
-    targetId: payload.targetItemId,
-    timestamp: new Date(),
+    targetId: payload.targetItemId
   };
   return parsed;
 }

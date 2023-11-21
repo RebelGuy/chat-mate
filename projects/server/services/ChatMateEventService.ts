@@ -22,6 +22,9 @@ export type ChatMateEvent = { timestamp: number } & ({
 } | {
   type: 'newViewer'
   primaryUserId: number
+} | {
+  type: 'chatMessageDeleted'
+  chatMessageId: number
 })
 
 type Deps = Dependencies<{
@@ -97,6 +100,15 @@ export default class ChatMateEventService extends ContextClass {
         type: 'newViewer',
         timestamp: viewer.firstSeen,
         primaryUserId: viewer.primaryUserId
+      })
+    }
+
+    const newDeletedMessages = await this.chatStore.getChatSince(streamerId, since, undefined, undefined, undefined, true)
+    for (let i = 0; i < newDeletedMessages.length; i++) {
+      events.push({
+        type: 'chatMessageDeleted',
+        timestamp: newDeletedMessages[i].deletedTime!.getTime(),
+        chatMessageId: newDeletedMessages[i].id
       })
     }
 

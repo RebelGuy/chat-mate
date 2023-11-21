@@ -2,6 +2,7 @@ import assert from "assert";
 import { YTLiveChatViewerEngagementMessageRenderer } from "../../interfaces/yt/chat";
 import { stringify } from "../../utils";
 import { parseLiveChatViewerEngagementMessageRenderer } from "./addChatItemAction";
+import { mock } from 'jest-mock-extended'
 
 it("can parse poll", () => {
   const payload: YTLiveChatViewerEngagementMessageRenderer = {
@@ -101,7 +102,7 @@ it("can parse poll", () => {
       ],
     },
   };
-  const result = parseLiveChatViewerEngagementMessageRenderer(payload);
+  const result = parseLiveChatViewerEngagementMessageRenderer(mock(), payload);
 
   assert(result?.type === "addPollResultAction");
 
@@ -139,7 +140,7 @@ it("can parse poll missing question", () => {
       ],
     },
   };
-  const result = parseLiveChatViewerEngagementMessageRenderer(payload);
+  const result = parseLiveChatViewerEngagementMessageRenderer(mock(), payload);
 
   assert(result?.type === "addPollResultAction");
 

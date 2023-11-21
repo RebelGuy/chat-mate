@@ -63,6 +63,16 @@ export default class ChatService extends ContextClass {
 
   public override initialise () {
     this.eventDispatchService.onData('chatItem', data => this.onNewChatItem(data, data.streamerId))
+    this.eventDispatchService.onData('chatItemRemoved', data => this.onChatItemRemoved(data.externalMessageId))
+  }
+
+  public async onChatItemRemoved (externalMessageId: string) {
+    try {
+      const isRemoved = await this.chatStore.removeChat(externalMessageId)
+      this.logService.logInfo(this, `Removed chat item ${externalMessageId}: ${isRemoved}`)
+    } catch (e: any) {
+      this.logService.logError(this, `Failed to remove chat item ${externalMessageId}:`, e)
+    }
   }
 
   /** Returns true if the chat item was new and added to the DB, and false if it wasn't because it already existed. Throws if something went wrong while adding the chat item. */

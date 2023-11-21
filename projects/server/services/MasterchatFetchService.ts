@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
+import { Action, AddChatItemAction, MarkChatItemsByAuthorAsDeletedAction, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItem, getEmojiLabel, PartialChatMessage } from '@rebel/server/models/chat'
 import { clamp, clampNormFn, sum } from '@rebel/shared/util/math'
 import LogService from '@rebel/server/services/LogService'
@@ -10,6 +10,8 @@ import MasterchatService from '@rebel/server/services/MasterchatService'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import MasterchatStore from '@rebel/server/stores/MasterchatStore'
+import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 
 const LIVESTREAM_CHECK_INTERVAL = 10_000
 
@@ -33,11 +35,14 @@ type Deps = Dependencies<{
   livestreamStore: LivestreamStore
   disableExternalApis: boolean
   streamerStore: StreamerStore
+  masterchatStore: MasterchatStore
+  externalRankEventService: ExternalRankEventService
   chatMateRegisteredUserName: string
+  isAdministrativeMode: () => boolean
 }>
 
-export default class ChatFetchService extends ContextClass {
-  readonly name = ChatFetchService.name
+export default class MasterchatFetchService extends ContextClass {
+  readonly name = MasterchatFetchService.name
   private readonly chatService: ChatService
   private readonly chatStore: ChatStore
   private readonly logService: LogService
@@ -46,7 +51,10 @@ export default class ChatFetchService extends ContextClass {
   private readonly livestreamStore: LivestreamStore
   private readonly disableExternalApis: boolean
   private readonly streamerStore: StreamerStore
+  private readonly masterchatStore: MasterchatStore
   private readonly chatMateRegisteredUserName: string
+  private readonly externalRankEventService: ExternalRankEventService
+  private readonly isAdministrativeMode: () => boolean
 
   private livestreamCheckTimer!: number
   private chatTimers: Map<string, number> = new Map()
@@ -62,11 +70,17 @@ export default class ChatFetchService extends ContextClass {
     this.livestreamStore = deps.resolve('livestreamStore')
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.streamerStore = deps.resolve('streamerStore')
+    this.masterchatStore = deps.resolve('masterchatStore')
+    this.externalRankEventService = deps.resolve('externalRankEventService')
     this.chatMateRegisteredUserName = deps.resolve('chatMateRegisteredUserName')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   public override async initialise (): Promise<void> {
     if (this.disableExternalApis) {
+      return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 
@@ -102,7 +116,14 @@ export default class ChatFetchService extends ContextClass {
       this.logService.logDebug(this, `Starting fetch timer for livestream ${livestream.id} for streamer ${livestream.streamerId}`)
       const timerOptions: TimerOptions = {
         behaviour: 'dynamicEnd',
-        callback: () => this.updateLivestreamMessages(livestream.streamerId, id)
+        callback: async () => {
+          try {
+            return await this.updateLivestreamMessages(livestream.streamerId, id)
+          } catch (e: any) {
+            this.logService.logError(this, 'Failed to update livestream messages:', e)
+            return MAX_INTERVAL
+          }
+        }
       }
       const timer = await this.timerHelpers.createRepeatingTimer(timerOptions, true)
       this.chatTimers.set(id, timer)
@@ -126,7 +147,7 @@ export default class ChatFetchService extends ContextClass {
 
     let hasNewChat: boolean = false
     if (response != null) {
-      let chatItems = response.actions
+      const chatItems = response.actions
         .filter(action => isAddChatAction(action))
         .map(item => this.toChatItem(item as AddChatItemAction))
         .sort((c1, c2) => c1.timestamp - c2.timestamp)
@@ -155,6 +176,32 @@ export default class ChatFetchService extends ContextClass {
           // and something goes wrong with adding chat, the chat messages will be lost forever.
           // todo: maybe we want it to be lost forever - perhaps there was bad data in the chat message, and now we are stuck in an infinite loop...
           await this.livestreamStore.setContinuationToken(liveId, response.continuation.token)
+        }
+      }
+
+      for (const action of response.actions.filter(a => !isAddChatAction(a))) {
+        let actionTime: number | null = null
+        if ('timestampUsec' in action) {
+          actionTime = action.timestamp.getTime()
+          const actionAlreadyExists = await this.masterchatStore.hasActionWithTime(action.type, actionTime, liveId)
+
+          // avoid double-processing an action
+          if (actionAlreadyExists) {
+            continue
+          }
+        }
+
+        // all actions are added for logging purposes
+        await this.masterchatStore.addMasterchatAction(action.type, JSON.stringify(action), actionTime, liveId)
+
+        if (action.type === 'hideUserAction') {
+          await this.externalRankEventService.onYoutubeChannelBanned(streamerId, action.userChannelName, action.moderatorChannelName)
+        } else if (action.type === 'unhideUserAction') {
+          await this.externalRankEventService.onYoutubeChannelUnbanned(streamerId, action.userChannelName, action.moderatorChannelName)
+        } else if (action.type === 'timeoutUserAction') {
+          await this.externalRankEventService.onYoutubeChannelTimedOut(streamerId, action.userChannelName, action.moderatorChannelName, action.durationSeconds)
+        } else if (action.type === 'markChatItemAsDeletedAction') {
+          await this.chatService.onChatItemRemoved(action.targetId)
         }
       }
     }

@@ -61,6 +61,11 @@ export default class TwurpleChatClientProvider extends ContextClass {
   }
 
   public override onReady (): void {
+    if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping onReady action because we are in administrative mode.')
+      return
+    }
+
     this.logService.logInfo(this, 'Initiating connection to the Twurple chat client')
 
     void this.chatClient.connect()

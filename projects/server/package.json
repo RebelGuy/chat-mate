@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.27.0",
+  "version": "1.28.0",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
@@ -32,6 +32,7 @@
     "snapshot:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/RefreshSnapshots.js"
   },
   "dependencies": {
+    "@googleapis/youtube": "^13.0.0",
     "@prisma/client": "3.15.2",
     "@twurple/api": "^6.1.1",
     "@twurple/auth": "^6.1.1",

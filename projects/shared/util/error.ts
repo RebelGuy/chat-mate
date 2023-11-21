@@ -142,9 +142,15 @@ export class InvalidCommandArgumentsError extends CustomError {
   }
 }
 
-export class NotAuthorisedError extends CustomError {
+export class TwitchNotAuthorisedError extends CustomError {
   constructor (twitchUserId: string) {
-    super(NotAuthorisedError.prototype, `Twitch user ${twitchUserId} has not authorised ChatMate.`)
+    super(TwitchNotAuthorisedError.prototype, `Twitch user ${twitchUserId} has not authorised ChatMate.`)
+  }
+}
+
+export class YoutubeNotAuthorisedError extends CustomError {
+  constructor (youtubeChannelId: string) {
+    super(YoutubeNotAuthorisedError.prototype, `Youtube channel ${youtubeChannelId} has not authorised ChatMate.`)
   }
 }
 
@@ -155,8 +161,11 @@ export class AuthorisationExpiredError extends CustomError {
 }
 
 export class InconsistentScopesError extends CustomError {
-  constructor () {
-    super(InconsistentScopesError.prototype, 'The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
+  constructor (type: 'stored' | 'authenticated') {
+    const message = type === 'stored'
+      ? 'The stored application scope differs from the expected scope. Please reset the authentication as described in the readme.'
+      : 'You must give ChatMate all requested permissions.'
+    super(InconsistentScopesError.prototype, message)
   }
 }
 

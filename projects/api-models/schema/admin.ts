@@ -12,6 +12,12 @@ export type ReconnectTwitchChatClientResponse = ApiResponse<EmptyObject>
 
 export type ResetTwitchSubscriptionsResponse = ApiResponse<EmptyObject>
 
+export type GetYoutubeLoginUrlResponse = ApiResponse<{ url: string, youtubeChannelName: string }>
+
+export type YoutubeAuthorisationResponse = ApiResponse<EmptyObject>
+
+export type YoutubeRevocationResponse = ApiResponse<EmptyObject>
+
 export type GetLinkAttemptLogsResponse = ApiResponse<{ logs: PublicLinkAttemptLog[] }>
 
 export type ReleaseLinkAttemptResponse = ApiResponse<EmptyObject>
