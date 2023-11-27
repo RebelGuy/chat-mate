@@ -32,7 +32,8 @@ import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEv
 // every now and then
 const NGROK_MAX_SESSION = 3600 * 2 * 1000
 
-const EVENT_SUB_TYPES = ['followers', 'ban', 'unban', 'mod', 'unmod'] as const
+// https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/
+const EVENT_SUB_TYPES = ['followers', 'ban', 'unban', 'mod', 'unmod', 'streamStart', 'streamEnd'] as const
 
 export type EventSubType = (typeof EVENT_SUB_TYPES)[number]
 
@@ -436,6 +437,10 @@ export default class HelixEventService extends ContextClass {
           continue // todo
         } else if (eventType === 'unmod') {
           continue // todo
+        } else if (eventType === 'streamStart') {
+          onCreateSubscription = () => this.eventSubBase.onStreamOnline(user, async (e) => { /* todo */ })
+        } else if (eventType === 'streamEnd') {
+          onCreateSubscription = () => this.eventSubBase.onStreamOffline(user, async (e) => { /* todo */ })
         } else {
           assertUnreachable(eventType)
         }

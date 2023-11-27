@@ -49,8 +49,8 @@ export default class StreamerEventService extends ContextClass {
     }
 
     const result = {
+      chat: chatStatus,
       ...this.helixEventService.getEventSubscriptions(streamerId),
-      chat: chatStatus
     }
     return result
   }
