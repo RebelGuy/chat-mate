@@ -247,7 +247,7 @@ jobs:
     if: always() && inputs.deploy && inputs.studio
     name: Deploy Studio
     runs-on: ubuntu-latest
-    needs: [build-studio]
+    needs: [build-studio, deploy-server]
     environment:
       name: ${{ inputs.NODE_ENV == 'debug' && 'Sandbox' || 'Production' }}
       url: ${{ inputs.STUDIO_URL }}
