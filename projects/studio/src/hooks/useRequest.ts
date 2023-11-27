@@ -2,6 +2,7 @@ import { ApiError, ApiResponse, PublicObject, ResponseData } from '@rebel/api-mo
 import { Primitive } from '@rebel/shared/types'
 import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
 import LoginContext, { LoginContextType } from '@rebel/studio/contexts/LoginContext'
+import RequestContext, { RequestContextType } from '@rebel/studio/contexts/RequestContext'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { useContext, useEffect, useRef, useState } from 'react'
 
@@ -9,6 +10,8 @@ const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
 
 const baseUrl = SERVER_URL + '/api'
+
+let requestCounter = 1
 
 type TriggerResult<TResponseData> = {
   type: 'success'
@@ -31,6 +34,9 @@ type RequestOptions<TResponseData> = {
   // don't auto-start the request on mount or when the props change (even if the `updateKey` changes).
   // instead, the request is made only when `triggerRequest()` is called
   onDemand?: boolean
+
+  // cannot be updated - must be a constant. this is true by default for all GET requests and cannot be true for any other requests.
+  useCache?: boolean
 
   // only required if using `useRequest` from within the LoginContext itself
   loginToken?: string | null
@@ -112,10 +118,19 @@ export default function useRequest<
   TRequestData extends TRequestData extends false ? never : PublicObject<TRequestData> | false = false,
   TResponseData extends SuccessfulResponseData<TResponse> = SuccessfulResponseData<TResponse>
 > (request: Request<TResponse, TRequestData>, options?: RequestOptions<TResponseData>): RequestResult<TResponseData> {
-  const [isLoading, setIsLoading] = useState(false)
+  // the RequestContext expects a mandatory cacheKey. for requests that we don't want to cache, we generate a unique key that we will clean up after unmounting.
+  // for a cleaner debugging experience, we spend some effort to make sure the counter increments once per component.
+  const hasGeneratedTempCacheKey = useRef(false)
+  const useCache = request.method === 'GET' && options?.useCache !== false || options?.useCache === true
+  const thisRequestCounter = !hasGeneratedTempCacheKey.current && !useCache ? requestCounter++ : 0
+  hasGeneratedTempCacheKey.current = true
+  const [cacheKey] = useState(useCache ? `${request.method}-${request.path}` : `${request.method}-${request.path}-${thisRequestCounter}`)
+  if (request.method !== 'GET' && options?.useCache) {
+    console.warn('Cannot set useCache for non-GET requests')
+  }
+
   const [requestType, setRequestType] = useState<RequestType>('none')
-  const [data, setData] = useState<TResponseData | null>(null)
-  const [apiError, setError] = useState<ApiError | null>(null)
+  const { isLoading, setIsLoading, data, setData, apiError, setApiError, removeCache } = useContext<RequestContextType<TResponseData>>(RequestContext)(cacheKey)
   const [onRetry, setOnRetry] = useState<(() => void) | null>(null)
   let loginContext = useContext(LoginContext)
 
@@ -199,14 +214,14 @@ export default function useRequest<
         const responseData = transformer == null ? response.data : transformer(response.data)
         if (shouldUpdateState()) {
           setData(responseData)
-          setError(null)
+          setApiError(null)
           onSuccess(responseData, type)
         }
         returnObj = { type: 'success', data: responseData }
       } else {
         if (shouldUpdateState()) {
           setData(null)
-          setError(response.error)
+          setApiError(response.error)
           onError(response.error, type)
         }
         returnObj = { type: 'error', error: response.error }
@@ -215,7 +230,7 @@ export default function useRequest<
       const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', internalErrorType: 'Unknown', message: e.message }
       if (shouldUpdateState()) {
         setData(null)
-        setError(error)
+        setApiError(error)
         onError(error, type)
       }
       returnObj = { type: 'error', error: error }
@@ -241,7 +256,7 @@ export default function useRequest<
     invariantRef.current = invariantRef.current + 1
     setIsLoading(false)
     setData(useData ?? null)
-    setError(useError ?? null)
+    setApiError(useError ?? null)
   }
 
   const mutate = (newData: TResponseData | null) => {
@@ -259,6 +274,18 @@ export default function useRequest<
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, skipLoadOnMount, onDemand, ...objToArr(requestData ?? {})])
+
+  // remove data when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (useCache) {
+        return
+      }
+
+      removeCache()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const error: ApiRequestError | null = apiError == null ? null : { message: apiError.message, onRetry: onRetry ?? undefined }
   return { data, isLoading, error, requestType, triggerRequest, reset, mutate }

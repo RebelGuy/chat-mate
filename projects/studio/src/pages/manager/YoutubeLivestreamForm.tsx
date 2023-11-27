@@ -29,7 +29,10 @@ export default function YoutubeLivestreamForm () {
   })
   const setLivestreamRequest = useRequest(setActiveLivestream({ livestream: nullIfEmpty(currentLivestreamInput) }), {
     onDemand: true,
-    onSuccess: () => setLastLivestreamResponse(currentLivestreamInput.trim())
+    onSuccess: () => {
+      setLastLivestreamResponse(currentLivestreamInput.trim())
+      updateLivestreamKey()
+    }
   })
 
   let livestreamIdError: string | null = null
