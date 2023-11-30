@@ -1,7 +1,7 @@
 import { Primitive, Singular } from '@rebel/shared/types'
 
 /** Public objects are containers for primitive values or other public objects. */
-export type PublicObject<T extends ResponseData<T>> = T extends ResponseData<infer U> ? U : never
+export type PublicObject<T extends ResponseData<T>> = T extends ResponseData<any> ? T : never
 
 /** The root of the response data must consist exclusively of primitives and PublicObjects. */
 export type ResponseData<T extends ResponseData<T>> = {

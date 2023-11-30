@@ -100,7 +100,7 @@ export type ApiRequestError = {
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH'
 
-export type Request<TResponse extends ApiResponse<any>, TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false> = {
+export type Request<TResponse extends ApiResponse<any>, TRequestData extends PublicObject<any> | false> = {
   method: Method
   path: string
   data: TRequestData extends false ? never : Method extends 'GET' ? never : TRequestData
@@ -115,7 +115,7 @@ export type Request<TResponse extends ApiResponse<any>, TRequestData extends Pub
 
 export default function useRequest<
   TResponse extends ApiResponse<any>,
-  TRequestData extends TRequestData extends false ? never : PublicObject<TRequestData> | false = false,
+  TRequestData extends PublicObject<any> | false = false,
   TResponseData extends SuccessfulResponseData<TResponse> = SuccessfulResponseData<TResponse>
 > (request: Request<TResponse, TRequestData>, options?: RequestOptions<TResponseData>): RequestResult<TResponseData> {
   // the RequestContext expects a mandatory cacheKey. for requests that we don't want to cache, we generate a unique key that we will clean up after unmounting.
@@ -303,7 +303,7 @@ function objToArr<T extends ResponseData<T>> (obj: PublicObject<T>): (Primitive 
     if (isPrimitive(typeof value) || value == null) {
       return [value as Primitive | null]
     } else if (Array.isArray(value)) {
-      // I aplogise for the typings
+      // I apologise for the typings
       return (value as any).flatMap((item: any) => isPrimitive(typeof item) || item == null ? [item] : objToArr(item as any))
     } else {
       return objToArr(value)
