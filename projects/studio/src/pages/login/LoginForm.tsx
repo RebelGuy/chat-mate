@@ -32,7 +32,9 @@ export default function LoginForm () {
 
   const onSuccess = (data: SuccessfulResponseData<RegisterResponse | LoginResponse>) => {
     loginContext.setLogin(username, data.loginToken, 'isStreamer' in data && data.isStreamer)
-    navigate(returnUrl ?? generatePath('/'))
+
+    // redirect them to the previous page. if `replace` is true, the login page will not show up in the browser page history
+    navigate(returnUrl ?? generatePath('/'), { replace: returnUrl != null })
 
     if ('isStreamer' in data && loginContext.streamer == null && data.isStreamer) {
       loginContext.setStreamer(username)
