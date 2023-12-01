@@ -13,23 +13,26 @@ import { PageLogin } from '@rebel/studio/pages/navigation'
 import { deleteCustomRankName, logout, setCustomRankName } from '@rebel/studio/utility/api'
 import React, { CSSProperties, ReactElement, useState } from 'react'
 import { useContext } from 'react'
-import { useNavigate, generatePath } from 'react-router-dom'
+import { useNavigate, generatePath, useLocation } from 'react-router-dom'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import { InvalidCustomRankNameError } from '@rebel/shared/util/error'
+import { RETURN_URL_QUERY_PARAM } from '@rebel/studio/pages/login/LoginForm'
 
 const rankHelpers = new RankHelpers()
 
 export default function UserInfo () {
   const loginContext = useContext(LoginContext)
   const navigate = useNavigate()
+  const { pathname: currentPath } = useLocation()
 
+  const loginUrl = generatePath(PageLogin.path) + `?${RETURN_URL_QUERY_PARAM}=${currentPath}`
   const isLoggedIn = loginContext.username != null
   if (!isLoggedIn) {
     return <>
       <Alert severity="info">
         You are not currently logged in.
       </Alert>
-      <Button onClick={() => navigate(generatePath(PageLogin.path))} fullWidth sx={{ marginTop: 1, marginBottom: 1}}>Login</Button>
+      <Button onClick={() => navigate(loginUrl)} fullWidth sx={{ marginTop: 1, marginBottom: 1}}>Login</Button>
 
       {loginContext.authError != null && <>
         <Alert severity="error">{loginContext.authError}</Alert>
