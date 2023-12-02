@@ -1,5 +1,5 @@
 import { PrismaClient, PrismaPromise } from '@prisma/client'
-import { mockDeep } from 'jest-mock-extended'
+import { mock } from 'jest-mock-extended'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
@@ -9,9 +9,21 @@ import Semaphore from '@rebel/shared/util/Semaphore'
  * This timeout helps prevent the "Exceeded timeout of 5000 ms for a hook." error. */
 export const DB_TEST_TIMEOUT = 30000
 
+// use this below if you need to access logging while debugging tests. only prints to the console, not file
+const logServiceWithConsoleOutput = new LogService(new Dependencies({
+  apiLogLevel: 'disable',
+  dbLogLevel: 'full',
+  applicationInsightsService: mock(),
+  debugLogOutput: 'full',
+  errorLogOutput: 'full',
+  fileService: mock(),
+  infoLogOutput: 'full',
+  warningLogOutput: 'full'
+}))
+
 const semaphore: Semaphore = new Semaphore()
 const dbProvider = new DbProvider(new Dependencies({
-  logService: mockDeep<LogService>(),
+  logService: mock(),
   databaseUrl: process.env.DATABASE_URL!,
   dbSemaphoreConcurrent: 1000,
   dbSemaphoreTimeout: null,
