@@ -96,6 +96,7 @@ model LiveViewers {
   livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "live_viewer_livestreamId_fkey")
 
   @@index([livestreamId], map: "live_viewer_livestreamId_fkey")
+  @@index([time], map: "live_viewer_time_key")
   @@map("live_viewer")
 }
 
