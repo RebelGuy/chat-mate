@@ -96,6 +96,7 @@ model LiveViewers {
   livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "live_viewer_livestreamId_fkey")
 
   @@index([livestreamId], map: "live_viewer_livestreamId_fkey")
+  @@index([time], map: "live_viewer_time_key")
   @@map("live_viewer")
 }
 
@@ -286,6 +287,7 @@ model YoutubeChannelInfo {
   channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_info_channelId_fkey")
 
   @@index([channelId], map: "youtube_channel_info_channelId_fkey")
+  @@index([time], map: "youtube_channel_info_time_key")
   @@map("youtube_channel_info")
 }
 
@@ -325,6 +327,7 @@ model TwitchChannelInfo {
   channel   TwitchChannel @relation(fields: [channelId], references: [id], map: "twitch_channel_info_channelId_fkey")
 
   @@index([channelId], map: "twitch_channel_info_channelId_fkey")
+  @@index([time], map: "twitch_channel_info_time_key")
   @@map("twitch_channel_info")
 }
 
@@ -563,6 +566,7 @@ model ChatMessage {
   @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")
   @@index([livestreamId], map: "chat_message_livestreamId_fkey")
+  @@index([time], map: "chat_message_time_key")
   @@map("chat_message")
 }
 

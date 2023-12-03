@@ -40,6 +40,10 @@ on:
         required: true
       DATABASE_PASSWORD:
         required: true
+      DATABASE_HOST:
+        required: true
+      DATABASE_PORT:
+        required: true
 
 jobs:
   build-server:
@@ -95,7 +99,7 @@ jobs:
         # we are using separate test tables for the develop/master tests so they can run in parallel if needed
         run: |
           touch ./projects/server/test.env
-          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_test_debug' || 'chat_mate_test' }}?pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
+          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@${{ secrets.DATABASE_HOST }}:${{ secrets.DATABASE_PORT }}/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_test_debug' || 'chat_mate_test' }}?pool_timeout=30&connect_timeout=30\"" >> ./projects/server/test.env
           cat ./projects/server/test.env
 
       - name: Set up Node.js
@@ -210,17 +214,17 @@ jobs:
       - name: Create .env file
         run: |
           touch .env
-          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@chat-mate.mysql.database.azure.com:3306/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_debug' || 'chat_mate' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> .env
+          echo "DATABASE_URL=\"mysql://${{ secrets.DATABASE_USERNAME }}:${{ secrets.DATABASE_PASSWORD }}@${{ secrets.DATABASE_HOST }}:${{ secrets.DATABASE_PORT }}/${{ inputs.NODE_ENV == 'debug' && 'chat_mate_debug' || 'chat_mate' }}?connection_limit=5&pool_timeout=30&connect_timeout=30\"" >> .env
           cat .env
 
       - name: Migrate database
         run: dotenv yarn prisma migrate deploy
 
   deploy-server:
-    if: always() && inputs.deploy && inputs.server && (needs.migrate-database.result == 'success' || needs.migrate-database.result == 'skipped')
+    if: always() && inputs.deploy && inputs.server && (needs.migrate-database.result == 'success' || needs.migrate-database.result == 'skipped') && (needs.test-server.result == 'success' || needs.test-server.result == 'skipped')
     name: Deploy Server
     runs-on: ubuntu-latest
-    needs: [migrate-database]
+    needs: [migrate-database, test-server]
 
     environment:
       name: ${{ inputs.NODE_ENV == 'debug' && 'Sandbox' || 'Production' }}
@@ -247,7 +251,7 @@ jobs:
     if: always() && inputs.deploy && inputs.studio
     name: Deploy Studio
     runs-on: ubuntu-latest
-    needs: [build-studio]
+    needs: [build-studio, deploy-server, test-server]
     environment:
       name: ${{ inputs.NODE_ENV == 'debug' && 'Sandbox' || 'Production' }}
       url: ${{ inputs.STUDIO_URL }}

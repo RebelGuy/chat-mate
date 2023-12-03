@@ -106,6 +106,21 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow an expand and contract pattern.
 
+### Debugging Slow Queries
+If the CPU usage of the MySQL Server instance is consistently high, follow these steps:
+
+- Log into MySQL.
+  
+  `> mysql -h chat-mate.mysql.database.azure.com -u chatmateadmin -p`
+
+- Show all currently running processes. This includes any raw SQL queries currently executing. Running this command a few times will reveal which queries in particular need attention, as they may be listed frequently.
+  
+  `mysql> SHOW FULL PROCESSLIST;`
+
+Also ensure `slow_query_logs` are enabled via the Server Parameters sidebar menu. Once enabled, you can read these from the Server Logs section or perform additional debugging in Workbook -> Query Performance Insight.
+
+For more info, refer to https://learn.microsoft.com/en-us/azure/mysql/single-server/how-to-troubleshoot-high-cpu-utilization.
+
 ## Punishments
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
 

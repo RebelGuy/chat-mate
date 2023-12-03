@@ -35,7 +35,7 @@ By default, the deployment of the Server includes an automatic migration of the 
 
 If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped.
 
-If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed.
+If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed. Note that migrations will still run.
 
 If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
 
