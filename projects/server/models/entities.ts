@@ -23,7 +23,7 @@ export namespace Entity {
   */
 
 
-  export type Livestream = FullPayload<'Livestream'>
+  export type YoutubeLivestream = FullPayload<'YoutubeLivestream'>
 
   export type ChatUser = FullPayload<'ChatUser'>
   export type YoutubeChannel = FullPayload<'YoutubeChannel'>
@@ -54,14 +54,14 @@ export type New<E> = NullableToOptional<Omit<E, 'id'>>
 // todo: automatically add circular references (only need 1 depth for it to work?)
 export type WithChildren<M extends Models, C extends keyof Omit<Includes[M], '_count'> = any> = GetPayloads<FullSelect<Selects[M]> & IncludeSpecificChildren<Includes[M], C>>[M]
 
-type Models = 'Livestream' |
+type Models = 'YoutubeLivestream' |
   'ChatUser' | 'YoutubeChannel' | 'YoutubeChannelInfo' | 'TwitchChannel' | 'TwitchChannelInfo' |
   'ChatMessage' | 'ChatMessagePart' | 'ChatEmoji' | 'ChatText' | 'ChatCheer' |
   'ExperienceTransaction' | 'ExperienceSnapshot' | 'ExperienceDataChatMessage' |
   'CustomEmoji'
 
   type Includes = DbDefine<{
-    Livestream: Prisma.LivestreamInclude,
+    YoutubeLivestream: Prisma.YoutubeLivestreamInclude,
     ChatUser: Prisma.ChatUserInclude,
     YoutubeChannel: Prisma.YoutubeChannelInclude,
     YoutubeChannelInfo: Prisma.YoutubeChannelInfoInclude,
@@ -79,7 +79,7 @@ type Models = 'Livestream' |
   }>
 
   type Args = DbDefine<{
-    Livestream: Prisma.LivestreamArgs,
+    YoutubeLivestream: Prisma.YoutubeLivestreamArgs,
     ChatUser: Prisma.ChatUserArgs,
     YoutubeChannel: Prisma.YoutubeChannelArgs,
     YoutubeChannelInfo: Prisma.YoutubeChannelInfoArgs,
@@ -97,7 +97,7 @@ type Models = 'Livestream' |
   }>
 
 type GetPayloads<T> = DbDefine<{
-  Livestream: Prisma.LivestreamGetPayload<T extends Args['Livestream'] ? T : never>,
+  YoutubeLivestream: Prisma.YoutubeLivestreamGetPayload<T extends Args['YoutubeLivestream'] ? T : never>,
   ChatUser: Prisma.ChatUserGetPayload<T extends Args['ChatUser'] ? T : never>,
   YoutubeChannel: Prisma.YoutubeChannelGetPayload<T extends Args['YoutubeChannel'] ? T : never>,
   YoutubeChannelInfo: Prisma.YoutubeChannelInfoGetPayload<T extends Args['YoutubeChannelInfo'] ? T : never>,
@@ -115,7 +115,7 @@ type GetPayloads<T> = DbDefine<{
 }>
 
 type Selects = DbDefine<{
-  Livestream: Prisma.LivestreamSelect,
+  YoutubeLivestream: Prisma.YoutubeLivestreamSelect,
   ChatUser: Prisma.ChatUserSelect,
   YoutubeChannel: Prisma.YoutubeChannelSelect,
   YoutubeChannelInfo: Prisma.YoutubeChannelInfoSelect,

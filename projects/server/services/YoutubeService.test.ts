@@ -1,4 +1,4 @@
-import { Livestream } from '@prisma/client'
+import { YoutubeLivestream } from '@prisma/client'
 import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
@@ -12,7 +12,7 @@ import { MockProxy, mock } from 'jest-mock-extended'
 const streamerId = 5
 const streamerExternalChannelId = 'externalChannelId'
 const liveId = 'liveId'
-const livestream = cast<Livestream>({ liveId })
+const livestream = cast<YoutubeLivestream>({ liveId })
 const streamerYoutubeChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: streamerExternalChannelId }} })
 const streamerPrimaryChannel = cast<PrimaryChannels>({ youtubeChannel: streamerYoutubeChannel })
 
@@ -46,7 +46,7 @@ describe(nameof(YoutubeService, 'getMods'), () => {
     const modChannelId = 123
     const modChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: mod1ExternalChannelId, id: modChannelId }} })
     const otherChannel = cast<UserChannel<'twitch'>>({ platformInfo: { platform: 'twitch', channel: { twitchId: 'twitchId' }} })
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockYoutubeApiProxyService.getMods.calledWith(streamerId, streamerExternalChannelId, liveId).mockResolvedValue([
       { externalModId: mod1ExternalId, externalChannelId: mod1ExternalChannelId }, { externalModId: mod2ExternalId, externalChannelId: mod2ExternalChannelId }
@@ -68,7 +68,7 @@ describe(nameof(YoutubeService, 'modYoutubeChannel'), () => {
   test('Mods the specified channel', async () => {
     const userExternalChannelId = 'userId'
     const userYoutubeChannelId = 51
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userYoutubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ platformInfo: { channel: { youtubeId: userExternalChannelId }}}]))
 
@@ -87,7 +87,7 @@ describe(nameof(YoutubeService, 'unmodYoutubeChannel'), () => {
     const userChannelId = 51
     const modChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: modExternalChannelId, id: userChannelId }} })
     const externalModId = '151j'
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockYoutubeApiProxyService.getMods.calledWith(streamerId, streamerExternalChannelId, liveId).mockResolvedValue([
       { externalModId: externalModId, externalChannelId: modExternalChannelId }
@@ -103,7 +103,7 @@ describe(nameof(YoutubeService, 'unmodYoutubeChannel'), () => {
   test('Does not unmod the channel if it is not modded', async () => {
     const otherModExternalChannelId = 'otherMod'
     const otherModChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: otherModExternalChannelId, id: 5623 }} })
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockYoutubeApiProxyService.getMods.calledWith(streamerId, streamerExternalChannelId, liveId).mockResolvedValue([
       { externalModId: 'externalId', externalChannelId: otherModExternalChannelId }
@@ -123,7 +123,7 @@ describe(nameof(YoutubeService, 'banYoutubeChannel'), () => {
     const userChannelId = 51
     const userExternalChannelId = 'externalId'
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
@@ -142,7 +142,7 @@ describe(nameof(YoutubeService, 'timeoutYoutubeChannel'), () => {
     const userChannelId = 51
     const userExternalChannelId = 'externalId'
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
@@ -160,7 +160,7 @@ describe(nameof(YoutubeService, 'unbanYoutubeChannel'), () => {
     const userChannelId = 51
     const userExternalChannelId = 'externalId'
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
@@ -178,7 +178,7 @@ describe(nameof(YoutubeService, 'untimeoutYoutubeChannel'), () => {
     const userChannelId = 51
     const userExternalChannelId = 'externalId'
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
     mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
@@ -193,14 +193,14 @@ describe(nameof(YoutubeService, 'untimeoutYoutubeChannel'), () => {
 
 function requireLivestreamAndPrimaryYoutubeChannel () {
   test('Throws if there is no active livestream', async () => {
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(null)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(null)
 
     await expect(() => youtubeService.unmodYoutubeChannel(streamerId, 123)).rejects.toThrow()
   })
 
   test('Throws if the streamer does not have a primary Youtube channel', async () => {
     const primaryChannels = cast<PrimaryChannels>({ youtubeChannel: null })
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([primaryChannels])
 
     await expect(() => youtubeService.unmodYoutubeChannel(streamerId, 123)).rejects.toThrow()

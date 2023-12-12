@@ -2,5 +2,6 @@ import { PublicLivestream } from '@rebel/api-models/public/livestream/PublicLive
 import { ApiResponse, PublicObject } from '@rebel/api-models/types'
 
 export type GetLivestreamsResponse = ApiResponse<{
-  livestreams: PublicObject<PublicLivestream>[]
+  youtubeLivestreams: PublicObject<PublicLivestream>[]
+  twitchLivestreams: PublicObject<PublicLivestream>[]
 }>

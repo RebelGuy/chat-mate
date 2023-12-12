@@ -35,12 +35,25 @@ export default class ChatStore extends ContextClass {
 
   /** Adds the chat item and returns it when done. Returns null if the chat item already exists. */
   public async addChat (chatItem: ChatItem, streamerId: number, defaultUserId: number, channelId: string): Promise<ChatMessage | null> {
-    let livestreamPart: Prisma.ChatMessageCreateInput['livestream']
-    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
-    if (activeLivestream == null) {
-      livestreamPart = undefined
+    // get the youtube or twitch livestream that this chat message belongs to, if any
+    let youtubeLivestreamPart: Prisma.ChatMessageCreateInput['youtubeLivestream']
+    let twitchLivestreamPart: Prisma.ChatMessageCreateInput['twitchLivestream']
+    if (chatItem.platform === 'youtube') {
+      const activeLivestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
+      if (activeLivestream == null) {
+        youtubeLivestreamPart = undefined
+      } else {
+        youtubeLivestreamPart = { connect: { id: activeLivestream.id }}
+      }
+    } else if (chatItem.platform === 'twitch') {
+      const activeLivestream = await this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+      if (activeLivestream == null) {
+        twitchLivestreamPart = undefined
+      } else {
+        twitchLivestreamPart = { connect: { id: activeLivestream.id }}
+      }
     } else {
-      livestreamPart = { connect: { id: activeLivestream.id }}
+      assertUnreachable(chatItem)
     }
 
     // there is a race condition where the client may request messages whose message parts haven't yet been
@@ -57,7 +70,8 @@ export default class ChatStore extends ContextClass {
             user: { connect: { id: defaultUserId }},
             youtubeChannel: chatItem.platform === 'youtube' ? { connect: { youtubeId: channelId }} : chatItem.platform === 'twitch' ? undefined : assertUnreachable(chatItem),
             twitchChannel: chatItem.platform === 'twitch' ? { connect: { twitchId: channelId }} : chatItem.platform === 'youtube' ? undefined : assertUnreachable(chatItem),
-            livestream: livestreamPart
+            youtubeLivestream: youtubeLivestreamPart,
+            twitchLivestream: twitchLivestreamPart
           },
           include: { chatMessageParts: true }
         })

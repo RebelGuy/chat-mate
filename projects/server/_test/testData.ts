@@ -1,4 +1,4 @@
-import { YoutubeChannelInfo, ChatMessage, ChatUser, Livestream, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelInfo, ChatMessage, TwitchChannelInfo, YoutubeLivestream } from '@prisma/client'
 import { Author, ChatItem, TwitchAuthor } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
@@ -8,8 +8,9 @@ export const time1 = new Date(2022, 0, 3)
 export const time2 = new Date(2022, 0, 4)
 export const time3 = new Date(2022, 0, 5)
 export const time4 = new Date(2022, 0, 6)
+export const time5 = new Date(2022, 0, 7)
 
-export const livestream1: Livestream = {
+export const livestream1: YoutubeLivestream = {
   id: 1,
   liveId: 'liveId1',
   streamerId: 1,
@@ -19,7 +20,7 @@ export const livestream1: Livestream = {
   end: addTime(time1, 'seconds', 1),
   isActive: true
 }
-export const livestream2: Livestream = {
+export const livestream2: YoutubeLivestream = {
   id: 2,
   liveId: 'liveId2',
   streamerId: 1,
@@ -29,7 +30,7 @@ export const livestream2: Livestream = {
   end: addTime(time2, 'seconds', 1),
   isActive: true
 }
-export const livestream3: Livestream = {
+export const livestream3: YoutubeLivestream = {
   id: 3,
   liveId: 'liveId3',
   streamerId: 1,
@@ -139,14 +140,14 @@ export const chatExperienceData3: ChatExperienceData = {
 }
 
 /** Adds random data. Assumes the user, channel and livestream have already been created. */
-export function addChatMessage (db: Db, time: Date, streamerId: number, livestreamId: number | null, userId: number, youtubeChannelId: number): Promise<ChatMessage> {
+export function addChatMessage (db: Db, time: Date, streamerId: number, youtubeLivestreamId: number | null, userId: number, youtubeChannelId: number): Promise<ChatMessage> {
   return db.chatMessage.create({ data: {
     time,
     streamer: { connect: { id: streamerId }},
     externalId: 'testMessage-' + Math.random(),
     user: { connect: { id: userId }},
     youtubeChannel: { connect: { id: youtubeChannelId }},
-    livestream: livestreamId == null ? undefined : { connect: { id: livestreamId }},
+    youtubeLivestream: youtubeLivestreamId == null ? undefined : { connect: { id: youtubeLivestreamId }},
     chatMessageParts: { create: {
       order: 0,
       text: { create: {

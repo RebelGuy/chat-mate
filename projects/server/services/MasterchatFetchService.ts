@@ -104,7 +104,7 @@ export default class MasterchatFetchService extends ContextClass {
 
   /** Esures that there is one timer active for every YouTube livestream. */
   private checkLivestreams = async (): Promise<void> => {
-    const livestreams = await this.livestreamStore.getActiveLivestreams()
+    const livestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
     const currentIds = [...this.chatTimers.keys()]
 
     for (const livestream of livestreams) {
@@ -175,7 +175,7 @@ export default class MasterchatFetchService extends ContextClass {
           // purposefully only set this AFTER everything has been added. if we set it before,
           // and something goes wrong with adding chat, the chat messages will be lost forever.
           // todo: maybe we want it to be lost forever - perhaps there was bad data in the chat message, and now we are stuck in an infinite loop...
-          await this.livestreamStore.setContinuationToken(liveId, response.continuation.token)
+          await this.livestreamStore.setYoutubeContinuationToken(liveId, response.continuation.token)
         }
       }
 
@@ -218,7 +218,7 @@ export default class MasterchatFetchService extends ContextClass {
   }
 
   private fetchLatestMessages = async (streamerId: number) => {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
       return null
     }
@@ -231,7 +231,7 @@ export default class MasterchatFetchService extends ContextClass {
       return result
     } catch (e: any) {
       this.logService.logError(this, `Encountered error while fetching chat for livestream ${livestream.id} for streamer ${livestream.streamerId}:`, e.message)
-      await this.livestreamStore.setContinuationToken(liveId, null)
+      await this.livestreamStore.setYoutubeContinuationToken(liveId, null)
       return null
     }
   }

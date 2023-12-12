@@ -5,7 +5,6 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { nameof } from '@rebel/shared/testUtils'
 
 export default () => {
-  const liveId1 = 'id1'
   const streamer1 = 1
 
   let youtubeApiStore: YoutubeApiStore
@@ -20,7 +19,6 @@ export default () => {
     db = dbProvider.get()
 
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-    await db.livestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: true }})
   }, DB_TEST_TIMEOUT)
 
   afterEach(() => {

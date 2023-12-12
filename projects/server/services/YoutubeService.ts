@@ -40,7 +40,7 @@ export default class YoutubeService extends ContextClass {
   }
 
   public async getMods (streamerId: number): Promise<YoutubeMod[]> {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot get moderators because streamer ${streamerId} has no active livestream.`)
     }
@@ -59,7 +59,7 @@ export default class YoutubeService extends ContextClass {
   }
 
   public async modYoutubeChannel (streamerId: number, youtubeChannelId: number) {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot add moderator ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
@@ -84,7 +84,7 @@ export default class YoutubeService extends ContextClass {
   }
 
   public async banYoutubeChannel (streamerId: number, youtubeChannelId: number) {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot ban channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
@@ -96,7 +96,7 @@ export default class YoutubeService extends ContextClass {
   }
 
   public async timeoutYoutubeChannel (streamerId: number, youtubeChannelId: number, durationSeconds: number) {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot timeout channel ${youtubeChannelId} for ${durationSeconds} seconds because streamer ${streamerId} has no active livestream.`)
     }
@@ -108,7 +108,7 @@ export default class YoutubeService extends ContextClass {
   }
 
   public async unbanYoutubeChannel (streamerId: number, youtubeChannelId: number) {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
       throw new Error(`Cannot timeout channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }

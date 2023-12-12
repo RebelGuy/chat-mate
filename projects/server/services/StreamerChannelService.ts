@@ -92,8 +92,11 @@ export default class StreamerChannelService extends ContextClass {
    * @throws {@link ForbiddenError}: When the streamer is not linked to the youtube or twitch channel.
   */
   public async setPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch', youtubeOrTwitchChannelId: number) {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
-    if (activeLivestream != null) {
+    const [youtubeLivestream, twitchLivestream] = await Promise.all([
+      this.livestreamStore.getActiveYoutubeLivestream(streamerId),
+      this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    ])
+    if (youtubeLivestream != null || twitchLivestream != null) {
       throw new Error('Cannot set the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
@@ -122,8 +125,11 @@ export default class StreamerChannelService extends ContextClass {
   }
 
   public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
-    if (activeLivestream != null) {
+    const [youtubeLivestream, twitchLivestream] = await Promise.all([
+      this.livestreamStore.getActiveYoutubeLivestream(streamerId),
+      this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    ])
+    if (youtubeLivestream != null || twitchLivestream != null) {
       throw new Error('Cannot unset the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 

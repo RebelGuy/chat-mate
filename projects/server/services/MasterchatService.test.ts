@@ -51,7 +51,7 @@ describe(nameof(MasterchatService, 'addMasterchat'), () => {
     const streamer2 = 2
     const testMasterchat1 = mock<Masterchat>()
     const testMasterchat2 = mock<Masterchat>()
-    mockMasterchatFactory.create.mockClear()
+    mockMasterchatFactory.create.mockReset()
     mockMasterchatFactory.create.calledWith(testLiveId1).mockReturnValue(testMasterchat1)
     mockMasterchatFactory.create.calledWith(testLiveId2).mockReturnValue(testMasterchat2)
 

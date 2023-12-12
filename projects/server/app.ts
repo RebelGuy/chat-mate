@@ -96,6 +96,7 @@ import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClie
 import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
 import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
 import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientFactory'
+import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -212,6 +213,7 @@ const main = async () => {
     .withClass('youtubeService', YoutubeService)
     .withClass('punishmentService', PunishmentService)
     .withClass('genericStore', GenericStore)
+    .withClass('aggregateLivestreamService', AggregateLivestreamService)
     .withClass('experienceService', ExperienceService)
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)

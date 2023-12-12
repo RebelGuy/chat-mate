@@ -23,14 +23,14 @@ export default class MasterchatStore extends ContextClass {
       type: type,
       data: serialisedData.substring(0, MAX_DATA_LENGTH),
       time: time != null ? new Date(time) : null,
-      livestream: { connect: { liveId: liveId }}
+      youtubeLivestream: { connect: { liveId: liveId }}
     }})
   }
 
   public async hasActionWithTime (type: string, time: number, liveId: string) {
     const result = await this.db.masterchatAction.findFirst({ where: {
       type: type,
-      livestream: { liveId: liveId },
+      youtubeLivestream: { liveId: liveId },
       time: new Date(time)
     }})
 

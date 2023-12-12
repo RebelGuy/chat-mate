@@ -4,7 +4,10 @@ export type PublicLivestream = PublicObject<{
   /** The internal ID of the livestream. */
   id: number
 
-  /** Link to the YouTube watch page of the livestream. */
+  /** Whether this is a Youtube or Twitch livestream. */
+  platform: 'youtube' | 'twitch'
+
+  /** Link to the external watch page of the livestream. */
   livestreamLink: string
 
   /** The current status of the livestream. */

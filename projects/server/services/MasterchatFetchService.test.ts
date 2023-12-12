@@ -1,4 +1,4 @@
-import { Livestream } from '@prisma/client'
+import { YoutubeLivestream } from '@prisma/client'
 import { Action, AddChatItemAction, ChatResponse, HideUserAction, MarkChatItemAsDeletedAction, UnhideUserAction, TimeoutUserAction, YTRun } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
@@ -26,7 +26,7 @@ const token3 = 'token3'
 const token4 = 'token4'
 const streamer1 = 1
 const streamer2 = 2
-const currentLivestreams: Livestream[] = [{
+const currentLivestreams: YoutubeLivestream[] = [{
   id: 1,
   liveId: 'liveId1',
   streamerId: streamer1,
@@ -113,9 +113,9 @@ beforeEach(() => {
   mockMasterchatStore = mock()
   mockExternalRankEventService = mock()
 
-  mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue(currentLivestreams)
+  mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue(currentLivestreams)
   mockChatStore.getChatSince.calledWith(expect.any(Number), expect.any(Number), undefined, undefined).mockResolvedValue([])
-  mockLivestreamStore.getActiveLivestream.mockImplementation(streamerId => Promise.resolve(currentLivestreams.find(l => l.streamerId === streamerId)!))
+  mockLivestreamStore.getActiveYoutubeLivestream.mockImplementation(streamerId => Promise.resolve(currentLivestreams.find(l => l.streamerId === streamerId)!))
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -185,7 +185,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
 
     await masterchatFetchService.initialise()
 
-    const calls = mockLivestreamStore.setContinuationToken.mock.calls
+    const calls = mockLivestreamStore.setYoutubeContinuationToken.mock.calls
     expect(calls.length).toBe(2)
     expect(calls).toEqual(expectArray<[liveId: string, continuationToken: string | null]>([
       [currentLivestreams[0].liveId, null],
@@ -194,11 +194,11 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
   })
 
   test('Quietly handles no active livestream', async () => {
-    mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([])
+    mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([])
 
     await masterchatFetchService.initialise()
 
-    expect(mockLivestreamStore.setContinuationToken.mock.calls.length).toBe(0)
+    expect(mockLivestreamStore.setYoutubeContinuationToken.mock.calls.length).toBe(0)
     expect(mockTimerHelpers.dispose.mock.calls.length).toBe(0)
   })
 
@@ -218,7 +218,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
       [expectObject<ChatItem>({ id: chatAction3.id }), streamer2]
     ]))
 
-    const livestreamStoreCalls = mockLivestreamStore.setContinuationToken.mock.calls
+    const livestreamStoreCalls = mockLivestreamStore.setYoutubeContinuationToken.mock.calls
     expect(livestreamStoreCalls.length).toBe(2)
     expect(livestreamStoreCalls).toEqual(expectArray<[liveId: string, continuationToken: string | null]>([
       [currentLivestreams[0].liveId, token2],
@@ -234,7 +234,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
 
     await masterchatFetchService.initialise()
 
-    expect(mockLivestreamStore.setContinuationToken.mock.calls.length).toBe(1)
+    expect(mockLivestreamStore.setYoutubeContinuationToken.mock.calls.length).toBe(1)
   })
 
   test('Persists hide/unhide/timeout user actions and notifies service', async () => {

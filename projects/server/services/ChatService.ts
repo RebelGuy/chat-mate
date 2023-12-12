@@ -136,8 +136,12 @@ export default class ChatService extends ContextClass {
     // either perform side effects for a normal message, or execute command for a chat command message
     if (message != null && command == null) {
       try {
-        const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
-        if (livestream != null) {
+        const [youtubeLivestream, twitchLivestream] = await Promise.all([
+          this.livestreamStore.getActiveYoutubeLivestream(streamerId),
+          this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+        ])
+
+        if (youtubeLivestream != null || twitchLivestream != null) {
           await this.experienceService.addExperienceForChat(item, streamerId)
         }
       } catch (e: any) {

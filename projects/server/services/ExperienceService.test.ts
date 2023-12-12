@@ -2,13 +2,13 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceService, { RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
-import LivestreamStore, { LivestreamParticipation } from '@rebel/server/stores/LivestreamStore'
+import LivestreamStore, { YoutubeLivestreamParticipation } from '@rebel/server/stores/LivestreamStore'
 import { cast, nameof, expectObject, expectArray } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { asGte, asLt, asRange, GreaterThanOrEqual, NumRange } from '@rebel/shared/util/math'
-import { ChatMessage, ExperienceTransaction } from '@prisma/client'
+import { ChatMessage, ExperienceTransaction, YoutubeLivestream } from '@prisma/client'
 import { addTime } from '@rebel/shared/util/datetime'
 import { ChatItem, ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
@@ -21,6 +21,8 @@ import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'
+import AggregateLivestreamService, { AggregateLivestreamParticipation } from '@rebel/server/services/AggregateLivestreamService'
+import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -34,6 +36,7 @@ let mockRankHelpers: MockProxy<RankHelpers>
 let mockAccountService: MockProxy<AccountService>
 let mockUserService: MockProxy<UserService>
 let mockGenericStore: MockProxy<GenericStore>
+let mockAggregateLivestreamService: MockProxy<AggregateLivestreamService>
 let experienceService: ExperienceService
 
 beforeEach(() => {
@@ -50,6 +53,7 @@ beforeEach(() => {
   mockUserService = mock<UserService>()
   // @ts-ignore
   mockGenericStore = mock<GenericStore>()
+  mockAggregateLivestreamService = mock<AggregateLivestreamService>()
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -63,7 +67,8 @@ beforeEach(() => {
     rankHelpers: mockRankHelpers,
     accountService: mockAccountService,
     userService: mockUserService,
-    genericStore: mockGenericStore
+    genericStore: mockGenericStore,
+    aggregateLivestreamService: mockAggregateLivestreamService
   }))
 })
 
@@ -78,7 +83,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       messageParts: [],
     }
     const streamerId = 2
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(null)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(null)
 
     await experienceService.addExperienceForChat(chatItem, streamerId)
 
@@ -95,7 +100,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
       messageParts: [],
     }
     const streamerId = 2
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(data.livestream1)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(data.livestream1)
 
     await experienceService.addExperienceForChat(chatItem, streamerId)
 
@@ -117,7 +122,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
 
-  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore, does not notify ViewershipStore', async () => {
+  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore', async () => {
     const primaryUserId = 3
     const connectedUserIds = [3, 5]
     const streamerId = 2
@@ -153,24 +158,27 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
         chatMessageId: 1,
         experienceTransactionId: 1,
         spamMultiplier: 0.8,
-        chatMessage: cast<ChatMessage>({ livestreamId: data.livestream3.id })
+        chatMessage: cast<ChatMessage>({ youtubeLivestreamId: data.livestream3.id })
       }
     }
 
     // cheating a little here since we don't want to write out all properties
     const chatItems: Partial<ChatItemWithRelations>[] = [{ userId: connectedUserIds[1] }]
 
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(data.livestream3)
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(data.livestream3)
     mockChannelStore.getPrimaryUserId.calledWith(chatItem.author.channelId).mockResolvedValue(primaryUserId)
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ queriedAnyUserId: primaryUserId, connectedChatUserIds: connectedUserIds }])
     mockPunishmentService.isUserPunished.calledWith(primaryUserId, streamerId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(streamerId, primaryUserId, null).mockResolvedValue(prevData)
-    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerId, connectedUserIds).mockResolvedValue([
-      { ...data.livestream1, participated: true },
-      { ...data.livestream2, participated: true },
-      { ...data.livestream2, participated: false },
-      { ...data.livestream2, participated: true },
-      { ...data.livestream3, participated: false }
+    mockAggregateLivestreamService.getAggregateLivestreams.calledWith(streamerId).mockResolvedValue([
+      createAggregateLivestreamParticipation(data.livestream1),
+      createAggregateLivestreamParticipation(data.livestream2),
+      createAggregateLivestreamParticipation(data.livestream3)
+    ] as AggregateLivestream[])
+    mockAggregateLivestreamService.getLivestreamParticipation.calledWith(streamerId, connectedUserIds).mockResolvedValue([
+      createAggregateLivestreamParticipation(data.livestream1, true),
+      createAggregateLivestreamParticipation(data.livestream2, false),
+      createAggregateLivestreamParticipation(data.livestream3, true),
     ]) // -> walking participation score: 1
     mockExperienceHelpers.calculateChatMessageQuality.calledWith(chatItem.messageParts).mockReturnValue(msgQuality)
     mockExperienceHelpers.calculateParticipationMultiplier.calledWith(asGte(1, 0)).mockReturnValue(asGte(experienceData.participationStreakMultiplier, 1))
@@ -387,7 +395,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
 
 describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
   // probably shouldn't have written a test for this, wtf
-  test('Recalculates experience across all streamers', async () => {
+  test.only('Recalculates experience across all streamers', async () => {
     const aggregateUserId = 4
     const connectedUserIds = [4, 1, 6]
     const streamerIds = [7, 8]
@@ -401,7 +409,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       experienceDataChatMessage: {
         id: 1253,
         chatMessageId: chatMessageId1,
-        chatMessage: { livestreamId: 2 },
+        chatMessage: { youtubeLivestreamId: 2 }, // for yt livestream 2
         baseExperience: baseExperience,
         spamMultiplier: chatExperience1SpamMultiplier,
         viewershipStreakMultiplier: chatExperience1ViewershipMultiplier
@@ -419,7 +427,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       experienceDataChatMessage: {
         id: 1254,
         chatMessageId: chatMessageId2,
-        chatMessage: { livestreamId: 2 },
+        chatMessage: { youtubeLivestreamId: 2 }, // for yt livestream 2
         baseExperience: baseExperience,
         viewershipStreakMultiplier: chatExperience2ViewershipMultiplier
       },
@@ -435,7 +443,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
       experienceDataChatMessage: {
         id: 1255,
         chatMessageId: chatMessageId3,
-        chatMessage: { livestreamId: 4 },
+        chatMessage: { youtubeLivestreamId: 4 }, // for yt livestream 4
         baseExperience: baseExperience,
         viewershipStreakMultiplier: chatExperience3ViewershipMultiplier
       },
@@ -444,8 +452,25 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     })
     const chatMessage3 = cast<ChatItemWithRelations>({ id: chatMessageId3, time: data.time3, chatMessageParts: [] })
 
-    const livestreamParticipationStreamer1 = cast<LivestreamParticipation[]>([{ id: 1, participated: false }, { id: 2, participated: true }, { id: 3, participated: true }, { id: 4, participated: true }])
-    const livestreamParticipationStreamer2 = cast<LivestreamParticipation[]>([{ id: 1, participated: true }, { id: 2, participated: true }, { id: 3, participated: false }, { id: 4, participated: true }])
+    const aggregateLivestreams = [
+      // these are used for both streamers for simpicity
+      createAggregateLivestreamParticipation({ id: 1, liveId: '1' }),
+      createAggregateLivestreamParticipation({ id: 2, liveId: '2' }),
+      createAggregateLivestreamParticipation({ id: 3, liveId: '3' }),
+      createAggregateLivestreamParticipation({ id: 4, liveId: '4' })
+    ]
+    const livestreamParticipationStreamer1: AggregateLivestreamParticipation[] = [
+      createAggregateLivestreamParticipation({ id: 1, liveId: '1' }, false),
+      createAggregateLivestreamParticipation({ id: 2, liveId: '2' }, true),
+      createAggregateLivestreamParticipation({ id: 3, liveId: '3' }, true),
+      createAggregateLivestreamParticipation({ id: 4, liveId: '4' }, true)
+    ]
+    const livestreamParticipationStreamer2: AggregateLivestreamParticipation[] = [
+      createAggregateLivestreamParticipation({ id: 1, liveId: '1' }, true),
+      createAggregateLivestreamParticipation({ id: 2, liveId: '2' }, true),
+      createAggregateLivestreamParticipation({ id: 3, liveId: '3' }, false),
+      createAggregateLivestreamParticipation({ id: 4, liveId: '4' }, true)
+    ]
     const livestreamParticipationStreamerChat1Score = 1 // livestream 2
     const livestreamParticipationStreamerChat2Score = 1 // livestream 2
     const livestreamParticipationStreamerChat3Score = 2 // livestream 4
@@ -461,8 +486,9 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     mockChatStore.getChatSince.calledWith(streamerIds[0], 0, undefined, undefined, expectArray<number>(connectedUserIds)).mockResolvedValue([chatMessage1, chatMessage2])
     mockChatStore.getChatSince.calledWith(streamerIds[1], 0, undefined, undefined, expectArray<number>(connectedUserIds)).mockResolvedValue([chatMessage3])
 
-    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[0], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer1)
-    mockLivestreamStore.getLivestreamParticipation.calledWith(streamerIds[1], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer2)
+    mockAggregateLivestreamService.getAggregateLivestreams.calledWith(expect.anything()).mockResolvedValue(aggregateLivestreams as AggregateLivestream[])
+    mockAggregateLivestreamService.getLivestreamParticipation.calledWith(streamerIds[0], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer1)
+    mockAggregateLivestreamService.getLivestreamParticipation.calledWith(streamerIds[1], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer2)
     mockExperienceHelpers.calculateParticipationMultiplier.mockImplementation(score => score + 1 as GreaterThanOrEqual<1>)
 
     // expect 1 as a SpamMult because chatExperience1 will have its spam multiplier overwritten
@@ -534,7 +560,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
 
     const chatExperience = cast<ChatExperience>({
       experienceDataChatMessage: {
-        chatMessage: { livestreamId: 2 }
+        chatMessage: { youtubeLivestreamId: 2 }
       },
       time: data.time1,
       user: { id: aggregateUserId }
@@ -562,7 +588,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
 
     const chatExperience = cast<ChatExperience>({
       experienceDataChatMessage: {
-        chatMessage: { livestreamId: null }
+        chatMessage: { youtubeLivestreamId: null }
       },
       time: data.time1,
       user: { id: aggregateUserId }
@@ -581,3 +607,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     expect(calls[1]).toEqual(['experienceDataChatMessage', expectObject([{ baseExperience: 0 }])])
   })
 })
+
+function createAggregateLivestreamParticipation (youtubeLivestream: Partial<YoutubeLivestream>, hasParticipated?: boolean): AggregateLivestreamParticipation {
+  return new AggregateLivestream(youtubeLivestream.start!, youtubeLivestream.end!, [youtubeLivestream as YoutubeLivestream], hasParticipated == null ? undefined : { hasParticipated })
+}

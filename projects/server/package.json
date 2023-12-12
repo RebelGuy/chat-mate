@@ -10,8 +10,8 @@
     "auth:twitch:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   electron ../../dist/server/TwitchAuth.js",
     "auth:twitch:release": "cross-env NODE_ENV=release dotenv -e release.env electron ../../dist/server/TwitchAuth.js",
 
-    "watch":       "webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=true  SKIP_TESTS=false",
-    "watch:check": "webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=false SKIP_TESTS=false",
+    "watch":                                                   "webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=true  SKIP_TESTS=false",
+    "watch:check": "NODE_OPTIONS=\"--max-old-space-size=20000\" webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=false SKIP_TESTS=false",
     "watch:tsc": "tsc --build --watch",
     "start:local":  "cross-env NODE_ENV=local                           nodemon --watch ../../dist --inspect ../../dist/server/app.js",
     "start:mock":   "cross-env NODE_ENV=local USE_FAKE_CONTROLLERS=true nodemon --watch ../../dist --inspect ../../dist/server/app.js",
