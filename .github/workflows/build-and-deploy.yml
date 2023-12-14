@@ -167,9 +167,6 @@ jobs:
       - name: Install node modules
         run: yarn install
 
-      - name: Look for TypescriptPerformance
-        run: find ./ -maxdepth 50 | grep fork-ts-checker-webpack-plugin
-
       - name: Create .env file
         run: |
           touch ./projects/studio/.env
