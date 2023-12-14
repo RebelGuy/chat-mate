@@ -395,7 +395,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
 
 describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
   // probably shouldn't have written a test for this, wtf
-  test.only('Recalculates experience across all streamers', async () => {
+  test('Recalculates experience across all streamers', async () => {
     const aggregateUserId = 4
     const connectedUserIds = [4, 1, 6]
     const streamerIds = [7, 8]

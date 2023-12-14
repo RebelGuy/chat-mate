@@ -163,6 +163,7 @@ export default () => {
 
     mockLivestreamStore = mock<LivestreamStore>()
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(youtubeLivestream.streamerId).mockResolvedValue(youtubeLivestream)
+    mockLivestreamStore.getCurrentTwitchLivestream.calledWith(twitchLivestream.streamerId).mockResolvedValue(twitchLivestream)
 
     chatStore = new ChatStore(new Dependencies({
       dbProvider,

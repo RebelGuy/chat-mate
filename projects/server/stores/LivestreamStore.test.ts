@@ -373,7 +373,6 @@ export default () => {
 
     test('Returns null if no data exists for the specified livestream', async () => {
       await db.youtubeLiveViewers.createMany({ data: [
-        { youtubeLivestreamId: livestream1.id, viewCount: 2 },
         { youtubeLivestreamId: livestream2.id, viewCount: 2 }
       ]})
 
@@ -408,11 +407,10 @@ export default () => {
 
     test('Returns null if no data exists for the specified livestream', async () => {
       await db.twitchLiveViewers.createMany({ data: [
-        { twitchLivestreamId: livestream1.id, viewCount: 2 },
         { twitchLivestreamId: livestream2.id, viewCount: 2 }
       ]})
 
-      const result = await livestreamStore.getLatestYoutubeLiveCount(livestream1.id)
+      const result = await livestreamStore.getLatestTwitchLiveCount(livestream1.id)
 
       expect(result).toBeNull()
     })
@@ -426,7 +424,7 @@ export default () => {
         { twitchLivestreamId: livestream2.id, viewCount: 354, time: new Date() },
       ]})
 
-      const result = await livestreamStore.getLatestYoutubeLiveCount(livestream1.id)
+      const result = await livestreamStore.getLatestTwitchLiveCount(livestream1.id)
 
       expect(result).toEqual(data2)
     })
