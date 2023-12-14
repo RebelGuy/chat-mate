@@ -3,8 +3,8 @@
   "version": "1.28.0",
   "main": "../../dist/studio/index.js",
   "scripts": {
-    "start": "yarn fix-typescript-build && npx react-app-rewired start",
-    "build": "yarn fix-typescript-build && npx react-app-rewired build",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
     "test": "react-app-rewired test",
     "eject": "react-app-rewired eject",
     "fix-typescript-build": "cp ./TypeScriptPerformance.js ../../node_modules/react-dev-utils/node_modules/fork-ts-checker-webpack-plugin/lib/typescript-reporter/profile/TypeScriptPerformance.js"
