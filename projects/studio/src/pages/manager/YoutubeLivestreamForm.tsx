@@ -20,8 +20,8 @@ export default function YoutubeLivestreamForm () {
   const getStatusRequest = useRequest(getStatus(), {
     updateKey: livestreamKey,
     onSuccess: (data) => {
-      setCurrentLivestreamInput(data.livestreamStatus?.livestream.livestreamLink ?? '')
-      setLastLivestreamResponse(data.livestreamStatus?.livestream.livestreamLink ?? '')
+      setCurrentLivestreamInput(data.livestreamStatus?.youtubeLivestream?.livestreamLink ?? '')
+      setLastLivestreamResponse(data.livestreamStatus?.youtubeLivestream?.livestreamLink ?? '')
     }, onError: () => {
       setCurrentLivestreamInput(currentLivestreamInput)
       setLastLivestreamResponse('')

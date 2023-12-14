@@ -6,8 +6,11 @@ export type PublicStreamerSummary = PublicObject<{
   /** The streamer's registered username on ChatMate. */
   username: string
 
-  /** The livestream that is currently in progress, if any. */
-  currentLivestream: PublicLivestream | null
+  /** The Youtube livestream that is currently in progress, if any. */
+  currentYoutubeLivestream: PublicLivestream | null
+
+  /** The Twitch livestream that is currently in progress, if any. */
+  currentTwitchLivestream: PublicLivestream | null
 
   /** The primary YouTube channel of the streamer, if set. */
   youtubeChannel: PublicChannel | null

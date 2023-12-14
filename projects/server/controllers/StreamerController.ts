@@ -93,20 +93,23 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /')
 
     try {
-      const livestreamPromise = this.livestreamStore.getActiveYoutubeLivestreams()
       const streamers = await this.streamerStore.getStreamers()
-      const primaryChannelsPromise = this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
-      const users = await this.accountStore.getRegisteredUsersFromIds(streamers.map(s => s.registeredUserId))
-      const livestreams = await livestreamPromise
-      const primaryChannels = await primaryChannelsPromise
+      const [youtubeLivestreams, twitchLivestreams, primaryChannels, users] = await Promise.all([
+        this.livestreamStore.getActiveYoutubeLivestreams(),
+        this.livestreamStore.getCurrentTwitchLivestreams(),
+        this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id)),
+        this.accountStore.getRegisteredUsersFromIds(streamers.map(s => s.registeredUserId))
+      ])
 
       const streamerUsers = zipOnStrict(streamers, users, 'registeredUserId', 'id', 'registeredUserId')
       const streamerSummary: PublicStreamerSummary[] = streamerUsers.map(streamer => {
-        const livestream = livestreams.find(stream => stream.streamerId === streamer.id)
+        const youtubeLivestream = youtubeLivestreams.find(stream => stream.streamerId === streamer.id)
+        const twitchLivestream = twitchLivestreams.find(stream => stream.streamerId === streamer.id)
         const { youtubeChannel, twitchChannel } = primaryChannels.find(channels => channels.streamerId === streamer.id)!
         return {
           username: streamer.username,
-          currentLivestream: livestream == null ? null : youtubeLivestreamToPublic(livestream),
+          currentYoutubeLivestream: youtubeLivestream == null ? null : youtubeLivestreamToPublic(youtubeLivestream),
+          currentTwitchLivestream: twitchLivestream == null ? null : twitchLivestreamToPublic(twitchLivestream, twitchChannel != null ? getUserName(twitchChannel) : ''),
           youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),
           twitchChannel: twitchChannel == null ? null : channelToPublicChannel(twitchChannel)
         }

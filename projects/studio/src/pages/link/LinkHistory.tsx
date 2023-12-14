@@ -121,7 +121,7 @@ function ItemMessage (props: { item: PublicLinkHistoryItem, chatMateUsername: st
     let channelUrl: string | null = null
     if (chatMateStreamer != null) {
       if (props.item.platform === 'youtube' && chatMateStreamer.youtubeChannel != null) {
-        channelUrl = chatMateStreamer.currentLivestream?.livestreamLink ?? getChannelUrlFromPublic(chatMateStreamer.youtubeChannel)
+        channelUrl = chatMateStreamer.currentYoutubeLivestream?.livestreamLink ?? getChannelUrlFromPublic(chatMateStreamer.youtubeChannel)
       } else if (props.item.platform === 'twitch' && chatMateStreamer.twitchChannel != null) {
         channelUrl = getChannelUrlFromPublic(chatMateStreamer.twitchChannel)
       }
@@ -129,7 +129,7 @@ function ItemMessage (props: { item: PublicLinkHistoryItem, chatMateUsername: st
 
     return <>
       <div style={{ display: 'block' }}>
-        <div>Initiate the link by pasting the command {channelUrl != null && <LinkInNewTab href={channelUrl}>here</LinkInNewTab>} (or in another ChatMate streamer's chat)</div>
+        <div>Initiate the link by pasting the command {channelUrl != null && <LinkInNewTab href={channelUrl}>here</LinkInNewTab>} (or in any other ChatMate streamer's chat)</div>
         <code>{command}</code>
         <CopyText text={command} tooltip="Copy command to clipboard" sx={{ ml: 1 }} />
       </div>

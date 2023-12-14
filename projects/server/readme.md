@@ -513,7 +513,9 @@ Path: `/livestream`.
 Gets the list of all livestreams with any status.
 
 Returns data with the following properties:
-- `livestreams` (`PublicLivestream[]`): The list of livestreams, sorted by start time in ascending order. Livestreams that haven't started yet are placed at the end of the array.
+- `youtubeLivestreams` (`PublicLivestream[]`): The list of Youtube livestreams, sorted by start time in ascending order. Livestreams that haven't started yet are placed at the end of the array.
+- `twitchLivestreams` (`PublicLivestream[]`): The list of Twitch livestreams, sorted by start time in ascending order.
+- `aggregateLivestreams` (`PublicAggregateLivestream[]`): The list of aggregate livestreams, sorted by start time in ascending order. An aggregate livestream is a logical period of time during which the streamer was live on either platform. No two aggregate livestreams overlap. Only the last aggregate livestream in the list may still be ongoing.
 
 ## Punishment Endpoints
 Path: `/punishment`.
@@ -952,17 +954,17 @@ Can return the following errors:
 - `400`: When the required query parameters have not been provided.
 
 ### `PATCH /livestream`
-Sets the active public livestream. Note that an active livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
+Sets the active Youtube livestream. Note that an active Youtube livestream cannot be set if another one is already active. Please deactivate the existing one first (see below).
 
 Request data (body):
-- `livestream` (`string | null`): *Required.* The livestream link or id to set as active. If `null`, the active stream will be deactivated.
+- `livestream` (`string | null`): *Required.* The Youtube livestream link or id to set as active. If `null`, the active stream will be deactivated.
 
 Returns data with the following properties:
-- `livestreamLink` (`string | null`): The new livestream link.
+- `livestreamLink` (`string | null`): The new Youtube livestream link.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
-- `422`: When an active livestream already exists.
+- `422`: When an active Youtube livestream already exists.
 
 ## User Endpoints
 Path: `/user`.

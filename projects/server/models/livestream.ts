@@ -1,7 +1,8 @@
 import { YoutubeLivestream, TwitchLivestream } from '@prisma/client'
-import { LiveStatus } from '@rebel/masterchat'
 import { PublicLivestream } from '@rebel/api-models/public/livestream/PublicLivestream'
+import { PublicAggregateLivestream } from '@rebel/api-models/public/livestream/PublicAggregateLivestream'
 import { getLivestreamLink } from '@rebel/shared/util/text'
+import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
 
 export function youtubeLivestreamToPublic (livestream: YoutubeLivestream): PublicLivestream {
   const link = getLivestreamLink(livestream.liveId)
@@ -42,6 +43,20 @@ export function twitchLivestreamToPublic (livestream: TwitchLivestream, twitchCh
     status: status,
     startTime: livestream.start?.getTime() ?? null,
     endTime: livestream.end?.getTime() ?? null
+  }
+}
+
+export function aggregateLivestreamToPublic (aggregateLivestream: AggregateLivestream, twitchChannelName: string | null): PublicAggregateLivestream {
+  if (twitchChannelName == null && aggregateLivestream.getTwitchLivestreams().length > 0) {
+    throw new Error('Unable to convert AggregateLivestream to a public object because it contains Twitch livestreams, but no twitch channel name was provided')
+  }
+
+  return {
+    startTime: aggregateLivestream.startTime.getTime(),
+    endTime: aggregateLivestream.endTime?.getTime() ?? null,
+    livestreams: aggregateLivestream.livestreams.map(livestream =>
+      isYoutubeLivestream(livestream) ? youtubeLivestreamToPublic(livestream) : twitchLivestreamToPublic(livestream, twitchChannelName!)
+    )
   }
 }
 
