@@ -168,7 +168,7 @@ jobs:
         run: yarn install
 
       - name: Look for TypescriptPerformance
-        run: find node_modules/ -maxdepth 50 | perl -wnle '/react-dev-utils/ and print'
+        run: find ./ -maxdepth 50 | grep fork-ts-checker-webpack-plugin
 
       - name: Create .env file
         run: |
