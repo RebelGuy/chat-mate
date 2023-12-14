@@ -167,6 +167,9 @@ jobs:
       - name: Install node modules
         run: yarn install
 
+      - name: Look for TypescriptPerformance
+        run: find node_modules/ -maxdepth 50 | perl -wnle '/react-dev-utils/ and print'
+
       - name: Create .env file
         run: |
           touch ./projects/studio/.env
