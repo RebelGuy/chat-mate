@@ -38,6 +38,26 @@ export default () => {
     stopTestDb()
   })
 
+  describe(nameof(LivestreamStore, 'addNewTwitchLivestream'), () => {
+    test('Creates a new Twitch livestream for the streamer', async () => {
+      await db.twitchLivestream.createMany({ data: [
+        { streamerId: streamer1, start: data.time1, end: data.time2 },
+        { streamerId: streamer2, start: data.time1, end: null }
+      ]})
+
+      const result = await livestreamStore.addNewTwitchLivestream(streamer1)
+
+      await expectRowCount(db.twitchLivestream).toBe(3)
+      expect(result).toEqual(expectObject(result, { streamerId: streamer1, start: expect.any(Date), end: null }))
+    })
+
+    test('Throws if a current livestream already exists', async () => {
+      await db.twitchLivestream.create({ data: { streamerId: streamer1, start: data.time1 }})
+
+      await expect(() => livestreamStore.addNewTwitchLivestream(streamer1)).rejects.toThrowError()
+    })
+  })
+
   describe(nameof(LivestreamStore, 'deactivateYoutubeLivestream'), () => {
     test('Updates entry in the database', async () => {
       await db.youtubeLivestream.createMany({ data: [

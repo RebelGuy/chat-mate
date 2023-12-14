@@ -24,6 +24,18 @@ export default class LivestreamStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
+  public async addNewTwitchLivestream (streamerId: number): Promise<TwitchLivestream> {
+    const currentLivestream = await this.getCurrentTwitchLivestream(streamerId)
+    if (currentLivestream != null) {
+      throw new Error(`Cannot add a new Twitch livestream for streamer ${streamerId} because a current livestream already exists`)
+    }
+
+    return await this.db.twitchLivestream.create({ data: {
+      streamerId: streamerId,
+      start: new Date()
+    }})
+  }
+
   /** Sets the streamer's current active Youtube livestream, if exists, to inactive such that `LivestreamStore.activeLivestream` returns null for that streamer. */
   public async deactivateYoutubeLivestream (streamerId: number): Promise<void> {
     const activeLivestream = await this.getActiveYoutubeLivestream(streamerId)

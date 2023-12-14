@@ -26,6 +26,7 @@ import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { assertUnreachable, waitUntil } from '@rebel/shared/util/typescript'
 import { nonNull } from '@rebel/shared/util/arrays'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -62,6 +63,7 @@ type Deps = Dependencies<{
   authStore: AuthStore
   twurpleAuthProvider: TwurpleAuthProvider
   externalRankEventService: ExternalRankEventService
+  livestreamStore: LivestreamStore
 }>
 
 // this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
@@ -90,6 +92,7 @@ export default class HelixEventService extends ContextClass {
   private readonly authStore: AuthStore
   private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly externalRankEventService: ExternalRankEventService
+  private readonly livestreamStore: LivestreamStore
 
   private initialisedStreamerEvents: boolean = false
   private listener: EventSubHttpListener | null = null
@@ -129,6 +132,7 @@ export default class HelixEventService extends ContextClass {
     this.authStore = deps.resolve('authStore')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.externalRankEventService = deps.resolve('externalRankEventService')
+    this.livestreamStore = deps.resolve('livestreamStore')
   }
 
   public override initialise () {
@@ -438,9 +442,15 @@ export default class HelixEventService extends ContextClass {
         } else if (eventType === 'unmod') {
           continue // todo
         } else if (eventType === 'streamStart') {
-          onCreateSubscription = () => this.eventSubBase.onStreamOnline(user, async (e) => { /* todo */ })
+          onCreateSubscription = () => this.eventSubBase.onStreamOnline(user, async (e) =>
+            await this.livestreamStore.addNewTwitchLivestream(streamerId)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
         } else if (eventType === 'streamEnd') {
-          onCreateSubscription = () => this.eventSubBase.onStreamOffline(user, async (e) => { /* todo */ })
+          onCreateSubscription = () => this.eventSubBase.onStreamOffline(user, async (e) => {
+            await this.onStreamEnd(streamerId)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          })
         } else {
           assertUnreachable(eventType)
         }
@@ -649,6 +659,15 @@ export default class HelixEventService extends ContextClass {
 
   private getSecret (): string {
     return `065adade-b312-11ec-b909-0242ac120002-${this.nodeEnv}`
+  }
+
+  private async onStreamEnd (streamerId: number) {
+    const livestream = await this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    if (livestream == null) {
+      throw new Error(`Cannot set the livestream end time for streamer ${streamerId} because no current livestream exists.`)
+    }
+
+    await this.livestreamStore.setTwitchLivestreamTimes(livestream.id, { start: livestream.start, end: livestream.end })
   }
 }
 
