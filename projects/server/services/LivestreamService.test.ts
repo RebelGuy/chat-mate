@@ -358,3 +358,50 @@ describe(nameof(LivestreamService, 'setActiveYoutubeLivestream'), () => {
   })
 })
 
+describe(nameof(LivestreamService, 'onTwitchLivestreamStarted'), () => {
+  test('Creates a new livestream if the previous livestream was long ago', async () => {
+    mockLivestreamStore.getPreviousTwitchLivestream.calledWith(streamerId).mockResolvedValue(cast<TwitchLivestream>({ end: data.time1 }))
+    mockDateTimeHelpers.ts.mockReset().calledWith().mockReturnValue(data.time2.getTime())
+    mockLivestreamStore.addNewTwitchLivestream.calledWith(streamerId).mockResolvedValue(cast<TwitchLivestream>({}))
+
+    await livestreamService.onTwitchLivestreamStarted(streamerId)
+
+    expect(single2(mockLivestreamStore.addNewTwitchLivestream.mock.calls)).toBe(streamerId)
+  })
+
+  test('Re-activates the previous livestream if it ended recently', async () => {
+    const prevLivestream = cast<TwitchLivestream>({ id: 123, end: data.time1 })
+    mockDateTimeHelpers.ts.mockReset().calledWith().mockReturnValue(data.time1.getTime() + 60_000)
+    mockLivestreamStore.getPreviousTwitchLivestream.calledWith(streamerId).mockResolvedValue(prevLivestream)
+
+    await livestreamService.onTwitchLivestreamStarted(streamerId)
+
+    const args = single(mockLivestreamStore.setTwitchLivestreamTimes.mock.calls)
+    expect(args).toEqual(expectObject(args, [prevLivestream.id, { end: null }]))
+  })
+
+  test('Does not do anything if a Twitch livestream is already current', async () => {
+    mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(cast<TwitchLivestream>({}))
+
+    await livestreamService.onTwitchLivestreamStarted(streamerId)
+
+    expect(mockLivestreamStore.addNewTwitchLivestream.mock.calls.length).toBe(0)
+  })
+})
+
+describe(nameof(LivestreamService, 'onTwitchLivestreamEnded'), () => {
+  test('Sets the end time of the Twitch livestream to now', async () => {
+    const currentStream = cast<TwitchLivestream>({ id: 123, start: data.time1, end: null })
+    mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(currentStream)
+    mockDateTimeHelpers.now.mockReset().calledWith().mockReturnValue(data.time2)
+
+    await livestreamService.onTwitchLivestreamEnded(streamerId)
+
+    const args = single(mockLivestreamStore.setTwitchLivestreamTimes.mock.calls)
+    expect(args).toEqual(expectObject(args, [currentStream.id, { start: currentStream.start, end: data.time2 }]))
+  })
+
+  test('Throws if there is no current Twitch livestream', async () => {
+    await expect(() => livestreamService.onTwitchLivestreamEnded(streamerId)).rejects.toThrowError()
+  })
+})

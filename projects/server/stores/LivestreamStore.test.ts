@@ -154,6 +154,32 @@ export default () => {
     })
   })
 
+  describe(nameof(LivestreamStore, 'getPreviousTwitchLivestream'), () => {
+    test('Returns the previous livestream', async () => {
+      await db.twitchLivestream.createMany({ data: [
+        { streamerId: streamer1, start: data.time1, end: data.time2 },
+        { streamerId: streamer1, start: data.time2, end: data.time3 },
+        { streamerId: streamer1, start: data.time3, end: null },
+        { streamerId: streamer2, start: data.time1, end: data.time5 }
+      ]})
+
+      const result = await livestreamStore.getPreviousTwitchLivestream(streamer1)
+
+      expect(result!.id).toBe(2)
+    })
+
+    test('Returns null if the streamer has no previous livestream', async () => {
+      await db.twitchLivestream.createMany({ data: [
+        { streamerId: streamer1, start: data.time3, end: null },
+        { streamerId: streamer2, start: data.time1, end: data.time5 }
+      ]})
+
+      const result = await livestreamStore.getPreviousTwitchLivestream(streamer1)
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(LivestreamStore, 'getYoutubeLivestreams'), () => {
     test(`Gets the ordered list of the streamer's Youtube livestreams`, async () => {
       await db.youtubeLivestream.createMany({

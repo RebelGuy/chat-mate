@@ -14,6 +14,8 @@ import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
+const STREAM_CONTINUITY_ALLOWANCE = 5 * 60_000
+
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
   masterchatService: MasterchatService
@@ -94,6 +96,35 @@ export default class LivestreamService extends ContextClass {
     await this.livestreamStore.setActiveYoutubeLivestream(streamerId, liveId)
     this.masterchatService.addMasterchat(streamerId, liveId)
     this.logService.logInfo(this, `Youtube livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
+  }
+
+  public async onTwitchLivestreamStarted (streamerId: number) {
+    const currentStream = await this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    if (currentStream != null) {
+      this.logService.logWarning(this, `A new Twitch livestream for streamer ${streamerId} has supposedly started, but another stream is still active. Ignoring.`)
+      return
+    }
+
+    const previousStream = await this.livestreamStore.getPreviousTwitchLivestream(streamerId)
+    const previousEndTime = previousStream?.end!.getTime() ?? 0
+    if (previousStream != null && this.dateTimeHelpers.ts() - previousEndTime <= STREAM_CONTINUITY_ALLOWANCE) {
+      // re-activate the previous stream
+      await this.livestreamStore.setTwitchLivestreamTimes(previousStream.id, { start: previousStream?.start, end: null })
+      this.logService.logInfo(this, `A new Twitch livestream for streamer ${streamerId} has started shortly after the previous one (id ${previousStream.id} finished. Re-activating the previous livestream.`)
+    } else {
+      // create a new stream
+      const newStream = await this.livestreamStore.addNewTwitchLivestream(streamerId)
+      this.logService.logInfo(this, `A new Twitch livestream for streamer ${streamerId} has started (livestream id ${newStream.id}).`)
+    }
+  }
+
+  public async onTwitchLivestreamEnded (streamerId: number) {
+    const livestream = await this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    if (livestream == null) {
+      throw new Error(`Cannot set the livestream end time for streamer ${streamerId} because no current livestream exists.`)
+    }
+
+    await this.livestreamStore.setTwitchLivestreamTimes(livestream.id, { start: livestream.start, end: this.dateTimeHelpers.now() })
   }
 
   private async updateAllMetadata () {

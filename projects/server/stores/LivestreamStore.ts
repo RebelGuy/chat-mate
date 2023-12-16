@@ -79,6 +79,19 @@ export default class LivestreamStore extends ContextClass {
     }})
   }
 
+  /** Returns the latest Twitch livestream that is not current. */
+  public async getPreviousTwitchLivestream (streamerId: number): Promise<TwitchLivestream | null> {
+    return await this.db.twitchLivestream.findFirst({
+      where: {
+        streamerId: streamerId,
+        end: { not: null }
+      },
+      orderBy: {
+        end: 'desc'
+      }
+    })
+  }
+
   /** Gets the list of all of the streamer's Youtube livestreams, sorted by time in ascending order (with not-yet-started livestreams placed at the end). */
   public async getYoutubeLivestreams (streamerId: number): Promise<YoutubeLivestream[]> {
     const orderedLivestreams = await this.db.youtubeLivestream.findMany({
