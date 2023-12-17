@@ -125,6 +125,7 @@ export default class LivestreamService extends ContextClass {
     }
 
     await this.livestreamStore.setTwitchLivestreamTimes(livestream.id, { start: livestream.start, end: this.dateTimeHelpers.now() })
+    this.logService.logInfo(this, `The Twitch livestream for streamer ${streamerId} has ended (livestream id ${livestream.id}).`)
   }
 
   private async updateAllMetadata () {
@@ -243,6 +244,7 @@ export default class LivestreamService extends ContextClass {
           end: this.dateTimeHelpers.now()
         }
         await this.livestreamStore.setTwitchLivestreamTimes(currentLivestream.id, updatedTimes)
+        this.logService.logInfo(this, `Inferred that the Twitch livestream for streamer ${currentLivestream.streamerId} has ended.`)
 
       // otherwise, update the viewer count
       } else {
