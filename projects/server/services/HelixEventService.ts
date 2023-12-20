@@ -438,9 +438,15 @@ export default class HelixEventService extends ContextClass {
               .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
           )
         } else if (eventType === 'mod') {
-          continue // todo
+          onCreateSubscription = () => this.eventSubBase.onChannelModeratorAdd(user, async (e) =>
+            await this.externalRankEventService.onTwitchChannelModded(streamerId, e.userName)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
         } else if (eventType === 'unmod') {
-          continue // todo
+          onCreateSubscription = () => this.eventSubBase.onChannelModeratorRemove(user, async (e) =>
+            await this.externalRankEventService.onTwitchChannelUnmodded(streamerId, e.userName)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
         } else if (eventType === 'streamStart') {
           onCreateSubscription = () => this.eventSubBase.onStreamOnline(user, async (e) =>
             await this.livestreamService.onTwitchLivestreamStarted(streamerId)

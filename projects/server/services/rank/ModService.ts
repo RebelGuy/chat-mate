@@ -9,6 +9,11 @@ import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/st
 import { single } from '@rebel/shared/util/arrays'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 
+export type IgnoreOptions = {
+  youtubeChannelId?: number
+  twitchChannelId?: number
+}
+
 type Deps = Dependencies<{
   rankStore: RankStore
   channelStore: ChannelStore
@@ -43,18 +48,22 @@ export default class ModService extends ContextClass {
   // should we also handle discrepancies between the data, e.g. when the external rank differs from the expected rank?
 
   /** Add or remove the mod user-rank and notify the external platforms. Doesn't throw. */
-  public async setModRank (primaryUserId: number, streamerId: number, loggedInRegisteredUserId: number | null, isMod: boolean, message: string | null): Promise<SetActionRankResult> {
+  public async setModRank (primaryUserId: number, streamerId: number, issuingModeratorPrimaryUserId: number | null, isMod: boolean, message: string | null, ignoreOptions: IgnoreOptions | null): Promise<SetActionRankResult> {
     if (await this.userService.isUserBusy(primaryUserId)) {
       throw new Error(`Cannot ${isMod ? 'mod' : 'unmod'} the user at this time. Please try again later.`)
     }
 
-    const internalRankResult = await this.setInternalModRank(primaryUserId, streamerId, loggedInRegisteredUserId, isMod, message)
+    const internalRankResult = await this.setInternalModRank(primaryUserId, streamerId, issuingModeratorPrimaryUserId, isMod, message)
 
     // we have no way of knowing the _current_ external state (only from the previous message sent from that channel), so, to be safe, apply the rank
     // update to ALL of the user's channels and report back any errors that could arise from duplication.
     const userChannels = await this.channelStore.getConnectedUserOwnedChannels([primaryUserId]).then(single)
-    const youtubeResults = await Promise.all(userChannels.youtubeChannelIds.map(c => this.trySetYoutubeMod(streamerId, c, isMod)))
-    const twitchResults = await Promise.all(userChannels.twitchChannelIds.map(c => this.trySetTwitchMod(streamerId, c, isMod)))
+    const youtubeResults = await Promise.all(userChannels.youtubeChannelIds
+      .filter(id => ignoreOptions?.youtubeChannelId !== id)
+      .map(c => this.trySetYoutubeMod(streamerId, c, isMod)))
+    const twitchResults = await Promise.all(userChannels.twitchChannelIds
+      .filter(id => ignoreOptions?.twitchChannelId !== id)
+      .map(c => this.trySetTwitchMod(streamerId, c, isMod)))
 
     return {
       rankResult: internalRankResult,
@@ -75,7 +84,7 @@ export default class ModService extends ContextClass {
     }
   }
 
-  private async setInternalModRank (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, isMod: boolean, message: string | null): Promise<InternalRankResult> {
+  private async setInternalModRank (primaryUserId: number, streamerId: number, issuingModeratorPrimaryUserId: number | null, isMod: boolean, message: string | null): Promise<InternalRankResult> {
     try {
       if (isMod) {
         const args: AddUserRankArgs = {
@@ -84,7 +93,7 @@ export default class ModService extends ContextClass {
           rank: 'mod',
           expirationTime: null,
           message: message,
-          assignee: moderatorPrimaryUserId
+          assignee: issuingModeratorPrimaryUserId
         }
         return {
           rank: await this.rankStore.addUserRank(args),
@@ -96,7 +105,7 @@ export default class ModService extends ContextClass {
           streamerId: streamerId,
           rank: 'mod',
           message: message,
-          removedBy: moderatorPrimaryUserId
+          removedBy: issuingModeratorPrimaryUserId
         }
         return {
           rank: await this.rankStore.removeUserRank(args),

@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ModService from '@rebel/server/services/rank/ModService'
+import ModService, { IgnoreOptions } from '@rebel/server/services/rank/ModService'
 import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -47,12 +47,13 @@ describe(nameof(ModService, 'setModRank'), () => {
       userId: primaryUserId,
       aggregateUserId: primaryUserId,
       youtubeChannelIds: [3, 4],
-      twitchChannelIds: [1, 2]
+      twitchChannelIds: [1, 2, 3]
     }])
+    const ignoreOptions: IgnoreOptions = { twitchChannelId: 3 }
     const newRank: any = {}
     mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ primaryUserId: primaryUserId, streamerId: streamerId1, assignee: loggedInRegisteredUserId, rank: 'mod', expirationTime: null, message: testMessage })).mockResolvedValue(newRank)
 
-    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, true, testMessage)
+    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, true, testMessage, ignoreOptions)
 
     expect(result.rankResult.rank).toBe(newRank)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
@@ -62,6 +63,7 @@ describe(nameof(ModService, 'setModRank'), () => {
     expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: null },
       { twitchChannelId: 2, error: null }
+      // should not have modded twitch channel 3
     ])
 
     const youtubeCalls = mockYoutubeService.modYoutubeChannel.mock.calls
@@ -78,7 +80,7 @@ describe(nameof(ModService, 'setModRank'), () => {
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ userId: primaryUserId, aggregateUserId: primaryUserId, youtubeChannelIds: [], twitchChannelIds: [] }])
     mockRankStore.addUserRank.calledWith(expectObject<AddUserRankArgs>({ rank: 'mod', streamerId: streamerId1, assignee: loggedInRegisteredUserId })).mockRejectedValue(new UserRankAlreadyExistsError())
 
-    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, true, null)
+    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, true, null, null)
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: expect.anything() }))
   })
@@ -87,18 +89,20 @@ describe(nameof(ModService, 'setModRank'), () => {
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{
       userId: primaryUserId,
       aggregateUserId: null,
-      youtubeChannelIds: [3, 4],
+      youtubeChannelIds: [3, 4, 5],
       twitchChannelIds: [1, 2]
     }])
+    const ignoreOptions: IgnoreOptions = { youtubeChannelId: 5 }
     const updatedRank: any = {}
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ primaryUserId: primaryUserId, streamerId: streamerId1, removedBy: loggedInRegisteredUserId, rank: 'mod', message: testMessage })).mockResolvedValue(updatedRank)
 
-    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, false, testMessage)
+    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, false, testMessage, ignoreOptions)
 
     expect(result.rankResult.rank).toBe(updatedRank)
     expect(result.youtubeResults).toEqual<YoutubeRankResult[]>([
       { youtubeChannelId: 3, error: null },
       { youtubeChannelId: 4, error: null }
+      // should not have unmodded youtube channel 5
     ])
     expect(result.twitchResults).toEqual<TwitchRankResult[]>([
       { twitchChannelId: 1, error: null },
@@ -119,7 +123,7 @@ describe(nameof(ModService, 'setModRank'), () => {
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ userId: primaryUserId, aggregateUserId: null, youtubeChannelIds: [], twitchChannelIds: [] }])
     mockRankStore.removeUserRank.calledWith(expectObject<RemoveUserRankArgs>({ rank: 'mod', streamerId: streamerId1, removedBy: loggedInRegisteredUserId })).mockRejectedValue(new UserRankNotFoundError())
 
-    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, false, null)
+    const result = await modService.setModRank(primaryUserId, streamerId1, loggedInRegisteredUserId, false, null, null)
 
     expect(result.rankResult).toEqual(expectObject<InternalRankResult>({ rank: null, error: expect.anything() }))
   })
@@ -127,7 +131,7 @@ describe(nameof(ModService, 'setModRank'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => modService.setModRank(primaryUserId, streamerId1, 1, true, '')).rejects.toThrow()
+    await expect(() => modService.setModRank(primaryUserId, streamerId1, 1, true, '', null)).rejects.toThrow()
   })
 })
 
