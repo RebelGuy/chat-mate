@@ -5,7 +5,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, nameof, promised } from '@rebel/shared/testUtils'
+import { cast, expectObject, nameof, promised } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -16,6 +16,7 @@ import { ChatMessage, YoutubeLivestream, TwitchLivestream } from '@prisma/client
 import CommandService, { NormalisedCommand } from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
+import ChannelEventService from '@rebel/server/services/ChannelEventService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateOrUpdateYoutube = CalledWithMock<Promise<YoutubeChannelWithLatestInfo>, ['youtube', string, CreateOrUpdateYoutubeChannelArgs]>
@@ -78,19 +79,21 @@ let mockLivestreamStore: MockProxy<LivestreamStore>
 let mockCommandService: MockProxy<CommandService>
 let mockCommandHelpers: MockProxy<CommandHelpers>
 let mockCommandStore: MockProxy<CommandStore>
+let mockChannelEventService: MockProxy<ChannelEventService>
 let chatService: ChatService
 
 beforeEach(() => {
-  mockChatStore = mock<ChatStore>()
-  mockLogService = mock<LogService>()
-  mockExperienceService = mock<ExperienceService>()
-  mockChannelStore = mock<ChannelStore>()
-  mockEmojiService = mock<EmojiService>()
-  mockEventDispatchService = mock<EventDispatchService>()
-  mockLivestreamStore = mock<LivestreamStore>()
-  mockCommandService = mock<CommandService>()
-  mockCommandHelpers = mock<CommandHelpers>()
-  mockCommandStore = mock<CommandStore>()
+  mockChatStore = mock()
+  mockLogService = mock()
+  mockExperienceService = mock()
+  mockChannelStore = mock()
+  mockEmojiService = mock()
+  mockEventDispatchService = mock()
+  mockLivestreamStore = mock()
+  mockCommandService = mock()
+  mockCommandHelpers = mock()
+  mockCommandStore = mock()
+  mockChannelEventService = mock()
 
   chatService = new ChatService(new Dependencies({
     chatStore: mockChatStore,
@@ -102,7 +105,8 @@ beforeEach(() => {
     livestreamStore: mockLivestreamStore,
     commandHelpers: mockCommandHelpers,
     commandService: mockCommandService,
-    commandStore: mockCommandStore
+    commandStore: mockCommandStore,
+    channelEventService: mockChannelEventService
   }))
 })
 
@@ -150,6 +154,9 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const [passedChatItem_, passedStreamerId_] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(passedChatItem_).toBe(chatItem1)
     expect(passedStreamerId_).toBe(streamerId)
+
+    const channelEventServiceArgs = single(mockChannelEventService.checkYoutubeChannelForModEvent.mock.calls)
+    expect(channelEventServiceArgs).toEqual<typeof channelEventServiceArgs>([streamerId, youtubeChannel1.id])
   })
 
   test('twitch: synthesises correct data and calls required services, then returns true', async () => {
@@ -204,5 +211,8 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     expect(addedChat).toBe(false)
 
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
+
+    const channelEventServiceArgs = single(mockChannelEventService.checkYoutubeChannelForModEvent.mock.calls)
+    expect(channelEventServiceArgs).toEqual<typeof channelEventServiceArgs>([streamerId, youtubeChannel1.id])
   })
 })

@@ -330,6 +330,28 @@ export default () => {
     })
   })
 
+  describe(nameof(ChannelStore, 'getYoutubeChannelHistory'), () => {
+    test('Returns the latest 2 items from the specified channel', async () => {
+      const channel1 = await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo1, channelInfo3]} }
+      }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo4] }}
+      }})
+      const streamerId = 1
+
+      const result = await channelStore.getYoutubeChannelHistory(streamerId, channel1.id, 2)
+
+      expect(result).toEqual(expectObject(result, [
+        { id: 3 }, { id: 1 }
+      ]))
+    })
+  })
+
   describe(nameof(ChannelStore, 'getChannelFromUserNameOrExternalId'), () => {
     beforeEach(async () => {
       await db.youtubeChannel.create({ data: {

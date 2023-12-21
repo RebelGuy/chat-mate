@@ -97,6 +97,8 @@ import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyServic
 import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
 import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientFactory'
 import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
+import ExternalRankDataService from '@rebel/server/services/rank/ExternalRankDataService'
+import ChannelEventService from '@rebel/server/services/ChannelEventService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -201,7 +203,6 @@ const main = async () => {
     .withClass('adminService', AdminService)
     .withClass('experienceStore', ExperienceStore)
     .withClass('accountService', AccountService)
-    .withClass('channelService', ChannelService)
     .withClass('twurpleService', TwurpleService)
     .withClass('linkStore', LinkStore)
     .withClass('userService', UserService)
@@ -214,22 +215,25 @@ const main = async () => {
     .withClass('punishmentService', PunishmentService)
     .withClass('genericStore', GenericStore)
     .withClass('aggregateLivestreamService', AggregateLivestreamService)
+    .withClass('channelService', ChannelService)
+    .withClass('externalRankDataService', ExternalRankDataService)
+    .withClass('modService', ModService)
+    .withClass('externalRankEventService', ExternalRankEventService)
     .withClass('experienceService', ExperienceService)
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
     .withClass('emojiService', EmojiService)
     .withClass('commandStore', CommandStore)
     .withClass('donationStore', DonationStore)
-    .withClass('modService', ModService)
     .withClass('rankService', RankService)
     .withClass('donationService', DonationService)
     .withClass('linkService', LinkService)
     .withClass('linkCommand', LinkCommand)
     .withClass('commandService', CommandService)
+    .withClass('channelEventService', ChannelEventService)
     .withClass('chatService', ChatService)
     .withClass('masterchatStore', MasterchatStore)
     .withClass('followerStore', FollowerStore)
-    .withClass('externalRankEventService', ExternalRankEventService)
     .withClass('masterchatFetchService', MasterchatFetchService)
     .withClass('helixEventService', HelixEventService)
     .withClass('donationFetchService', DonationFetchService)

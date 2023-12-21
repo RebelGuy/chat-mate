@@ -14,6 +14,7 @@ import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import { ChatMessage } from '@prisma/client'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
+import ChannelEventService from '@rebel/server/services/ChannelEventService'
 
 type ChatEvents = {
   newChatItem: {
@@ -32,6 +33,7 @@ type Deps = Dependencies<{
   commandService: CommandService
   commandHelpers: CommandHelpers
   commandStore: CommandStore
+  channelEventService: ChannelEventService
 }>
 
 export default class ChatService extends ContextClass {
@@ -46,6 +48,7 @@ export default class ChatService extends ContextClass {
   private readonly commandHelpers: CommandHelpers
   private readonly commandService: CommandService
   private readonly commandStore: CommandStore
+  private readonly channelEventService: ChannelEventService
 
   constructor (deps: Deps) {
     super()
@@ -59,6 +62,7 @@ export default class ChatService extends ContextClass {
     this.commandHelpers = deps.resolve('commandHelpers')
     this.commandService = deps.resolve('commandService')
     this.commandStore = deps.resolve('commandStore')
+    this.channelEventService = deps.resolve('channelEventService')
   }
 
   public override initialise () {
@@ -94,6 +98,8 @@ export default class ChatService extends ContextClass {
         externalId = item.author.channelId
         platform = 'youtube'
         channel = await this.channelStore.createOrUpdate('youtube', externalId, channelInfo)
+
+        await this.channelEventService.checkYoutubeChannelForModEvent(streamerId, channel.id)
 
       } else if (item.platform === 'twitch') {
         const channelInfo: CreateOrUpdateTwitchChannelArgs = {

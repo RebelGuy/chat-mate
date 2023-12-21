@@ -197,6 +197,16 @@ export default class ChannelStore extends ContextClass {
     })
   }
 
+  /** Gets the latest N history updates (or less, if less exist) of the Youtube channel, sorted by time in descending order. The data is updated only when the user posts a chat message in the streamer's chat, and if the channel details have changed.
+   * Note: this method is currently bugged since we don't save channel info per-streamer. See CHAT-718 */
+  public async getYoutubeChannelHistory (streamerId: number, youtubeChannelId: number, n: number) {
+    return await this.db.youtubeChannelInfo.findMany({
+      where: { channelId: youtubeChannelId },
+      orderBy: { time: 'desc' },
+      take: n
+    })
+  }
+
   /** Returns null if the channel was not found. Not case sensitive. Do NOT provide the twitch external id - provide the twitch username instead. */
   public async getChannelFromUserNameOrExternalId (externalIdOrUserName: string): Promise<YoutubeChannel | TwitchChannel | null> {
     const youtubeChannel = await this.db.youtubeChannel.findUnique({ where: { youtubeId: externalIdOrUserName } })
