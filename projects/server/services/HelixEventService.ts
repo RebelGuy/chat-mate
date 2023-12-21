@@ -14,7 +14,7 @@ import { Express } from 'express-serve-static-core'
 import { EventSubHttpBase } from '@twurple/eventsub-http/lib/EventSubHttpBase'
 import { NodeEnv } from '@rebel/server/globals'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
-import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EventData, EVENT_ADD_PRIMARY_CHANNEL, EVENT_REMOVE_PRIMARY_CHANNEL } from '@rebel/server/services/EventDispatchService'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import { keysOf } from '@rebel/shared/util/objects'
@@ -143,8 +143,8 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
-    this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
-    this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
+    this.eventDispatchService.onData(EVENT_ADD_PRIMARY_CHANNEL, data => this.onPrimaryChannelAdded(data))
+    this.eventDispatchService.onData(EVENT_REMOVE_PRIMARY_CHANNEL, data => this.onPrimaryChannelRemoved(data))
 
     // there is no need to initialise everything right now - wait for the server to be set up first,
     // then subscribe to events (this could take a long time if there are many streamers)
@@ -360,7 +360,7 @@ export default class HelixEventService extends ContextClass {
     }
   }
 
-  private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {
+  private async onPrimaryChannelAdded (data: EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]) {
     if (data.userChannel.platformInfo.platform !== 'twitch') {
       return
     }
@@ -370,7 +370,7 @@ export default class HelixEventService extends ContextClass {
     await this.subscribeToChannelEventsByChannelName(data.streamerId, getUserName(data.userChannel))
   }
 
-  private async onPrimaryChannelRemoved (data: EventData['removePrimaryChannel']) {
+  private async onPrimaryChannelRemoved (data: EventData[typeof EVENT_REMOVE_PRIMARY_CHANNEL]) {
     if (data.userChannel.platformInfo.platform !== 'twitch') {
       return
     }

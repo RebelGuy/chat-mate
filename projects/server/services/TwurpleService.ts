@@ -3,7 +3,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import { getUserName } from '@rebel/server/services/ChannelService'
-import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_ADD_PRIMARY_CHANNEL, EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED, EVENT_REMOVE_PRIMARY_CHANNEL, EventData } from '@rebel/server/services/EventDispatchService'
 import LogService from '@rebel/server/services/LogService'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
@@ -128,8 +128,8 @@ export default class TwurpleService extends ContextClass {
     this.chatClient.onBan((channel, user) => this.logService.logInfo(this, 'chatClient.onBan', channel, user))
     this.chatClient.onTimeout((channel, user, duration) => this.logService.logInfo(this, 'chatClient.onTimeout', channel, user, duration))
 
-    this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
-    this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
+    this.eventDispatchService.onData(EVENT_ADD_PRIMARY_CHANNEL, data => this.onPrimaryChannelAdded(data))
+    this.eventDispatchService.onData(EVENT_REMOVE_PRIMARY_CHANNEL, data => this.onPrimaryChannelRemoved(data))
   }
 
   public async banChannel (streamerId: number, twitchChannelId: number, reason: string | null) {
@@ -270,7 +270,7 @@ export default class TwurpleService extends ContextClass {
     await this.twurpleApiProxyService.unTimeout(broadcaster, user)
   }
 
-  private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {
+  private async onPrimaryChannelAdded (data: EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]) {
     if (data.userChannel.platformInfo.platform !== 'twitch') {
       return
     }
@@ -279,7 +279,7 @@ export default class TwurpleService extends ContextClass {
     await this.joinSafe(channelName, data.streamerId)
   }
 
-  private onPrimaryChannelRemoved (data: EventData['removePrimaryChannel']) {
+  private onPrimaryChannelRemoved (data: EventData[typeof EVENT_REMOVE_PRIMARY_CHANNEL]) {
     if (data.userChannel.platformInfo.platform !== 'twitch') {
       return
     }
@@ -340,7 +340,7 @@ export default class TwurpleService extends ContextClass {
       }
 
       this.logService.logInfo(this, _channel, 'Adding 1 new chat item')
-      this.eventDispatchService.addData('chatItem', { ...evaluated, streamerId: streamer.id })
+      this.eventDispatchService.addData(EVENT_CHAT_ITEM, { ...evaluated, streamerId: streamer.id })
     } catch (e: any) {
       this.logService.logError(this, e)
     }
@@ -348,7 +348,7 @@ export default class TwurpleService extends ContextClass {
 
   private async onMessageRemoved (channel: string, messageId: string) {
     this.logService.logInfo(this, channel, `Removing chat item ${messageId}`)
-    await this.eventDispatchService.addData('chatItemRemoved', { externalMessageId: messageId })
+    await this.eventDispatchService.addData(EVENT_CHAT_ITEM_REMOVED, { externalMessageId: messageId })
   }
 
   private async onConnected () {

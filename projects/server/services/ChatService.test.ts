@@ -10,7 +10,7 @@ import { single, single2 } from '@rebel/shared/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import EmojiService from '@rebel/server/services/EmojiService'
-import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { ChatMessage, YoutubeLivestream, TwitchLivestream } from '@prisma/client'
 import CommandService, { NormalisedCommand } from '@rebel/server/services/command/CommandService'
@@ -116,9 +116,9 @@ describe(nameof(ChatService, 'initialise'), () => {
 
     const args = mockEventDispatchService.onData.mock.calls
     expect(args.length).toBe(2)
-    expect(args[0][0]).toBe('chatItem')
+    expect(args[0][0]).toBe(EVENT_CHAT_ITEM)
     expect(args[0][1]).not.toBeNull()
-    expect(args[1][0]).toBe('chatItemRemoved')
+    expect(args[1][0]).toBe(EVENT_CHAT_ITEM_REMOVED)
     expect(args[1][1]).not.toBeNull()
   })
 })

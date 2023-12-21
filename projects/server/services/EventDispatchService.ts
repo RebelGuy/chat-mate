@@ -5,11 +5,16 @@ import { UserChannel } from '@rebel/server/stores/ChannelStore'
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
 
+export const EVENT_CHAT_ITEM = Symbol()
+export const EVENT_CHAT_ITEM_REMOVED = Symbol()
+export const EVENT_ADD_PRIMARY_CHANNEL = Symbol()
+export const EVENT_REMOVE_PRIMARY_CHANNEL = Symbol()
+
 export type EventData = {
-  chatItem: ChatItem & { streamerId: number },
-  chatItemRemoved: { externalMessageId: string },
-  addPrimaryChannel: { streamerId: number, userChannel: UserChannel },
-  removePrimaryChannel: { streamerId: number, userChannel: UserChannel }
+  [EVENT_CHAT_ITEM]: ChatItem & { streamerId: number },
+  [EVENT_CHAT_ITEM_REMOVED]: { externalMessageId: string },
+  [EVENT_ADD_PRIMARY_CHANNEL]: { streamerId: number, userChannel: UserChannel },
+  [EVENT_REMOVE_PRIMARY_CHANNEL]: { streamerId: number, userChannel: UserChannel }
 }
 
 export type DataPair<T extends keyof EventData> = [T, EventData[T]]

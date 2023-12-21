@@ -8,7 +8,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
@@ -66,8 +66,8 @@ export default class ChatService extends ContextClass {
   }
 
   public override initialise () {
-    this.eventDispatchService.onData('chatItem', data => this.onNewChatItem(data, data.streamerId))
-    this.eventDispatchService.onData('chatItemRemoved', data => this.onChatItemRemoved(data.externalMessageId))
+    this.eventDispatchService.onData(EVENT_CHAT_ITEM, data => this.onNewChatItem(data, data.streamerId))
+    this.eventDispatchService.onData(EVENT_CHAT_ITEM_REMOVED, data => this.onChatItemRemoved(data.externalMessageId))
   }
 
   public async onChatItemRemoved (externalMessageId: string) {

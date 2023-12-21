@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { getUserName } from '@rebel/server/services/ChannelService'
-import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_ADD_PRIMARY_CHANNEL, EVENT_REMOVE_PRIMARY_CHANNEL } from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -121,7 +121,7 @@ export default class StreamerChannelService extends ContextClass {
       assertUnreachable(platform)
     }
 
-    await this.eventDispatchService.addData('addPrimaryChannel', { streamerId, userChannel })
+    await this.eventDispatchService.addData(EVENT_ADD_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 
   public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
@@ -143,7 +143,7 @@ export default class StreamerChannelService extends ContextClass {
     }
 
     if (userChannel != null) {
-      await this.eventDispatchService.addData('removePrimaryChannel', { streamerId, userChannel })
+      await this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
     }
   }
 }
