@@ -351,6 +351,13 @@ export default class RankStore extends ContextClass {
     })
   }
 
+  public async relinkRankEvents (formUserId: number, toUserId: number) {
+    await this.db.rankEvent.updateMany({
+      where: { userId: formUserId },
+      data: { userId: toUserId }
+    })
+  }
+
   /** Removes the rank from the user in the context of the streamer.
    * @throws {@link UserRankNotFoundError}: When no user-rank of that type is currently active.
   */
