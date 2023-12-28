@@ -109,8 +109,8 @@ describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
       twitchChannelIds: []
     })
     mockChannelStore.getConnectedUserOwnedChannels.calledWith(expect.arrayContaining([userId1, userId2])).mockResolvedValue([connectedChannelIds1, connectedChannelIds2])
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expect.arrayContaining([10, 20])).mockResolvedValue([youtubeChannel1, youtubeChannel2])
-    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expect.arrayContaining([10, 25])).mockResolvedValue([twitchChannel1, twitchChannel2])
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expect.arrayContaining([10, 20])).mockResolvedValue([youtubeChannel1, youtubeChannel2])
+    mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expect.arrayContaining([10, 25])).mockResolvedValue([twitchChannel1, twitchChannel2])
 
     const result = await channelService.getConnectedUserChannels([userId1, userId2])
 

@@ -157,7 +157,7 @@ export default class ChannelStore extends ContextClass {
   }
 
   /** For each of the given internal twitch ids, returns the latest channel info. Throws if any channels could not be found. */
-  public async getTwitchChannelFromChannelId (twitchChannelIds: number[]): Promise<UserChannel<'twitch'>[]> {
+  public async getTwitchChannelsFromChannelIds (twitchChannelIds: number[]): Promise<UserChannel<'twitch'>[]> {
     if (twitchChannelIds.length === 0) {
       return []
     }
@@ -182,7 +182,7 @@ export default class ChannelStore extends ContextClass {
   }
 
   /** For each of the given internal youtube ids, returns the latest channel info. Throws if any channels could not be found. */
-  public async getYoutubeChannelFromChannelId (youtubeChannelIds: number[]): Promise<UserChannel<'youtube'>[]> {
+  public async getYoutubeChannelsFromChannelIds (youtubeChannelIds: number[]): Promise<UserChannel<'youtube'>[]> {
     if (youtubeChannelIds.length === 0) {
       return []
     }

@@ -173,7 +173,7 @@ export default class ExternalRankEventService extends ContextClass {
   }
 
   public async onYoutubeChannelModded (streamerId: number, youtubeChannelId: number) {
-    const youtubeChannel = await this.channelStore.getYoutubeChannelFromChannelId([youtubeChannelId]).then(single)
+    const youtubeChannel = await this.channelStore.getYoutubeChannelsFromChannelIds([youtubeChannelId]).then(single)
     if (youtubeChannel.aggregateUserId == null) {
       this.logService.logInfo(this, `Received notification that Youtube channel ${youtubeChannelId} for streamer ${streamerId} was modded, but channel has no other channels linked. Nothing to sync.`)
       return
@@ -213,7 +213,7 @@ export default class ExternalRankEventService extends ContextClass {
   }
 
   public async onYoutubeChannelUnmodded (streamerId: number, youtubeChannelId: number) {
-    const youtubeChannel = await this.channelStore.getYoutubeChannelFromChannelId([youtubeChannelId]).then(single)
+    const youtubeChannel = await this.channelStore.getYoutubeChannelsFromChannelIds([youtubeChannelId]).then(single)
     if (youtubeChannel.aggregateUserId == null) {
       this.logService.logInfo(this, `Received notification that Youtube channel ${youtubeChannelId} for streamer ${streamerId} was unmodded, but channel has no other channels linked. Nothing to sync.`)
       return

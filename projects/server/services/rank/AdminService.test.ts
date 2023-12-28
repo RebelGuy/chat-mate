@@ -93,7 +93,7 @@ describe(nameof(AdminService, 'getYoutubeChannelName'), () => {
     const youtubeChannelName = 'testName'
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(mockChannelId)
       .mockResolvedValue(cast<YoutubeChannel>({ id: youtubeChannelId, youtubeId: mockChannelId }))
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([youtubeChannelId]))
       .mockResolvedValue([cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: youtubeChannelName }]}} })])
 
     const result = await adminService.getYoutubeChannelName()

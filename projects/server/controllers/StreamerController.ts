@@ -583,7 +583,7 @@ export default class StreamerController extends ControllerBase {
         }
         return ids
       }))
-      const youtubeChannelsPromise = this.channelStore.getYoutubeChannelFromChannelId(youtubeChannelIds)
+      const youtubeChannelsPromise = this.channelStore.getYoutubeChannelsFromChannelIds(youtubeChannelIds)
 
       const twitchChannelIds = unique(filterTypes(events, 'rankUpdate').flatMap(e => {
         let ids = e.twitchRankResults.map(r => r.twitchChannelId)
@@ -592,7 +592,7 @@ export default class StreamerController extends ControllerBase {
         }
         return ids
       }))
-      const twitchChannelsPromise = this.channelStore.getTwitchChannelFromChannelId(twitchChannelIds)
+      const twitchChannelsPromise = this.channelStore.getTwitchChannelsFromChannelIds(twitchChannelIds)
 
       // pre-fetch user data for some of the events
       const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer', 'rankUpdate').map(e => e.primaryUserId)))

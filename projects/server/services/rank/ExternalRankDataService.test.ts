@@ -48,7 +48,7 @@ describe(nameof(ExternalRankDataService, 'getTwitchDataForExternalRankEvent'), (
     ])
 
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<TwitchChannel>({ id: channelId, twitchId: '123' }))
-    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId, platformInfo: { channel: { id: channelId }} }]))
+    mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId, platformInfo: { channel: { id: channelId }} }]))
     mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(ranks)
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(null)
 
@@ -71,10 +71,10 @@ describe(nameof(ExternalRankDataService, 'getTwitchDataForExternalRankEvent'), (
     ])
 
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(userName).mockResolvedValue(cast<TwitchChannel>({ id: channelId, twitchId: '123' }))
-    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId, platformInfo: { channel: { id: channelId }} }]))
+    mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expectArray<number>([channelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: primaryUserId, platformInfo: { channel: { id: channelId }} }]))
     mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue(ranks)
     mockChannelStore.getChannelFromUserNameOrExternalId.calledWith(moderatorName).mockResolvedValue(cast<TwitchChannel>({ id: modChannelId, twitchId: '456' }))
-    mockChannelStore.getTwitchChannelFromChannelId.calledWith(expectArray<number>([modChannelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: moderatorPrimaryUserId }]))
+    mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expectArray<number>([modChannelId])).mockResolvedValue(cast<UserChannel<'twitch'>[]>([{ aggregateUserId: moderatorPrimaryUserId }]))
 
     const result = await externalRankDataService.getTwitchDataForExternalRankEvent(streamerId, userName, moderatorName, 'administration')
 

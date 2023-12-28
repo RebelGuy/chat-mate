@@ -265,7 +265,7 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getTwitchChannelFromChannelId'), () => {
+  describe(nameof(ChannelStore, 'getTwitchChannelsFromChannelIds'), () => {
     test('Gets Twitch channel with latest info', async () => {
       const time1 = new Date()
       const time2 = addTime(time1, 'seconds', 10)
@@ -287,7 +287,7 @@ export default () => {
         infoHistory: { createMany: { data: [twitchChannelInfo4]} }
       }})
 
-      const result = await channelStore.getTwitchChannelFromChannelId([2, 3])
+      const result = await channelStore.getTwitchChannelsFromChannelIds([2, 3])
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectObjectDeep(result, [
@@ -297,7 +297,7 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getYoutubeChannelFromChannelId'), () => {
+  describe(nameof(ChannelStore, 'getYoutubeChannelsFromChannelIds'), () => {
     test('Gets YouTube channel with latest info', async () => {
       const time1 = new Date()
       const time2 = addTime(time1, 'seconds', 10)
@@ -320,7 +320,7 @@ export default () => {
         infoHistory: { createMany: { data: [channelInfo4]} }
       }})
 
-      const result = await channelStore.getYoutubeChannelFromChannelId([2, 3])
+      const result = await channelStore.getYoutubeChannelsFromChannelIds([2, 3])
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectObjectDeep(result, [

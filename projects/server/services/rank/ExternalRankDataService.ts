@@ -38,7 +38,7 @@ export default class ExternalRankDataService extends ContextClass {
       return null
     }
 
-    const userChannel = await this.channelStore.getTwitchChannelFromChannelId([channel.id]).then(single)
+    const userChannel = await this.channelStore.getTwitchChannelsFromChannelIds([channel.id]).then(single)
     const primaryUserId = getPrimaryUserId(userChannel)
     const channelId = userChannel.platformInfo.channel.id
 
@@ -46,7 +46,7 @@ export default class ExternalRankDataService extends ContextClass {
     const punishmentRanksForUser = ranks.filter(r => r.primaryUserId === primaryUserId)
 
     const moderatorChannel = moderatorChannelName != null ? await this.channelStore.getChannelFromUserNameOrExternalId(moderatorChannelName) : null
-    const moderatorUserChannel = moderatorChannel != null && isTwitchChannel(moderatorChannel) ? await this.channelStore.getTwitchChannelFromChannelId([moderatorChannel.id]).then(single) : null
+    const moderatorUserChannel = moderatorChannel != null && isTwitchChannel(moderatorChannel) ? await this.channelStore.getTwitchChannelsFromChannelIds([moderatorChannel.id]).then(single) : null
     const moderatorPrimaryUserId = moderatorUserChannel != null ? getPrimaryUserId(moderatorUserChannel) : null
 
     return { primaryUserId, channelId, ranksForUser: punishmentRanksForUser, moderatorPrimaryUserId }

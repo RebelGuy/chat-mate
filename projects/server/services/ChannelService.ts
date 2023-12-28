@@ -95,8 +95,8 @@ export default class ChannelService extends ContextClass {
   /** UserIds are preserved according to the `anyUserIds` parameter. */
   public async getConnectedUserChannels (anyUserIds: number[]): Promise<ConnectedUserChannels[]> {
     const allChannelIds = await this.channelStore.getConnectedUserOwnedChannels(anyUserIds)
-    const youtubeChannels = await this.channelStore.getYoutubeChannelFromChannelId(allChannelIds.flatMap(id => id.youtubeChannelIds))
-    const twitchChannels = await this.channelStore.getTwitchChannelFromChannelId(allChannelIds.flatMap(id => id.twitchChannelIds))
+    const youtubeChannels = await this.channelStore.getYoutubeChannelsFromChannelIds(allChannelIds.flatMap(id => id.youtubeChannelIds))
+    const twitchChannels = await this.channelStore.getTwitchChannelsFromChannelIds(allChannelIds.flatMap(id => id.twitchChannelIds))
 
     return anyUserIds.map<ConnectedUserChannels>(userId => {
       const channelIds = allChannelIds.find(c => c.userId === userId)!

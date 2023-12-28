@@ -138,7 +138,7 @@ export default class YoutubeService extends ContextClass {
   }
 
   private async getExternalChannelIdFromInternalChannelId (internalChannelId: number) {
-    const userChannel = await this.channelStore.getYoutubeChannelFromChannelId([internalChannelId]).then(single)
+    const userChannel = await this.channelStore.getYoutubeChannelsFromChannelIds([internalChannelId]).then(single)
     return userChannel.platformInfo.channel.youtubeId
   }
 

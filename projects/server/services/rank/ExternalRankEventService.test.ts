@@ -258,7 +258,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelModded'), () => {
   const aggregateUserId = 512
 
   test('Returns early if channel is not linked to an aggregate (primary) user', async () => {
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId: null }]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId: null }]))
 
     await externalRankEventService.onYoutubeChannelModded(streamerId, youtubeChannelId)
 
@@ -267,7 +267,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelModded'), () => {
 
   test('Does not mod user if they are already modded internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'mod' } })
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
     mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue([rank])
 
     await externalRankEventService.onYoutubeChannelModded(streamerId, youtubeChannelId)
@@ -279,7 +279,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelModded'), () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'famous' } })
     const registeredUserId = 851
     const streamerPrimaryUserId = 42
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
     mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue([rank])
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(cast<Streamer>({ registeredUserId }))
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray([registeredUserId])).mockResolvedValue(cast<RegisteredUser[]>([{ aggregateChatUserId: streamerPrimaryUserId }]))
@@ -327,7 +327,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelUnmodded'), () => {
   const aggregateUserId = 512
 
   test('Returns early if channel is not linked to an aggregate (primary) user', async () => {
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId: null }]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId: null }]))
 
     await externalRankEventService.onYoutubeChannelUnmodded(streamerId, youtubeChannelId)
 
@@ -336,7 +336,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelUnmodded'), () => {
 
   test('Does not unmod user if they are not modded internally', async () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'famous' } })
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
     mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue([rank])
 
     await externalRankEventService.onYoutubeChannelUnmodded(streamerId, youtubeChannelId)
@@ -348,7 +348,7 @@ describe(nameof(ExternalRankEventService, 'onYoutubeChannelUnmodded'), () => {
     const rank = cast<UserRankWithRelations>({ rank: { name: 'mod' } })
     const registeredUserId = 851
     const streamerPrimaryUserId = 42
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([youtubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ aggregateUserId }]))
     mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue([rank])
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(cast<Streamer>({ registeredUserId }))
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray([registeredUserId])).mockResolvedValue(cast<RegisteredUser[]>([{ aggregateChatUserId: streamerPrimaryUserId }]))

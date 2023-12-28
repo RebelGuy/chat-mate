@@ -70,7 +70,7 @@ describe(nameof(YoutubeService, 'modYoutubeChannel'), () => {
     const userYoutubeChannelId = 51
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userYoutubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ platformInfo: { channel: { youtubeId: userExternalChannelId }}}]))
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([userYoutubeChannelId])).mockResolvedValue(cast<UserChannel<'youtube'>[]>([{ platformInfo: { channel: { youtubeId: userExternalChannelId }}}]))
 
     await youtubeService.modYoutubeChannel(streamerId, userYoutubeChannelId)
 
@@ -125,7 +125,7 @@ describe(nameof(YoutubeService, 'banYoutubeChannel'), () => {
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
     await youtubeService.banYoutubeChannel(streamerId, userChannelId)
 
@@ -144,7 +144,7 @@ describe(nameof(YoutubeService, 'timeoutYoutubeChannel'), () => {
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
     await youtubeService.timeoutYoutubeChannel(streamerId, userChannelId, timeoutDuration)
 
@@ -162,7 +162,7 @@ describe(nameof(YoutubeService, 'unbanYoutubeChannel'), () => {
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
     await youtubeService.unbanYoutubeChannel(streamerId, userChannelId)
 
@@ -180,7 +180,7 @@ describe(nameof(YoutubeService, 'untimeoutYoutubeChannel'), () => {
     const userChannel = cast<UserChannel<'youtube'>>({ platformInfo: { platform: 'youtube', channel: { youtubeId: userExternalChannelId }} })
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([streamerPrimaryChannel])
-    mockChannelStore.getYoutubeChannelFromChannelId.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
+    mockChannelStore.getYoutubeChannelsFromChannelIds.calledWith(expectArray([userChannelId])).mockResolvedValue([userChannel])
 
     await youtubeService.untimeoutYoutubeChannel(streamerId, userChannelId)
 
