@@ -2,7 +2,7 @@ import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import PunishmentService, { IgnoreOptions } from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore, { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
-import { cast, nameof, expectObject } from '@rebel/shared/testUtils'
+import { cast, nameof, expectObject, expectObjectDeep } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -164,6 +164,13 @@ describe(nameof(PunishmentService, 'banUser'), () => {
 
     const twitchCalls = mockTwurpleService.banChannel.mock.calls
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1, 'test'], [streamerId1, 2, 'test']])
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'ban', {
+      ignoreOptions: ignoreOptions,
+      youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: error2 }],
+      twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
+    }]))
   })
 
   test('Catches error and returns error message', async () => {
@@ -239,6 +246,9 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
     const result = await punishmentService.muteUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test', 10)
 
     expect(result).toBe(newPunishment)
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mute', null]))
   })
 
   test('mute is permanent if duration is null', async () => {
@@ -250,6 +260,9 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
     const result = await punishmentService.muteUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test', null)
 
     expect(result).toBe(newPunishment)
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mute', null]))
   })
 
   test('Rethrows store error', async () => {
@@ -306,6 +319,13 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
 
     const timeoutCalls = mockTwurpleService.timeout.mock.calls
     expect(timeoutCalls).toEqual<typeof timeoutCalls>([[streamerId1, 1, 'test', 1000], [streamerId1, 2, 'test', 1000]])
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'timeout', {
+      ignoreOptions: ignoreOptions,
+      youtubeRankResults: [{ youtubeChannelId: 3, error: error1 }, { youtubeChannelId: 4, error: null }],
+      twitchRankResults: [{ twitchChannelId: 1, error: error3 }, { twitchChannelId: 2, error: null }]
+    }]))
   })
 
   test('Catches error and returns error message', async () => {
@@ -404,6 +424,13 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
 
     const twitchCalls = mockTwurpleService.unbanChannel.mock.calls
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1], [streamerId1, 2]])
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'ban', {
+      ignoreOptions: ignoreOptions,
+      youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
+      twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
+    }]))
   })
 
   test('Catches error and returns error message', async () => {
@@ -432,6 +459,9 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
     const result = await punishmentService.unmuteUser(primaryUserId, streamerId1, loggedInRegisteredUserId, 'test')
 
     expect(result).toBe(expectedResult)
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'mute', null]))
   })
 
   test('Rethrows store error', async () => {
@@ -479,6 +509,13 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
 
     const twitchCalls = mockTwurpleService.untimeout.mock.calls
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1], [streamerId1, 2]])
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'timeout', {
+      ignoreOptions: ignoreOptions,
+      youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
+      twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
+    }]))
   })
 
   test('Catches error and returns error message', async () => {

@@ -35,6 +35,9 @@ import { DELETE, GET, PATCH, Path, PathParam, POST, PreProcessor, QueryParam } f
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, GetYoutubeModeratorsResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import YoutubeService from '@rebel/server/services/YoutubeService'
+import { PublicRankUpdateData } from '@rebel/api-models/public/event/PublicRankUpdateData'
+import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -51,6 +54,7 @@ type Deps = ControllerDependencies<{
   livestreamService: LivestreamService
   youtubeAuthProvider: YoutubeAuthProvider
   youtubeService: YoutubeService
+  channelStore: ChannelStore
 }>
 
 @Path(buildPath('streamer'))
@@ -69,6 +73,7 @@ export default class StreamerController extends ControllerBase {
   private readonly livestreamService: LivestreamService
   private readonly youtubeAuthProvider: YoutubeAuthProvider
   private readonly youtubeService: YoutubeService
+  private readonly channelStore: ChannelStore
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -86,6 +91,7 @@ export default class StreamerController extends ControllerBase {
     this.livestreamService = deps.resolve('livestreamService')
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
     this.youtubeService = deps.resolve('youtubeService')
+    this.channelStore = deps.resolve('channelStore')
   }
 
   @GET
@@ -569,9 +575,30 @@ export default class StreamerController extends ControllerBase {
 
       const events = await this.chatMateEventService.getEventsSince(streamerId, since)
 
+      // pref
+      const youtubeChannelIds = unique(filterTypes(events, 'rankUpdate').flatMap(e => {
+        let ids = e.youtubeRankResults.map(r => r.youtubeChannelId)
+        if (e.ignoreOptions?.youtubeChannelId != null) {
+          ids.push(e.ignoreOptions.youtubeChannelId)
+        }
+        return ids
+      }))
+      const youtubeChannelsPromise = this.channelStore.getYoutubeChannelFromChannelId(youtubeChannelIds)
+
+      const twitchChannelIds = unique(filterTypes(events, 'rankUpdate').flatMap(e => {
+        let ids = e.twitchRankResults.map(r => r.twitchChannelId)
+        if (e.ignoreOptions?.twitchChannelId != null) {
+          ids.push(e.ignoreOptions.twitchChannelId)
+        }
+        return ids
+      }))
+      const twitchChannelsPromise = this.channelStore.getTwitchChannelFromChannelId(twitchChannelIds)
+
       // pre-fetch user data for some of the events
-      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer').map(e => e.primaryUserId)))
+      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer', 'rankUpdate').map(e => e.primaryUserId)))
       const allData = await this.apiService.getAllData(primaryUserIds)
+
+      const [youtubeChannels, twitchChannels] = await Promise.all([youtubeChannelsPromise, twitchChannelsPromise])
 
       let result: PublicChatMateEvent[] = []
       for (const event of events) {
@@ -580,6 +607,7 @@ export default class StreamerController extends ControllerBase {
         let donationData: PublicDonationData | null = null
         let newViewerData: PublicNewViewerData | null = null
         let chatMessageDeletedData: PublicChatMessageDeletedData | null = null
+        let rankUpdateData: PublicRankUpdateData | null = null
 
         if (event.type === 'levelUp') {
           const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
@@ -613,6 +641,34 @@ export default class StreamerController extends ControllerBase {
           chatMessageDeletedData = {
             chatMessageId: event.chatMessageId
           }
+        } else if (event.type === 'rankUpdate') {
+          const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
+
+          let platformRanks: PublicPlatformRank[] = [
+            ...event.youtubeRankResults.map<PublicPlatformRank>(r => {
+              const channel = youtubeChannels.find(c => c.platformInfo.channel.id === r.youtubeChannelId)!
+              return { platform: 'youtube', channelName: getUserName(channel), success: r.error != null }
+            }),
+            ...event.twitchRankResults.map<PublicPlatformRank>(r => {
+              const channel = twitchChannels.find(c => c.platformInfo.channel.id === r.twitchChannelId)!
+              return { platform: 'twitch', channelName: getUserName(channel), success: r.error != null }
+            })
+          ]
+
+          if (event.ignoreOptions?.youtubeChannelId != null) {
+            const channel = youtubeChannels.find(c => c.platformInfo.channel.id === event.ignoreOptions!.youtubeChannelId)!
+            platformRanks.unshift({ platform: 'youtube', channelName: getUserName(channel), success: true })
+          } else if (event.ignoreOptions?.twitchChannelId != null) {
+            const channel = twitchChannels.find(c => c.platformInfo.channel.id === event.ignoreOptions!.twitchChannelId)!
+            platformRanks.push({ platform: 'twitch', channelName: getUserName(channel), success: true })
+          }
+
+          rankUpdateData = {
+            isAdded: event.isAdded,
+            rankName: event.rankName,
+            user: user,
+            platformRanks: platformRanks
+          }
         } else {
           assertUnreachable(event)
         }
@@ -624,7 +680,8 @@ export default class StreamerController extends ControllerBase {
           newTwitchFollowerData,
           donationData,
           newViewerData,
-          chatMessageDeletedData
+          chatMessageDeletedData,
+          rankUpdateData
         })
       }
 

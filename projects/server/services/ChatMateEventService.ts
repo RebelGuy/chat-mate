@@ -6,6 +6,9 @@ import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { sortBy, unique } from '@rebel/shared/util/arrays'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import RankStore from '@rebel/server/stores/RankStore'
+import { ExternalRank, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import { IgnoreOptions } from '@rebel/server/services/rank/ModService'
 
 export type ChatMateEvent = { timestamp: number } & ({
   type: 'levelUp'
@@ -25,6 +28,14 @@ export type ChatMateEvent = { timestamp: number } & ({
 } | {
   type: 'chatMessageDeleted'
   chatMessageId: number
+} | {
+  type: 'rankUpdate'
+  primaryUserId: number
+  isAdded: boolean
+  rankName: ExternalRank
+  youtubeRankResults: YoutubeRankResult[]
+  twitchRankResults: TwitchRankResult[]
+  ignoreOptions: IgnoreOptions | null
 })
 
 type Deps = Dependencies<{
@@ -32,6 +43,7 @@ type Deps = Dependencies<{
   followerStore: FollowerStore
   donationStore: DonationStore
   chatStore: ChatStore
+  rankStore: RankStore
 }>
 
 export default class ChatMateEventService extends ContextClass {
@@ -39,6 +51,7 @@ export default class ChatMateEventService extends ContextClass {
   private readonly followerStore: FollowerStore
   private readonly donationStore: DonationStore
   private readonly chatStore: ChatStore
+  private readonly rankStore: RankStore
 
   constructor (deps: Deps) {
     super()
@@ -46,12 +59,13 @@ export default class ChatMateEventService extends ContextClass {
     this.followerStore = deps.resolve('followerStore')
     this.donationStore = deps.resolve('donationStore')
     this.chatStore = deps.resolve('chatStore')
+    this.rankStore = deps.resolve('rankStore')
   }
 
   public async getEventsSince (streamerId: number, since: number): Promise<ChatMateEvent[]> {
-    const diffs = await this.experienceService.getLevelDiffs(streamerId, since)
-
     let events: ChatMateEvent[] = []
+
+    const diffs = await this.experienceService.getLevelDiffs(streamerId, since)
     for (let i = 0; i < diffs.length; i++) {
       const diff = diffs[i]
 
@@ -109,6 +123,20 @@ export default class ChatMateEventService extends ContextClass {
         type: 'chatMessageDeleted',
         timestamp: newDeletedMessages[i].deletedTime!.getTime(),
         chatMessageId: newDeletedMessages[i].id
+      })
+    }
+
+    const rankEvents = await this.rankStore.getRankEventsSince(streamerId, since)
+    for (const rankEvent of rankEvents) {
+      events.push({
+        type: 'rankUpdate',
+        timestamp: rankEvent.time.getTime(),
+        primaryUserId: rankEvent.userId,
+        rankName: rankEvent.rank.name as ExternalRank,
+        isAdded: rankEvent.isAdded,
+        youtubeRankResults: rankEvent.data?.youtubeRankResults ?? [],
+        twitchRankResults: rankEvent.data?.twitchRankResults ?? [],
+        ignoreOptions: rankEvent.data?.ignoreOptions ?? null
       })
     }
 

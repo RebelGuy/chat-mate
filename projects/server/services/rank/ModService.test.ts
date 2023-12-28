@@ -6,7 +6,7 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
 import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
-import { expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
+import { expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import UserService from '@rebel/server/services/UserService'
@@ -74,6 +74,13 @@ describe(nameof(ModService, 'setModRank'), () => {
 
     const twitchCalls = mockTwurpleService.modChannel.mock.calls
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mod', {
+      ignoreOptions: ignoreOptions,
+      youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
+      twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
+    }]))
   })
 
   test('Adding the mod rank when the user is already modded is gracefully handled', async () => {
@@ -117,6 +124,13 @@ describe(nameof(ModService, 'setModRank'), () => {
 
     const twitchCalls = mockTwurpleService.unmodChannel.mock.calls
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
+
+    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'mod', {
+      ignoreOptions: ignoreOptions,
+      youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
+      twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
+    }]))
   })
 
   test('Removing the mod rank when the user is not modded is gracefully handled', async () => {

@@ -5,7 +5,7 @@ import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankR
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import UserService from '@rebel/server/services/UserService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
-import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
+import RankStore, { AddUserRankArgs, RankEventData, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 
@@ -64,6 +64,14 @@ export default class ModService extends ContextClass {
     const twitchResults = await Promise.all(userChannels.twitchChannelIds
       .filter(id => ignoreOptions?.twitchChannelId !== id)
       .map(c => this.trySetTwitchMod(streamerId, c, isMod)))
+
+    const rankEventData: RankEventData = {
+      version: 1,
+      youtubeRankResults: youtubeResults,
+      twitchRankResults: twitchResults,
+      ignoreOptions: ignoreOptions
+    }
+    this.rankStore.addRankEvent(streamerId, primaryUserId, isMod, 'mod', rankEventData)
 
     return {
       rankResult: internalRankResult,

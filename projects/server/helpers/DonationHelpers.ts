@@ -1,10 +1,11 @@
 import { RankName } from '@prisma/client'
+import { SafeExtract } from '@rebel/api-models/types'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { sum } from '@rebel/shared/util/math'
 
 export type DonationAmount = [date: Date, amount: number]
 
-export type DonationRank = Extract<RankName, 'donator' | 'supporter' | 'member'>
+export type DonationRank = SafeExtract<RankName, 'donator' | 'supporter' | 'member'>
 
 export const DONATION_EPOCH_DAYS = 365 / 2
 

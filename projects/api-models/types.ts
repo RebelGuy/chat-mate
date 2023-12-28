@@ -1,4 +1,4 @@
-import { Primitive, Singular } from '@rebel/shared/types'
+import { Primitive } from '@rebel/shared/types'
 
 /** Public objects are containers for primitive values or other public objects. */
 export type PublicObject<T extends ResponseData<T>> = T extends ResponseData<any> ? T : never
@@ -55,3 +55,6 @@ export type ApiError = {
   errorType: string
   internalErrorType: string
 }
+
+/** Extract from T those types that are assignable to U, ensuring that U is strictly a sub-type of T. */
+export type SafeExtract<T, U extends T> = U extends Extract<T, U> ? U : never

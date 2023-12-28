@@ -7,6 +7,7 @@ import { New, Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ObjectComparator } from '@rebel/shared/types'
 import { assertUnreachable, compare } from '@rebel/shared/util/typescript'
+import { SafeExtract } from '@rebel/api-models/types'
 
 export type CreateOrUpdateYoutubeChannelArgs = Omit<New<YoutubeChannelInfo>, 'channelId'>
 export type CreateOrUpdateTwitchChannelArgs = Omit<New<TwitchChannelInfo>, 'channelId'>
@@ -29,10 +30,10 @@ export type UserChannel<TPlatform extends 'youtube' | 'twitch' = 'youtube' | 'tw
   defaultUserId: number
   aggregateUserId: number | null
   platformInfo: (TPlatform extends 'youtube' ? {
-    platform: Extract<ChatPlatform, 'youtube'>
+    platform: SafeExtract<ChatPlatform, 'youtube'>
     channel: YoutubeChannelWithLatestInfo
   } : never) | (TPlatform extends 'twitch' ? {
-    platform: Extract<ChatPlatform, 'twitch'>
+    platform: SafeExtract<ChatPlatform, 'twitch'>
     channel: TwitchChannelWithLatestInfo
   } : never)
 }
@@ -49,8 +50,8 @@ export default class ChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async createOrUpdate (platform: Extract<ChatPlatform, 'youtube'>, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs): Promise<YoutubeChannelWithLatestInfo>
-  public async createOrUpdate (platform: Extract<ChatPlatform, 'twitch'>, externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo>
+  public async createOrUpdate (platform: SafeExtract<ChatPlatform, 'youtube'>, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs): Promise<YoutubeChannelWithLatestInfo>
+  public async createOrUpdate (platform: SafeExtract<ChatPlatform, 'twitch'>, externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo>
   public async createOrUpdate (platform: ChatPlatform, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs | CreateOrUpdateTwitchChannelArgs): Promise<YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo> {
     // the reason we don't have separate createOrUpdate methods for each platform is that there is some shared logic that we don't want to replicate.
     // I toyed with adding an adapter, and making the method generic, but setting up the prisma validators was a pain so I opted for this.
@@ -157,6 +158,10 @@ export default class ChannelStore extends ContextClass {
 
   /** For each of the given internal twitch ids, returns the latest channel info. Throws if any channels could not be found. */
   public async getTwitchChannelFromChannelId (twitchChannelIds: number[]): Promise<UserChannel<'twitch'>[]> {
+    if (twitchChannelIds.length === 0) {
+      return []
+    }
+
     const channels = await this.db.twitchChannel.findMany({
       where: { id: { in: twitchChannelIds } },
       include: channelQuery_includeLatestChannelInfo
@@ -178,6 +183,10 @@ export default class ChannelStore extends ContextClass {
 
   /** For each of the given internal youtube ids, returns the latest channel info. Throws if any channels could not be found. */
   public async getYoutubeChannelFromChannelId (youtubeChannelIds: number[]): Promise<UserChannel<'youtube'>[]> {
+    if (youtubeChannelIds.length === 0) {
+      return []
+    }
+
     const channels = await this.db.youtubeChannel.findMany({
       where: { id: { in: youtubeChannelIds } },
       include: channelQuery_includeLatestChannelInfo

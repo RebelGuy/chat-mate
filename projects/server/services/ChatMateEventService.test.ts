@@ -11,11 +11,13 @@ import { TwitchFollower } from '@prisma/client'
 import { filterTypes, single } from '@rebel/shared/util/arrays'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
+import RankStore, { ParsedRankEvent } from '@rebel/server/stores/RankStore'
 
 let mockDonationStore: MockProxy<DonationStore>
 let mockExperienceService: MockProxy<ExperienceService>
 let mockFollowerStore: MockProxy<FollowerStore>
 let mockChatStore: MockProxy<ChatStore>
+let mockRankStore: MockProxy<RankStore>
 let chatMateEventService: ChatMateEventService
 
 beforeEach(() => {
@@ -23,12 +25,14 @@ beforeEach(() => {
   mockExperienceService = mock()
   mockFollowerStore = mock()
   mockChatStore = mock()
+  mockRankStore = mock()
 
   chatMateEventService = new ChatMateEventService(new Dependencies({
     donationStore: mockDonationStore,
     experienceService: mockExperienceService,
     followerStore: mockFollowerStore,
-    chatStore: mockChatStore
+    chatStore: mockChatStore,
+    rankStore: mockRankStore
   }))
 })
 
@@ -48,6 +52,7 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
     const chat2 = cast<ChatItemWithRelations>({ time: data.time4, user: { id: userId1 } }) // duplicate user
     const chat3 = cast<ChatItemWithRelations>({ time: data.time3, user: { id: 125152, aggregateChatUserId: userId2 }})
     const deletedChat = cast<ChatItemWithRelations>({ id: 15, deletedTime: data.time2 })
+    const rankEvent = cast<ParsedRankEvent>({ id: 5, time: data.time3, userId: userId2, rank: { name: 'ban' } })
 
     mockExperienceService.getLevelDiffs.calledWith(streamerId, since).mockResolvedValue([levelDiff1, levelDiff2])
     mockFollowerStore.getFollowersSince.calledWith(streamerId, since).mockResolvedValue([follower1, follower2])
@@ -58,10 +63,11 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
       { primaryUserId: userId2, firstSeen: data.time2.getTime() } // after the `since` time - the message above must have been the user's first message
     ])
     mockChatStore.getChatSince.calledWith(streamerId, since, undefined, undefined, undefined, true).mockResolvedValue([deletedChat])
+    mockRankStore.getRankEventsSince.calledWith(streamerId, since).mockResolvedValue([rankEvent])
 
     const result = await chatMateEventService.getEventsSince(streamerId, since)
 
-    expect(result.length).toBe(8)
+    expect(result.length).toBe(9)
     expect(filterTypes(result, 'levelUp')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'levelUp' }>>({ timestamp: data.time2.getTime(), primaryUserId: 1, oldLevel: 0, newLevel: 1 }))
     expect(filterTypes(result, 'levelUp')[1]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'levelUp' }>>({ timestamp: data.time3.getTime(), primaryUserId: 2, oldLevel: 2, newLevel: 3 }))
     expect(filterTypes(result, 'newTwitchFollower')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'newTwitchFollower' }>>({ timestamp: data.time2.getTime(), displayName: 'test1' }))
@@ -70,5 +76,6 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
     expect(filterTypes(result, 'donation')[1]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'donation' }>>({ donation: donation2 }))
     expect(filterTypes(result, 'newViewer')[0]).toEqual(expectObject<Extract<ChatMateEvent, { type: 'newViewer' }>>({ primaryUserId: userId1, timestamp: data.time2.getTime() }))
     expect(single(filterTypes(result, 'chatMessageDeleted'))).toEqual(expectObject<Extract<ChatMateEvent, { type: 'chatMessageDeleted' }>>({ timestamp: data.time2.getTime(), chatMessageId: 15 }))
+    expect(single(filterTypes(result, 'rankUpdate'))).toEqual(expectObject<Extract<ChatMateEvent, { type: 'rankUpdate' }>>({ timestamp: data.time3.getTime(), primaryUserId: userId2, rankName: 'ban' }))
   })
 })

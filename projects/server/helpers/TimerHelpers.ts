@@ -2,6 +2,7 @@
 // use `start` for a constant period.
 // use `end` for constant padding between callbacks.
 
+import { SafeExtract } from '@rebel/api-models/types'
 import ContextClass from '@rebel/shared/context/ContextClass'
 
 // use `dynamicEnd` for variable padding between callbacks.
@@ -9,11 +10,11 @@ export type RescheduleBehaviour = 'start' | 'end' | 'dynamicEnd'
 
 /** WARNING: DO NOT pass class methods directly as the callback function, as `this` will change context. */
 export type TimerOptions = {
-  behaviour: Extract<RescheduleBehaviour, 'start' | 'end'>,
+  behaviour: SafeExtract<RescheduleBehaviour, 'start' | 'end'>,
   interval: number
   callback: () => Promise<void>
 } | {
-  behaviour: Extract<RescheduleBehaviour, 'dynamicEnd'>,
+  behaviour: SafeExtract<RescheduleBehaviour, 'dynamicEnd'>,
   // returns the time (in milliseconds) for the next timeout
   callback: () => Promise<number>,
   // if not specified, will run immediately regardless of setting

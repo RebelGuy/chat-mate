@@ -154,6 +154,7 @@ model ChatUser {
   linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
   linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
   customRankNames                CustomRankName[]
+  rankEvents                     RankEvent[]
 
   // only used if this is an aggregate user
   linkTokensAggregateUser LinkToken[] @relation("link_token_aggregateChatUser")
@@ -275,6 +276,7 @@ model Streamer {
   donationLinks              DonationLink[]
   customRankNames            CustomRankName[]
   youtubeApiRequests         YoutubeApiRequest[]
+  rankEvents                 RankEvent[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -788,6 +790,7 @@ model Rank {
   userRanks                UserRank[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
   customRankNames          CustomRankName[]
+  rankEvents               RankEvent[]
 
   @@unique([name], map: "rank_name_key")
   @@map("rank")
@@ -877,6 +880,29 @@ model CustomRankName {
   @@index([rankId], map: "custom_rank_name_rankId_fkey")
   @@index([streamerId], map: "custom_rank_name_streamerId_fkey")
   @@map("custom_rank_name")
+}
+
+model RankEvent {
+  id Int @id @default(autoincrement())
+
+  time           DateTime @default(now())
+  isAdded        Boolean
+  serialisedData String?  @db.VarChar(8192)
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "rank_event_streamerId_key")
+
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "rank_event_userId_fkey")
+
+  rankId Int
+  rank   Rank @relation(fields: [rankId], references: [id], map: "rank_event_rankId_fkey")
+
+  @@index([time], map: "rank_event_time_key")
+  @@index([streamerId], map: "rank_event_streamerId_key")
+  @@index([userId], map: "rank_event_userId_fkey")
+  @@index([rankId], map: "rank_event_rankId_fkey")
+  @@map("rank_event")
 }
 
 model Donation {
