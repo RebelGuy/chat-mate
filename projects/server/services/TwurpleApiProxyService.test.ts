@@ -4,14 +4,11 @@ import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { cast, nameof } from '@rebel/shared/testUtils'
-import { HelixStream } from '@twurple/api/lib/api/helix/stream/HelixStream'
+import { HelixStream } from '@twurple/api/lib/endpoints/stream/HelixStream'
 import { ApiClient, HelixUser } from '@twurple/api'
 import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'
 import { ChatClient } from '@twurple/chat/lib'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
-import { HelixUserData } from '@twurple/api/lib/interfaces/helix/user.external'
-
-const chatMateModeratorId: string = 'moderator id'
 
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>

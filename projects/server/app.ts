@@ -163,6 +163,7 @@ const main = async () => {
     .withProperty('streamlabsAccessToken', streamlabsAccessToken)
     .withProperty('twitchUsername', twitchUsername)
     .withProperty('chatMateRegisteredUserName', env('chatMateRegisteredUserName'))
+    .withProperty('ngrokAuthToken', env('ngrokAuthToken')!)
     .withHelpers('experienceHelpers', ExperienceHelpers)
     .withHelpers('timerHelpers', TimerHelpers)
     .withHelpers('dateTimeHelpers', DateTimeHelpers)

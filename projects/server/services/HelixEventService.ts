@@ -7,7 +7,7 @@ import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUser
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
-import { disconnect, kill } from 'ngrok'
+import { disconnect, kill, authtoken } from '@ngrok/ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
@@ -57,6 +57,7 @@ type Deps = Dependencies<{
   streamerChannelService: StreamerChannelService
   eventDispatchService: EventDispatchService
   twitchClientId: string
+  ngrokAuthToken: string
   isAdministrativeMode: () => boolean
   isContextInitialised: () => boolean
   dateTimeHelpers: DateTimeHelpers
@@ -86,6 +87,7 @@ export default class HelixEventService extends ContextClass {
   private readonly streamerChannelService: StreamerChannelService
   private readonly eventDispatchService: EventDispatchService
   private readonly twitchClientId: string
+  private readonly ngrokAuthToken: string
   private readonly isAdministrativeMode: () => boolean
   private readonly isContextInitialised: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
@@ -126,6 +128,7 @@ export default class HelixEventService extends ContextClass {
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.twitchClientId = deps.resolve('twitchClientId')
+    this.ngrokAuthToken = deps.resolve('ngrokAuthToken')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.isContextInitialised = deps.resolve('isContextInitialised')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
@@ -159,6 +162,10 @@ export default class HelixEventService extends ContextClass {
       this.eventSubApi = client.eventSub
 
       if (this.nodeEnv === 'local') {
+        // for some inexplicable reason whose sole purpose is to make our lives harder, the ngrok js client doesn't get the auth token from the normal ngrok config file.
+        // instead, we have to set it manually
+        await authtoken(this.ngrokAuthToken)
+
         // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
         // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
         // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
