@@ -121,6 +121,13 @@ Also ensure `slow_query_logs` are enabled via the Server Parameters sidebar menu
 
 For more info, refer to https://learn.microsoft.com/en-us/azure/mysql/single-server/how-to-troubleshoot-high-cpu-utilization.
 
+### Exporting/Importing
+
+If importing a dump into the DigitalOcean database incurrs a permission error (code 1227), you will need to edit the dump .sql file manually:
+- Remove any `DEFINER` statements, e.g. `/* DEFINER=... */`
+- Remove any `@@SESSION.` statements
+- Remove any `@@GLOBAL.` statements
+
 ## Punishments
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
 
