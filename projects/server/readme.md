@@ -128,6 +128,8 @@ If importing a dump into the DigitalOcean database incurrs a permission error (c
 - Remove any `@@SESSION.` statements
 - Remove any `@@GLOBAL.` statements
 
+If doing a whole-db export, it is likely that you will have to additionally export the `custom_emoji_version` table separately to prevent the image blob data from corrupting (possibly due to an encoding error).
+
 ## Punishments
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
 
