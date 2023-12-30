@@ -647,11 +647,11 @@ export default class StreamerController extends ControllerBase {
           let platformRanks: PublicPlatformRank[] = [
             ...event.youtubeRankResults.map<PublicPlatformRank>(r => {
               const channel = youtubeChannels.find(c => c.platformInfo.channel.id === r.youtubeChannelId)!
-              return { platform: 'youtube', channelName: getUserName(channel), success: r.error != null }
+              return { platform: 'youtube', channelName: getUserName(channel), success: r.error == null }
             }),
             ...event.twitchRankResults.map<PublicPlatformRank>(r => {
               const channel = twitchChannels.find(c => c.platformInfo.channel.id === r.twitchChannelId)!
-              return { platform: 'twitch', channelName: getUserName(channel), success: r.error != null }
+              return { platform: 'twitch', channelName: getUserName(channel), success: r.error == null }
             })
           ]
 
