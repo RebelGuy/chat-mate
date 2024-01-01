@@ -9,6 +9,7 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
+import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 
 const liveId = 'liveId'
 const streamerId = 10000
@@ -18,6 +19,7 @@ let mockStatusService: MockProxy<StatusService>
 let mockMasterchatFactory: MockProxy<MasterchatFactory>
 let mockMasterchat: MockProxy<Masterchat>
 let mockChatStore: MockProxy<ChatStore>
+let mockPlatformApiStore: MockProxy<PlatformApiStore>
 let masterchatService: MasterchatService
 
 beforeEach(() => {
@@ -26,6 +28,7 @@ beforeEach(() => {
   mockMasterchatFactory = mock()
   mockMasterchat = mock()
   mockChatStore = mock()
+  mockPlatformApiStore = mock()
 
   mockMasterchatFactory.create.calledWith(liveId).mockReturnValue(mockMasterchat)
 
@@ -33,7 +36,8 @@ beforeEach(() => {
     logService: mockLogService,
     masterchatStatusService: mockStatusService,
     masterchatFactory: mockMasterchatFactory,
-    chatStore: mockChatStore
+    chatStore: mockChatStore,
+    platformApiStore: mockPlatformApiStore
   }))
 
   masterchatService.addMasterchat(streamerId, liveId)

@@ -1,19 +1,19 @@
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { Db } from '@rebel/server/providers/DbProvider'
-import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
+import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { nameof } from '@rebel/shared/testUtils'
 
 export default () => {
   const streamer1 = 1
 
-  let youtubeApiStore: YoutubeApiStore
+  let youtubeApiStore: PlatformApiStore
   let db: Db
 
   beforeEach(async () => {
     const dbProvider = await startTestDb()
 
-    youtubeApiStore = new YoutubeApiStore(new Dependencies({
+    youtubeApiStore = new PlatformApiStore(new Dependencies({
       dbProvider
     }))
     db = dbProvider.get()
@@ -25,11 +25,11 @@ export default () => {
     stopTestDb()
   })
 
-  describe(nameof(YoutubeApiStore, 'addApiRequest'), () => {
+  describe(nameof(PlatformApiStore, 'addApiRequest'), () => {
     test('Adds the request', async () => {
-      await youtubeApiStore.addApiRequest(streamer1, 'test', 1, true)
+      await youtubeApiStore.addApiRequest(streamer1, 'youtubeApi', new Date().getTime(), new Date().getTime(), 'test.endpoint', 'test data', 'test error')
 
-      await expectRowCount(db.youtubeApiRequest).toEqual(1)
+      await expectRowCount(db.platformApiCall).toEqual(1)
     })
   })
 }

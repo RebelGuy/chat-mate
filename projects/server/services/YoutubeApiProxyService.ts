@@ -3,7 +3,7 @@ import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClie
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import ApiService from '@rebel/server/services/abstract/ApiService'
-import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
+import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { GaxiosError } from 'gaxios'
 
@@ -28,6 +28,8 @@ type Endpoint =
 // the nice devs over at youtube didn't think it was necessary to document these, so i took it upon myself to find these
 // via the API quota dashboard: console.cloud.google.com -> APIs and services -> YouTube Data API v3 -> Quotas.
 // some are listed here though: https://developers.google.com/youtube/v3/determine_quota_cost
+// we track API requests via the PlatformApiStore for internal auditing purposes since the youtube API quota is _extremely_ low (10000 units per day).
+// if we ever run into issues with the limit and can't increase it, we will need to fallback to making requests via masterchat, though that is a problem for a later time
 const ENDPOINT_COSTS: Record<Endpoint, number> = {
   'youtube_v3.liveChatModerators.list': 50,
   'youtube_v3.liveChatModerators.insert': 200,
@@ -41,12 +43,11 @@ type Deps = Dependencies<{
   logService: LogService
   youtubeStatusService: StatusService
   youtubeApiClientProvider: YoutubeApiClientProvider
-  youtubeApiStore: YoutubeApiStore
+  platformApiStore: PlatformApiStore
 }>
 
 export default class YoutubeApiProxyService extends ApiService {
   private readonly youtubeApiClientProvider: YoutubeApiClientProvider
-  private readonly youtubeApiStore: YoutubeApiStore
 
   private readonly wrappedApi: (streamerId: number, requestOwnerExternalChannelId: string) => Promise<youtube_v3.Youtube>
 
@@ -54,10 +55,11 @@ export default class YoutubeApiProxyService extends ApiService {
     const name = YoutubeApiProxyService.name
     const logService = deps.resolve('logService')
     const statusService = deps.resolve('youtubeStatusService')
+    const platformApiStore = deps.resolve('platformApiStore')
+    const apiPlatform: ApiPlatform = 'youtubeApi'
     const timeout = null
-    super(name, logService, statusService, timeout, false)
+    super(name, logService, statusService, platformApiStore, apiPlatform, timeout, false)
     this.youtubeApiClientProvider = deps.resolve('youtubeApiClientProvider')
-    this.youtubeApiStore = deps.resolve('youtubeApiStore')
 
     this.wrappedApi = this.createApiWrapper()
   }
@@ -225,28 +227,15 @@ export default class YoutubeApiProxyService extends ApiService {
   private wrapRequestWithErrorLogging<TParams, TResult> (request: (params: TParams) => Promise<TResult>, streamerId: number, endpoint: Endpoint): (params: TParams) => Promise<TResult> {
     return super.wrapRequest(async (params: TParams) => {
       try {
-        const result = await request(params)
-        await this.logApiUsage(streamerId, endpoint, true)
-        return result
+        return await request(params)
 
-      } catch (e) {
+      } catch (e: any) {
         if (e instanceof GaxiosError) {
           this.logService.logError(this, `Request ${endpoint} received an error response:`, e.response?.data)
         }
 
-        await this.logApiUsage(streamerId, endpoint, false)
         throw e
       }
-    }, endpoint)
-  }
-
-  // track API requests for internal auditing purposes since the youtube API quota is _extremely_ low (10000 units per day).
-  // if we ever run into issues with the limit and can't increase it, we will need to fallback to making requests via masterchat, though that is a problem for a later time
-  private async logApiUsage (streamerId: number, endpoint: Endpoint, success: boolean) {
-    try {
-      await this.youtubeApiStore.addApiRequest(streamerId, endpoint, ENDPOINT_COSTS[endpoint], success)
-    } catch (e: any) {
-      this.logService.logError(this, 'Unable to log API usage via the YoutubeApiStore:', e)
-    }
+    }, endpoint, streamerId)
   }
 }

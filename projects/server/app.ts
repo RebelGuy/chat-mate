@@ -94,11 +94,11 @@ import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClientProvider'
 import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
-import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
 import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientFactory'
 import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
 import ExternalRankDataService from '@rebel/server/services/rank/ExternalRankDataService'
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
+import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -188,6 +188,7 @@ const main = async () => {
     .withClass('streamlabsStatusService', StatusService)
     .withClass('livestreamStore', LivestreamStore)
     .withClass('chatStore', ChatStore)
+    .withClass('platformApiStore', PlatformApiStore)
     .withClass('masterchatService', MasterchatService)
     .withClass('twurpleAuthProvider', TwurpleAuthProvider)
     .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
@@ -210,7 +211,6 @@ const main = async () => {
     .withClass('youtubeAuthClientFactory', YoutubeAuthClientFactory)
     .withClass('youtubeAuthProvider', YoutubeAuthProvider)
     .withClass('youtubeApiClientProvider', YoutubeApiClientProvider)
-    .withClass('youtubeApiStore', YoutubeApiStore)
     .withClass('youtubeApiProxyService', YoutubeApiProxyService)
     .withClass('youtubeService', YoutubeService)
     .withClass('punishmentService', PunishmentService)

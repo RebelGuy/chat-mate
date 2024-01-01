@@ -275,8 +275,8 @@ model Streamer {
   streamerTwitchChannelLink  StreamerTwitchChannelLink?
   donationLinks              DonationLink[]
   customRankNames            CustomRankName[]
-  youtubeApiRequests         YoutubeApiRequest[]
   rankEvents                 RankEvent[]
+  platformApiCalls           PlatformApiCall[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -619,20 +619,6 @@ model MasterchatAction {
   @@map("masterchat_action")
 }
 
-model YoutubeApiRequest {
-  id      Int      @id @default(autoincrement())
-  time    DateTime @default(now())
-  request String   @db.VarChar(128)
-  cost    Int
-  success Boolean
-
-  streamerId Int
-  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "youtube_api_request_streamerId_fkey")
-
-  @@index([streamerId], map: "youtube_api_request_streamerId_fkey")
-  @@map("youtube_api_request")
-}
-
 // Experience
 
 /// Holds individual changes in a person's experience.
@@ -890,7 +876,7 @@ model RankEvent {
   serialisedData String?  @db.VarChar(8192)
 
   streamerId Int
-  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "rank_event_streamerId_key")
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "rank_event_streamerId_fkey")
 
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "rank_event_userId_fkey")
@@ -899,10 +885,30 @@ model RankEvent {
   rank   Rank @relation(fields: [rankId], references: [id], map: "rank_event_rankId_fkey")
 
   @@index([time], map: "rank_event_time_key")
-  @@index([streamerId], map: "rank_event_streamerId_key")
+  @@index([streamerId], map: "rank_event_streamerId_fkey")
   @@index([userId], map: "rank_event_userId_fkey")
   @@index([rankId], map: "rank_event_rankId_fkey")
   @@map("rank_event")
+}
+
+model PlatformApiCall {
+  id Int @id @default(autoincrement())
+
+  start DateTime
+  end   DateTime
+
+  platform String @db.VarChar(16)
+
+  // if you update these string lengths, be sure to udpate the constants in the PlatformApiStore
+  endpoint String  @db.VarChar(128)
+  payload  String? @db.VarChar(1024)
+  error    String? @db.VarChar(1024)
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "platform_api_call_streamerId_fkey")
+
+  @@index([streamerId], map: "platform_api_call_streamerId_fkey")
+  @@map("platform_api_call")
 }
 
 model Donation {

@@ -262,6 +262,6 @@ export default class LivestreamService extends ContextClass {
       throw new Error(`Streamer ${streamerId} does not have a primary Twitch channel.`)
     }
 
-    return await this.twurpleApiProxyService.fetchMetadata(channelName)
+    return await this.twurpleApiProxyService.fetchMetadata(streamerId, channelName)
   }
 }

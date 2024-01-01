@@ -256,7 +256,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       const endTime = data.time4
       const livestream = makeTwitchStream(data.time2, null)
       mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([livestream])
-      mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockResolvedValue(null)
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(livestream.streamerId, twitchChannelName).mockResolvedValue(null)
       mockDateTimeHelpers.now.mockReset().calledWith().mockReturnValue(endTime)
 
       await livestreamService.initialise()
@@ -269,7 +269,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     test('Updates the view count while the livestream is live', async () => {
       const livestream = makeTwitchStream(data.time2, null)
       mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([livestream])
-      mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockResolvedValue(twitchMetadata)
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(livestream.streamerId, twitchChannelName).mockResolvedValue(twitchMetadata)
 
       await livestreamService.initialise()
 
@@ -281,7 +281,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     test('Updates metadata regularly', async () => {
       const livestream = makeTwitchStream(data.time2, null)
       mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([livestream])
-      mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockResolvedValue(twitchMetadata)
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(livestream.streamerId, twitchChannelName).mockResolvedValue(twitchMetadata)
 
       await livestreamService.initialise()
 
@@ -291,7 +291,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     test('Ignores API errors', async () => {
       const livestream = makeTwitchStream(data.time2, null)
       mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([livestream])
-      mockTwurpleApiProxyService.fetchMetadata.calledWith(twitchChannelName).mockRejectedValue(new Error('Test error'))
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(livestream.streamerId, twitchChannelName).mockRejectedValue(new Error('Test error'))
 
       await livestreamService.initialise()
 

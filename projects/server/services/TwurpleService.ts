@@ -139,7 +139,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
-    await this.twurpleApiProxyService.ban(broadcaster, user, reason ?? undefined)
+    await this.twurpleApiProxyService.ban(streamerId, broadcaster, user, reason ?? undefined)
   }
 
   /** Returns null if the streamer does not have a primary Twitch channel. */
@@ -223,7 +223,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
-    await this.twurpleApiProxyService.mod(broadcaster, user)
+    await this.twurpleApiProxyService.mod(streamerId, broadcaster, user)
   }
 
   public reconnectClient () {
@@ -237,7 +237,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
-    await this.twurpleApiProxyService.timeout(broadcaster, user, durationSeconds, reason ?? undefined)
+    await this.twurpleApiProxyService.timeout(streamerId, broadcaster, user, durationSeconds, reason ?? undefined)
   }
 
   public async unbanChannel (streamerId: number, twitchChannelId: number) {
@@ -247,7 +247,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
-    await this.twurpleApiProxyService.unban(broadcaster, user)
+    await this.twurpleApiProxyService.unban(streamerId, broadcaster, user)
   }
 
   public async unmodChannel (streamerId: number, twitchChannelId: number) {
@@ -257,7 +257,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
-    await this.twurpleApiProxyService.unmod(broadcaster, user)
+    await this.twurpleApiProxyService.unmod(streamerId, broadcaster, user)
   }
 
   public async untimeout (streamerId: number, twitchChannelId: number) {
@@ -267,7 +267,7 @@ export default class TwurpleService extends ContextClass {
     }
 
     const user = await this.getTwitchUserFromChannelId(twitchChannelId)
-    await this.twurpleApiProxyService.unTimeout(broadcaster, user)
+    await this.twurpleApiProxyService.unTimeout(streamerId, broadcaster, user)
   }
 
   private async onPrimaryChannelAdded (data: EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]) {
