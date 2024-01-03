@@ -42,6 +42,9 @@ type RequestOptions<TResponseData> = {
   loginToken?: string | null
   streamer?: string | null
 
+  // if true, the request will not fire
+  blockAutoRequest?: boolean
+
   // IMPORTANT: changing callback functions does NOT trigger a new request, so they do not need to be memoised.
 
   // called before the request is fired. return true to cancel the request.
@@ -162,6 +165,7 @@ export default function useRequest<
   const updateKey = options?.updateKey ?? 0
   const skipLoadOnMount = options?.skipLoadOnMount ?? false
   const onDemand = options?.onDemand ?? false
+  const blockAutoRequest = options?.blockAutoRequest ?? false
   const transformer = options?.transformer ?? null
   const onSuccess = options?.onSuccess ?? NO_OP
   const onError = options?.onError ?? NO_OP
@@ -265,7 +269,7 @@ export default function useRequest<
 
   // for handling the automatic request
   useEffect(() => {
-    if (!onDemand && (!skipLoadOnMount || skipLoadOnMount && isMounted.current)) {
+    if (!blockAutoRequest && !onDemand && (!skipLoadOnMount || skipLoadOnMount && isMounted.current)) {
       void makeRequest(requestType === 'none' ? 'auto-initial' : 'auto-refresh')
       setOnRetry(() => () => makeRequest('retry'))
     }
@@ -273,7 +277,7 @@ export default function useRequest<
     isMounted.current = true
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, skipLoadOnMount, onDemand, ...objToArr(requestData ?? {})])
+  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, skipLoadOnMount, blockAutoRequest, onDemand, ...objToArr(requestData ?? {})])
 
   // remove data when the component unmounts
   useEffect(() => {

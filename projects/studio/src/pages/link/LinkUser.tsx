@@ -24,7 +24,7 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
   const [selectedAggregateUserId, setSelectedAggregateUserId] = React.useState<number | null>()
 
   const getLinkedChannelsRequest = useRequest(getLinkedChannels(props.admin_selectedAggregateUserId), { updateKey: key })
-  const getPrimaryChannelsRequest = useRequest(getPrimaryChannels(), { updateKey: key })
+  const getPrimaryChannelsRequest = useRequest(getPrimaryChannels(), { updateKey: key, blockAutoRequest: !loginContext.isStreamer })
   const getChatMateRegisteredUsernameRequest = useRequest(getChatMateRegisteredUsername())
 
   React.useEffect(() => {
