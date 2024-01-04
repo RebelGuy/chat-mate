@@ -99,6 +99,7 @@ import AggregateLivestreamService from '@rebel/server/services/AggregateLivestre
 import ExternalRankDataService from '@rebel/server/services/rank/ExternalRankDataService'
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
+import CacheService from '@rebel/server/services/CacheService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -201,6 +202,7 @@ const main = async () => {
     .withClass('streamerChannelStore', StreamerChannelStore)
     .withClass('rankStore', RankStore)
     .withClass('streamerChannelService', StreamerChannelService)
+    .withClass('cacheService', CacheService)
     .withClass('livestreamService', LivestreamService)
     .withClass('adminService', AdminService)
     .withClass('experienceStore', ExperienceStore)

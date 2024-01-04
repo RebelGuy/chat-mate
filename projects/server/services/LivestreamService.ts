@@ -11,6 +11,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime } from '@rebel/shared/util/datetime'
 import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
+import CacheService from '@rebel/server/services/CacheService'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
@@ -25,6 +26,7 @@ type Deps = Dependencies<{
   disableExternalApis: boolean
   dateTimeHelpers: DateTimeHelpers
   streamerChannelService: StreamerChannelService
+  cacheService: CacheService
 }>
 
 export default class LivestreamService extends ContextClass {
@@ -38,6 +40,7 @@ export default class LivestreamService extends ContextClass {
   private readonly disableExternalApis: boolean
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly streamerChannelService: StreamerChannelService
+  private readonly cacheService: CacheService
 
   constructor (deps: Deps) {
     super()
@@ -49,6 +52,7 @@ export default class LivestreamService extends ContextClass {
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.streamerChannelService = deps.resolve('streamerChannelService')
+    this.cacheService = deps.resolve('cacheService')
   }
 
   public override async initialise (): Promise<void> {
@@ -137,6 +141,11 @@ export default class LivestreamService extends ContextClass {
   }
 
   private async updateYoutubeLivestreamMetadata (livestream: YoutubeLivestream) {
+    // no point in fetching metadata for the official ChatMate streamer since it will never go live
+    if (await this.cacheService.isChatMateStreamer(livestream.streamerId)) {
+      return
+    }
+
     if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'minutes', 2)) {
       // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
       // (after some delay), so there is no need to keep it around.

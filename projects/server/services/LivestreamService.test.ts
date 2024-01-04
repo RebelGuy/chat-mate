@@ -15,6 +15,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
+import CacheService from '@rebel/server/services/CacheService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -59,6 +60,7 @@ let mockLogService: MockProxy<LogService>
 let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let mockStreamerChannelService: MockProxy<StreamerChannelService>
+let mockCacheService: MockProxy<CacheService>
 let livestreamService: LivestreamService
 
 beforeEach(() => {
@@ -69,6 +71,7 @@ beforeEach(() => {
   mockTimerHelpers = mock()
   mockDateTimeHelpers = mock()
   mockStreamerChannelService = mock()
+  mockCacheService = mock()
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -87,7 +90,8 @@ beforeEach(() => {
     timerHelpers: mockTimerHelpers,
     disableExternalApis: false,
     dateTimeHelpers: mockDateTimeHelpers,
-    streamerChannelService: mockStreamerChannelService
+    streamerChannelService: mockStreamerChannelService,
+    cacheService: mockCacheService
   }))
 })
 
@@ -101,7 +105,8 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       timerHelpers: mockTimerHelpers,
       disableExternalApis: true,
       dateTimeHelpers: mockDateTimeHelpers,
-      streamerChannelService: mockStreamerChannelService
+      streamerChannelService: mockStreamerChannelService,
+      cacheService: mockCacheService
     }))
 
     await livestreamService.initialise()
@@ -224,6 +229,16 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       await livestreamService.initialise()
 
       expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expect.anything(), true])
+    })
+
+    test('Does not fetch metadata for the official ChatMate stream', async () => {
+      const livestream = makeYoutubeStream(null, null)
+      mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([livestream])
+      mockCacheService.isChatMateStreamer.calledWith(livestream.streamerId).mockResolvedValue(true)
+
+      await livestreamService.initialise()
+
+      expect(mockMasterchatService.fetchMetadata.mock.calls.length).toBe(0)
     })
 
     test('Ignores API errors', async () => {
