@@ -18,8 +18,8 @@ export default function ChatMateManager () {
 
   return <div style={{ display: 'block' }}>
     {getPrimaryChannelsRequest.data?.youtubeChannelId != null && <YoutubeLivestreamForm />}
-    <StreamlabsWebsocketForm />
     {getPrimaryChannelsRequest.data?.youtubeChannelId != null && <YoutubeStatus />}
     {getPrimaryChannelsRequest.data?.twitchChannelId != null && <TwitchEventStatuses />}
+    <StreamlabsWebsocketForm />
   </div>
 }
