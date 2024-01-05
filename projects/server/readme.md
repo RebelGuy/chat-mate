@@ -172,7 +172,7 @@ Every response contains the following properties:
 
 Note that a `500` error can be expected for all endpoints and a `401` error for endpoints requiring authentication, but any other errors should be documented specifically in the below sections.
 
-All non-primitive properties of `data` are of type `PublicObject`, which are reusable objects which themselves contain either primitive types or other `PublicObject`s. The definitions for these objects can be found in the `/projects/api-models/public` folder and will not be reproduced here. Please ensure the Client's model is in sync at all times.
+All non-primitive properties of `data` are of type `PublicObject`, which are reusable objects which themselves contain either primitive types or other `PublicObject`s. The definitions for these objects can be found in the [`/projects/api-models/public`](https://github.com/RebelGuy/chat-mate/tree/master/projects/api-models/public) folder and will not be reproduced here. Please ensure the Client's model is in sync at all times.
 
 Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-Login-Token` header.
 

@@ -10,6 +10,8 @@ Other projects in this repo:
 
 For more info about each project, refer to the project's Readme file.
 
+Streamers are encouraged to peruse the [Streamer Guide](./docs/streamer-guide.md) for more info on how to use ChatMate.
+
 Want to contribute? Check out the [contribution guide](./docs/contributing.md) for more info.
 
 ## Running ChatMate locally
@@ -42,7 +44,7 @@ If the string `--skip-studio` is included in the commit message, the Studio proj
 ## ChatMate admin channels
 External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`. ChatMate assumes that this registered user exists in the database.
 
-For more info about the OAuth applications, refer to the docs for [Youtube](./docs/youtube-auth.md)/[Twitch](./docs/youtube-auth.md).
+For more info about the OAuth applications, refer to the docs for [Youtube](./docs/youtube-auth.md)/[Twitch](./docs/twitch-auth.md).
 
 | Environment | Email | YouTube Name* | YouTube Channel ID | Youtube App Client ID | Twitch Name | Twitch App Name | Twitch App Client ID |
 | --- | --- | --- | --- | --- | --- | --- | --- |
