@@ -23,15 +23,16 @@ import { createLogContext, LogContext } from '@rebel/shared/ILogService'
 import { LogLevel } from '@twurple/chat/lib'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
-import { waitUntil } from '@rebel/shared/util/typescript'
+import { assertUnreachable, waitUntil } from '@rebel/shared/util/typescript'
 import { nonNull } from '@rebel/shared/util/arrays'
+import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
 // every now and then
 const NGROK_MAX_SESSION = 3600 * 2 * 1000
 
-const EVENT_SUB_TYPES = ['followers'] as const
+const EVENT_SUB_TYPES = ['followers', 'ban', 'unban', 'mod', 'unmod'] as const
 
 export type EventSubType = (typeof EVENT_SUB_TYPES)[number]
 
@@ -59,6 +60,7 @@ type Deps = Dependencies<{
   dateTimeHelpers: DateTimeHelpers
   authStore: AuthStore
   twurpleAuthProvider: TwurpleAuthProvider
+  externalRankEventService: ExternalRankEventService
 }>
 
 // this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
@@ -86,6 +88,7 @@ export default class HelixEventService extends ContextClass {
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly authStore: AuthStore
   private readonly twurpleAuthProvider: TwurpleAuthProvider
+  private readonly externalRankEventService: ExternalRankEventService
 
   private initialisedStreamerEvents: boolean = false
   private listener: EventSubHttpListener | null = null
@@ -124,6 +127,7 @@ export default class HelixEventService extends ContextClass {
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.authStore = deps.resolve('authStore')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
+    this.externalRankEventService = deps.resolve('externalRankEventService')
   }
 
   public override initialise () {
@@ -376,6 +380,7 @@ export default class HelixEventService extends ContextClass {
       await this.eventSubApi.deleteAllSubscriptions()
       await disconnect()
       await kill()
+      this.listener!.stop()
 
       // this will create a new Ngrok server/tunnel with a different address
       this.listener = this.createNewListener()
@@ -408,11 +413,36 @@ export default class HelixEventService extends ContextClass {
     }
 
     try {
-      /* eslint-disable @typescript-eslint/no-misused-promises */
-      await this.createSubscriptionSafe(() => {
-        return this.eventSubBase.onChannelFollow(user, user, async (e) => await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName))
-      }, streamerId, channelName, 'followers')
-      /* eslint-enable @typescript-eslint/no-misused-promises */
+      for (const eventType of EVENT_SUB_TYPES) {
+        let onCreateSubscription: () => EventSubSubscription
+
+        /* eslint-disable @typescript-eslint/no-misused-promises */
+        if (eventType === 'followers') {
+          onCreateSubscription = () => this.eventSubBase.onChannelFollow(user, user, async (e) =>
+            await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
+        } else if (eventType === 'ban') {
+          onCreateSubscription = () => this.eventSubBase.onChannelBan(user, async (e) =>
+            await this.externalRankEventService.onTwitchChannelBanned(streamerId, e.userName, e.moderatorName, e.reason, e.endDate?.getTime() ?? null)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
+        } else if (eventType === 'unban') {
+          onCreateSubscription = () => this.eventSubBase.onChannelUnban(user, async (e) =>
+            await this.externalRankEventService.onTwitchChannelUnbanned(streamerId, e.userName, e.moderatorName)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
+        } else if (eventType === 'mod') {
+          continue // todo
+        } else if (eventType === 'unmod') {
+          continue // todo
+        } else {
+          assertUnreachable(eventType)
+        }
+        /* eslint-enable @typescript-eslint/no-misused-promises */
+
+        await this.createSubscriptionSafe(onCreateSubscription, streamerId, channelName, eventType)
+      }
 
       this.logService.logInfo(this, `Finished subscription sequence of Twitch user '${channelName}' (streamer ${streamerId}).`)
     } catch (e: any) {

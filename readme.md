@@ -1,5 +1,5 @@
 ChatMate is a helper tool for livestreamers and viewers. It consists of three main parts:
-- Server (`./projects/server`): Node.js express app that runs the core logic for ChatMate and directly interacts with YouTube (via [Masterchat](https://github.com/sigvt/masterchat/)), Twitch (via [Twurple](https://github.com/twurple/twurple)), and the MySQL database (via [Prisma](https://github.com/prisma/prisma)). Exposes a collection of REST API endpoints.
+- Server (`./projects/server`): Node.js express app that runs the core logic for ChatMate and directly interacts with YouTube (via the [Youtube API](https://developers.google.com/youtube/v3/live/docs) and [Masterchat](https://github.com/sigvt/masterchat/)), Twitch (via [Twurple](https://github.com/twurple/twurple)), and the MySQL database (via [Prisma](https://github.com/prisma/prisma)). Exposes a collection of REST API endpoints.
 - Studio (`./projects/studio`): [React](https://github.com/facebook/react) web interface for managing streamer and viewer data. It communicates with the server API endpoints.
 - Client ([`chat-mate-client`](https://github.com/RebelGuy/chat-mate-client)): Minecraft 1.8.9 mod for viewing and managing livestreams and viewers. Contains additional streamer tools that do not communicate with the server.
 
@@ -25,7 +25,6 @@ Recommended VSCode extensions:
 - `DotENV`
 - `Prisma` (only useful if you intend to make changes to the database schema)
 - `GitHub Actions` (only useful if you intend to make changes to the CI build process)
-- `Thunder Client` (there are some old API tests, but they are probably broken)
 
 ## CI and deployment
 Github Actions are used for automatically building and deploying the Server/Studio projects when pushed.
@@ -36,18 +35,20 @@ By default, the deployment of the Server includes an automatic migration of the 
 
 If the string `--skip-tests` is included in the commit message, test files will not be built and unit tests will be skipped.
 
-If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed.
+If the string `--skip-server` is included in the commit message, the Server project will not be built, tested, or deployed. Note that migrations will still run.
 
 If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
 
 ## ChatMate admin channels
 External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`. ChatMate assumes that this registered user exists in the database.
 
-| Environment | Email | YouTube Name* | YouTube Channel ID | Twitch Name | Twitch App Name | Twitch App Client ID |
-| --- | --- | --- | --- | --- | --- | --- |
-| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig)* | UCobq78RdXWvXlG1jcRjkTig | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
-| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA)* | UCEM2zbU-YVO6BMF_fukrdUA | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
-| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g)* | UCY-5SHtJqoKGqm2YmOMOm_g | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
+For more info about the OAuth applications, refer to the docs for [Youtube](./docs/youtube-auth.md)/[Twitch](./docs/youtube-auth.md).
+
+| Environment | Email | YouTube Name* | YouTube Channel ID | Youtube App Client ID | Twitch Name | Twitch App Name | Twitch App Client ID |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig)* | UCobq78RdXWvXlG1jcRjkTig | 419723469636-bnl40h64tppr2ag795od7ruvsispjfsu.apps.googleusercontent.com | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
+| Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA)* | UCEM2zbU-YVO6BMF_fukrdUA | 54178587733-gnkp3m4mrkh5hmic2gb680gqlrfiqo2h.apps.googleusercontent.com | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
+| Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g)* | UCY-5SHtJqoKGqm2YmOMOm_g | 909444975820-bmvfuvu7a1qee34acn75gmtn0e39lk0b.apps.googleusercontent.com | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
 
 *YouTube appears to be prohibiting the word "mate" in the channel name.
 
@@ -56,7 +57,37 @@ Passwords:
 - Twitch: `T`
 - YouTube: `C`
 
+## Common Problems And How To Fix Them
+
+### Streamer
+Problem: 401 (Unauthorised) error from Twitch when a streamer attempts to initiate a moderation request, such as banning a user. The error message reads something like "The ID in moderator_id must match the user ID found in the request’s OAuth token".
+Solution: Most likely the user has authorised ChatMate using the wrong Twitch account. They should refresh their authorisation via the Studio stream manager using the correct account.
+
+Problem: Streamlabs donations are not being received by ChatMate.
+Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
+
 # Change Log
+## v1.28 - The Youtube Update [20/11/2023]
+- Server
+  - ChatMate now listens to punishment updates on Twitch and Youtube
+    - If a user is puished externally, ChatMate will trigger a sync which propagates the rank update internally, and externally to any other connected channels
+    - Youtube does not provide a proper API for this, and the Youtube implementation is crude and unreliable, but technically functional in the majority of cases
+  - ChatMate now listens to deleted messages
+    - Deleted messages are no longer accessible via the ChatMate API
+  - Added ChatMate as a Google OAuth application
+    - Streamers can authorise ChatMate to access the API on their behalf  
+  - ChatMate now performs rank-related actions on Youtube via the official API instead of Masterchat
+    - The default API quota is extremely limited
+    - Timeouts can now be an arbitrary duration between 1 second and 1 day, instead of the previous static 5 minutes
+  - Added the ability to control verbosity of logging via environment variables
+- Studio
+  - The Youtube status section now offers the ability for streamers to authorise ChatMate to act on their behalf when making requests to Youtube
+  - The moderator status of ChatMate on a streamer's channel is now more reliable
+  - Minor UI fixes
+- Masterchat
+  - Added listeners for ban/unban/timeout actions
+  - Added a listener for deleted message actions
+
 ## v1.27 - The Donation Update v3 [4/8/2023]
 - Server
   - Added support for donators to customise their rank name

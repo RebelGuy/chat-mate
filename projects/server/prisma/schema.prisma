@@ -33,12 +33,28 @@ model TwitchAuth {
   @@map("twitch_auth")
 }
 
-/// Persists access tokens for Youtube authentication
-model YoutubeAuth {
+/// Persists web client access tokens for Youtube authentication
+model YoutubeWebAuth {
   channelId   String   @id
   accessToken String   @db.VarChar(511)
   updateTime  DateTime
 
+  @@map("youtube_web_auth")
+}
+
+model YoutubeAuth {
+  id Int @id @default(autoincrement())
+
+  externalYoutubeChannelId String // unique
+  timeObtained             DateTime @default(now())
+
+  /// Note: this refresh token is static and is valid to use for refreshing the access token until authorisation is revoked.
+  refreshToken String   @db.VarChar(512)
+  expiryDate   DateTime
+  accessToken  String   @db.VarChar(512)
+  scope        String
+
+  @@unique([externalYoutubeChannelId], map: "youtube_auth_externalYoutubeChannelId")
   @@map("youtube_auth")
 }
 
@@ -61,8 +77,9 @@ model Livestream {
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "livestream_streamerId_fkey")
 
-  liveViewers  LiveViewers[]
-  chatMessages ChatMessage[]
+  liveViewers       LiveViewers[]
+  chatMessages      ChatMessage[]
+  masterchatActions MasterchatAction[]
 
   @@unique([liveId], map: "livestream_liveId_key")
   @@index([streamerId], map: "livestream_streamerId_fkey")
@@ -79,6 +96,7 @@ model LiveViewers {
   livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "live_viewer_livestreamId_fkey")
 
   @@index([livestreamId], map: "live_viewer_livestreamId_fkey")
+  @@index([time], map: "live_viewer_time_key")
   @@map("live_viewer")
 }
 
@@ -231,6 +249,7 @@ model Streamer {
   streamerTwitchChannelLink  StreamerTwitchChannelLink?
   donationLinks              DonationLink[]
   customRankNames            CustomRankName[]
+  youtubeApiRequests         YoutubeApiRequest[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -268,6 +287,7 @@ model YoutubeChannelInfo {
   channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_info_channelId_fkey")
 
   @@index([channelId], map: "youtube_channel_info_channelId_fkey")
+  @@index([time], map: "youtube_channel_info_time_key")
   @@map("youtube_channel_info")
 }
 
@@ -307,6 +327,7 @@ model TwitchChannelInfo {
   channel   TwitchChannel @relation(fields: [channelId], references: [id], map: "twitch_channel_info_channelId_fkey")
 
   @@index([channelId], map: "twitch_channel_info_channelId_fkey")
+  @@index([time], map: "twitch_channel_info_time_key")
   @@map("twitch_channel_info")
 }
 
@@ -500,6 +521,9 @@ model ChatMessage {
   externalId String   @db.VarChar(255) // unique
   time       DateTime
 
+  /// The time at which the message was deleted by a moderator or retracted by the author. Null if the message has not been deleted.
+  deletedTime DateTime?
+
   /// For Youtube messages only - required to retrieve the list of and execute options in the context menu next to messages.
   /// Internally in Youtube, this is called the `contextMenuEndpointParams`.
   contextToken String? @db.VarChar(511)
@@ -542,7 +566,38 @@ model ChatMessage {
   @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")
   @@index([livestreamId], map: "chat_message_livestreamId_fkey")
+  @@index([time], map: "chat_message_time_key")
   @@map("chat_message")
+}
+
+model MasterchatAction {
+  id        Int      @id @default(autoincrement())
+  timeAdded DateTime @default(now())
+  type      String   @db.VarChar(64)
+  data      String   @db.VarChar(4096) // if you update the string length, be sure to udpate the constant in the MasterchatStore
+
+  // the time contained in the action data
+  time DateTime?
+
+  livestreamId Int
+  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "masterchat_action_livestreamId_fkey")
+
+  @@index([livestreamId], map: "masterchat_action_livestreamId_fkey")
+  @@map("masterchat_action")
+}
+
+model YoutubeApiRequest {
+  id      Int      @id @default(autoincrement())
+  time    DateTime @default(now())
+  request String   @db.VarChar(128)
+  cost    Int
+  success Boolean
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "youtube_api_request_streamerId_fkey")
+
+  @@index([streamerId], map: "youtube_api_request_streamerId_fkey")
+  @@map("youtube_api_request")
 }
 
 // Experience

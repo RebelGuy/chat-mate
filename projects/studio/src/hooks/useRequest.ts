@@ -25,6 +25,9 @@ type RequestOptions<TResponseData> = {
   // forces the request to refresh. has no effect when `onDemand` is true
   updateKey?: Primitive
 
+  // if true, does not automatically trigger a request when first mounting, only when the `updateKey` changes. has no effect when `onDemand` is true
+  skipLoadOnMount?: boolean
+
   // don't auto-start the request on mount or when the props change (even if the `updateKey` changes).
   // instead, the request is made only when `triggerRequest()` is called
   onDemand?: boolean
@@ -106,7 +109,7 @@ export type Request<TResponse extends ApiResponse<any>, TRequestData extends Pub
 
 export default function useRequest<
   TResponse extends ApiResponse<any>,
-  TRequestData extends PublicObject<TRequestData extends false ? never : TRequestData> | false = false,
+  TRequestData extends TRequestData extends false ? never : PublicObject<TRequestData> | false = false,
   TResponseData extends SuccessfulResponseData<TResponse> = SuccessfulResponseData<TResponse>
 > (request: Request<TResponse, TRequestData>, options?: RequestOptions<TResponseData>): RequestResult<TResponseData> {
   const [isLoading, setIsLoading] = useState(false)
@@ -119,6 +122,8 @@ export default function useRequest<
   // this is essentially `useState` but it updates the value immediately.
   // concept stolen from https://stackoverflow.com/a/60643670
   const invariantRef = useRef<number>(0)
+
+  const isMounted = useRef<boolean>(false)
 
   if (loginContext == null) {
     if (request.requiresLogin === true && options?.loginToken == null) {
@@ -140,6 +145,7 @@ export default function useRequest<
   const requiresLogin = request.requiresLogin ?? true
   const requiresStreamer = request.requiresStreamer ?? true
   const updateKey = options?.updateKey ?? 0
+  const skipLoadOnMount = options?.skipLoadOnMount ?? false
   const onDemand = options?.onDemand ?? false
   const transformer = options?.transformer ?? null
   const onSuccess = options?.onSuccess ?? NO_OP
@@ -244,13 +250,15 @@ export default function useRequest<
 
   // for handling the automatic request
   useEffect(() => {
-    if (!onDemand) {
+    if (!onDemand && (!skipLoadOnMount || skipLoadOnMount && isMounted.current)) {
       void makeRequest(requestType === 'none' ? 'auto-initial' : 'auto-refresh')
       setOnRetry(() => () => makeRequest('retry'))
     }
 
+    isMounted.current = true
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, onDemand, ...objToArr(requestData ?? {})])
+  }, [path, method, requiresLogin, loginToken, requiresStreamer, streamer, updateKey, skipLoadOnMount, onDemand, ...objToArr(requestData ?? {})])
 
   const error: ApiRequestError | null = apiError == null ? null : { message: apiError.message, onRetry: onRetry ?? undefined }
   return { data, isLoading, error, requestType, triggerRequest, reset, mutate }

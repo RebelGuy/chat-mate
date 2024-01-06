@@ -54,6 +54,8 @@ The following environment variables must be set in the `.env` file:
 - `PORT`: Which port the server should run on.
 - `STUDIO_URL`: The URL to ChatMate Studio (not ending in `/`).
 - `CHAT_MATE_REGISTERED_USER_NAME`: The registered username of the official ChatMate account.
+- `YOUTUBE_CLIENT_ID`: The client ID for the YouTube ChatMate app (from https://console.cloud.google.com/apis/credentials).
+- `YOUTUBE_CLIENT_SECRET`: The client secret for the YouTube ChatMate app.
 - `CHANNEL_ID`: The channel ID of the user on behalf of which ChatMate will communicate with YouTube. If this is ever changed, you will need to re-authenticate and purge all Context Tokens from the `chat_message` table.
 - `TWITCH_CLIENT_ID`: The client ID for Twitch auth (from https://dev.twitch.tv/console/apps).
 - `TWITCH_CLIENT_SECRET`: The client secret for Twitch auth.
@@ -62,7 +64,12 @@ The following environment variables must be set in the `.env` file:
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
-- `ENABLE_DB_LOGGING`: [Optional, defaults to `false`] Whether to include database-related actions in the logs. Note that, even if this is `false`, any warning and errors will still be included, as will slow query logs.
+- `DB_LOG_LEVEL`: [Optional, defaults to `info`] The minimum log level to include for database logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
+- `API_LOG_LEVEL`: [Optional, defaults to `warning`] The minimum log level to include for API logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
+- `DEBUG_LOG_OUTPUT`: [Optional, defaults to `disable`] The log output method for debug messages. A value of `full` logs the message to the console and file, `file` logs the message to the file only, and `disable` skips logging the message.
+- `INFO_LOG_OUTPUT`: [Optional, defaults to `full`] The log output method for info messages. A value of `full` logs the message to the console and file, `file` logs the message to the file only, and `disable` skips logging the message.
+- `WARNING_LOG_OUTPUT`: [Optional, defaults to `full`] The log output method for warning messages. A value of `full` logs the message to the console and file, `file` logs the message to the file only, and `disable` skips logging the message.
+- `ERROR_LOG_OUTPUT`: [Optional, defaults to `full`] The log output method for error messages. A value of `full` logs the message to the console and file, `file` logs the message to the file only, and `disable` skips logging the message.
 - `DB_SEMAPHORE_CONCURRENT`: [Optional, defaults to `1000`] How many concurrent database requests to allow, before queuing any new requests. Note that operations on the Prisma Client generate many direct database requests, so this number shouldn't be too low (> 50).
 - `DB_SEMAPHORE_TIMEOUT`: [Optional, defaults to `null`] The maximum number of milliseconds that a database request can be queued before timing it out. If null, does not timeout requests in the queue.
 - `DB_TRANSACTION_TIMEOUT`: [Optional, defaults to `5000`] The maximum number of milliseconds a Prisma transaction can run before being cancelled and rolled back.
@@ -99,12 +106,27 @@ During a migration, ensure that the `.sql` is checked and edited to avoid data l
 
 Migrations are autoamtically run in CI during the deployment process. This occurs during the last step before deployment, but it is still possible that something goes wrong where the migration succeeds, but deployment fails. For this reason, migrations should follow an expand and contract pattern.
 
+### Debugging Slow Queries
+If the CPU usage of the MySQL Server instance is consistently high, follow these steps:
+
+- Log into MySQL.
+  
+  `> mysql -h chat-mate.mysql.database.azure.com -u chatmateadmin -p`
+
+- Show all currently running processes. This includes any raw SQL queries currently executing. Running this command a few times will reveal which queries in particular need attention, as they may be listed frequently.
+  
+  `mysql> SHOW FULL PROCESSLIST;`
+
+Also ensure `slow_query_logs` are enabled via the Server Parameters sidebar menu. Once enabled, you can read these from the Server Logs section or perform additional debugging in Workbook -> Query Performance Insight.
+
+For more info, refer to https://learn.microsoft.com/en-us/azure/mysql/single-server/how-to-troubleshoot-high-cpu-utilization.
+
 ## Punishments
 Punishments are used to temporarily or permanently hide users' livestream messages. Any punishment can be revoked at any time. Punishment reasons and revoke reasons are supported but optional. Punishments can be either temporary or permanent, depending on the type.
 
 Currently there are 3 punishment types:
 1. `mute`: This is an internal punishment, and is used by the Client to hide messages of a certain user. A mute can be temporary or permanent.
-2. `timeout`: This is both internal and external (i.e. sent to YouTube and Twitch) and completely stops the user from sending messages in the livestream chat. It is always temporary. Due to limitations with the Masterchat implementation, timeouts must be at least 5 minutes long. Furthermore, we have a service that refreshes YouTube timeouts periodically if they are longer than 5 minutes.
+2. `timeout`: This is both internal and external (i.e. sent to YouTube and Twitch) and completely stops the user from sending messages in the livestream chat. It is always temporary. Due to limitations with the Youtube API, timeouts must be at most 1 day long.
 3. `ban`: This is essentially a permanent timeout.
 
 ## Testing
@@ -205,7 +227,7 @@ Returns data with the following properties:
 - `twitchUsername` (`string`): The username of the ChatMate Twitch account. This account must be used to authenticate on the admin page.
 
 ### `POST /twitch/authorise`
-Authorises the authorisation token and updates the stored Twitch `access_token` in the database.
+Authorises the authorisation code and updates the stored Twitch `access_token` in the database.
 
 Query parameters:
 - `code` (`string`): The authorisation code obtained from Twitch after logging on.
@@ -219,6 +241,26 @@ Returns an empty response body.
 
 ### `POST /twitch/resetSubscriptions`
 Deletes and re-initialises all streamer event subscriptions.
+
+Returns an empty response body.
+
+### `GET /youtube/login`
+Retrieves the Youtube login URL that should be used to start the OAuth2 authorisation flow. Intended to be used by Studio. See [the docs](../../docs/youtube-auth.md) for more info.
+
+Returns data with the following properties:
+- `url` (`string`): The login URL. It will redirect back to Studio.
+- `youtubeChannelName` (`string`): The channel name of the ChatMate Youtube account. This account must be used to authenticate on the admin page.
+
+### `POST /youtube/authorise`
+Authorises the authorisation code and updates the stored Youtube `access_token` in the database.
+
+Query parameters:
+- `code` (`string`): The authorisation code obtained from Youtube after logging on.
+
+Returns an empty response body.
+
+### `POST /youtube/revoke`
+Revokes the ChatMate authorisation for the admin's Youtube channel.
 
 Returns an empty response body.
 
@@ -505,7 +547,7 @@ Can return the following errors:
 Applies a punishment of type `ban` to the user, which is essentially a permanent `timeout`. This endpoint may also be used to apply bans to any channels which may not currently be banned.
 
 Request data (body):
-- `userId` (`int`): *Required.* The user to which the punishment should be applied.
+- `userId` (`int`): *Required.* The primary user to which the punishment should be applied.
 - `message` (`string`): *Optional.* The reason for the punishment.
 
 Returns data with the following properties:
@@ -537,7 +579,7 @@ Applies a punishment of type `timeout` to the user, which is essentially a tempo
 Request data (body):
 - `userId` (`int`): *Required.* The user to which the punishment should be applied.
 - `message` (`string`): *Optional.* The reason for the punishment.
-- `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 5 minutes.
+- `durationSeconds` (`number`): *Required.* The duration of the punishment, in seconds. Must be at least 1 second and at most 1 day.
 
 Returns data with the following properties:
 - `newPunishment` (`PublicUserRank | null`): The new punishment that was created as a result of this request, if successful.
@@ -825,6 +867,17 @@ Returns data with the following properties:
 Can return the following errors:
 - `403`: When the logged-in user is not a streamer.
 
+### `POST /twitch/authorise`
+Authorises the authorisation code and updates the stored Twitch `access_token` in the database.
+
+Query parameters:
+- `code` (`string`): The authorisation code obtained from Twitch after logging on.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `403`: When the logged-in user is not a streamer.
+
 ### `GET /youtube/status`
 Retrieves the status of the ChatMate admin YouTube channel in relation to the logged-in streamer's current primary YouTube channel. ChatMate requires that the streamer add the admin channel as a moderator. Note that we can only check the moderator status at the time of the last message received in the streamer's latest livestream.
 
@@ -833,6 +886,48 @@ Returns data with the following properties:
 - `timestamp` (`number`): The latest time for which the moderation status could be verified. It may have changed since then.
 
 Can return the following errors:
+- `400`: When the logged-in streamer does not have a primary Youtube channel set.
+- `403`: When the logged-in user is not a streamer.
+
+### `GET /youtube/login`
+Retrieves the Youtube login URL that should be used by the streamer to authorise the ChatMate Application. Intended to be used by Studio. See [the docs](../../docs/youtube-auth.md) for more info.
+
+Returns data with the following properties:
+- `url` (`string`): The login URL. It will redirect back to Studio.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
+- `403`: When the logged-in user is not a streamer.
+
+### `POST /youtube/authorise`
+Authorises the authorisation code and updates the stored Youtube `access_token` in the database.
+
+Query parameters:
+- `code` (`string`): The authorisation code obtained from Youtube after logging on.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
+- `403`: When the logged-in user is not a streamer.
+
+### `POST /youtube/revoke`
+Revokes the ChatMate authorisation for the admin's Youtube channel.
+
+Returns an empty response body.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
+- `403`: When the logged-in user is not a streamer.
+
+### `GET /youtube/moderators`
+Gets the list of moderator YouTube channels, as reported by YouTube.
+
+Returns data with the following properties:
+- `moderators` (`PublicYoutubeModerator[]`): The list of YouTube moderators.
+
+Can return the following errors:
+- `400`: When the logged-in user has not set a primary Youtube channel.
 - `403`: When the logged-in user is not a streamer.
 
 ### `GET /status`

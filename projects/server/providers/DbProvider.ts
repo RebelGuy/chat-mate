@@ -77,7 +77,7 @@ export default class DbProvider extends ContextClass {
         // until either the app is restarted, or the connection is reset.
         // we disconnect here, and the next request will automatically re-establish the connection.
         if (isPrismaTimeout(e)) {
-          this.logService.logInfo(this, 'Detected Prisma timeout, now reconnecting to the database.')
+          this.logService.logWarning(this, 'Detected Prisma timeout, now reconnecting to the database.')
           await this.prismaClient.$disconnect()
         }
         throw e

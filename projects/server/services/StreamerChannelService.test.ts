@@ -1,9 +1,9 @@
-import { ChatUser, Livestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
+import { Livestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore, { RegisteredUserResult } from '@rebel/server/stores/AccountStore'
-import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -45,19 +45,21 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
     const streamerId3 = 3
     const twitchName1 = 'name1'
     const twitchName2 = 'name2'
+    const internalTwitchId1 = 5
+    const internalTwitchId2 = 6
 
     mockStreamerStore.getStreamers.calledWith().mockResolvedValue([cast<Streamer>({ id: streamerId1 }), cast<Streamer>({ id: streamerId2 }), cast<Streamer>({ id: streamerId3 })])
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId1, streamerId2, streamerId3])).mockResolvedValue(cast<PrimaryChannels[]>([
-      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName1 }]}}} },
-      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName2 }]}}} },
+      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId1, infoHistory: [{ displayName: twitchName1 }]}}} },
+      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId2, infoHistory: [{ displayName: twitchName2 }]}}} },
       { streamerId: streamerId3, twitchChannel: null }
     ]))
 
     const result = await streamerChannelService.getAllTwitchStreamerChannels()
 
     expect(result).toEqual<TwitchStreamerChannel[]>([
-      {streamerId: streamerId1, twitchChannelName: twitchName1 },
-      {streamerId: streamerId2, twitchChannelName: twitchName2 }
+      {streamerId: streamerId1, twitchChannelName: twitchName1, internalChannelId: internalTwitchId1 },
+      {streamerId: streamerId2, twitchChannelName: twitchName2, internalChannelId: internalTwitchId2 }
     ])
   })
 })

@@ -6,6 +6,9 @@ import { TWITCH_SCOPE } from '@rebel/server/constants'
 import { AccessToken } from '@twurple/auth/lib'
 import LogService from '@rebel/server/services/LogService'
 import WebService from '@rebel/server/services/WebService'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
+import { getUserName, isYoutubeChannel } from '@rebel/server/services/ChannelService'
+import { single } from '@rebel/shared/util/arrays'
 
 type Deps = Dependencies<{
   twitchClientId: string
@@ -16,6 +19,8 @@ type Deps = Dependencies<{
   authStore: AuthStore
   logService: LogService
   webService: WebService
+  channelId: string
+  channelStore: ChannelStore
 }>
 
 export default class AdminService extends ContextClass {
@@ -24,11 +29,13 @@ export default class AdminService extends ContextClass {
   private readonly twitchClientId: string
   private readonly twitchClientSecret: string
   private readonly twitchUsername: string
+  private readonly youtubeChannelId: string
   private readonly studioUrl: string
   private readonly rankStore: RankStore
   private readonly authStore: AuthStore
   private readonly logService: LogService
   private readonly webService: WebService
+  private readonly channelStore: ChannelStore
 
   constructor (deps: Deps) {
     super()
@@ -41,6 +48,8 @@ export default class AdminService extends ContextClass {
     this.authStore = deps.resolve('authStore')
     this.logService = deps.resolve('logService')
     this.webService = deps.resolve('webService')
+    this.youtubeChannelId = deps.resolve('channelId')
+    this.channelStore = deps.resolve('channelStore')
   }
 
   /** Returns all current system admin users. */
@@ -59,6 +68,16 @@ export default class AdminService extends ContextClass {
   /** The username of the ChatMate Twitch account. */
   public getTwitchUsername (): string {
     return this.twitchUsername
+  }
+
+  public async getYoutubeChannelName (): Promise<string> {
+    const channel = await this.channelStore.getChannelFromUserNameOrExternalId(this.youtubeChannelId)
+    if (channel == null || !isYoutubeChannel(channel)) {
+      throw new Error('Admin Youtube channel not found')
+    }
+
+    const userChannel = await this.channelStore.getYoutubeChannelFromChannelId([channel.id]).then(single)
+    return getUserName(userChannel)
   }
 
   public async authoriseTwitchLogin (authorisationCode: string): Promise<void> {

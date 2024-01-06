@@ -13,7 +13,7 @@ import EventDispatchService, { DataPair, EventData } from '@rebel/server/service
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { RegisteredUser, Streamer } from '@prisma/client'
-import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import { ApiClient, HelixModerationApi, HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { HelixUserData } from '@twurple/api/lib/interfaces/helix/user.external'
@@ -21,7 +21,7 @@ import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventSe
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { RefreshingAuthProvider } from '@twurple/auth/lib'
-import { NotAuthorisedError } from '@rebel/shared/util/error'
+import { TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 const onMessage_example = '{"msgId":"c2ddc7b6-51b6-4d75-9670-d262a6e98cf1","userInfo":{"userName":"chat_mate1","displayName":"chat_mate1","color":"#0000FF","badges":{},"badgeInfo":{},"userId":"781376034","userType":"","isBroadcaster":true,"isSubscriber":false,"isFounder":false,"isMod":false,"isVip":false},"channelId":"781376034","isCheer":false,"bits":0,"emoteOffsets":{},"messageParts":[{"type":"emote","position":0,"length":2,"id":"1","name":":)","displayInfo":{}},{"type":"text","position":2,"length":1,"text":" "},{"type":"emote","position":3,"length":6,"id":"301544927","name":"SirUwU","displayInfo":{}},{"type":"text","position":9,"length":1,"text":" "},{"type":"emote","position":10,"length":7,"id":"30259","name":"HeyGuys","displayInfo":{}}]}'
@@ -146,18 +146,19 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
 
-  test(`joins all streamers' channels and passes new chat message to the EventDispatchService`, async () => {
+  test(`joins all streamers' channels and passes data to the EventDispatchService`, async () => {
     const channelId = '12345'
     const twitchMessage = { ...JSON.parse(onMessage_example), channelId: channelId }
     const chatItem: ChatItem = cast<ChatItem>({ id: 'id' })
     const evalMockFn = jest.spyOn(chat, 'evalTwitchPrivateMessage').mockImplementation(msg_ => chatItem)
     const twitchChannelNames = ['test1', 'test2']
     const streamerId = 4
+    const removedMessageId = 'removedMessageId'
     mockStreamerChannelService.getAllTwitchStreamerChannels.mockReset()
-    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([
       { streamerId: streamerId, twitchChannelName: twitchChannelNames[0] },
       { streamerId: streamerId + 1, twitchChannelName: twitchChannelNames[1] }
-    ])
+    ]))
 
     // set up the channel name -> chat user -> registered user -> streamer conversion
     const chatUserId = 2
@@ -178,17 +179,24 @@ describe(nameof(TwurpleService, 'initialise'), () => {
     expect(joinCalls).toEqual(twitchChannelNames)
 
     // post a mock chat message
-    const callback = mockChatClient.onMessage.mock.calls[0][0] as (...args: any) => Promise<void> //  :  -  (
-    await callback(twitchChannelNames[0], 'user', 'message', twitchMessage)
+    const onMessageCallback = mockChatClient.onMessage.mock.calls[0][0] as (...args: any) => Promise<void> //  :  -  (
+    await onMessageCallback(twitchChannelNames[0], 'user', 'message', twitchMessage)
+
+    // post a mock remove chat message event
+    const onMessageRemovedCallback = mockChatClient.onMessageRemove.mock.calls[0][0] as (...args: any) => Promise<void>
+    await onMessageRemovedCallback(twitchChannelNames[0], removedMessageId, { } as any)
 
     // check that the chat item is evaluated properly (trust the actual implementation)
     const providedTwitchMessage = single(single(evalMockFn.mock.calls))
     expect(providedTwitchMessage).toBe(twitchMessage)
 
+    const [chatItemData, removeChatItemData] = mockEventDispatchService.addData.mock.calls as [DataPair<'chatItem'>, DataPair<'chatItemRemoved'>]
+
     // check that the evaluated message is passed to the EventDispatchService
-    const data = single(mockEventDispatchService.addData.mock.calls) as DataPair<'chatItem'>
-    expect(data[0]).toBe(`chatItem`)
-    expect(data[1]).toEqual({ ...chatItem, streamerId })
+    expect(chatItemData).toEqual(expectObject(chatItemData, ['chatItem', { ...chatItem, streamerId }]))
+
+    // check that message deleted events are dispatched
+    expect(removeChatItemData).toEqual(expectObject(removeChatItemData, ['chatItemRemoved', { externalMessageId: removedMessageId }]))
   })
 
   test(`Joins the streamer's chat when a primary Twitch channel has been set`, async () => {
@@ -359,10 +367,10 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const channelName4 = 'test4'
     const streamerId4 = 4
     const user4 = cast<HelixUser>({ id: 'userId4' })
-    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([{
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{
       streamerId: streamerId4,
       twitchChannelName: channelName4
-    }])
+    }]))
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId4).mockResolvedValue(channelName4)
     mockUserApi.getUserByName.calledWith(channelName4).mockResolvedValue(user4)
     mockTwurpleAuthProvider.hasTokenForUser.calledWith(user4.id).mockReturnValue(true)
@@ -451,7 +459,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const user = cast<HelixUser>({ id: 'userId' })
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(channelName)
     mockStreamerChannelService.getAllTwitchStreamerChannels.mockReset()
-    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([{ streamerId: streamerId, twitchChannelName: channelName }])
+    mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{ streamerId: streamerId, twitchChannelName: channelName }]))
     mockUserApi.getUserByName.calledWith(channelName).mockResolvedValue(user)
     mockGetter(mockChatClient, 'currentChannels').mockReturnValue([]) // importantly, this is empty even though we think we connected
     mockGetter(mockChatClient, 'isConnected').mockReturnValue(true)
@@ -481,7 +489,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     mockGetter(mockChatClient, 'isConnecting').mockReturnValue(false)
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(channelName)
     mockUserApi.getUserByName.calledWith(channelName).mockResolvedValue(user)
-    mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith(user.id).mockRejectedValue(new NotAuthorisedError(user.id))
+    mockTwurpleAuthProvider.getUserTokenAuthProvider.calledWith(user.id).mockRejectedValue(new TwitchNotAuthorisedError(user.id))
 
     await twurpleService.initialise()
     const onAddPrimaryChannel = mockEventDispatchService.onData.mock.calls.find(args => args[0] === 'addPrimaryChannel')![1]

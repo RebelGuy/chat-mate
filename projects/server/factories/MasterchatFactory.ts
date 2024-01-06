@@ -30,7 +30,7 @@ export default class MasterchatFactory extends ContextClass {
   public override async initialise () {
     // todo: later we could modify this so the access token can be updated while the application is running,
     // perhaps via events. masterchat.setCredentials() supports changing the token without instantiating a new instance.
-    this.accessToken = await this.authStore.loadYoutubeAccessToken(this.channelId)
+    this.accessToken = await this.authStore.loadYoutubeWebAccessToken(this.channelId)
 
     if (this.accessToken == null) {
       this.logService.logWarning(this, 'Access token is not set in the db for channelId', this.channelId)

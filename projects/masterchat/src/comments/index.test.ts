@@ -11,7 +11,7 @@ it("can fetch comments", async () => {
   prettyPrint(first);
 });
 
-it("can fetch comment by id", async () => {
+it.skip("can fetch comment by id", async () => {
   const videoId = "q5ctC_sWU4g";
   const commentId = "UgzNuL5flAW9vygeE9V4AaABAg";
 

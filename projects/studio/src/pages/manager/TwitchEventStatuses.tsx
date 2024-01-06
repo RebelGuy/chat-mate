@@ -10,6 +10,7 @@ import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient, resetTwitchSubscriptions } from '@rebel/studio/utility/api'
+import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -26,6 +27,22 @@ const EVENT_INFO: Record<PublicTwitchEventStatus['eventType'], EventInfo> = {
   followers: {
     name: 'New Followers',
     description: 'ChatMate listens to new followers to your channel to show you notifications.'
+  },
+  ban: {
+    name: 'User Ban',
+    description: `ChatMate listens to bans to synchronise ranks and propagate a ban to the user's linked channels.`
+  },
+  unban: {
+    name: 'User Unban',
+    description: `ChatMate listens to unbans to synchronise ranks and propagate an unban to the user's linked channels.`
+  },
+  mod: {
+    name: 'User Mod',
+    description: `ChatMate listens to mod events to synchronise ranks and mod the user on their linked channels.`
+  },
+  unmod: {
+    name: 'Unmod',
+    description: `ChatMate listens to unmod events to synchronise ranks and unmod the user on their linked channels.`
   }
 }
 
@@ -33,7 +50,10 @@ let successPoller: number | null = null
 
 export default function TwitchEventStatuses () {
   const [params, setParams] = useSearchParams()
-  const code = params.get('code')
+
+  // params are cleared upon mounting, but retained in state by setting them as the default value of each piece of state.
+  const [isTwitchAuth] = useState(getAuthTypeFromParams(params) === 'twitch')
+  const code = isTwitchAuth ? params.get('code') : null
 
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const getStatusesRequest = useRequest(getTwitchEventStatuses(), { updateKey: refreshToken })
@@ -52,7 +72,11 @@ export default function TwitchEventStatuses () {
 
   useEffect(() => {
     // for some reason we can't immediately clear the params here, else the states won't initialise. but it's working fine on the admin authentication page?!
-    const timeout = window.setTimeout(() => setParams({}), 500)
+    const timeout = window.setTimeout(() => {
+      if (isTwitchAuth) {
+        setParams({})
+      }
+    }, 500)
 
     primaryChannelsRequest.triggerRequest()
     getLoginUrlRequest.triggerRequest()

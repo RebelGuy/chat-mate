@@ -1,7 +1,6 @@
-import { NoNever, OptionalKeys, Primitive } from '@rebel/shared/types'
+import { NoNever, Primitive } from '@rebel/shared/types'
 import dotenv from 'dotenv'
 import { toConstCase } from '@rebel/shared/util/text'
-import assert from 'node:assert'
 
 /** Always returns T if running the server locally, otherwise null. */
 type LocalVariable<T extends Primitive | null> = { type: 'local', value: T | null }
@@ -13,7 +12,17 @@ type DeploymentVariable<T extends Primitive | null> = { type: 'deployment', valu
 
 type OptionalVariable<T extends Primitive | null, TDefault extends T> = { type: 'optional', value: T, default: TDefault }
 
-export type NodeEnv = 'local' | 'debug' | 'release'
+const NODE_ENV_VALUES = ['local', 'debug', 'release'] as const
+export type NodeEnv = (typeof NODE_ENV_VALUES)[number]
+
+
+const LOG_OUTPUT_VALUES = ['full', 'file', 'disable'] as const
+/** `'full'`: log to console and file. `'log'`: log to file. `'disable'`: don't log anything. */
+export type LogOutput = (typeof LOG_OUTPUT_VALUES)[number]
+
+const LOG_LEVEL_VALUES = ['full', 'error', 'warning', 'info', 'disable'] as const
+/** The minimum log level to include in the output (specified by `LogOutput`). Anything below will be discarded. */
+export type LogLevel = (typeof LOG_LEVEL_VALUES)[number]
 
 // these can be set either statically in the .env file or Azure configuration, or dynamically within the npm script using the `cross-env` package.
 type EnvironmentVariables = {
@@ -30,7 +39,10 @@ type EnvironmentVariables = {
 
   streamlabsAccessToken: string
 
+  youtubeClientId: string
+  youtubeClientSecret: string
   channelId: string
+
   databaseUrl: string
 
   // replaces some controllers with fake ones
@@ -39,8 +51,12 @@ type EnvironmentVariables = {
   applicationinsightsConnectionString: DeploymentVariable<string>
   websiteHostname: DeploymentVariable<string>
 
-  // if false, will still log warnings and errors
-  enableDbLogging: OptionalVariable<boolean, false>
+  dbLogLevel: OptionalVariable<LogLevel, 'info'>
+  apiLogLevel: OptionalVariable<LogLevel, 'warning'>
+  debugLogOutput: OptionalVariable<LogOutput, 'disable'>
+  infoLogOutput: OptionalVariable<LogOutput, 'full'>
+  warningLogOutput: OptionalVariable<LogOutput, 'full'>
+  errorLogOutput: OptionalVariable<LogOutput, 'full'>
 
   dbSemaphoreConcurrent: OptionalVariable<number, 1000>
   dbSemaphoreTimeout: OptionalVariable<number | null, null>
@@ -48,31 +64,35 @@ type EnvironmentVariables = {
   dbSlowQueryThreshold: OptionalVariable<number, 10000>
 }
 
-function getAllKeys () {
-  // wrapped in a function to stop polluting the top-level scope
-  const allEnvVariables: Record<keyof EnvironmentVariables, true> = {
-    'applicationinsightsConnectionString': true,
-    'channelId': true,
-    'databaseUrl': true,
-    'enableDbLogging': true,
-    'dbSemaphoreConcurrent': true,
-    'dbSemaphoreTimeout': true,
-    'dbTransactionTimeout': true,
-    'dbSlowQueryThreshold': true,
-    'websiteHostname': true,
-    'nodeEnv': true,
-    'port': true,
-    'studioUrl': true,
-    'twitchClientId': true,
-    'twitchClientSecret': true,
-    'useFakeControllers': true,
-    'streamlabsAccessToken': true,
-    'twitchUsername': true,
-    'chatMateRegisteredUserName': true
-  }
-  return Object.keys(allEnvVariables) as (keyof EnvironmentVariables)[]
+// includes the variable name and allowed values. set the allowed values to null to not restrict the values to a set.
+const allChatMateEnvVariables: { [K in keyof EnvironmentVariables]: readonly ValueType<K>[] | null } = {
+  applicationinsightsConnectionString: null,
+  channelId: null,
+  youtubeClientId: null,
+  youtubeClientSecret: null,
+  databaseUrl: null,
+  dbLogLevel: LOG_LEVEL_VALUES,
+  apiLogLevel: LOG_LEVEL_VALUES,
+  debugLogOutput: LOG_OUTPUT_VALUES,
+  infoLogOutput: LOG_OUTPUT_VALUES,
+  warningLogOutput: LOG_OUTPUT_VALUES,
+  errorLogOutput: LOG_OUTPUT_VALUES,
+  dbSemaphoreConcurrent: null,
+  dbSemaphoreTimeout: null,
+  dbTransactionTimeout: null,
+  dbSlowQueryThreshold: null,
+  websiteHostname: null,
+  nodeEnv: NODE_ENV_VALUES,
+  port: null,
+  studioUrl: null,
+  twitchClientId: null,
+  twitchClientSecret: null,
+  useFakeControllers: null,
+  streamlabsAccessToken: null,
+  twitchUsername: null,
+  chatMateRegisteredUserName: null
 }
-const allKeys = getAllKeys()
+const allKeys = Object.keys(allChatMateEnvVariables) as (keyof EnvironmentVariables)[]
 
 type VariablesOfType<Type extends 'local' | 'deployment' | 'optional'> = keyof NoNever<{
   [K in keyof EnvironmentVariables]:
@@ -101,7 +121,12 @@ const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
 // optional variables resolve to the default value if they are not included in the environment definition.
 const optionalVariables: OptionalVariablesWithDefaults = {
   useFakeControllers: false,
-  enableDbLogging: false,
+  dbLogLevel: 'info',
+  apiLogLevel: 'warning',
+  debugLogOutput: 'disable',
+  infoLogOutput: 'full',
+  warningLogOutput: 'full',
+  errorLogOutput: 'full',
   dbSemaphoreConcurrent: 1000,
   dbSemaphoreTimeout: null,
   dbTransactionTimeout: 5000,
@@ -118,6 +143,17 @@ function isLocalVar<V extends keyof EnvironmentVariables> (variable: V): boolean
 
 function isDeploymentVar<V extends keyof EnvironmentVariables> (variable: V): boolean {
   return Object.keys(deploymentVariables).includes(variable)
+}
+
+function assertValidValue<V extends keyof EnvironmentVariables> (variable: V, value: ValueType<V>): void {
+  const validValues = allChatMateEnvVariables[variable]
+  if (validValues == null) {
+    return
+  } else if (validValues.includes(value)) {
+    return
+  } else {
+    throw new Error(`Invalid value for environment variable ${toConstCase(variable)}. Allowed values are ${JSON.stringify(validValues)}, but was ${JSON.stringify(value)}`)
+  }
 }
 
 // if an environment variable is included in this list, it must be set using the `cross-env` package.
@@ -204,7 +240,9 @@ export default function env<V extends keyof EnvironmentVariables> (variable: V):
     throw new Error(`Cannot find non-optional environment variable ${envName}`)
   }
 
-  return parseValue<Primitive | null>(value) as ValueType<V>
+  const parsed = parseValue<Primitive | null>(value) as ValueType<V>
+  assertValidValue(variable, parsed)
+  return parsed
 }
 
 function parseValue<T extends Primitive | null> (value: string | null | undefined): T {

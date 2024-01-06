@@ -26,8 +26,7 @@ import ExperienceController from '@rebel/server/controllers/ExperienceController
 import UserController from '@rebel/server/controllers/UserController'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import EmojiController from '@rebel/server/controllers/EmojiController'
-import cors from 'cors'
-import ChatFetchService from '@rebel/server/services/ChatFetchService'
+import MasterchatFetchService from '@rebel/server/services/MasterchatFetchService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
@@ -47,7 +46,7 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
-import { TimeoutError } from '@rebel/shared/util/error'
+import { TimeoutError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
@@ -89,6 +88,14 @@ import AdminController from '@rebel/server/controllers/AdminController'
 import WebService from '@rebel/server/services/WebService'
 import StreamerTwitchEventService from '@rebel/server/services/StreamerTwitchEventService'
 import { ApiResponse } from '@rebel/api-models/types'
+import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
+import MasterchatStore from '@rebel/server/stores/MasterchatStore'
+import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
+import YoutubeService from '@rebel/server/services/YoutubeService'
+import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClientProvider'
+import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
+import YoutubeApiStore from '@rebel/server/stores/YoutubeApiStore'
+import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientFactory'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -106,7 +113,12 @@ const main = async () => {
   const twitchClientId = env('twitchClientId')
   const twitchClientSecret = env('twitchClientSecret')
   const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
-  const enableDbLogging = env('enableDbLogging')
+  const dbLogLevel = env('dbLogLevel')
+  const apiLogLevel = env('apiLogLevel')
+  const debugLogOutput = env('debugLogOutput')
+  const infoLogOutput = env('infoLogOutput')
+  const warningLogOutput = env('warningLogOutput')
+  const errorLogOutput = env('errorLogOutput')
   const hostName = env('websiteHostname')
   const dbSemaphoreConcurrent = env('dbSemaphoreConcurrent')
   const dbSemaphoreTimeout = env('dbSemaphoreTimeout')
@@ -125,6 +137,8 @@ const main = async () => {
     .withProperty('port', port)
     .withProperty('studioUrl', studioUrl)
     .withProperty('channelId', env('channelId'))
+    .withProperty('youtubeClientId', env('youtubeClientId'))
+    .withProperty('youtubeClientSecret', env('youtubeClientSecret'))
     .withProperty('dataPath', dataPath)
     .withProperty('nodeEnv', env('nodeEnv'))
     .withProperty('databaseUrl', env('databaseUrl'))
@@ -132,7 +146,12 @@ const main = async () => {
     .withProperty('twitchClientId', twitchClientId)
     .withProperty('twitchClientSecret', twitchClientSecret)
     .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
-    .withProperty('enableDbLogging', enableDbLogging)
+    .withProperty('dbLogLevel', dbLogLevel)
+    .withProperty('apiLogLevel', apiLogLevel)
+    .withProperty('debugLogOutput', debugLogOutput)
+    .withProperty('infoLogOutput', infoLogOutput)
+    .withProperty('warningLogOutput', warningLogOutput)
+    .withProperty('errorLogOutput', errorLogOutput)
     .withProperty('dbSemaphoreConcurrent', dbSemaphoreConcurrent)
     .withProperty('dbSemaphoreTimeout', dbSemaphoreTimeout)
     .withProperty('dbTransactionTimeout', dbTransactionTimeout)
@@ -161,6 +180,7 @@ const main = async () => {
     .withClass('masterchatFactory', MasterchatFactory)
     .withClass('masterchatStatusService', StatusService)
     .withClass('twurpleStatusService', StatusService)
+    .withClass('youtubeStatusService', StatusService)
     .withClass('streamlabsStatusService', StatusService)
     .withClass('livestreamStore', LivestreamStore)
     .withClass('chatStore', ChatStore)
@@ -174,17 +194,22 @@ const main = async () => {
     .withClass('streamerStore', StreamerStore)
     .withClass('channelStore', ChannelStore)
     .withClass('streamerChannelStore', StreamerChannelStore)
+    .withClass('rankStore', RankStore)
     .withClass('streamerChannelService', StreamerChannelService)
     .withClass('livestreamService', LivestreamService)
-    .withClass('rankStore', RankStore)
     .withClass('adminService', AdminService)
     .withClass('experienceStore', ExperienceStore)
     .withClass('accountService', AccountService)
     .withClass('channelService', ChannelService)
-    .withClass('youtubeTimeoutRefreshService', YoutubeTimeoutRefreshService)
     .withClass('twurpleService', TwurpleService)
     .withClass('linkStore', LinkStore)
     .withClass('userService', UserService)
+    .withClass('youtubeAuthClientFactory', YoutubeAuthClientFactory)
+    .withClass('youtubeAuthProvider', YoutubeAuthProvider)
+    .withClass('youtubeApiClientProvider', YoutubeApiClientProvider)
+    .withClass('youtubeApiStore', YoutubeApiStore)
+    .withClass('youtubeApiProxyService', YoutubeApiProxyService)
+    .withClass('youtubeService', YoutubeService)
     .withClass('punishmentService', PunishmentService)
     .withClass('genericStore', GenericStore)
     .withClass('experienceService', ExperienceService)
@@ -200,8 +225,10 @@ const main = async () => {
     .withClass('linkCommand', LinkCommand)
     .withClass('commandService', CommandService)
     .withClass('chatService', ChatService)
-    .withClass('chatFetchService', ChatFetchService)
+    .withClass('masterchatStore', MasterchatStore)
     .withClass('followerStore', FollowerStore)
+    .withClass('externalRankEventService', ExternalRankEventService)
+    .withClass('masterchatFetchService', MasterchatFetchService)
     .withClass('helixEventService', HelixEventService)
     .withClass('donationFetchService', DonationFetchService)
     .withClass('chatMateEventService', ChatMateEventService)
@@ -388,7 +415,9 @@ const main = async () => {
 
   // ensure the server can still run if Twitch auth fails, so that we can re-authenticate via the Studio Twitch admin page
   await globalContext.initialise((erroredClass, stage, e) => {
-    if (erroredClass instanceof TwurpleAuthProvider && stage === 'initialise') {
+    if (stage === 'initialise' &&
+      (erroredClass instanceof TwurpleAuthProvider || erroredClass instanceof YoutubeAuthProvider)
+    ) {
       isAdministrativeMode = true
       return 'ignore'
     }

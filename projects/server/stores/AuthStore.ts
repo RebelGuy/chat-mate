@@ -2,6 +2,8 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { AccessToken } from '@twurple/auth'
+import { YoutubeAuth } from '@prisma/client'
+import { New } from '@rebel/server/models/entities'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -48,8 +50,14 @@ export default class AuthStore extends ContextClass {
     }
   }
 
-  public async loadYoutubeAccessToken (channelId: string): Promise<string | null> {
-    const result = await this.dbProvider.get().youtubeAuth.findUnique({ where: { channelId }})
+  public async loadYoutubeAccessToken (externalYoutubeChannelId: string): Promise<YoutubeAuth | null> {
+    return await this.dbProvider.get().youtubeAuth.findUnique({
+      where: { externalYoutubeChannelId }
+    })
+  }
+
+  public async loadYoutubeWebAccessToken (channelId: string): Promise<string | null> {
+    const result = await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
     return result?.accessToken ?? null
   }
 
@@ -91,9 +99,26 @@ export default class AuthStore extends ContextClass {
     }
   }
 
-  public async saveYoutubeAccessToken (channelId: string, accessToken: string) {
+  public async saveYoutubeAccessToken (youtubeAuth: New<YoutubeAuth>): Promise<void> {
+    const existingToken = await this.dbProvider.get().youtubeAuth.findUnique({
+      where: { externalYoutubeChannelId: youtubeAuth.externalYoutubeChannelId },
+      rejectOnNotFound: false
+    })
+
+    // for some reason, we can't use upsert here but I don't understand why (weird runtime error)
+    if (existingToken == null) {
+      await this.dbProvider.get().youtubeAuth.create({ data: youtubeAuth })
+    } else {
+      await this.dbProvider.get().youtubeAuth.update({
+        where: { externalYoutubeChannelId: youtubeAuth.externalYoutubeChannelId },
+        data: youtubeAuth
+      })
+    }
+  }
+
+  public async saveYoutubeWebAccessToken (channelId: string, accessToken: string) {
     const updateTime = new Date()
-    await this.dbProvider.get().youtubeAuth.upsert({
+    await this.dbProvider.get().youtubeWebAuth.upsert({
       create: { channelId, accessToken, updateTime },
       where: { channelId },
       update: { accessToken, updateTime }
@@ -102,6 +127,11 @@ export default class AuthStore extends ContextClass {
 
   public async tryDeleteTwitchAccessToken (twitchUserId: string) {
     // deleteMany supresses the not-found error
-    await this.dbProvider.get().twitchAuth.deleteMany({where: { twitchUserId }})
+    await this.dbProvider.get().twitchAuth.deleteMany({ where: { twitchUserId }})
+  }
+
+  public async tryDeleteYoutubeAccessToken (externalYoutubeChannelId: string) {
+    // deleteMany supresses the not-found error
+    await this.dbProvider.get().youtubeAuth.deleteMany({ where: { externalYoutubeChannelId }})
   }
 }

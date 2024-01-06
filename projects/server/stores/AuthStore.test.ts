@@ -2,9 +2,11 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { expectObject, nameof } from '@rebel/shared/testUtils'
+import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
 import { AccessToken } from '@twurple/auth'
 import { single } from '@rebel/shared/util/arrays'
+import { New } from '@rebel/server/models/entities'
+import { YoutubeAuth } from '@prisma/client'
 
 const accessToken: AccessToken = {
   accessToken: 'accessToken1',
@@ -73,20 +75,49 @@ export default () => {
 
   describe(nameof(AuthStore, 'loadYoutubeAccessToken'), () => {
     test('Returns access token for channelId', async () => {
+      const channel = 'channel1'
+      const token = 'token1'
+      const refreshToken = 'refreshTOken1'
+      const scope = 'scope1'
       await db.youtubeAuth.createMany({ data: [
+        { externalYoutubeChannelId: channel, accessToken: token, expiryDate: new Date(), refreshToken: refreshToken, scope: scope },
+        { externalYoutubeChannelId: 'channel2', accessToken: 'token2', expiryDate: new Date(), refreshToken: '', scope: '' }
+      ]})
+
+      const result = await authStore.loadYoutubeAccessToken(channel)
+
+      expect(result).toEqual(expectObject(result, {
+        accessToken: token,
+        refreshToken,
+        scope
+      }))
+    })
+
+    test('Returns null if no token exists for the given channel', async () => {
+      await db.youtubeAuth.create({ data: { externalYoutubeChannelId: 'channel2', accessToken: 'token2', expiryDate: new Date(), refreshToken: '', scope: '' }})
+
+      const result = await authStore.loadYoutubeAccessToken('channel1')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe(nameof(AuthStore, 'loadYoutubeWebAccessToken'), () => {
+    test('Returns access token for channelId', async () => {
+      await db.youtubeWebAuth.createMany({ data: [
         { channelId: 'channel1', accessToken: 'token1', updateTime: new Date() },
         { channelId: 'channel2', accessToken: 'token2', updateTime: new Date() }
       ]})
 
-      const result = await authStore.loadYoutubeAccessToken('channel1')
+      const result = await authStore.loadYoutubeWebAccessToken('channel1')
 
       expect(result).toBe('token1')
     })
 
     test('Returns null if no token exists for the given channelId', async () => {
-      await db.youtubeAuth.create({ data: { channelId: 'channel1', accessToken: 'token1', updateTime: new Date() }})
+      await db.youtubeWebAuth.create({ data: { channelId: 'channel1', accessToken: 'token1', updateTime: new Date() }})
 
-      const result = await authStore.loadYoutubeAccessToken('channel2')
+      const result = await authStore.loadYoutubeWebAccessToken('channel2')
 
       expect(result).toBeNull()
 
@@ -120,28 +151,52 @@ export default () => {
   })
 
   describe(nameof(AuthStore, 'saveYoutubeAccessToken'), () => {
+    test('Creates new entry if no access token for the given channel exists yet', async () => {
+      await db.youtubeAuth.create({ data: { externalYoutubeChannelId: 'otherChannel', accessToken: '', expiryDate: new Date(), refreshToken: '', scope: '' }})
+      const channelId = 'channelId'
+      const data: New<YoutubeAuth> = { accessToken: 'accessToken', refreshToken: 'refreshToken', scope: 'scope', expiryDate: new Date(), externalYoutubeChannelId: channelId, timeObtained: new Date() }
+
+      await authStore.saveYoutubeAccessToken(data)
+
+      const stored = await db.youtubeAuth.findUnique({ where: { externalYoutubeChannelId: channelId }})
+      expect(stored).toEqual(expectObject(data))
+    })
+
+    test('Updates existing entry for the given channel', async () => {
+      const channelId = 'channelId'
+      const data: New<YoutubeAuth> = { accessToken: 'accessToken', refreshToken: 'refreshToken', scope: 'scope', expiryDate: new Date(), externalYoutubeChannelId: channelId, timeObtained: new Date() }
+      await db.youtubeAuth.create({ data: { externalYoutubeChannelId: channelId, accessToken: 'oldToken', expiryDate: new Date(), refreshToken: 'oldRefreshToken', scope: 'oldScope' }})
+
+      await authStore.saveYoutubeAccessToken(data)
+
+      const stored = await db.youtubeAuth.findUnique({ where: { externalYoutubeChannelId: channelId }})
+      expect(stored).toEqual(expectObject(data))
+    })
+  })
+
+  describe(nameof(AuthStore, 'saveYoutubeWebAccessToken'), () => {
     test('creates new entry if no access token for channelId exists already', async () => {
-      await db.youtubeAuth.create({ data: { channelId: 'channel1', accessToken: 'token1', updateTime: new Date() }})
+      await db.youtubeWebAuth.create({ data: { channelId: 'channel1', accessToken: 'token1', updateTime: new Date() }})
 
-      await authStore.saveYoutubeAccessToken('channel2', 'token2')
+      await authStore.saveYoutubeWebAccessToken('channel2', 'token2')
 
-      await expectRowCount(db.youtubeAuth).toBe(2)
-      const stored = await db.youtubeAuth.findUnique({ where: { channelId: 'channel2' }})
+      await expectRowCount(db.youtubeWebAuth).toBe(2)
+      const stored = await db.youtubeWebAuth.findUnique({ where: { channelId: 'channel2' }})
       expect(stored!.channelId).toBe('channel2')
       expect(stored!.accessToken).toBe('token2')
     })
 
     test('updates existing entry with channelId', async () => {
       const originalDate = new Date()
-      await db.youtubeAuth.createMany({ data: [
+      await db.youtubeWebAuth.createMany({ data: [
         { channelId: 'channel1', accessToken: 'token1', updateTime: new Date() },
         { channelId: 'channel2', accessToken: 'token2', updateTime: originalDate }
       ]})
 
-      await authStore.saveYoutubeAccessToken('channel2', 'token3')
+      await authStore.saveYoutubeWebAccessToken('channel2', 'token3')
 
-      await expectRowCount(db.youtubeAuth).toBe(2)
-      const stored = await db.youtubeAuth.findUnique({ where: { channelId: 'channel2' }})
+      await expectRowCount(db.youtubeWebAuth).toBe(2)
+      const stored = await db.youtubeWebAuth.findUnique({ where: { channelId: 'channel2' }})
       expect(stored!.channelId).toBe('channel2')
       expect(stored!.accessToken).toBe('token3')
       expect(stored!.updateTime.getTime()).not.toBe(originalDate.getTime())

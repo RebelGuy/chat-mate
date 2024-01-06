@@ -8,7 +8,7 @@ import { compareArrays } from '@rebel/shared/util/arrays'
 import { AccessToken, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
 import { waitUntil } from '@rebel/shared/util/typescript'
-import { AuthorisationExpiredError, InconsistentScopesError, NotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
@@ -98,7 +98,7 @@ export default class TwurpleAuthProvider extends ContextClass {
         if (e instanceof AuthorisationExpiredError) {
           throw e
         } else {
-          throw new NotAuthorisedError(twitchUserId)
+          throw new TwitchNotAuthorisedError(twitchUserId)
         }
       }
     }
@@ -106,7 +106,7 @@ export default class TwurpleAuthProvider extends ContextClass {
     if (checkScopes) {
       const scopes = this.userTokenAuthProvider.getCurrentScopesForUser(twitchUserId)
       if (!this.compareScopes(TWITCH_SCOPE, scopes)) {
-        throw new InconsistentScopesError()
+        throw new InconsistentScopesError('stored')
       }
     }
 

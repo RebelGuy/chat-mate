@@ -415,6 +415,39 @@ export default () => {
 
       expect(result.length).toBe(0)
     })
+
+    test('Ignores deleted messages if flag not set', async () => {
+      const chatItem = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
+      await chatStore.addChat(chatItem, streamer1, youtube1UserId, extYoutubeChannel1)
+      await db.chatMessage.updateMany({ data: { deletedTime: data.time3 }})
+
+      const result1 = await chatStore.getChatSince(streamer1, 0) // start searching since before addition
+      const result2 = await chatStore.getChatSince(streamer1, data.time2.getTime()) // start searching since after addition
+      const result3 = await chatStore.getChatSince(streamer1, data.time4.getTime()) // start searching since after deletion
+
+      expect(result1.length).toBe(0)
+      expect(result2.length).toBe(0)
+      expect(result3.length).toBe(0)
+    })
+
+    test('Returns only deleted messages if flag set', async () => {
+      // add deleted message
+      const chatItem1 = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
+      await chatStore.addChat(chatItem1, streamer1, youtube1UserId, extYoutubeChannel1)
+      await db.chatMessage.updateMany({ data: { deletedTime: data.time3 }})
+
+      // add undeleted message
+      const chatItem2 = { ...makeYtChatItem(text1), timeStamp: data.time1.getTime() }
+      await chatStore.addChat(chatItem2, streamer1, youtube1UserId, extYoutubeChannel1)
+
+      const result1 = await chatStore.getChatSince(streamer1, 0, undefined, undefined, undefined, true) // start searching since before addition
+      const result2 = await chatStore.getChatSince(streamer1, data.time2.getTime(), undefined, undefined, undefined, true) // start searching since after addition
+      const result3 = await chatStore.getChatSince(streamer1, data.time4.getTime(), undefined, undefined, undefined, true) // start searching since after deletion
+
+      expect(result1.length).toBe(1)
+      expect(result2.length).toBe(1)
+      expect(result3.length).toBe(0)
+    })
   })
 
   describe(nameof(ChatStore, 'getChatMessageCount'), () => {
@@ -778,6 +811,42 @@ export default () => {
       await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       await expect(() => chatStore.getChatById(2)).rejects.toThrow()
+    })
+  })
+
+  describe(nameof(ChatStore, 'removeChat'), () => {
+    test('Marks the message as removed and returns true', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.removeChat(chatItem1.id)
+
+      expect(result).toBe(true)
+      const storedMessage = await db.chatMessage.findFirst()
+      expect(storedMessage!.deletedTime).not.toBeNull()
+    })
+
+    test('Returns false if the message was not found', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+
+      const result = await chatStore.removeChat('unknown id')
+
+      expect(result).toBe(false)
+      const storedMessage = await db.chatMessage.findFirst()
+      expect(storedMessage!.deletedTime).toBeNull()
+    })
+
+    test('Returns false if the message was already deleted', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      await chatStore.addChat(chatItem1, livestream.streamerId, youtube1UserId, extYoutubeChannel1)
+      await db.chatMessage.updateMany({ data: { deletedTime: data.time1 }})
+
+      const result = await chatStore.removeChat(chatItem1.id)
+
+      expect(result).toBe(false)
+      const storedMessage = await db.chatMessage.findFirst()
+      expect(storedMessage!.deletedTime).toEqual(data.time1)
     })
   })
 }

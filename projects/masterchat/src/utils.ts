@@ -320,6 +320,24 @@ export function durationToISO8601(durationText: string): string {
   return `P${durationInt}${durationUnit}`;
 }
 
+// e.g. 45K -> 45000
+export function parseTruncatedNumber (str: string): number {
+  if ((str?.length ?? 0) === 0) {
+    return 0
+  }
+
+  const suffix = str.at(-1)!.toLowerCase()
+  if (!isNaN(parseInt(suffix))) {
+    return parseInt(str)
+  } else if (suffix === 'k') {
+    return parseInt(str.substring(0, str.length - 1)) * 1_000
+  } else if (suffix === 'm') {
+    return parseInt(str.substring(0, str.length - 1)) * 1_000_000
+  } else {
+    throw new Error(`Unable to parse number because the suffix ${suffix} is unknown.`)
+  }
+}
+
 export function unwrapReplayActions(rawActions: YTAction[]) {
   return rawActions.map(
     // TODO: verify that an action always holds a single item.

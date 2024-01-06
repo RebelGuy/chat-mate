@@ -40,7 +40,11 @@ export type Action =
   | ShowTooltipAction
   | ModeChangeAction
   | MembershipGiftPurchaseAction
-  | MembershipGiftRedemptionAction;
+  | MembershipGiftRedemptionAction
+  | RemoveChatItemByAuthorAction
+  | HideUserAction
+  | UnhideUserAction
+  | TimeoutUserAction;
 
 export interface AddChatItemAction {
   type: "addChatItemAction";
@@ -181,13 +185,14 @@ export interface MarkChatItemAsDeletedAction {
   type: "markChatItemAsDeletedAction";
   retracted: boolean;
   targetId: string;
-  timestamp: Date;
 }
 
 export interface MarkChatItemsByAuthorAsDeletedAction {
   type: "markChatItemsByAuthorAsDeletedAction";
   channelId: string;
-  timestamp: Date;
+
+  // the moderator that deleted the messages
+  moderatorChannelName: string
 }
 
 export interface AddSuperChatTickerAction {
@@ -372,6 +377,36 @@ export interface MembershipGiftRedemptionAction {
   authorName: string;
   authorChannelId: string;
   authorPhoto: string;
+}
+
+export interface RemoveChatItemByAuthorAction {
+  type: "removeChatItemByAuthorAction";
+  channelId: string;
+}
+
+export interface HideUserAction {
+  type: "hideUserAction";
+  timestamp: Date;
+  timestampUsec: string;
+  userChannelName: string;
+  moderatorChannelName: string;
+}
+
+export interface UnhideUserAction {
+  type: "unhideUserAction";
+  timestamp: Date;
+  timestampUsec: string;
+  userChannelName: string;
+  moderatorChannelName: string;
+}
+
+export interface TimeoutUserAction {
+  type: "timeoutUserAction";
+  timestamp: Date;
+  timestampUsec: string;
+  userChannelName: string;
+  moderatorChannelName: string;
+  durationSeconds: number;
 }
 
 export interface UnknownAction {
