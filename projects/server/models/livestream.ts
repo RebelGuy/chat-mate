@@ -41,7 +41,7 @@ export function twitchLivestreamToPublic (livestream: TwitchLivestream, twitchCh
     platform: 'youtube',
     livestreamLink: `twitch.tv/${twitchChannelName}`,
     status: status,
-    startTime: livestream.start?.getTime() ?? null,
+    startTime: livestream.start.getTime(),
     endTime: livestream.end?.getTime() ?? null
   }
 }

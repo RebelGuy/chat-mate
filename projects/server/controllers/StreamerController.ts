@@ -575,7 +575,7 @@ export default class StreamerController extends ControllerBase {
 
       const events = await this.chatMateEventService.getEventsSince(streamerId, since)
 
-      // pref
+      // pre-fetch channel data for rank update events
       const youtubeChannelIds = unique(filterTypes(events, 'rankUpdate').flatMap(e => {
         let ids = e.youtubeRankResults.map(r => r.youtubeChannelId)
         if (e.ignoreOptions?.youtubeChannelId != null) {

@@ -22,6 +22,7 @@ type RequestMethods<TResponseData> = {
 export function RequestContextProvider (props: Props) {
   const [cache, setCache] = useState<Record<string, RequestMethods<any>>>({});
 
+  // save to the `window` for easier debugging
   (window as any)['requestCache'] = cache
 
   const requestContextValue = () => (cacheKey: string): ReturnType<RequestContextType<any>> => {

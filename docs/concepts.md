@@ -96,7 +96,7 @@ During the linking (or unlinking) process, the following work will be done:
 - All of the default user's donations will be linked to the aggregate user, and the donation rank eligibility algorithm is triggered. As a result, the aggregate user's [donation ranks](#ranks-and-punishments) may change.
 - Administrative ranks are additive during linking and, in the case of the `mod` rank, [external side effects](#ranks-and-punishments) are triggered.
 - Punishment ranks are additive during linking and also trigger [side effects](#ranks-and-punishments) where applicable.
-- Any other of the user's data is relinked (though not everything is unlinked, should the link be reversed)
+- Any other of the user's data is relinked (though not everything is unlinked, should the link be reversed).
 
 The linking feature is yet to be properly tested "in the field". As such, each execution of the `LinkCommand` is tracked by a link attempt (`link_attempt` table), which saves the timing and outcome of the link, and additionally includes some logs for debugging purposes.
 > Should the `LinkCommand` fail to execute due to an unknown error, the link attempt will not be `release`d, and any future link attempts by any other users will be immediately rejected to protect the DB data integrity. An admin is required to review the link attempt's logs and check the data integrity. Depending on the location of the error, some data may need to be manually unlinked. Once the all-clear is given, the link attempt can be released.

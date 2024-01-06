@@ -134,6 +134,8 @@ export default class RankStore extends ContextClass {
       userId: primaryUserId,
       isAdded: isAdded,
       rankId: rank!.id,
+
+      // deliberately don't truncate the string, else we might be saving an invalid json object that can't be parsed
       serialisedData: data == null ? null : JSON.stringify(data)
     }})
   }

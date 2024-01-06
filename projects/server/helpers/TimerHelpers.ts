@@ -1,11 +1,10 @@
-// at what point in the callback cycle the timer should be rescheduled.
-// use `start` for a constant period.
-// use `end` for constant padding between callbacks.
-
 import { SafeExtract } from '@rebel/api-models/types'
 import ContextClass from '@rebel/shared/context/ContextClass'
 
-// use `dynamicEnd` for variable padding between callbacks.
+/** At what point in the callback cycle the timer should be rescheduled.
+  * - Use `start` for a constant period.
+  * - Use `end` for constant padding between callbacks.
+  * - Use `dynamicEnd` for variable padding between callbacks. **/
 export type RescheduleBehaviour = 'start' | 'end' | 'dynamicEnd'
 
 /** WARNING: DO NOT pass class methods directly as the callback function, as `this` will change context. */
