@@ -148,7 +148,7 @@ Currently there are 3 punishment types:
 
 Further, to filter individual tests, temporarily replace `test()` with `test.only()`. All other `test()`s will then be skipped.
 
-Due to concurrency issues, all tests using the test database will need to be run from the central `_test/stores.test.ts` file. It imports the `<StoreName>.suite.ts` files which contain the actual tests, then run them one-by-one. Store tests are not currently performed as part of the CI build due to timing issues (locally, with minimal latency, they already take ~10 minutes).
+Due to concurrency issues, all tests using the test database will need to be run from the central `_test/stores.test.ts` file. It imports the `<StoreName>.suite.ts` files which contain the actual tests, then run them one-by-one. Store tests are not currently performed as part of the CI build due to timing issues (locally, with minimal latency, they already take ~40 minutes (no joke, wtf)).
 
 ## Stores
 Stores are classes that abstract away direct interactions with the database via Prisma to segragate the testing of business logic and data access. Integration tests involving the live testing database must be defined in `stores.tests.ts` instead of their individual files to guarantee that they are run in series.

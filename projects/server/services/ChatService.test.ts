@@ -134,7 +134,7 @@ describe(nameof(ChatService, 'onChatItemRemoved'), () => {
   })
 })
 
-describe.skip(nameof(ChatService, 'onNewChatItem'), () => {
+describe(nameof(ChatService, 'onNewChatItem'), () => {
   test('youtube: synthesises correct data and calls required services, then returns true', async () => {
     const streamerId = 2
     const addedChatMessage = cast<ChatMessage>({})

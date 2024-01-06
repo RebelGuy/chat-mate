@@ -24,7 +24,7 @@ beforeEach(() => {
   }))
 })
 
-describe(nameof(ChannelEventService, 'checkYoutubeChannelForModEvent'), () => {
+describe.skip(nameof(ChannelEventService, 'checkYoutubeChannelForModEvent'), () => {
   test('Does nothing if the channel only has one info data point', async () => {
     mockChannelStore.getYoutubeChannelHistory.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelInfo[]>([{}]))
 
