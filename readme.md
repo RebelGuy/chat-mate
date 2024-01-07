@@ -399,4 +399,3 @@ Solution: If the streamer has set a socket access token and is still unable to r
   - Initial release
   - Simple fetching and saving of chat messages
   - Added `GET /chat` endpoint
-
