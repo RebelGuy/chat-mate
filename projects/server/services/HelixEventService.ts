@@ -6,7 +6,6 @@ import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUser
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
-import { disconnect, kill, authtoken } from '@ngrok/ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
@@ -26,6 +25,8 @@ import { assertUnreachable, waitUntil } from '@rebel/shared/util/typescript'
 import { nonNull } from '@rebel/shared/util/arrays'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
+
+// if you're wondering why we are dynamically importing some things - it's because they can't be resolved at runtime on the deployed server. for whatever reason the javascript gods have decided today.
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
@@ -163,7 +164,8 @@ export default class HelixEventService extends ContextClass {
       if (this.nodeEnv === 'local') {
         // for some inexplicable reason whose sole purpose is to make our lives harder, the ngrok js client doesn't get the auth token from the normal ngrok config file.
         // instead, we have to set it manually
-        await authtoken(this.ngrokAuthToken)
+        const ngrok = await import('@ngrok/ngrok')
+        await ngrok.authtoken(this.ngrokAuthToken)
 
         // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
         // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
@@ -388,9 +390,10 @@ export default class HelixEventService extends ContextClass {
   private async refreshNgrok () {
     try {
       // stop the current Ngrok server/tunnel
+      const ngrok = await import('@ngrok/ngrok')
       await this.eventSubApi.deleteAllSubscriptions()
-      await disconnect()
-      await kill()
+      await ngrok.disconnect()
+      await ngrok.kill()
       this.listener!.stop()
 
       // this will create a new Ngrok server/tunnel with a different address
