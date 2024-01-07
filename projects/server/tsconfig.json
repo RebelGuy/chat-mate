@@ -16,9 +16,6 @@
   },
   "include": ["./**/*"],
   "exclude": [
-    // uncomment this during development to skip type-checking tests
-    // "./**/*.test.ts",
-
     "./node_modules",
     "./prisma",
 

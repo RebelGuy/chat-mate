@@ -5,6 +5,7 @@
   "references": [
     { "path": "../masterchat" },
     { "path": "../shared" },
+    { "path": "../api-models" },
   ],
   "compilerOptions": {
     "composite": true,
