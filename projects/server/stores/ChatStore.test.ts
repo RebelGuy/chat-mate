@@ -7,7 +7,7 @@ import { expectObject, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
-import { YoutubeChannelInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelGlobalInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelGlobalInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
 import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
@@ -108,7 +108,7 @@ const cheer1: PartialCheerChatMessage = {
   name: 'Mr Cheerer'
 }
 
-function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelInfo, 'channelId' | 'id'> {
+function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelGlobalInfo, 'channelId' | 'id'> {
   return {
     isVerified: a.attributes.isVerified,
     isModerator: a.attributes.isModerator,
@@ -119,7 +119,7 @@ function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelInfo, 
   }
 }
 
-function twitchAuthorToChannelInfo (a: TwitchAuthor, time?: Date): Omit<TwitchChannelInfo, 'channelId' | 'id'> {
+function twitchAuthorToChannelInfo (a: TwitchAuthor, time?: Date): Omit<TwitchChannelGlobalInfo, 'channelId' | 'id'> {
   return {
     time: time ?? new Date(),
     colour: a.color ?? '',

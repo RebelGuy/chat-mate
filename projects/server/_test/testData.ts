@@ -1,4 +1,4 @@
-import { YoutubeChannelInfo, ChatMessage, TwitchChannelInfo, YoutubeLivestream } from '@prisma/client'
+import { YoutubeChannelGlobalInfo, ChatMessage, TwitchChannelGlobalInfo, YoutubeLivestream } from '@prisma/client'
 import { Author, ChatItem, TwitchAuthor } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
@@ -48,7 +48,7 @@ export const author1: Author = {
   image: 'author1.image',
   name: 'author1.name'
 }
-export const youtubeChannelInfo1: Omit<YoutubeChannelInfo, 'id' | 'channelId'> = {
+export const youtubeChannelGlobalInfo1: Omit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
   isModerator: author1.attributes.isModerator,
   isOwner: author1.attributes.isOwner,
   isVerified: author1.attributes.isVerified,
@@ -64,7 +64,7 @@ export const author2: Author = {
   image: 'author2.image',
   name: 'author2.name'
 }
-export const youtubeChannelInfo2: Omit<YoutubeChannelInfo, 'id' | 'channelId'> = {
+export const youtubeChannelGlobalInfo2: Omit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
   isModerator: author2.attributes.isModerator,
   isOwner: author2.attributes.isOwner,
   isVerified: author2.attributes.isVerified,
@@ -87,7 +87,7 @@ export const author3: TwitchAuthor = {
   badges: new Map(),
   badgeInfo: new Map()
 }
-export const twitchChannelInfo3: Omit<TwitchChannelInfo, 'id' | 'channelId'> = {
+export const twitchChannelGlobalInfo3: Omit<TwitchChannelGlobalInfo, 'id' | 'channelId'> = {
   userName: author3.userName,
   displayName: author3.displayName,
   colour: author3.color!,

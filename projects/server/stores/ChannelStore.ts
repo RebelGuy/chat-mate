@@ -1,4 +1,4 @@
-import { YoutubeChannelInfo, Prisma, TwitchChannelInfo, TwitchChannel, YoutubeChannel } from '@prisma/client'
+import { YoutubeChannelGlobalInfo, Prisma, TwitchChannelGlobalInfo, TwitchChannel, YoutubeChannel } from '@prisma/client'
 import { nonNull } from '@rebel/shared/util/arrays'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
@@ -9,8 +9,8 @@ import { ObjectComparator } from '@rebel/shared/types'
 import { assertUnreachable, compare } from '@rebel/shared/util/typescript'
 import { SafeExtract } from '@rebel/api-models/types'
 
-export type CreateOrUpdateYoutubeChannelArgs = Omit<New<YoutubeChannelInfo>, 'channelId'>
-export type CreateOrUpdateTwitchChannelArgs = Omit<New<TwitchChannelInfo>, 'channelId'>
+export type CreateOrUpdateYoutubeChannelArgs = Omit<New<YoutubeChannelGlobalInfo>, 'channelId'>
+export type CreateOrUpdateTwitchChannelArgs = Omit<New<TwitchChannelGlobalInfo>, 'channelId'>
 
 export type YoutubeChannelWithLatestInfo = Omit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLink'>
 export type TwitchChannelWithLatestInfo = Omit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLink'>
@@ -123,13 +123,13 @@ export default class ChannelStore extends ContextClass {
 
   /** Returns channels that have authored chat messages for the given streamer. */
   public async getAllChannels (streamerId: number): Promise<UserChannel[]> {
-    const currentYoutubeChannelInfos = await this.db.youtubeChannelInfo.findMany({
+    const currentYoutubeChannelGlobalInfos = await this.db.youtubeChannelGlobalInfo.findMany({
       distinct: ['channelId'],
       orderBy: { time: 'desc' },
       include: { channel: { include: { user: true }}},
       where: { channel: { chatMessages: { some: { streamerId }}}} // omfg that works?!
     })
-    const youtubeChannels = currentYoutubeChannelInfos.map<UserChannel>(info => ({
+    const youtubeChannels = currentYoutubeChannelGlobalInfos.map<UserChannel>(info => ({
       defaultUserId: info.channel.userId,
       aggregateUserId: info.channel.user.aggregateChatUserId,
       platformInfo: {
@@ -138,13 +138,13 @@ export default class ChannelStore extends ContextClass {
       }
     }))
 
-    const currentTwitchChannelInfos = await this.db.twitchChannelInfo.findMany({
+    const currentTwitchChannelGlobalInfos = await this.db.twitchChannelGlobalInfo.findMany({
       distinct: ['channelId'],
       orderBy: { time: 'desc' },
       include: { channel: { include: { user: true }}},
       where: { channel: { chatMessages: { some: { streamerId }}}}
     })
-    const twitchChannels = currentTwitchChannelInfos.map<UserChannel>(info => ({
+    const twitchChannels = currentTwitchChannelGlobalInfos.map<UserChannel>(info => ({
       defaultUserId: info.channel.userId,
       aggregateUserId: info.channel.user.aggregateChatUserId,
       platformInfo: {
@@ -209,7 +209,7 @@ export default class ChannelStore extends ContextClass {
   /** Gets the latest N history updates (or less, if less exist) of the Youtube channel, sorted by time in descending order. The data is updated only when the user posts a chat message in the streamer's chat, and if the channel details have changed.
    * Note: this method is currently bugged since we don't save channel info per-streamer. See CHAT-718 */
   public async getYoutubeChannelHistory (streamerId: number, youtubeChannelId: number, n: number) {
-    return await this.db.youtubeChannelInfo.findMany({
+    return await this.db.youtubeChannelGlobalInfo.findMany({
       where: { channelId: youtubeChannelId },
       orderBy: { time: 'desc' },
       take: n
@@ -223,7 +223,7 @@ export default class ChannelStore extends ContextClass {
       return youtubeChannel
     }
 
-    const twitchChannel = await this.db.twitchChannelInfo.findFirst({
+    const twitchChannel = await this.db.twitchChannelGlobalInfo.findFirst({
       where: { userName: externalIdOrUserName },
       include: { channel: true }
     })
@@ -396,7 +396,7 @@ export const channelQuery_includeLatestChannelInfo = Prisma.validator<Prisma.You
   user: true
 })
 
-const youtubeChannelInfoComparator: ObjectComparator<CreateOrUpdateYoutubeChannelArgs> = {
+const youtubeChannelGlobalInfoComparator: ObjectComparator<CreateOrUpdateYoutubeChannelArgs> = {
   imageUrl: 'default',
   name: 'default',
   time: null,
@@ -405,7 +405,7 @@ const youtubeChannelInfoComparator: ObjectComparator<CreateOrUpdateYoutubeChanne
   isVerified: 'default'
 }
 
-const twitchChannelInfoComparator: ObjectComparator<CreateOrUpdateTwitchChannelArgs> = {
+const twitchChannelGlobalInfoComparator: ObjectComparator<CreateOrUpdateTwitchChannelArgs> = {
   time: null,
   userName: 'default',
   displayName: 'default',
@@ -417,12 +417,12 @@ const twitchChannelInfoComparator: ObjectComparator<CreateOrUpdateTwitchChannelA
   colour: 'default'
 }
 
-function channelInfoHasChanged (platform: ChatPlatform, storedInfo: YoutubeChannelInfo | TwitchChannelInfo, newInfo: CreateOrUpdateYoutubeChannelArgs | CreateOrUpdateTwitchChannelArgs): boolean {
+function channelInfoHasChanged (platform: ChatPlatform, storedInfo: YoutubeChannelGlobalInfo | TwitchChannelGlobalInfo, newInfo: CreateOrUpdateYoutubeChannelArgs | CreateOrUpdateTwitchChannelArgs): boolean {
   let comparator: ObjectComparator<CreateOrUpdateYoutubeChannelArgs> | ObjectComparator<CreateOrUpdateTwitchChannelArgs>
   if (platform === 'youtube') {
-    comparator = youtubeChannelInfoComparator
+    comparator = youtubeChannelGlobalInfoComparator
   } else if (platform === 'twitch') {
-    comparator = twitchChannelInfoComparator
+    comparator = twitchChannelGlobalInfoComparator
   } else {
     assertUnreachable(platform)
   }

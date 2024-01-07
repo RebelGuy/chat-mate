@@ -1,4 +1,4 @@
-import { TwitchChannel, TwitchChannelInfo, YoutubeChannel, YoutubeChannelInfo } from '@prisma/client'
+import { TwitchChannel, TwitchChannelGlobalInfo, YoutubeChannel, YoutubeChannelGlobalInfo } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import AccountService from '@rebel/server/services/AccountService'
@@ -136,9 +136,9 @@ export function getUserName (userChannel: UserChannel) {
 
 export function getUserNameFromChannelInfo (platform: 'youtube' | 'twitch', channelInfo: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo) {
   if (platform === 'youtube') {
-    return (channelInfo.infoHistory[0] as YoutubeChannelInfo).name
+    return (channelInfo.infoHistory[0] as YoutubeChannelGlobalInfo).name
   } else if (platform === 'twitch') {
-    return (channelInfo.infoHistory[0] as TwitchChannelInfo).displayName
+    return (channelInfo.infoHistory[0] as TwitchChannelGlobalInfo).displayName
   } else {
     assertUnreachable(platform)
   }

@@ -299,7 +299,7 @@ model StreamerApplication {
   @@map("streamer_application")
 }
 
-model YoutubeChannelInfo {
+model YoutubeChannelGlobalInfo {
   id          Int     @id @default(autoincrement())
   name        String  @db.VarChar(255)
   imageUrl    String  @db.VarChar(511)
@@ -311,11 +311,11 @@ model YoutubeChannelInfo {
   time DateTime
 
   channelId Int
-  channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_info_channelId_fkey")
+  channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_global_info_channelId_fkey")
 
-  @@index([channelId], map: "youtube_channel_info_channelId_fkey")
-  @@index([time], map: "youtube_channel_info_time_key")
-  @@map("youtube_channel_info")
+  @@index([channelId], map: "youtube_channel_global_info_channelId_fkey")
+  @@index([time], map: "youtube_channel_global_info_time_key")
+  @@map("youtube_channel_global_info")
 }
 
 model YoutubeChannel {
@@ -326,7 +326,7 @@ model YoutubeChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "youtube_channel_userId_fkey")
 
-  infoHistory                YoutubeChannelInfo[]
+  infoHistory                YoutubeChannelGlobalInfo[]
   chatMessages               ChatMessage[]
   streamerYoutubeChannelLink StreamerYoutubeChannelLink?
 
@@ -335,7 +335,7 @@ model YoutubeChannel {
   @@map("youtube_channel")
 }
 
-model TwitchChannelInfo {
+model TwitchChannelGlobalInfo {
   id Int @id @default(autoincrement())
 
   userName      String  @db.VarChar(64)
@@ -351,11 +351,11 @@ model TwitchChannelInfo {
   time DateTime
 
   channelId Int
-  channel   TwitchChannel @relation(fields: [channelId], references: [id], map: "twitch_channel_info_channelId_fkey")
+  channel   TwitchChannel @relation(fields: [channelId], references: [id], map: "twitch_channel_global_info_channelId_fkey")
 
-  @@index([channelId], map: "twitch_channel_info_channelId_fkey")
-  @@index([time], map: "twitch_channel_info_time_key")
-  @@map("twitch_channel_info")
+  @@index([channelId], map: "twitch_channel_global_info_channelId_fkey")
+  @@index([time], map: "twitch_channel_global_info_time_key")
+  @@map("twitch_channel_global_info")
 }
 
 model TwitchChannel {
@@ -366,7 +366,7 @@ model TwitchChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channel_userId_fkey")
 
-  infoHistory               TwitchChannelInfo[]
+  infoHistory               TwitchChannelGlobalInfo[]
   chatMessages              ChatMessage[]
   streamerTwitchChannelLink StreamerTwitchChannelLink?
 
