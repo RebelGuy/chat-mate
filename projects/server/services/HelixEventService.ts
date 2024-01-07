@@ -1,7 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
-import { NgrokAdapter } from '@twurple/eventsub-ngrok'
 import { ConnectionAdapter, DirectConnectionAdapter, EventSubHttpListener, EventSubMiddleware } from '@twurple/eventsub-http'
 import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUserAuthorizationRevokeEvent } from '@twurple/eventsub-base'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
@@ -171,7 +170,7 @@ export default class HelixEventService extends ContextClass {
         // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
         await this.eventSubApi.deleteAllSubscriptions()
 
-        this.listener = this.createNewListener()
+        this.listener = await this.createNewListener()
         this.eventSubBase = this.listener
         this.listener.start()
         this.timerHelpers.createRepeatingTimer({ behaviour: 'start', interval: NGROK_MAX_SESSION * 0.9, callback: () => this.refreshNgrok() })
@@ -395,7 +394,7 @@ export default class HelixEventService extends ContextClass {
       this.listener!.stop()
 
       // this will create a new Ngrok server/tunnel with a different address
-      this.listener = this.createNewListener()
+      this.listener = await this.createNewListener()
       this.eventSubBase = this.listener
       this.listener.start()
       await this.initialiseSubscriptions()
@@ -633,10 +632,10 @@ export default class HelixEventService extends ContextClass {
     }
   }
 
-  private createNewListener () {
+  private async createNewListener (): Promise<EventSubHttpListener> {
     return new EventSubHttpListener({
       apiClient: this.twurpleApiClientProvider.getClientApi(),
-      adapter: this.createAdapter(),
+      adapter: await this.createAdapter(),
       secret: this.getSecret(),
       legacySecrets: false,
       logger: {
@@ -647,9 +646,10 @@ export default class HelixEventService extends ContextClass {
     })
   }
 
-  private createAdapter (): ConnectionAdapter {
+  private async createAdapter (): Promise<ConnectionAdapter> {
     if (this.nodeEnv === 'local') {
       // debug the Ngrok server at http://localhost:4040/inspect/http
+      const NgrokAdapter = await import('@twurple/eventsub-ngrok').then(i => i.NgrokAdapter)
       return new NgrokAdapter()
     } else {
       // this doesn't work - don't create an adapter when deploying the server, instead, use the EventSub middleware
