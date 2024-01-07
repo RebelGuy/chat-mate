@@ -265,7 +265,7 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getTwitchChannelFromChannelId'), () => {
+  describe(nameof(ChannelStore, 'getTwitchChannelsFromChannelIds'), () => {
     test('Gets Twitch channel with latest info', async () => {
       const time1 = new Date()
       const time2 = addTime(time1, 'seconds', 10)
@@ -287,7 +287,7 @@ export default () => {
         infoHistory: { createMany: { data: [twitchChannelInfo4]} }
       }})
 
-      const result = await channelStore.getTwitchChannelFromChannelId([2, 3])
+      const result = await channelStore.getTwitchChannelsFromChannelIds([2, 3])
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectObjectDeep(result, [
@@ -297,7 +297,7 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getYoutubeChannelFromChannelId'), () => {
+  describe(nameof(ChannelStore, 'getYoutubeChannelsFromChannelIds'), () => {
     test('Gets YouTube channel with latest info', async () => {
       const time1 = new Date()
       const time2 = addTime(time1, 'seconds', 10)
@@ -320,12 +320,34 @@ export default () => {
         infoHistory: { createMany: { data: [channelInfo4]} }
       }})
 
-      const result = await channelStore.getYoutubeChannelFromChannelId([2, 3])
+      const result = await channelStore.getYoutubeChannelsFromChannelIds([2, 3])
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectObjectDeep(result, [
         { defaultUserId: 3, aggregateUserId: 1, platformInfo: { channel: { youtubeId: ytChannelId2, infoHistory: [{ name: channelInfo2.name }] }}},
         { defaultUserId: 4, aggregateUserId: null, platformInfo: { channel: { youtubeId: ytChannelId3, infoHistory: [{ name: channelInfo4.name }] }}}
+      ]))
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getYoutubeChannelHistory'), () => {
+    test('Returns the latest 2 items from the specified channel', async () => {
+      const channel1 = await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo2, channelInfo1, channelInfo3]} }
+      }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}},
+        infoHistory: { createMany: { data: [channelInfo4] }}
+      }})
+      const streamerId = 1
+
+      const result = await channelStore.getYoutubeChannelHistory(streamerId, channel1.id, 2)
+
+      expect(result).toEqual(expectObject(result, [
+        { id: 3 }, { id: 1 }
       ]))
     })
   })

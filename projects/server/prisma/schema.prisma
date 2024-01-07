@@ -58,10 +58,7 @@ model YoutubeAuth {
   @@map("youtube_auth")
 }
 
-// there is no notion of a "livestream" on twitch - all chat messages are sent to the channel directly.
-// since we never run a twitch livestream without also running a youtube livestream, we point the twitch
-// livestream to the youtube livestream.
-model Livestream {
+model YoutubeLivestream {
   id        Int       @id @default(autoincrement())
   liveId    String    @db.VarChar(11) // unique
   createdAt DateTime  @default(now())
@@ -75,29 +72,56 @@ model Livestream {
   continuationToken String? @db.VarChar(1023)
 
   streamerId Int
-  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "livestream_streamerId_fkey")
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "youtube_livestream_streamerId_fkey")
 
-  liveViewers       LiveViewers[]
-  chatMessages      ChatMessage[]
-  masterchatActions MasterchatAction[]
+  youtubeLiveViewers YoutubeLiveViewers[]
+  chatMessages       ChatMessage[]
+  masterchatActions  MasterchatAction[]
 
-  @@unique([liveId], map: "livestream_liveId_key")
-  @@index([streamerId], map: "livestream_streamerId_fkey")
-  @@map("livestream")
+  @@unique([liveId], map: "youtube_livestream_liveId_key")
+  @@index([streamerId], map: "youtube_livestream_streamerId_fkey")
+  @@map("youtube_livestream")
 }
 
-model LiveViewers {
-  id               Int      @id @default(autoincrement())
-  time             DateTime @default(now())
-  youtubeViewCount Int
-  twitchViewCount  Int
+model YoutubeLiveViewers {
+  id        Int      @id @default(autoincrement())
+  time      DateTime @default(now())
+  viewCount Int
 
-  livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "live_viewer_livestreamId_fkey")
+  youtubeLivestreamId Int               @map("youtubeLivestreamId")
+  youtubeLivestream   YoutubeLivestream @relation(fields: [youtubeLivestreamId], references: [id], map: "youtube_live_viewer_youtubeLivestreamId_fkey")
 
-  @@index([livestreamId], map: "live_viewer_livestreamId_fkey")
+  @@index([youtubeLivestreamId], map: "youtube_live_viewer_youtubeLivestreamId_fkey")
+  @@map("youtube_live_viewer")
+}
+
+model TwitchLivestream {
+  id Int @id @default(autoincrement())
+
+  start DateTime
+  end   DateTime?
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "twitch_livestream_streamerId_fkey")
+
+  twitchLiveViewers TwitchLiveViewers[]
+  chatMessages      ChatMessage[]
+
+  @@index([streamerId], map: "twitch_livestream_streamerId_fkey")
+  @@map("twitch_livestream")
+}
+
+model TwitchLiveViewers {
+  id        Int      @id @default(autoincrement())
+  time      DateTime @default(now())
+  viewCount Int
+
+  twitchLivestreamId Int              @map("twitchLivestreamId")
+  twitchLivestream   TwitchLivestream @relation(fields: [twitchLivestreamId], references: [id], map: "twitch_live_viewer_twitchLivestreamId_fkey")
+
+  @@index([twitchLivestreamId], map: "twitch_live_viewer_twitchLivestreamId_fkey")
   @@index([time], map: "live_viewer_time_key")
-  @@map("live_viewer")
+  @@map("twitch_live_viewer")
 }
 
 /// USERS
@@ -130,6 +154,7 @@ model ChatUser {
   linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
   linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
   customRankNames                CustomRankName[]
+  rankEvents                     RankEvent[]
 
   // only used if this is an aggregate user
   linkTokensAggregateUser LinkToken[] @relation("link_token_aggregateChatUser")
@@ -237,7 +262,8 @@ model Streamer {
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
   userRanks                  UserRank[]
-  livestreams                Livestream[]
+  youtubeLivestreams         YoutubeLivestream[]
+  twitchLivestreams          TwitchLivestream[]
   customEmojis               CustomEmoji[]
   donations                  Donation[]
   streamlabsSocketToken      StreamlabsSocketToken?
@@ -249,7 +275,8 @@ model Streamer {
   streamerTwitchChannelLink  StreamerTwitchChannelLink?
   donationLinks              DonationLink[]
   customRankNames            CustomRankName[]
-  youtubeApiRequests         YoutubeApiRequest[]
+  rankEvents                 RankEvent[]
+  platformApiCalls           PlatformApiCall[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -547,9 +574,14 @@ model ChatMessage {
   twitchChannelId Int?
   twitchChannel   TwitchChannel? @relation(fields: [twitchChannelId], references: [id], map: "chat_message_twitchChannelId_fkey")
 
-  // null if the message was received off-stream. this is generally only true when received on twitch
-  livestreamId Int?
-  livestream   Livestream? @relation(fields: [livestreamId], references: [id], map: "chat_message_livestreamId_fkey")
+  // for regular livestream messages by a youtube channel, the youtube livestream is always set and the twitch livestream is never set.
+  // for regular livestream message by a twitch channel, the twitch livestream may be set (it is null if the message was sent off-stream) and the youtube livestream is never set.
+  // the youtube livestream is always null if the youtube channel is null and never null when the youtube channel is not null, and the twitch livestream is always null if the twitch channel is null but may be null if the twitch channel is not null.
+  youtubeLivestreamId Int?
+  youtubeLivestream   YoutubeLivestream? @relation(fields: [youtubeLivestreamId], references: [id], map: "chat_message_youtubeLivestreamId_fkey")
+
+  twitchLivestreamId Int?
+  twitchLivestream   TwitchLivestream? @relation(fields: [twitchLivestreamId], references: [id], map: "chat_message_twitchLivestreamId_fkey")
 
   // the donation that this message belongs to, if any
   donationId Int? // unique
@@ -565,7 +597,8 @@ model ChatMessage {
   @@index([userId], map: "chat_message_userId_fkey")
   @@index([youtubeChannelId], map: "chat_message_youtubeChannelId_fkey")
   @@index([twitchChannelId], map: "chat_message_twitchChannelId_fkey")
-  @@index([livestreamId], map: "chat_message_livestreamId_fkey")
+  @@index([youtubeLivestreamId], map: "chat_message_youtubeLivestreamId_fkey")
+  @@index([twitchLivestreamId], map: "chat_message_twitchLivestreamId_fkey")
   @@index([time], map: "chat_message_time_key")
   @@map("chat_message")
 }
@@ -579,25 +612,11 @@ model MasterchatAction {
   // the time contained in the action data
   time DateTime?
 
-  livestreamId Int
-  livestream   Livestream @relation(fields: [livestreamId], references: [id], map: "masterchat_action_livestreamId_fkey")
+  youtubeLivestreamId Int
+  youtubeLivestream   YoutubeLivestream @relation(fields: [youtubeLivestreamId], references: [id], map: "masterchat_action_youtubeLivestreamId_fkey")
 
-  @@index([livestreamId], map: "masterchat_action_livestreamId_fkey")
+  @@index([youtubeLivestreamId], map: "masterchat_action_youtubeLivestreamId_fkey")
   @@map("masterchat_action")
-}
-
-model YoutubeApiRequest {
-  id      Int      @id @default(autoincrement())
-  time    DateTime @default(now())
-  request String   @db.VarChar(128)
-  cost    Int
-  success Boolean
-
-  streamerId Int
-  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "youtube_api_request_streamerId_fkey")
-
-  @@index([streamerId], map: "youtube_api_request_streamerId_fkey")
-  @@map("youtube_api_request")
 }
 
 // Experience
@@ -757,6 +776,7 @@ model Rank {
   userRanks                UserRank[]
   customEmojiRankWhitelist CustomEmojiRankWhitelist[]
   customRankNames          CustomRankName[]
+  rankEvents               RankEvent[]
 
   @@unique([name], map: "rank_name_key")
   @@map("rank")
@@ -846,6 +866,49 @@ model CustomRankName {
   @@index([rankId], map: "custom_rank_name_rankId_fkey")
   @@index([streamerId], map: "custom_rank_name_streamerId_fkey")
   @@map("custom_rank_name")
+}
+
+model RankEvent {
+  id Int @id @default(autoincrement())
+
+  time           DateTime @default(now())
+  isAdded        Boolean
+  serialisedData String?  @db.VarChar(8192)
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "rank_event_streamerId_fkey")
+
+  userId Int
+  user   ChatUser @relation(fields: [userId], references: [id], map: "rank_event_userId_fkey")
+
+  rankId Int
+  rank   Rank @relation(fields: [rankId], references: [id], map: "rank_event_rankId_fkey")
+
+  @@index([time], map: "rank_event_time_key")
+  @@index([streamerId], map: "rank_event_streamerId_fkey")
+  @@index([userId], map: "rank_event_userId_fkey")
+  @@index([rankId], map: "rank_event_rankId_fkey")
+  @@map("rank_event")
+}
+
+model PlatformApiCall {
+  id Int @id @default(autoincrement())
+
+  start DateTime
+  end   DateTime
+
+  platform String @db.VarChar(16)
+
+  // if you update these string lengths, be sure to udpate the constants in the PlatformApiStore
+  endpoint String  @db.VarChar(128)
+  payload  String? @db.VarChar(1024)
+  error    String? @db.VarChar(1024)
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "platform_api_call_streamerId_fkey")
+
+  @@index([streamerId], map: "platform_api_call_streamerId_fkey")
+  @@map("platform_api_call")
 }
 
 model Donation {

@@ -20,7 +20,7 @@ export default function StreamerLinks (props: Props) {
   return <>
     <Box>
       {streamerSummary.youtubeChannel != null && <>
-        <LinkInNewTab href={streamerSummary.currentLivestream?.livestreamLink ?? streamerSummary.youtubeChannel.channelUrl} hideTextDecoration sx={{ mr: 2 }}>
+        <LinkInNewTab href={streamerSummary.currentYoutubeLivestream?.livestreamLink ?? streamerSummary.youtubeChannel.channelUrl} hideTextDecoration sx={{ mr: 2 }}>
           <Button>
             {streamerName} on YouTube
           </Button>

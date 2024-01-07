@@ -20,8 +20,8 @@ export default function YoutubeLivestreamForm () {
   const getStatusRequest = useRequest(getStatus(), {
     updateKey: livestreamKey,
     onSuccess: (data) => {
-      setCurrentLivestreamInput(data.livestreamStatus?.livestream.livestreamLink ?? '')
-      setLastLivestreamResponse(data.livestreamStatus?.livestream.livestreamLink ?? '')
+      setCurrentLivestreamInput(data.livestreamStatus?.youtubeLivestream?.livestreamLink ?? '')
+      setLastLivestreamResponse(data.livestreamStatus?.youtubeLivestream?.livestreamLink ?? '')
     }, onError: () => {
       setCurrentLivestreamInput(currentLivestreamInput)
       setLastLivestreamResponse('')
@@ -29,7 +29,10 @@ export default function YoutubeLivestreamForm () {
   })
   const setLivestreamRequest = useRequest(setActiveLivestream({ livestream: nullIfEmpty(currentLivestreamInput) }), {
     onDemand: true,
-    onSuccess: () => setLastLivestreamResponse(currentLivestreamInput.trim())
+    onSuccess: () => {
+      setLastLivestreamResponse(currentLivestreamInput.trim())
+      updateLivestreamKey()
+    }
   })
 
   let livestreamIdError: string | null = null

@@ -1,4 +1,3 @@
-import { Livestream } from '@prisma/client'
 import { LiveStatus, MasterchatError, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
@@ -11,8 +10,12 @@ import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyServic
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime } from '@rebel/shared/util/datetime'
 import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
+import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
+import CacheService from '@rebel/server/services/CacheService'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
+
+const STREAM_CONTINUITY_ALLOWANCE = 5 * 60_000
 
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
@@ -23,6 +26,7 @@ type Deps = Dependencies<{
   disableExternalApis: boolean
   dateTimeHelpers: DateTimeHelpers
   streamerChannelService: StreamerChannelService
+  cacheService: CacheService
 }>
 
 export default class LivestreamService extends ContextClass {
@@ -36,6 +40,7 @@ export default class LivestreamService extends ContextClass {
   private readonly disableExternalApis: boolean
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly streamerChannelService: StreamerChannelService
+  private readonly cacheService: CacheService
 
   constructor (deps: Deps) {
     super()
@@ -47,6 +52,7 @@ export default class LivestreamService extends ContextClass {
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.streamerChannelService = deps.resolve('streamerChannelService')
+    this.cacheService = deps.resolve('cacheService')
   }
 
   public override async initialise (): Promise<void> {
@@ -54,33 +60,33 @@ export default class LivestreamService extends ContextClass {
       return
     }
 
-    const activeLivestreams = await this.livestreamStore.getActiveLivestreams()
+    const activeLivestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
     activeLivestreams.forEach(l => this.masterchatService.addMasterchat(l.streamerId, l.liveId))
 
     const timerOptions: TimerOptions = {
-      behaviour: 'start',
+      behaviour: 'end',
       callback: () => this.updateAllMetadata(),
       interval: METADATA_SYNC_INTERVAL_MS
     }
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  /** Sets the streamer's current livestream as inactive, also removing the associated masterchat instance. */
-  public async deactivateLivestream (streamerId: number) {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
+  /** Sets the streamer's current Youtube livestream as inactive, also removing the associated masterchat instance. */
+  public async deactivateYoutubeLivestream (streamerId: number) {
+    const activeLivestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (activeLivestream == null) {
       return
     }
 
-    await this.livestreamStore.deactivateLivestream(streamerId)
+    await this.livestreamStore.deactivateYoutubeLivestream(streamerId)
     this.masterchatService.removeMasterchat(streamerId)
-    this.logService.logInfo(this, `Livestream with id ${activeLivestream.liveId} for streamer ${streamerId} has been deactivated.`)
+    this.logService.logInfo(this, `Youtube livestream with id ${activeLivestream.liveId} for streamer ${streamerId} has been deactivated.`)
   }
 
-  /** Sets the given livestream as active for the streamer, and creates a masterchat instance.
-   * Please ensure you deactivate the previous livestream first, if applicable.
+  /** Sets the given Youtube livestream as active for the streamer, and creates a masterchat instance.
+   * Please ensure you deactivate the previous Youtube livestream first, if applicable.
    * Attempts of activating a livestream that is from a different channel than the streamer's primary channel will throw. */
-  public async setActiveLivestream (streamerId: number, liveId: string) {
+  public async setActiveYoutubeLivestream (streamerId: number, liveId: string) {
     const streamerYoutubeChannelId = await this.streamerChannelService.getYoutubeExternalId(streamerId)
     if (streamerYoutubeChannelId == null) {
       throw new Error('No primary YouTube channel has been set for the streamer.')
@@ -88,89 +94,111 @@ export default class LivestreamService extends ContextClass {
 
     const livestreamYoutubeChannelId = await this.masterchatService.getChannelIdFromAnyLiveId(liveId)
     if (streamerYoutubeChannelId !== livestreamYoutubeChannelId) {
-      throw new Error(`The livestream does not belong to the streamer's primary YouTube channel.`)
+      throw new Error(`The given Youtube livestream does not belong to the streamer's primary YouTube channel.`)
     }
 
-    await this.livestreamStore.setActiveLivestream(streamerId, liveId)
+    await this.livestreamStore.setActiveYoutubeLivestream(streamerId, liveId)
     this.masterchatService.addMasterchat(streamerId, liveId)
-    this.logService.logInfo(this, `Livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
+    this.logService.logInfo(this, `Youtube livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
   }
 
+  public async onTwitchLivestreamStarted (streamerId: number) {
+    const currentStream = await this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    if (currentStream != null) {
+      this.logService.logWarning(this, `A new Twitch livestream for streamer ${streamerId} has supposedly started, but another stream is still active. Ignoring.`)
+      return
+    }
+
+    const previousStream = await this.livestreamStore.getPreviousTwitchLivestream(streamerId)
+    const previousEndTime = previousStream?.end!.getTime() ?? 0
+    if (previousStream != null && this.dateTimeHelpers.ts() - previousEndTime <= STREAM_CONTINUITY_ALLOWANCE) {
+      // re-activate the previous stream
+      await this.livestreamStore.setTwitchLivestreamTimes(previousStream.id, { start: previousStream?.start, end: null })
+      this.logService.logInfo(this, `A new Twitch livestream for streamer ${streamerId} has started shortly after the previous one (id ${previousStream.id} finished. Re-activating the previous livestream.`)
+    } else {
+      // create a new stream
+      const newStream = await this.livestreamStore.addNewTwitchLivestream(streamerId)
+      this.logService.logInfo(this, `A new Twitch livestream for streamer ${streamerId} has started (livestream id ${newStream.id}).`)
+    }
+  }
+
+  public async onTwitchLivestreamEnded (streamerId: number) {
+    const livestream = await this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    if (livestream == null) {
+      throw new Error(`Cannot set the livestream end time for streamer ${streamerId} because no current livestream exists.`)
+    }
+
+    await this.livestreamStore.setTwitchLivestreamTimes(livestream.id, { start: livestream.start, end: this.dateTimeHelpers.now() })
+    this.logService.logInfo(this, `The Twitch livestream for streamer ${streamerId} has ended (livestream id ${livestream.id}).`)
+  }
+
+  private async updateAllMetadata () {
+    const activeYoutubeLivestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
+    await Promise.all(activeYoutubeLivestreams.map(l => this.updateYoutubeLivestreamMetadata(l)))
+
+    const currentTwitchLivestreams = await this.livestreamStore.getCurrentTwitchLivestreams()
+    await Promise.all(currentTwitchLivestreams.map(l => this.updateTwitchLivestreamMetadata(l)))
+  }
+
+  private async updateYoutubeLivestreamMetadata (livestream: YoutubeLivestream) {
+    // no point in fetching metadata for the official ChatMate streamer since it will never go live
+    if (await this.cacheService.isChatMateStreamer(livestream.streamerId)) {
+      return
+    }
+
+    if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'minutes', 2)) {
+      // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
+      // (after some delay), so there is no need to keep it around.
+      this.logService.logInfo(this, `Automatically deactivating current Youtube livestream with id ${livestream.liveId} for streamer ${livestream.streamerId} because it has ended.`)
+      await this.deactivateYoutubeLivestream(livestream.streamerId)
+      return
+    }
+
+    const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.streamerId)
+    if (youtubeMetadata == null) {
+      // failed to fetch metadata
+      return
+    }
+
+    try {
+      const updatedTimes = this.getUpdatedYoutubeLivestreamTimes(livestream, youtubeMetadata)
+
+      if (updatedTimes) {
+        await this.livestreamStore.setYoutubeLivestreamTimes(livestream.liveId, updatedTimes)
+      }
+
+      if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {
+        await this.livestreamStore.addYoutubeLiveViewCount(livestream.id, youtubeMetadata.viewerCount)
+      }
+    } catch (e: any) {
+      this.logService.logError(this, `Encountered error while syncing Youtube metadata for livestream ${livestream.liveId} for streamer ${livestream.streamerId}.`, e)
+    }
+  }
+
+  /** Returns null if something went wrong. */
   private async fetchYoutubeMetadata (streamerId: number): Promise<Metadata | null> {
     try {
       return await this.masterchatService.fetchMetadata(streamerId)
     } catch (e: any) {
       if (e instanceof MasterchatError) {
         // we won't be able to recover from this - deactivate
-        this.logService.logError(this, `Cannot fetch metadata for streamer ${streamerId} because of a masterchat error. Deactivating livestream.`, e.name, e.message)
-        await this.deactivateLivestream(streamerId)
+        this.logService.logError(this, `Cannot fetch Youtube metadata for streamer ${streamerId} because of a masterchat error. Deactivating livestream.`, e.name, e.message)
+        await this.deactivateYoutubeLivestream(streamerId)
       } else {
-        this.logService.logError(this, `Encountered error while fetching youtube metadata for streamer ${streamerId}.`, e.message)
+        this.logService.logError(this, `Encountered error while fetching Youtube metadata for streamer ${streamerId}.`, e.message)
       }
       return null
     }
   }
 
-  private async fetchTwitchMetadata (streamerId: number): Promise<TwitchMetadata | null> {
-    try {
-      const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
-      if (channelName == null) {
-        return null
-      }
-
-      return await this.twurpleApiProxyService.fetchMetadata(channelName)
-    } catch (e: any) {
-      this.logService.logWarning(this, 'Encountered error while fetching twitch metadata.', e.message)
-      return null
-    }
-  }
-
-  private async updateAllMetadata () {
-    const activeLivestreams = await this.livestreamStore.getActiveLivestreams()
-    await Promise.all(activeLivestreams.map(l => this.updateLivestreamMetadata(l)))
-  }
-
-  private async updateLivestreamMetadata (livestream: Livestream) {
-    if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'minutes', 2)) {
-      // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
-      // (after some delay), so there is no need to keep it around.
-      this.logService.logInfo(this, `Automatically deactivating current livestream with id ${livestream.liveId} for streamer ${livestream.streamerId} because it has ended.`)
-      await this.deactivateLivestream(livestream.streamerId)
-      return
-    }
-
-    const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.streamerId)
-    const twitchMetadata = await this.fetchTwitchMetadata(livestream.streamerId)
-
-    // deliberately require that youtube metadata is always called successfully, as it
-    // is used as the source of truth for the stream status
-    if (youtubeMetadata == null) {
-      return
-    }
-
-    try {
-      const updatedTimes = this.getUpdatedLivestreamTimes(livestream, youtubeMetadata)
-
-      if (updatedTimes) {
-        await this.livestreamStore.setTimes(livestream.liveId, updatedTimes)
-      }
-
-      if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {
-        await this.livestreamStore.addLiveViewCount(livestream.id, youtubeMetadata.viewerCount, twitchMetadata?.viewerCount ?? 0)
-      }
-    } catch (e: any) {
-      this.logService.logError(this, `Encountered error while syncing metadata for livestream ${livestream.liveId}.`, e)
-    }
-  }
-
-  private getUpdatedLivestreamTimes (existingLivestream: Livestream, metadata: Metadata): Pick<Livestream, 'start' | 'end'> | null {
+  private getUpdatedYoutubeLivestreamTimes (existingLivestream: YoutubeLivestream, metadata: Metadata): Pick<YoutubeLivestream, 'start' | 'end'> | null {
     const newStatus = metadata.liveStatus
     if (newStatus === 'unknown') {
       this.logService.logWarning(this, `Tried to update livestream times, but current live status was reported as 'unkown'. Won't attempt to update livestream times.`)
       return null
     }
 
-    const existingStatus = LivestreamService.getLivestreamStatus(existingLivestream)
+    const existingStatus = LivestreamService.getYoutubeLivestreamStatus(existingLivestream)
     if (existingStatus === 'finished' && newStatus !== 'finished' || existingStatus === 'live' && newStatus === 'not_started') {
       // invalid status
       throw new Error(`Unable to update livestream times because current status '${existingStatus}' is incompatible with new status '${newStatus}'.`)
@@ -180,29 +208,29 @@ export default class LivestreamService extends ContextClass {
       // just started
       this.logService.logInfo(this, 'Livestream has started')
       return {
-        start: new Date(),
+        start: this.dateTimeHelpers.now(),
         end: existingLivestream.end
       }
     } else if (existingStatus === 'not_started' && newStatus === 'finished') {
       // should not happen, but not impossible
       this.logService.logWarning(this, 'Livestream has finished before it started - 0 duration')
       return {
-        start: new Date(),
-        end: new Date()
+        start: this.dateTimeHelpers.now(),
+        end: this.dateTimeHelpers.now()
       }
     } else if (existingStatus === 'live' && newStatus === 'finished') {
       // just finished
       this.logService.logInfo(this, 'Livestream has finished')
       return {
         start: existingLivestream.start,
-        end: new Date()
+        end: this.dateTimeHelpers.now()
       }
     } else {
       throw new Error('Did not expect to get here')
     }
   }
 
-  private static getLivestreamStatus (livestream: Livestream): Exclude<LiveStatus, 'unknown'> {
+  private static getYoutubeLivestreamStatus (livestream: YoutubeLivestream): Exclude<LiveStatus, 'unknown'> {
     if (livestream.start == null && livestream.end == null) {
       return 'not_started'
     } else if (livestream.start != null && livestream.end == null) {
@@ -212,5 +240,37 @@ export default class LivestreamService extends ContextClass {
     } else {
       throw new Error(`Could not determine livestream status based on start time ${livestream.start} and end time ${livestream.end}`)
     }
+  }
+
+  private async updateTwitchLivestreamMetadata (currentLivestream: TwitchLivestream) {
+    try {
+      const twitchMetadata = await this.fetchTwitchMetadata(currentLivestream.streamerId)
+
+      // update the end time if the stream has ended
+      if (twitchMetadata == null) {
+        const updatedTimes = {
+          start: currentLivestream.start,
+          end: this.dateTimeHelpers.now()
+        }
+        await this.livestreamStore.setTwitchLivestreamTimes(currentLivestream.id, updatedTimes)
+        this.logService.logInfo(this, `Inferred that the Twitch livestream for streamer ${currentLivestream.streamerId} has ended.`)
+
+      // otherwise, update the viewer count
+      } else {
+        await this.livestreamStore.addTwitchLiveViewCount(currentLivestream.id, twitchMetadata.viewerCount)
+      }
+    } catch (e: any) {
+      this.logService.logError(this, `Encountered error while syncing Twitch metadata for streamer ${currentLivestream.streamerId}.`, e)
+    }
+  }
+
+  /** Returns null if no stream is active for the streamer. Throws if something went wrong. */
+  private async fetchTwitchMetadata (streamerId: number): Promise<TwitchMetadata | null> {
+    const channelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
+    if (channelName == null) {
+      throw new Error(`Streamer ${streamerId} does not have a primary Twitch channel.`)
+    }
+
+    return await this.twurpleApiProxyService.fetchMetadata(streamerId, channelName)
   }
 }

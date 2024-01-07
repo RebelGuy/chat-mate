@@ -1,4 +1,4 @@
-import { Prisma, Rank, RankGroup, RankName, RegisteredUser, Streamer, UserRank } from '@prisma/client'
+import { Prisma, Rank, RankEvent, RankGroup, RankName, RegisteredUser, Streamer, UserRank } from '@prisma/client'
 import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
@@ -6,6 +6,8 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { group, toObject, unique } from '@rebel/shared/util/arrays'
 import { NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
+import { IgnoreOptions } from '@rebel/server/services/rank/PunishmentService'
+import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 
 export type UserRanks = {
   primaryUserId: number
@@ -34,6 +36,21 @@ export type AddUserRankArgs = {
 
   /** optionally specify the reported time at which the rank was added. if not provided, uses the current time */
   time?: Date
+}
+
+export type RankEventData = {
+  version: 1
+  youtubeRankResults: YoutubeRankResult[]
+  twitchRankResults: TwitchRankResult[]
+
+  // the rank was not explicitly applied to this channel by ChatMate,
+  // but it is understood that the rank was applied by some other entity externally
+  ignoreOptions: IgnoreOptions | null
+}
+
+export type ParsedRankEvent = Omit<RankEvent, 'serialisedData'> & {
+  data: RankEventData | null
+  rank: Rank
 }
 
 export type RemoveUserRankArgs = {
@@ -107,6 +124,20 @@ export default class RankStore extends ContextClass {
         isActive: isActive
       }})
     }
+  }
+
+  public async addRankEvent (streamerId: number, primaryUserId: number, isAdded: boolean, rankName: RankName, data: RankEventData | null) {
+    const rank = await this.db.rank.findUnique({ where: { name: rankName }})
+
+    await this.db.rankEvent.create({ data: {
+      streamerId: streamerId,
+      userId: primaryUserId,
+      isAdded: isAdded,
+      rankId: rank!.id,
+
+      // deliberately don't truncate the string, else we might be saving an invalid json object that can't be parsed
+      serialisedData: data == null ? null : JSON.stringify(data)
+    }})
   }
 
   /** Adds the rank to the user.
@@ -191,6 +222,36 @@ export default class RankStore extends ContextClass {
   /** Gets all ranks. */
   public async getRanks (): Promise<Rank[]> {
     return await this.db.rank.findMany()
+  }
+
+  public async getRankEventsSince (streamerId: number, since: number): Promise<ParsedRankEvent[]> {
+    const rankEvents = await this.db.rankEvent.findMany({
+      where: {
+        streamerId: streamerId,
+        time: { gt: new Date(since) }
+      },
+      include: {
+        rank: true
+      }
+    })
+
+    return rankEvents.map(event => {
+      const data: RankEventData | null = event.serialisedData == null ? null : JSON.parse(event.serialisedData)
+      if (data != null && data.version !== 1) {
+        throw new Error(`Invalid rank event data version ${data.version}. Expected 1.`)
+      }
+
+      return {
+        id: event.id,
+        isAdded: event.isAdded,
+        rankId: event.rankId,
+        rank: event.rank,
+        streamerId: event.streamerId,
+        time: event.time,
+        userId: event.userId,
+        data: data
+      }
+    })
   }
 
   /** Gets the user rank that has the specified id.
@@ -288,6 +349,13 @@ export default class RankStore extends ContextClass {
   public async relinkCustomRankNames (fromUserId: number, toUserId: number) {
     await this.db.customRankName.updateMany({
       where: { userId: fromUserId },
+      data: { userId: toUserId }
+    })
+  }
+
+  public async relinkRankEvents (formUserId: number, toUserId: number) {
+    await this.db.rankEvent.updateMany({
+      where: { userId: formUserId },
       data: { userId: toUserId }
     })
   }

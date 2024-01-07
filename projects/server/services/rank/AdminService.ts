@@ -76,7 +76,7 @@ export default class AdminService extends ContextClass {
       throw new Error('Admin Youtube channel not found')
     }
 
-    const userChannel = await this.channelStore.getYoutubeChannelFromChannelId([channel.id]).then(single)
+    const userChannel = await this.channelStore.getYoutubeChannelsFromChannelIds([channel.id]).then(single)
     return getUserName(userChannel)
   }
 

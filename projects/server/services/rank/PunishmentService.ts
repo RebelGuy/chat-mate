@@ -3,7 +3,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
-import RankStore, { AddUserRankArgs, groupFilter, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import RankStore, { AddUserRankArgs, groupFilter, RankEventData, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { addTime } from '@rebel/shared/util/datetime'
 import { assert, assertUnreachable } from '@rebel/shared/util/typescript'
 import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
@@ -86,6 +86,14 @@ export default class PunishmentService extends ContextClass {
       .filter(id => ignoreOptions?.twitchChannelId !== id)
       .map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'ban')))
 
+    const rankEventData: RankEventData = {
+      version: 1,
+      youtubeRankResults: youtubeResults,
+      twitchRankResults: twitchResults,
+      ignoreOptions: ignoreOptions
+    }
+    this.rankStore.addRankEvent(streamerId, primaryUserId, true, 'ban', rankEventData)
+
     return { rankResult, youtubeResults, twitchResults }
   }
 
@@ -119,7 +127,11 @@ export default class PunishmentService extends ContextClass {
       streamerId: streamerId,
       assignee: moderatorPrimaryUserId
     }
-    return await this.rankStore.addUserRank(args)
+    const rank = await this.rankStore.addUserRank(args)
+
+    this.rankStore.addRankEvent(streamerId, primaryUserId, true, 'mute', null)
+
+    return rank
   }
 
   /** Applies an actual timeout that is relayed to Youtube or Twitch. */
@@ -146,6 +158,14 @@ export default class PunishmentService extends ContextClass {
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds
       .filter(id => ignoreOptions?.twitchChannelId !== id)
       .map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
+
+    const rankEventData: RankEventData = {
+      version: 1,
+      youtubeRankResults: youtubeResults,
+      twitchRankResults: twitchResults,
+      ignoreOptions: ignoreOptions
+    }
+    this.rankStore.addRankEvent(streamerId, primaryUserId, true, 'timeout', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -182,6 +202,14 @@ export default class PunishmentService extends ContextClass {
       .filter(id => ignoreOptions?.twitchChannelId !== id)
       .map(c => this.tryApplyTwitchPunishment(streamerId, c, unbanMessage, 'unban')))
 
+    const rankEventData: RankEventData = {
+      version: 1,
+      youtubeRankResults: youtubeResults,
+      twitchRankResults: twitchResults,
+      ignoreOptions: ignoreOptions
+    }
+    this.rankStore.addRankEvent(streamerId, primaryUserId, false, 'ban', rankEventData)
+
     return { rankResult, youtubeResults, twitchResults }
   }
 
@@ -197,7 +225,11 @@ export default class PunishmentService extends ContextClass {
       message: revokeMessage,
       removedBy: moderatorPrimaryUserId
     }
-    return await this.rankStore.removeUserRank(args)
+    const rank = await this.rankStore.removeUserRank(args)
+
+    this.rankStore.addRankEvent(streamerId, primaryUserId, false, 'mute', null)
+
+    return rank
   }
 
   public async untimeoutUser (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, revokeMessage: string | null, ignoreOptions: IgnoreOptions | null): Promise<SetActionRankResult> {
@@ -221,6 +253,14 @@ export default class PunishmentService extends ContextClass {
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds
       .filter(id => ignoreOptions?.twitchChannelId !== id)
       .map(c => this.tryApplyTwitchPunishment(streamerId, c, revokeMessage, 'untimeout')))
+
+    const rankEventData: RankEventData = {
+      version: 1,
+      youtubeRankResults: youtubeResults,
+      twitchRankResults: twitchResults,
+      ignoreOptions: ignoreOptions
+    }
+    this.rankStore.addRankEvent(streamerId, primaryUserId, false, 'timeout', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }

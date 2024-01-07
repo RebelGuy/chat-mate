@@ -9,7 +9,7 @@ import RelativeTime from '@rebel/studio/components/RelativeTime'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest, { onConfirmRequest } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { getYoutubeStatus, getChatMateRegisteredUsername, getPrimaryChannels, revokeYoutubeStreamer, authoriseYoutubeStreamer, getYoutubeStreamerLoginUrl, getYoutubeModerators } from '@rebel/studio/utility/api'
+import { getYoutubeStatus, getChatMateRegisteredUsername, getPrimaryChannels, revokeYoutubeStreamer, authoriseYoutubeStreamer, getYoutubeStreamerLoginUrl, getYoutubeModerators, getStatus } from '@rebel/studio/utility/api'
 import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -34,6 +34,8 @@ export default function YoutubeStatus () {
     onRequest: () => onConfirmRequest('Are you sure you wish to revoke ChatMate access to your YouTube channel?'),
   })
   const getYoutubeModeratorsRequest = useRequest(getYoutubeModerators(), { updateKey: refreshToken })
+  const getStatusRequest = useRequest(getStatus(), { updateKey: refreshToken })
+  const [isLivestreamActive, setIsLivestreamActive] = useState(getStatusRequest.data?.livestreamStatus != null)
 
   const chatMateInfo = loginContext.allStreamers.find(streamer => streamer.username === getChatMateRegisteredUsernameRequest.data?.username)
   const requiresAuth = getYoutubeStatusRequest.data == null || !getYoutubeStatusRequest.data.chatMateIsAuthorised
@@ -57,8 +59,21 @@ export default function YoutubeStatus () {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // if the user hasn't set an active livestream, we don't get the list of moderators because
+  // the request on the server would fail. if the user then sets the livestream, we need to trigger
+  // a request to get the list of moderators.
+  useEffect(() => {
+    const isLivestreamActiveCurrent = getStatusRequest.data?.livestreamStatus != null
+    if (isLivestreamActiveCurrent && !isLivestreamActive && !getYoutubeModeratorsRequest.isLoading) {
+      getYoutubeModeratorsRequest.triggerRequest()
+    }
+
+    setIsLivestreamActive(isLivestreamActiveCurrent)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getStatusRequest.data])
+
   return <>
-    <PanelHeader>YouTube Status {<RefreshButton isLoading={getYoutubeStatusRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
+    <PanelHeader>YouTube Status {<RefreshButton isLoading={getYoutubeStatusRequest.isLoading && getYoutubeModeratorsRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
 
     <Box>
       {requiresAuth ?
@@ -114,10 +129,10 @@ export default function YoutubeStatus () {
       &nbsp;-&gt; Settings -&gt; Community). For example, this will allow ChatMate to listen for punishments applied on YouTube, and synchronise these punishments on other accounts/platforms.
     </Box>
 
-    <ApiLoading requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest, getYoutubeModeratorsRequest]} initialOnly />
-    <ApiError requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest]} /> {/* deliberately don't show the moderator request, as it would show an error if ChatMate is not yet authorised */}
+    <ApiLoading requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest, getYoutubeModeratorsRequest, getStatusRequest]} initialOnly />
+    <ApiError requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest, getStatusRequest]} /> {/* deliberately don't show the moderator request, as it would show an error if ChatMate is not yet authorised */}
 
-    {getYoutubeStatusRequest.data != null && getChatMateRegisteredUsernameRequest.data != null && (getYoutubeModeratorsRequest.data != null || getYoutubeModeratorsRequest.error != null) && <>
+    {getYoutubeStatusRequest.data != null && getChatMateRegisteredUsernameRequest.data != null && (getYoutubeModeratorsRequest.data != null || getYoutubeModeratorsRequest.error != null) && getStatusRequest.data != null && <>
       {getYoutubeModeratorsRequest.data != null ? // in this case, we know definitely whether ChatMate is a moderator or not. technically this never comes up if we are not a moderator, because then we can't make the request
         <Box sx={{ mt: 1, mb: 1 }}>
           ChatMate is
@@ -127,10 +142,15 @@ export default function YoutubeStatus () {
         : // otherwise, we must make an educated guess (this can come up if the user has not authorised ChatMate)
         <>
           <Alert severity="info" sx={{ mt: 1, mb: 1 }}>
-            Due to limitations with the current YouTube API that ChatMate is using, we are only able to
-            check the moderator status at the time of the last received chat message in your latest livestream
-            that was sent by a non-moderator user.
-            The below status may be outdated and should be used as a guide only.
+            {getStatusRequest.data?.livestreamStatus != null ? <>
+              {/* show detailed information - the user can't fix this */}
+              Due to limitations with the current YouTube API that ChatMate is using, we are only able to
+              check the moderator status at the time of the last received chat message in your latest livestream
+              that was sent by a non-moderator user.
+              The below status may be outdated and should be used as a guide only.
+            </> : <>
+              {/* we can get more reliable results if the user sets an active livestream. this allows us to make a request to the Youtube API */}
+              The below status may be outdated. Please ensure you have an active livestream set.</>}
           </Alert>
           <Box>
             ChatMate is

@@ -95,7 +95,6 @@ export function LoginProvider (props: Props) {
   function onClearAuthInfo () {
     try {
       window.localStorage.removeItem('loginToken')
-      window.localStorage.removeItem('streamer')
     } catch (e: any) {
       console.error('Unable to remove login token from local storage:', e)
     }
@@ -103,7 +102,6 @@ export function LoginProvider (props: Props) {
     setLoginToken(null)
     setUsername(null)
     setIsStreamer(false)
-    setSelectedStreamer(null)
   }
 
   const onLogin = React.useCallback(async () => {

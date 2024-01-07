@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { getUserName } from '@rebel/server/services/ChannelService'
-import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_ADD_PRIMARY_CHANNEL, EVENT_REMOVE_PRIMARY_CHANNEL } from '@rebel/server/services/EventDispatchService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -92,8 +92,11 @@ export default class StreamerChannelService extends ContextClass {
    * @throws {@link ForbiddenError}: When the streamer is not linked to the youtube or twitch channel.
   */
   public async setPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch', youtubeOrTwitchChannelId: number) {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
-    if (activeLivestream != null) {
+    const [youtubeLivestream, twitchLivestream] = await Promise.all([
+      this.livestreamStore.getActiveYoutubeLivestream(streamerId),
+      this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    ])
+    if (youtubeLivestream != null || twitchLivestream != null) {
       throw new Error('Cannot set the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
@@ -118,12 +121,15 @@ export default class StreamerChannelService extends ContextClass {
       assertUnreachable(platform)
     }
 
-    await this.eventDispatchService.addData('addPrimaryChannel', { streamerId, userChannel })
+    await this.eventDispatchService.addData(EVENT_ADD_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 
   public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
-    if (activeLivestream != null) {
+    const [youtubeLivestream, twitchLivestream] = await Promise.all([
+      this.livestreamStore.getActiveYoutubeLivestream(streamerId),
+      this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    ])
+    if (youtubeLivestream != null || twitchLivestream != null) {
       throw new Error('Cannot unset the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
@@ -137,7 +143,7 @@ export default class StreamerChannelService extends ContextClass {
     }
 
     if (userChannel != null) {
-      await this.eventDispatchService.addData('removePrimaryChannel', { streamerId, userChannel })
+      await this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
     }
   }
 }

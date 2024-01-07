@@ -61,7 +61,8 @@ export default class ChatMateController extends ControllerBase {
       const channelCount = await this.channelStore.getChannelCount()
       const messageCount = await this.chatStore.getChatMessageCount()
       const totalExperience = await this.experienceStore.getTotalGlobalExperience()
-      const totalDaysLivestreamed = await this.livestreamStore.getTotalDaysLivestreamed()
+      const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed()
+      const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed()
 
       return builder.success({
         streamerCount: streamerCount,
@@ -69,7 +70,8 @@ export default class ChatMateController extends ControllerBase {
         uniqueChannelCount: channelCount,
         chatMessageCount: messageCount,
         totalExperience: totalExperience,
-        totalDaysLivestreamed: totalDaysLivestreamed
+        youtubeTotalDaysLivestreamed: youtubeTotalDaysLivestreamed,
+        twitchTotalDaysLivestreamed: twitchTotalDaysLivestreamed
       })
     } catch (e: any) {
       return builder.failure(e)

@@ -7,14 +7,14 @@ import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUser
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
-import { disconnect, kill } from 'ngrok'
+import { disconnect, kill, authtoken } from '@ngrok/ngrok'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
 import { EventSubHttpBase } from '@twurple/eventsub-http/lib/EventSubHttpBase'
 import { NodeEnv } from '@rebel/server/globals'
 import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
-import EventDispatchService, { EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EventData, EVENT_ADD_PRIMARY_CHANNEL, EVENT_REMOVE_PRIMARY_CHANNEL } from '@rebel/server/services/EventDispatchService'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import { keysOf } from '@rebel/shared/util/objects'
@@ -26,13 +26,15 @@ import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { assertUnreachable, waitUntil } from '@rebel/shared/util/typescript'
 import { nonNull } from '@rebel/shared/util/arrays'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
+import LivestreamService from '@rebel/server/services/LivestreamService'
 
 // Ngrok session expires automatically after this time. We can increase the session time by signing up, but
 // there seems to be no way to pass the auth details to the adapter so we have to restart the session manually
 // every now and then
 const NGROK_MAX_SESSION = 3600 * 2 * 1000
 
-const EVENT_SUB_TYPES = ['followers', 'ban', 'unban', 'mod', 'unmod'] as const
+// https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/
+const EVENT_SUB_TYPES = ['followers', 'ban', 'unban', 'mod', 'unmod', 'streamStart', 'streamEnd'] as const
 
 export type EventSubType = (typeof EVENT_SUB_TYPES)[number]
 
@@ -55,12 +57,14 @@ type Deps = Dependencies<{
   streamerChannelService: StreamerChannelService
   eventDispatchService: EventDispatchService
   twitchClientId: string
+  ngrokAuthToken: string
   isAdministrativeMode: () => boolean
   isContextInitialised: () => boolean
   dateTimeHelpers: DateTimeHelpers
   authStore: AuthStore
   twurpleAuthProvider: TwurpleAuthProvider
   externalRankEventService: ExternalRankEventService
+  livestreamService: LivestreamService
 }>
 
 // this class is so complicated, I don't want to write unit tests for it because the unit tests themselves would also be complicated, which defeats the purpose.
@@ -83,12 +87,14 @@ export default class HelixEventService extends ContextClass {
   private readonly streamerChannelService: StreamerChannelService
   private readonly eventDispatchService: EventDispatchService
   private readonly twitchClientId: string
+  private readonly ngrokAuthToken: string
   private readonly isAdministrativeMode: () => boolean
   private readonly isContextInitialised: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly authStore: AuthStore
   private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly externalRankEventService: ExternalRankEventService
+  private readonly livestreamService: LivestreamService
 
   private initialisedStreamerEvents: boolean = false
   private listener: EventSubHttpListener | null = null
@@ -122,12 +128,14 @@ export default class HelixEventService extends ContextClass {
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.twitchClientId = deps.resolve('twitchClientId')
+    this.ngrokAuthToken = deps.resolve('ngrokAuthToken')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.isContextInitialised = deps.resolve('isContextInitialised')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.authStore = deps.resolve('authStore')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.externalRankEventService = deps.resolve('externalRankEventService')
+    this.livestreamService = deps.resolve('livestreamService')
   }
 
   public override initialise () {
@@ -138,8 +146,8 @@ export default class HelixEventService extends ContextClass {
       return
     }
 
-    this.eventDispatchService.onData('addPrimaryChannel', data => this.onPrimaryChannelAdded(data))
-    this.eventDispatchService.onData('removePrimaryChannel', data => this.onPrimaryChannelRemoved(data))
+    this.eventDispatchService.onData(EVENT_ADD_PRIMARY_CHANNEL, data => this.onPrimaryChannelAdded(data))
+    this.eventDispatchService.onData(EVENT_REMOVE_PRIMARY_CHANNEL, data => this.onPrimaryChannelRemoved(data))
 
     // there is no need to initialise everything right now - wait for the server to be set up first,
     // then subscribe to events (this could take a long time if there are many streamers)
@@ -154,6 +162,10 @@ export default class HelixEventService extends ContextClass {
       this.eventSubApi = client.eventSub
 
       if (this.nodeEnv === 'local') {
+        // for some inexplicable reason whose sole purpose is to make our lives harder, the ngrok js client doesn't get the auth token from the normal ngrok config file.
+        // instead, we have to set it manually
+        await authtoken(this.ngrokAuthToken)
+
         // from https://discuss.dev.twitch.tv/t/cancel-subscribe-webhook-events/21064/3
         // we have to go through our existing callbacks and terminate them, otherwise we won't be able to re-subscribe (HTTP 429 - "Too many requests")
         // this is explicitly required for ngrok as per the docs because ngrok assigns a new host name every time we run it
@@ -355,7 +367,7 @@ export default class HelixEventService extends ContextClass {
     }
   }
 
-  private async onPrimaryChannelAdded (data: EventData['addPrimaryChannel']) {
+  private async onPrimaryChannelAdded (data: EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]) {
     if (data.userChannel.platformInfo.platform !== 'twitch') {
       return
     }
@@ -365,7 +377,7 @@ export default class HelixEventService extends ContextClass {
     await this.subscribeToChannelEventsByChannelName(data.streamerId, getUserName(data.userChannel))
   }
 
-  private async onPrimaryChannelRemoved (data: EventData['removePrimaryChannel']) {
+  private async onPrimaryChannelRemoved (data: EventData[typeof EVENT_REMOVE_PRIMARY_CHANNEL]) {
     if (data.userChannel.platformInfo.platform !== 'twitch') {
       return
     }
@@ -433,9 +445,25 @@ export default class HelixEventService extends ContextClass {
               .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
           )
         } else if (eventType === 'mod') {
-          continue // todo
+          onCreateSubscription = () => this.eventSubBase.onChannelModeratorAdd(user, async (e) =>
+            await this.externalRankEventService.onTwitchChannelModded(streamerId, e.userName)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
         } else if (eventType === 'unmod') {
-          continue // todo
+          onCreateSubscription = () => this.eventSubBase.onChannelModeratorRemove(user, async (e) =>
+            await this.externalRankEventService.onTwitchChannelUnmodded(streamerId, e.userName)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
+        } else if (eventType === 'streamStart') {
+          onCreateSubscription = () => this.eventSubBase.onStreamOnline(user, async (e) =>
+            await this.livestreamService.onTwitchLivestreamStarted(streamerId)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          )
+        } else if (eventType === 'streamEnd') {
+          onCreateSubscription = () => this.eventSubBase.onStreamOffline(user, async (e) => {
+            await this.livestreamService.onTwitchLivestreamEnded(streamerId)
+              .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
+          })
         } else {
           assertUnreachable(eventType)
         }

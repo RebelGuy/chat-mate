@@ -4,13 +4,16 @@ export type PublicLivestream = PublicObject<{
   /** The internal ID of the livestream. */
   id: number
 
-  /** Link to the YouTube watch page of the livestream. */
+  /** Whether this is a Youtube or Twitch livestream. */
+  platform: 'youtube' | 'twitch'
+
+  /** Link to the external watch page of the livestream. */
   livestreamLink: string
 
-  /** The current status of the livestream. */
+  /** The current status of the livestream. Never "not_started" for Twitch livestreams. */
   status: 'not_started' | 'live' | 'finished'
 
-  /** The start timestamp of the livestream. Null if status is `not_started`. */
+  /** The start timestamp of the livestream. Null if status is `not_started`. Never null for Twitch livestreams. */
   startTime: number | null
 
   /** The end timestamp of the livestream. Null if status is not `finished`. */

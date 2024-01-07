@@ -148,6 +148,10 @@ export default class LinkService extends ContextClass {
       }
 
       await this.rankStore.relinkCustomRankNames(defaultUserId, aggregateUserId)
+      logs.push([new Date(), nameof(RankStore, 'relinkCustomRankNames'), cumWarnings])
+
+      await this.rankStore.relinkRankEvents(defaultUserId, aggregateUserId)
+      logs.push([new Date(), nameof(RankStore, 'relinkRankEvents'), cumWarnings])
 
     } catch (e: any) {
       this.logService.logError(this, `[${linkAttemptId}] Failed to link default user ${defaultUserId} to aggregate user ${aggregateUserId} with attempt id ${linkAttemptId}. Current warnings: ${cumWarnings}. Logs:`, logs, 'Error:', e)

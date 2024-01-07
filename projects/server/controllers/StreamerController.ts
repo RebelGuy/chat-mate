@@ -11,7 +11,7 @@ import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicS
 import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
-import { livestreamToPublic } from '@rebel/server/models/livestream'
+import { twitchLivestreamToPublic, youtubeLivestreamToPublic } from '@rebel/server/models/livestream'
 import { streamerApplicationToPublicObject } from '@rebel/server/models/streamer'
 import { channelToPublicChannel, userDataToPublicUser } from '@rebel/server/models/user'
 import { getUserName } from '@rebel/server/services/ChannelService'
@@ -35,6 +35,9 @@ import { DELETE, GET, PATCH, Path, PathParam, POST, PreProcessor, QueryParam } f
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, GetYoutubeModeratorsResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import YoutubeService from '@rebel/server/services/YoutubeService'
+import { PublicRankUpdateData } from '@rebel/api-models/public/event/PublicRankUpdateData'
+import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -51,6 +54,7 @@ type Deps = ControllerDependencies<{
   livestreamService: LivestreamService
   youtubeAuthProvider: YoutubeAuthProvider
   youtubeService: YoutubeService
+  channelStore: ChannelStore
 }>
 
 @Path(buildPath('streamer'))
@@ -69,6 +73,7 @@ export default class StreamerController extends ControllerBase {
   private readonly livestreamService: LivestreamService
   private readonly youtubeAuthProvider: YoutubeAuthProvider
   private readonly youtubeService: YoutubeService
+  private readonly channelStore: ChannelStore
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -86,6 +91,7 @@ export default class StreamerController extends ControllerBase {
     this.livestreamService = deps.resolve('livestreamService')
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
     this.youtubeService = deps.resolve('youtubeService')
+    this.channelStore = deps.resolve('channelStore')
   }
 
   @GET
@@ -93,20 +99,23 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /')
 
     try {
-      const livestreamPromise = this.livestreamStore.getActiveLivestreams()
       const streamers = await this.streamerStore.getStreamers()
-      const primaryChannelsPromise = this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
-      const users = await this.accountStore.getRegisteredUsersFromIds(streamers.map(s => s.registeredUserId))
-      const livestreams = await livestreamPromise
-      const primaryChannels = await primaryChannelsPromise
+      const [youtubeLivestreams, twitchLivestreams, primaryChannels, users] = await Promise.all([
+        this.livestreamStore.getActiveYoutubeLivestreams(),
+        this.livestreamStore.getCurrentTwitchLivestreams(),
+        this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id)),
+        this.accountStore.getRegisteredUsersFromIds(streamers.map(s => s.registeredUserId))
+      ])
 
       const streamerUsers = zipOnStrict(streamers, users, 'registeredUserId', 'id', 'registeredUserId')
       const streamerSummary: PublicStreamerSummary[] = streamerUsers.map(streamer => {
-        const livestream = livestreams.find(stream => stream.streamerId === streamer.id)
+        const youtubeLivestream = youtubeLivestreams.find(stream => stream.streamerId === streamer.id)
+        const twitchLivestream = twitchLivestreams.find(stream => stream.streamerId === streamer.id)
         const { youtubeChannel, twitchChannel } = primaryChannels.find(channels => channels.streamerId === streamer.id)!
         return {
           username: streamer.username,
-          currentLivestream: livestream == null ? null : livestreamToPublic(livestream),
+          currentYoutubeLivestream: youtubeLivestream == null ? null : youtubeLivestreamToPublic(youtubeLivestream),
+          currentTwitchLivestream: twitchLivestream == null ? null : twitchLivestreamToPublic(twitchLivestream, twitchChannel != null ? getUserName(twitchChannel) : ''),
           youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),
           twitchChannel: twitchChannel == null ? null : channelToPublicChannel(twitchChannel)
         }
@@ -566,9 +575,30 @@ export default class StreamerController extends ControllerBase {
 
       const events = await this.chatMateEventService.getEventsSince(streamerId, since)
 
+      // pre-fetch channel data for rank update events
+      const youtubeChannelIds = unique(filterTypes(events, 'rankUpdate').flatMap(e => {
+        let ids = e.youtubeRankResults.map(r => r.youtubeChannelId)
+        if (e.ignoreOptions?.youtubeChannelId != null) {
+          ids.push(e.ignoreOptions.youtubeChannelId)
+        }
+        return ids
+      }))
+      const youtubeChannelsPromise = this.channelStore.getYoutubeChannelsFromChannelIds(youtubeChannelIds)
+
+      const twitchChannelIds = unique(filterTypes(events, 'rankUpdate').flatMap(e => {
+        let ids = e.twitchRankResults.map(r => r.twitchChannelId)
+        if (e.ignoreOptions?.twitchChannelId != null) {
+          ids.push(e.ignoreOptions.twitchChannelId)
+        }
+        return ids
+      }))
+      const twitchChannelsPromise = this.channelStore.getTwitchChannelsFromChannelIds(twitchChannelIds)
+
       // pre-fetch user data for some of the events
-      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer').map(e => e.primaryUserId)))
+      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer', 'rankUpdate').map(e => e.primaryUserId)))
       const allData = await this.apiService.getAllData(primaryUserIds)
+
+      const [youtubeChannels, twitchChannels] = await Promise.all([youtubeChannelsPromise, twitchChannelsPromise])
 
       let result: PublicChatMateEvent[] = []
       for (const event of events) {
@@ -577,6 +607,7 @@ export default class StreamerController extends ControllerBase {
         let donationData: PublicDonationData | null = null
         let newViewerData: PublicNewViewerData | null = null
         let chatMessageDeletedData: PublicChatMessageDeletedData | null = null
+        let rankUpdateData: PublicRankUpdateData | null = null
 
         if (event.type === 'levelUp') {
           const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
@@ -610,6 +641,34 @@ export default class StreamerController extends ControllerBase {
           chatMessageDeletedData = {
             chatMessageId: event.chatMessageId
           }
+        } else if (event.type === 'rankUpdate') {
+          const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
+
+          let platformRanks: PublicPlatformRank[] = [
+            ...event.youtubeRankResults.map<PublicPlatformRank>(r => {
+              const channel = youtubeChannels.find(c => c.platformInfo.channel.id === r.youtubeChannelId)!
+              return { platform: 'youtube', channelName: getUserName(channel), success: r.error == null }
+            }),
+            ...event.twitchRankResults.map<PublicPlatformRank>(r => {
+              const channel = twitchChannels.find(c => c.platformInfo.channel.id === r.twitchChannelId)!
+              return { platform: 'twitch', channelName: getUserName(channel), success: r.error == null }
+            })
+          ]
+
+          if (event.ignoreOptions?.youtubeChannelId != null) {
+            const channel = youtubeChannels.find(c => c.platformInfo.channel.id === event.ignoreOptions!.youtubeChannelId)!
+            platformRanks.unshift({ platform: 'youtube', channelName: getUserName(channel), success: true })
+          } else if (event.ignoreOptions?.twitchChannelId != null) {
+            const channel = twitchChannels.find(c => c.platformInfo.channel.id === event.ignoreOptions!.twitchChannelId)!
+            platformRanks.push({ platform: 'twitch', channelName: getUserName(channel), success: true })
+          }
+
+          rankUpdateData = {
+            isAdded: event.isAdded,
+            rankName: event.rankName,
+            user: user,
+            platformRanks: platformRanks
+          }
         } else {
           assertUnreachable(event)
         }
@@ -621,7 +680,8 @@ export default class StreamerController extends ControllerBase {
           newTwitchFollowerData,
           donationData,
           newViewerData,
-          chatMessageDeletedData
+          chatMessageDeletedData,
+          rankUpdateData
         })
       }
 
@@ -657,11 +717,11 @@ export default class StreamerController extends ControllerBase {
       }
 
       const streamerId = this.getStreamerId()
-      const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
+      const activeLivestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
       if (activeLivestream == null && liveId != null) {
-        await this.livestreamService.setActiveLivestream(streamerId, liveId)
+        await this.livestreamService.setActiveYoutubeLivestream(streamerId, liveId)
       } else if (activeLivestream != null && liveId == null) {
-        await this.livestreamService.deactivateLivestream(streamerId)
+        await this.livestreamService.deactivateYoutubeLivestream(streamerId)
       } else if (!(activeLivestream == null && liveId == null || activeLivestream!.liveId === liveId)) {
         return builder.failure(422, `Cannot set active livestream ${liveId} for streamer ${streamerId} because another livestream is already active.`)
       }
@@ -672,22 +732,29 @@ export default class StreamerController extends ControllerBase {
     }
   }
 
-  private async getLivestreamStatus (streamerId: number): Promise<PublicLivestreamStatus | null> {
-    const activeLivestream = await this.livestreamStore.getActiveLivestream(streamerId)
-    if (activeLivestream == null) {
-      return null
+  private async getLivestreamStatus (streamerId: number): Promise<PublicLivestreamStatus> {
+    const activeYoutubeLivestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
+    const publicYoutubeLivestream = activeYoutubeLivestream == null ? null : youtubeLivestreamToPublic(activeYoutubeLivestream)
+
+    const activeTwitchLivestream = await this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    const twitchChannelName = await this.streamerChannelService.getTwitchChannelName(streamerId) ?? ''
+    const publicTwitchLivestream = activeTwitchLivestream == null ? null : twitchLivestreamToPublic(activeTwitchLivestream, twitchChannelName)
+
+    let youtubeViewers: { time: Date, viewCount: number } | null = null
+    if (publicYoutubeLivestream?.status === 'live') {
+      youtubeViewers = await this.livestreamStore.getLatestYoutubeLiveCount(publicYoutubeLivestream.id)
     }
 
-    const publicLivestream = livestreamToPublic(activeLivestream)
-    let viewers: { time: Date, viewCount: number, twitchViewCount: number } | null = null
-    if (publicLivestream.status === 'live') {
-      viewers = await this.livestreamStore.getLatestLiveCount(publicLivestream.id)
+    let twitchViewers: { time: Date, viewCount: number } | null = null
+    if (publicTwitchLivestream?.status === 'live') {
+      twitchViewers = await this.livestreamStore.getLatestTwitchLiveCount(publicTwitchLivestream.id)
     }
 
     return {
-      livestream: publicLivestream,
-      youtubeLiveViewers: viewers?.viewCount ?? null,
-      twitchLiveViewers: viewers?.twitchViewCount ?? null,
+      youtubeLivestream: publicYoutubeLivestream,
+      youtubeLiveViewers: youtubeViewers?.viewCount ?? null,
+      twitchLivestream: publicTwitchLivestream,
+      twitchLiveViewers: twitchViewers?.viewCount ?? null,
     }
   }
 }

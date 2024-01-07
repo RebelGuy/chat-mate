@@ -1,13 +1,13 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import { Db } from '@rebel/server/providers/DbProvider'
-import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import RankStore, { AddUserRankArgs, RankEventData, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/shared/util/datetime'
 import { Rank, RankName } from '@prisma/client'
-import { expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
+import { expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { single, sortBy, unique } from '@rebel/shared/util/arrays'
 import { UserRankNotFoundError, UserRankAlreadyExistsError, UserRankRequiresStreamerError, NotFoundError } from '@rebel/shared/util/error'
 
@@ -96,6 +96,37 @@ export default () => {
       await expectRowCount(db.customRankName).toBe(3)
       const firstEntry = await db.customRankName.findFirst()
       expect(firstEntry).toEqual(expectObject(firstEntry, { name: 'test4', isActive: false }))
+    })
+  })
+
+  describe(nameof(RankStore, 'addRankEvent'), () => {
+    test('Adds the rank event with data to the db', async () => {
+      const eventData: RankEventData = {
+        version: 1,
+        ignoreOptions: { youtubeChannelId: 3 },
+        youtubeRankResults: [{ youtubeChannelId: 5, error: null }, { youtubeChannelId: 6, error: 'test' }],
+        twitchRankResults: [{ twitchChannelId: 5, error: null }, { twitchChannelId: 6, error: 'test' }]
+      }
+
+      await rankStore.addRankEvent(streamer2, user2, true, 'ban', eventData)
+
+      const storedData = await db.rankEvent.findMany({}).then(single)
+      expect(storedData).toEqual(expectObject(storedData, {
+        isAdded: true,
+        rankId: bannedRank.id,
+        serialisedData: expect.any(String)
+      }))
+    })
+
+    test('Adds the rank event without data', async () => {
+      await rankStore.addRankEvent(streamer2, user2, true, 'ban', null)
+
+      const storedData = await db.rankEvent.findMany({}).then(single)
+      expect(storedData).toEqual(expectObject(storedData, {
+        isAdded: true,
+        rankId: bannedRank.id,
+        serialisedData: null
+      }))
     })
   })
 
@@ -373,6 +404,40 @@ export default () => {
     })
   })
 
+  describe(nameof(RankStore, 'getRankEventsSince'), () => {
+    test('Returns rank events since the specified time and deserialises the data correctly', async () => {
+      const eventData: RankEventData = {
+        version: 1,
+        ignoreOptions: { youtubeChannelId: 3 },
+        youtubeRankResults: [{ youtubeChannelId: 5, error: null }, { youtubeChannelId: 6, error: 'test' }],
+        twitchRankResults: [{ twitchChannelId: 5, error: null }, { twitchChannelId: 6, error: 'test' }]
+      }
+      await rankStore.addRankEvent(streamer1, user1, true, 'ban', eventData)
+      await rankStore.addRankEvent(streamer1, user2, false, 'mute', null)
+      await rankStore.addRankEvent(streamer1, user1, true, 'mod', null) // too early
+      await rankStore.addRankEvent(streamer2, user1, true, 'mod', null) // wrong streamer
+
+      await db.rankEvent.update({ where: { id: 1 }, data: { time: data.time2 }})
+      await db.rankEvent.update({ where: { id: 2 }, data: { time: data.time3 }})
+      await db.rankEvent.update({ where: { id: 3 }, data: { time: data.time1 }})
+      await db.rankEvent.update({ where: { id: 4 }, data: { time: data.time4 }})
+
+      const result = await rankStore.getRankEventsSince(streamer1, data.time1.getTime())
+
+      expect(result).toEqual(expectObjectDeep(result, [{
+        isAdded: true,
+        rank: { name: 'ban' },
+        data: eventData,
+        userId: user1
+      }, {
+        isAdded: false,
+        rank: { name: 'mute' },
+        data: null,
+        userId: user2
+      }]))
+    })
+  })
+
   describe(nameof(RankStore, 'getUserRankById'), () => {
     test('Returns the correct rank', async () => {
       await db.userRank.createMany({ data: [
@@ -580,6 +645,21 @@ export default () => {
       await rankStore.relinkCustomRankNames(user1, user3)
 
       const stored = await db.customRankName.findMany()
+      expect(stored).toEqual(expectObject(stored, [{ userId: user3 }, { userId: user3 }, { userId: user2 }]))
+    })
+  })
+
+  describe(nameof(RankStore, 'relinkRankEvents'), () => {
+    test('Relinks the correct user ids', async () => {
+      await db.rankEvent.createMany({ data: [
+        { streamerId: streamer1, rankId: donatorRank.id, userId: user1, isAdded: true },
+        { streamerId: streamer2, rankId: donatorRank.id, userId: user1, isAdded: true },
+        { streamerId: streamer1, rankId: donatorRank.id, userId: user2, isAdded: true }
+      ]})
+
+      await rankStore.relinkRankEvents(user1, user3)
+
+      const stored = await db.rankEvent.findMany()
       expect(stored).toEqual(expectObject(stored, [{ userId: user3 }, { userId: user3 }, { userId: user2 }]))
     })
   })

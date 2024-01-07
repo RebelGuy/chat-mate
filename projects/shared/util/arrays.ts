@@ -390,3 +390,21 @@ export function toObject<K extends string | number | symbol, V, T> (items: T[], 
   })
   return obj
 }
+
+/** Returns the elements until the specified condition is reached. If `inclusive` is true, includes the element for which the condition is true. */
+export function takeUntil<T> (items: T[], predicate: (item: T) => boolean, inclusive = true) {
+  let result: T[] = []
+
+  for (const item of items) {
+    if (predicate(item)) {
+      if (inclusive) {
+        result.push(item)
+      }
+      break
+    } else {
+      result.push(item)
+    }
+  }
+
+  return result
+}

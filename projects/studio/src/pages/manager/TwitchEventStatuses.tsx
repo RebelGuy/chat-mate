@@ -38,11 +38,19 @@ const EVENT_INFO: Record<PublicTwitchEventStatus['eventType'], EventInfo> = {
   },
   mod: {
     name: 'User Mod',
-    description: `ChatMate listens to mod events to synchronise ranks and mod the user on their linked channels.`
+    description: 'ChatMate listens to mod events to synchronise ranks and mod the user on their linked channels.'
   },
   unmod: {
     name: 'Unmod',
-    description: `ChatMate listens to unmod events to synchronise ranks and unmod the user on their linked channels.`
+    description: 'ChatMate listens to unmod events to synchronise ranks and unmod the user on their linked channels.'
+  },
+  streamStart: {
+    name: 'Stream Start',
+    description: 'ChatMate listens to livestream events to toggle some live-specific features.'
+  },
+  streamEnd: {
+    name: 'Stream End',
+    description: 'ChatMate listens to livestream events to toggle some live-specific features.'
   }
 }
 

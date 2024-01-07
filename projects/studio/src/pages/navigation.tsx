@@ -54,7 +54,7 @@ export const PageApply = {
   path: '/apply',
   requiresLogin: true,
   requiresStreamer: false,
-  requireRanksProps: { admin: true }
+  requireRanksProps: null
 } as const
 
 export const PageLogin = {

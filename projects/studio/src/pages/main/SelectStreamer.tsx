@@ -1,10 +1,11 @@
 import { Help } from '@mui/icons-material'
 import { Alert, Box, FormControl, Icon, InputLabel, MenuItem, Select, Tooltip } from '@mui/material'
+import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 import { nonNull } from '@rebel/shared/util/arrays'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { pages } from '@rebel/studio/pages/navigation'
-import { isLive } from '@rebel/studio/utility/misc'
+import { isLivestreamLive, isStreamerLive } from '@rebel/studio/utility/misc'
 import { useContext, useEffect } from 'react'
 import { generatePath, matchPath, useLocation, useNavigate, useParams } from 'react-router-dom'
 
@@ -43,8 +44,8 @@ export default function SelectStreamer () {
   }
 
   const currentStreamer = loginContext.allStreamers.find(streamer => streamer.username === loginContext.username)
-  const liveStreamers = loginContext.allStreamers.filter(streamer => streamer.username !== loginContext.username && isLive(streamer.currentLivestream))
-  const otherStreamers = loginContext.allStreamers.filter(streamer => streamer.username !== loginContext.username && !isLive(streamer.currentLivestream))
+  const liveStreamers = loginContext.allStreamers.filter(streamer => streamer.username !== loginContext.username && isStreamerLive(streamer))
+  const otherStreamers = loginContext.allStreamers.filter(streamer => streamer.username !== loginContext.username && !isStreamerLive(streamer))
   const allStreamers = nonNull([currentStreamer, ...liveStreamers, ...otherStreamers])
 
   return (
@@ -55,7 +56,7 @@ export default function SelectStreamer () {
           <InputLabel>Streamer</InputLabel>
           <Select error={isUnknownStreamer} value={loginContext.streamer ?? ''} onChange={e => loginContext.setStreamer(e.target.value)} label="Streamer">
             <MenuItem value=""><em>None</em></MenuItem>
-            {allStreamers.map(streamer => <MenuItem key={streamer.username} value={streamer.username}>{streamer.username}{isLive(streamer.currentLivestream) ? ' 🔴' : ''}</MenuItem>)}
+            {allStreamers.map(streamer => <MenuItem key={streamer.username} value={streamer.username}>{streamer.username}{getLiveIndicator(streamer)}</MenuItem>)}
           </Select>
         </FormControl>
         <div style={{ padding: 8, paddingTop: 16, margin: 'auto' }}>
@@ -68,6 +69,22 @@ export default function SelectStreamer () {
       </div>
     </Box>
   )
+}
+
+function getLiveIndicator (streamer: PublicStreamerSummary): string {
+  if (!isStreamerLive(streamer)) {
+    return ''
+  }
+
+  let result = ''
+  if (isLivestreamLive(streamer.currentYoutubeLivestream)) {
+    result += ' 🔴'
+  }
+  if (isLivestreamLive(streamer.currentTwitchLivestream)) {
+    result += ' 🟣'
+  }
+
+  return result
 }
 
 function InvalidStreamer ({ streamerName }: { streamerName: string }) {
