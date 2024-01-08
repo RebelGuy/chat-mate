@@ -488,6 +488,15 @@ export default () => {
         youtubeChannel: { connect: { id: 2 }},
         twitchLivestream: { connect: { id: 1 }},
       }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time3,
+        externalId: 'x3',
+        youtubeChannel: { connect: { id: 2 }},
+        twitchLivestream: { connect: { id: 1 }},
+        deletedTime: data.time4
+      }})
 
       const result = await chatStore.getChatMessageCount()
 
