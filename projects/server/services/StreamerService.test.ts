@@ -111,7 +111,7 @@ describe(nameof(StreamerService, 'authoriseTwitchLogin'), () => {
 
     mockStreamerChannelStore.getPrimaryChannels
       .calledWith(expectArray<number>([streamerId]))
-      .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: { platformInfo: { platform: 'twitch', channel: { twitchId: twitchUserId, infoHistory: [{ displayName: twitchChannelName }] }}}})])
+      .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: { platformInfo: { platform: 'twitch', channel: { twitchId: twitchUserId, globalInfoHistory: [{ displayName: twitchChannelName }] }}}})])
     mockWebService.fetch
       .calledWith(expect.stringContaining(code))
       .mockResolvedValue(cast<Response>({ ok: true, json: () => Promise.resolve({ access_token, refresh_token }) }))

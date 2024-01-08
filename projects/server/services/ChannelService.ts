@@ -126,9 +126,9 @@ export default class ChannelService extends ContextClass {
 
 export function getUserName (userChannel: UserChannel) {
   if (userChannel.platformInfo.platform === 'youtube') {
-    return userChannel.platformInfo.channel.infoHistory[0].name
+    return userChannel.platformInfo.channel.globalInfoHistory[0].name
   } else if (userChannel.platformInfo.platform === 'twitch') {
-    return userChannel.platformInfo.channel.infoHistory[0].displayName
+    return userChannel.platformInfo.channel.globalInfoHistory[0].displayName
   } else {
     assertUnreachable(userChannel.platformInfo)
   }
@@ -136,9 +136,9 @@ export function getUserName (userChannel: UserChannel) {
 
 export function getUserNameFromChannelInfo (platform: 'youtube' | 'twitch', channelInfo: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo) {
   if (platform === 'youtube') {
-    return (channelInfo.infoHistory[0] as YoutubeChannelGlobalInfo).name
+    return (channelInfo.globalInfoHistory[0] as YoutubeChannelGlobalInfo).name
   } else if (platform === 'twitch') {
-    return (channelInfo.infoHistory[0] as TwitchChannelGlobalInfo).displayName
+    return (channelInfo.globalInfoHistory[0] as TwitchChannelGlobalInfo).displayName
   } else {
     assertUnreachable(platform)
   }
@@ -148,7 +148,7 @@ export function getExternalIdOrUserName (userChannel: UserChannel) {
   if (userChannel.platformInfo.platform === 'youtube') {
     return userChannel.platformInfo.channel.youtubeId
   } else if (userChannel.platformInfo.platform === 'twitch') {
-    return userChannel.platformInfo.channel.infoHistory[0].userName
+    return userChannel.platformInfo.channel.globalInfoHistory[0].userName
   } else {
     assertUnreachable(userChannel.platformInfo)
   }

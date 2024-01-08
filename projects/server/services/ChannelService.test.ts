@@ -92,10 +92,10 @@ describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
   test('Gets channel info of connected channels', async () => {
     const userId1 = 123
     const userId2 = 354
-    const youtubeChannel1 = cast<UserChannel>({ platformInfo: { channel: { id: 10, infoHistory: [{ name: 'name1' }] }} })
-    const youtubeChannel2 = cast<UserChannel>({ platformInfo: { channel: { id: 20, infoHistory: [{ name: 'name2' }] }} })
-    const twitchChannel1 = cast<UserChannel>({ platformInfo: { channel: { id: 10, infoHistory: [{ userName: 'name3' }] }} })
-    const twitchChannel2 = cast<UserChannel>({ platformInfo: { channel: { id: 25, infoHistory: [{ userName: 'name4' }] }} })
+    const youtubeChannel1 = cast<UserChannel>({ platformInfo: { channel: { id: 10, globalInfoHistory: [{ name: 'name1' }] }} })
+    const youtubeChannel2 = cast<UserChannel>({ platformInfo: { channel: { id: 20, globalInfoHistory: [{ name: 'name2' }] }} })
+    const twitchChannel1 = cast<UserChannel>({ platformInfo: { channel: { id: 10, globalInfoHistory: [{ userName: 'name3' }] }} })
+    const twitchChannel2 = cast<UserChannel>({ platformInfo: { channel: { id: 25, globalInfoHistory: [{ userName: 'name4' }] }} })
     const connectedChannelIds1 = cast<UserOwnedChannels>({
       userId: userId1,
       aggregateUserId: 45,
@@ -125,10 +125,10 @@ describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
 describe(nameof(ChannelService, 'searchChannelsByName'), () => {
   test('returns best match', async () => {
     const allChannels: UserChannel[] = cast<UserChannel[]>([
-      { platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: 'Mr Cool Guy' }] }} },
-      { platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: 'Rebel_Guy' }] }} },
-      { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: 'Rebel_Guy2' }] }} },
-      { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: 'Test' }] }} },
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'Mr Cool Guy' }] }} },
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'Rebel_Guy' }] }} },
+      { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: 'Rebel_Guy2' }] }} },
+      { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: 'Test' }] }} },
     ])
     mockChannelStore.getAllChannels.calledWith(streamerId).mockResolvedValue(allChannels)
 

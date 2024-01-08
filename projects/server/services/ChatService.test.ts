@@ -3,11 +3,11 @@ import { ChatItem, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, Parti
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
-import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, expectObject, nameof, promised } from '@rebel/shared/testUtils'
+import { cast, nameof, promised } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
-import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
+import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import EmojiService from '@rebel/server/services/EmojiService'
 import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
@@ -57,13 +57,13 @@ const youtubeChannel1: YoutubeChannelWithLatestInfo = {
   id: 10,
   userId: 1,
   youtubeId: data.youtubeChannel1,
-  infoHistory: [{ ...data.youtubeChannelGlobalInfo1, id: 1, channelId: 1 }]
+  globalInfoHistory: [{ ...data.youtubeChannelGlobalInfo1, id: 1, channelId: 1 }]
 }
 const twitchChannel1: TwitchChannelWithLatestInfo = {
   id: 20,
   userId: 3,
   twitchId: data.twitchChannel3,
-  infoHistory: [{ ...data.twitchChannelGlobalInfo3, id: 2, channelId: 2 }]
+  globalInfoHistory: [{ ...data.twitchChannelGlobalInfo3, id: 2, channelId: 2 }]
 }
 
 let mockChatStore: MockProxy<ChatStore>

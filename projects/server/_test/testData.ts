@@ -49,8 +49,6 @@ export const author1: Author = {
   name: 'author1.name'
 }
 export const youtubeChannelGlobalInfo1: Omit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
-  isModerator: author1.attributes.isModerator,
-  isOwner: author1.attributes.isOwner,
   isVerified: author1.attributes.isVerified,
   imageUrl: author1.image,
   name: author1.name!,
@@ -65,8 +63,6 @@ export const author2: Author = {
   name: 'author2.name'
 }
 export const youtubeChannelGlobalInfo2: Omit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
-  isModerator: author2.attributes.isModerator,
-  isOwner: author2.attributes.isOwner,
   isVerified: author2.attributes.isVerified,
   imageUrl: author2.image,
   name: author2.name!,
@@ -92,10 +88,6 @@ export const twitchChannelGlobalInfo3: Omit<TwitchChannelGlobalInfo, 'id' | 'cha
   displayName: author3.displayName,
   colour: author3.color!,
   time: time1,
-  isBroadcaster: author3.isBroadcaster,
-  isMod: author3.isMod,
-  isSubscriber: author3.isSubscriber,
-  isVip: author3.isVip,
   userType: author3.userType!
 }
 

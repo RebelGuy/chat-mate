@@ -212,8 +212,8 @@ describe(nameof(ExperienceService, 'getLeaderboard'), () => {
     const primaryUserId2 = 3
     const channelName1 = 'channel 1'
     const channelName2 = 'channel 2'
-    const userChannel1 = cast<UserChannel>({ defaultUserId: userId1, aggregateUserId: null, platformInfo: { platform: 'youtube', channel: { userId: userId1, infoHistory: [{ name: channelName1 }] } } })
-    const userChannel2 = cast<UserChannel>({ defaultUserId: userId2, aggregateUserId: primaryUserId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, infoHistory: [{ displayName: channelName2 }] } } })
+    const userChannel1 = cast<UserChannel>({ defaultUserId: userId1, aggregateUserId: null, platformInfo: { platform: 'youtube', channel: { userId: userId1, globalInfoHistory: [{ name: channelName1 }] } } })
+    const userChannel2 = cast<UserChannel>({ defaultUserId: userId2, aggregateUserId: primaryUserId2, platformInfo: { platform: 'twitch', channel: { userId: userId2, globalInfoHistory: [{ displayName: channelName2 }] } } })
     mockChannelService.getActiveUserChannels.calledWith(streamerId, null).mockResolvedValue([userChannel1, userChannel2])
     mockExperienceStore.getExperience.calledWith(streamerId, expect.arrayContaining([primaryUserId1, primaryUserId2]))
       .mockResolvedValue([{ primaryUserId: primaryUserId2, experience: 811 }, { primaryUserId: primaryUserId1, experience: 130 }]) // descending order

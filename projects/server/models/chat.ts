@@ -182,8 +182,8 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
 
 // wtf
 export type ChatItemWithRelations = (ChatMessage & {
-  youtubeChannel: YoutubeChannel & { infoHistory: YoutubeChannelGlobalInfo[] } | null
-  twitchChannel: TwitchChannel & { infoHistory: TwitchChannelGlobalInfo[] } | null
+  youtubeChannel: YoutubeChannel & { globalInfoHistory: YoutubeChannelGlobalInfo[] } | null
+  twitchChannel: TwitchChannel & { globalInfoHistory: TwitchChannelGlobalInfo[] } | null
   chatCommand: ChatCommand | null
   user: (ChatUser & { aggregateChatUser: ChatUser | null }) | null
   chatMessageParts: (ChatMessagePart & {

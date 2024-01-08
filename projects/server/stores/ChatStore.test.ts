@@ -111,8 +111,6 @@ const cheer1: PartialCheerChatMessage = {
 function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelGlobalInfo, 'channelId' | 'id'> {
   return {
     isVerified: a.attributes.isVerified,
-    isModerator: a.attributes.isModerator,
-    isOwner: a.attributes.isOwner,
     imageUrl: a.image,
     name: a.name!,
     time: time ?? new Date()
@@ -124,10 +122,6 @@ function twitchAuthorToChannelInfo (a: TwitchAuthor, time?: Date): Omit<TwitchCh
     time: time ?? new Date(),
     colour: a.color ?? '',
     displayName: a.displayName,
-    isBroadcaster: a.isBroadcaster,
-    isMod: a.isMod,
-    isSubscriber: a.isSubscriber,
-    isVip: a.isVip,
     userName: a.userName,
     userType: a.userType ?? ''
   }
@@ -175,17 +169,17 @@ export default () => {
     await db.youtubeChannel.create({ data: {
       user: { create: {}}, // user id: 1
       youtubeId: ytAuthor1.channelId,
-      infoHistory: { create: authorToChannelInfo(ytAuthor1)}
+      globalInfoHistory: { create: authorToChannelInfo(ytAuthor1)}
     }})
     await db.twitchChannel.create({ data: {
       user: { create: {}}, // user id: 2
       twitchId: twitchAuthor.userId,
-      infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
+      globalInfoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
     }})
     await db.youtubeChannel.create({ data: {
       user: { create: {}},
       youtubeId: ytAuthor2.channelId,
-      infoHistory: { create: authorToChannelInfo(ytAuthor2)}
+      globalInfoHistory: { create: authorToChannelInfo(ytAuthor2)}
     }})
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 4
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 5

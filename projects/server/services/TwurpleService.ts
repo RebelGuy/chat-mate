@@ -297,7 +297,7 @@ export default class TwurpleService extends ContextClass {
 
   private async getTwitchUserFromChannelId (internalTwitchChannelId: number): Promise<HelixUser> {
     const channel = single(await this.channelStore.getTwitchChannelsFromChannelIds([internalTwitchChannelId]))
-    const channelName = channel.platformInfo.channel.infoHistory[0].userName
+    const channelName = channel.platformInfo.channel.globalInfoHistory[0].userName
     const user = await this.userApi.getUserByName(channelName)
     if (user == null) {
       throw new Error(`Unable to get HelixUser for Twitch channel ${channelName} (internal id ${internalTwitchChannelId})`)

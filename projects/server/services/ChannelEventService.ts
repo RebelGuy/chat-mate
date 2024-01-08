@@ -26,7 +26,7 @@ export default class ChannelEventService extends ContextClass {
 
   /** Checks if the user's external rank has changed and, if so, syncs the mod rank. On Twitch, we do this by listening to mod/unmod events. On Youtube, this method is the equivalent. */
   public async checkYoutubeChannelForModEvent (streamerId: number, youtubeChannelId: number) {
-    const infos = await this.channelStore.getYoutubeChannelHistory(streamerId, youtubeChannelId, 2)
+    const infos = await this.channelStore.getYoutubeChannelHistoryForStreamer(streamerId, youtubeChannelId, 2)
     if (infos.length < 2) {
       return
     }

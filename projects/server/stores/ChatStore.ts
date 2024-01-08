@@ -245,7 +245,7 @@ export default class ChatStore extends ContextClass {
 
 const includeChannelInfo = {
   include: Prisma.validator<Prisma.YoutubeChannelInclude | Prisma.TwitchChannelInclude>()({
-    infoHistory: {
+    globalInfoHistory: {
       orderBy: { time: 'desc' },
       take: 1
     }

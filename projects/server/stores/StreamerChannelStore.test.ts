@@ -25,11 +25,11 @@ export default () => {
       const youtubeId2 = 'id2'
       await db.streamerYoutubeChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}}
+        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId1, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
       await db.streamerYoutubeChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
 
       const result = await streamerChannelStore.deleteStreamerYoutubeChannelLink(1)
@@ -42,10 +42,10 @@ export default () => {
       const youtubeId1 = 'id1'
       const youtubeId2 = 'id2'
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}})
+      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, globalInfoHistory: { create: createYoutubeInfoHistory() }}})
       await db.streamerYoutubeChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
 
       const result = await streamerChannelStore.deleteStreamerYoutubeChannelLink(1)
@@ -61,11 +61,11 @@ export default () => {
       const twitchId2 = 'id2'
       await db.streamerTwitchChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}}
+        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId1, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
       await db.streamerTwitchChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
 
       const result = await streamerChannelStore.deleteStreamerTwitchChannelLink(1)
@@ -78,10 +78,10 @@ export default () => {
       const twitchId1 = 'id1'
       const twitchId2 = 'id2'
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}})
+      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, globalInfoHistory: { create: createTwitchInfoHistory() }}})
       await db.streamerTwitchChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
 
       const result = await streamerChannelStore.deleteStreamerTwitchChannelLink(1)
@@ -109,19 +109,19 @@ export default () => {
       // streamer 3: twitchId2
       await db.streamerYoutubeChannelLink.create({ data: {
         streamer: { connect: { id: streamer1 }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}}
+        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId1, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
       await db.streamerYoutubeChannelLink.create({ data: {
         streamer: { connect: { id: streamer2 }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
       await db.streamerTwitchChannelLink.create({ data: {
         streamer: { connect: { id: streamer1 }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}}
+        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId1, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
       await db.streamerTwitchChannelLink.create({ data: {
         streamer: { connect: { id: streamer3 }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
 
       const primaryChannels = await streamerChannelStore.getPrimaryChannels([streamer1, streamer2])
@@ -138,10 +138,10 @@ export default () => {
       const youtubeId1 = 'id1'
       const youtubeId2 = 'id2'
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}})
+      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, globalInfoHistory: { create: createYoutubeInfoHistory() }}})
       await db.streamerYoutubeChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
 
       const result = await streamerChannelStore.setStreamerYoutubeChannelLink(1, 1)
@@ -154,10 +154,10 @@ export default () => {
       const youtubeId1 = 'id1'
       const youtubeId2 = 'id2'
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}})
+      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, globalInfoHistory: { create: createYoutubeInfoHistory() }}})
       await db.streamerYoutubeChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
 
       await expect(() => streamerChannelStore.setStreamerYoutubeChannelLink(2, 1)).rejects.toThrow()
@@ -169,10 +169,10 @@ export default () => {
       const twitchId1 = 'id1'
       const twitchId2 = 'id2'
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}})
+      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, globalInfoHistory: { create: createTwitchInfoHistory() }}})
       await db.streamerTwitchChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
 
       const result = await streamerChannelStore.setStreamerTwitchChannelLink(1, 1)
@@ -185,10 +185,10 @@ export default () => {
       const twitchId1 = 'id1'
       const twitchId2 = 'id2'
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}})
+      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, globalInfoHistory: { create: createTwitchInfoHistory() }}})
       await db.streamerTwitchChannelLink.create({ data: {
         streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
 
       await expect(() => streamerChannelStore.setStreamerTwitchChannelLink(2, 1)).rejects.toThrow()
@@ -197,9 +197,9 @@ export default () => {
 }
 
 function createYoutubeInfoHistory () {
-  return { imageUrl: '', isModerator: false, isOwner: false, isVerified: false, name: 'channel', time: new Date() }
+  return { imageUrl: '', isVerified: false, name: 'channel', time: new Date() }
 }
 
 function createTwitchInfoHistory () {
-  return { colour: '', displayName: '', isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false, time: new Date(), userName: '', userType: '' }
+  return { colour: '', displayName: '', time: new Date(), userName: '', userType: '' }
 }

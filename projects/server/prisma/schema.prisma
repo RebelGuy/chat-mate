@@ -261,22 +261,24 @@ model Streamer {
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
-  userRanks                  UserRank[]
-  youtubeLivestreams         YoutubeLivestream[]
-  twitchLivestreams          TwitchLivestream[]
-  customEmojis               CustomEmoji[]
-  donations                  Donation[]
-  streamlabsSocketToken      StreamlabsSocketToken?
-  experienceTransactions     ExperienceTransaction[]
-  experienceSnapshots        ExperienceSnapshot[]
-  twitchFollowers            TwitchFollower[]
-  chatMessages               ChatMessage[]
-  streamerYoutubeChannelLink StreamerYoutubeChannelLink?
-  streamerTwitchChannelLink  StreamerTwitchChannelLink?
-  donationLinks              DonationLink[]
-  customRankNames            CustomRankName[]
-  rankEvents                 RankEvent[]
-  platformApiCalls           PlatformApiCall[]
+  userRanks                   UserRank[]
+  youtubeLivestreams          YoutubeLivestream[]
+  twitchLivestreams           TwitchLivestream[]
+  customEmojis                CustomEmoji[]
+  donations                   Donation[]
+  streamlabsSocketToken       StreamlabsSocketToken?
+  experienceTransactions      ExperienceTransaction[]
+  experienceSnapshots         ExperienceSnapshot[]
+  twitchFollowers             TwitchFollower[]
+  chatMessages                ChatMessage[]
+  streamerYoutubeChannelLink  StreamerYoutubeChannelLink?
+  streamerTwitchChannelLink   StreamerTwitchChannelLink?
+  donationLinks               DonationLink[]
+  customRankNames             CustomRankName[]
+  rankEvents                  RankEvent[]
+  platformApiCalls            PlatformApiCall[]
+  youtubeChannelStreamerInfos YoutubeChannelStreamerInfo[]
+  twitchChannelStreamerInfos  TwitchChannelStreamerInfo[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -300,12 +302,10 @@ model StreamerApplication {
 }
 
 model YoutubeChannelGlobalInfo {
-  id          Int     @id @default(autoincrement())
-  name        String  @db.VarChar(255)
-  imageUrl    String  @db.VarChar(511)
-  isOwner     Boolean
-  isModerator Boolean
-  isVerified  Boolean
+  id         Int     @id @default(autoincrement())
+  name       String  @db.VarChar(255)
+  imageUrl   String  @db.VarChar(511)
+  isVerified Boolean
 
   /// first seen with this info
   time DateTime
@@ -318,6 +318,26 @@ model YoutubeChannelGlobalInfo {
   @@map("youtube_channel_global_info")
 }
 
+/// Channel info specific to a streamer.
+model YoutubeChannelStreamerInfo {
+  id          Int     @id @default(autoincrement())
+  isOwner     Boolean
+  isModerator Boolean
+
+  /// first seen with this info
+  time DateTime
+
+  channelId Int
+  channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_streamer_info_channelId_fkey")
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "youtube_channel_streamer_info_streamerId_fkey")
+
+  @@index([channelId], map: "youtube_channel_streamer_info_channelId_fkey")
+  @@index([streamerId], map: "youtube_channel_streamer_info_streamerId_fkey")
+  @@map("youtube_channel_streamer_info")
+}
+
 model YoutubeChannel {
   id        Int    @id @default(autoincrement())
   youtubeId String @db.VarChar(63) // unique
@@ -326,7 +346,8 @@ model YoutubeChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "youtube_channel_userId_fkey")
 
-  infoHistory                YoutubeChannelGlobalInfo[]
+  globalInfoHistory          YoutubeChannelGlobalInfo[]
+  streamerInfoHistory        YoutubeChannelStreamerInfo[]
   chatMessages               ChatMessage[]
   streamerYoutubeChannelLink StreamerYoutubeChannelLink?
 
@@ -338,14 +359,10 @@ model YoutubeChannel {
 model TwitchChannelGlobalInfo {
   id Int @id @default(autoincrement())
 
-  userName      String  @db.VarChar(64)
-  displayName   String  @db.VarChar(64)
-  userType      String  @db.VarChar(32)
-  isBroadcaster Boolean
-  isSubscriber  Boolean
-  isMod         Boolean
-  isVip         Boolean
-  colour        String  @db.VarChar(8)
+  userName    String @db.VarChar(64)
+  displayName String @db.VarChar(64)
+  userType    String @db.VarChar(32)
+  colour      String @db.VarChar(8)
 
   /// first seen with this info
   time DateTime
@@ -358,6 +375,28 @@ model TwitchChannelGlobalInfo {
   @@map("twitch_channel_global_info")
 }
 
+/// Channel info specific to a streamer.
+model TwitchChannelStreamerInfo {
+  id            Int     @id @default(autoincrement())
+  isBroadcaster Boolean
+  isSubscriber  Boolean
+  isMod         Boolean
+  isVip         Boolean
+
+  /// first seen with this info
+  time DateTime
+
+  channelId Int
+  channel   TwitchChannel @relation(fields: [channelId], references: [id], map: "twitch_channel_streamer_info_channelId_fkey")
+
+  streamerId Int
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "twitch_channel_streamer_info_streamerId_fkey")
+
+  @@index([channelId], map: "twitch_channel_streamer_info_channelId_fkey")
+  @@index([streamerId], map: "twitch_channel_streamer_info_streamerId_fkey")
+  @@map("twitch_channel_streamer_info")
+}
+
 model TwitchChannel {
   id       Int    @id @default(autoincrement())
   twitchId String @db.VarChar(32) // unique
@@ -366,7 +405,8 @@ model TwitchChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channel_userId_fkey")
 
-  infoHistory               TwitchChannelGlobalInfo[]
+  globalInfoHistory         TwitchChannelGlobalInfo[]
+  streamerInfoHistory       TwitchChannelStreamerInfo[]
   chatMessages              ChatMessage[]
   streamerTwitchChannelLink StreamerTwitchChannelLink?
 

@@ -87,8 +87,8 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
   test('Returns unknown id if the channel was not found', async () => {
     const userName = 'user'
     const allChannels = cast<UserChannel<'youtube'>[]>([
-      { platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: 'a' }]}} },
-      { platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: 'b' }]}} }
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'a' }]}} },
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'b' }]}} }
     ])
     mockChannelService.searchChannelsByName.calledWith(streamerId, userName).mockResolvedValue(allChannels)
 
@@ -100,8 +100,8 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
   test('Returns unknown id if there are multiple matches', async () => {
     const userName = 'user'
     const matchedChannels = cast<UserChannel<'youtube'>[]>([
-      { platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: userName }]}} },
-      { platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: userName }]}} }
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: userName }]}} },
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: userName }]}} }
     ])
     mockChannelService.searchChannelsByName.calledWith(streamerId, userName).mockResolvedValue(matchedChannels)
 
@@ -117,7 +117,7 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
     const channelId = 512
     const userChannel = cast<UserChannel<'youtube'>>({
       aggregateUserId: primaryUserId,
-      platformInfo: { platform: 'youtube', channel: { id: channelId, infoHistory: [{ name: userName }]}}
+      platformInfo: { platform: 'youtube', channel: { id: channelId, globalInfoHistory: [{ name: userName }]}}
     })
     const punishmentRanks = cast<UserRankWithRelations[]>([
       { primaryUserId: primaryUserId },
@@ -147,17 +147,17 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
     const channelId = 235
     const userChannel = cast<UserChannel<'youtube'>>({
       aggregateUserId: primaryUserId,
-      platformInfo: { platform: 'youtube', channel: { id: channelId, infoHistory: [{ name: userName }]}}
+      platformInfo: { platform: 'youtube', channel: { id: channelId, globalInfoHistory: [{ name: userName }]}}
     })
     // the true owner
     const userWithOwnerName1 = cast<UserChannel<'youtube'>>({
       aggregateUserId: ownerPrimaryUserId,
-      platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: ownerName }]}}
+      platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: ownerName }]}}
     })
     // another channel with the same name as the owner
     const userWithOwnerName2 = cast<UserChannel<'youtube'>>({
       aggregateUserId: ownerPrimaryUserId - 1,
-      platformInfo: { platform: 'youtube', channel: { infoHistory: [{ name: ownerName }]}}
+      platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: ownerName }]}}
     })
 
     const punishmentRanks = cast<UserRankWithRelations[]>([

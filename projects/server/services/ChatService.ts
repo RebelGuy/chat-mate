@@ -5,7 +5,7 @@ import { ChatItem, ChatPlatform } from '@rebel/server/models/chat'
 import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateGlobalTwitchChannelArgs, TwitchChannelWithLatestInfo, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
@@ -87,13 +87,14 @@ export default class ChatService extends ContextClass {
     let platform: ChatPlatform
     try {
       if (item.platform === 'youtube') {
-        const channelInfo: CreateOrUpdateYoutubeChannelArgs = {
+        const channelInfo: CreateOrUpdateGlobalYoutubeChannelArgs & CreateOrUpdateStreamerYoutubeChannelArgs = {
           name: item.author.name ?? '',
           time: new Date(item.timestamp),
+          streamerId: streamerId,
           imageUrl: item.author.image,
           isOwner: item.author.attributes.isOwner,
           isModerator: item.author.attributes.isModerator,
-          isVerified: item.author.attributes.isVerified
+          isVerified: item.author.attributes.isVerified,
         }
         externalId = item.author.channelId
         platform = 'youtube'
@@ -102,10 +103,11 @@ export default class ChatService extends ContextClass {
         await this.channelEventService.checkYoutubeChannelForModEvent(streamerId, channel.id)
 
       } else if (item.platform === 'twitch') {
-        const channelInfo: CreateOrUpdateTwitchChannelArgs = {
+        const channelInfo: CreateOrUpdateGlobalTwitchChannelArgs & CreateOrUpdateStreamerTwitchChannelArgs = {
           userName: item.author.userName,
           displayName: item.author.displayName,
           time: new Date(item.timestamp),
+          streamerId: streamerId,
           userType: item.author.userType ?? '',
           colour: item.author.color ?? '',
           isBroadcaster: item.author.isBroadcaster,

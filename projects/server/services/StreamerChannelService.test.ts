@@ -50,8 +50,8 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
 
     mockStreamerStore.getStreamers.calledWith().mockResolvedValue([cast<Streamer>({ id: streamerId1 }), cast<Streamer>({ id: streamerId2 }), cast<Streamer>({ id: streamerId3 })])
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId1, streamerId2, streamerId3])).mockResolvedValue(cast<PrimaryChannels[]>([
-      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId1, infoHistory: [{ displayName: twitchName1 }]}}} },
-      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId2, infoHistory: [{ displayName: twitchName2 }]}}} },
+      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId1, globalInfoHistory: [{ displayName: twitchName1 }]}}} },
+      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId2, globalInfoHistory: [{ displayName: twitchName2 }]}}} },
       { streamerId: streamerId3, twitchChannel: null }
     ]))
 
@@ -74,7 +74,7 @@ describe(nameof(StreamerChannelService, 'getStreamerFromTwitchChannelName'), () 
     const registeredUser = cast<RegisteredUserResult>({ registeredUser: { id: registeredUserId }})
     const streamer = cast<Streamer>({ id: streamerId })
     const primaryChannels = cast<PrimaryChannels>({ twitchChannel: { platformInfo: {
-      channel: { infoHistory: [{ displayName: channelName.toUpperCase() }] },
+      channel: { globalInfoHistory: [{ displayName: channelName.toUpperCase() }] },
       platform: 'twitch'
     }}})
 
@@ -94,7 +94,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
     const streamerId = 1
     const twitchName = 'name'
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId])).mockResolvedValue(cast<PrimaryChannels[]>([
-      { twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName }]}}} }
+      { twitchChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: twitchName }]}}} }
     ]))
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
