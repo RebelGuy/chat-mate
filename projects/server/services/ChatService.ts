@@ -97,7 +97,7 @@ export default class ChatService extends ContextClass {
         }
         externalId = item.author.channelId
         platform = 'youtube'
-        channel = await this.channelStore.createOrUpdate('youtube', externalId, channelInfo)
+        channel = await this.channelStore.createOrUpdateYoutubeChannel(externalId, channelInfo)
 
         await this.channelEventService.checkYoutubeChannelForModEvent(streamerId, channel.id)
 
@@ -115,7 +115,7 @@ export default class ChatService extends ContextClass {
         }
         externalId = item.author.userId
         platform = 'twitch'
-        channel = await this.channelStore.createOrUpdate('twitch', externalId, channelInfo)
+        channel = await this.channelStore.createOrUpdateTwitchChannel(externalId, channelInfo)
 
       } else {
         assertUnreachable(item)

@@ -100,7 +100,7 @@ export default () => {
 
   afterEach(stopTestDb)
 
-  describe(nameof(ChannelStore, 'createOrUpdate'), () => {
+  describe(nameof(ChannelStore, 'createOrUpdateYoutubeChannel') + ' & ' + nameof(ChannelStore, 'createOrUpdateYoutubeChannel'), () => {
     // set up the database with sample data
     const nChannel = 2
     const nInfo = 3
@@ -132,7 +132,7 @@ export default () => {
     // to be extremely similar both in set up and expected outcome
 
     test('creating new youtube channel works', async () => {
-      const result = await channelStore.createOrUpdate('youtube', 'channel3', channelInfo1)
+      const result = await channelStore.createOrUpdateYoutubeChannel('channel3', channelInfo1)
 
       expect(result.youtubeId).toBe('channel3')
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo1))
@@ -140,7 +140,7 @@ export default () => {
     })
 
     test('creating new twitch channel works', async () => {
-      const result = await channelStore.createOrUpdate('twitch', 'channel3', twitchChannelGlobalInfo1)
+      const result = await channelStore.createOrUpdateTwitchChannel('channel3', twitchChannelGlobalInfo1)
 
       expect(result.twitchId).toBe('channel3')
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelGlobalInfo1))
@@ -150,7 +150,7 @@ export default () => {
     // ----
 
     test('updating existing youtube channel works', async () => {
-      const result = await channelStore.createOrUpdate('youtube', ytChannelId2, channelInfo4)
+      const result = await channelStore.createOrUpdateYoutubeChannel(ytChannelId2, channelInfo4)
 
       expect(result.youtubeId).toBe(ytChannelId2)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo4))
@@ -158,7 +158,7 @@ export default () => {
     })
 
     test('updating existing twitch channel works', async () => {
-      const result = await channelStore.createOrUpdate('twitch', extTwitchChannelId2, twitchChannelGlobalInfo4)
+      const result = await channelStore.createOrUpdateTwitchChannel(extTwitchChannelId2, twitchChannelGlobalInfo4)
 
       expect(result.twitchId).toBe(extTwitchChannelId2)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelGlobalInfo4))
@@ -173,7 +173,7 @@ export default () => {
         time: new Date(2021, 1, 3)
       }
 
-      const result = await channelStore.createOrUpdate('youtube', ytChannelId1, modifiedInfo2)
+      const result = await channelStore.createOrUpdateYoutubeChannel(ytChannelId1, modifiedInfo2)
 
       expect(result.youtubeId).toBe(ytChannelId1)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo2))
@@ -186,7 +186,7 @@ export default () => {
         time: new Date(2021, 1, 3)
       }
 
-      const result = await channelStore.createOrUpdate('twitch', extTwitchChannelId1, modifiedInfo2)
+      const result = await channelStore.createOrUpdateTwitchChannel(extTwitchChannelId1, modifiedInfo2)
 
       expect(result.twitchId).toBe(extTwitchChannelId1)
       expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelGlobalInfo2))

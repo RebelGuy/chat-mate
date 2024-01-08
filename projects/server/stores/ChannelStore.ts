@@ -50,69 +50,67 @@ export default class ChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async createOrUpdate (platform: SafeExtract<ChatPlatform, 'youtube'>, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs): Promise<YoutubeChannelWithLatestInfo>
-  public async createOrUpdate (platform: SafeExtract<ChatPlatform, 'twitch'>, externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo>
-  public async createOrUpdate (platform: ChatPlatform, externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs | CreateOrUpdateTwitchChannelArgs): Promise<YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo> {
-    // the reason we don't have separate createOrUpdate methods for each platform is that there is some shared logic that we don't want to replicate.
-    // I toyed with adding an adapter, and making the method generic, but setting up the prisma validators was a pain so I opted for this.
-
-    let currentChannel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo | null
-    if (platform === 'youtube') {
-      currentChannel = await this.tryGetChannelWithLatestInfo(externalId)
-    } else if (platform === 'twitch') {
-      currentChannel = await this.tryGetTwitchChannelWithLatestInfo(externalId)
-    } else {
-      assertUnreachable(platform)
-    }
+  public async createOrUpdateYoutubeChannel (externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs): Promise<YoutubeChannelWithLatestInfo> {
+    const currentChannel = await this.tryGetChannelWithLatestInfo(externalId)
     const storedInfo = currentChannel?.infoHistory[0] ?? null
 
-    let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
+    let channel: YoutubeChannelWithLatestInfo
     if (currentChannel != null) {
       // check if anything has changed - if so, update info
-      if (channelInfoHasChanged(platform, storedInfo!, channelInfo)) {
-        if (platform === 'youtube') {
-          channel = await this.db.youtubeChannel.update({
-            where: { youtubeId: externalId },
-            data: { infoHistory: { create: channelInfo as CreateOrUpdateYoutubeChannelArgs } },
-            include: channelQuery_includeLatestChannelInfo
-          })
-        } else if (platform === 'twitch') {
-          channel = await this.db.twitchChannel.update({
-            where: { twitchId: externalId },
-            data: { infoHistory: { create: channelInfo as CreateOrUpdateTwitchChannelArgs } },
-            include: channelQuery_includeLatestChannelInfo
-          })
-        }
-
+      if (channelInfoHasChanged('youtube', storedInfo!, channelInfo)) {
+        channel = await this.db.youtubeChannel.update({
+          where: { youtubeId: externalId },
+          data: { infoHistory: { create: channelInfo as CreateOrUpdateYoutubeChannelArgs } },
+          include: channelQuery_includeLatestChannelInfo
+        })
       } else {
-        // nothing has changed: keep using the stored info
         channel = currentChannel
       }
 
     } else {
       // create new channel
-      if (platform === 'youtube') {
-        channel = await this.db.youtubeChannel.create({
-          data: {
-            youtubeId: externalId,
-            user: { create: {}},
-            infoHistory: { create: channelInfo as CreateOrUpdateYoutubeChannelArgs }
-          },
-          include: channelQuery_includeLatestChannelInfo
-        })
-      } else if (platform === 'twitch') {
-        channel = await this.db.twitchChannel.create({
-          data: {
-            twitchId: externalId,
-            user: { create: {}},
-            infoHistory: { create: channelInfo as CreateOrUpdateTwitchChannelArgs }
-          },
-          include: channelQuery_includeLatestChannelInfo
-        })
-      }
+      channel = await this.db.youtubeChannel.create({
+        data: {
+          youtubeId: externalId,
+          user: { create: {}},
+          infoHistory: { create: channelInfo as CreateOrUpdateYoutubeChannelArgs }
+        },
+        include: channelQuery_includeLatestChannelInfo
+      })
     }
 
-    return channel!
+    return channel
+  }
+
+  public async createOrUpdateTwitchChannel (externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo> {
+    const currentChannel = await this.tryGetTwitchChannelWithLatestInfo(externalId)
+    const storedInfo = currentChannel?.infoHistory[0] ?? null
+
+    let channel: TwitchChannelWithLatestInfo
+    if (currentChannel != null) {
+      // check if anything has changed - if so, update info
+      if (channelInfoHasChanged('twitch', storedInfo!, channelInfo)) {
+        channel = await this.db.twitchChannel.update({
+          where: { twitchId: externalId },
+          data: { infoHistory: { create: channelInfo as CreateOrUpdateTwitchChannelArgs } },
+          include: channelQuery_includeLatestChannelInfo
+        })
+      } else {
+        channel = currentChannel
+      }
+
+    } else {
+      channel = await this.db.twitchChannel.create({
+        data: {
+          twitchId: externalId,
+          user: { create: {}},
+          infoHistory: { create: channelInfo as CreateOrUpdateTwitchChannelArgs }
+        },
+        include: channelQuery_includeLatestChannelInfo
+      })
+    }
+
+    return channel
   }
 
   public async getChannelCount (): Promise<number> {
