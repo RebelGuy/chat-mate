@@ -9,7 +9,13 @@ import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
 import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { authenticate, getCustomisableRankNames, getGlobalRanks, getRanksForStreamer, getStreamers, getUser } from '@rebel/studio/utility/api'
+import { DEFAULT_STREAMER } from '@rebel/studio/utility/global'
 import * as React from 'react'
+
+// null if unset, empty string if the empty row was selected
+const LOCAL_STORAGE_STREAMER = 'streamer'
+
+const LOCAL_STORAGE_LOGIN_TOKEN = 'loginToken'
 
 export type RankName = PublicRank['name']
 
@@ -63,7 +69,7 @@ export function LoginProvider (props: Props) {
 
   function onSetLogin (usernameToSet: string, token: string, isStreamerToSet: boolean) {
     try {
-      window.localStorage.setItem('loginToken', token)
+      window.localStorage.setItem(LOCAL_STORAGE_LOGIN_TOKEN, token)
     } catch (e: any) {
       console.error('Unable to save login token to local storage:', e)
     }
@@ -80,11 +86,7 @@ export function LoginProvider (props: Props) {
     }
 
     try {
-      if (streamer == null) {
-        window.localStorage.removeItem('streamer')
-      } else {
-        window.localStorage.setItem('streamer', streamer)
-      }
+      window.localStorage.setItem(LOCAL_STORAGE_STREAMER, streamer ?? '')
     } catch (e: any) {
       console.error('Unable to save streamer to local storage:', e)
     }
@@ -94,7 +96,7 @@ export function LoginProvider (props: Props) {
 
   function onClearAuthInfo () {
     try {
-      window.localStorage.removeItem('loginToken')
+      window.localStorage.removeItem(LOCAL_STORAGE_LOGIN_TOKEN)
     } catch (e: any) {
       console.error('Unable to remove login token from local storage:', e)
     }
@@ -106,8 +108,8 @@ export function LoginProvider (props: Props) {
 
   const onLogin = React.useCallback(async () => {
     try {
-      const storedStreamer = window.localStorage.getItem('streamer')
-      const storedLoginToken = window.localStorage.getItem('loginToken')
+      const storedStreamer = window.localStorage.getItem(LOCAL_STORAGE_STREAMER)
+      const storedLoginToken = window.localStorage.getItem(LOCAL_STORAGE_LOGIN_TOKEN)
       if (storedLoginToken == null) {
         setHasLoadedAuth(true)
         return
@@ -126,7 +128,7 @@ export function LoginProvider (props: Props) {
         setUsername(response.data.username)
         setIsStreamer(response.data.isStreamer)
 
-        if (response.data.isStreamer && storedStreamer == null) {
+        if (response.data.isStreamer && isNullOrEmpty(storedStreamer)) {
           onPersistStreamer(response.data.username)
         }
 
@@ -179,7 +181,7 @@ export function LoginProvider (props: Props) {
         streamer = routeParams.streamer
       } else {
         try {
-          streamer = window.localStorage.getItem('streamer')
+          streamer = window.localStorage.getItem(LOCAL_STORAGE_STREAMER) ?? DEFAULT_STREAMER
         } catch (e: any) {
           console.error('Unable to initialise streamer:', e)
         }

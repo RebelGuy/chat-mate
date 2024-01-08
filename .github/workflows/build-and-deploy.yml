@@ -176,6 +176,7 @@ jobs:
           node ./scripts/getVersion | tr -d '\n' >> ./projects/studio/.env
           echo \" >> ./projects/studio/.env
           echo REACT_APP_ENV=${{ inputs.NODE_ENV }} >> ./projects/studio/.env
+          echo REACT_APP_DEFAULT_STREAMER=rebel_guy >> ./projects/studio/.env
           cat ./projects/studio/.env
       
       - name: Build typescript project
