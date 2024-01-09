@@ -12,6 +12,7 @@ import { addTime } from '@rebel/shared/util/datetime'
 import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
 import CacheService from '@rebel/server/services/CacheService'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
@@ -27,6 +28,7 @@ type Deps = Dependencies<{
   dateTimeHelpers: DateTimeHelpers
   streamerChannelService: StreamerChannelService
   cacheService: CacheService
+  chatMateStateService: ChatMateStateService
 }>
 
 export default class LivestreamService extends ContextClass {
@@ -41,6 +43,7 @@ export default class LivestreamService extends ContextClass {
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly streamerChannelService: StreamerChannelService
   private readonly cacheService: CacheService
+  private readonly chatMateStateService: ChatMateStateService
 
   constructor (deps: Deps) {
     super()
@@ -53,6 +56,7 @@ export default class LivestreamService extends ContextClass {
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.cacheService = deps.resolve('cacheService')
+    this.chatMateStateService = deps.resolve('chatMateStateService')
   }
 
   public override async initialise (): Promise<void> {
@@ -133,11 +137,22 @@ export default class LivestreamService extends ContextClass {
   }
 
   private async updateAllMetadata () {
+    const isInitialFetch = !this.chatMateStateService.hasInitialisedLivestreamMetadata()
+    if (isInitialFetch) {
+      this.chatMateStateService.onInitialisedLivestreamMetadata()
+    }
+
     const activeYoutubeLivestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
     await Promise.all(activeYoutubeLivestreams.map(l => this.updateYoutubeLivestreamMetadata(l)))
 
     const currentTwitchLivestreams = await this.livestreamStore.getCurrentTwitchLivestreams()
-    await Promise.all(currentTwitchLivestreams.map(l => this.updateTwitchLivestreamMetadata(l)))
+    if (isInitialFetch) {
+      this.logService.logInfo(this, 'Syncing Twitch livestreams...')
+      await this.syncTwitchLiveStatus(currentTwitchLivestreams)
+      this.logService.logInfo(this, 'Completed syncing Twitch livestreams.')
+    } else {
+      await Promise.all(currentTwitchLivestreams.map(l => this.updateTwitchLivestreamMetadata(l)))
+    }
   }
 
   private async updateYoutubeLivestreamMetadata (livestream: YoutubeLivestream) {
@@ -239,6 +254,34 @@ export default class LivestreamService extends ContextClass {
       return 'finished'
     } else {
       throw new Error(`Could not determine livestream status based on start time ${livestream.start} and end time ${livestream.end}`)
+    }
+  }
+
+  private async syncTwitchLiveStatus (currentLivestreams: TwitchLivestream[]) {
+    const twitchChannels = await this.streamerChannelService.getAllTwitchStreamerChannels()
+
+    for (const twitchChannel of twitchChannels) {
+      const streamerId = twitchChannel.streamerId
+      const expectedCurrentLivestream = currentLivestreams.find(l => l.streamerId === streamerId)
+
+      try {
+        const twitchMetadata = await this.fetchTwitchMetadata(streamerId)
+        if (twitchMetadata == null && expectedCurrentLivestream == null) {
+          continue
+        } else if (twitchMetadata != null && expectedCurrentLivestream != null) {
+          this.logService.logInfo(this, `Syncing Twitch live status. Streamer ${streamerId} is still live while we weren't listening`)
+          await this.livestreamStore.addTwitchLiveViewCount(expectedCurrentLivestream.id, twitchMetadata.viewerCount)
+        } else if (twitchMetadata == null && expectedCurrentLivestream != null) {
+          this.logService.logInfo(this, `Syncing Twitch live status. Streamer ${streamerId} went offline on Twitch while we weren't listening`)
+          await this.onTwitchLivestreamEnded(streamerId)
+        } else if (twitchMetadata != null && expectedCurrentLivestream == null) {
+          this.logService.logInfo(this, `Syncing Twitch live status. Streamer ${streamerId} went live on Twitch while we weren't listening`)
+          await this.onTwitchLivestreamStarted(streamerId)
+        }
+
+      } catch (e: any) {
+        this.logService.logError(this, `Encountered error while initialising Twitch metadata for streamer ${streamerId}.`, e)
+      }
     }
   }
 

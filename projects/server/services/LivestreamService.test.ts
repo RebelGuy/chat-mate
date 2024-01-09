@@ -12,10 +12,11 @@ import MasterchatService from '@rebel/server/services/MasterchatService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { addTime } from '@rebel/shared/util/datetime'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
-import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
 import CacheService from '@rebel/server/services/CacheService'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -61,6 +62,7 @@ let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let mockStreamerChannelService: MockProxy<StreamerChannelService>
 let mockCacheService: MockProxy<CacheService>
+let mockChatMateStateService: MockProxy<ChatMateStateService>
 let livestreamService: LivestreamService
 
 beforeEach(() => {
@@ -72,6 +74,7 @@ beforeEach(() => {
   mockDateTimeHelpers = mock()
   mockStreamerChannelService = mock()
   mockCacheService = mock()
+  mockChatMateStateService = mock()
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -91,7 +94,8 @@ beforeEach(() => {
     disableExternalApis: false,
     dateTimeHelpers: mockDateTimeHelpers,
     streamerChannelService: mockStreamerChannelService,
-    cacheService: mockCacheService
+    cacheService: mockCacheService,
+    chatMateStateService: mockChatMateStateService
   }))
 })
 
@@ -106,7 +110,8 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       disableExternalApis: true,
       dateTimeHelpers: mockDateTimeHelpers,
       streamerChannelService: mockStreamerChannelService,
-      cacheService: mockCacheService
+      cacheService: mockCacheService,
+      chatMateStateService: mockChatMateStateService
     }))
 
     await livestreamService.initialise()
@@ -118,6 +123,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
   describe('Youtube tests', () => {
     beforeEach(() => {
       mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([])
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.calledWith().mockReturnValue(true)
     })
 
     test(`Ignores times and views if livestream hasn't started`, async () => {
@@ -265,6 +271,68 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     beforeEach(() => {
       mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([])
       mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(twitchChannelName)
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.calledWith().mockReturnValue(true)
+    })
+
+    test(`Syncs the Twitch livestreams upon startup (does nothing if the streamer did not go live while we weren't listening)`, async () => {
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.mockReset().calledWith().mockReturnValue(false)
+      mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([]) // no active livestreams
+      mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{ streamerId: streamerId }]))
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(streamerId, twitchChannelName).mockResolvedValue(null)
+
+      await livestreamService.initialise()
+
+      expect(mockLivestreamStore.addTwitchLiveViewCount.mock.calls.length).toBe(0)
+      expect(mockLivestreamStore.addNewTwitchLivestream.mock.calls.length).toBe(0)
+      expect(mockLivestreamStore.setTwitchLivestreamTimes.mock.calls.length).toBe(0)
+    })
+
+    test(`Syncs the Twitch livestreams upon startup (updates the view count if the streamer continued being live while we weren't listening)`, async () => {
+      const storedLivestream = makeTwitchStream(data.time2, null)
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.mockReset().calledWith().mockReturnValue(false)
+      mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([storedLivestream])
+      mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{ streamerId: streamerId }]))
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(streamerId, twitchChannelName).mockResolvedValue(twitchMetadata)
+
+      await livestreamService.initialise()
+
+      const args = single(mockLivestreamStore.addTwitchLiveViewCount.mock.calls)
+      expect(args).toEqual(expectObject(args, [storedLivestream.id, twitchMetadata.viewerCount]))
+      expect(mockLivestreamStore.addNewTwitchLivestream.mock.calls.length).toBe(0)
+      expect(mockLivestreamStore.setTwitchLivestreamTimes.mock.calls.length).toBe(0)
+    })
+
+    test(`Syncs the Twitch livestreams upon startup (ends the stream if a live streamer went offline while we weren't listening)`, async () => {
+      const storedLivestream = makeTwitchStream(data.time2, null)
+      const endTime = data.time4
+      mockDateTimeHelpers.now.mockReset().calledWith().mockReturnValue(endTime)
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.mockReset().calledWith().mockReturnValue(false)
+      mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([storedLivestream])
+      mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{ streamerId: streamerId }]))
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(streamerId, twitchChannelName).mockResolvedValue(null)
+      mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(storedLivestream)
+
+      await livestreamService.initialise()
+
+      expect(mockLivestreamStore.addTwitchLiveViewCount.mock.calls.length).toBe(0)
+      expect(mockLivestreamStore.addNewTwitchLivestream.mock.calls.length).toBe(0)
+      const args = single(mockLivestreamStore.setTwitchLivestreamTimes.mock.calls)
+      expect(args).toEqual(expectObject(args, [storedLivestream.id, { end: endTime }]))
+    })
+
+    test(`Syncs the Twitch livestreams upon startup (starts the stream if the streamer went live while we weren't listening)`, async () => {
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.mockReset().calledWith().mockReturnValue(false)
+      mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([])
+      mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue(cast<TwitchStreamerChannel[]>([{ streamerId: streamerId }]))
+      mockTwurpleApiProxyService.fetchMetadata.calledWith(streamerId, twitchChannelName).mockResolvedValue(twitchMetadata)
+      mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(null)
+      mockLivestreamStore.getPreviousTwitchLivestream.calledWith(streamerId).mockResolvedValue(null)
+
+      await livestreamService.initialise()
+
+      expect(mockLivestreamStore.addTwitchLiveViewCount.mock.calls.length).toBe(0)
+      expect(single2(mockLivestreamStore.addNewTwitchLivestream.mock.calls)).toBe(streamerId)
+      expect(mockLivestreamStore.setTwitchLivestreamTimes.mock.calls.length).toBe(0)
     })
 
     test('Updates the end time when the livestream finishes', async () => {
