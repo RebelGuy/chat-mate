@@ -95,6 +95,8 @@ export default () => {
     const nChannel = 2
     const nInfo = 3
     beforeEach(async () => {
+      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'test', aggregateChatUser: { create: {} } }} } })
+      await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'test', aggregateChatUser: { create: {} } }} } })
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}},
