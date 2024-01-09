@@ -1,4 +1,5 @@
 import { Branded } from '@rebel/shared/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { List, isList } from 'immutable'
 
 // hack: https://github.com/microsoft/TypeScript/issues/31752
@@ -53,7 +54,7 @@ function assertConstraint (condition: boolean, value: number, constraint: number
   if (condition) {
     return value
   } else {
-    throw new Error(`Expected value ${value} to be ${constraintDescription} ${constraint}`)
+    throw new ChatMateError(`Expected value ${value} to be ${constraintDescription} ${constraint}`)
   }
 }
 
@@ -135,7 +136,7 @@ export function clampNorm (value: number, min: number, max: number, centre?: num
   if (centre === undefined) {
     centre = (max - min) / 2
   } else if (centre < min || centre > max) {
-    throw new Error('Centre must lie between min and max')
+    throw new ChatMateError('Centre must lie between min and max')
   }
 
   if (min === max) {

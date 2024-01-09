@@ -1,4 +1,5 @@
 import { Box, Button } from '@mui/material'
+import { ChatMateError } from '@rebel/shared/util/error'
 import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { useContext } from 'react'
@@ -14,7 +15,7 @@ export default function StreamerLinks (props: Props) {
 
   const streamerSummary = loginContext.allStreamers.find(streamer => streamer.username === streamerName)
   if (streamerSummary == null) {
-    throw new Error(`Unable to get info for streamer ${streamerName}`)
+    throw new ChatMateError(`Unable to get info for streamer ${streamerName}`)
   }
 
   return <>

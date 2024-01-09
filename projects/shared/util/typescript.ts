@@ -1,5 +1,6 @@
 import { ObjectComparator, Primitive, ValueComparator } from '@rebel/shared/types'
 import { values } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export const NO_OP = () => { /* Do nothing */ }
 
@@ -7,7 +8,7 @@ export const NO_OP_ASYNC = async () => { /* Do nothing */ }
 
 export function assert (condition: any, msg: string): asserts condition {
   if (!condition) {
-    throw new Error(msg)
+    throw new ChatMateError(msg)
   }
 }
 
@@ -76,7 +77,7 @@ export function compare<T> (a: T, b: T, comparator: ObjectComparator<T>) {
 }
 
 export function assertUnreachable (x: never): never {
-  throw new Error('This should not happen')
+  throw new ChatMateError('This should not happen')
 }
 
 /** Used as a type-guard during compile-time to check completeness of implementations, but has no effect on runtime code. */
@@ -85,7 +86,7 @@ export function assertUnreachableCompile (x: never): any { return }
 /** Asserts that the property of the given variable is not identically null. */
 export function assertNotNull<T, K extends keyof T> (x: T, key: K, msg: string): asserts x is { [P in keyof T]: P extends K ? Exclude<T[P], null> : T[P] } {
   if (x != null && x[key] === null) {
-    throw new Error(msg)
+    throw new ChatMateError(msg)
   }
 }
 

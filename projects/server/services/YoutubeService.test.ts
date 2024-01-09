@@ -7,6 +7,7 @@ import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/Stre
 import { Dependencies } from '@rebel/shared/context/context'
 import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { MockProxy, mock } from 'jest-mock-extended'
 
 const streamerId = 5
@@ -195,7 +196,7 @@ function requireLivestreamAndPrimaryYoutubeChannel () {
   test('Throws if there is no active livestream', async () => {
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(null)
 
-    await expect(() => youtubeService.unmodYoutubeChannel(streamerId, 123)).rejects.toThrow()
+    await expect(() => youtubeService.unmodYoutubeChannel(streamerId, 123)).rejects.toThrowError(ChatMateError)
   })
 
   test('Throws if the streamer does not have a primary Youtube channel', async () => {
@@ -203,6 +204,6 @@ function requireLivestreamAndPrimaryYoutubeChannel () {
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray([streamerId])).mockResolvedValue([primaryChannels])
 
-    await expect(() => youtubeService.unmodYoutubeChannel(streamerId, 123)).rejects.toThrow()
+    await expect(() => youtubeService.unmodYoutubeChannel(streamerId, 123)).rejects.toThrowError(ChatMateError)
   })
 }

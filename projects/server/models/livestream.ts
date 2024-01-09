@@ -3,6 +3,7 @@ import { PublicLivestream } from '@rebel/api-models/public/livestream/PublicLive
 import { PublicAggregateLivestream } from '@rebel/api-models/public/livestream/PublicAggregateLivestream'
 import { getLivestreamLink } from '@rebel/shared/util/text'
 import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export function youtubeLivestreamToPublic (livestream: YoutubeLivestream): PublicLivestream {
   const link = getLivestreamLink(livestream.liveId)
@@ -48,7 +49,7 @@ export function twitchLivestreamToPublic (livestream: TwitchLivestream, twitchCh
 
 export function aggregateLivestreamToPublic (aggregateLivestream: AggregateLivestream, twitchChannelName: string | null): PublicAggregateLivestream {
   if (twitchChannelName == null && aggregateLivestream.getTwitchLivestreams().length > 0) {
-    throw new Error('Unable to convert AggregateLivestream to a public object because it contains Twitch livestreams, but no twitch channel name was provided')
+    throw new ChatMateError('Unable to convert AggregateLivestream to a public object because it contains Twitch livestreams, but no twitch channel name was provided')
   }
 
   return {

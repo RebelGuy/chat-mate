@@ -1,5 +1,6 @@
 import { ApiError, ApiResponse, PublicObject, ResponseData } from '@rebel/api-models/types'
 import { Primitive } from '@rebel/shared/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
 import LoginContext, { LoginContextType } from '@rebel/studio/contexts/LoginContext'
 import RequestContext, { RequestContextType } from '@rebel/studio/contexts/RequestContext'
@@ -145,9 +146,9 @@ export default function useRequest<
 
   if (loginContext == null) {
     if (request.requiresLogin === true && options?.loginToken == null) {
-      throw new Error('`userRequest` cannot use LoginContext because it is null and no `loginToken` has been provided')
+      throw new ChatMateError('`userRequest` cannot use LoginContext because it is null and no `loginToken` has been provided')
     } else if (request.requiresStreamer === true && options?.streamer == null) {
-      throw new Error('`userRequest` cannot use LoginContext because it is null and no `streamer` has been provided')
+      throw new ChatMateError('`userRequest` cannot use LoginContext because it is null and no `streamer` has been provided')
     }
 
     loginContext = {
@@ -198,11 +199,11 @@ export default function useRequest<
       }
 
       if (requiresLogin && loginToken == null) {
-        throw new Error('You must be logged in to do that.')
+        throw new ChatMateError('You must be logged in to do that.')
       } else if (requiresStreamer === true && streamer == null) {
-        throw new Error('You must select a streamer to do that.')
+        throw new ChatMateError('You must select a streamer to do that.')
       } else if (requiresStreamer === 'self' && !loginContext.isStreamer) {
-        throw new Error('You must be a streamer to do that.')
+        throw new ChatMateError('You must be a streamer to do that.')
       }
 
       setIsLoading(true)

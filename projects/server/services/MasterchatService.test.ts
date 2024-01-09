@@ -7,7 +7,7 @@ import { cast, nameof } from '@rebel/shared/testUtils'
 import { any, mock, MockProxy } from 'jest-mock-extended'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
+import { ChatMateError, NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 
@@ -45,7 +45,7 @@ beforeEach(() => {
 
 describe(nameof(MasterchatService, 'addMasterchat'), () => {
   test('Throws if attempting to add an instance for an existing streamer', () => {
-    expect(() => masterchatService.addMasterchat(streamerId, liveId)).toThrow()
+    expect(() => masterchatService.addMasterchat(streamerId, liveId)).toThrowError(ChatMateError)
   })
 
   test('creates masterchat instance with specified liveId', async () => {
@@ -96,7 +96,7 @@ describe(nameof(MasterchatService, 'fetch'), () => {
   })
 
   test('throws if invalid liveId', async () => {
-    await expect(masterchatService.fetch(150, undefined)).rejects.toThrow()
+    await expect(masterchatService.fetch(150, undefined)).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -240,15 +240,15 @@ describe(nameof(MasterchatService, 'unbanYoutubeChannel'), () => {
   })
 
   test('throws if invalid liveId', async () => {
-    await expect(masterchatService.fetchMetadata(123456)).rejects.toThrow()
+    await expect(masterchatService.fetchMetadata(123456)).rejects.toThrowError(ChatMateError)
   })
 })
 
 describe(nameof(MasterchatService, 'removeMasterchat'), () => {
-  test('creates masterchat instance with specified liveId', async () => {
+  test('removes masterchat instance with specified liveId', async () => {
     masterchatService.removeMasterchat(streamerId)
 
-    await expect(masterchatService.fetch(streamerId, undefined)).rejects.toThrow()
+    await expect(masterchatService.fetch(streamerId, undefined)).rejects.toThrowError(ChatMateError)
   })
 })
 

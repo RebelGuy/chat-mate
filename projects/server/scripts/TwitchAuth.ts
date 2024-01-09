@@ -8,6 +8,7 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { Dependencies } from '@rebel/shared/context/context'
 import { AccessToken } from '@twurple/auth/lib'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 
 // stolen from the masterchat auth fetcher, modified according to https://twurple.js.org/docs/examples/chat/basic-bot.html
@@ -15,7 +16,7 @@ import { AccessToken } from '@twurple/auth/lib'
 const REDIRECT_URI = 'http://localhost'
 
 if (REDIRECT_URI == null || TWITCH_CLIENT_ID == null || TWITCH_CLIENT_SECRET == null) {
-  throw new Error('Invalid env variables')
+  throw new ChatMateError('Invalid env variables')
 }
 
 

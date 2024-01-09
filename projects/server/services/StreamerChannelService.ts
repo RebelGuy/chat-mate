@@ -8,7 +8,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { nonNull, single } from '@rebel/shared/util/arrays'
-import { ForbiddenError } from '@rebel/shared/util/error'
+import { ChatMateError, ForbiddenError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type TwitchStreamerChannel = {
@@ -97,7 +97,7 @@ export default class StreamerChannelService extends ContextClass {
       this.livestreamStore.getCurrentTwitchLivestream(streamerId)
     ])
     if (youtubeLivestream != null || twitchLivestream != null) {
-      throw new Error('Cannot set the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
+      throw new ChatMateError('Cannot set the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
     const streamer = await this.streamerStore.getStreamerById(streamerId)
@@ -130,7 +130,7 @@ export default class StreamerChannelService extends ContextClass {
       this.livestreamStore.getCurrentTwitchLivestream(streamerId)
     ])
     if (youtubeLivestream != null || twitchLivestream != null) {
-      throw new Error('Cannot unset the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
+      throw new ChatMateError('Cannot unset the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
     let userChannel: UserChannel | null

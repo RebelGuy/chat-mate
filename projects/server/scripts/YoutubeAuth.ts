@@ -4,6 +4,7 @@ import DbProvider from '@rebel/server/providers/DbProvider'
 import { CHANNEL_ID, DB } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { app, BrowserWindow } from 'electron'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 const isSingleInstance = app.requestSingleInstanceLock()
 
@@ -84,17 +85,17 @@ async function createWindow () {
             })
         `)
         if (channelUrl == null) {
-          throw new Error('ChannelUrl was null')
+          throw new ChatMateError('ChannelUrl was null')
         }
 
         channelId = channelUrl.split('/').at(-1)
         if (channelId.length !== 24) {
-          throw new Error(`Invalid channelId: ${channelId} (from URL ${channelUrl})`)
+          throw new ChatMateError(`Invalid channelId: ${channelId} (from URL ${channelUrl})`)
         }
         console.log(`Successfully retrieved channel ID ${channelId} from the Youtube page.`)
 
         if (channelId !== CHANNEL_ID) {
-          throw new Error(`Expected a channel ID of ${CHANNEL_ID}. Please ensure you are logged into the correct YouTube account.`)
+          throw new ChatMateError(`Expected a channel ID of ${CHANNEL_ID}. Please ensure you are logged into the correct YouTube account.`)
         }
       } catch (ex: any) {
         console.error('Failed to complete YouTube auth.', ex)

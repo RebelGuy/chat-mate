@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { sortBy } from '@rebel/shared/util/arrays'
-import { UsernameAlreadyExistsError } from '@rebel/shared/util/error'
+import { DbError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { hashString } from '@rebel/shared/util/strings'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { expectObject, nameof } from '@rebel/shared/testUtils'
@@ -144,7 +144,7 @@ export default () => {
     })
 
     test('Throws if the user does not exist', async () => {
-      await expect(() => accountStore.createLoginToken('test')).rejects.toThrow()
+      await expect(() => accountStore.createLoginToken('test')).rejects.toThrowError(DbError)
     })
   })
 

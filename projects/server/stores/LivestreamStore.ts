@@ -5,6 +5,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
 import { assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import { single } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export type YoutubeLivestreamParticipation = YoutubeLivestream & { participated: boolean }
 
@@ -27,7 +28,7 @@ export default class LivestreamStore extends ContextClass {
   public async addNewTwitchLivestream (streamerId: number): Promise<TwitchLivestream> {
     const currentLivestream = await this.getCurrentTwitchLivestream(streamerId)
     if (currentLivestream != null) {
-      throw new Error(`Cannot add a new Twitch livestream for streamer ${streamerId} because a current livestream already exists`)
+      throw new ChatMateError(`Cannot add a new Twitch livestream for streamer ${streamerId} because a current livestream already exists`)
     }
 
     return await this.db.twitchLivestream.create({ data: {
@@ -139,7 +140,7 @@ export default class LivestreamStore extends ContextClass {
       if (activeLivestream.liveId === liveId) {
         return activeLivestream
       } else {
-        throw new Error(`Cannot set an active livestream for streamer ${streamerId} while another livestream is already active. Please ensure you deactivate the existing livestream first.`)
+        throw new ChatMateError(`Cannot set an active livestream for streamer ${streamerId} while another livestream is already active. Please ensure you deactivate the existing livestream first.`)
       }
     }
 

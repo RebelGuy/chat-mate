@@ -3,6 +3,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { DbError } from '@rebel/shared/util/error'
 
 export default () => {
   const username1 = 'username1'
@@ -160,7 +161,7 @@ export default () => {
         youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, globalInfoHistory: { create: createYoutubeInfoHistory() }}}
       }})
 
-      await expect(() => streamerChannelStore.setStreamerYoutubeChannelLink(2, 1)).rejects.toThrow()
+      await expect(() => streamerChannelStore.setStreamerYoutubeChannelLink(2, 1)).rejects.toThrowError(DbError)
     })
   })
 
@@ -191,7 +192,7 @@ export default () => {
         twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, globalInfoHistory: { create: createTwitchInfoHistory() }}}
       }})
 
-      await expect(() => streamerChannelStore.setStreamerTwitchChannelLink(2, 1)).rejects.toThrow()
+      await expect(() => streamerChannelStore.setStreamerTwitchChannelLink(2, 1)).rejects.toThrowError(DbError)
     })
   })
 }

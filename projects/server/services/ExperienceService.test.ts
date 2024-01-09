@@ -23,6 +23,7 @@ import UserService from '@rebel/server/services/UserService'
 import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'
 import AggregateLivestreamService, { AggregateLivestreamParticipation } from '@rebel/server/services/AggregateLivestreamService'
 import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -389,7 +390,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     const primaryUserId = 5
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => experienceService.modifyExperience(primaryUserId, 1, 1, 1, '')).rejects.toThrow()
+    await expect(() => experienceService.modifyExperience(primaryUserId, 1, 1, 1, '')).rejects.toThrowError(ChatMateError)
   })
 })
 

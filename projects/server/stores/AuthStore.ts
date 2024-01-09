@@ -4,6 +4,7 @@ import DbProvider from '@rebel/server/providers/DbProvider'
 import { AccessToken } from '@twurple/auth'
 import { YoutubeAuth } from '@prisma/client'
 import { New } from '@rebel/server/models/entities'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -73,7 +74,7 @@ export default class AuthStore extends ContextClass {
     }
 
     if (twitchUserId == null && twitchUsername == null) {
-      throw new Error('Must provide a Twitch user ID or username when saving an access token')
+      throw new ChatMateError('Must provide a Twitch user ID or username when saving an access token')
     }
 
     const existingToken = await this.dbProvider.get().twitchAuth.findFirst({
@@ -81,7 +82,7 @@ export default class AuthStore extends ContextClass {
     })
     if (existingToken == null) {
       if (twitchUsername == null) {
-        throw new Error('Must provide a Twitch username when creating a new access token')
+        throw new ChatMateError('Must provide a Twitch username when creating a new access token')
       }
 
       await this.dbProvider.get().twitchAuth.create({ data: { twitchUsername, twitchUserId, ...tokenData }})

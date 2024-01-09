@@ -1,3 +1,4 @@
+import { ChatMateError } from '@rebel/shared/util/error'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 
 // beautiful use of the template literal type!
@@ -6,7 +7,7 @@ function getEnvironmentVariable (environmentVariable: `REACT_APP_${string}`, opt
 function getEnvironmentVariable (environmentVariable: `REACT_APP_${string}`, optional?: boolean): string | null {
   const value = process.env[environmentVariable]
   if (!optional && isNullOrEmpty(value)) {
-    throw new Error(`Environment variable ${environmentVariable} is required but was not found.`)
+    throw new ChatMateError(`Environment variable ${environmentVariable} is required but was not found.`)
   } else {
     return value ?? null
   }

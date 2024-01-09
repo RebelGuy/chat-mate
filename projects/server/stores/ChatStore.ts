@@ -3,7 +3,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
-import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { reverse } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
@@ -76,7 +76,7 @@ export default class ChatStore extends ContextClass {
           include: { chatMessageParts: true }
         })
       } catch (e: any) {
-        if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        if (isKnownPrismaError(e) && e.innerError.code === 'P2002') {
           return null
         } else {
           throw e

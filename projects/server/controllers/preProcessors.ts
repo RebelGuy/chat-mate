@@ -1,7 +1,7 @@
 import { RankName } from '@prisma/client'
 import { getContextProvider } from '@rebel/shared/context/context'
 import ApiService from '@rebel/server/controllers/ApiService'
-import { PreProcessorError } from '@rebel/shared/util/error'
+import { ChatMateError, PreProcessorError } from '@rebel/shared/util/error'
 import { toCamelCase } from '@rebel/shared/util/text'
 import { Request, Response } from 'express'
 
@@ -47,7 +47,7 @@ async function preProcessorWrapper (req: Request, res: Response | undefined, han
     await handler(apiService)
   } catch (e: any) {
     if (res == null) {
-      throw new Error('Unable to send response because the response object was undefined.')
+      throw new ChatMateError('Unable to send response because the response object was undefined.')
     }
 
     if (e instanceof PreProcessorError) {

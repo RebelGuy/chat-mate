@@ -9,7 +9,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
 import { YoutubeChannelGlobalInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelGlobalInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
-import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
+import { DbError, ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
 
 const youtube1UserId = 1
@@ -686,7 +686,7 @@ export default () => {
     })
 
     test('Throws if the user has not posted a message in the given streamer', async () => {
-      await expect(() => chatStore.getTimeOfFirstChat(streamer1, [user3])).rejects.toThrow()
+      await expect(() => chatStore.getTimeOfFirstChat(streamer1, [user3])).rejects.toThrowError(ChatMessageForStreamerNotFoundError)
     })
   })
 
@@ -839,7 +839,7 @@ export default () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      await expect(() => chatStore.getChatById(2)).rejects.toThrow()
+      await expect(() => chatStore.getChatById(2)).rejects.toThrowError(DbError)
     })
   })
 

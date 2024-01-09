@@ -15,7 +15,7 @@ import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/Stre
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { addTime } from '@rebel/shared/util/datetime'
-import { LinkAttemptInProgressError } from '@rebel/shared/util/error'
+import { ChatMateError, LinkAttemptInProgressError } from '@rebel/shared/util/error'
 import { cast, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
@@ -123,7 +123,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     mockLinkStore.startLinkAttempt.calledWith(defaultUserId, aggregateUserId).mockResolvedValue(linkAttemptId)
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
 
-    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId, 'token')).rejects.toThrow()
+    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId, 'token')).rejects.toThrowError(ChatMateError)
 
     expect(single(mockLinkStore.linkUser.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single2(mockLinkStore.unlinkUser.mock.calls)).toEqual(defaultUserId)
@@ -268,9 +268,9 @@ describe(nameof(LinkService, 'linkUser'), () => {
 
     mockLinkStore.startLinkAttempt.calledWith(defaultUserId, aggregateUserId).mockResolvedValue(linkAttemptId)
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
-    mockRankService.mergeRanks.calledWith(defaultUserId, aggregateUserId, expect.anything(), expect.any(String)).mockRejectedValue(new Error())
+    mockRankService.mergeRanks.calledWith(defaultUserId, aggregateUserId, expect.anything(), expect.any(String)).mockRejectedValue(new ChatMateError())
 
-    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId, 'token')).rejects.toThrow()
+    await expect(() => linkService.linkUser(defaultUserId, aggregateUserId, 'token')).rejects.toThrowError(ChatMateError)
 
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), expect.any(String)])
     expect(single(mockLinkStore.unlinkUser.mock.calls)).toEqual([defaultUserId])
@@ -358,9 +358,9 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     mockAccountStore.getRegisteredUsers.calledWith(expect.arrayContaining([defaultUserId])).mockResolvedValue(cast<RegisteredUserResult[]>([{ registeredUser: null }]))
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([aggregateUserId])).mockResolvedValue([{ queriedAnyUserId: defaultUserId, connectedChatUserIds: connectedUserIds }])
     mockLinkStore.unlinkUser.calledWith(defaultUserId).mockResolvedValue(aggregateUserId)
-    mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean), expect.anything()).mockRejectedValue(new Error())
+    mockRankService.transferRanks.calledWith(aggregateUserId, defaultUserId, expect.anything(), expect.any(Boolean), expect.anything()).mockRejectedValue(new ChatMateError())
 
-    await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })).rejects.toThrow()
+    await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: true, transferRanks: true, relinkDonations: true })).rejects.toThrowError(ChatMateError)
 
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), expect.any(String)])
   })
@@ -395,7 +395,7 @@ describe(nameof(LinkService, 'unlinkUser'), () => {
     mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue(cast<Streamer>({ id: streamerId }))
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expect.arrayContaining([streamerId])).mockResolvedValue([primaryChannels])
 
-    await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false, relinkDonations: false })).rejects.toThrow()
+    await expect(() => linkService.unlinkUser(defaultUserId, { relinkChatExperience: false, transferRanks: false, relinkDonations: false })).rejects.toThrowError(ChatMateError)
 
     expect(mockLinkStore.unlinkUser.mock.calls.length).toBe(0)
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([linkAttemptId, expect.anything(), expect.any(String)])

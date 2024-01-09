@@ -8,6 +8,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ObjectComparator } from '@rebel/shared/types'
 import { assertUnreachable, compare } from '@rebel/shared/util/typescript'
 import { SafeExtract } from '@rebel/api-models/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export type CreateOrUpdateGlobalYoutubeChannelArgs = Omit<New<YoutubeChannelGlobalInfo>, 'channelId'>
 export type CreateOrUpdateGlobalTwitchChannelArgs = Omit<New<TwitchChannelGlobalInfo>, 'channelId'>
@@ -183,7 +184,7 @@ export default class ChannelStore extends ContextClass {
     return twitchChannelIds.map<UserChannel>(channelId => {
       const channel = channels.find(c => c.id === channelId)
       if (channel == null) {
-        throw new Error(`Unable to find TwitchChannel with id ${channelId}`)
+        throw new ChatMateError(`Unable to find TwitchChannel with id ${channelId}`)
       }
 
       return {
@@ -208,7 +209,7 @@ export default class ChannelStore extends ContextClass {
     return youtubeChannelIds.map<UserChannel>(channelId => {
       const channel = channels.find(c => c.id === channelId)
       if (channel == null) {
-        throw new Error(`Unable to find YoutubeChannel with id ${channelId}`)
+        throw new ChatMateError(`Unable to find YoutubeChannel with id ${channelId}`)
       }
 
       return {
@@ -271,7 +272,7 @@ export default class ChannelStore extends ContextClass {
       return await this.getPrimaryUserIdForUser(twitchChannel.userId)
     }
 
-    throw new Error('Cannot find user with external id ' + externalId)
+    throw new ChatMateError('Cannot find user with external id ' + externalId)
   }
 
   /** Returns the ordered channels associated with the chat user.
@@ -291,7 +292,7 @@ export default class ChannelStore extends ContextClass {
     return anyUserIds.map(id => {
       const channels = userOwnedChannels.find(c => c.userId === id)
       if (channels == null) {
-        throw new Error(`Could not find connected channels for user ${id}`)
+        throw new ChatMateError(`Could not find connected channels for user ${id}`)
       } else {
         return channels
       }
@@ -316,7 +317,7 @@ export default class ChannelStore extends ContextClass {
     return defaultUserIds.map<UserOwnedChannels>(id => {
       const result = results.find(r => r.id === id)
       if (result == null) {
-        throw new Error(`Could not find default user ${id}`)
+        throw new ChatMateError(`Could not find default user ${id}`)
       }
 
       return {

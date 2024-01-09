@@ -3,9 +3,9 @@ import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
-import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db, isKnownPrismaError, isNotFoundPrismaError, isUnknownPrismaError } from '@rebel/server/providers/DbProvider'
 import { group, toObject, unique } from '@rebel/shared/util/arrays'
-import { NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
+import { ChatMateError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 import { IgnoreOptions } from '@rebel/server/services/rank/PunishmentService'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 
@@ -169,7 +169,7 @@ export default class RankStore extends ContextClass {
 
     } catch (e: any) {
       // annoyingly we don't have access to the inner server object, as it is only included in serialised form in the message directly
-      if (e instanceof PrismaClientUnknownRequestError && e.message.includes('DUPLICATE_RANK')) {
+      if (isUnknownPrismaError(e) && e.innerError.message.includes('DUPLICATE_RANK')) {
         throw new UserRankAlreadyExistsError(`The '${args.rank}' rank is already active for chat user ${args.primaryUserId}.`)
       }
 
@@ -238,7 +238,7 @@ export default class RankStore extends ContextClass {
     return rankEvents.map(event => {
       const data: RankEventData | null = event.serialisedData == null ? null : JSON.parse(event.serialisedData)
       if (data != null && data.version !== 1) {
-        throw new Error(`Invalid rank event data version ${data.version}. Expected 1.`)
+        throw new ChatMateError(`Invalid rank event data version ${data.version}. Expected 1.`)
       }
 
       return {
@@ -377,7 +377,7 @@ export default class RankStore extends ContextClass {
         select: { id: true }
       })
     } catch (e: any) {
-      if (e.name === 'NotFoundError') {
+      if (isNotFoundPrismaError(e)) {
         throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for chat user ${args.primaryUserId} in the context of streamer ${args.streamerId}.`)
       }
 
@@ -411,7 +411,7 @@ export default class RankStore extends ContextClass {
       return rawDataToUserRankWithRelations(result)
     } catch (e: any) {
       // https://www.prisma.io/docs/reference/api-reference/error-reference#p2025
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+      if (isKnownPrismaError(e) && e.innerError.code === 'P2025') {
         throw new UserRankNotFoundError(`Could not update expiration for rank ${rankId} because it does not exist.`)
       }
 

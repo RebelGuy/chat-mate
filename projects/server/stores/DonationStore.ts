@@ -5,7 +5,7 @@ import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/server/stores/ChatStore'
 import { single } from '@rebel/shared/util/arrays'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, NotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, NotFoundError } from '@rebel/shared/util/error'
 
 export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
   messageParts: ChatItemWithRelations['chatMessageParts']
@@ -86,7 +86,7 @@ export default class DonationStore extends ContextClass {
     })
 
     if (result.count !== 1) {
-      throw new Error(`Could not delete donation ${donationId} because it doesn't exist.`)
+      throw new ChatMateError(`Could not delete donation ${donationId} because it doesn't exist.`)
     }
   }
 
@@ -225,7 +225,8 @@ export default class DonationStore extends ContextClass {
   // and link the ChatMate user to that link identifier instead.
 
   /** Links the user to the donation. It is the responsibility of the caller to ensure the correct primary user is used.
-   * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
+   * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation.
+   * @throws {@link NotFoundError}: When the donation could not be found. */
   public async linkUserToDonation (streamerId: number, donationId: number, primaryUserId: number, linkedAt: Date): Promise<void> {
     const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
 
@@ -249,7 +250,7 @@ export default class DonationStore extends ContextClass {
     })
 
     if (result.count !== 1) {
-      throw new Error(`Could not refund donation ${donationId}. Either it doesn't exist or it has already been refunded.`)
+      throw new ChatMateError(`Could not refund donation ${donationId}. Either it doesn't exist or it has already been refunded.`)
     }
   }
 
@@ -272,7 +273,7 @@ export default class DonationStore extends ContextClass {
       if (existingEntry != null && existingEntry.token === streamlabsSocketToken) {
         return false
       } else if (existingEntry != null && existingEntry.token !== streamlabsSocketToken) {
-        throw new Error('An existing token is already active. Please first deactivate the active token, then set the new one.')
+        throw new ChatMateError('An existing token is already active. Please first deactivate the active token, then set the new one.')
       } else {
         await this.db.streamlabsSocketToken.upsert({
           create: { streamerId, token: streamlabsSocketToken },
@@ -304,7 +305,8 @@ export default class DonationStore extends ContextClass {
   }
 
   /** Returns the primaryUserId that was unlinked.
-   * @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation. */
+   * @throws {@link DonationUserLinkNotFoundError}: When a link does not exist for the donation.
+   * @throws {@link NotFoundError}: When a donation cannot be found. */
   public async unlinkUserFromDonation (streamerId: number, donationId: number): Promise<number> {
     const linkIdentifier = await this.getLinkIdentifier(streamerId, donationId)
 

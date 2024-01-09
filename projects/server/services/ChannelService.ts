@@ -6,6 +6,7 @@ import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelW
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 /** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
 export const LIVESTREAM_PARTICIPATION_TYPES = 'chatParticipation' as const
@@ -87,7 +88,7 @@ export default class ChannelService extends ContextClass {
           }
         }
       } else {
-        throw new Error('Cannot get active channel for user because the latest chat item has no channel attached to it')
+        throw new ChatMateError('Cannot get active channel for user because the latest chat item has no channel attached to it')
       }
     })
   }

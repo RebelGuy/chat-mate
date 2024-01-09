@@ -6,6 +6,7 @@ import AccountService from '@rebel/server/services/AccountService'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
 import { single } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 type SearchResult = {
   searchTerm: string,
@@ -43,7 +44,7 @@ export default class EmojiService extends ContextClass {
   private applyEligibleEmojis (part: PartialChatMessage, eligibleEmojis: CurrentCustomEmoji[]): PartialChatMessage[] {
     if (part.type === 'customEmoji') {
       // this should never happen
-      throw new Error('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
+      throw new ChatMateError('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
     }
 
     // ok I don't know what the proper way to do this is, but typing `:troll:` in YT will convert the message
@@ -83,7 +84,7 @@ export default class EmojiService extends ContextClass {
     let result: PartialChatMessage[] = []
     for (const searchResult of searchResults) {
       if (remainderText == null) {
-        throw new Error('The remainder text was null')
+        throw new ChatMateError('The remainder text was null')
       }
       const indexShift = remainderText.text.length - part.text.length
       const [leading, removed, trailing] = removeRangeFromText(remainderText, searchResult.startIndex + indexShift, searchResult.searchTerm.length)
@@ -118,7 +119,7 @@ export default class EmojiService extends ContextClass {
     for (let i = 0; i < text.length; i++) {
       for (let j = 0; j < searchTerms.length; j++) {
         const term = searchTerms[j].toLowerCase()
-        if (text.substring(i, i + term.length) == term) {
+        if (text.substring(i, i + term.length) === term) {
           results.push({ startIndex: i, searchTerm: searchTerms[j] })
 
           // the next outer loop iteration should start after this match.

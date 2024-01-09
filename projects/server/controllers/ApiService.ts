@@ -10,7 +10,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single, unique, zipOnStrictMany } from '@rebel/shared/util/arrays'
-import { PreProcessorError } from '@rebel/shared/util/error'
+import { ChatMateError, PreProcessorError } from '@rebel/shared/util/error'
 import { Request, Response } from 'express'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { AllUserData } from '@rebel/server/models/user'
@@ -123,7 +123,7 @@ export default class ApiService extends ContextClass {
 
     const user = this.registeredUser
     if (user == null) {
-      throw new Error('Context user must be set')
+      throw new ChatMateError('Context user must be set')
     }
 
     const userRanks = single(await this.rankStore.getUserRanks([user.aggregateChatUserId], this.streamerId))
@@ -134,7 +134,7 @@ export default class ApiService extends ContextClass {
   public getCurrentUser (optional: true): RegisteredUser | null
   public getCurrentUser (optional?: boolean): RegisteredUser | null {
     if (!optional && this.registeredUser == null) {
-      throw new Error('Current user is required but null - ensure you are using the `requireAuth` pre-processor.')
+      throw new ChatMateError('Current user is required but null - ensure you are using the `requireAuth` pre-processor.')
     }
 
     return this.registeredUser
@@ -144,7 +144,7 @@ export default class ApiService extends ContextClass {
   public getStreamerId (optional: true): number | null
   public getStreamerId (optional?: boolean): number | null {
     if (!optional && this.streamerId == null) {
-      throw new Error('StreamerId is required but null - ensure you are using the `requireStreamer` pre-processor.')
+      throw new ChatMateError('StreamerId is required but null - ensure you are using the `requireStreamer` pre-processor.')
     }
 
     return this.streamerId
@@ -192,7 +192,7 @@ export default class ApiService extends ContextClass {
       return zipOnStrictMany(activeUserChannels, 'primaryUserId', levels, ranks, registeredUsers, firstSeen, customRankNames)
     } catch (e: any) {
       this.logService.logError(this, `Failed to get all data for primaryUserIds [${primaryUserIds.join(', ')}]. Most likely one or more of the ids were not primary (leading to duplicate effective primary user ids) or a link/unlink was not successful such that fetching data for a (probably default) primary user returned data for another (proabbly aggregate) primary user.`, e)
-      throw new Error('Unable to get all data.')
+      throw new ChatMateError('Unable to get all data.')
     }
   }
 

@@ -6,7 +6,7 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import { firstOrDefault } from '@rebel/shared/util/typescript'
 import ApiService from '@rebel/server/services/abstract/ApiService'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
+import { ChatMateError, NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
 export type ChatMateModeratorStatus = {
@@ -53,7 +53,7 @@ export default class MasterchatService extends ApiService {
 
   public addMasterchat (streamerId: number, liveId: string) {
     if (this.wrappedMasterchats.has(streamerId)) {
-      throw new Error(`Cannot add masterchat instance for streamer ${streamerId} and liveId ${liveId} because one already exists with liveId ${liveId}`)
+      throw new ChatMateError(`Cannot add masterchat instance for streamer ${streamerId} and liveId ${liveId} because one already exists with liveId ${liveId}`)
     }
 
     const newMasterchat = this.createWrapper(streamerId, liveId, this.masterchatFactory.create(liveId))
@@ -82,6 +82,10 @@ export default class MasterchatService extends ApiService {
 
   // the second argument is not optional to avoid bugs where `fetch(continuationToken)` is erroneously called.
   public async fetch (streamerId: number, continuationToken: string | undefined): Promise<ChatResponse> {
+    if (!this.wrappedMasterchats.has(streamerId)) {
+      throw new ChatMateError(`No Masterchat instance exists for streamer ${streamerId}`)
+    }
+
     // this quirky code is required for typescript to recognise which overloaded `fetch` method we are using
     if (continuationToken == null) {
       return await this.wrappedMasterchats.get(streamerId)!.fetch()
@@ -91,6 +95,10 @@ export default class MasterchatService extends ApiService {
   }
 
   public async fetchMetadata (streamerId: number): Promise<Metadata> {
+    if (!this.wrappedMasterchats.has(streamerId)) {
+      throw new ChatMateError(`No Masterchat instance exists for streamer ${streamerId}`)
+    }
+
     return await this.wrappedMasterchats.get(streamerId)!.fetchMetadata()
   }
 
@@ -135,7 +143,7 @@ export default class MasterchatService extends ApiService {
    * was not included in the latest chat item's context menu. */
   public async banYoutubeChannel (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
     if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
     }
 
     // only returns null if the action is not available in the context menu, e.g. if the user is already banned
@@ -149,7 +157,7 @@ export default class MasterchatService extends ApiService {
    * option was not included in the latest chat item's context menu. */
   public async timeout (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
     if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
     }
 
     const result = await this.wrappedMasterchats.get(streamerId)!.timeout(contextMenuEndpointParams)
@@ -160,7 +168,7 @@ export default class MasterchatService extends ApiService {
    * was not included in the latest chat item's context menu. */
   public async unbanYoutubeChannel (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
     if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
     }
 
     const result = await this.wrappedMasterchats.get(streamerId)!.unhide(contextMenuEndpointParams)
@@ -171,7 +179,7 @@ export default class MasterchatService extends ApiService {
    * was not included in the latest chat item's context menu. */
   public async mod (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
     if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
     }
 
     const result = await this.wrappedMasterchats.get(streamerId)!.addModerator(contextMenuEndpointParams)
@@ -182,7 +190,7 @@ export default class MasterchatService extends ApiService {
    * was not included in the latest chat item's context menu. */
   public async unmod (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
     if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new Error(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
+      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
     }
 
     const result = await this.wrappedMasterchats.get(streamerId)!.removeModerator(contextMenuEndpointParams)

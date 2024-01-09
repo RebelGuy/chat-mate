@@ -5,6 +5,7 @@ import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectObject, nameof } from '@rebel/shared/testUtils'
 import * as data from '@rebel/server/_test/testData'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export default () => {
   let genericStore: GenericStore
@@ -25,20 +26,20 @@ export default () => {
     test('Throws if updating the same entry multiple times', async () => {
       const replacementData: ReplacementData<'chatUser'>[] = [{ id: 1 }, { id: 2 }, { id: 2 }]
 
-      await expect(() => genericStore.replaceMany('chatUser', replacementData)).rejects.toThrow()
+      await expect(() => genericStore.replaceMany('chatUser', replacementData)).rejects.toThrowError(ChatMateError)
     })
 
     test('Throws if not all data entries have the exact same keys', async () => {
       const replacementData: ReplacementData<'chatUser'>[] = [{ id: 1, aggregateChatUserId: 1, linkedAt: new Date() }, { id: 2 }, { id: 3 }]
 
-      await expect(() => genericStore.replaceMany('chatUser', replacementData)).rejects.toThrow()
+      await expect(() => genericStore.replaceMany('chatUser', replacementData)).rejects.toThrowError(ChatMateError)
     })
 
     test('Throws without modifications if replacement data included a non-existent entry', async () => {
       await db.chatUser.createMany({ data: [{}, {}]})
       const replacementData: ReplacementData<'chatUser'>[] = [{ id: 1, aggregateChatUserId: 1, linkedAt: new Date() }, { id: 3 }]
 
-      await expect(() => genericStore.replaceMany('chatUser', replacementData)).rejects.toThrow()
+      await expect(() => genericStore.replaceMany('chatUser', replacementData)).rejects.toThrowError(ChatMateError)
 
       await expectRowCount(db.chatUser).toBe(2)
       expect(await db.chatUser.findFirst()).toEqual<ChatUser>({ id: 1, aggregateChatUserId: null, linkedAt: null })

@@ -1,7 +1,7 @@
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import { NormalisedCommand } from '@rebel/server/services/command/CommandService'
-import { InvalidCommandArgumentsError } from '@rebel/shared/util/error'
+import { ChatMateError, InvalidCommandArgumentsError } from '@rebel/shared/util/error'
 
 export default class CommandHelpers extends ContextClass {
   /** Returns null if the chat message is not command. */
@@ -30,7 +30,7 @@ export default class CommandHelpers extends ContextClass {
     const flattened = messageParts.map(p => p.text!.text).join().trim()
     const stringParts = flattened.split(' ').filter(p => p.length > 0)
     if (!stringParts[0].startsWith('!')) {
-      throw new Error('Invalid command format - must start with `!`')
+      throw new ChatMateError('Invalid command format - must start with `!`')
     }
 
     return stringParts.slice(1)

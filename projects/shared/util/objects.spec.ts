@@ -1,9 +1,10 @@
 import * as objects from '@rebel/shared/util/objects'
 import { NO_OP } from '@rebel/shared/util/typescript'
 import { Primitive } from '@rebel/shared/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 describe(objects.transformPrimitiveValues, () => {
-  const EXPECT_UNUSED = (key: any, value: any) => { throw new Error(`Did not expect this function to get called for ${key}: ${value}.` )}
+  const EXPECT_UNUSED = (key: any, value: any) => { throw new ChatMateError(`Did not expect this function to get called for ${key}: ${value}.` )}
 
   test('Returns empty object if an empty object is passed in', () => {
     const input = {}
@@ -33,7 +34,7 @@ describe(objects.transformPrimitiveValues, () => {
       } else if (key === 'e' && typeof value === 'string') {
         return ''
       } else {
-        throw new Error('Unexpected object type')
+        throw new ChatMateError('Unexpected object type')
       }
     }
 
@@ -56,7 +57,7 @@ describe(objects.transformPrimitiveValues, () => {
       } else if (key === 'e' && typeof value === 'string') {
         return ''
       } else {
-        throw new Error('Unexpected object type')
+        throw new ChatMateError('Unexpected object type')
       }
     }
 
@@ -75,7 +76,7 @@ describe(objects.transformPrimitiveValues, () => {
       } else if (key === 'd' && value === 'y') {
         return 5
       } else {
-        throw new Error('Unexpected object type')
+        throw new ChatMateError('Unexpected object type')
       }
     }
 

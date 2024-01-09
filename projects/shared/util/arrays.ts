@@ -1,4 +1,5 @@
 import { GenericObject, NumberOnly, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 // uses default equality comparison
@@ -27,7 +28,7 @@ export function single<T> (array: T[]): T {
   if (array.length === 1) {
     return array[0]
   } else {
-    throw new Error(`Expected 1 element in the array but found ${array.length}`)
+    throw new ChatMateError(`Expected 1 element in the array but found ${array.length}`)
   }
 }
 
@@ -41,13 +42,13 @@ export function singleOrNull<T> (array: T[]): T | null {
   } else if (array.length === 1) {
     return array[0]
   } else {
-    throw new Error(`Expected 0 or 1 elements in the array but found ${array.length}`)
+    throw new ChatMateError(`Expected 0 or 1 elements in the array but found ${array.length}`)
   }
 }
 
 export function first<T> (array: T[]): T {
   if (array.length < 1) {
-    throw new Error(`Expected at least 1 element in the array but found none`)
+    throw new ChatMateError(`Expected at least 1 element in the array but found none`)
   } else {
     return array[0]
   }
@@ -82,7 +83,7 @@ export function sortBy<T extends GenericObject> (array: T[], selector: keyof T |
     } else if (typeof x === 'string' && typeof y === 'string') {
       diff = x.localeCompare(y)
     } else {
-      throw new Error('Unexpected type')
+      throw new ChatMateError('Unexpected type')
     }
     return direction === 'asc' ? diff : -diff
   })
@@ -90,7 +91,7 @@ export function sortBy<T extends GenericObject> (array: T[], selector: keyof T |
 
 export function zip<T extends GenericObject, U extends GenericObject> (first: T[], second: U[]): (T & U)[] {
   if (first.length !== second.length) {
-    throw new Error('Cannot zip arrays with different lengths')
+    throw new ChatMateError('Cannot zip arrays with different lengths')
   }
 
   return first.map((a, i) => ({ ...a, ...second[i] }))
@@ -107,7 +108,7 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
   for (const x of first) {
     const k = x[key]
     if (firstMap.has(k)) {
-      throw new Error('The key should be unique within the first array')
+      throw new ChatMateError('The key should be unique within the first array')
     } else {
       const copy = { ...x }
       delete copy[key]
@@ -118,7 +119,7 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
   for (const y of second) {
     const k = y[key]
     if (secondMap.has(k)) {
-      throw new Error('The key should be unique within the second array')
+      throw new ChatMateError('The key should be unique within the second array')
     } else {
       const copy = { ...y }
       delete copy[key]
@@ -159,24 +160,24 @@ export function zipOnStrict<T extends GenericObject, U extends GenericObject, Ke
   }
 
   if (firstArray.length !== secondArray.length) {
-    throw new Error('Cannot strict-zip arrays with different lengths')
+    throw new ChatMateError('Cannot strict-zip arrays with different lengths')
   }
 
   const firstKeys = unique(firstArray.map(x => x[firstKey]))
   const secondKeys = unique(secondArray.map(y => y[secondKey!]))
   if (firstKeys.length !== secondKeys.length || firstKeys.length !== firstArray.length) {
-    throw new Error('Cannot strict-zip arrays with non-unique keys')
+    throw new ChatMateError('Cannot strict-zip arrays with non-unique keys')
   }
 
   if (firstKeys.find(x => x == null) || secondKeys.find(y => y == null)) {
-    throw new Error('Cannot strict-zip arrays when at least one element is null')
+    throw new ChatMateError('Cannot strict-zip arrays when at least one element is null')
   }
 
   // since keys are unique, and since both sets of keys should be exactly overlapping,
   // the grouped values should be the exact same set
   const groupedKeys = groupedSingle([...firstKeys, ...secondKeys], x => x)
   if (firstKeys.length !== groupedKeys.length) {
-    throw new Error('Cannot strict-zip arrays with differing keys')
+    throw new ChatMateError('Cannot strict-zip arrays with differing keys')
   }
 
   const result = firstArray.map(x => {
@@ -212,7 +213,7 @@ export function zipOnStrictMany<
     try {
       result = zipOnStrict(result, arrays[i] as any, key as any)
     } catch (e: any) {
-      throw new Error(`Unable to zip additional array at index ${i} onto the existing result: ${e.message}`)
+      throw new ChatMateError(`Unable to zip additional array at index ${i} onto the existing result: ${e.message}`)
     }
   }
   return result

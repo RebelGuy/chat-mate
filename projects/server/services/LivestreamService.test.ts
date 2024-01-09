@@ -17,6 +17,7 @@ import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
 import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -421,7 +422,7 @@ describe(nameof(LivestreamService, 'setActiveYoutubeLivestream'), () => {
     const testLiveId = 'testLiveId'
     mockStreamerChannelService.getYoutubeExternalId.calledWith(streamerId).mockResolvedValue(null)
 
-    await expect(() => livestreamService.setActiveYoutubeLivestream(streamerId, testLiveId)).rejects.toThrow()
+    await expect(() => livestreamService.setActiveYoutubeLivestream(streamerId, testLiveId)).rejects.toThrowError(ChatMateError)
 
     expect(mockLivestreamStore.setActiveYoutubeLivestream.mock.calls.length).toEqual(0)
     expect(mockMasterchatService.addMasterchat.mock.calls.length).toEqual(0)
@@ -434,7 +435,7 @@ describe(nameof(LivestreamService, 'setActiveYoutubeLivestream'), () => {
     mockStreamerChannelService.getYoutubeExternalId.calledWith(streamerId).mockResolvedValue(youtubeId1)
     mockMasterchatService.getChannelIdFromAnyLiveId.calledWith(testLiveId).mockResolvedValue(youtubeId2)
 
-    await expect(() => livestreamService.setActiveYoutubeLivestream(streamerId, testLiveId)).rejects.toThrow()
+    await expect(() => livestreamService.setActiveYoutubeLivestream(streamerId, testLiveId)).rejects.toThrowError(ChatMateError)
 
     expect(mockLivestreamStore.setActiveYoutubeLivestream.mock.calls.length).toEqual(0)
     expect(mockMasterchatService.addMasterchat.mock.calls.length).toEqual(0)
@@ -485,6 +486,6 @@ describe(nameof(LivestreamService, 'onTwitchLivestreamEnded'), () => {
   })
 
   test('Throws if there is no current Twitch livestream', async () => {
-    await expect(() => livestreamService.onTwitchLivestreamEnded(streamerId)).rejects.toThrowError()
+    await expect(() => livestreamService.onTwitchLivestreamEnded(streamerId)).rejects.toThrowError(ChatMateError)
   })
 })

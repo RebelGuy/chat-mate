@@ -12,7 +12,7 @@ import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { intersection, nonNull, single, symmetricDifference, unique } from '@rebel/shared/util/arrays'
-import { ChatMessageForStreamerNotFoundError, LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
+import { ChatMateError, ChatMessageForStreamerNotFoundError, LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
 import { asGte, asLte } from '@rebel/shared/util/math'
 import { sleep } from '@rebel/shared/util/node'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
@@ -194,7 +194,7 @@ export default class UserController extends ControllerBase {
       const registeredUser = await this.accountStore.getRegisteredUsers([admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId]).then(single)
 
       if (registeredUser == null) {
-        throw new Error('Expected registered user for aggregate user to be defined.')
+        throw new ChatMateError('Expected registered user for aggregate user to be defined.')
       }
 
       return builder.success({
@@ -283,7 +283,7 @@ export default class UserController extends ControllerBase {
         items: history.map<PublicLinkHistoryItem>(h => {
           const userOwnedChannels = channels.find(c => c.userId === h.defaultUserId)!
           if (userOwnedChannels.youtubeChannelIds.length + userOwnedChannels.twitchChannelIds.length !== 1) {
-            throw new Error(`Only a single channel is supported for default user ${userOwnedChannels.userId}`)
+            throw new ChatMateError(`Only a single channel is supported for default user ${userOwnedChannels.userId}`)
           }
 
           const platform = userOwnedChannels.youtubeChannelIds.length === 1 ? 'youtube' : 'twitch'

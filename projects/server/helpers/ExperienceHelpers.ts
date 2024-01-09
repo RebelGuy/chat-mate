@@ -3,6 +3,7 @@ import { ChatItem, PartialTextChatMessage, PartialEmojiChatMessage, ChatItemWith
 import { tally, unique } from '@rebel/shared/util/arrays'
 import { NumRange, clampNorm, scaleNorm, clamp, avg, sum, GreaterThanOrEqual, asRange, asGte, LessThan, asLt, LessThanOrEqual, GreaterThan, asLte, asGt } from '@rebel/shared/util/math'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 // if chat rate is between lowest and min target values, the reward multiplier will decrease.
 // if chat rate is between max target and highest values, the reward multiplier will increase.
@@ -74,7 +75,7 @@ export default class ExperienceHelpers extends ContextClass {
         } else if (p.emoji == null && p.text == null && p.customEmoji != null && p.cheer == null) {
           return p.customEmoji.customEmojiVersion.customEmoji.symbol
         } else {
-          throw new Error('ChatMessagePart must have either an emoji, custom emoji, or text attached to it')
+          throw new ChatMateError('ChatMessagePart must have either an emoji, custom emoji, or text attached to it')
         }
       }).join('')
   }
@@ -136,7 +137,7 @@ export default class ExperienceHelpers extends ContextClass {
   public calculateLevel (experience: GreaterThanOrEqual<0>): LevelData {
     const levelFrac = this.calculateLevel0to50(experience) ?? this.calculateLevel50upwards(experience)
     if (levelFrac == null) {
-      throw new Error(`Unable to calculate level for experience ${experience}`)
+      throw new ChatMateError(`Unable to calculate level for experience ${experience}`)
     }
 
     const roundedLevel = asGte(Math.floor(levelFrac), 0)

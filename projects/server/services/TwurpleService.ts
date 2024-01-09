@@ -18,7 +18,7 @@ import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientPr
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
-import { AuthorisationExpiredError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 import { waitUntil } from '@rebel/shared/util/typescript'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
@@ -300,7 +300,7 @@ export default class TwurpleService extends ContextClass {
     const channelName = channel.platformInfo.channel.globalInfoHistory[0].userName
     const user = await this.userApi.getUserByName(channelName)
     if (user == null) {
-      throw new Error(`Unable to get HelixUser for Twitch channel ${channelName} (internal id ${internalTwitchChannelId})`)
+      throw new ChatMateError(`Unable to get HelixUser for Twitch channel ${channelName} (internal id ${internalTwitchChannelId})`)
     }
 
     return user
@@ -314,7 +314,7 @@ export default class TwurpleService extends ContextClass {
 
     const user = await this.userApi.getUserByName(channelName)
     if (user == null) {
-      throw new Error(`Unable to get HelixUser for Twitch channel ${channelName} (streamerId ${streamerId})`)
+      throw new ChatMateError(`Unable to get HelixUser for Twitch channel ${channelName} (streamerId ${streamerId})`)
     }
 
     return user
@@ -325,18 +325,18 @@ export default class TwurpleService extends ContextClass {
       const evaluated = evalTwitchPrivateMessage(msg)
       const channelId = msg.channelId
       if (channelId == null) {
-        throw new Error(`Cannot add Twitch chat message from channel ${_channel} because the message's channelId property was null`)
+        throw new ChatMateError(`Cannot add Twitch chat message from channel ${_channel} because the message's channelId property was null`)
       }
 
       const chatUserId = await this.channelStore.getPrimaryUserId(channelId)
       const registeredUser = await this.accountStore.getRegisteredUserFromAggregateUser(chatUserId)
       if (registeredUser == null) {
-        throw new Error(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the chat user ${chatUserId} is not associated with a registered user`)
+        throw new ChatMateError(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the chat user ${chatUserId} is not associated with a registered user`)
       }
 
       const streamer = await this.streamerStore.getStreamerByRegisteredUserId(registeredUser.id)
       if (streamer == null) {
-        throw new Error(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the registered user ${registeredUser.id} is not a streamer`)
+        throw new ChatMateError(`Cannot add Twitch chat message from channel ${_channel} (id ${channelId}) because the registered user ${registeredUser.id} is not a streamer`)
       }
 
       this.logService.logInfo(this, _channel, 'Adding 1 new chat item')

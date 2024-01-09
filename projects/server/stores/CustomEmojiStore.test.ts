@@ -7,6 +7,7 @@ import { sortBy } from '@rebel/shared/util/arrays'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { anyDate, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { symbolName } from 'typescript'
+import { ChatMateError, DbError } from '@rebel/shared/util/error'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>
 
@@ -87,7 +88,7 @@ export default () => {
       await db.customEmoji.create({ data: { streamerId: streamer1, symbol: 'emoji1' } })
       const data: CustomEmojiCreateData = { ...getEmojiCreateData(1), whitelistedRanks: [] }
 
-      await expect(() => customEmojiStore.addCustomEmoji(data)).rejects.toThrowError()
+      await expect(() => customEmojiStore.addCustomEmoji(data)).rejects.toThrowError(DbError)
     })
   })
 
@@ -187,14 +188,14 @@ export default () => {
     test('throws if invalid id', async () => {
       await createEmojis([1])
 
-      await expect(() => customEmojiStore.updateCustomEmoji({ id: 2 } as any)).rejects.toThrow()
+      await expect(() => customEmojiStore.updateCustomEmoji({ id: 2 } as any)).rejects.toThrowError(ChatMateError)
     })
 
     test('throws if attempting to update a deactivated emoji', async () => {
       await createEmojis([1])
       db.customEmojiVersion.updateMany({ data: { isActive: false }})
 
-      await expect(() => customEmojiStore.updateCustomEmoji({ id: 1 } as any)).rejects.toThrow()
+      await expect(() => customEmojiStore.updateCustomEmoji({ id: 1 } as any)).rejects.toThrowError(DbError)
     })
   })
 
@@ -210,7 +211,7 @@ export default () => {
         levelRequirement: 1,
         canUseInDonationMessage: true,
         version: 1
-      }})).rejects.toThrow()
+      }})).rejects.toThrowError(DbError)
     })
   })
 

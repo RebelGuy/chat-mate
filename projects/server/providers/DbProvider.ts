@@ -3,6 +3,8 @@ import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import Semaphore from '@rebel/shared/util/Semaphore'
+import { DbError } from '@rebel/shared/util/error'
+import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
@@ -80,7 +82,7 @@ export default class DbProvider extends ContextClass {
           this.logService.logWarning(this, 'Detected Prisma timeout, now reconnecting to the database.')
           await this.prismaClient.$disconnect()
         }
-        throw e
+        throw new DbError(e)
       } finally {
         const duration = Date.now() - startTime
         if (duration >= this.dbSlowQueryThreshold) {
@@ -108,4 +110,17 @@ export default class DbProvider extends ContextClass {
 function isPrismaTimeout (e: any) {
   const message = e.message as string | null
   return message != null && message.includes('Timed out fetching a new connection from the connection pool.')
+}
+
+// https://www.prisma.io/docs/reference/api-reference/error-reference
+export function isKnownPrismaError (e: any): e is DbError<PrismaClientKnownRequestError> {
+  return e instanceof DbError && e.innerError instanceof PrismaClientKnownRequestError
+}
+
+export function isUnknownPrismaError (e: any): e is DbError<PrismaClientUnknownRequestError> {
+  return e instanceof DbError && e.innerError instanceof PrismaClientUnknownRequestError
+}
+
+export function isNotFoundPrismaError (e: any): e is DbError<Error> {
+  return e instanceof DbError && e.innerError.name === 'NotFoundError'
 }

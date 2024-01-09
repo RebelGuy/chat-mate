@@ -1,9 +1,11 @@
+import { ChatMateError } from '@rebel/shared/util/error'
+
 // extracts the video/livestream ID from the given string
 export function getLiveId (linkOrId: string): string {
   const ID_LENGTH = 11
 
   if (linkOrId == null || linkOrId.trim().length === 0) {
-    throw new Error('A link or ID must be provided.')
+    throw new ChatMateError('A link or ID must be provided.')
   }
 
   linkOrId = linkOrId.trim()
@@ -18,7 +20,7 @@ export function getLiveId (linkOrId: string): string {
   try {
     url = new URL(linkOrId)
   } catch (e: any) {
-    throw new Error(`The provided link ${linkOrId} is malformed.`)
+    throw new ChatMateError(`The provided link ${linkOrId} is malformed.`)
   }
 
   if (linkOrId.includes('watch?v=') && linkOrId.includes('youtu')) {
@@ -36,13 +38,13 @@ export function getLiveId (linkOrId: string): string {
       id = path[0]
     }
   } else {
-    throw new Error(`The provided link ${linkOrId} is malformed.`)
+    throw new ChatMateError(`The provided link ${linkOrId} is malformed.`)
   }
 
   if (id == null || id.length === 0) {
-    throw new Error(`The provided link ${linkOrId} does not contain a video ID.`)
+    throw new ChatMateError(`The provided link ${linkOrId} does not contain a video ID.`)
   } else if (id.length !== ID_LENGTH) {
-    throw new Error(`A video/livestream ID (${id}) was able to be found on the link ${linkOrId}, but it was malformed.`)
+    throw new ChatMateError(`A video/livestream ID (${id}) was able to be found on the link ${linkOrId}, but it was malformed.`)
   } else {
     return id
   }
@@ -57,7 +59,7 @@ export function getLivestreamLink (liveId: string) {
 export function toConstCase (word: string): string {
   word = word.trim()
   if (word.includes(' ')) {
-    throw new Error('Input has to be a single word')
+    throw new ChatMateError('Input has to be a single word')
   } else if (isConstCase(word)) {
     return word
   } else if (word.includes('_')) {

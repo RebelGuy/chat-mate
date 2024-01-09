@@ -9,6 +9,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { YoutubeLivestream, YoutubeLiveViewers, TwitchLivestream, TwitchLiveViewers } from '@prisma/client'
 import { addTime } from '@rebel/shared/util/datetime'
+import { ChatMateError, DbError } from '@rebel/shared/util/error'
 
 export default () => {
   const liveId1 = 'id1'
@@ -54,7 +55,7 @@ export default () => {
     test('Throws if a current livestream already exists', async () => {
       await db.twitchLivestream.create({ data: { streamerId: streamer1, start: data.time1 }})
 
-      await expect(() => livestreamStore.addNewTwitchLivestream(streamer1)).rejects.toThrowError()
+      await expect(() => livestreamStore.addNewTwitchLivestream(streamer1)).rejects.toThrowError(ChatMateError)
     })
   })
 
@@ -293,7 +294,7 @@ export default () => {
     test('Throws if there is already an active Youtube livestream', async () => {
       await db.youtubeLivestream.create({ data: { liveId: liveId1, streamerId: streamer1, isActive: true }})
 
-      await expect(() => livestreamStore.setActiveYoutubeLivestream(streamer1, 'id2')).rejects.toThrow()
+      await expect(() => livestreamStore.setActiveYoutubeLivestream(streamer1, 'id2')).rejects.toThrowError(ChatMateError)
     })
   })
 
@@ -308,7 +309,7 @@ export default () => {
     })
 
     test('Throws if no Youtube livestream can be found with the given liveId', async () => {
-      await expect(livestreamStore.setYoutubeContinuationToken('id', 'test')).rejects.toThrow()
+      await expect(livestreamStore.setYoutubeContinuationToken('id', 'test')).rejects.toThrowError(DbError)
     })
   })
 
@@ -328,7 +329,7 @@ export default () => {
     })
 
     test('Throws if the Youtube livestream does not exist', async () => {
-      await expect(livestreamStore.setYoutubeLivestreamTimes(liveId1, { start: null, end: null })).rejects.toThrow()
+      await expect(livestreamStore.setYoutubeLivestreamTimes(liveId1, { start: null, end: null })).rejects.toThrowError(DbError)
     })
   })
 
@@ -348,7 +349,7 @@ export default () => {
     })
 
     test('Throws if the Youtube livestream does not exist', async () => {
-      await expect(livestreamStore.setTwitchLivestreamTimes(1, { start: data.time1, end: null })).rejects.toThrow()
+      await expect(livestreamStore.setTwitchLivestreamTimes(1, { start: data.time1, end: null })).rejects.toThrowError(DbError)
     })
   })
 

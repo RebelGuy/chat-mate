@@ -45,7 +45,7 @@ import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
-import { TimeoutError } from '@rebel/shared/util/error'
+import { ChatMateError, TimeoutError } from '@rebel/shared/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
@@ -279,7 +279,7 @@ const main = async () => {
         } catch (e: any) {
           // the response body was just a message (string), so we must construct the error object explicitly
           if (res.statusCode === 200) {
-            throw new Error('It is expected that only errors are ever sent with a simple message.')
+            throw new ChatMateError('It is expected that only errors are ever sent with a simple message.')
           }
 
           responseBody = {

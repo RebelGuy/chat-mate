@@ -5,7 +5,7 @@ import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
@@ -145,7 +145,7 @@ describe(nameof(ModService, 'setModRank'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => modService.setModRank(primaryUserId, streamerId1, 1, true, '', null)).rejects.toThrow()
+    await expect(() => modService.setModRank(primaryUserId, streamerId1, 1, true, '', null)).rejects.toThrowError(ChatMateError)
   })
 })
 

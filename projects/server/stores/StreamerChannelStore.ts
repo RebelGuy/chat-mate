@@ -2,7 +2,7 @@ import { ChatUser, StreamerTwitchChannelLink, StreamerYoutubeChannelLink } from 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
 import { channelQuery_includeLatestChannelInfo, TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 
 export type PrimaryChannels = {
@@ -32,7 +32,7 @@ export default class StreamerChannelStore extends ContextClass {
       return youtubeLinkToUserChannel(removedLink)
 
     } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+      if (isKnownPrismaError(e) && e.innerError.code === 'P2025') {
         return null
       } else {
         throw e
@@ -49,7 +49,7 @@ export default class StreamerChannelStore extends ContextClass {
       return twitchLinkToUserChannel(removedLink)
 
     } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+      if (isKnownPrismaError(e) && e.innerError.code === 'P2025') {
         return null
       } else {
         throw e

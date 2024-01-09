@@ -15,7 +15,7 @@ import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/shared/util/error'
+import { ChatMateError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedError } from '@rebel/shared/util/error'
 import { NO_OP_ASYNC } from '@rebel/shared/util/typescript'
 import { nameof } from '@rebel/shared/testUtils'
 import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
@@ -106,7 +106,7 @@ export default class LinkService extends ContextClass {
       // note that the first user represents the aggregate user.
       const connectedUserIds = single(await this.accountStore.getConnectedChatUserIds([defaultUserId])).connectedChatUserIds
       if (connectedUserIds.length > MAX_CHANNEL_LINKS_ALLOWED + 1) {
-        throw new Error(`Only a maximum of ${MAX_CHANNEL_LINKS_ALLOWED} channels can be linked to an account.`)
+        throw new ChatMateError(`Only a maximum of ${MAX_CHANNEL_LINKS_ALLOWED} channels can be linked to an account.`)
       }
 
       await this.experienceStore.invalidateSnapshots([defaultUserId, aggregateUserId])
@@ -197,7 +197,7 @@ export default class LinkService extends ContextClass {
         if (streamer != null) {
           const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamer!.id]).then(single)
           if (primaryChannels.twitchChannel?.defaultUserId === defaultUserId || primaryChannels.youtubeChannel?.defaultUserId === defaultUserId) {
-            throw new Error(`Cannot unlink default channel ${defaultUserId} because it is a primary channel for streamer ${streamer.id}.`)
+            throw new ChatMateError(`Cannot unlink default channel ${defaultUserId} because it is a primary channel for streamer ${streamer.id}.`)
           } else {
             logs.push([new Date(), 'Ensured channel is not a primary channel for the streamer', cumWarnings])
           }

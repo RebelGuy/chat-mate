@@ -4,7 +4,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { singleOrNull, unique } from '@rebel/shared/util/arrays'
-import { InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { isOneOf } from '@rebel/shared/util/validation'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import UserService from '@rebel/server/services/UserService'
@@ -84,7 +84,7 @@ export default class RankService extends ContextClass {
    *  @throws {@link InvalidCustomRankError}: When the given custom rank does not exist or is not customisable. */
   public async addOrUpdateCustomRankName (streamerId: number, primaryUserId: number, rankName: CustomisableRank, name: string, isActive: boolean): Promise<void> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot set or update the rank name at this time. Please try again later.')
+      throw new ChatMateError('Cannot set or update the rank name at this time. Please try again later.')
     }
 
     name = this.rankHelpers.validateCustomRankName(name)

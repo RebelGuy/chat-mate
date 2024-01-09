@@ -2,9 +2,9 @@ import { Prisma, RegisteredUser } from '@prisma/client'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
 import { group } from '@rebel/shared/util/arrays'
-import { UsernameAlreadyExistsError } from '@rebel/shared/util/error'
+import { ChatMateError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { randomString } from '@rebel/shared/util/random'
 import { hashString } from '@rebel/shared/util/strings'
 
@@ -53,7 +53,7 @@ export default class AccountStore extends ContextClass {
         aggregateChatUser: { create: {}}
       }})
     } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (isKnownPrismaError(e) && e.innerError.code === 'P2002') {
         throw new UsernameAlreadyExistsError(registeredUser.username)
       }
       throw e
@@ -96,7 +96,7 @@ export default class AccountStore extends ContextClass {
         }
       }
 
-      throw new Error(`User with anyUserId ${id} was identified as neither an aggregate user nor a default user.`)
+      throw new ChatMateError(`User with anyUserId ${id} was identified as neither an aggregate user nor a default user.`)
     })
   }
 

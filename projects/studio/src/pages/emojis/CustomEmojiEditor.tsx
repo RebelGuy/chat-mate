@@ -1,6 +1,7 @@
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
 import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
@@ -102,7 +103,7 @@ export default function CustomEmojiEditor (props: Props) {
       const imageData = data.substring(prefix.length)
       onChange({ ...editingData!, imageData })
     }
-    fr.onerror = () => { throw new Error() }
+    fr.onerror = () => { throw new ChatMateError() }
     fr.readAsDataURL(files[0])
   }
 

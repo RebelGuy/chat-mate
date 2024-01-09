@@ -7,6 +7,7 @@ import { expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { addTime } from '@rebel/shared/util/datetime'
 import * as data from '@rebel/server/_test/testData'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 const ytChannelId1 = 'channelId1'
 const ytChannelId2 = 'channelId2'
@@ -452,7 +453,7 @@ export default () => {
       await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})
       await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: 'test_twitch' }})
 
-      await expect(() => channelStore.getPrimaryUserId('bad id')).rejects.toThrow()
+      await expect(() => channelStore.getPrimaryUserId('bad id')).rejects.toThrowError(ChatMateError)
     })
 
     test('returns correct default id for youtube channel', async () => {
@@ -496,7 +497,7 @@ export default () => {
 
   describe(nameof(ChannelStore, 'getConnectedUserOwnedChannels'), () => {
     test('throws if user does not exist', async () => {
-      await expect(() => channelStore.getConnectedUserOwnedChannels([1])).rejects.toThrow()
+      await expect(() => channelStore.getConnectedUserOwnedChannels([1])).rejects.toThrowError(ChatMateError)
     })
 
     test('Returns linked channels for default or aggregate users, and single channel for an unlinked default user', async () => {
@@ -554,7 +555,7 @@ export default () => {
     })
 
     test('Throws if user does not exist', async () => {
-      await expect(() => channelStore.getDefaultUserOwnedChannels([1])).rejects.toThrow()
+      await expect(() => channelStore.getDefaultUserOwnedChannels([1])).rejects.toThrowError(ChatMateError)
     })
   })
 }

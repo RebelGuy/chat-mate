@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import RankService, { CustomisableRank } from '@rebel/server/services/rank/RankService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
-import { InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -55,7 +55,7 @@ describe(nameof(RankService, 'addOrUpdateCustomRankName'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(user1).mockResolvedValue(true)
 
-    await expect(() => rankService.addOrUpdateCustomRankName(streamer1, user1, 'donator', 'test1', true)).rejects.toThrow()
+    await expect(() => rankService.addOrUpdateCustomRankName(streamer1, user1, 'donator', 'test1', true)).rejects.toThrowError(ChatMateError)
   })
 
   test('Throws if the given rank name is invalid', async () => {
