@@ -7,6 +7,8 @@ import { getElapsedText, ONE_HOUR, ONE_MINUTE } from '@rebel/shared/util/datetim
 
 type Props = {
   time: number
+  prefix?: string
+  suffix?: string
   useSentenceCase?: boolean
   sx?: SxProps
 }
@@ -22,11 +24,13 @@ export default function RelativeTime (props: Props) {
   const text = getElapsedText(elapsed)
 
   return <>
+    {props.prefix}
     <Tooltip title={new Date(props.time).toLocaleString()}>
       <Box sx={{ display: 'inline', ...(props.sx ?? {}) }}>
         {props.useSentenceCase ? toSentenceCase(text) : text}
       </Box>
     </Tooltip>
+    {props.suffix}
   </>
 }
 

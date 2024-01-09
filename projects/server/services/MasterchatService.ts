@@ -8,12 +8,18 @@ import ApiService from '@rebel/server/services/abstract/ApiService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { ChatMateError, NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
+import AuthStore from '@rebel/server/stores/AuthStore'
 
 export type ChatMateModeratorStatus = {
   isModerator: boolean
 
   /** The time at which we know for certain the moderator state of ChatMate. It might have changed since then, but we have no way of knowing. */
   time: number
+}
+
+export type MasterchatAuthentication = {
+  isActive: boolean
+  lastUpdated: Date | null
 }
 
 type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'> & {
@@ -27,11 +33,15 @@ type Deps = Dependencies<{
   masterchatFactory: MasterchatFactory
   chatStore: ChatStore
   platformApiStore: PlatformApiStore
+  authStore: AuthStore
+  channelId: string
 }>
 
 export default class MasterchatService extends ApiService {
   private readonly masterchatFactory: MasterchatFactory
   private readonly chatStore: ChatStore
+  private readonly authStore: AuthStore
+  private readonly channelId: string
 
   // note that some endpoints are livestream-agnostic
   private readonly wrappedMasterchats: Map<number, PartialMasterchat>
@@ -47,6 +57,8 @@ export default class MasterchatService extends ApiService {
 
     this.masterchatFactory = deps.resolve('masterchatFactory')
     this.chatStore = deps.resolve('chatStore')
+    this.authStore = deps.resolve('authStore')
+    this.channelId = deps.resolve('channelId')
 
     this.wrappedMasterchats = new Map()
   }
@@ -69,14 +81,18 @@ export default class MasterchatService extends ApiService {
     this.wrappedMasterchats.delete(streamerId)
   }
 
-  /** If an instance of masterchat is active, returns whether the credentials are currently active and valid.
-   * If false, no user is authenticated and some requests will fail. */
-  public checkCredentials () {
+  /** If an instance of Masterchat is active and authenticated, returns information about the credentials.
+   * Returns null if the authentication is missing or not active - some Masterchat requests will fail. */
+  public async checkAuthentication (): Promise<MasterchatAuthentication | null> {
     const masterchat = firstOrDefault(this.wrappedMasterchats, null)
     if (masterchat == null) {
       return null
-    } else {
-      return !masterchat.masterchat.isLoggedOut
+    }
+
+    const accessToken = await this.authStore.loadYoutubeWebAccessToken(this.channelId)
+    return {
+      isActive: !masterchat.masterchat.isLoggedOut,
+      lastUpdated: accessToken?.updateTime ?? null
     }
   }
 

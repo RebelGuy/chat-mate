@@ -338,6 +338,7 @@ Returns data with the following properties:
   - `true`: The Masterchat instance is authenticated.
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
+- `lastUpdatedTimestamp` (`number | null`): In the case where `authenticated` is `true`, at what time we last updated the Youtube authentication for Masterchat. `null` if Masterchat is not authenticated.
 
 ### `GET /username`
 Gets the username of the official ChatMate registered account.

@@ -111,7 +111,7 @@ async function createWindow () {
       await authStore.saveYoutubeWebAccessToken(channelId, accessToken)
 
       console.log('-------------------')
-      console.log('Successfully saved YouTube credentials.')
+      console.log('Successfully saved YouTube credentials. Please restart the Server now.')
       console.log('-------------------')
 
       app.quit()

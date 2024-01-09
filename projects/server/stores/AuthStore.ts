@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { AccessToken } from '@twurple/auth'
-import { YoutubeAuth } from '@prisma/client'
+import { YoutubeAuth, YoutubeWebAuth } from '@prisma/client'
 import { New } from '@rebel/server/models/entities'
 import { ChatMateError } from '@rebel/shared/util/error'
 
@@ -57,9 +57,8 @@ export default class AuthStore extends ContextClass {
     })
   }
 
-  public async loadYoutubeWebAccessToken (channelId: string): Promise<string | null> {
-    const result = await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
-    return result?.accessToken ?? null
+  public async loadYoutubeWebAccessToken (channelId: string): Promise<YoutubeWebAuth | null> {
+    return await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
   }
 
   /** Must provide a Twitch username when creating a new access token (not required when refreshing the token).
