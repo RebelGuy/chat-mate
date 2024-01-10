@@ -38,6 +38,7 @@ import YoutubeService from '@rebel/server/services/YoutubeService'
 import { PublicRankUpdateData } from '@rebel/api-models/public/event/PublicRankUpdateData'
 import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import CacheService from '@rebel/server/services/CacheService'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -55,6 +56,7 @@ type Deps = ControllerDependencies<{
   youtubeAuthProvider: YoutubeAuthProvider
   youtubeService: YoutubeService
   channelStore: ChannelStore
+  cacheService: CacheService
 }>
 
 @Path(buildPath('streamer'))
@@ -74,6 +76,7 @@ export default class StreamerController extends ControllerBase {
   private readonly youtubeAuthProvider: YoutubeAuthProvider
   private readonly youtubeService: YoutubeService
   private readonly channelStore: ChannelStore
+  private readonly cacheService: CacheService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -92,6 +95,7 @@ export default class StreamerController extends ControllerBase {
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
     this.youtubeService = deps.resolve('youtubeService')
     this.channelStore = deps.resolve('channelStore')
+    this.cacheService = deps.resolve('cacheService')
   }
 
   @GET
@@ -99,7 +103,9 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /')
 
     try {
-      const streamers = await this.streamerStore.getStreamers()
+      const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
+      const streamers = await this.streamerStore.getStreamers().then(col => col.filter(s => s.id !== chatMateStreamerId))
+
       const [youtubeLivestreams, twitchLivestreams, primaryChannels, users] = await Promise.all([
         this.livestreamStore.getActiveYoutubeLivestreams(),
         this.livestreamStore.getCurrentTwitchLivestreams(),

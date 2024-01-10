@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
+import { cast, expectObject, mockGetter, mockResolvable, nameof } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -85,6 +85,7 @@ beforeEach(() => {
   })
 
   mockDateTimeHelpers.now.calledWith().mockReturnValue(new Date())
+  mockGetter(mockCacheService, 'chatMateStreamerId').mockReturnValue(mockResolvable(-1))
 
   livestreamService = new LivestreamService(new Dependencies({
     livestreamStore: mockLivestreamStore,
@@ -241,7 +242,7 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     test('Does not fetch metadata for the official ChatMate stream', async () => {
       const livestream = makeYoutubeStream(null, null)
       mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([livestream])
-      mockCacheService.isChatMateStreamer.calledWith(livestream.streamerId).mockResolvedValue(true)
+      mockGetter(mockCacheService, 'chatMateStreamerId').mockReturnValue(mockResolvable(livestream.streamerId))
 
       await livestreamService.initialise()
 

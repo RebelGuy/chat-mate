@@ -270,7 +270,8 @@ export default class MasterchatFetchService extends ContextClass {
   }
 
   private async getNextInterval (streamerId: number, currentTime: number, timestamps: number[]): Promise<number> {
-    if (await this.cacheService.isChatMateStreamer(streamerId) && timestamps.length === 0) {
+    const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
+    if (chatMateStreamerId === streamerId && timestamps.length === 0) {
       // to avoid spamming the logs and reduce the chance of YouTube getting upset with us, we don't poll the chat of the official
       // ChatMate streamer very often if there haven't been recent messages.
       return MAX_INTERVAL_FOR_CHAT_MATE

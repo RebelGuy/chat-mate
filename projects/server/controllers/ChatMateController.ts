@@ -65,7 +65,7 @@ export default class ChatMateController extends ControllerBase {
       const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed()
 
       return builder.success({
-        streamerCount: streamerCount,
+        streamerCount: streamerCount - 1, // subtract the official ChatMate streamer
         registeredUserCount: registeredUserCount,
         uniqueChannelCount: channelCount,
         chatMessageCount: messageCount,

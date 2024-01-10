@@ -6,7 +6,7 @@ import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { Box, Button, Checkbox, createTheme, FormControlLabel, IconButton, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
+import { Alert, Box, Button, Checkbox, createTheme, FormControlLabel, IconButton, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
 import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import { GetCustomEmojisResponse } from '@rebel/api-models/schema/emoji'
@@ -127,10 +127,19 @@ export default function CustomEmojiManager () {
     return { meetsLevelRequirement, meetsRankRequirement }
   }
 
+  const header = <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
+
+  const streamer = loginContext.allStreamers.find(s => s.username === loginContext.streamer)
+  if (streamer == null) {
+    return <>
+      {header}
+      <Alert severity="error">Invalid streamer selected.</Alert>
+    </>
+  }
+
   return (
     <>
-      <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
-
+      {header}
       {emojisRequest.data != null &&
         <Box>
           <RequireRank owner>

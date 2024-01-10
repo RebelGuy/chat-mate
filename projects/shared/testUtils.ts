@@ -1,6 +1,7 @@
+import Resolvable from '@rebel/shared/Resolvable'
 import { DeepPartial, GenericObject, Primitive, Singular } from '@rebel/shared/types'
 import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
-import { Matcher, MatcherCreator, MockProxy } from 'jest-mock-extended'
+import { Matcher, MockProxy, mock } from 'jest-mock-extended'
 
 type Class = new (...args: any[]) => any
 
@@ -131,4 +132,10 @@ export function anyDate (): Matcher<Date> {
     (actualDate) => actualDate instanceof Date,
     'Matches any date.'
   )
+}
+
+export function mockResolvable<T> (value: T): Resolvable<T> {
+  const mockObj: MockProxy<Resolvable<T>> = mock()
+  mockObj.resolve.calledWith().mockResolvedValue(value)
+  return mockObj
 }

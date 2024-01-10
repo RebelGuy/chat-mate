@@ -158,7 +158,8 @@ export default class LivestreamService extends ContextClass {
 
   private async updateYoutubeLivestreamMetadata (livestream: YoutubeLivestream) {
     // no point in fetching metadata for the official ChatMate streamer since it will never go live
-    if (await this.cacheService.isChatMateStreamer(livestream.streamerId)) {
+    const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
+    if (chatMateStreamerId === livestream.streamerId) {
       return
     }
 
