@@ -75,7 +75,7 @@ export default function MainView () {
           {/* empty */}
         </div>
         <div style={{ width: '100%', bottom: 8, textAlign: 'center' }}>
-          <em style={{ fontSize: 14 }}>This is a work in progress...</em>
+          {/* empty */}
         </div>
         <div style={{ width: '100%', bottom: 8, textAlign: 'right', paddingRight: 4 }}>
           <em style={{ fontSize: 14 }}>ChatMate Studio v{VERSION} ({COMMIT_HASH})</em>
