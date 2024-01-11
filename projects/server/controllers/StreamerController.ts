@@ -281,7 +281,7 @@ export default class StreamerController extends ControllerBase {
   @Path('/primaryChannels')
   @PreProcessor(requireAuth)
   public async getPrimaryChannels (): Promise<GetPrimaryChannelsResponse> {
-    const builder = this.registerResponseBuilder<GetPrimaryChannelsResponse>('POST /primaryChannels')
+    const builder = this.registerResponseBuilder<GetPrimaryChannelsResponse>('GET /primaryChannels')
 
     try {
       const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
