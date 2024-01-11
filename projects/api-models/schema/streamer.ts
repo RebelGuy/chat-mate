@@ -10,6 +10,8 @@ import { EmptyObject } from '@rebel/shared/types'
 
 export type GetStreamersResponse = ApiResponse<{ streamers: PublicStreamerSummary[] }>
 
+export type GetOfficialChatMateStreamerResponse = ApiResponse<{ chatMateStreamer: PublicStreamerSummary }>
+
 export type CreateApplicationRequest = ApiRequest<{ message: string }>
 export type CreateApplicationResponse = ApiResponse<{ newApplication: PublicStreamerApplication }>
 

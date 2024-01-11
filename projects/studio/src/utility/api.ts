@@ -1,7 +1,7 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/api-models/schema/emoji'
 import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
 import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetOfficialChatMateStreamerResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/api-models/schema/account'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/api-models/schema/donation'
@@ -80,6 +80,8 @@ export async function authenticate (loginToken: string): Promise<AuthenticateRes
 }
 
 export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false, false)
+
+export const getOfficialChatMateStreamer = requestBuilder<GetOfficialChatMateStreamerResponse>('GET', `/streamer/chatMate`, false, false)
 
 export const getStreamerApplications = requestBuilder<GetApplicationsResponse>('GET', `/streamer/application`, false)
 

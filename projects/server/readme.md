@@ -766,10 +766,16 @@ Can return the following errors:
 Path: `/streamer`.
 
 ### `GET`
-Gets all streamer data in ChatMate.
+Gets all streamer data in ChatMate. Note that the official ChatMate streamer is not included, as it is considered a dummy streamer.
 
 Returns data with the following properties:
 - `streamers` (`PublicStreamerSummary[]`): The array of streamer data.
+
+### `GET /chatMate`
+Gets data about the official ChatMate streamer.
+
+Returns data with the following properties:
+- `chatMateStreamer` (`PublicStreamerSummary`): The ChatMate streamer data.
 
 ### `GET /application`
 Gets all streamer applications of the user. If the user is an admin, returns all applications of all users.
