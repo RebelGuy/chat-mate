@@ -18,7 +18,7 @@ All environment variables **must** be of the form `REACT_APP_<VARIABLE_NAME>` an
 
 - `REACT_APP_SERVER_URL`: The URL of the server without a trailing slash.
 - `DISABLE_ESLINT_PLUGIN`: Whether to disable ESLint checking during the CI build. If not set, or set to `false`, the build will fail if there are any ESLint warnings in the project.
-- `REACT_APP_STUDIO_VERSION_HASH`: The Studio version (e.g. 1.0.0) and latest commit hash, separated by a space.
+- `REACT_APP_STUDIO_VERSION`: The Studio version (e.g. `1.2.3.456 (abcdefh)`).
 - `REACT_APP_ENV=local`: Alias for `NODE_ENV`. Either `local`, `debug`, or `release`. We can't use `NODE_ENV` for this because it is overwritten by `react-app-rewired`.
 
 Optional:

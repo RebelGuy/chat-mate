@@ -172,9 +172,7 @@ jobs:
           touch ./projects/studio/.env
           echo REACT_APP_SERVER_URL=${{ inputs.SERVER_URL }} >> ./projects/studio/.env
           echo DISABLE_ESLINT_PLUGIN=true >> ./projects/studio/.env
-          echo -n REACT_APP_STUDIO_VERSION_HASH=\" >> ./projects/studio/.env
-          node ./scripts/getVersion | tr -d '\n' >> ./projects/studio/.env
-          echo \" >> ./projects/studio/.env
+          echo REACT_APP_STUDIO_VERSION="$(node ./scripts/getVersion | tr -d '\n')" >> ./projects/studio/.env
           echo REACT_APP_ENV=${{ inputs.NODE_ENV }} >> ./projects/studio/.env
           echo REACT_APP_DEFAULT_STREAMER=rebel_guy >> ./projects/studio/.env
           cat ./projects/studio/.env

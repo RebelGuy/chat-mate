@@ -13,7 +13,7 @@ import { getAdministrativeMode } from '@rebel/studio/utility/api'
 import useCurrentPage from '@rebel/studio/hooks/useCurrentPage'
 import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
 import ErrorBoundary from '@rebel/studio/components/ErrorBoundary'
-import { VERSION, COMMIT_HASH, NODE_ENV } from '@rebel/studio/utility/global'
+import { STUDIO_VERSION, NODE_ENV } from '@rebel/studio/utility/global'
 import { RETURN_URL_QUERY_PARAM } from '@rebel/studio/pages/login/LoginForm'
 import { PageLogin } from '@rebel/studio/pages/navigation'
 
@@ -78,7 +78,7 @@ export default function MainView () {
           {/* empty */}
         </div>
         <div style={{ width: '100%', bottom: 8, textAlign: 'right', paddingRight: 4 }}>
-          <em style={{ fontSize: 14 }}>ChatMate Studio v{VERSION} ({COMMIT_HASH})</em>
+          <em style={{ fontSize: 14 }}>ChatMate Studio v{STUDIO_VERSION}</em>
         </div>
       </div>
 

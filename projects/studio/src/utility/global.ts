@@ -15,7 +15,7 @@ function getEnvironmentVariable (environmentVariable: `REACT_APP_${string}`, opt
 
 export const SERVER_URL = getEnvironmentVariable('REACT_APP_SERVER_URL')
 
-export const [VERSION, COMMIT_HASH] = getEnvironmentVariable('REACT_APP_STUDIO_VERSION_HASH').split(' ')
+export const STUDIO_VERSION = getEnvironmentVariable('REACT_APP_STUDIO_VERSION')
 
 export const NODE_ENV = getEnvironmentVariable('REACT_APP_ENV') as 'local' | 'debug' | 'release'
 
