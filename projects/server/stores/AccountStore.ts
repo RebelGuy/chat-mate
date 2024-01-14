@@ -1,9 +1,7 @@
-import { Prisma, RegisteredUser } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
+import { RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
-import { group } from '@rebel/shared/util/arrays'
 import { ChatMateError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { randomString } from '@rebel/shared/util/random'
 import { hashString } from '@rebel/shared/util/strings'
@@ -176,6 +174,12 @@ export default class AccountStore extends ContextClass {
     })
   }
 
+  public async getRegisteredUserFromName (username: string): Promise<RegisteredUser | null> {
+    return await this.db.registeredUser.findFirst({
+      where: { username: username }
+    })
+  }
+
   public async getRegisteredUserFromToken (token: string): Promise<RegisteredUser | null> {
     const result = await this.db.loginToken.findUnique({
       where: { token: token },
@@ -194,5 +198,13 @@ export default class AccountStore extends ContextClass {
   /** Returns all registered users whose display names match the given string (not case sensitive). */
   public async searchByUserName (name: string): Promise<RegisteredUser[]> {
     return await this.db.registeredUser.findMany({ where: { username: { contains: name.toLowerCase() }}})
+  }
+
+  /** Sets the password of an existing user. */
+  public async setPassword (username: string, newPassword: string): Promise<void> {
+    await this.db.registeredUser.update({
+      where: { username: username },
+      data: { hashedPassword: hashString(username + newPassword) }
+    })
   }
 }

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import DbProvider from '@rebel/server/providers/DbProvider'
 import path from 'node:path'
 
 export const DATABASE_URL = process.env.DATABASE_URL!
@@ -16,8 +17,12 @@ export const refreshDb = () => new PrismaClient({ datasources: { db: { url: DATA
 
 export const DB = refreshDb()
 
+export const DB_PROVIDER = { get: () => DB } as Pick<DbProvider, 'get'> as DbProvider
+
 export const MIGRATIONS_FOLDER = path.join(__dirname, '../../projects/server/prisma/migrations')
 
 export const MIGRATION_SCRIPTS_FOLDER = path.join(__dirname, './migrations')
 
 export const DATA_MIGRATION_TEMPLATE = path.join(MIGRATION_SCRIPTS_FOLDER, '_dataMigrationTemplate.ts')
+
+export const ARGS = process.argv.slice(2)

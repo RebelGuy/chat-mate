@@ -1,5 +1,6 @@
 import Resolvable from '@rebel/shared/Resolvable'
 import { DeepPartial, GenericObject, Primitive, Singular } from '@rebel/shared/types'
+import { single } from '@rebel/shared/util/arrays'
 import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
 import { Matcher, MockProxy, mock } from 'jest-mock-extended'
 
@@ -124,6 +125,12 @@ export function expectArray<T extends AnyValue> (fullOrPartialObject: T[] | Deep
   }
 
   return expect.arrayContaining(partialObj)
+}
+
+export function expectInvocation<TArgs extends AnyValue[]> (fn: (...args: TArgs) => any, expectedInvocation: TArgs) {
+  const untypedFn = fn as any
+  const invocation = single(untypedFn.mock.calls) as any
+  expect(invocation).toEqual(expectedInvocation)
 }
 
 /** Matches any date. */

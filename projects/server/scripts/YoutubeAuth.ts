@@ -1,7 +1,7 @@
 // https://www.electronjs.org/docs/api/session
 import { Dependencies } from '@rebel/shared/context/context'
 import DbProvider from '@rebel/server/providers/DbProvider'
-import { CHANNEL_ID, DB } from '@rebel/server/scripts/consts'
+import { CHANNEL_ID, DB, DB_PROVIDER } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { app, BrowserWindow } from 'electron'
 import { ChatMateError } from '@rebel/shared/util/error'
@@ -103,9 +103,8 @@ async function createWindow () {
         return
       }
 
-      const partialDbProvider: Pick<DbProvider, 'get'> = { get: () => DB }
       const authStore = new AuthStore(new Dependencies({
-        dbProvider: partialDbProvider as DbProvider,
+        dbProvider: DB_PROVIDER,
         twitchClientId: ''
       }))
       await authStore.saveYoutubeWebAccessToken(channelId, accessToken)

@@ -195,6 +195,23 @@ export default () => {
     })
   })
 
+  describe(nameof(AccountStore, 'getRegisteredUserFromName'), () => {
+    test('Returns the correct user', async () => {
+      const registeredUser1 = await db.registeredUser.create({ data: { username: 'test1', hashedPassword: 'test1', aggregateChatUser: { create: {}} }})
+      const registeredUser2 = await db.registeredUser.create({ data: { username: 'test2', hashedPassword: 'test2', aggregateChatUser: { create: {}} }})
+
+      const result = await accountStore.getRegisteredUserFromName('test2')
+
+      expect(result).toEqual(registeredUser2)
+    })
+
+    test('Returns null if user is not found', async () => {
+      const result = await accountStore.getRegisteredUserFromName('name')
+
+      expect(result).toBe(null)
+    })
+  })
+
   describe(nameof(AccountStore, 'getRegisteredUserFromAggregateUser'), () => {
     test('Returns registered user for the given chat user id', async () => {
       const registeredUser = await db.registeredUser.create({ data: {
@@ -230,6 +247,31 @@ export default () => {
       const result = await accountStore.getRegisteredUserFromToken('test')
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe(nameof(AccountStore, 'searchByUserName'), () => {
+    test('Returns partial matches', async () => {
+      const registeredUser1 = await db.registeredUser.create({ data: { username: 'test1', hashedPassword: 'test1', aggregateChatUser: { create: {}} }})
+      const registeredUser2 = await db.registeredUser.create({ data: { username: 'test2', hashedPassword: 'test2', aggregateChatUser: { create: {}} }})
+      const registeredUser3 = await db.registeredUser.create({ data: { username: 'user3', hashedPassword: 'test3', aggregateChatUser: { create: {}} }})
+      const registeredUser4 = await db.registeredUser.create({ data: { username: 'user4', hashedPassword: 'test4', aggregateChatUser: { create: {}} }})
+
+      const result = await accountStore.searchByUserName('test')
+
+      expect(result).toEqual([registeredUser1, registeredUser2])
+    })
+  })
+
+  describe(nameof(AccountStore, 'setPassword'), () => {
+    test(`Changes the user's password`, async () => {
+      await db.registeredUser.create({ data: { username: 'test1', hashedPassword: 'test1', aggregateChatUser: { create: {}} }})
+      await db.registeredUser.create({ data: { username: 'test2', hashedPassword: 'test2', aggregateChatUser: { create: {}} }})
+
+      await accountStore.setPassword('test2', 'newPassword')
+
+      const updatedUser = await db.registeredUser.findFirst({ where: { id: 2 }})
+      expect(updatedUser?.hashedPassword).not.toBe('test2')
     })
   })
 }

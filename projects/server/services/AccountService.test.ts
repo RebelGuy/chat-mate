@@ -2,8 +2,10 @@ import { Dependencies } from '@rebel/shared/context/context'
 import AccountService from '@rebel/server/services/AccountService'
 import AccountStore, { ConnectedChatUserIds } from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
-import { cast, nameof } from '@rebel/shared/testUtils'
+import { cast, expectArray, expectInvocation, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import { RegisteredUser } from '@prisma/client'
+import { single2 } from '@rebel/shared/util/arrays'
 
 const streamerId = 5
 
@@ -48,5 +50,19 @@ describe(nameof(AccountService, 'getPrimaryUserIdFromAnyUser'), () => {
     const result = await accountService.getPrimaryUserIdFromAnyUser(userIds)
 
     expect(result).toEqual([1, 1, 12])
+  })
+})
+
+describe(nameof(AccountService, 'resetPassword'), () => {
+  test(`Clears the user's tokens and changes the password`, async () => {
+    const registeredUserId = 51
+    const newPassword = 'newPassword'
+    const username = 'testUser'
+    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray([registeredUserId])).mockResolvedValue(cast<RegisteredUser[]>([{ username }]))
+
+    await accountService.resetPassword(registeredUserId, newPassword)
+
+    expectInvocation(mockAccountStore.clearLoginTokens, [registeredUserId])
+    expectInvocation(mockAccountStore.setPassword, [username, newPassword])
   })
 })

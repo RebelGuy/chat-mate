@@ -4,7 +4,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
-import { first, unique } from '@rebel/shared/util/arrays'
+import { first, single, unique } from '@rebel/shared/util/arrays'
 import { assertUnreachableCompile } from '@rebel/shared/util/typescript'
 
 type Deps = Dependencies<{
@@ -36,6 +36,13 @@ export default class AccountService extends ContextClass {
   public async getPrimaryUserIdFromAnyUser (anyUserIds: number[]): Promise<number[]> {
     const connectedUserIds = await this.accountStore.getConnectedChatUserIds(anyUserIds)
     return anyUserIds.map(userId => first(connectedUserIds.find(c => c.queriedAnyUserId === userId)!.connectedChatUserIds))
+  }
+
+  public async resetPassword (registeredUserId: number, newPassword: string) {
+    const registeredUser = await this.accountStore.getRegisteredUsersFromIds([registeredUserId]).then(single)
+
+    await this.accountStore.clearLoginTokens(registeredUserId)
+    await this.accountStore.setPassword(registeredUser.username, newPassword)
   }
 }
 

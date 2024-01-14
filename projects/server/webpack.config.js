@@ -100,7 +100,8 @@ module.exports = (env) => {
     applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts',
     TwitchAuth: './scripts/TwitchAuth.ts',
     YoutubeAuth: './scripts/YoutubeAuth.ts',
-    RefreshSnapshots: './scripts/RefreshSnapshots.ts'
+    RefreshSnapshots: './scripts/RefreshSnapshots.ts',
+    resetPassword: './scripts/resetPassword.ts'
   } : {}
 
   // skip type checking
