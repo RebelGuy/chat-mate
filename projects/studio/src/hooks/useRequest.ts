@@ -4,6 +4,7 @@ import { ChatMateError } from '@rebel/shared/util/error'
 import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
 import LoginContext, { LoginContextType } from '@rebel/studio/contexts/LoginContext'
 import RequestContext, { RequestContextType } from '@rebel/studio/contexts/RequestContext'
+import useRequireLogin from '@rebel/studio/hooks/useRequireLogin'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { useContext, useEffect, useRef, useState } from 'react'
 
@@ -137,6 +138,7 @@ export default function useRequest<
   const { isLoading, setIsLoading, data, setData, apiError, setApiError, removeCache } = useContext<RequestContextType<TResponseData>>(RequestContext)(cacheKey)
   const [onRetry, setOnRetry] = useState<(() => void) | null>(null)
   let loginContext = useContext(LoginContext)
+  const { onRequireLogin } = useRequireLogin()
 
   // this is essentially `useState` but it updates the value immediately.
   // concept stolen from https://stackoverflow.com/a/60643670
@@ -230,6 +232,12 @@ export default function useRequest<
           onError(response.error, type)
         }
         returnObj = { type: 'error', error: response.error }
+
+        if (response.error.errorCode === 401) {
+          loginContext.logout()
+          onRequireLogin()
+          removeCache()
+        }
       }
     } catch (e: any) {
       const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', internalErrorType: 'Unknown', message: e.message }

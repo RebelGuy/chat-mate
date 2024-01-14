@@ -16,6 +16,7 @@ import ErrorBoundary from '@rebel/studio/components/ErrorBoundary'
 import { STUDIO_VERSION, NODE_ENV } from '@rebel/studio/utility/global'
 import { RETURN_URL_QUERY_PARAM } from '@rebel/studio/pages/login/LoginForm'
 import { PageLogin } from '@rebel/studio/pages/navigation'
+import useRequireLogin from '@rebel/studio/hooks/useRequireLogin'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -94,15 +95,11 @@ export default function MainView () {
 function CurrentPage () {
   const loginContext = useContext(LoginContext)
   const page = useCurrentPage()
-
-  const { pathname: currentPath } = useLocation()
-  const loginPath = generatePath(PageLogin.path)
-  const navigate = useNavigate()
+  const { onRequireLogin } = useRequireLogin()
 
   useEffect(() => {
     if (loginContext.loginToken == null && page?.requiresLogin) {
-      const queryParam = `?${RETURN_URL_QUERY_PARAM}=${currentPath}`
-      navigate(loginPath + queryParam)
+      onRequireLogin()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loginContext.loginToken])
