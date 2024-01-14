@@ -39,6 +39,8 @@ function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends
   }
 }
 
+export const LOGIN_PATH = `/account/login`
+
 export const getChatMateRegisteredUsername = requestBuilder<GetChatMateRegisteredUsernameResponse>('GET', `/chatMate/username`)
 
 export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`, true, false)
@@ -71,7 +73,7 @@ export const deleteCustomRankName = requestBuilder<DeleteCustomRankNameResponse,
 
 export const registerAccount = requestBuilder<RegisterResponse, RegisterRequest>('POST', `/account/register`, false, false)
 
-export const login = requestBuilder<LoginResponse, LoginRequest>('POST', `/account/login`, false, false)
+export const login = requestBuilder<LoginResponse, LoginRequest>('POST', LOGIN_PATH, false, false)
 
 export const logout = requestBuilder<LogoutResponse>('POST', `/account/logout`, false)
 

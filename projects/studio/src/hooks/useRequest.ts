@@ -5,6 +5,7 @@ import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
 import LoginContext, { LoginContextType } from '@rebel/studio/contexts/LoginContext'
 import RequestContext, { RequestContextType } from '@rebel/studio/contexts/RequestContext'
 import useRequireLogin from '@rebel/studio/hooks/useRequireLogin'
+import { LOGIN_PATH } from '@rebel/studio/utility/api'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { useContext, useEffect, useRef, useState } from 'react'
 
@@ -233,7 +234,7 @@ export default function useRequest<
         }
         returnObj = { type: 'error', error: response.error }
 
-        if (response.error.errorCode === 401) {
+        if (response.error.errorCode === 401 && path !== LOGIN_PATH) {
           loginContext.logout()
           onRequireLogin()
           removeCache()
