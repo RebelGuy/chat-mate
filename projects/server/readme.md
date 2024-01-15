@@ -225,6 +225,19 @@ Returns data with the following properties:
 Can return the following errors:
 - `401`: When the login token is invalid.
 
+### `POST /resetPassword`
+Resets the user's password. Note that any active login tokens will be invalidated.
+
+Request data (body):
+- `oldPassword` (`string`): *Required.* The user's current password.
+- `newPassword` (`string`): *Required.* The user's new password.
+
+Returns data with the following properties:
+- `loginToken` (`string`): The updated login token.
+
+Can return the following errors:
+- `401`: When the login token or old password is invalid.
+
 ## Admin Endpoints
 Path: `/admin`.
 

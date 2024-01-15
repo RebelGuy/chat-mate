@@ -6,20 +6,27 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { first, single, unique } from '@rebel/shared/util/arrays'
 import { assertUnreachableCompile } from '@rebel/shared/util/typescript'
+import { NotLoggedInError } from '@rebel/shared/util/error'
+import LogService from '@rebel/server/services/LogService'
 
 type Deps = Dependencies<{
   accountStore: AccountStore
   channelStore: ChannelStore
+  logService: LogService
 }>
 
 export default class AccountService extends ContextClass {
+  public readonly name = AccountService.name
+
   private readonly accountStore: AccountStore
   private readonly channelStore: ChannelStore
+  private readonly logService: LogService
 
   constructor (deps: Deps) {
     super()
     this.accountStore = deps.resolve('accountStore')
     this.channelStore = deps.resolve('channelStore')
+    this.logService = deps.resolve('logService')
   }
 
   /** Gets the primary users for all channels that have participated in the streamer's chat. */
@@ -38,11 +45,20 @@ export default class AccountService extends ContextClass {
     return anyUserIds.map(userId => first(connectedUserIds.find(c => c.queriedAnyUserId === userId)!.connectedChatUserIds))
   }
 
-  public async resetPassword (registeredUserId: number, newPassword: string) {
+  /** Resets the user's password and returns a new login token.
+   * @throws {@link NotLoggedInError}: When the provided old password is incorrect. */
+  public async resetPassword (registeredUserId: number, oldPassword: string, newPassword: string): Promise<string> {
     const registeredUser = await this.accountStore.getRegisteredUsersFromIds([registeredUserId]).then(single)
+    const isAuthenticated = await this.accountStore.checkPassword(registeredUser.username, oldPassword)
+    if (!isAuthenticated) {
+      throw new NotLoggedInError('Invalid login details')
+    }
 
     await this.accountStore.clearLoginTokens(registeredUserId)
     await this.accountStore.setPassword(registeredUser.username, newPassword)
+
+    this.logService.logInfo(this, `User ${registeredUserId} (${registeredUser.username}) has reset their password.`)
+    return await this.accountStore.createLoginToken(registeredUser.username)
   }
 }
 

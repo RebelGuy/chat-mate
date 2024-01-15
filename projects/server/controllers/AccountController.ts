@@ -3,12 +3,13 @@ import { requireAuth } from '@rebel/server/controllers/preProcessors'
 import AccountHelpers from '@rebel/shared/helpers/AccountHelpers'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { InvalidUsernameError, TimeoutError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
+import { InvalidUsernameError, NotLoggedInError, TimeoutError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { sleep } from '@rebel/shared/util/node'
 import Semaphore from '@rebel/shared/util/Semaphore'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { Path, POST, PreProcessor } from 'typescript-rest'
-import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/api-models/schema/account'
+import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse } from '@rebel/api-models/schema/account'
+import AccountService from '@rebel/server/services/AccountService'
 
 // prevent brute-force login attacks by limiting the number of concurrent requests
 const loginSemaphore = new Semaphore(3, 10000)
@@ -18,6 +19,7 @@ type Deps = ControllerDependencies<{
   accountStore: AccountStore
   accountHelpers: AccountHelpers
   streamerStore: StreamerStore
+  accountService: AccountService
 }>
 
 @Path(buildPath('account'))
@@ -25,12 +27,14 @@ export default class AccountController extends ControllerBase {
   private readonly accountStore: AccountStore
   private readonly accountHelpers: AccountHelpers
   private readonly streamerStore: StreamerStore
+  private readonly accountService: AccountService
 
   constructor (deps: Deps) {
     super(deps, 'account')
     this.accountStore = deps.resolve('accountStore')
     this.accountHelpers = deps.resolve('accountHelpers')
     this.streamerStore = deps.resolve('streamerStore')
+    this.accountService = deps.resolve('accountService')
   }
 
   @POST
@@ -140,6 +144,36 @@ export default class AccountController extends ControllerBase {
       return builder.success({ username: user.username, isStreamer: streamer != null })
     } catch (e: any) {
       return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('resetPassword')
+  @PreProcessor(requireAuth)
+  public async resetPassword (request: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+    const builder = this.registerResponseBuilder<ResetPasswordResponse>('POST /resetPassword')
+
+    if (isNullOrEmpty(request.newPassword)) {
+      return builder.failure(400, 'New password must be provided')
+    }
+
+    try {
+      await loginSemaphore.enter()
+      await sleep(2000)
+
+      const user = super.getCurrentUser()
+      await this.accountService.resetPassword(user.id, request.oldPassword, request.newPassword)
+
+      const token = await this.accountStore.createLoginToken(user.username)
+      return builder.success({ loginToken: token })
+
+    } catch (e: any) {
+      if (e instanceof NotLoggedInError) {
+        return builder.failure(401, e)
+      }
+      return builder.failure(e)
+    } finally {
+      loginSemaphore.exit()
     }
   }
 }

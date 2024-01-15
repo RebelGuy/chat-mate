@@ -6,6 +6,7 @@ import { cast, expectArray, expectInvocation, nameof } from '@rebel/shared/testU
 import { mock, MockProxy } from 'jest-mock-extended'
 import { RegisteredUser } from '@prisma/client'
 import { single2 } from '@rebel/shared/util/arrays'
+import { NotLoggedInError } from '@rebel/shared/util/error'
 
 const streamerId = 5
 
@@ -19,7 +20,8 @@ beforeEach(() => {
 
   accountService = new AccountService(new Dependencies({
     accountStore: mockAccountStore,
-    channelStore: mockChannelStore
+    channelStore: mockChannelStore,
+    logService: mock()
   }))
 })
 
@@ -54,15 +56,32 @@ describe(nameof(AccountService, 'getPrimaryUserIdFromAnyUser'), () => {
 })
 
 describe(nameof(AccountService, 'resetPassword'), () => {
-  test(`Clears the user's tokens and changes the password`, async () => {
+  test(`Clears the user's tokens, changes the password, and returns the new token`, async () => {
     const registeredUserId = 51
+    const oldPassword = 'oldPassword'
     const newPassword = 'newPassword'
     const username = 'testUser'
+    const newLoginToken = 'newLoginToken'
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray([registeredUserId])).mockResolvedValue(cast<RegisteredUser[]>([{ username }]))
+    mockAccountStore.checkPassword.calledWith(username, oldPassword).mockResolvedValue(true)
+    mockAccountStore.createLoginToken.calledWith(username).mockResolvedValue(newLoginToken)
 
-    await accountService.resetPassword(registeredUserId, newPassword)
+    const result = await accountService.resetPassword(registeredUserId, oldPassword, newPassword)
 
     expectInvocation(mockAccountStore.clearLoginTokens, [registeredUserId])
     expectInvocation(mockAccountStore.setPassword, [username, newPassword])
+    expect(result).toBe(newLoginToken)
+  })
+
+  test(`Throws ${NotLoggedInError.name} if the current password is incorrect`, async () => {
+    const registeredUserId = 51
+    const username = 'testUser'
+    const oldPassword = 'oldPassword'
+    mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray([registeredUserId])).mockResolvedValue(cast<RegisteredUser[]>([{ username }]))
+    mockAccountStore.checkPassword.calledWith(username, oldPassword).mockResolvedValue(false)
+
+    await expect(() => accountService.resetPassword(registeredUserId, oldPassword, '')).rejects.toThrowError(NotLoggedInError)
+
+    expect(mockAccountStore.setPassword.mock.calls.length).toBe(0)
   })
 })

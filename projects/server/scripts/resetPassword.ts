@@ -1,5 +1,4 @@
 import { ARGS, DB_PROVIDER } from '@rebel/server/scripts/consts'
-import AccountService from '@rebel/server/services/AccountService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import AccountHelpers from '@rebel/shared/helpers/AccountHelpers'
@@ -19,10 +18,7 @@ const accountHelpers = new AccountHelpers()
 const accountStore = new AccountStore(new Dependencies({
   dbProvider: DB_PROVIDER
 }))
-const accountService = new AccountService(new Dependencies({
-  accountStore: accountStore,
-  channelStore: null!
-}))
+
 const formattedUsername = accountHelpers.validateAndFormatUsername(username)
 
 const _ = (async () => {
@@ -32,7 +28,8 @@ const _ = (async () => {
       throw new Error('Could not find registered user')
     }
 
-    await accountService.resetPassword(registeredUser.id, password)
+    await accountStore.clearLoginTokens(registeredUser.id)
+    await accountStore.setPassword(registeredUser.username, password)
     console.log(`Successfully updated password for user ${formattedUsername}`)
 
   } catch (e) {
