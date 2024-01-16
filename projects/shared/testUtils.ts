@@ -1,5 +1,5 @@
 import Resolvable from '@rebel/shared/Resolvable'
-import { DeepPartial, GenericObject, Primitive, Singular } from '@rebel/shared/types'
+import { DeepPartial, GenericObject, Primitive, SafeOmit, Singular } from '@rebel/shared/types'
 import { single } from '@rebel/shared/util/arrays'
 import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
 import { Matcher, MockProxy, mock } from 'jest-mock-extended'
@@ -48,7 +48,7 @@ export function promised<T> (value: T): Promise<T> {
   return new Promise(res => res(value))
 }
 
-export function deleteProps<T, Prop extends keyof T> (obj: T, ...props: Prop[]): Omit<T, Prop> {
+export function deleteProps<T, Prop extends keyof T> (obj: T, ...props: Prop[]): SafeOmit<T, Prop> {
   const result = { ...obj }
   for (const prop of props) {
     delete result[prop]

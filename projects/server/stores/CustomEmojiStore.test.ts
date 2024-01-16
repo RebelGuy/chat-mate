@@ -8,6 +8,7 @@ import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel
 import { anyDate, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { symbolName } from 'typescript'
 import { ChatMateError, DbError } from '@rebel/shared/util/error'
+import { SafeOmit } from '@rebel/shared/types'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>
 
@@ -229,7 +230,7 @@ export default () => {
   }
 }
 
-function getEmojiCreateData (id: number, streamerId?: number): Omit<CustomEmojiCreateData, 'whitelistedRanks'> {
+function getEmojiCreateData (id: number, streamerId?: number): SafeOmit<CustomEmojiCreateData, 'whitelistedRanks'> {
   return {
     name: 'Emoji ' + id,
     streamerId: streamerId ?? streamer1,

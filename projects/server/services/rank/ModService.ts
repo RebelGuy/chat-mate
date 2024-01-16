@@ -9,6 +9,7 @@ import RankStore, { AddUserRankArgs, RankEventData, RemoveUserRankArgs } from '@
 import { single } from '@rebel/shared/util/arrays'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 import { ChatMateError } from '@rebel/shared/util/error'
+import { SafeOmit } from '@rebel/shared/types'
 
 export type IgnoreOptions = {
   youtubeChannelId?: number
@@ -82,7 +83,7 @@ export default class ModService extends ContextClass {
   }
 
   /** Like `setModRank` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. */
-  public async setModRankExternal (defaultUserId: number, streamerId: number, isMod: boolean): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+  public async setModRankExternal (defaultUserId: number, streamerId: number, isMod: boolean): Promise<SafeOmit<SetActionRankResult, 'rankResult'>> {
     const userChannels = await this.channelStore.getDefaultUserOwnedChannels([defaultUserId]).then(single)
     const youtubeResults = await Promise.all(userChannels.youtubeChannelIds.map(c => this.trySetYoutubeMod(streamerId, c, isMod)))
     const twitchResults = await Promise.all(userChannels.twitchChannelIds.map(c => this.trySetTwitchMod(streamerId, c, isMod)))

@@ -5,19 +5,19 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatPlatform } from '@rebel/server/models/chat'
 import { New, Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { ObjectComparator } from '@rebel/shared/types'
+import { ObjectComparator, SafeOmit } from '@rebel/shared/types'
 import { assertUnreachable, compare } from '@rebel/shared/util/typescript'
 import { SafeExtract } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
 
-export type CreateOrUpdateGlobalYoutubeChannelArgs = Omit<New<YoutubeChannelGlobalInfo>, 'channelId'>
-export type CreateOrUpdateGlobalTwitchChannelArgs = Omit<New<TwitchChannelGlobalInfo>, 'channelId'>
+export type CreateOrUpdateGlobalYoutubeChannelArgs = SafeOmit<New<YoutubeChannelGlobalInfo>, 'channelId'>
+export type CreateOrUpdateGlobalTwitchChannelArgs = SafeOmit<New<TwitchChannelGlobalInfo>, 'channelId'>
 
-export type CreateOrUpdateStreamerYoutubeChannelArgs = Omit<New<YoutubeChannelStreamerInfo>, 'channelId'>
-export type CreateOrUpdateStreamerTwitchChannelArgs = Omit<New<TwitchChannelStreamerInfo>, 'channelId'>
+export type CreateOrUpdateStreamerYoutubeChannelArgs = SafeOmit<New<YoutubeChannelStreamerInfo>, 'channelId'>
+export type CreateOrUpdateStreamerTwitchChannelArgs = SafeOmit<New<TwitchChannelStreamerInfo>, 'channelId'>
 
-export type YoutubeChannelWithLatestInfo = Omit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLink' | 'streamerInfoHistory'>
-export type TwitchChannelWithLatestInfo = Omit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLink' | 'streamerInfoHistory'>
+export type YoutubeChannelWithLatestInfo = SafeOmit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLink' | 'streamerInfoHistory'>
+export type TwitchChannelWithLatestInfo = SafeOmit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLink' | 'streamerInfoHistory'>
 
 /** Contains all channels on all platforms owned by the user. */
 export type UserOwnedChannels = {

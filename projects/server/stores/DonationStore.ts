@@ -7,7 +7,7 @@ import { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/serve
 import { single } from '@rebel/shared/util/arrays'
 import { ChatMateError, DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, NotFoundError } from '@rebel/shared/util/error'
 
-export type DonationWithMessage = Omit<Donation, 'chatMessageId'> & {
+export type DonationWithMessage = Donation & {
   messageParts: ChatItemWithRelations['chatMessageParts']
 }
 

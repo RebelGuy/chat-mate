@@ -19,6 +19,7 @@ import { ChatMateError, UserAlreadyLinkedToAggregateUserError, UserNotLinkedErro
 import { NO_OP_ASYNC } from '@rebel/shared/util/typescript'
 import { nameof } from '@rebel/shared/testUtils'
 import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
+import { SafeOmit } from '@rebel/shared/types'
 
 export type LinkLog = [time: Date, step: string, warnings: number]
 
@@ -316,8 +317,8 @@ export default class LinkService extends ContextClass {
     oldDefaultUserId: number,
     otherDefaultUserIds: number[],
     mergeResult: MergeResult,
-    onRevokeExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<(Omit<SetActionRankResult, 'rankResult'> | void)[] | void>,
-    onApplyExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<(Omit<SetActionRankResult, 'rankResult'> | void)[] | void>
+    onRevokeExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<(SafeOmit<SetActionRankResult, 'rankResult'> | void)[] | void>,
+    onApplyExternal: (rank: UserRankWithRelations, defaultUsers: number[]) => Promise<(SafeOmit<SetActionRankResult, 'rankResult'> | void)[] | void>
   ): Promise<number> {
     let warnings = 0
 
@@ -345,11 +346,11 @@ export default class LinkService extends ContextClass {
 }
 
 /** Gets the number of warnings from the external action results. */
-function getWarnings (result: (Omit<SetActionRankResult, 'rankResult'> | void)[] | void): number {
+function getWarnings (result: (SafeOmit<SetActionRankResult, 'rankResult'> | void)[] | void): number {
   if (result == null) {
     return 0
   } else {
-    return (result.filter(r => r != null) as Omit<SetActionRankResult, 'rankResult'>[])
+    return (result.filter(r => r != null) as SafeOmit<SetActionRankResult, 'rankResult'>[])
       .flatMap(r => [
         ...r.twitchResults.filter(x => x.error != null),
         ...r.youtubeResults.filter(x => x.error != null)

@@ -8,13 +8,14 @@ import { group, toObject, unique } from '@rebel/shared/util/arrays'
 import { ChatMateError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 import { IgnoreOptions } from '@rebel/server/services/rank/PunishmentService'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import { SafeOmit } from '@rebel/shared/types'
 
 export type UserRanks = {
   primaryUserId: number
   ranks: UserRankWithRelations[]
 }
 
-export type UserRankWithRelations = Omit<UserRank, 'rankId' | 'userId'> & {
+export type UserRankWithRelations = SafeOmit<UserRank, 'rankId' | 'userId'> & {
   primaryUserId: number
   rank: Rank
   streamerName: string | null
@@ -48,7 +49,7 @@ export type RankEventData = {
   ignoreOptions: IgnoreOptions | null
 }
 
-export type ParsedRankEvent = Omit<RankEvent, 'serialisedData'> & {
+export type ParsedRankEvent = SafeOmit<RankEvent, 'serialisedData'> & {
   data: RankEventData | null
   rank: Rank
 }

@@ -19,8 +19,9 @@ import ApiError from '@rebel/studio/components/ApiError'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
+import { SafeOmit } from '@rebel/shared/types'
 
-export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
+export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version'>
 
 type Eligibility = {
   meetsLevelRequirement: boolean

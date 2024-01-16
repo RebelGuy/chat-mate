@@ -12,6 +12,7 @@ import StreamerInfo from '@rebel/studio/pages/streamer-info/StreamerInfo'
 import YouTube from '@rebel/studio/icons/YouTube'
 import YoutubeAdminLogin from '@rebel/studio/pages/admin/youtube/YoutubeAdminLogin'
 import ResetPasswordForm from '@rebel/studio/pages/login/ResetPasswordForm'
+import { SafeOmit } from '@rebel/shared/types'
 
 export type Page = {
   id: string
@@ -21,7 +22,7 @@ export type Page = {
   path: string
   requiresLogin: boolean
   requiresStreamer: boolean
-  requireRanksProps: Omit<RequireRankProps, 'children' | 'hideAdminOutline'> | null
+  requireRanksProps: SafeOmit<RequireRankProps, 'children' | 'hideAdminOutline'> | null
 }
 
 // by typing out pages as `const`s, we can enforce the required route parameters to be provided when generating paths (via `generatePath`)

@@ -5,11 +5,12 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import Semaphore from '@rebel/shared/util/Semaphore'
 import { DbError } from '@rebel/shared/util/error'
 import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
+import { SafeOmit } from '@rebel/shared/types'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
 
-export type Db = Omit<PrismaClient, UnusedPrismaProperties>
+export type Db = SafeOmit<PrismaClient, UnusedPrismaProperties>
 
 type Deps = Dependencies<{
   logService: LogService

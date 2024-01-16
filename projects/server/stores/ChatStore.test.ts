@@ -11,6 +11,7 @@ import { YoutubeChannelGlobalInfo, YoutubeLivestream, TwitchLivestream, TwitchCh
 import * as data from '@rebel/server/_test/testData'
 import { DbError, ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
+import { SafeOmit } from '@rebel/shared/types'
 
 const youtube1UserId = 1
 const extYoutubeChannel1 = 'channel1'
@@ -108,7 +109,7 @@ const cheer1: PartialCheerChatMessage = {
   name: 'Mr Cheerer'
 }
 
-function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelGlobalInfo, 'channelId' | 'id'> {
+function authorToChannelInfo (a: Author, time?: Date): SafeOmit<YoutubeChannelGlobalInfo, 'channelId' | 'id'> {
   return {
     isVerified: a.attributes.isVerified,
     imageUrl: a.image,
@@ -117,7 +118,7 @@ function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelGlobal
   }
 }
 
-function twitchAuthorToChannelInfo (a: TwitchAuthor, time?: Date): Omit<TwitchChannelGlobalInfo, 'channelId' | 'id'> {
+function twitchAuthorToChannelInfo (a: TwitchAuthor, time?: Date): SafeOmit<TwitchChannelGlobalInfo, 'channelId' | 'id'> {
   return {
     time: time ?? new Date(),
     colour: a.color ?? '',

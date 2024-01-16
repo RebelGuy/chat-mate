@@ -1,4 +1,4 @@
-import { GenericObject, NumberOnly, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
+import { GenericObject, NumberOnly, PrimitiveKeys, SafeOmit, UnionToIntersection } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
@@ -100,10 +100,10 @@ export function zip<T extends GenericObject, U extends GenericObject> (first: T[
 /** Merges the two arrays on the specified key, which must be a common property. It is assumed that the key is unique within
  * an array, but may or may not be unique across the two arrays. No other properties should overlap between the objects, else
  * the behaviour is undefined. The arrays' lengths may differ. The return order is undefined. */
-export function zipOn<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (first: T[], second: U[], key: Key): (Pick<T & U, Key> & Partial<Omit<T & U, Key>>)[] {
-  // for some reason we must explicitly define `Key extends (string | number | symbol)` otherwise Omit<> is unhappy
-  let firstMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
-  let secondMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
+export function zipOn<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (first: T[], second: U[], key: Key): (Pick<T & U, Key> & Partial<SafeOmit<T & U, Key>>)[] {
+  // for some reason we must explicitly define `Key extends (string | number | symbol)` otherwise SafeOmit<> is unhappy
+  let firstMap: Map<T[Key] & U[Key], Pick<T & U, Key> & SafeOmit<Partial<T & U>, Key>> = new Map()
+  let secondMap: Map<T[Key] & U[Key], Pick<T & U, Key> & SafeOmit<Partial<T & U>, Key>> = new Map()
 
   for (const x of first) {
     const k = x[key]
@@ -127,11 +127,11 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
     }
   }
 
-  let map: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
+  let map: Map<T[Key] & U[Key], Pick<T & U, Key> & SafeOmit<Partial<T & U>, Key>> = new Map()
   const allKeys = unique([...firstMap.keys(), ...secondMap.keys()])
   for (const k of allKeys) {
-    const firstValue = firstMap.get(k) ?? {} as Omit<Partial<T & U>, Key>
-    const secondValue = secondMap.get(k) ?? {} as Omit<Partial<T & U>, Key>
+    const firstValue = firstMap.get(k) ?? {} as SafeOmit<Partial<T & U>, Key>
+    const secondValue = secondMap.get(k) ?? {} as SafeOmit<Partial<T & U>, Key>
 
     const keyValue = { [key]: k } as Pick<T & U, Key>
     const finalValue = {
@@ -149,7 +149,7 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
  * The merged object has the same order as the first array, relative to the keys. */
 export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (firstArray: T[], secondArray: U[], key: Key): (T & U)[]
 /** Merges the two arrays on the given keys, and optionally maps the key names to a new key. */
-export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key1 extends (string | number | symbol) & PrimitiveKeys<T>, Key2 extends (string | number | symbol) & PrimitiveKeys<U>, NewKey extends string | number | symbol> (firstArray: T[], secondArray: U[], firstKey: Key1, secondKey: Key2, newKey?: NewKey): (Omit<T, Key1> & Omit<U, Key2> & Record<NewKey, T[Key1] | U[Key2]>)[]
+export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key1 extends (string | number | symbol) & PrimitiveKeys<T>, Key2 extends (string | number | symbol) & PrimitiveKeys<U>, NewKey extends string | number | symbol> (firstArray: T[], secondArray: U[], firstKey: Key1, secondKey: Key2, newKey?: NewKey): (SafeOmit<T, Key1> & SafeOmit<U, Key2> & Record<NewKey, T[Key1] | U[Key2]>)[]
 export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (firstArray: T[], secondArray: U[], firstKey: Key, secondKey?: Key, newKey?: Key): (T & U)[] {
   if (secondKey == null) {
     secondKey = firstKey
