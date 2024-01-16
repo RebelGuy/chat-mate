@@ -11,6 +11,7 @@ import { Props as RequireRankProps } from '@rebel/studio/components/RequireRank'
 import StreamerInfo from '@rebel/studio/pages/streamer-info/StreamerInfo'
 import YouTube from '@rebel/studio/icons/YouTube'
 import YoutubeAdminLogin from '@rebel/studio/pages/admin/youtube/YoutubeAdminLogin'
+import ResetPasswordForm from '@rebel/studio/pages/login/ResetPasswordForm'
 
 export type Page = {
   id: string
@@ -64,6 +65,17 @@ export const PageLogin = {
   icon: <AccountCircle />,
   path: '/login',
   requiresLogin: false,
+  requiresStreamer: false,
+  requireRanksProps: null
+} as const
+
+export const PageChangePassword = {
+  id: 'changePassword',
+  title: 'Change Password',
+  element: <ResetPasswordForm />,
+  icon: <AccountCircle />,
+  path: '/changePassword',
+  requiresLogin: true,
   requiresStreamer: false,
   requireRanksProps: null
 } as const
@@ -126,4 +138,4 @@ export const PageYoutubeAuth = {
   requireRanksProps: { admin: true }
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth, PageYoutubeAuth]
+export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageChangePassword, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth, PageYoutubeAuth]

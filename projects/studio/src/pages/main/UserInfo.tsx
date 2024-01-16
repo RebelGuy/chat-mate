@@ -1,5 +1,5 @@
 import { Edit, Public } from '@mui/icons-material'
-import { Alert, Avatar, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Grid, SxProps, TextField, Typography } from '@mui/material'
+import { Alert, Avatar, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, Paper, Popover, Stack, SxProps, TextField, Typography } from '@mui/material'
 import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { toSentenceCase } from '@rebel/shared/util/text'
@@ -9,7 +9,7 @@ import ApiLoading from '@rebel/studio/components/ApiLoading'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
-import { PageLogin } from '@rebel/studio/pages/navigation'
+import { PageChangePassword, PageLogin } from '@rebel/studio/pages/navigation'
 import { deleteCustomRankName, logout, setCustomRankName } from '@rebel/studio/utility/api'
 import React, { CSSProperties, ReactElement, useState } from 'react'
 import { useContext } from 'react'
@@ -17,6 +17,7 @@ import { useNavigate, generatePath, useLocation } from 'react-router-dom'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import { InvalidCustomRankNameError } from '@rebel/shared/util/error'
 import { RETURN_URL_QUERY_PARAM } from '@rebel/studio/pages/login/LoginForm'
+import Clickable from '@rebel/studio/components/Clickable'
 
 const rankHelpers = new RankHelpers()
 
@@ -24,6 +25,19 @@ export default function UserInfo () {
   const loginContext = useContext(LoginContext)
   const navigate = useNavigate()
   const { pathname: currentPath } = useLocation()
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+
+  const onLoggedOut = () => {
+    loginContext.logout()
+    navigate(generatePath('/'))
+    setMenuAnchor(null)
+  }
+  const logoutRequest = useRequest(logout(), { onDemand: true, onDone: onLoggedOut })
+
+  const onChangePassword = () => {
+    navigate(PageChangePassword.path)
+    setMenuAnchor(null)
+  }
 
   const loginUrl = generatePath(PageLogin.path) + `?${RETURN_URL_QUERY_PARAM}=${currentPath}`
   const isLoggedIn = loginContext.username != null
@@ -32,7 +46,7 @@ export default function UserInfo () {
       <Alert severity="info">
         You are not currently logged in.
       </Alert>
-      <Button onClick={() => navigate(loginUrl)} fullWidth sx={{ marginTop: 1, marginBottom: 1}}>Login</Button>
+      <Button onClick={() => navigate(loginUrl)} fullWidth sx={{ marginTop: 1, marginBottom: 1 }}>Login</Button>
 
       {loginContext.authError != null && <>
         <Alert severity="error">{loginContext.authError}</Alert>
@@ -40,29 +54,25 @@ export default function UserInfo () {
     </>
   }
 
+  const isLoading = logoutRequest.isLoading
+
   return <>
-    <Avatar sx={{ margin: 'auto' }} />
+    <Clickable onClick={e => setMenuAnchor(e.currentTarget)} width="40px" margin="auto">
+      <Avatar />
+    </Clickable>
     <UserName />
     <UserRanks sx={{ mt: 1, mb: 1 }} />
-    <LogoutButton />
+
+    <Popover
+      open={menuAnchor != null}
+      anchorEl={menuAnchor}
+      onClose={() => setMenuAnchor(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+    >
+      <MenuItem disabled={isLoading} onClick={logoutRequest.triggerRequest}>Log out</MenuItem>
+      <MenuItem disabled={isLoading} onClick={onChangePassword}>Change password</MenuItem>
+    </Popover>
   </>
-}
-
-function LogoutButton () {
-  const loginContext = React.useContext(LoginContext)
-  const navigate = useNavigate()
-  const logoutRequest = useRequest(logout(), { onDemand: true, onSuccess: onDone, onError: onDone })
-
-  function onDone () {
-    loginContext.logout()
-    navigate(generatePath('/'))
-  }
-
-  return (
-    <>
-      <Button disabled={logoutRequest.isLoading} onClick={logoutRequest.triggerRequest} sx={{ display: 'block', margin: 'auto' }}>Logout</Button>
-    </>
-  )
 }
 
 function UserName () {
