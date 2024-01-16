@@ -7,7 +7,7 @@ import { New, Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ObjectComparator } from '@rebel/shared/types'
 import { assertUnreachable, compare } from '@rebel/shared/util/typescript'
-import { SafeExtract } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
 
 export type CreateOrUpdateGlobalYoutubeChannelArgs = Omit<New<YoutubeChannelGlobalInfo>, 'channelId'>

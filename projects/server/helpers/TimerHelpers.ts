@@ -1,4 +1,4 @@
-import { SafeExtract } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatMateError } from '@rebel/shared/util/error'
 

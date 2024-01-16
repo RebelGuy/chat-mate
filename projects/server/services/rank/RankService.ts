@@ -8,7 +8,7 @@ import { ChatMateError, InvalidCustomRankError, UserRankAlreadyExistsError, User
 import { isOneOf } from '@rebel/shared/util/validation'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import UserService from '@rebel/server/services/UserService'
-import { SafeExtract } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
 
 /** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
 export type RegularRank = SafeExtract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>

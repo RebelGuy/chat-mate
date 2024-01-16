@@ -84,3 +84,6 @@ export type Singular<T> = T extends Array<infer K> ? K : never
 export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never
 
 export type RecordValueType<T> = T extends Record<any, infer V> ? V : never
+
+/** Extract from T those types that are assignable to U, ensuring that U is strictly a sub-type of T. */
+export type SafeExtract<T, U extends T> = U extends Extract<T, U> ? U : never

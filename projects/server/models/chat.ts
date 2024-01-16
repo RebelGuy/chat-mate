@@ -16,7 +16,7 @@ import { Singular } from '@rebel/shared/types'
 import { sortByLength } from '@rebel/shared/util/arrays'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
-import { SafeExtract } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
 
 export type ChatPlatform = 'youtube' | 'twitch'
