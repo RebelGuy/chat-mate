@@ -23,10 +23,20 @@ export default class StreamerChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async deleteStreamerYoutubeChannelLink (streamerId: number): Promise<UserChannel<'youtube'> | null> {
+  public async removeStreamerYoutubeChannelLink (streamerId: number): Promise<UserChannel<'youtube'> | null> {
     try {
-      const removedLink = await this.db.streamerYoutubeChannelLink.delete({
-        where: { streamerId },
+      const entry = await this.db.streamerYoutubeChannelLink.findFirst({ where: {
+        streamerId: streamerId,
+        timeRemoved: null
+      }})
+
+      if (entry == null) {
+        return null
+      }
+
+      const removedLink = await this.db.streamerYoutubeChannelLink.update({
+        data: { timeRemoved: new Date() },
+        where: { id: entry.id },
         include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
       })
       return youtubeLinkToUserChannel(removedLink)
@@ -40,10 +50,20 @@ export default class StreamerChannelStore extends ContextClass {
     }
   }
 
-  public async deleteStreamerTwitchChannelLink (streamerId: number): Promise<UserChannel<'twitch'> | null> {
+  public async removeStreamerTwitchChannelLink (streamerId: number): Promise<UserChannel<'twitch'> | null> {
     try {
-      const removedLink = await this.db.streamerTwitchChannelLink.delete({
-        where: { streamerId },
+      const entry = await this.db.streamerTwitchChannelLink.findFirst({ where: {
+        streamerId: streamerId,
+        timeRemoved: null
+      }})
+
+      if (entry == null) {
+        return null
+      }
+
+      const removedLink = await this.db.streamerTwitchChannelLink.update({
+        data: { timeRemoved: new Date() },
+        where: { id: entry.id },
         include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
       })
       return twitchLinkToUserChannel(removedLink)
@@ -60,12 +80,18 @@ export default class StreamerChannelStore extends ContextClass {
   /** Returns the streamers' primary channels - the channels that were selected to be streamed on. */
   public async getPrimaryChannels (streamerIds: number[]): Promise<PrimaryChannels[]> {
     const youtubeLinks = await this.db.streamerYoutubeChannelLink.findMany({
-      where: { streamerId: { in: streamerIds } },
+      where: {
+        streamerId: { in: streamerIds },
+        timeRemoved: null
+      },
       include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 
     const twitchLinks = await this.db.streamerTwitchChannelLink.findMany({
-      where: { streamerId: { in: streamerIds} },
+      where: {
+        streamerId: { in: streamerIds},
+        timeRemoved: null
+      },
       include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 
@@ -83,7 +109,11 @@ export default class StreamerChannelStore extends ContextClass {
   /** Throws if a primary youtube channel already exists. */
   public async setStreamerYoutubeChannelLink (streamerId: number, youtubeChannelId: number): Promise<UserChannel<'youtube'>> {
     const addedLink = await this.db.streamerYoutubeChannelLink.create({
-      data: { streamerId, youtubeChannelId },
+      data: {
+        streamerId: streamerId,
+        youtubeChannelId: youtubeChannelId,
+        timeAdded: new Date()
+      },
       include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 
@@ -93,7 +123,11 @@ export default class StreamerChannelStore extends ContextClass {
   /** Throws if a primary twitch channel already exists. */
   public async setStreamerTwitchChannelLink (streamerId: number, twitchChannelId: number): Promise<UserChannel<'twitch'>> {
     const addedLink = await this.db.streamerTwitchChannelLink.create({
-      data: { streamerId, twitchChannelId },
+      data: {
+        streamerId: streamerId,
+        twitchChannelId: twitchChannelId,
+        timeAdded: new Date()
+      },
       include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 

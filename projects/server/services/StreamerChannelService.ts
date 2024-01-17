@@ -135,9 +135,9 @@ export default class StreamerChannelService extends ContextClass {
 
     let userChannel: UserChannel | null
     if (platform === 'youtube') {
-      userChannel = await this.streamerChannelStore.deleteStreamerYoutubeChannelLink(streamerId)
+      userChannel = await this.streamerChannelStore.removeStreamerYoutubeChannelLink(streamerId)
     } else if (platform === 'twitch') {
-      userChannel = await this.streamerChannelStore.deleteStreamerTwitchChannelLink(streamerId)
+      userChannel = await this.streamerChannelStore.removeStreamerTwitchChannelLink(streamerId)
     } else {
       assertUnreachable(platform)
     }

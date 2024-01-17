@@ -203,7 +203,7 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
   test('Unsets primary channel and dispatches data', async () => {
     const streamerId = 3
     const userChannel = cast<UserChannel>({})
-    mockStreamerChannelStore.deleteStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(userChannel)
+    mockStreamerChannelStore.removeStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(userChannel)
 
     await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
 
@@ -213,7 +213,7 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
 
   test('Does not dispatch data if no primary channel was unset', async () => {
     const streamerId = 3
-    mockStreamerChannelStore.deleteStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(null)
+    mockStreamerChannelStore.removeStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(null)
 
     await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
 

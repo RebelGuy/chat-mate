@@ -18,6 +18,11 @@ It is not possible to rename a foreign key. Instead, you must drop and re-add it
 
 `ALTER TABLE table_name ADD CONSTRAINT fkey_name FOREIGN KEY (current_table_column) REFERENCES foreign_table_name (foreign_table_column) ON DELETE RESTRICT ON UPDATE CASCADE;`
 
+# Add a non-null column with default values
+`ALTER TABLE table_name ADD COLUMN column_name data_type NULL;`
+`UPDATE table_name SET column_name = value WHERE id > 0;`
+`ALTER TABLE table_name MODIFY COLUMN column_name data_type NOT NULL;` 
+
 # Update a column
 `UPDATE table_name SET column_name = value WHERE condition;`
 

@@ -16,8 +16,8 @@ export type CreateOrUpdateGlobalTwitchChannelArgs = SafeOmit<New<TwitchChannelGl
 export type CreateOrUpdateStreamerYoutubeChannelArgs = SafeOmit<New<YoutubeChannelStreamerInfo>, 'channelId'>
 export type CreateOrUpdateStreamerTwitchChannelArgs = SafeOmit<New<TwitchChannelStreamerInfo>, 'channelId'>
 
-export type YoutubeChannelWithLatestInfo = SafeOmit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLink' | 'streamerInfoHistory'>
-export type TwitchChannelWithLatestInfo = SafeOmit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLink' | 'streamerInfoHistory'>
+export type YoutubeChannelWithLatestInfo = SafeOmit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLinks' | 'streamerInfoHistory'>
+export type TwitchChannelWithLatestInfo = SafeOmit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLinks' | 'streamerInfoHistory'>
 
 /** Contains all channels on all platforms owned by the user. */
 export type UserOwnedChannels = {

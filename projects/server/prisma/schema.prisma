@@ -271,8 +271,8 @@ model Streamer {
   experienceSnapshots         ExperienceSnapshot[]
   twitchFollowers             TwitchFollower[]
   chatMessages                ChatMessage[]
-  streamerYoutubeChannelLink  StreamerYoutubeChannelLink?
-  streamerTwitchChannelLink   StreamerTwitchChannelLink?
+  streamerYoutubeChannelLinks StreamerYoutubeChannelLink[]
+  streamerTwitchChannelLinks  StreamerTwitchChannelLink[]
   donationLinks               DonationLink[]
   customRankNames             CustomRankName[]
   rankEvents                  RankEvent[]
@@ -346,10 +346,10 @@ model YoutubeChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "youtube_channel_userId_fkey")
 
-  globalInfoHistory          YoutubeChannelGlobalInfo[]
-  streamerInfoHistory        YoutubeChannelStreamerInfo[]
-  chatMessages               ChatMessage[]
-  streamerYoutubeChannelLink StreamerYoutubeChannelLink?
+  globalInfoHistory           YoutubeChannelGlobalInfo[]
+  streamerInfoHistory         YoutubeChannelStreamerInfo[]
+  chatMessages                ChatMessage[]
+  streamerYoutubeChannelLinks StreamerYoutubeChannelLink[]
 
   @@unique([youtubeId], map: "youtube_channel_youtubeId_key")
   @@unique([userId], map: "youtube_channel_userId_fkey")
@@ -405,10 +405,10 @@ model TwitchChannel {
   userId Int
   user   ChatUser @relation(fields: [userId], references: [id], map: "twitch_channel_userId_fkey")
 
-  globalInfoHistory         TwitchChannelGlobalInfo[]
-  streamerInfoHistory       TwitchChannelStreamerInfo[]
-  chatMessages              ChatMessage[]
-  streamerTwitchChannelLink StreamerTwitchChannelLink?
+  globalInfoHistory          TwitchChannelGlobalInfo[]
+  streamerInfoHistory        TwitchChannelStreamerInfo[]
+  chatMessages               ChatMessage[]
+  streamerTwitchChannelLinks StreamerTwitchChannelLink[]
 
   @@unique([twitchId], map: "twitch_channel_twitchId_key")
   @@unique([userId], map: "twitch_channel_userId_fkey")
@@ -418,19 +418,25 @@ model TwitchChannel {
 model StreamerYoutubeChannelLink {
   id Int @id @default(autoincrement())
 
+  timeAdded   DateTime
+  timeRemoved DateTime?
+
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "streamer_youtube_channel_link_streamerId_fkey")
 
   youtubeChannelId Int
   youtubeChannel   YoutubeChannel @relation(fields: [youtubeChannelId], references: [id], map: "streamer_youtube_channel_link_youtubeChannelId_fkey")
 
-  @@unique([streamerId], map: "streamer_youtube_channel_link_streamerId_fkey")
-  @@unique([youtubeChannelId], map: "streamer_youtube_channel_link_youtubeChannelId_fkey")
+  @@index([streamerId], map: "streamer_youtube_channel_link_streamerId_fkey")
+  @@index([youtubeChannelId], map: "streamer_youtube_channel_link_youtubeChannelId_fkey")
   @@map("streamer_youtube_channel_link")
 }
 
 model StreamerTwitchChannelLink {
   id Int @id @default(autoincrement())
+
+  timeAdded   DateTime
+  timeRemoved DateTime?
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "streamer_twitch_channel_link_streamerId_fkey")
@@ -438,8 +444,8 @@ model StreamerTwitchChannelLink {
   twitchChannelId Int
   twitchChannel   TwitchChannel @relation(fields: [twitchChannelId], references: [id], map: "streamer_twitch_channel_link_twitchChannelId_fkey")
 
-  @@unique([streamerId], map: "streamer_twitch_channel_link_streamerId_fkey")
-  @@unique([twitchChannelId], map: "streamer_twitch_channel_link_twitchChannelId_fkey")
+  @@index([streamerId], map: "streamer_twitch_channel_link_streamerId_fkey")
+  @@index([twitchChannelId], map: "streamer_twitch_channel_link_twitchChannelId_fkey")
   @@map("streamer_twitch_channel_link")
 }
 
