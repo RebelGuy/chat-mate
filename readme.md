@@ -41,6 +41,8 @@ If the string `--skip-server` is included in the commit message, the Server proj
 
 If the string `--skip-studio` is included in the commit message, the Studio project will not be built, tested, or deployed.
 
+When deploying the server that includes database migrations, ensure you stop the server before the migration, and after the server deployment has succeeded. Failure to do so causes undefined behaviour with potentially corrupt data being persisted to the database.
+
 ## ChatMate admin channels
 External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`. ChatMate assumes that this registered user exists in the database.
 
