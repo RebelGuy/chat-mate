@@ -154,9 +154,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
-          submodules: true
+          # fetch all commits, not just the latest one, so that webpack can correctly set the version based on the commit count
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
