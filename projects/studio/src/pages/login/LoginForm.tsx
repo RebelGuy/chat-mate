@@ -4,7 +4,7 @@ import { login, registerAccount } from '@rebel/studio/utility/api'
 import Form from '@rebel/studio/components/Form'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { useContext, useEffect, useState } from 'react'
-import { generatePath, useNavigate } from 'react-router-dom'
+import { generatePath, useNavigate, useSearchParams } from 'react-router-dom'
 import TextField from '@mui/material/TextField'
 import { Button, Checkbox, FormControlLabel } from '@mui/material'
 import AccountHelpers from '@rebel/shared/helpers/AccountHelpers'
@@ -13,6 +13,8 @@ import AutoFocus from '@rebel/studio/components/Autofocus'
 import useRequest, { SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
+
+export const RETURN_URL_QUERY_PARAM = 'returnUrl'
 
 const accountHelpers = new AccountHelpers()
 
@@ -24,10 +26,15 @@ export default function LoginForm () {
   const [confirmedPassword, onSetConfirmedPassword] = useState('')
   const [isNewUser, setIsNewUser] = useState(false)
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+
+  const returnUrl = params.get(RETURN_URL_QUERY_PARAM)
 
   const onSuccess = (data: SuccessfulResponseData<RegisterResponse | LoginResponse>) => {
     loginContext.setLogin(username, data.loginToken, 'isStreamer' in data && data.isStreamer)
-    navigate(generatePath('/'))
+
+    // redirect them to the previous page. if `replace` is true, the login page will not show up in the browser page history
+    navigate(returnUrl ?? generatePath('/'), { replace: returnUrl != null })
 
     if ('isStreamer' in data && loginContext.streamer == null && data.isStreamer) {
       loginContext.setStreamer(username)
@@ -40,7 +47,7 @@ export default function LoginForm () {
   // we don't want to show the login page if the user is already logged in
   useEffect(() => {
     if (loginContext.loginToken != null) {
-      navigate(generatePath('/'))
+      navigate(returnUrl ?? generatePath('/'))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

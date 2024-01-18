@@ -24,3 +24,6 @@ All environment variables **must** be of the form `REACT_APP_<VARIABLE_NAME>` an
 ## Scripts
 - `start`: For local development. Builds and watches the source files, then starts up the development server and serves the static app. Does not emit files.
 - `build`: For CI. Builds the app in production mode into the `./build` folder.
+
+### `fix-typescript-build`
+There is an annoying issue with a React package we depend on that causes a runtime error during compilation. As a result, the typescript checker is skipped, but Typescript files are still transpiled into Javascript. Turns out the responsible file is inconsequential in the build process and we can safely skip the logic within it. This is done via the `fix-typescript-build` script in the `package.json`. Running this will replace the published version of the file with our custom fix, thus allowing the build process to complete with a full type check.

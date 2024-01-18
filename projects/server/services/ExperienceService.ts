@@ -2,7 +2,7 @@ import { ExperienceTransaction } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
-import { ChatItem, convertInternalMessagePartsToExternal, getExternalId, PartialChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, ChatPlatform, convertInternalMessagePartsToExternal, getExternalId, PartialChatMessage } from '@rebel/server/models/chat'
 import ChannelService from '@rebel/server/services/ChannelService'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
@@ -11,12 +11,14 @@ import ExperienceStore, { ChatExperience, ChatExperienceData } from '@rebel/serv
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { asGte, asLt, clamp, GreaterThanOrEqual, LessThan, NumRange, sum } from '@rebel/shared/util/math'
 import { calculateWalkingScore } from '@rebel/shared/util/score'
-import { single, sortBy } from '@rebel/shared/util/arrays'
+import { single, sortBy, takeUntil } from '@rebel/shared/util/arrays'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'
+import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
+import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
 
 /** This is a legacy multiplier that we used to have. We can't simply remove it because, when linking channels, experience would otherwise be gained/lost.
  * Modifying the baseExperiences was an option, but I couldn't work it out due to the complex nature of the xp equation. */
@@ -60,6 +62,7 @@ type Deps = Dependencies<{
   accountService: AccountService
   userService: UserService
   genericStore: GenericStore
+  aggregateLivestreamService: AggregateLivestreamService
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -75,6 +78,7 @@ export default class ExperienceService extends ContextClass {
   private readonly accountService: AccountService
   private readonly userService: UserService
   private readonly genericStore: GenericStore
+  private readonly aggregateLivestreamService: AggregateLivestreamService
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -92,19 +96,25 @@ export default class ExperienceService extends ContextClass {
     this.accountService = deps.resolve('accountService')
     this.userService = deps.resolve('userService')
     this.genericStore = deps.resolve('genericStore')
+    this.aggregateLivestreamService = deps.resolve('aggregateLivestreamService')
   }
 
   /** Adds experience only for chat messages sent during the livestream for unpunished users.
    * Duplicate experience for the same chat message is checked on a database level. */
   public async addExperienceForChat (chatItem: ChatItem, streamerId: number): Promise<void> {
-    // ensure that an active public stream exists and is live
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
-    if (livestream == null) {
+    // ensure that an active stream exists and is live
+    const [youtubeLivestream, twitchLivestream] = await Promise.all([
+      this.livestreamStore.getActiveYoutubeLivestream(streamerId),
+      this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+    ])
+
+    if (youtubeLivestream == null && twitchLivestream == null) {
       return
     }
+
     const time = new Date(chatItem.timestamp)
-    const streamStartTime = livestream.start
-    const streamEndTime = livestream.end
+    const streamStartTime = youtubeLivestream?.start ?? twitchLivestream?.start
+    const streamEndTime = twitchLivestream != null ? null : youtubeLivestream?.end
     if (streamStartTime == null || time < streamStartTime || streamEndTime != null && time > streamEndTime) {
       return
     }
@@ -117,9 +127,11 @@ export default class ExperienceService extends ContextClass {
       return
     }
 
-    const participationStreakMultiplier = await this.getParticipationMultiplierGenerator(streamerId, connectedUserIds).then(generator => generator(livestream.id))
+    const participationStreakMultiplier = await this.getParticipationMultiplierGenerator(streamerId, connectedUserIds)
+      .then(generator => generator(youtubeLivestream?.id ?? twitchLivestream!.id, youtubeLivestream != null ? 'youtube' : 'twitch'))
     const prevChatExperience = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId, null)
-    const spamMultiplier = this.getSpamMultiplier(livestream.id, prevChatExperience, chatItem.timestamp)
+    const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId)
+    const spamMultiplier = this.getSpamMultiplier(youtubeLivestream?.id ?? null, twitchLivestream?.id ?? null, prevChatExperience, chatItem.timestamp, aggregateLivestreams)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem.messageParts)
     const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
     const data: ChatExperienceData = {
@@ -284,6 +296,7 @@ export default class ExperienceService extends ContextClass {
 
       const punishments = (await Promise.all(connectedUserIds.map(userId => this.punishmentService.getPunishmentHistory(userId, streamerId)))).flatMap(x => x)
       const chatMessages = await this.chatStore.getChatSince(streamerId, 0, undefined, undefined, connectedUserIds) // pre-fetch all messages - we don't know which ones we need, so have to get them all
+      const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId)
       const participationStreakMultiplierGenerator = await this.getParticipationMultiplierGenerator(streamerId, connectedUserIds)
 
       // cache, updates every iteration
@@ -293,7 +306,10 @@ export default class ExperienceService extends ContextClass {
 
       for (const tx of sortBy(chatExperienceTxs, x => x.time.getTime())) {
         const time = tx.time
-        const livestreamId = tx.experienceDataChatMessage.chatMessage.livestreamId
+        const youtubeLivestreamId = tx.experienceDataChatMessage.chatMessage.youtubeLivestreamId
+        const twitchLivestreamId = tx.experienceDataChatMessage.chatMessage.twitchLivestreamId
+        const livestreamId = youtubeLivestreamId ?? twitchLivestreamId // null if not live
+        const platform: ChatPlatform = youtubeLivestreamId != null ? 'youtube' : 'twitch'
         const isPunished = punishments.find(p => this.rankHelpers.isRankActive(p, time)) != null
 
         let experienceTxReplacementData: ReplacementData<'experienceTransaction'> = {
@@ -321,8 +337,8 @@ export default class ExperienceService extends ContextClass {
             throw new Error(`Expected chat message ${tx.experienceDataChatMessage.chatMessageId} to be loaded, but it was not.`)
           }
 
-          const participationStreakMultiplier = participationStreakMultiplierGenerator(livestreamId)
-          const spamMultiplier = this.getSpamMultiplier(livestreamId, prevChatExperience, time.getTime())
+          const participationStreakMultiplier = participationStreakMultiplierGenerator(livestreamId, platform)
+          const spamMultiplier = this.getSpamMultiplier(youtubeLivestreamId, twitchLivestreamId, prevChatExperience, time.getTime(), aggregateLivestreams)
           const messageParts = convertInternalMessagePartsToExternal(chatMessage.chatMessageParts)
           const messageQualityMultiplier = this.getMessageQualityMultiplier(messageParts)
 
@@ -368,14 +384,14 @@ export default class ExperienceService extends ContextClass {
     }
   }
 
-  private async getParticipationMultiplierGenerator (streamerId: number, anyUserIds: number[]): Promise<(livestreamId: number) => GreaterThanOrEqual<1>> {
-    const streams = await this.livestreamStore.getLivestreamParticipation(streamerId, anyUserIds)
+  private async getParticipationMultiplierGenerator (streamerId: number, anyUserIds: number[]): Promise<(livestreamId: number, platform: ChatPlatform) => GreaterThanOrEqual<1>> {
+    const aggregateLivestreamParticipations = await this.aggregateLivestreamService.getLivestreamParticipation(streamerId, anyUserIds)
 
-    return livestreamId => {
+    return (livestreamId, platform) => {
       const participationScore = calculateWalkingScore(
-        streams.filter(s => s.id <= livestreamId),
+        takeUntil(aggregateLivestreamParticipations, l => l.includesLivestream(livestreamId, platform)),
         0,
-        stream => stream.participated,
+        stream => stream.data.hasParticipated,
         (score, participated) => participated ? score + 1 : score - 1,
         0,
         10
@@ -386,8 +402,35 @@ export default class ExperienceService extends ContextClass {
   }
 
   // uses the primary user id because we only need it to fetch a experience transaction, and experience should be linked to the primary user at the time of calling this function
-  private getSpamMultiplier (currentLivestreamId: number, prevChatExperience: Pick<ChatExperience, 'time' | 'experienceDataChatMessage'> | null, messageTimestamp: number): SpamMult {
-    if (prevChatExperience == null || prevChatExperience.experienceDataChatMessage.chatMessage.livestreamId !== currentLivestreamId) {
+  // either the Youtube or Twitch livestreams, or both, must be defined
+  private getSpamMultiplier (
+    currentYoutubeLivestreamId: number | null,
+    currentTwitchLivestreamId: number | null,
+    prevChatExperience: Pick<ChatExperience, 'time' | 'experienceDataChatMessage'> | null,
+    messageTimestamp: number,
+    aggregateLivestreams: AggregateLivestream[]
+  ): SpamMult {
+    const chatMessageYoutubeLivestreamId = prevChatExperience?.experienceDataChatMessage.chatMessage.youtubeLivestreamId
+    const chatMessageTwitchLivestreamId = prevChatExperience?.experienceDataChatMessage.chatMessage.twitchLivestreamId
+
+    // the aggregate livestream that the prevChatExperience belongs to.
+    // if the current livestream belongs to a different aggregate livestream,
+    // we will not calculate the spam multiplier (see below).
+    const currentAggregateLivestream = aggregateLivestreams.find(l =>
+      l.includesLivestream(chatMessageYoutubeLivestreamId!, 'youtube') || l.includesLivestream(chatMessageTwitchLivestreamId!, 'twitch')
+    )
+
+    if (
+      prevChatExperience == null ||
+
+      // non-chat message (e.g. donation message). should never come up, but let's be safe
+      chatMessageYoutubeLivestreamId == null && chatMessageTwitchLivestreamId == null ||
+
+      // check if the chat message was sent to a different livestream. note that only one of the youtube or twitch ids can be non-null
+      currentAggregateLivestream == null ||
+      currentYoutubeLivestreamId != null && !currentAggregateLivestream.includesLivestream(currentYoutubeLivestreamId, 'youtube') ||
+      currentTwitchLivestreamId != null && !currentAggregateLivestream.includesLivestream(currentTwitchLivestreamId, 'twitch')
+    ) {
       // always start with a multiplier of 1 at the start of the livestream
       return 1 as SpamMult
     }

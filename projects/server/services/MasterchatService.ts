@@ -7,6 +7,7 @@ import { firstOrDefault } from '@rebel/shared/util/typescript'
 import ApiService from '@rebel/server/services/abstract/ApiService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
+import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
 export type ChatMateModeratorStatus = {
   isModerator: boolean
@@ -25,6 +26,7 @@ type Deps = Dependencies<{
   masterchatStatusService: StatusService
   masterchatFactory: MasterchatFactory
   chatStore: ChatStore
+  platformApiStore: PlatformApiStore
 }>
 
 export default class MasterchatService extends ApiService {
@@ -38,8 +40,10 @@ export default class MasterchatService extends ApiService {
     const name = MasterchatService.name
     const logService = deps.resolve('logService')
     const statusService = deps.resolve('masterchatStatusService')
+    const platformApiStore = deps.resolve('platformApiStore')
+    const apiPlatform: ApiPlatform = 'masterchat'
     const timeout = null
-    super(name, logService, statusService, timeout, true)
+    super(name, logService, statusService, platformApiStore, apiPlatform, timeout, true)
 
     this.masterchatFactory = deps.resolve('masterchatFactory')
     this.chatStore = deps.resolve('chatStore')
@@ -52,7 +56,7 @@ export default class MasterchatService extends ApiService {
       throw new Error(`Cannot add masterchat instance for streamer ${streamerId} and liveId ${liveId} because one already exists with liveId ${liveId}`)
     }
 
-    const newMasterchat = this.createWrapper(liveId, this.masterchatFactory.create(liveId))
+    const newMasterchat = this.createWrapper(streamerId, liveId, this.masterchatFactory.create(liveId))
     this.wrappedMasterchats.set(streamerId, newMasterchat)
   }
 
@@ -186,16 +190,16 @@ export default class MasterchatService extends ApiService {
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
-  private createWrapper = (liveId: string, masterchat: Masterchat): PartialMasterchat => {
+  private createWrapper (streamerId: number, liveId: string, masterchat: Masterchat): PartialMasterchat {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
-    const fetch = super.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`)
-    const fetchMetadata = super.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`)
-    const hide = super.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`)
-    const unhide = super.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`)
-    const timeout = super.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`)
-    const addModerator = super.wrapRequest((arg) => masterchat.addModerator(arg), `masterchat[${liveId}].addModerator`)
-    const removeModerator = super.wrapRequest((arg) => masterchat.removeModerator(arg), `masterchat[${liveId}].removeModerator`)
+    const fetch = super.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`, streamerId)
+    const fetchMetadata = super.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`, streamerId)
+    const hide = super.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`, streamerId)
+    const unhide = super.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`, streamerId)
+    const timeout = super.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`, streamerId)
+    const addModerator = super.wrapRequest((arg) => masterchat.addModerator(arg), `masterchat[${liveId}].addModerator`, streamerId)
+    const removeModerator = super.wrapRequest((arg) => masterchat.removeModerator(arg), `masterchat[${liveId}].removeModerator`, streamerId)
 
     return { masterchat, fetch, fetchMetadata, hide, unhide, timeout, addModerator, removeModerator }
   }

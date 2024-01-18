@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { Action, AddChatItemAction, MarkChatItemsByAuthorAsDeletedAction, YTRun, YTTextRun } from '@rebel/masterchat'
+import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItem, getEmojiLabel, PartialChatMessage } from '@rebel/server/models/chat'
 import { clamp, clampNormFn, sum } from '@rebel/shared/util/math'
 import LogService from '@rebel/server/services/LogService'
@@ -9,9 +9,9 @@ import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
-import StreamerStore from '@rebel/server/stores/StreamerStore'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
+import CacheService from '@rebel/server/services/CacheService'
 
 const LIVESTREAM_CHECK_INTERVAL = 10_000
 
@@ -34,10 +34,9 @@ type Deps = Dependencies<{
   timerHelpers: TimerHelpers
   livestreamStore: LivestreamStore
   disableExternalApis: boolean
-  streamerStore: StreamerStore
   masterchatStore: MasterchatStore
   externalRankEventService: ExternalRankEventService
-  chatMateRegisteredUserName: string
+  cacheService: CacheService
   isAdministrativeMode: () => boolean
 }>
 
@@ -50,15 +49,13 @@ export default class MasterchatFetchService extends ContextClass {
   private readonly timerHelpers: TimerHelpers
   private readonly livestreamStore: LivestreamStore
   private readonly disableExternalApis: boolean
-  private readonly streamerStore: StreamerStore
   private readonly masterchatStore: MasterchatStore
-  private readonly chatMateRegisteredUserName: string
   private readonly externalRankEventService: ExternalRankEventService
+  private readonly cacheService: CacheService
   private readonly isAdministrativeMode: () => boolean
 
   private livestreamCheckTimer!: number
   private chatTimers: Map<string, number> = new Map()
-  private chatMateStreamerId: number | null = null
 
   constructor (deps: Deps) {
     super()
@@ -69,10 +66,9 @@ export default class MasterchatFetchService extends ContextClass {
     this.timerHelpers = deps.resolve('timerHelpers')
     this.livestreamStore = deps.resolve('livestreamStore')
     this.disableExternalApis = deps.resolve('disableExternalApis')
-    this.streamerStore = deps.resolve('streamerStore')
     this.masterchatStore = deps.resolve('masterchatStore')
     this.externalRankEventService = deps.resolve('externalRankEventService')
-    this.chatMateRegisteredUserName = deps.resolve('chatMateRegisteredUserName')
+    this.cacheService = deps.resolve('cacheService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
@@ -99,12 +95,11 @@ export default class MasterchatFetchService extends ContextClass {
       this.timerHelpers.disposeSingle(timer)
     }
     this.chatTimers.clear()
-    this.chatMateStreamerId = null
   }
 
   /** Esures that there is one timer active for every YouTube livestream. */
   private checkLivestreams = async (): Promise<void> => {
-    const livestreams = await this.livestreamStore.getActiveLivestreams()
+    const livestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
     const currentIds = [...this.chatTimers.keys()]
 
     for (const livestream of livestreams) {
@@ -175,7 +170,7 @@ export default class MasterchatFetchService extends ContextClass {
           // purposefully only set this AFTER everything has been added. if we set it before,
           // and something goes wrong with adding chat, the chat messages will be lost forever.
           // todo: maybe we want it to be lost forever - perhaps there was bad data in the chat message, and now we are stuck in an infinite loop...
-          await this.livestreamStore.setContinuationToken(liveId, response.continuation.token)
+          await this.livestreamStore.setYoutubeContinuationToken(liveId, response.continuation.token)
         }
       }
 
@@ -218,7 +213,7 @@ export default class MasterchatFetchService extends ContextClass {
   }
 
   private fetchLatestMessages = async (streamerId: number) => {
-    const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
+    const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
       return null
     }
@@ -231,7 +226,7 @@ export default class MasterchatFetchService extends ContextClass {
       return result
     } catch (e: any) {
       this.logService.logError(this, `Encountered error while fetching chat for livestream ${livestream.id} for streamer ${livestream.streamerId}:`, e.message)
-      await this.livestreamStore.setContinuationToken(liveId, null)
+      await this.livestreamStore.setYoutubeContinuationToken(liveId, null)
       return null
     }
   }
@@ -275,7 +270,7 @@ export default class MasterchatFetchService extends ContextClass {
   }
 
   private async getNextInterval (streamerId: number, currentTime: number, timestamps: number[]): Promise<number> {
-    if (await this.isChatMateStreamer(streamerId) && timestamps.length === 0) {
+    if (await this.cacheService.isChatMateStreamer(streamerId) && timestamps.length === 0) {
       // to avoid spamming the logs and reduce the chance of YouTube getting upset with us, we don't poll the chat of the official
       // ChatMate streamer very often if there haven't been recent messages.
       return MAX_INTERVAL_FOR_CHAT_MATE
@@ -293,21 +288,6 @@ export default class MasterchatFetchService extends ContextClass {
     const nextInterval = (1 - clamp((chatRate - MIN_CHAT_RATE) / (MAX_CHAT_RATE - MIN_CHAT_RATE), 0, 1)) * (MAX_INTERVAL - MIN_INTERVAL) + MIN_INTERVAL
 
     return nextInterval
-  }
-
-  private async isChatMateStreamer (streamerId: number): Promise<boolean> {
-    // the streamer id is cached
-    if (this.chatMateStreamerId == null) {
-      const chatMateStreamer = await this.streamerStore.getStreamerByName(this.chatMateRegisteredUserName)
-      if (chatMateStreamer == null) {
-        this.logService.logWarning(this, 'Could not find the official ChatMate streamer.')
-        return false
-      }
-
-      this.chatMateStreamerId = chatMateStreamer.id
-    }
-
-    return this.chatMateStreamerId === streamerId
   }
 }
 

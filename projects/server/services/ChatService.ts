@@ -8,12 +8,13 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
 import { ChatMessage } from '@prisma/client'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
+import ChannelEventService from '@rebel/server/services/ChannelEventService'
 
 type ChatEvents = {
   newChatItem: {
@@ -32,6 +33,7 @@ type Deps = Dependencies<{
   commandService: CommandService
   commandHelpers: CommandHelpers
   commandStore: CommandStore
+  channelEventService: ChannelEventService
 }>
 
 export default class ChatService extends ContextClass {
@@ -46,6 +48,7 @@ export default class ChatService extends ContextClass {
   private readonly commandHelpers: CommandHelpers
   private readonly commandService: CommandService
   private readonly commandStore: CommandStore
+  private readonly channelEventService: ChannelEventService
 
   constructor (deps: Deps) {
     super()
@@ -59,11 +62,12 @@ export default class ChatService extends ContextClass {
     this.commandHelpers = deps.resolve('commandHelpers')
     this.commandService = deps.resolve('commandService')
     this.commandStore = deps.resolve('commandStore')
+    this.channelEventService = deps.resolve('channelEventService')
   }
 
   public override initialise () {
-    this.eventDispatchService.onData('chatItem', data => this.onNewChatItem(data, data.streamerId))
-    this.eventDispatchService.onData('chatItemRemoved', data => this.onChatItemRemoved(data.externalMessageId))
+    this.eventDispatchService.onData(EVENT_CHAT_ITEM, data => this.onNewChatItem(data, data.streamerId))
+    this.eventDispatchService.onData(EVENT_CHAT_ITEM_REMOVED, data => this.onChatItemRemoved(data.externalMessageId))
   }
 
   public async onChatItemRemoved (externalMessageId: string) {
@@ -94,6 +98,8 @@ export default class ChatService extends ContextClass {
         externalId = item.author.channelId
         platform = 'youtube'
         channel = await this.channelStore.createOrUpdate('youtube', externalId, channelInfo)
+
+        await this.channelEventService.checkYoutubeChannelForModEvent(streamerId, channel.id)
 
       } else if (item.platform === 'twitch') {
         const channelInfo: CreateOrUpdateTwitchChannelArgs = {
@@ -136,8 +142,12 @@ export default class ChatService extends ContextClass {
     // either perform side effects for a normal message, or execute command for a chat command message
     if (message != null && command == null) {
       try {
-        const livestream = await this.livestreamStore.getActiveLivestream(streamerId)
-        if (livestream != null) {
+        const [youtubeLivestream, twitchLivestream] = await Promise.all([
+          this.livestreamStore.getActiveYoutubeLivestream(streamerId),
+          this.livestreamStore.getCurrentTwitchLivestream(streamerId)
+        ])
+
+        if (youtubeLivestream != null || twitchLivestream != null) {
           await this.experienceService.addExperienceForChat(item, streamerId)
         }
       } catch (e: any) {

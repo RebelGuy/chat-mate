@@ -276,8 +276,8 @@ export default class UserController extends ControllerBase {
       const history = await this.linkDataService.getLinkHistory(admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId)
       const defaultUserIds = history.map(h => h.defaultUserId)
       const channels = await this.channelStore.getDefaultUserOwnedChannels(defaultUserIds)
-      const youtubeChannels = await this.channelStore.getYoutubeChannelFromChannelId(channels.flatMap(c => c.youtubeChannelIds))
-      const twitchChannels = await this.channelStore.getTwitchChannelFromChannelId(channels.flatMap(c => c.twitchChannelIds))
+      const youtubeChannels = await this.channelStore.getYoutubeChannelsFromChannelIds(channels.flatMap(c => c.youtubeChannelIds))
+      const twitchChannels = await this.channelStore.getTwitchChannelsFromChannelIds(channels.flatMap(c => c.twitchChannelIds))
 
       return builder.success({
         items: history.map<PublicLinkHistoryItem>(h => {

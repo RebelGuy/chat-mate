@@ -1,7 +1,7 @@
-import { Box, CircularProgress } from '@mui/material'
+import { Box, CircularProgress, SxProps } from '@mui/material'
 
-export default function CentredLoadingSpinner () {
-  return <Box sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+export default function CentredLoadingSpinner (props: { sx?: SxProps }) {
+  return <Box sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', ...props.sx }}>
     <CircularProgress />
   </Box>
 }

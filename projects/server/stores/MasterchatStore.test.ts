@@ -26,7 +26,7 @@ export default () => {
 
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}})
-    await db.livestream.createMany({ data: [
+    await db.youtubeLivestream.createMany({ data: [
       { liveId: liveId1, streamerId: streamer1, isActive: true },
       { liveId: liveId2, streamerId: streamer2, isActive: true }
     ]})
@@ -44,8 +44,8 @@ export default () => {
       await masterchatStore.addMasterchatAction('test2', 'data2', time.getTime(), liveId2)
 
       const [stored1, stored2] = await db.masterchatAction.findMany({})
-      expect(stored1).toEqual(expectObject<MasterchatAction>({ type: 'test1', data: 'data1', time: null, livestreamId: 1 }))
-      expect(stored2).toEqual(expectObject<MasterchatAction>({ type: 'test2', data: 'data2', time: time, livestreamId: 2 }))
+      expect(stored1).toEqual(expectObject<MasterchatAction>({ type: 'test1', data: 'data1', time: null, youtubeLivestreamId: 1 }))
+      expect(stored2).toEqual(expectObject<MasterchatAction>({ type: 'test2', data: 'data2', time: time, youtubeLivestreamId: 2 }))
     })
 
     test('Truncates the data if it is too long', async () => {
@@ -64,7 +64,7 @@ export default () => {
       await db.masterchatAction.create({ data: {
         type: 'type',
         data: '',
-        livestreamId: 2,
+        youtubeLivestreamId: 2,
         time: time
       }})
 
@@ -78,7 +78,7 @@ export default () => {
       await db.masterchatAction.create({ data: {
         type: 'type',
         data: '',
-        livestreamId: 1,
+        youtubeLivestreamId: 1,
         time: addTime(time, 'seconds', -1)
       }})
 
@@ -92,7 +92,7 @@ export default () => {
       await db.masterchatAction.create({ data: {
         type: 'type',
         data: '',
-        livestreamId: 1,
+        youtubeLivestreamId: 1,
         time: time
       }})
 

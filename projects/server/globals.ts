@@ -48,6 +48,8 @@ type EnvironmentVariables = {
   // replaces some controllers with fake ones
   useFakeControllers: OptionalLocalVariable<boolean, false>
 
+  ngrokAuthToken: LocalVariable<string>
+
   applicationinsightsConnectionString: DeploymentVariable<string>
   websiteHostname: DeploymentVariable<string>
 
@@ -88,6 +90,7 @@ const allChatMateEnvVariables: { [K in keyof EnvironmentVariables]: readonly Val
   twitchClientId: null,
   twitchClientSecret: null,
   useFakeControllers: null,
+  ngrokAuthToken: null,
   streamlabsAccessToken: null,
   twitchUsername: null,
   chatMateRegisteredUserName: null
@@ -109,7 +112,8 @@ type ValueType<V extends keyof EnvironmentVariables> = EnvironmentVariables[V] e
 
 // local variables can only be accessed when running the server locally, and return null otherwise.
 const localVariables: Record<VariablesOfType<'local'>, true> = {
-  useFakeControllers: true
+  useFakeControllers: true,
+  ngrokAuthToken: true
 }
 
 // deployment variables can only be accessed when running the server in Azure, and return null otherwise.

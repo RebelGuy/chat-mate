@@ -57,9 +57,14 @@ module.exports = (env) => {
 
   // similarly, only copy ngrok if it doesn't already exist
   const ngrokPath = path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it
-  if (isLocal && (!fs.existsSync(ngrokPath) || !fs.readdirSync(ngrokPath).find(file => file.endsWith('ngrok.exe') || file.endsWith('ngrok')))) {
+  if (isLocal && (!fs.existsSync(ngrokPath) || !fs.readdirSync(ngrokPath).find(file => file.startsWith('ngrok')))) {
+    const fileToCopy = findFileRecursively('../../node_modules/@ngrok', fileName => fileName.startsWith('ngrok.linux') || fileName === 'ngrok.exe')
+    if (fileToCopy == null) {
+      throw new Error('Could not find ngrok file to copy')
+    }
+
     copyPatterns.push({
-      from: path.resolve(__dirname, '../../node_modules/ngrok/bin'), // `ngrok.exe` for windows
+      from: fileToCopy,
       to: ngrokPath // folder is automatically created
     })
   }
@@ -189,6 +194,9 @@ module.exports = (env) => {
       '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
       '@azure/identity-vscode': 'commonjs @azure/identity-vscode',
 
+      // required otherwise it doesn't work lol. seems that it's because ngrok is `require()`ing the ngrok executables, which webpack doesn't like
+      '@ngrok/ngrok': 'commonjs @ngrok/ngrok',
+
       electron: 'require("electron")'
     },
     target: 'node',
@@ -242,5 +250,24 @@ module.exports = (env) => {
         studioUrl: STUDIO_URL
       })
     ]
+  }
+}
+
+// returns the first file path + name that matched the predicate, if any
+function findFileRecursively (pathToSearch, fileNamePredicate) {
+  for (const item of fs.readdirSync(pathToSearch, { withFileTypes: true })) {
+    const itemPath = item.path ?? pathToSearch
+
+    console.log(itemPath, item.name)
+    if (item.isDirectory()) {
+      const result = findFileRecursively(path.join(itemPath, item.name), fileNamePredicate)
+      if (result != null) {
+        return result
+      }
+    } else {
+      if (fileNamePredicate(item.name)) {
+        return path.join(itemPath, item.name)
+      }
+    }
   }
 }

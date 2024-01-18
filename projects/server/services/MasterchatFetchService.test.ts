@@ -1,4 +1,4 @@
-import { Livestream } from '@prisma/client'
+import { YoutubeLivestream } from '@prisma/client'
 import { Action, AddChatItemAction, ChatResponse, HideUserAction, MarkChatItemAsDeletedAction, UnhideUserAction, TimeoutUserAction, YTRun } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
@@ -12,10 +12,10 @@ import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils
 import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { ChatItem } from '@rebel/server/models/chat'
-import StreamerStore from '@rebel/server/stores/StreamerStore'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import { single, single2 } from '@rebel/shared/util/arrays'
+import CacheService from '@rebel/server/services/CacheService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -26,7 +26,7 @@ const token3 = 'token3'
 const token4 = 'token4'
 const streamer1 = 1
 const streamer2 = 2
-const currentLivestreams: Livestream[] = [{
+const currentLivestreams: YoutubeLivestream[] = [{
   id: 1,
   liveId: 'liveId1',
   streamerId: streamer1,
@@ -96,10 +96,9 @@ let mockMasterchatService: MockProxy<MasterchatService>
 let mockLogService: MockProxy<LogService>
 let mockTimerHelpers: MockProxy<TimerHelpers>
 let mockChatService: MockProxy<ChatService>
-let mockChatMateRegisteredUserName = 'mockChatMateRegisteredUserName'
-let mockStreamerStore: MockProxy<StreamerStore>
 let mockMasterchatStore: MockProxy<MasterchatStore>
 let mockExternalRankEventService: MockProxy<ExternalRankEventService>
+let mockCacheService: MockProxy<CacheService>
 let masterchatFetchService: MasterchatFetchService
 
 beforeEach(() => {
@@ -109,13 +108,13 @@ beforeEach(() => {
   mockLogService = mock()
   mockTimerHelpers = mock()
   mockChatService = mock()
-  mockStreamerStore = mock()
   mockMasterchatStore = mock()
   mockExternalRankEventService = mock()
+  mockCacheService = mock()
 
-  mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue(currentLivestreams)
+  mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue(currentLivestreams)
   mockChatStore.getChatSince.calledWith(expect.any(Number), expect.any(Number), undefined, undefined).mockResolvedValue([])
-  mockLivestreamStore.getActiveLivestream.mockImplementation(streamerId => Promise.resolve(currentLivestreams.find(l => l.streamerId === streamerId)!))
+  mockLivestreamStore.getActiveYoutubeLivestream.mockImplementation(streamerId => Promise.resolve(currentLivestreams.find(l => l.streamerId === streamerId)!))
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -132,10 +131,9 @@ beforeEach(() => {
     masterchatService: mockMasterchatService,
     timerHelpers: mockTimerHelpers,
     disableExternalApis: false,
-    chatMateRegisteredUserName: mockChatMateRegisteredUserName,
-    streamerStore: mockStreamerStore,
     masterchatStore: mockMasterchatStore,
     externalRankEventService: mockExternalRankEventService,
+    cacheService: mockCacheService,
     isAdministrativeMode: () => false
   }))
 })
@@ -150,10 +148,9 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
       masterchatService: mockMasterchatService,
       timerHelpers: mockTimerHelpers,
       disableExternalApis: true,
-      chatMateRegisteredUserName: mockChatMateRegisteredUserName,
-      streamerStore: mockStreamerStore,
       masterchatStore: mockMasterchatStore,
       externalRankEventService: mockExternalRankEventService,
+      cacheService: mockCacheService,
       isAdministrativeMode: () => false
     }))
 
@@ -185,7 +182,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
 
     await masterchatFetchService.initialise()
 
-    const calls = mockLivestreamStore.setContinuationToken.mock.calls
+    const calls = mockLivestreamStore.setYoutubeContinuationToken.mock.calls
     expect(calls.length).toBe(2)
     expect(calls).toEqual(expectArray<[liveId: string, continuationToken: string | null]>([
       [currentLivestreams[0].liveId, null],
@@ -194,11 +191,11 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
   })
 
   test('Quietly handles no active livestream', async () => {
-    mockLivestreamStore.getActiveLivestreams.calledWith().mockResolvedValue([])
+    mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([])
 
     await masterchatFetchService.initialise()
 
-    expect(mockLivestreamStore.setContinuationToken.mock.calls.length).toBe(0)
+    expect(mockLivestreamStore.setYoutubeContinuationToken.mock.calls.length).toBe(0)
     expect(mockTimerHelpers.dispose.mock.calls.length).toBe(0)
   })
 
@@ -218,7 +215,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
       [expectObject<ChatItem>({ id: chatAction3.id }), streamer2]
     ]))
 
-    const livestreamStoreCalls = mockLivestreamStore.setContinuationToken.mock.calls
+    const livestreamStoreCalls = mockLivestreamStore.setYoutubeContinuationToken.mock.calls
     expect(livestreamStoreCalls.length).toBe(2)
     expect(livestreamStoreCalls).toEqual(expectArray<[liveId: string, continuationToken: string | null]>([
       [currentLivestreams[0].liveId, token2],
@@ -234,7 +231,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
 
     await masterchatFetchService.initialise()
 
-    expect(mockLivestreamStore.setContinuationToken.mock.calls.length).toBe(1)
+    expect(mockLivestreamStore.setYoutubeContinuationToken.mock.calls.length).toBe(1)
   })
 
   test('Persists hide/unhide/timeout user actions and notifies service', async () => {

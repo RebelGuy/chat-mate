@@ -5,7 +5,7 @@ import RefreshButton from '@rebel/studio/components/RefreshButton'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
 import StreamerLinks from '@rebel/studio/components/StreamerLinks'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { isLive } from '@rebel/studio/utility/misc'
+import { isStreamerLive } from '@rebel/studio/utility/misc'
 import { useContext, useEffect } from 'react'
 
 export default function StreamerInfo () {
@@ -35,8 +35,8 @@ export default function StreamerInfo () {
     {header}
 
     <Box sx={{ mb: 2 }}>
-      <b>{loginContext.streamer}</b> is {isLive(info.currentLivestream) ? <>
-        livestreaming on {info.youtubeChannel != null && info.twitchChannel != null ? 'YouTube and Twitch' : info.youtubeChannel != null ? 'YouTube' : 'Twitch'} since <RelativeTime time={info.currentLivestream!.startTime!} /> ago.
+      <b>{loginContext.streamer}</b> is {isStreamerLive(info) ? <>
+        livestreaming on {info.youtubeChannel != null && info.twitchChannel != null ? 'YouTube and Twitch' : info.youtubeChannel != null ? 'YouTube' : 'Twitch'} since <RelativeTime time={info.currentYoutubeLivestream?.startTime ?? info.currentTwitchLivestream!.startTime!} /> ago.
       </> : <>
         not currently livestreaming. Please check back later.
       </>}

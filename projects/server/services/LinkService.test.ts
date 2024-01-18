@@ -85,6 +85,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockRankStore.relinkAdminUsers.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockRankService.transferRanks.mock.calls)).toEqual([defaultUserId, aggregateUserId, expect.any(String), true, expect.anything()])
     expect(single(mockRankStore.relinkCustomRankNames.mock.calls)).toEqual([defaultUserId, aggregateUserId])
+    expect(single(mockRankStore.relinkRankEvents.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
 
@@ -109,6 +110,7 @@ describe(nameof(LinkService, 'linkUser'), () => {
     expect(single(mockDonationService.reEvaluateDonationRanks.mock.calls)).toEqual([aggregateUserId, expect.any(String), expect.any(String)])
     expect(single(mockExperienceService.recalculateChatExperience.mock.calls)).toEqual([aggregateUserId])
     expect(single(mockRankStore.relinkCustomRankNames.mock.calls)).toEqual([defaultUserId, aggregateUserId])
+    expect(single(mockRankStore.relinkRankEvents.mock.calls)).toEqual([defaultUserId, aggregateUserId])
     expect(single(mockLinkStore.completeLinkAttempt.mock.calls)).toEqual([expect.any(Number), expect.anything(), null])
   })
 

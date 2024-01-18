@@ -10,6 +10,8 @@ Other projects in this repo:
 
 For more info about each project, refer to the project's Readme file.
 
+Streamers are encouraged to peruse the [Streamer Guide](./docs/streamer-guide.md) for more info on how to use ChatMate.
+
 Want to contribute? Check out the [contribution guide](./docs/contributing.md) for more info.
 
 ## Running ChatMate locally
@@ -42,7 +44,7 @@ If the string `--skip-studio` is included in the commit message, the Studio proj
 ## ChatMate admin channels
 External ChatMate channels are used to join streamers' chat rooms, listen for data, and perform moderation actions. They are linked to the registered user with username `chatmate`. ChatMate assumes that this registered user exists in the database.
 
-For more info about the OAuth applications, refer to the docs for [Youtube](./docs/youtube-auth.md)/[Twitch](./docs/youtube-auth.md).
+For more info about the OAuth applications, refer to the docs for [Youtube](./docs/youtube-auth.md)/[Twitch](./docs/twitch-auth.md).
 
 | Environment | Email | YouTube Name* | YouTube Channel ID | Youtube App Client ID | Twitch Name | Twitch App Name | Twitch App Client ID |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -67,6 +69,22 @@ Problem: Streamlabs donations are not being received by ChatMate.
 Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
 
 # Change Log
+## v1.29 - The Publication Update [6/1/2024]
+- Server
+  - Livestreams are no longer coupled exclusively to Youtube. That is, it is possible to start a livestream on either Youtube or Twitch
+    - ChatMate listens to Twitch online/offline events to be notified when a streamer goes live. This means streaming exclusively on Twitch requires no per-stream setup
+    - ChatMate internal livestream objects are now derived from individual Youtube and Twitch streams, which takes into account overlap between those streams
+    - If a livestream object can be continued if the duration between the previous stream's end time and the new stream's start time is less than 5 minutes
+  - Similar to punishments, ChatMate now listens to modding/unmodding events on Youtube/Twitch, and attempts to sync the internal rank and propagates the action to the user's other connected channels
+    - Due to limitations with the Youtube API, modding/unmodding events can only be inferred based on changes to a channel's moderator status between consecutive messages
+  - ChatMate now tracks external API requests for debugging and reporting purposes
+- Studio
+  - If a logged-out user visits a page requiring them to be logged in, they will now be sent automatically to the login page and, upon logging in, back to the original page
+  - The live indicators in the streamer list now indicates which platform(s) the streamer is live on
+  - Requests are now cached, meaning multiple components making calls to the same endpoint can enjoy instant data
+  - The ChatMate stats on the homepage now segregate the total Youtube and Twitch livestream durations
+  - Cleaned up the Stream Manager page to show less errors and only sections relevant to the streamer's streaming platforms
+
 ## v1.28 - The Youtube Update [20/11/2023]
 - Server
   - ChatMate now listens to punishment updates on Twitch and Youtube

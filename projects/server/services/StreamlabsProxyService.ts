@@ -7,6 +7,7 @@ import StatusService from '@rebel/server/services/StatusService'
 import { single } from '@rebel/shared/util/arrays'
 import { ApiResponseError } from '@rebel/shared/util/error'
 import { CurrencyCode } from '@rebel/server/constants'
+import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
 const REST_BASE_URL = 'https://streamlabs.com/api/v1.0'
 
@@ -85,6 +86,7 @@ type Deps = Dependencies<{
   logService: LogService
   nodeEnv: NodeEnv
   websocketFactory: WebsocketFactory
+  platformApiStore: PlatformApiStore
 }>
 
 export default class StreamlabsProxyService extends ApiService {
@@ -99,8 +101,10 @@ export default class StreamlabsProxyService extends ApiService {
     const name = StreamlabsProxyService.name
     const logService = deps.resolve('logService')
     const statusService = deps.resolve('streamlabsStatusService')
+    const platformApiStore = deps.resolve('platformApiStore')
+    const apiPlatform: ApiPlatform = 'streamlabs'
     const timeout = null
-    super(name, logService, statusService, timeout, false)
+    super(name, logService, statusService, platformApiStore, apiPlatform, timeout, false)
 
     this.accessToken = deps.resolve('streamlabsAccessToken')
     this.nodeEnv = deps.resolve('nodeEnv')
@@ -119,7 +123,7 @@ export default class StreamlabsProxyService extends ApiService {
   // https://streamlabs.readme.io/docs/donations
   /** Returns the first 100 donations donations in descending order after the given ID.
    * @throws {@link ApiResponseError} */
-  public async getDonationsAfterId (id: number | null): Promise<StreamlabsDonation[]> {
+  public async getDonationsAfterId (streamerId: number, id: number | null): Promise<StreamlabsDonation[]> {
     // todo: the access_token doesn't work (returns 401), so the only way to get this to work
     // would be to properly implement the OAuth2 flow described in https://rebel-guy.atlassian.net/browse/CHAT-378?focusedCommentId=10079
     // todo: must return streamerId
@@ -131,7 +135,7 @@ export default class StreamlabsProxyService extends ApiService {
       verified: this.nodeEnv === 'release' ? '1' : '0',
       after: id == null ? undefined : `${id}`
     }
-    const donations = await this.makeRequest<GetDonationsResponse>('GET', '/donations', new URLSearchParams(params))
+    const donations = await this.makeRequest<GetDonationsResponse>(streamerId, 'GET', '/donations', new URLSearchParams(params))
 
     return donations.data.map(d => ({
       streamlabsUserId: null,
@@ -207,7 +211,7 @@ export default class StreamlabsProxyService extends ApiService {
     }
   }
 
-  private async makeRequest<T> (method: 'GET' | 'POST', path: `/${string}`, params?: URLSearchParams): Promise<T> {
+  private async makeRequest<T> (streamerId: number, method: 'GET' | 'POST', path: `/${string}`, params?: URLSearchParams): Promise<T> {
     params = params ?? new URLSearchParams()
     params.append('access_token', this.accessToken)
 
@@ -223,7 +227,7 @@ export default class StreamlabsProxyService extends ApiService {
       } else {
         throw new ApiResponseError(response.status, json.error, json.error_description)
       }
-    }, requestName)
+    }, requestName, streamerId)
     return await wrappedRequest()
   }
 }

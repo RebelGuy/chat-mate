@@ -8,13 +8,16 @@ import { InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundErr
 import { isOneOf } from '@rebel/shared/util/validation'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import UserService from '@rebel/server/services/UserService'
+import { SafeExtract } from '@rebel/api-models/types'
 
 /** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
-export type RegularRank = Extract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
+export type RegularRank = SafeExtract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
+
+export type ExternalRank = SafeExtract<RankName, 'mute' | 'timeout' | 'ban' | 'mod'>
 
 export const ALL_RANK_NAMES = Object.keys(RankName) as RankName[] // RankName the const vs RankName the type. not confusing at all
 
-export type CustomisableRank = Extract<RankName, 'donator' | 'supporter' | 'member'>
+export type CustomisableRank = SafeExtract<RankName, 'donator' | 'supporter' | 'member'>
 
 const customisableRankNames: CustomisableRank[] = ['donator', 'supporter', 'member', 'famous'] as any
 

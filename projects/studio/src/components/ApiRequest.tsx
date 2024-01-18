@@ -200,7 +200,7 @@ export default class ApiRequest<TData extends ResponseData<TData>> extends React
 
     let returnNode: React.ReactNode = null
     if (typeof this.props.children === 'function') {
-      returnNode = this.props.children(response?.success ? response.data : null, loadingNode, errorNode)
+      returnNode = this.props.children(response?.success ? response.data as TData : null, loadingNode, errorNode)
     }
 
     return returnNode ?? loadingNode ?? errorNode

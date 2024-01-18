@@ -6,6 +6,6 @@ export default function RouteParamsObserver () {
   const params = useParams()
 
   routeParams = params
-  
+
   return null
 }

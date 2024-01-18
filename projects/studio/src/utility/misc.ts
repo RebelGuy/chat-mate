@@ -1,7 +1,12 @@
 import { PublicLivestream } from '@rebel/api-models/public/livestream/PublicLivestream'
+import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 
-export function isLive (livestream: PublicLivestream | null): boolean {
+export function isLivestreamLive (livestream: PublicLivestream | null): boolean {
   return livestream != null && livestream.status === 'live'
+}
+
+export function isStreamerLive (streamer: PublicStreamerSummary): boolean {
+  return isLivestreamLive(streamer.currentYoutubeLivestream) || isLivestreamLive(streamer.currentTwitchLivestream)
 }
 
 // Twitch and Youtube streamer auth both use the /manager page.

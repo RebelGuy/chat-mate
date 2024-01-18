@@ -19,7 +19,7 @@ export default function Socials () {
     <Box style={{ display: 'flex', justifyContent: 'space-between', margin: 8 }}>
       <Icon icon={<GitHub style={style} />} url="https://github.com/RebelGuy/chat-mate" tooltip="ChatMate on GitHub" />
       <Icon icon={<Discord style={style} />} url="https://discord.gg/2AtFv8XzAR" tooltip="PvP School" />
-      <Icon icon={<YouTube style={style} />} url="https://youtube.com/@Rebel_Guy" tooltip="Rebel Guy' YouTube channel" />
+      <Icon icon={<YouTube style={style} />} url="https://youtube.com/@Rebel_Guy" tooltip="Rebel Guy's YouTube channel" />
       <Icon icon={<Twitch style={style} />} url="https://twitch.com/rebel_guymc" tooltip="Rebel Guy's Twitch channel" />
       <Icon icon={<Twitter style={style} />} url="https://twitter.com/Rebel_GuyMC" tooltip="Rebel Guy's Twitter" />
     </Box>

@@ -4,19 +4,20 @@ import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { cast, nameof } from '@rebel/shared/testUtils'
-import { HelixStream } from '@twurple/api/lib/api/helix/stream/HelixStream'
+import { HelixStream } from '@twurple/api/lib/endpoints/stream/HelixStream'
 import { ApiClient, HelixUser } from '@twurple/api'
 import { DeepMockProxy, mock, MockProxy } from 'jest-mock-extended'
 import { ChatClient } from '@twurple/chat/lib'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
-import { HelixUserData } from '@twurple/api/lib/interfaces/helix/user.external'
+import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 
-const chatMateModeratorId: string = 'moderator id'
+const streamerId = 2
 
 let mockLogService: MockProxy<LogService>
 let mockStatusService: MockProxy<StatusService>
 let mockApiClient: DeepMockProxy<ApiClient>
 let mockChatClient: MockProxy<ChatClient>
+let mockPlatformApiStore: MockProxy<PlatformApiStore>
 let mockTwitchUsername: string
 let twurpleApiProxyService: TwurpleApiProxyService
 
@@ -24,6 +25,7 @@ beforeEach(() => {
   jest.useFakeTimers()
   mockLogService = mock()
   mockStatusService = mock()
+  mockPlatformApiStore = mock()
   mockApiClient = mock({ streams: mock(), users: mock() }) as any // the compiler wants us to mock every property individually?
   const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => Promise.resolve(mockApiClient) })
   mockChatClient = mock()
@@ -36,7 +38,8 @@ beforeEach(() => {
     twurpleChatClientProvider: mockTwurpleChatClientProvider,
     twurpleStatusService: mockStatusService,
     isAdministrativeMode: () => false,
-    twitchUsername: mockTwitchUsername
+    twitchUsername: mockTwitchUsername,
+    platformApiStore: mockPlatformApiStore
   }))
   twurpleApiProxyService.initialise()
 })
@@ -48,7 +51,7 @@ describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
     const mockedResponse: HelixStream = new HelixStream({ viewer_count: 10 } as any, mockApiClient)
     mockApiClient.streams.getStreamByUserName.calledWith(streamerChannelName).mockResolvedValue(mockedResponse)
 
-    const metadata = await twurpleApiProxyService.fetchMetadata(streamerChannelName)
+    const metadata = await twurpleApiProxyService.fetchMetadata(streamerId, streamerChannelName)
 
     expect(metadata!.viewerCount).toBe(10)
     verifyServicesUsed(false)
@@ -61,7 +64,7 @@ describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
 
     let actualResponse
     try {
-      await twurpleApiProxyService.fetchMetadata(streamerChannelName)
+      await twurpleApiProxyService.fetchMetadata(streamerId, streamerChannelName)
     } catch (e: any) {
       actualResponse = e
     }

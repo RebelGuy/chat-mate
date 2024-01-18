@@ -14,7 +14,7 @@ import StreamerChannelStoreSuite from '@rebel/server/stores/StreamerChannelStore
 import LinkStoreSuite from '@rebel/server/stores/LinkStore.test'
 import AuthStoreSuite from '@rebel/server/stores/AuthStore.test'
 import MasterchatStoreSuite from '@rebel/server/stores/MasterchatStore.test'
-import YoutubeApiStoreSuite from '@rebel/server/stores/YoutubeApiStore.test'
+import PlatformApiStoreSuite from '@rebel/server/stores/PlatformApiStore.test'
 
 // keep an eye on this one: https://github.com/prisma/prisma/issues/732
 // it would HUGELY improve efficiency if we can use an in-memory mock database for testing.
@@ -48,10 +48,10 @@ describeFn('LinkStore Suite', LinkStoreSuite)
 
 describeFn('MasterchatStore Suite', MasterchatStoreSuite)
 
+describeFn('PlatformApiStore Suite', PlatformApiStoreSuite)
+
 describeFn('RankStore Suite', RankStoreSuite)
 
 describeFn('StreamerChannelStore Suite', StreamerChannelStoreSuite)
 
 describeFn('StreamerStore Suite', StreamerStoreSuite)
-
-describeFn('YoutubeApiStore Suite', YoutubeApiStoreSuite)

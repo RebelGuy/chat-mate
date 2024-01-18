@@ -4,23 +4,27 @@ import StatusService from '@rebel/server/services/StatusService'
 import StreamlabsProxyService, { DonationCallback, StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 import { expectObject } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 
 const streamlabsAccessToken = 'accessToken'
 
 let mockStreamlabsStatusService: MockProxy<StatusService>
 let mockWebsocketFactory: MockProxy<WebsocketFactory>
+let mockPlatformApiStore: MockProxy<PlatformApiStore>
 let streamlabsProxyService: StreamlabsProxyService
 
 beforeEach(() => {
   mockStreamlabsStatusService = mock()
   mockWebsocketFactory = mock()
+  mockPlatformApiStore = mock()
 
   streamlabsProxyService = new StreamlabsProxyService(new Dependencies({
     logService: mock(),
     nodeEnv: 'release',
     streamlabsAccessToken: streamlabsAccessToken,
     streamlabsStatusService: mockStreamlabsStatusService,
-    websocketFactory: mockWebsocketFactory
+    websocketFactory: mockWebsocketFactory,
+    platformApiStore: mockPlatformApiStore
   }))
 })
 

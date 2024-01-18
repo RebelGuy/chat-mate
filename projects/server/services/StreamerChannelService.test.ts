@@ -1,6 +1,6 @@
-import { Livestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
+import { YoutubeLivestream, TwitchLivestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
-import EventDispatchService from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_ADD_PRIMARY_CHANNEL, EVENT_REMOVE_PRIMARY_CHANNEL } from '@rebel/server/services/EventDispatchService'
 import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore, { RegisteredUserResult } from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
@@ -155,7 +155,7 @@ describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
     await streamerChannelService.setPrimaryChannel(streamerId, 'youtube', youtubeChannelId)
 
     const eventArgs = single(mockEventDispatchService.addData.mock.calls)
-    expect(eventArgs).toEqual(expectObjectDeep(eventArgs, ['addPrimaryChannel', { streamerId, userChannel }]))
+    expect(eventArgs).toEqual(expectObjectDeep(eventArgs, [EVENT_ADD_PRIMARY_CHANNEL, { streamerId, userChannel }]))
   })
 
   test(`Throws ${ForbiddenError.name} if the user does not have access to the channel`, async () => {
@@ -192,7 +192,7 @@ describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
 
   test('Throws if a livestream is currently in progress', async () => {
     const streamerId = 3
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(cast<Livestream>({}))
+    mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(cast<YoutubeLivestream>({}))
 
     await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'youtube', 1)).rejects.toThrowError()
     await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'twitch', 1)).rejects.toThrowError()
@@ -208,7 +208,7 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
     await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
 
     const eventArgs = single(mockEventDispatchService.addData.mock.calls)
-    expect(eventArgs).toEqual(expectObjectDeep(eventArgs, ['removePrimaryChannel', { streamerId, userChannel }]))
+    expect(eventArgs).toEqual(expectObjectDeep(eventArgs, [EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel }]))
   })
 
   test('Does not dispatch data if no primary channel was unset', async () => {
@@ -222,7 +222,7 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
 
   test('Throws if a livestream is currently in progress', async () => {
     const streamerId = 3
-    mockLivestreamStore.getActiveLivestream.calledWith(streamerId).mockResolvedValue(cast<Livestream>({}))
+    mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(cast<TwitchLivestream>({}))
 
     await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')).rejects.toThrowError()
     await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'twitch')).rejects.toThrowError()
