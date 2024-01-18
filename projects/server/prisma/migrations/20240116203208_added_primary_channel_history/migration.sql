@@ -30,6 +30,7 @@ ALTER TABLE `streamer_youtube_channel_link` ADD CONSTRAINT `streamer_youtube_cha
 ALTER TABLE `streamer_twitch_channel_link` ADD COLUMN `timeAdded` DATETIME(3) NULL,
     ADD COLUMN `timeRemoved` DATETIME(3) NULL;
 UPDATE `streamer_twitch_channel_link` SET `timeAdded` = '1000-01-01 00:00:00.000000' WHERE `id` > 0;
+ALTER TABLE `streamer_twitch_channel_link` MODIFY COLUMN `timeAdded` DATETIME(3) NOT NULL;
 
 -- convert unique index to non-unique index - the only way is to drop it and re-add it, including the foreign keys :  ---  (
 ALTER TABLE `streamer_twitch_channel_link` DROP FOREIGN KEY `streamer_twitch_channel_link_streamerId_fkey`;
