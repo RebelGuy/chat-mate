@@ -1,7 +1,7 @@
 import { ChatUser, StreamerTwitchChannelLink, StreamerYoutubeChannelLink } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { channelQuery_includeLatestChannelInfo, TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import { PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
 

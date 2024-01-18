@@ -1,13 +1,13 @@
 import { ChatMessage, ChatMessagePart, Prisma } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
-import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { reverse } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
+import { PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 export type ChatSave = {
   continuationToken: string | null
@@ -76,7 +76,7 @@ export default class ChatStore extends ContextClass {
           include: { chatMessageParts: true }
         })
       } catch (e: any) {
-        if (isKnownPrismaError(e) && e.innerError.code === 'P2002') {
+        if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED) {
           return null
         } else {
           throw e

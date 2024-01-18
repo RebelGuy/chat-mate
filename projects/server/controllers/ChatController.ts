@@ -6,6 +6,7 @@ import { GET, Path, PathParam, PreProcessor, QueryParam } from 'typescript-rest'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { GetChatResponse, GetCommandStatusResponse } from '@rebel/api-models/schema/chat'
+import { isKnownPrismaError, PRISMA_CODE_DOES_NOT_EXIST } from '@rebel/server/prismaUtil'
 
 export type GetChatEndpoint = Endpoint<{ since?: number, limit?: number }, GetChatResponse>
 
@@ -60,7 +61,7 @@ export default class ChatController extends ControllerBase {
     try {
       return await this.implementation.getCommandStatus({ builder, commandId })
     } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
         return builder.failure(404, 'Command not found.')
       } else {
         return builder.failure(e)

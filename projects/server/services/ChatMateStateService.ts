@@ -5,8 +5,6 @@ type State = {
   hasInitialisedLivestreamMetadata: boolean
 }
 
-
-
 export default class ChatMateStateService extends ContextClass {
   private state: State = {
     hasInitialisedLivestreamMetadata: false

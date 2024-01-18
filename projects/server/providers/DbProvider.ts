@@ -112,16 +112,3 @@ function isPrismaTimeout (e: any) {
   const message = e.message as string | null
   return message != null && message.includes('Timed out fetching a new connection from the connection pool.')
 }
-
-// https://www.prisma.io/docs/reference/api-reference/error-reference
-export function isKnownPrismaError (e: any): e is DbError<PrismaClientKnownRequestError> {
-  return e instanceof DbError && e.innerError instanceof PrismaClientKnownRequestError
-}
-
-export function isUnknownPrismaError (e: any): e is DbError<PrismaClientUnknownRequestError> {
-  return e instanceof DbError && e.innerError instanceof PrismaClientUnknownRequestError
-}
-
-export function isNotFoundPrismaError (e: any): e is DbError<Error> {
-  return e instanceof DbError && e.innerError.name === 'NotFoundError'
-}

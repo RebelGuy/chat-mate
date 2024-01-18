@@ -1,10 +1,11 @@
 import { RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { ChatMateError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { randomString } from '@rebel/shared/util/random'
 import { hashString } from '@rebel/shared/util/strings'
+import { PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 export type RegisteredUserCreateArgs = {
   username: string
@@ -51,7 +52,7 @@ export default class AccountStore extends ContextClass {
         aggregateChatUser: { create: {}}
       }})
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === 'P2002') {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED) {
         throw new UsernameAlreadyExistsError(registeredUser.username)
       }
       throw e

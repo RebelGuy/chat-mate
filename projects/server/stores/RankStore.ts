@@ -1,14 +1,14 @@
 import { Prisma, Rank, RankEvent, RankGroup, RankName, RegisteredUser, Streamer, UserRank } from '@prisma/client'
-import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
-import DbProvider, { Db, isKnownPrismaError, isNotFoundPrismaError, isUnknownPrismaError } from '@rebel/server/providers/DbProvider'
+import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { group, toObject, unique } from '@rebel/shared/util/arrays'
 import { ChatMateError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError, UserRankRequiresStreamerError } from '@rebel/shared/util/error'
 import { IgnoreOptions } from '@rebel/server/services/rank/PunishmentService'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { SafeOmit } from '@rebel/shared/types'
+import { PRISMA_CODE_DOES_NOT_EXIST, isKnownPrismaError, isNotFoundPrismaError, isUnknownPrismaError } from '@rebel/server/prismaUtil'
 
 export type UserRanks = {
   primaryUserId: number
@@ -411,8 +411,7 @@ export default class RankStore extends ContextClass {
 
       return rawDataToUserRankWithRelations(result)
     } catch (e: any) {
-      // https://www.prisma.io/docs/reference/api-reference/error-reference#p2025
-      if (isKnownPrismaError(e) && e.innerError.code === 'P2025') {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
         throw new UserRankNotFoundError(`Could not update expiration for rank ${rankId} because it does not exist.`)
       }
 
