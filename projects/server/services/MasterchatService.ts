@@ -217,8 +217,8 @@ export default class MasterchatService extends ApiService {
   private createWrapper (streamerId: number, liveId: string, masterchat: Masterchat): PartialMasterchat {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
-    const fetch = super.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`, streamerId)
-    const fetchMetadata = super.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`, streamerId)
+    const fetch = super.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`, streamerId, true)
+    const fetchMetadata = super.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`, streamerId, true)
     const hide = super.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`, streamerId)
     const unhide = super.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`, streamerId)
     const timeout = super.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`, streamerId)

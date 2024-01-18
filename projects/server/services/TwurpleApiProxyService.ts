@@ -124,7 +124,7 @@ export default class TwurpleApiProxyService extends ApiService {
   private createApiWrapper = () => {
     return async (streamerId: number, twitchUserId: string | null) => {
       const api = await this.twurpleApiClientProvider.get(twitchUserId)
-      const getStreamByUserName = super.wrapRequest((userName: string) => api.streams.getStreamByUserName(userName), 'twurpleApiClient.streams.getStreamByUserName', streamerId)
+      const getStreamByUserName = super.wrapRequest((userName: string) => api.streams.getStreamByUserName(userName), 'twurpleApiClient.streams.getStreamByUserName', streamerId, true)
       const banUser = super.wrapRequest((broadcaster: UserIdResolvable, moderator: UserIdResolvable, data: HelixBanUserRequest) => api.moderation.banUser(broadcaster, moderator, data), 'twurpleChatClient.moderation.banUser', streamerId)
       const unbanUser = super.wrapRequest((broadcaster: UserIdResolvable, moderator: UserIdResolvable, user: UserIdResolvable) => api.moderation.unbanUser(broadcaster, moderator, user), 'twurpleChatClient.moderation.unbanUser', streamerId)
       const addModerator = super.wrapRequest((channel: string, twitchUserName: string) => api.moderation.addModerator(channel, twitchUserName), 'twurpleApiClient.moderation.addModerator', streamerId)
