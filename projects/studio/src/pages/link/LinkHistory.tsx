@@ -63,7 +63,7 @@ export function LinkHistory (props: Props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {tokens.map(item => <LinkTokenRow key={item.token ?? item.externalIdOrUserName} item={item} chatMateStreamer={props.chatMateStreamer} onRefresh={props.onRefresh} />)}
+          {tokens.map((item, i) => <LinkTokenRow key={i} item={item} chatMateStreamer={props.chatMateStreamer} onRefresh={props.onRefresh} />)}
         </TableBody>
       </Table>
     }
