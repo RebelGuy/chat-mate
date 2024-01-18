@@ -8,7 +8,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { ChatMateError, ForbiddenError } from '@rebel/shared/util/error'
+import { ChatMateError, ForbiddenError, PrimaryChannelAlreadyExistsError } from '@rebel/shared/util/error'
 import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
@@ -173,12 +173,12 @@ describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
 
-  test('Throws if the primary user is already set', async () => {
+  test(`Throws ${PrimaryChannelAlreadyExistsError.name} if the primary user is already set`, async () => {
     const streamerId = 4
     const registeredUserId = 91
     const aggregateChatUserId = 58
     const youtubeChannelId = 581
-    const err = new Error()
+    const err = new PrimaryChannelAlreadyExistsError(streamerId, 'youtube')
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(cast<Streamer>({ registeredUserId }))
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUserId])).mockResolvedValue([cast<RegisteredUser>({ aggregateChatUserId })])

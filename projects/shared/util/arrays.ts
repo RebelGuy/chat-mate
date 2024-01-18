@@ -409,3 +409,7 @@ export function takeUntil<T> (items: T[], predicate: (item: T) => boolean, inclu
 
   return result
 }
+
+export function createArray<T = undefined> (count: number, defaultItem?: (i: number) => T): T[] {
+  return [...Array(count)].map((_, i) => defaultItem == null ? undefined : (i)) as T[]
+}

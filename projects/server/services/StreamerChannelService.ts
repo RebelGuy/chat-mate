@@ -90,6 +90,7 @@ export default class StreamerChannelService extends ContextClass {
 
   /** Sets the provided channel to be the streamer's primary youtube or twitch channel.
    * @throws {@link ForbiddenError}: When the streamer is not linked to the youtube or twitch channel.
+   * @throws {@link PrimaryChannelAlreadyExistsError}: When the streamer already has a primary channel for the given platform.
   */
   public async setPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch', youtubeOrTwitchChannelId: number) {
     const [youtubeLivestream, twitchLivestream] = await Promise.all([

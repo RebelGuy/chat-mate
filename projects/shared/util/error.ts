@@ -220,6 +220,12 @@ export class NotLoggedInError extends ChatMateError {
   }
 }
 
+export class PrimaryChannelAlreadyExistsError extends ChatMateError {
+  constructor (streamerId: number, platform: 'youtube' | 'twitch') {
+    super(PrimaryChannelAlreadyExistsError.prototype, `A primary ${platform} channel for streamer ${streamerId} already exists.`)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

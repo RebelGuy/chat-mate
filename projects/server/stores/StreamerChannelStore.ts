@@ -1,9 +1,9 @@
 import { ChatUser, StreamerTwitchChannelLink, StreamerYoutubeChannelLink } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
 import { channelQuery_includeLatestChannelInfo, TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import { PrimaryChannelAlreadyExistsError } from '@rebel/shared/util/error'
 
 export type PrimaryChannels = {
   streamerId: number
@@ -106,8 +106,19 @@ export default class StreamerChannelStore extends ContextClass {
     })
   }
 
-  /** Throws if a primary youtube channel already exists. */
+  /** @throws {@link PrimaryChannelAlreadyExistsError}: When a primary Youtube channel already exists for the streamer. */
   public async setStreamerYoutubeChannelLink (streamerId: number, youtubeChannelId: number): Promise<UserChannel<'youtube'>> {
+    const existingLink = await this.db.streamerYoutubeChannelLink.findFirst({
+      where: {
+        streamerId: streamerId,
+        timeRemoved: null
+      }
+    })
+
+    if (existingLink != null) {
+      throw new PrimaryChannelAlreadyExistsError(streamerId, 'youtube')
+    }
+
     const addedLink = await this.db.streamerYoutubeChannelLink.create({
       data: {
         streamerId: streamerId,
@@ -120,8 +131,19 @@ export default class StreamerChannelStore extends ContextClass {
     return youtubeLinkToUserChannel(addedLink)
   }
 
-  /** Throws if a primary twitch channel already exists. */
+  /** @throws {@link PrimaryChannelAlreadyExistsError}: When a primary Twitch channel already exists for the streamer. */
   public async setStreamerTwitchChannelLink (streamerId: number, twitchChannelId: number): Promise<UserChannel<'twitch'>> {
+    const existingLink = await this.db.streamerTwitchChannelLink.findFirst({
+      where: {
+        streamerId: streamerId,
+        timeRemoved: null
+      }
+    })
+
+    if (existingLink != null) {
+      throw new PrimaryChannelAlreadyExistsError(streamerId, 'twitch')
+    }
+
     const addedLink = await this.db.streamerTwitchChannelLink.create({
       data: {
         streamerId: streamerId,
