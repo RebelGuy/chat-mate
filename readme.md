@@ -69,6 +69,20 @@ Problem: Streamlabs donations are not being received by ChatMate.
 Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
 
 # Change Log
+## v1.30 - The Cleanup Update 2 [18/1/2024]
+- Server
+  - External channel info data is now split into global data (for example, the channel name and profile picture) and streamer data (for example, whether the user is a moderator)
+  - ChatMate now checks the Twitch status of every streamer upon startup to handle the case where the streaming status has changed while we were offline and missed events
+  - Added time stamps to primary channels so that old data can be matched to the correct primary channel at the time
+  - Better handling of internal errors
+  - Fixed message count including deleted messages
+- Studio
+  - Added the ability for users to change their passwords
+  - When encountering a 401 error while making a request, Studio now sends the user to the login page and redirects them back to the previous page after they have logged in
+  - The "chatmate" streamer is now hidden as it is an implementation detail only, rather than a real streamer
+  - "rebel_guy" is now auto-selected as a streamer for first-time users
+  - Improved displayed ChatMate version
+
 ## v1.29 - The Publication Update [6/1/2024]
 - Server
   - Livestreams are no longer coupled exclusively to Youtube. That is, it is possible to start a livestream on either Youtube or Twitch
