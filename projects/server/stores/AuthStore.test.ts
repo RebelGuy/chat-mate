@@ -112,7 +112,7 @@ export default () => {
 
       const result = await authStore.loadYoutubeWebAccessToken('channel1')
 
-      expect(result).toBe('token1')
+      expect(result).toEqual(expectObject(result, { accessToken: 'token1' }))
     })
 
     test('Returns null if no token exists for the given channelId', async () => {
