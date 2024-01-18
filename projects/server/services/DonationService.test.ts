@@ -13,7 +13,7 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
 import { PartialChatMessage } from '@rebel/server/models/chat'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
-import { UserRankAlreadyExistsError } from '@rebel/shared/util/error'
+import { ChatMateError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
 
@@ -172,7 +172,7 @@ describe(nameof(DonationService, 'linkUserToDonation'), () => {
     const primaryUserId = 5
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => donationService.linkUserToDonation(1, 1, primaryUserId)).rejects.toThrow()
+    await expect(() => donationService.linkUserToDonation(1, 1, primaryUserId)).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -305,6 +305,6 @@ describe(nameof(DonationService, 'unlinkUserFromDonation'), () => {
     mockDonationStore.getDonation.calledWith(1, donationId).mockResolvedValue(cast<DonationWithUser>({ primaryUserId }))
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => donationService.unlinkUserFromDonation(1, donationId)).rejects.toThrow()
+    await expect(() => donationService.unlinkUserFromDonation(1, donationId)).rejects.toThrowError(ChatMateError)
   })
 })

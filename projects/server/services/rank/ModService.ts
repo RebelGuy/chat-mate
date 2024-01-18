@@ -8,6 +8,8 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import RankStore, { AddUserRankArgs, RankEventData, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
 import YoutubeService from '@rebel/server/services/YoutubeService'
+import { ChatMateError } from '@rebel/shared/util/error'
+import { SafeOmit } from '@rebel/shared/types'
 
 export type IgnoreOptions = {
   youtubeChannelId?: number
@@ -50,7 +52,7 @@ export default class ModService extends ContextClass {
   /** Add or remove the mod user-rank and notify the external platforms. Doesn't throw. */
   public async setModRank (primaryUserId: number, streamerId: number, issuingModeratorPrimaryUserId: number | null, isMod: boolean, message: string | null, ignoreOptions: IgnoreOptions | null): Promise<SetActionRankResult> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error(`Cannot ${isMod ? 'mod' : 'unmod'} the user at this time. Please try again later.`)
+      throw new ChatMateError(`Cannot ${isMod ? 'mod' : 'unmod'} the user at this time. Please try again later.`)
     }
 
     const internalRankResult = await this.setInternalModRank(primaryUserId, streamerId, issuingModeratorPrimaryUserId, isMod, message)
@@ -81,7 +83,7 @@ export default class ModService extends ContextClass {
   }
 
   /** Like `setModRank` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. */
-  public async setModRankExternal (defaultUserId: number, streamerId: number, isMod: boolean): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+  public async setModRankExternal (defaultUserId: number, streamerId: number, isMod: boolean): Promise<SafeOmit<SetActionRankResult, 'rankResult'>> {
     const userChannels = await this.channelStore.getDefaultUserOwnedChannels([defaultUserId]).then(single)
     const youtubeResults = await Promise.all(userChannels.youtubeChannelIds.map(c => this.trySetYoutubeMod(streamerId, c, isMod)))
     const twitchResults = await Promise.all(userChannels.twitchChannelIds.map(c => this.trySetTwitchMod(streamerId, c, isMod)))

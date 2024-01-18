@@ -1,92 +1,82 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import ChannelStore, { CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs, UserChannel } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateGlobalTwitchChannelArgs, UserChannel, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
 import { sortBy } from '@rebel/shared/util/arrays'
-import { randomString } from '@rebel/shared/util/random'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { addTime } from '@rebel/shared/util/datetime'
 import * as data from '@rebel/server/_test/testData'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 const ytChannelId1 = 'channelId1'
 const ytChannelId2 = 'channelId2'
 const ytChannelId3 = 'channelId3'
-const channelId1 = 1
-const channelId2 = 2
 const extTwitchChannelId1 = 'tchannelId1'
 const extTwitchChannelId2 = 'tchannelId2'
 const extTwitchChannelId3 = 'tchannelId3'
-const twitchChannelId1 = 1
-const twitchChannelId2 = 2
 
-const channelInfo1: CreateOrUpdateYoutubeChannelArgs = {
+const streamerId1 = 1
+const streamerId2 = 2
+
+const globalChannelInfo1: CreateOrUpdateGlobalYoutubeChannelArgs = {
   time: new Date(2021, 1, 1),
   name: 'User 1 A',
   imageUrl: 'www.image.com',
-  isOwner: false,
-  isModerator: true,
   isVerified: false
 }
-const channelInfo2: CreateOrUpdateYoutubeChannelArgs = {
+const globalChannelInfo2: CreateOrUpdateGlobalYoutubeChannelArgs = {
   time: new Date(2021, 1, 2),
   name: 'User 1 B',
   imageUrl: 'www.image.com',
-  isOwner: false,
-  isModerator: false,
   isVerified: false
 }
-const channelInfo3: CreateOrUpdateYoutubeChannelArgs = {
+const globalChannelInfo3: CreateOrUpdateGlobalYoutubeChannelArgs = {
   time: new Date(2021, 1, 3),
   name: 'User 2 A',
   imageUrl: 'www.image.net',
-  isOwner: false,
-  isModerator: false,
   isVerified: true
 }
-const channelInfo4: CreateOrUpdateYoutubeChannelArgs = {
+const globalChannelInfo4: CreateOrUpdateGlobalYoutubeChannelArgs = {
   time: new Date(2021, 1, 4),
   name: 'User 2 B',
   imageUrl: 'www.image.net',
-  isOwner: true,
-  isModerator: false,
   isVerified: false
 }
 
 const baseTwitchChannelProps = {
   colour: '#FF00FF',
-  isBroadcaster: false,
-  isMod: false,
-  isSubscriber: false,
-  isVip: false,
   userType: ''
 }
-const twitchChannelInfo1: CreateOrUpdateTwitchChannelArgs = {
+const baseTwitchChannelStreamerInfo = {
+  isVip: false,
+  isSubscriber: false,
+  isBroadcaster: false,
+  isMod: false
+}
+const twitchChannelGlobalInfo1: CreateOrUpdateGlobalTwitchChannelArgs = {
   ...baseTwitchChannelProps,
   time: new Date(2021, 1, 1),
   userName: 'User_1_A',
   displayName: 'User 1 A'
 }
-const twitchChannelInfo2: CreateOrUpdateTwitchChannelArgs = {
+const twitchChannelGlobalInfo2: CreateOrUpdateGlobalTwitchChannelArgs = {
   ...baseTwitchChannelProps,
   time: new Date(2021, 1, 2),
   userName: 'User_1_B',
-  displayName: 'User 1 B',
-  isVip: true
+  displayName: 'User 1 B'
 }
-const twitchChannelInfo3: CreateOrUpdateTwitchChannelArgs = {
+const twitchChannelGlobalInfo3: CreateOrUpdateGlobalTwitchChannelArgs = {
   ...baseTwitchChannelProps,
   time: new Date(2021, 1, 3),
   userName: 'User_2_A',
-  displayName: 'User 2 A',
-  isSubscriber: true
+  displayName: 'User 2 A'
 }
-const twitchChannelInfo4: CreateOrUpdateTwitchChannelArgs = {
+const twitchChannelGlobalInfo4: CreateOrUpdateGlobalTwitchChannelArgs = {
   ...baseTwitchChannelProps,
   time: new Date(2021, 1, 4),
   userName: 'User_2_B',
-  displayName: 'User 2 B',
-  isBroadcaster: true
+  displayName: 'User 2 B'
 }
 
 export default () => {
@@ -100,30 +90,32 @@ export default () => {
 
   afterEach(stopTestDb)
 
-  describe(nameof(ChannelStore, 'createOrUpdate'), () => {
+  describe(nameof(ChannelStore, 'createOrUpdateYoutubeChannel') + ' & ' + nameof(ChannelStore, 'createOrUpdateYoutubeChannel'), () => {
     // set up the database with sample data
     const nChannel = 2
     const nInfo = 3
     beforeEach(async () => {
+      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'test', aggregateChatUser: { create: {} } }} } })
+      await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'test', aggregateChatUser: { create: {} } }} } })
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo1]} }
+        globalInfoHistory: { createMany: { data: [globalChannelInfo2, globalChannelInfo1]} }
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo3]} }
+        globalInfoHistory: { createMany: { data: [globalChannelInfo3]} }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
         user: { connect: { id: 1 }},
-        infoHistory: { createMany: { data: [twitchChannelInfo2, twitchChannelInfo1]} }
+        globalInfoHistory: { createMany: { data: [twitchChannelGlobalInfo2, twitchChannelGlobalInfo1]} }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId2,
         user: { connect: { id: 2 }},
-        infoHistory: { createMany: { data: [twitchChannelInfo3]} }
+        globalInfoHistory: { createMany: { data: [twitchChannelGlobalInfo3]} }
       }})
     })
 
@@ -132,65 +124,88 @@ export default () => {
     // to be extremely similar both in set up and expected outcome
 
     test('creating new youtube channel works', async () => {
-      const result = await channelStore.createOrUpdate('youtube', 'channel3', channelInfo1)
+      const result = await channelStore.createOrUpdateYoutubeChannel('channel3', { ...globalChannelInfo1, streamerId: streamerId1, isModerator: false, isOwner: false })
 
       expect(result.youtubeId).toBe('channel3')
-      expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo1))
-      await expectRowCount(db.youtubeChannel, db.youtubeChannelInfo).toEqual([nChannel + 1, nInfo + 1])
+      expect(single(result.globalInfoHistory)).toEqual(expect.objectContaining(globalChannelInfo1))
+      await expectRowCount(db.youtubeChannel, db.youtubeChannelGlobalInfo).toEqual([nChannel + 1, nInfo + 1])
     })
 
     test('creating new twitch channel works', async () => {
-      const result = await channelStore.createOrUpdate('twitch', 'channel3', twitchChannelInfo1)
+      const result = await channelStore.createOrUpdateTwitchChannel('channel3', { ...twitchChannelGlobalInfo1, ...baseTwitchChannelStreamerInfo, streamerId: streamerId1 })
 
       expect(result.twitchId).toBe('channel3')
-      expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelInfo1))
-      await expectRowCount(db.twitchChannel, db.twitchChannelInfo).toEqual([nChannel + 1, nInfo + 1])
+      expect(single(result.globalInfoHistory)).toEqual(expect.objectContaining(twitchChannelGlobalInfo1))
+      await expectRowCount(db.twitchChannel, db.twitchChannelGlobalInfo).toEqual([nChannel + 1, nInfo + 1])
     })
 
     // ----
 
-    test('updating existing youtube channel works', async () => {
-      const result = await channelStore.createOrUpdate('youtube', ytChannelId2, channelInfo4)
+    test('updating global data of existing youtube channel works', async () => {
+      const result = await channelStore.createOrUpdateYoutubeChannel(ytChannelId2, { ...globalChannelInfo4, streamerId: streamerId1, isModerator: false, isOwner: false })
 
       expect(result.youtubeId).toBe(ytChannelId2)
-      expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo4))
-      await expectRowCount(db.youtubeChannel, db.youtubeChannelInfo).toEqual([nChannel, nInfo + 1])
+      expect(single(result.globalInfoHistory)).toEqual(expect.objectContaining(globalChannelInfo4))
+      await expectRowCount(db.youtubeChannel, db.youtubeChannelGlobalInfo).toEqual([nChannel, nInfo + 1])
     })
 
-    test('updating existing twitch channel works', async () => {
-      const result = await channelStore.createOrUpdate('twitch', extTwitchChannelId2, twitchChannelInfo4)
+    test('updating global data of existing twitch channel works', async () => {
+      const result = await channelStore.createOrUpdateTwitchChannel(extTwitchChannelId2, { ...twitchChannelGlobalInfo4, ...baseTwitchChannelStreamerInfo, streamerId: streamerId1 })
 
       expect(result.twitchId).toBe(extTwitchChannelId2)
-      expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelInfo4))
-      await expectRowCount(db.twitchChannel, db.twitchChannelInfo).toEqual([nChannel, nInfo + 1])
+      expect(single(result.globalInfoHistory)).toEqual(expect.objectContaining(twitchChannelGlobalInfo4))
+      await expectRowCount(db.twitchChannel, db.twitchChannelGlobalInfo).toEqual([nChannel, nInfo + 1])
+    })
+
+    // ----
+
+    test('updating streamer data of existing youtube channel works', async () => {
+      await db.youtubeChannelStreamerInfo.create({ data: { channelId: 2, time: data.time2, streamerId: streamerId1, isModerator: false, isOwner: false } })
+
+      await channelStore.createOrUpdateYoutubeChannel(ytChannelId2, { ...globalChannelInfo4, time: data.time3, streamerId: streamerId1, isModerator: true, isOwner: false })
+
+      const storedInfo = await db.youtubeChannelStreamerInfo.findUnique({ where: { id: 2 }})
+      expect(storedInfo!.isModerator).toBe(true)
+    })
+
+    test('updating streamer data of existing twitch channel works', async () => {
+      await db.twitchChannelStreamerInfo.create({ data: { channelId: 2, time: data.time2, streamerId: streamerId1, isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false } })
+
+      await channelStore.createOrUpdateTwitchChannel(extTwitchChannelId2, { ...twitchChannelGlobalInfo4, time: data.time3, streamerId: streamerId1, isBroadcaster: false, isMod: true, isSubscriber: false, isVip: false })
+
+      const storedInfo = await db.twitchChannelStreamerInfo.findUnique({ where: { id: 2 }})
+      expect(storedInfo!.isMod).toBe(true)
     })
 
     // ----
 
     test('stale youtube channel info skips db update', async () => {
       const modifiedInfo2 = {
-        ...channelInfo2,
-        time: new Date(2021, 1, 3)
+        ...globalChannelInfo2,
+        time: new Date(2021, 1, 3),
+        streamerId: streamerId1,
+        isModerator: false,
+        isOwner: false
       }
 
-      const result = await channelStore.createOrUpdate('youtube', ytChannelId1, modifiedInfo2)
+      const result = await channelStore.createOrUpdateYoutubeChannel(ytChannelId1, modifiedInfo2)
 
       expect(result.youtubeId).toBe(ytChannelId1)
-      expect(single(result.infoHistory)).toEqual(expect.objectContaining(channelInfo2))
-      await expectRowCount(db.youtubeChannel, db.youtubeChannelInfo).toEqual([nChannel, nInfo])
+      expect(single(result.globalInfoHistory)).toEqual(expect.objectContaining(globalChannelInfo2))
+      await expectRowCount(db.youtubeChannel, db.youtubeChannelGlobalInfo).toEqual([nChannel, nInfo])
     })
 
     test('stale twitch channel info skips db update', async () => {
       const modifiedInfo2 = {
-        ...twitchChannelInfo2,
+        ...twitchChannelGlobalInfo2,
         time: new Date(2021, 1, 3)
       }
 
-      const result = await channelStore.createOrUpdate('twitch', extTwitchChannelId1, modifiedInfo2)
+      const result = await channelStore.createOrUpdateTwitchChannel(extTwitchChannelId1, { ...modifiedInfo2, ...baseTwitchChannelStreamerInfo, streamerId: streamerId1 })
 
       expect(result.twitchId).toBe(extTwitchChannelId1)
-      expect(single(result.infoHistory)).toEqual(expect.objectContaining(twitchChannelInfo2))
-      await expectRowCount(db.twitchChannel, db.twitchChannelInfo).toEqual([nChannel, nInfo])
+      expect(single(result.globalInfoHistory)).toEqual(expect.objectContaining(twitchChannelGlobalInfo2))
+      await expectRowCount(db.twitchChannel, db.twitchChannelGlobalInfo).toEqual([nChannel, nInfo])
     })
   })
 
@@ -225,27 +240,27 @@ export default () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: { aggregateChatUserId: 3 }}, // default user 4
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo1] } }
+        globalInfoHistory: { createMany: { data: [globalChannelInfo2, globalChannelInfo1] } }
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
         user: { create: {}}, // default user 5
-        infoHistory: { createMany: { data: [channelInfo3] } }
+        globalInfoHistory: { createMany: { data: [globalChannelInfo3] } }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
         user: { create: {}}, // default user 6
-        infoHistory: { createMany: { data: [twitchChannelInfo2, twitchChannelInfo3] } }
+        globalInfoHistory: { createMany: { data: [twitchChannelGlobalInfo2, twitchChannelGlobalInfo3] } }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId2,
         user: { create: { aggregateChatUserId: 3 }}, // default user 7
-        infoHistory: { createMany: { data: [twitchChannelInfo4] } }
+        globalInfoHistory: { createMany: { data: [twitchChannelGlobalInfo4] } }
       }})
       await db.twitchChannel.create({ data: { // no chat messages
         twitchId: extTwitchChannelId3,
         user: { create: { aggregateChatUserId: 3 }}, // default user 8
-        infoHistory: { createMany: { data: [twitchChannelInfo1] } }
+        globalInfoHistory: { createMany: { data: [twitchChannelGlobalInfo1] } }
       }})
       await db.chatMessage.createMany({ data: [
         { streamerId: 1, externalId: 'msg1', time: data.time1, youtubeChannelId: 1 }, // match
@@ -274,25 +289,25 @@ export default () => {
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
         user: { create: {}}, // default user 2
-        infoHistory: { createMany: { data: [twitchChannelInfo1]} }
+        globalInfoHistory: { createMany: { data: [twitchChannelGlobalInfo1]} }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId2,
         user: { create: { aggregateChatUserId: 1 }}, // default user 3
-        infoHistory: { createMany: { data: [{ ...twitchChannelInfo2, time: time1 }, { ...twitchChannelInfo3, time: time2 }]} }
+        globalInfoHistory: { createMany: { data: [{ ...twitchChannelGlobalInfo2, time: time1 }, { ...twitchChannelGlobalInfo3, time: time2 }]} }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId3,
         user: { create: {}}, // default user 4
-        infoHistory: { createMany: { data: [twitchChannelInfo4]} }
+        globalInfoHistory: { createMany: { data: [twitchChannelGlobalInfo4]} }
       }})
 
       const result = await channelStore.getTwitchChannelsFromChannelIds([2, 3])
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectObjectDeep(result, [
-        { defaultUserId: 3, aggregateUserId: 1, platformInfo: { channel: { twitchId: extTwitchChannelId2, infoHistory: [{ userName: twitchChannelInfo3.userName }] }}},
-        { defaultUserId: 4, aggregateUserId: null, platformInfo: { channel: { twitchId: extTwitchChannelId3, infoHistory: [{ userName: twitchChannelInfo4.userName }] }}}
+        { defaultUserId: 3, aggregateUserId: 1, platformInfo: { channel: { twitchId: extTwitchChannelId2, globalInfoHistory: [{ userName: twitchChannelGlobalInfo3.userName }] }}},
+        { defaultUserId: 4, aggregateUserId: null, platformInfo: { channel: { twitchId: extTwitchChannelId3, globalInfoHistory: [{ userName: twitchChannelGlobalInfo4.userName }] }}}
       ]))
     })
   })
@@ -307,47 +322,89 @@ export default () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}}, // default user 2
-        infoHistory: { createMany: { data: [channelInfo1]} }
+        globalInfoHistory: { createMany: { data: [globalChannelInfo1]} }
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
         user: { create: { aggregateChatUserId: 1 }}, // default user 3
-        infoHistory: { createMany: { data: [{ ...channelInfo2, time: time3 }, { ...channelInfo3, time: time2 }]} }
+        globalInfoHistory: { createMany: { data: [{ ...globalChannelInfo2, time: time3 }, { ...globalChannelInfo3, time: time2 }]} }
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId3,
         user: { create: {}}, // default user 4
-        infoHistory: { createMany: { data: [channelInfo4]} }
+        globalInfoHistory: { createMany: { data: [globalChannelInfo4]} }
       }})
 
       const result = await channelStore.getYoutubeChannelsFromChannelIds([2, 3])
 
       expect(result.length).toBe(2)
       expect(result).toEqual(expectObjectDeep(result, [
-        { defaultUserId: 3, aggregateUserId: 1, platformInfo: { channel: { youtubeId: ytChannelId2, infoHistory: [{ name: channelInfo2.name }] }}},
-        { defaultUserId: 4, aggregateUserId: null, platformInfo: { channel: { youtubeId: ytChannelId3, infoHistory: [{ name: channelInfo4.name }] }}}
+        { defaultUserId: 3, aggregateUserId: 1, platformInfo: { channel: { youtubeId: ytChannelId2, globalInfoHistory: [{ name: globalChannelInfo2.name }] }}},
+        { defaultUserId: 4, aggregateUserId: null, platformInfo: { channel: { youtubeId: ytChannelId3, globalInfoHistory: [{ name: globalChannelInfo4.name }] }}}
       ]))
     })
   })
 
-  describe(nameof(ChannelStore, 'getYoutubeChannelHistory'), () => {
+  describe(nameof(ChannelStore, 'getYoutubeChannelHistoryForStreamer'), () => {
     test('Returns the latest 2 items from the specified channel', async () => {
+      const streamerChannelInfo1: CreateOrUpdateStreamerYoutubeChannelArgs = { time: data.time1, isModerator: false, isOwner: true, streamerId: streamerId1 }
+      const streamerChannelInfo2: CreateOrUpdateStreamerYoutubeChannelArgs = { time: data.time2, isModerator: true, isOwner: true, streamerId: streamerId2 }
+      const streamerChannelInfo3: CreateOrUpdateStreamerYoutubeChannelArgs = { time: data.time3, isModerator: true, isOwner: true, streamerId: streamerId1 }
+      const streamerChannelInfo4: CreateOrUpdateStreamerYoutubeChannelArgs = { time: data.time4, isModerator: true, isOwner: true, streamerId: streamerId1 }
+
+      await db.streamer.create({ data: {
+        registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}
+      })
+      await db.streamer.create({ data: {
+        registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}
+      })
       const channel1 = await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo2, channelInfo1, channelInfo3]} }
+        streamerInfoHistory: { createMany: { data: [streamerChannelInfo2, streamerChannelInfo1, streamerChannelInfo3] }}
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
         user: { create: {}},
-        infoHistory: { createMany: { data: [channelInfo4] }}
+        streamerInfoHistory: { createMany: { data: [streamerChannelInfo4] }}
       }})
-      const streamerId = 1
 
-      const result = await channelStore.getYoutubeChannelHistory(streamerId, channel1.id, 2)
+      const result = await channelStore.getYoutubeChannelHistoryForStreamer(streamerId1, channel1.id, 2)
 
       expect(result).toEqual(expectObject(result, [
-        { id: 3 }, { id: 1 }
+        { id: 3 }, { id: 2 }
+      ]))
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getTwitchChannelHistoryForStreamer'), () => {
+    test('Returns the latest 2 items from the specified channel', async () => {
+      const streamerChannelInfo1: CreateOrUpdateStreamerTwitchChannelArgs = { time: data.time1, streamerId: streamerId1, isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false }
+      const streamerChannelInfo2: CreateOrUpdateStreamerTwitchChannelArgs = { time: data.time2, streamerId: streamerId2, isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false }
+      const streamerChannelInfo3: CreateOrUpdateStreamerTwitchChannelArgs = { time: data.time3, streamerId: streamerId1, isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false }
+      const streamerChannelInfo4: CreateOrUpdateStreamerTwitchChannelArgs = { time: data.time4, streamerId: streamerId1, isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false }
+
+      await db.streamer.create({ data: {
+        registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}
+      })
+      await db.streamer.create({ data: {
+        registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}
+      })
+      const channel1 = await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}},
+        streamerInfoHistory: { createMany: { data: [streamerChannelInfo2, streamerChannelInfo1, streamerChannelInfo3] }}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { create: {}},
+        streamerInfoHistory: { createMany: { data: [streamerChannelInfo4] }}
+      }})
+
+      const result = await channelStore.getTwitchChannelHistoryForStreamer(streamerId1, channel1.id, 2)
+
+      expect(result).toEqual(expectObject(result, [
+        { id: 3 }, { id: 2 }
       ]))
     })
   })
@@ -365,12 +422,12 @@ export default () => {
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
         user: { create: {}},
-        infoHistory: { create: twitchChannelInfo1 }
+        globalInfoHistory: { create: twitchChannelGlobalInfo1 }
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId2,
         user: { create: {}},
-        infoHistory: { create: twitchChannelInfo2 }
+        globalInfoHistory: { create: twitchChannelGlobalInfo2 }
       }})
     })
 
@@ -381,7 +438,7 @@ export default () => {
     })
 
     test('Returns the Twitch channel associated with the external id', async () => {
-      const result = await channelStore.getChannelFromUserNameOrExternalId(twitchChannelInfo1.userName.toUpperCase())
+      const result = await channelStore.getChannelFromUserNameOrExternalId(twitchChannelGlobalInfo1.userName.toUpperCase())
 
       expect(result!.userId).toBe(3)
     })
@@ -398,7 +455,7 @@ export default () => {
       await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: 'test_youtube' }})
       await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: 'test_twitch' }})
 
-      await expect(() => channelStore.getPrimaryUserId('bad id')).rejects.toThrow()
+      await expect(() => channelStore.getPrimaryUserId('bad id')).rejects.toThrowError(ChatMateError)
     })
 
     test('returns correct default id for youtube channel', async () => {
@@ -442,7 +499,7 @@ export default () => {
 
   describe(nameof(ChannelStore, 'getConnectedUserOwnedChannels'), () => {
     test('throws if user does not exist', async () => {
-      await expect(() => channelStore.getConnectedUserOwnedChannels([1])).rejects.toThrow()
+      await expect(() => channelStore.getConnectedUserOwnedChannels([1])).rejects.toThrowError(ChatMateError)
     })
 
     test('Returns linked channels for default or aggregate users, and single channel for an unlinked default user', async () => {
@@ -500,7 +557,7 @@ export default () => {
     })
 
     test('Throws if user does not exist', async () => {
-      await expect(() => channelStore.getDefaultUserOwnedChannels([1])).rejects.toThrow()
+      await expect(() => channelStore.getDefaultUserOwnedChannels([1])).rejects.toThrowError(ChatMateError)
     })
   })
 }

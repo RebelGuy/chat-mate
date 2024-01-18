@@ -13,6 +13,9 @@ export type ChatMateStatsResponse = ApiResponse<{
   twitchTotalDaysLivestreamed: number
 }>
 
-export type GetMasterchatAuthenticationResponse = ApiResponse<{ authenticated: boolean | null }>
+export type GetMasterchatAuthenticationResponse = ApiResponse<{
+  authenticated: boolean | null
+  lastUpdatedTimestamp: number | null
+}>
 
 export type GetChatMateRegisteredUsernameResponse = ApiResponse<{ username: string }>

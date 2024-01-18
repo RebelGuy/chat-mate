@@ -19,7 +19,7 @@ export type NullableKeys<T> = ({
 
 // this intermediate step results in the union of objects of non-nullable and nullable properties,
 // but we want a single object.
-type NullableToOptional_<T> = Omit<T, NullableKeys<T>> & {
+type NullableToOptional_<T> = SafeOmit<T, NullableKeys<T>> & {
   [key in NullableKeys<T>]?: T[key]
 }
 
@@ -43,7 +43,7 @@ export type NoNulls<T> = {
 }
 
 /** Returns T but with all `never` properties removed. */
-export type NoNever<T extends GenericObject> = Omit<T, { [K in keyof T]: T[K] extends never ? K : never }[keyof T]>
+export type NoNever<T extends GenericObject> = SafeOmit<T, { [K in keyof T]: T[K] extends never ? K : never }[keyof T]>
 
 export type Nullify<T> = {
   [P in keyof T]: T[P] | null
@@ -84,3 +84,9 @@ export type Singular<T> = T extends Array<infer K> ? K : never
 export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never
 
 export type RecordValueType<T> = T extends Record<any, infer V> ? V : never
+
+/** Extract from T those types that are assignable to U, ensuring that U is strictly a sub-type of T. */
+export type SafeExtract<T, U extends T> = U extends Extract<T, U> ? U : never
+
+/** Omit from T the provided keys. */
+export type SafeOmit<T, K extends keyof T> = Omit<T, K>

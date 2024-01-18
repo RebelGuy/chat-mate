@@ -1,4 +1,5 @@
-import { GenericObject, NumberOnly, PrimitiveKeys, UnionToIntersection } from '@rebel/shared/types'
+import { GenericObject, NumberOnly, PrimitiveKeys, SafeOmit, UnionToIntersection } from '@rebel/shared/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 // uses default equality comparison
@@ -27,7 +28,7 @@ export function single<T> (array: T[]): T {
   if (array.length === 1) {
     return array[0]
   } else {
-    throw new Error(`Expected 1 element in the array but found ${array.length}`)
+    throw new ChatMateError(`Expected 1 element in the array but found ${array.length}`)
   }
 }
 
@@ -41,13 +42,13 @@ export function singleOrNull<T> (array: T[]): T | null {
   } else if (array.length === 1) {
     return array[0]
   } else {
-    throw new Error(`Expected 0 or 1 elements in the array but found ${array.length}`)
+    throw new ChatMateError(`Expected 0 or 1 elements in the array but found ${array.length}`)
   }
 }
 
 export function first<T> (array: T[]): T {
   if (array.length < 1) {
-    throw new Error(`Expected at least 1 element in the array but found none`)
+    throw new ChatMateError(`Expected at least 1 element in the array but found none`)
   } else {
     return array[0]
   }
@@ -82,7 +83,7 @@ export function sortBy<T extends GenericObject> (array: T[], selector: keyof T |
     } else if (typeof x === 'string' && typeof y === 'string') {
       diff = x.localeCompare(y)
     } else {
-      throw new Error('Unexpected type')
+      throw new ChatMateError('Unexpected type')
     }
     return direction === 'asc' ? diff : -diff
   })
@@ -90,7 +91,7 @@ export function sortBy<T extends GenericObject> (array: T[], selector: keyof T |
 
 export function zip<T extends GenericObject, U extends GenericObject> (first: T[], second: U[]): (T & U)[] {
   if (first.length !== second.length) {
-    throw new Error('Cannot zip arrays with different lengths')
+    throw new ChatMateError('Cannot zip arrays with different lengths')
   }
 
   return first.map((a, i) => ({ ...a, ...second[i] }))
@@ -99,15 +100,15 @@ export function zip<T extends GenericObject, U extends GenericObject> (first: T[
 /** Merges the two arrays on the specified key, which must be a common property. It is assumed that the key is unique within
  * an array, but may or may not be unique across the two arrays. No other properties should overlap between the objects, else
  * the behaviour is undefined. The arrays' lengths may differ. The return order is undefined. */
-export function zipOn<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (first: T[], second: U[], key: Key): (Pick<T & U, Key> & Partial<Omit<T & U, Key>>)[] {
-  // for some reason we must explicitly define `Key extends (string | number | symbol)` otherwise Omit<> is unhappy
-  let firstMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
-  let secondMap: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
+export function zipOn<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (first: T[], second: U[], key: Key): (Pick<T & U, Key> & Partial<SafeOmit<T & U, Key>>)[] {
+  // for some reason we must explicitly define `Key extends (string | number | symbol)` otherwise SafeOmit<> is unhappy
+  let firstMap: Map<T[Key] & U[Key], Pick<T & U, Key> & SafeOmit<Partial<T & U>, Key>> = new Map()
+  let secondMap: Map<T[Key] & U[Key], Pick<T & U, Key> & SafeOmit<Partial<T & U>, Key>> = new Map()
 
   for (const x of first) {
     const k = x[key]
     if (firstMap.has(k)) {
-      throw new Error('The key should be unique within the first array')
+      throw new ChatMateError('The key should be unique within the first array')
     } else {
       const copy = { ...x }
       delete copy[key]
@@ -118,7 +119,7 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
   for (const y of second) {
     const k = y[key]
     if (secondMap.has(k)) {
-      throw new Error('The key should be unique within the second array')
+      throw new ChatMateError('The key should be unique within the second array')
     } else {
       const copy = { ...y }
       delete copy[key]
@@ -126,11 +127,11 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
     }
   }
 
-  let map: Map<T[Key] & U[Key], Pick<T & U, Key> & Omit<Partial<T & U>, Key>> = new Map()
+  let map: Map<T[Key] & U[Key], Pick<T & U, Key> & SafeOmit<Partial<T & U>, Key>> = new Map()
   const allKeys = unique([...firstMap.keys(), ...secondMap.keys()])
   for (const k of allKeys) {
-    const firstValue = firstMap.get(k) ?? {} as Omit<Partial<T & U>, Key>
-    const secondValue = secondMap.get(k) ?? {} as Omit<Partial<T & U>, Key>
+    const firstValue = firstMap.get(k) ?? {} as SafeOmit<Partial<T & U>, Key>
+    const secondValue = secondMap.get(k) ?? {} as SafeOmit<Partial<T & U>, Key>
 
     const keyValue = { [key]: k } as Pick<T & U, Key>
     const finalValue = {
@@ -148,7 +149,7 @@ export function zipOn<T extends GenericObject, U extends GenericObject, Key exte
  * The merged object has the same order as the first array, relative to the keys. */
 export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (firstArray: T[], secondArray: U[], key: Key): (T & U)[]
 /** Merges the two arrays on the given keys, and optionally maps the key names to a new key. */
-export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key1 extends (string | number | symbol) & PrimitiveKeys<T>, Key2 extends (string | number | symbol) & PrimitiveKeys<U>, NewKey extends string | number | symbol> (firstArray: T[], secondArray: U[], firstKey: Key1, secondKey: Key2, newKey?: NewKey): (Omit<T, Key1> & Omit<U, Key2> & Record<NewKey, T[Key1] | U[Key2]>)[]
+export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key1 extends (string | number | symbol) & PrimitiveKeys<T>, Key2 extends (string | number | symbol) & PrimitiveKeys<U>, NewKey extends string | number | symbol> (firstArray: T[], secondArray: U[], firstKey: Key1, secondKey: Key2, newKey?: NewKey): (SafeOmit<T, Key1> & SafeOmit<U, Key2> & Record<NewKey, T[Key1] | U[Key2]>)[]
 export function zipOnStrict<T extends GenericObject, U extends GenericObject, Key extends (string | number | symbol) & PrimitiveKeys<T> & PrimitiveKeys<U>> (firstArray: T[], secondArray: U[], firstKey: Key, secondKey?: Key, newKey?: Key): (T & U)[] {
   if (secondKey == null) {
     secondKey = firstKey
@@ -159,24 +160,24 @@ export function zipOnStrict<T extends GenericObject, U extends GenericObject, Ke
   }
 
   if (firstArray.length !== secondArray.length) {
-    throw new Error('Cannot strict-zip arrays with different lengths')
+    throw new ChatMateError('Cannot strict-zip arrays with different lengths')
   }
 
   const firstKeys = unique(firstArray.map(x => x[firstKey]))
   const secondKeys = unique(secondArray.map(y => y[secondKey!]))
   if (firstKeys.length !== secondKeys.length || firstKeys.length !== firstArray.length) {
-    throw new Error('Cannot strict-zip arrays with non-unique keys')
+    throw new ChatMateError('Cannot strict-zip arrays with non-unique keys')
   }
 
   if (firstKeys.find(x => x == null) || secondKeys.find(y => y == null)) {
-    throw new Error('Cannot strict-zip arrays when at least one element is null')
+    throw new ChatMateError('Cannot strict-zip arrays when at least one element is null')
   }
 
   // since keys are unique, and since both sets of keys should be exactly overlapping,
   // the grouped values should be the exact same set
   const groupedKeys = groupedSingle([...firstKeys, ...secondKeys], x => x)
   if (firstKeys.length !== groupedKeys.length) {
-    throw new Error('Cannot strict-zip arrays with differing keys')
+    throw new ChatMateError('Cannot strict-zip arrays with differing keys')
   }
 
   const result = firstArray.map(x => {
@@ -212,7 +213,7 @@ export function zipOnStrictMany<
     try {
       result = zipOnStrict(result, arrays[i] as any, key as any)
     } catch (e: any) {
-      throw new Error(`Unable to zip additional array at index ${i} onto the existing result: ${e.message}`)
+      throw new ChatMateError(`Unable to zip additional array at index ${i} onto the existing result: ${e.message}`)
     }
   }
   return result
@@ -407,4 +408,8 @@ export function takeUntil<T> (items: T[], predicate: (item: T) => boolean, inclu
   }
 
   return result
+}
+
+export function createArray<T = undefined> (count: number, defaultItem?: (i: number) => T): T[] {
+  return [...Array(count)].map((_, i) => defaultItem == null ? undefined : (i)) as T[]
 }

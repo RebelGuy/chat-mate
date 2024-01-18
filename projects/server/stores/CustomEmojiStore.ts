@@ -3,6 +3,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { group } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export type CustomEmojiWithRankWhitelist = {
   id: number
@@ -167,7 +168,7 @@ export default class CustomEmojiStore extends ContextClass {
       })
 
       if (updateResult.count === 0) {
-        throw new Error(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
+        throw new ChatMateError(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
       }
 
       const previousVersion = (await db.customEmojiVersion.findFirst({

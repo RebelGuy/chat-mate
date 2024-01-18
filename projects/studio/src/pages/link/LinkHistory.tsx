@@ -11,15 +11,14 @@ import { deleteLinkToken, getLinkHistory } from '@rebel/studio/utility/api'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
-import { useContext } from 'react'
-import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { getChannelUrlFromPublic } from '@rebel/shared/util/channel'
 import { Delete } from '@mui/icons-material'
+import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 
 type Props = {
   updateKey: number
   admin_selectedAggregateUserId: number | undefined
-  chatMateUsername: string | undefined
+  chatMateStreamer: PublicStreamerSummary | null
   onRefresh: () => void
 }
 
@@ -64,7 +63,7 @@ export function LinkHistory (props: Props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {tokens.map(item => <LinkTokenRow key={item.token ?? item.externalIdOrUserName} item={item} chatMateUsername={props.chatMateUsername} onRefresh={props.onRefresh} />)}
+          {tokens.map((item, i) => <LinkTokenRow key={i} item={item} chatMateStreamer={props.chatMateStreamer} onRefresh={props.onRefresh} />)}
         </TableBody>
       </Table>
     }
@@ -74,7 +73,7 @@ export function LinkHistory (props: Props) {
   </>
 }
 
-function LinkTokenRow (props: { item: PublicLinkHistoryItem, chatMateUsername: string | undefined, onRefresh: () => void }) {
+function LinkTokenRow (props: { item: PublicLinkHistoryItem, chatMateStreamer: PublicStreamerSummary | null, onRefresh: () => void }) {
   const item = props.item
   const { data, isLoading, triggerRequest } = useRequest(deleteLinkToken(item.token!), {
     onDemand: true,
@@ -90,7 +89,7 @@ function LinkTokenRow (props: { item: PublicLinkHistoryItem, chatMateUsername: s
       <TableCell>{capitaliseWord(item.type)}</TableCell>
       <TableCell>{item.status}</TableCell>
       <TableCell>{item.token ?? 'Initiated by admin'}</TableCell>
-      <TableCell><ItemMessage item={item} chatMateUsername={props.chatMateUsername} /></TableCell>
+      <TableCell><ItemMessage item={item} chatMateStreamer={props.chatMateStreamer} /></TableCell>
       <TableCell>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</TableCell>
       <TableCell>
         {canDelete && (
@@ -107,8 +106,7 @@ function LinkTokenRow (props: { item: PublicLinkHistoryItem, chatMateUsername: s
   )
 }
 
-function ItemMessage (props: { item: PublicLinkHistoryItem, chatMateUsername: string | undefined }) {
-  const loginContext = useContext(LoginContext)
+function ItemMessage (props: { item: PublicLinkHistoryItem, chatMateStreamer: PublicStreamerSummary | null }) {
   const command = `!link ${props.item.token}`
 
   if (props.item.message != null) {
@@ -116,14 +114,13 @@ function ItemMessage (props: { item: PublicLinkHistoryItem, chatMateUsername: st
   } else if (props.item.status === 'pending' || props.item.status === 'processing') {
     return <div>Please wait for the link to complete</div>
   } else if (props.item.status === 'waiting') {
-    const chatMateStreamer = loginContext.allStreamers.find(streamer => streamer.username === props.chatMateUsername)
 
     let channelUrl: string | null = null
-    if (chatMateStreamer != null) {
-      if (props.item.platform === 'youtube' && chatMateStreamer.youtubeChannel != null) {
-        channelUrl = chatMateStreamer.currentYoutubeLivestream?.livestreamLink ?? getChannelUrlFromPublic(chatMateStreamer.youtubeChannel)
-      } else if (props.item.platform === 'twitch' && chatMateStreamer.twitchChannel != null) {
-        channelUrl = getChannelUrlFromPublic(chatMateStreamer.twitchChannel)
+    if (props.chatMateStreamer != null) {
+      if (props.item.platform === 'youtube' && props.chatMateStreamer.youtubeChannel != null) {
+        channelUrl = props.chatMateStreamer.currentYoutubeLivestream?.livestreamLink ?? getChannelUrlFromPublic(props.chatMateStreamer.youtubeChannel)
+      } else if (props.item.platform === 'twitch' && props.chatMateStreamer.twitchChannel != null) {
+        channelUrl = getChannelUrlFromPublic(props.chatMateStreamer.twitchChannel)
       }
     }
 

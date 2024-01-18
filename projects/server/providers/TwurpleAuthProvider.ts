@@ -8,7 +8,7 @@ import { compareArrays } from '@rebel/shared/util/arrays'
 import { AccessToken, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
 import { waitUntil } from '@rebel/shared/util/typescript'
-import { AuthorisationExpiredError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
@@ -59,7 +59,7 @@ export default class TwurpleAuthProvider extends ContextClass {
     this.logService.logDebug(this, 'Loaded Twitch admin access token')
 
     if (!this.compareScopes(TWITCH_SCOPE, token.scope)) {
-      throw new Error('The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
+      throw new ChatMateError('The stored application scope differs from the expected scope. Please reset the Twitch authentication as described in the readme.')
     }
 
     this.userTokenAuthProvider = this.refreshingAuthProviderFactory.create({

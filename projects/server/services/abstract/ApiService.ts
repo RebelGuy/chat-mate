@@ -35,7 +35,8 @@ export default abstract class ApiService extends ContextClass {
   public wrapRequest<TQuery extends any[], TResponse> (
     request: (...query: TQuery) => Promise<TResponse>,
     requestName: string,
-    streamerId: number
+    streamerId: number,
+    skipPlatformLogIfSuccessful?: boolean
   ): (...query: TQuery) => Promise<TResponse> {
     return async (...query: TQuery) => {
       // set up
@@ -43,7 +44,7 @@ export default abstract class ApiService extends ContextClass {
       const startTime = Date.now()
 
       // do request
-      let error: any | null = null
+      let error: Error | null = null
       let response: TResponse | null = null
       const queryToLog = this.wrapQuery(query)
       this.logService.logApiRequest(this, id, requestName, queryToLog)
@@ -58,8 +59,8 @@ export default abstract class ApiService extends ContextClass {
         response = await Promise.race([request(...query), timeoutPromise]) as TResponse
         const responseToLog = this.getResponseToLog(response)
         this.logService.logApiResponse(this, id, false, responseToLog)
-      } catch (e) {
-        error = e
+      } catch (e: any) {
+        error = e as Error
         this.logService.logApiResponse(this, id, true, e)
       }
       const finishTime = Date.now()
@@ -69,10 +70,12 @@ export default abstract class ApiService extends ContextClass {
       const status = error == null ? 'ok' : 'error'
       this.statusService.onRequestDone(finishTime, status, duration)
 
-      try {
-        await this.platformApiStore.addApiRequest(streamerId, this.apiPlatform, startTime, finishTime, requestName, JSON.stringify(queryToLog), error?.message ?? null)
-      } catch (e: any) {
-        this.logService.logError(this, `Unable to log API usage of ${this.apiPlatform} for streamer ${streamerId} for endpoint ${requestName}:`, e)
+      if (!skipPlatformLogIfSuccessful || error != null) {
+        try {
+          await this.platformApiStore.addApiRequest(streamerId, this.apiPlatform, startTime, finishTime, requestName, JSON.stringify(queryToLog), error?.message ?? null)
+        } catch (e: any) {
+          this.logService.logError(this, `Unable to log API usage of ${this.apiPlatform} for streamer ${streamerId} for endpoint ${requestName}:`, e)
+        }
       }
 
       // return

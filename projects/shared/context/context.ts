@@ -1,6 +1,7 @@
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Branded, GenericObject, Primitive } from '@rebel/shared/types'
 import { reverse } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 // make sure we don't accidentally override non-context-related properties when assigning the context to an object
@@ -37,7 +38,7 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
     if (this.isBuiltContext()) {
       return new ContextProvider(this.builder.isolateServices(), false) as this extends BuiltContext<TClasses, TObjects, TProperties, TVariables> ? ContextProvider<TClasses, TObjects, TProperties, TVariables> : never
     }
-    throw new Error(`Cannot use this context as a parent because it hasn't been built yet`)
+    throw new ChatMateError(`Cannot use this context as a parent because it hasn't been built yet`)
   }
 
   // add the given class to the context. note that its dependencies can only depend on classes
@@ -82,7 +83,7 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
   // tslint:disable-next-line:ban-types
   public getClassInstance<ClassName extends keyof TClasses & string> (name: ClassName): TClasses[ClassName] {
     if (this.isDisposed) {
-      throw new Error('Cannot use the context because it has been disposed')
+      throw new ChatMateError('Cannot use the context because it has been disposed')
     }
     return this.builder.getDependencies().resolve(name)
   }
@@ -93,7 +94,7 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
       await this.builder.initialise(errorHandler)
       await this.builder.notifyReady(errorHandler)
     } else {
-      throw new Error(`Cannot initialise a context that hasn't been built yet`)
+      throw new ChatMateError(`Cannot initialise a context that hasn't been built yet`)
     }
   }
 
@@ -103,20 +104,20 @@ export class ContextProvider<TClasses extends StoredClass<any, any>, TObjects ex
       await this.builder.dispose()
       this.isDisposed = true
     } else {
-      throw new Error(`Cannot dispose a context that hasn't been built yet`)
+      throw new ChatMateError(`Cannot dispose a context that hasn't been built yet`)
     }
   }
 
   private assertMutable () {
     if (this.built) {
-      throw new Error('Cannot change a context once it has been built')
+      throw new ChatMateError('Cannot change a context once it has been built')
     }
   }
 
   private extendAndReturnMutableContext<TNewClasses extends StoredClass<any, any>, TNewObjects extends StoredObject<any, any>, TNewProperties extends StoredProperty<any, any>, TNewVariables extends StoredVariable<any, any>> (extender: () => ServiceBuilder<TNewClasses, TNewObjects, TNewProperties, TNewVariables>)
     : this extends BuiltContext<TNewClasses, TNewObjects, TNewProperties, TNewVariables> ? never : ContextProvider<TNewClasses, TNewObjects, TNewProperties, TNewVariables> {
     if (this.isBuiltContext()) {
-      throw new Error('This should not happen')
+      throw new ChatMateError('This should not happen')
     } else {
       return new ContextProvider(extender(), false) as this extends BuiltContext<TNewClasses, TNewObjects, TNewProperties, TNewVariables> ? never : ContextProvider<TNewClasses, TNewObjects, TNewProperties, TNewVariables>
     }
@@ -143,7 +144,7 @@ export class Dependencies<T extends StoredClass<any, any> | StoredObject<any, an
   // throws if the name doesn't exist. For classes, use the `class.name` API
   public resolve<Name extends keyof T & DepName> (name: Name): T[Name] {
     if (!Object.keys(this.dependencies).includes(name)) {
-      throw new Error(`Could not resolve dependency '${name}'`)
+      throw new ChatMateError(`Could not resolve dependency '${name}'`)
     }
 
     return this.dependencies[name]
@@ -153,7 +154,7 @@ export class Dependencies<T extends StoredClass<any, any> | StoredObject<any, an
 // add the given context provider to the request
 export function setContextProvider<TClasses extends StoredClass<any, any>, TObjects extends StoredClass<any, any>, TProperties extends StoredClass<any, any>, TVariables extends StoredClass<any, any>> (req: Express.Request, context: BuiltContext<TClasses, TObjects, TProperties, TVariables>) {
   if (Object.getOwnPropertySymbols(req).includes(CONTEXT_SYMBOL)) {
-    throw new Error('A context has already been set on the Request object')
+    throw new ChatMateError('A context has already been set on the Request object')
   }
 
   Object.defineProperty(req, CONTEXT_SYMBOL, { value: context, writable: false })
@@ -163,7 +164,7 @@ export function setContextProvider<TClasses extends StoredClass<any, any>, TObje
 // retrieve the context provider with the given name from the request. throws if it doesn't exist
 export function getContextProvider<C extends BuiltContext<any, any, any, any>> (req: Express.Request): C {
   if (!Object.getOwnPropertySymbols(req).includes(CONTEXT_SYMBOL)) {
-    throw new Error('A context could not be found on the Request object')
+    throw new ChatMateError('A context could not be found on the Request object')
   }
 
   return (req as any)[CONTEXT_SYMBOL] as C
@@ -277,14 +278,14 @@ class ServiceBuilder<TClasses extends StoredClass<any, any>, TObjects extends St
 
   private assertUniqueDependency (name: DepName) {
     if (Object.keys(this.dependencies).includes(name)) {
-      throw new Error(`Cannot add dependency with name ${name} because it already exists`)
+      throw new ChatMateError(`Cannot add dependency with name ${name} because it already exists`)
     }
   }
 
   private async withErrorHandling (className: keyof TClasses, stage: 'initialise' | 'onReady' | 'dispose', errorHandler?: ErrorHandler) {
     const contextClass = this.dependencies[className] as ContextClass
     if (contextClass == null) {
-      throw new Error(`Context: Can't process class '${String(className)}' in stage '${stage}' because it does not exist in the dependencies.`)
+      throw new ChatMateError(`Context: Can't process class '${String(className)}' in stage '${stage}' because it does not exist in the dependencies.`)
     }
 
     try {

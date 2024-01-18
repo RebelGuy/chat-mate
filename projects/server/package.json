@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.29.0",
+  "version": "1.30.0",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
@@ -29,7 +29,11 @@
 
     "snapshot:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/RefreshSnapshots.js",
     "snapshot:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/RefreshSnapshots.js",
-    "snapshot:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/RefreshSnapshots.js"
+    "snapshot:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/RefreshSnapshots.js",
+
+    "reset-password:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/resetPassword.js",
+    "reset-password:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/resetPassword.js",
+    "reset-password:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/resetPassword.js"
   },
   "dependencies": {
     "@googleapis/youtube": "^13.0.0",

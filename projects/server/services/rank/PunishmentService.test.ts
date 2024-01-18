@@ -9,7 +9,7 @@ import * as data from '@rebel/server/_test/testData'
 import { addTime } from '@rebel/shared/util/datetime'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import UserService from '@rebel/server/services/UserService'
 import YoutubeService from '@rebel/server/services/YoutubeService'
@@ -186,7 +186,7 @@ describe(nameof(PunishmentService, 'banUser'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => punishmentService.banUser(primaryUserId, streamerId1, 1, '', null)).rejects.toThrow()
+    await expect(() => punishmentService.banUser(primaryUserId, streamerId1, 1, '', null)).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -275,7 +275,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => punishmentService.muteUser(primaryUserId, streamerId1, 1, '', 1)).rejects.toThrow()
+    await expect(() => punishmentService.muteUser(primaryUserId, streamerId1, 1, '', 1)).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -341,7 +341,7 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => punishmentService.timeoutUser(primaryUserId, streamerId1, 1, '', 1, null)).rejects.toThrow()
+    await expect(() => punishmentService.timeoutUser(primaryUserId, streamerId1, 1, '', 1, null)).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -446,7 +446,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => punishmentService.unbanUser(primaryUserId, streamerId1, 1, '', null)).rejects.toThrow()
+    await expect(() => punishmentService.unbanUser(primaryUserId, streamerId1, 1, '', null)).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -474,7 +474,7 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => punishmentService.unmuteUser(primaryUserId, streamerId1, 1, '')).rejects.toThrow()
+    await expect(() => punishmentService.unmuteUser(primaryUserId, streamerId1, 1, '')).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -531,7 +531,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
   test('Throws if the user is currently busy', async () => {
     mockUserService.isUserBusy.calledWith(primaryUserId).mockResolvedValue(true)
 
-    await expect(() => punishmentService.untimeoutUser(primaryUserId, streamerId1, 1, '', null)).rejects.toThrow()
+    await expect(() => punishmentService.untimeoutUser(primaryUserId, streamerId1, 1, '', null)).rejects.toThrowError(ChatMateError)
   })
 })
 

@@ -201,7 +201,7 @@ describe(nameof(TwurpleService, 'initialise'), () => {
 
   test(`Joins the streamer's chat when a primary Twitch channel has been set`, async () => {
     const channelName = 'test'
-    const addPrimaryChannelData = cast<EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]>({ userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName }]}}} })
+    const addPrimaryChannelData = cast<EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]>({ userChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: channelName }]}}} })
     mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([])
 
     await twurpleService.initialise()
@@ -215,7 +215,7 @@ describe(nameof(TwurpleService, 'initialise'), () => {
 
   test(`Leaves the streamer's chat when a primary Twitch channel has been unset`, async () => {
     const channelName = 'test'
-    const removePrimaryChannelData = cast<EventData[typeof EVENT_REMOVE_PRIMARY_CHANNEL]>({ userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName }]}}} })
+    const removePrimaryChannelData = cast<EventData[typeof EVENT_REMOVE_PRIMARY_CHANNEL]>({ userChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: channelName }]}}} })
     mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([])
 
     await twurpleService.initialise()
@@ -235,7 +235,7 @@ describe(nameof(TwurpleService, 'banChannel'), () => {
     const streamerChannelName = 'streamerChannelName'
     const streamerHelixUser = new HelixUser(cast<HelixUserData>({ id: 'streamer' }), mockApiClient)
     const channelName = 'testChannelName'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    const channel = cast<TwitchChannelWithLatestInfo>({ globalInfoHistory: [{ userName: channelName }] })
     const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
     const reason = 'test reason'
     mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expect.arrayContaining([channelId])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
@@ -258,7 +258,7 @@ describe(nameof(TwurpleService, 'unbanChannel'), () => {
     const streamerChannelName = 'streamerChannelName'
     const streamerHelixUser = new HelixUser(cast<HelixUserData>({ id: 'streamer' }), mockApiClient)
     const channelName = 'testChannelName'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    const channel = cast<TwitchChannelWithLatestInfo>({ globalInfoHistory: [{ userName: channelName }] })
     const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
     mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expect.arrayContaining([channelId])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
@@ -280,7 +280,7 @@ describe(nameof(TwurpleService, 'timeout'), () => {
     const streamerChannelName = 'streamerChannelName'
     const streamerHelixUser = new HelixUser(cast<HelixUserData>({ id: 'streamer' }), mockApiClient)
     const channelName = 'testChannelName'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    const channel = cast<TwitchChannelWithLatestInfo>({ globalInfoHistory: [{ userName: channelName }] })
     const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
     const reason = 'test reason'
     const durationSeconds = 100
@@ -304,7 +304,7 @@ describe(nameof(TwurpleService, 'untimeout'), () => {
     const streamerChannelName = 'streamerChannelName'
     const streamerHelixUser = new HelixUser(cast<HelixUserData>({ id: 'streamer' }), mockApiClient)
     const channelName = 'testChannelName'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    const channel = cast<TwitchChannelWithLatestInfo>({ globalInfoHistory: [{ userName: channelName }] })
     const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
     mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expect.arrayContaining([channelId])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
@@ -330,7 +330,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const streamerId1 = 1
     const addPrimaryChannelData1 = cast<EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]>({
       streamerId: streamerId1,
-      userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName1 }]}}}
+      userChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: channelName1 }]}}}
     })
     const user1 = cast<HelixUser>({ id: 'userId1' })
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId1).mockResolvedValue(channelName1)
@@ -342,7 +342,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const streamerId2 = 2
     const addPrimaryChannelData2 = cast<EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]>({
       streamerId: streamerId2,
-      userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName2 }]}}}
+      userChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: channelName2 }]}}}
     })
     const user2 = cast<HelixUser>({ id: 'userId2' })
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId2).mockResolvedValue(channelName2)
@@ -354,7 +354,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const streamerId3 = 3
     const addPrimaryChannelData3 = cast<EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]>({
       streamerId: streamerId3,
-      userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName3 }]}}}
+      userChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: channelName3 }]}}}
     })
     const testErrorMessage = 'testError'
     const user3 = cast<HelixUser>({ id: 'userId3' })
@@ -481,7 +481,7 @@ describe(nameof(TwurpleService, 'getChatStatus'), () => {
     const channelName = 'testchannel'
     const addPrimaryChannelData1 = cast<EventData[typeof EVENT_ADD_PRIMARY_CHANNEL]>({
       streamerId: streamerId,
-      userChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: channelName }]}}}
+      userChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: channelName }]}}}
     })
     const user = cast<HelixUser>({ id: 'userId' })
 
@@ -508,7 +508,7 @@ describe(nameof(TwurpleService, 'modChannel'), () => {
     const streamerChannelName = 'streamerChannelName'
     const streamerHelixUser = new HelixUser(cast<HelixUserData>({ id: 'streamer' }), mockApiClient)
     const channelName = 'testChannelName'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    const channel = cast<TwitchChannelWithLatestInfo>({ globalInfoHistory: [{ userName: channelName }] })
     const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
     mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expect.arrayContaining([channelId])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)
@@ -530,7 +530,7 @@ describe(nameof(TwurpleService, 'unmodChannel'), () => {
     const streamerChannelName = 'streamerChannelName'
     const streamerHelixUser = new HelixUser(cast<HelixUserData>({ id: 'streamer' }), mockApiClient)
     const channelName = 'testChannelName'
-    const channel = cast<TwitchChannelWithLatestInfo>({ infoHistory: [{ userName: channelName }] })
+    const channel = cast<TwitchChannelWithLatestInfo>({ globalInfoHistory: [{ userName: channelName }] })
     const helixUser = new HelixUser(cast<HelixUserData>({ id: 'user' }), mockApiClient)
     mockChannelStore.getTwitchChannelsFromChannelIds.calledWith(expect.arrayContaining([channelId])).mockResolvedValue([cast<UserChannel>({ platformInfo: { platform: 'twitch', channel: channel }})])
     mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(streamerChannelName)

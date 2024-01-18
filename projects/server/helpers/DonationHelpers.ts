@@ -1,5 +1,5 @@
 import { RankName } from '@prisma/client'
-import { SafeExtract } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { sum } from '@rebel/shared/util/math'
 

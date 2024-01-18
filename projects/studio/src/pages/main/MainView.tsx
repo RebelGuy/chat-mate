@@ -1,11 +1,11 @@
 import RequireRank from '@rebel/studio/components/RequireRank'
 import RouteParamsObserver from '@rebel/studio/components/RouteParamsObserver'
 import DebugInfo from '@rebel/studio/pages/main/DebugInfo'
-import { Outlet, generatePath, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { Alert, Box, Container, Typography } from '@mui/material'
 import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
 import UserPanel from '@rebel/studio/pages/main/UserPanel'
-import styled from '@emotion/styled'
+import { styled } from '@mui/material'
 import { ReactNode, useContext, useEffect, useState } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
@@ -13,9 +13,8 @@ import { getAdministrativeMode } from '@rebel/studio/utility/api'
 import useCurrentPage from '@rebel/studio/hooks/useCurrentPage'
 import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
 import ErrorBoundary from '@rebel/studio/components/ErrorBoundary'
-import { VERSION, COMMIT_HASH, NODE_ENV } from '@rebel/studio/utility/global'
-import { RETURN_URL_QUERY_PARAM } from '@rebel/studio/pages/login/LoginForm'
-import { PageLogin } from '@rebel/studio/pages/navigation'
+import { STUDIO_VERSION, NODE_ENV } from '@rebel/studio/utility/global'
+import useRequireLogin from '@rebel/studio/hooks/useRequireLogin'
 
 const Panel = styled('div')({
   border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -75,10 +74,10 @@ export default function MainView () {
           {/* empty */}
         </div>
         <div style={{ width: '100%', bottom: 8, textAlign: 'center' }}>
-          <em style={{ fontSize: 14 }}>This is a work in progress...</em>
+          {/* empty */}
         </div>
         <div style={{ width: '100%', bottom: 8, textAlign: 'right', paddingRight: 4 }}>
-          <em style={{ fontSize: 14 }}>ChatMate Studio v{VERSION} ({COMMIT_HASH})</em>
+          <em style={{ fontSize: 14 }}>ChatMate Studio v{STUDIO_VERSION}</em>
         </div>
       </div>
 
@@ -94,15 +93,11 @@ export default function MainView () {
 function CurrentPage () {
   const loginContext = useContext(LoginContext)
   const page = useCurrentPage()
-
-  const { pathname: currentPath } = useLocation()
-  const loginPath = generatePath(PageLogin.path)
-  const navigate = useNavigate()
+  const { onRequireLogin } = useRequireLogin()
 
   useEffect(() => {
     if (loginContext.loginToken == null && page?.requiresLogin) {
-      const queryParam = `?${RETURN_URL_QUERY_PARAM}=${currentPath}`
-      navigate(loginPath + queryParam)
+      onRequireLogin()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loginContext.loginToken])

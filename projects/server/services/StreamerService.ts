@@ -4,7 +4,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore, { AddUserRankArgs } from '@rebel/server/stores/RankStore'
 import StreamerStore, { CreateApplicationArgs, StreamerApplicationWithUser } from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { ChatMateError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
 import WebService from '@rebel/server/services/WebService'
 import LogService from '@rebel/server/services/LogService'
@@ -105,7 +105,7 @@ export default class StreamerService extends ContextClass {
   public async authoriseTwitchLogin (streamerId: number, authorisationCode: string): Promise<void> {
     const primaryChannel = await this.streamerChannelStore.getPrimaryChannels([streamerId]).then(single)
     if (primaryChannel.twitchChannel == null) {
-      throw new Error(`Could not find a primary Twitch channel for streamer ${streamerId}.`)
+      throw new ChatMateError(`Could not find a primary Twitch channel for streamer ${streamerId}.`)
     }
 
     const redirectUrl = this.getRedirectUrl()
@@ -121,7 +121,7 @@ export default class StreamerService extends ContextClass {
     if (!rawResponse.ok) {
       const message = `Twitch auth response was status ${rawResponse.status}: ${await rawResponse.text()}`
       this.logService.logError(this, `Failed to set Twitch access token for streamer ${streamerId}. ${message}`)
-      throw new Error(message)
+      throw new ChatMateError(message)
     }
 
     const response = await rawResponse.json() as any

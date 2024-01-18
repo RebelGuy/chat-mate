@@ -6,6 +6,7 @@ import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type AggregateLivestreamParticipation = AggregateLivestream<{
@@ -42,15 +43,15 @@ export default class AggregateLivestreamService extends ContextClass {
     if (currentYoutubeLivestreams > 1 || currentTwitchLivestreams > 1) {
       const message = `Unable to construct aggregate streams for streamer ${streamerId} because multiple current livestreams were detected (${currentYoutubeLivestreams} on Youtube and ${currentTwitchLivestreams} on Twitch).`
       this.logService.logError(this, message, youtubeLivestreams, twitchLivestreams)
-      throw new Error(message)
+      throw new ChatMateError(message)
     } else if (currentYoutubeLivestreams === 1 && youtubeLivestreams.at(-1)!.end != null) {
       const message = `Unable to construct aggregate streams for streamer ${streamerId} because the current Youtube livestream was in an unexpected position.`
       this.logService.logError(this, message, youtubeLivestreams)
-      throw new Error(message)
+      throw new ChatMateError(message)
     } else if (currentTwitchLivestreams === 1 && twitchLivestreams.at(-1)!.end != null) {
       const message = `Unable to construct aggregate streams for streamer ${streamerId} because the current Twitch livestream was in an unexpected position.`
       this.logService.logError(this, message, twitchLivestreams)
-      throw new Error(message)
+      throw new ChatMateError(message)
     }
 
     // make sure start time are monotonically increasing
@@ -94,7 +95,7 @@ export default class AggregateLivestreamService extends ContextClass {
       } else {
         const message = `Unable to construct aggregate streams for streamer ${streamerId}`
         this.logService.logError(this, message, livestream, currentLivestreams, currentStartTime, currentEndTime, youtubeLivestreams, twitchLivestreams)
-        throw new Error(message)
+        throw new ChatMateError(message)
       }
     }
 

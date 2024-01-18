@@ -11,6 +11,7 @@ import CommandStore from '@rebel/server/stores/CommandStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { allDefined, unique } from '@rebel/shared/util/arrays'
 import { Path } from 'typescript-rest'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export type ChatControllerDeps = ControllerDependencies<{
   chatStore: ChatStore,
@@ -48,7 +49,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
 
     const users = items.map(c => c.user)
     if (!allDefined(users)) {
-      throw new Error('Chat items must have a user set')
+      throw new ChatMateError('Chat items must have a user set')
     }
     const primaryUserIds = unique(users.map(getPrimaryUserId))
 

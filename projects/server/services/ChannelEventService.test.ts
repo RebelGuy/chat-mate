@@ -1,4 +1,4 @@
-import { YoutubeChannelInfo } from '@prisma/client'
+import { YoutubeChannelStreamerInfo } from '@prisma/client'
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -24,9 +24,9 @@ beforeEach(() => {
   }))
 })
 
-describe.skip(nameof(ChannelEventService, 'checkYoutubeChannelForModEvent'), () => {
+describe(nameof(ChannelEventService, 'checkYoutubeChannelForModEvent'), () => {
   test('Does nothing if the channel only has one info data point', async () => {
-    mockChannelStore.getYoutubeChannelHistory.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelInfo[]>([{}]))
+    mockChannelStore.getYoutubeChannelHistoryForStreamer.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelStreamerInfo[]>([{}]))
 
     await channelEventService.checkYoutubeChannelForModEvent(streamerId, youtubeChannelId)
 
@@ -35,7 +35,7 @@ describe.skip(nameof(ChannelEventService, 'checkYoutubeChannelForModEvent'), () 
   })
 
   test(`Does nothing if the moderator flag hasn't changed`, async () => {
-    mockChannelStore.getYoutubeChannelHistory.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelInfo[]>([{ isModerator: true }, { isModerator: true }]))
+    mockChannelStore.getYoutubeChannelHistoryForStreamer.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelStreamerInfo[]>([{ isModerator: true }, { isModerator: true }]))
 
     await channelEventService.checkYoutubeChannelForModEvent(streamerId, youtubeChannelId)
 
@@ -44,7 +44,7 @@ describe.skip(nameof(ChannelEventService, 'checkYoutubeChannelForModEvent'), () 
   })
 
   test(`Mods the user`, async () => {
-    mockChannelStore.getYoutubeChannelHistory.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelInfo[]>([{ isModerator: true }, { isModerator: false }]))
+    mockChannelStore.getYoutubeChannelHistoryForStreamer.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelStreamerInfo[]>([{ isModerator: true }, { isModerator: false }]))
 
     await channelEventService.checkYoutubeChannelForModEvent(streamerId, youtubeChannelId)
 
@@ -53,7 +53,7 @@ describe.skip(nameof(ChannelEventService, 'checkYoutubeChannelForModEvent'), () 
   })
 
   test(`Unmods the user`, async () => {
-    mockChannelStore.getYoutubeChannelHistory.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelInfo[]>([{ isModerator: false }, { isModerator: true }]))
+    mockChannelStore.getYoutubeChannelHistoryForStreamer.calledWith(streamerId, youtubeChannelId, 2).mockResolvedValue(cast<YoutubeChannelStreamerInfo[]>([{ isModerator: false }, { isModerator: true }]))
 
     await channelEventService.checkYoutubeChannelForModEvent(streamerId, youtubeChannelId)
 

@@ -55,6 +55,3 @@ export type ApiError = {
   errorType: string
   internalErrorType: string
 }
-
-/** Extract from T those types that are assignable to U, ensuring that U is strictly a sub-type of T. */
-export type SafeExtract<T, U extends T> = U extends Extract<T, U> ? U : never

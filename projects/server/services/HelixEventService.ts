@@ -25,6 +25,7 @@ import { assertUnreachable, waitUntil } from '@rebel/shared/util/typescript'
 import { nonNull } from '@rebel/shared/util/arrays'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 // if you're wondering why we are dynamically importing some things - it's because they can't be resolved at runtime on the deployed server. for whatever reason the javascript gods have decided today.
 
@@ -658,12 +659,12 @@ export default class HelixEventService extends ContextClass {
       // this doesn't work - don't create an adapter when deploying the server, instead, use the EventSub middleware
       const key = this.fileService.read('./server/key.pem')
       if (key == null) {
-        throw new Error(`Unable to read SSL private key because the 'key.pem' file could not be found`)
+        throw new ChatMateError(`Unable to read SSL private key because the 'key.pem' file could not be found`)
       }
 
       const cert = this.fileService.read('./server/certificate.pem')
       if (cert == null) {
-        throw new Error(`Unable to read SSL certificate because the 'certificate.pem' file could not be found`)
+        throw new ChatMateError(`Unable to read SSL certificate because the 'certificate.pem' file could not be found`)
       }
 
       return new DirectConnectionAdapter({

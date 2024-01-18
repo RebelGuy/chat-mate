@@ -9,7 +9,7 @@ import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { isOneOf } from '@rebel/shared/util/validation'
-import { InvalidCustomRankNameError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, InvalidCustomRankNameError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import RankService, { CustomisableRank, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/shared/util/datetime'
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
@@ -105,7 +105,7 @@ export default class RankController extends ControllerBase {
     try {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
       if (await this.userService.isUserBusy(primaryUserId)) {
-        throw new Error('Cannot add the user rank at this time. Please try again later.')
+        throw new ChatMateError('Cannot add the user rank at this time. Please try again later.')
       }
 
       const streamerId = this.getStreamerId()
@@ -141,7 +141,7 @@ export default class RankController extends ControllerBase {
     try {
       const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([request.userId]).then(single)
       if (await this.userService.isUserBusy(primaryUserId)) {
-        throw new Error('Cannot renove the user rank at this time. Please try again later.')
+        throw new ChatMateError('Cannot renove the user rank at this time. Please try again later.')
       }
 
       const args: RemoveUserRankArgs = {

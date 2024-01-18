@@ -1,9 +1,9 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/api-models/schema/emoji'
 import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
 import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetOfficialChatMateStreamerResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import { SERVER_URL } from '@rebel/studio/utility/global'
-import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse } from '@rebel/api-models/schema/account'
+import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse } from '@rebel/api-models/schema/account'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/api-models/schema/donation'
 import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, DeleteLinkTokenResponse } from '@rebel/api-models/schema/user'
 import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, GetLinkAttemptLogsResponse, ReleaseLinkAttemptResponse, GetYoutubeLoginUrlResponse as GetYoutubeAdminLoginUrlResponse, YoutubeAuthorisationResponse as YoutubeAdminAuthorisationResponse, YoutubeRevocationResponse as YoutubeAdminRevocationResponse } from '@rebel/api-models/schema/admin'
@@ -39,6 +39,8 @@ function requestBuilder<TResponse extends ApiResponse<any>, TRequestData extends
   }
 }
 
+export const LOGIN_PATH = `/account/login`
+
 export const getChatMateRegisteredUsername = requestBuilder<GetChatMateRegisteredUsernameResponse>('GET', `/chatMate/username`)
 
 export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`, true, false)
@@ -71,7 +73,7 @@ export const deleteCustomRankName = requestBuilder<DeleteCustomRankNameResponse,
 
 export const registerAccount = requestBuilder<RegisterResponse, RegisterRequest>('POST', `/account/register`, false, false)
 
-export const login = requestBuilder<LoginResponse, LoginRequest>('POST', `/account/login`, false, false)
+export const login = requestBuilder<LoginResponse, LoginRequest>('POST', LOGIN_PATH, false, false)
 
 export const logout = requestBuilder<LogoutResponse>('POST', `/account/logout`, false)
 
@@ -79,7 +81,11 @@ export async function authenticate (loginToken: string): Promise<AuthenticateRes
   return await POST('/account/authenticate', {}, loginToken)
 }
 
+export const resetPassword = requestBuilder<ResetPasswordResponse, ResetPasswordRequest>('POST', `/account/resetPassword`, false, true)
+
 export const getStreamers = requestBuilder<GetStreamersResponse>('GET', `/streamer`, false, false)
+
+export const getOfficialChatMateStreamer = requestBuilder<GetOfficialChatMateStreamerResponse>('GET', `/streamer/chatMate`, false, false)
 
 export const getStreamerApplications = requestBuilder<GetApplicationsResponse>('GET', `/streamer/application`, false)
 

@@ -1,4 +1,4 @@
-import { TwitchChannel, TwitchChannelInfo, YoutubeChannel, YoutubeChannelInfo } from '@prisma/client'
+import { TwitchChannel, TwitchChannelGlobalInfo, YoutubeChannel, YoutubeChannelGlobalInfo } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import AccountService from '@rebel/server/services/AccountService'
@@ -6,6 +6,7 @@ import ChannelStore, { TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelW
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import { UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 /** If the definition of "participation" ever changes, add more strings to this type to generate relevant compile errors. */
 export const LIVESTREAM_PARTICIPATION_TYPES = 'chatParticipation' as const
@@ -87,7 +88,7 @@ export default class ChannelService extends ContextClass {
           }
         }
       } else {
-        throw new Error('Cannot get active channel for user because the latest chat item has no channel attached to it')
+        throw new ChatMateError('Cannot get active channel for user because the latest chat item has no channel attached to it')
       }
     })
   }
@@ -126,9 +127,9 @@ export default class ChannelService extends ContextClass {
 
 export function getUserName (userChannel: UserChannel) {
   if (userChannel.platformInfo.platform === 'youtube') {
-    return userChannel.platformInfo.channel.infoHistory[0].name
+    return userChannel.platformInfo.channel.globalInfoHistory[0].name
   } else if (userChannel.platformInfo.platform === 'twitch') {
-    return userChannel.platformInfo.channel.infoHistory[0].displayName
+    return userChannel.platformInfo.channel.globalInfoHistory[0].displayName
   } else {
     assertUnreachable(userChannel.platformInfo)
   }
@@ -136,9 +137,9 @@ export function getUserName (userChannel: UserChannel) {
 
 export function getUserNameFromChannelInfo (platform: 'youtube' | 'twitch', channelInfo: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo) {
   if (platform === 'youtube') {
-    return (channelInfo.infoHistory[0] as YoutubeChannelInfo).name
+    return (channelInfo.globalInfoHistory[0] as YoutubeChannelGlobalInfo).name
   } else if (platform === 'twitch') {
-    return (channelInfo.infoHistory[0] as TwitchChannelInfo).displayName
+    return (channelInfo.globalInfoHistory[0] as TwitchChannelGlobalInfo).displayName
   } else {
     assertUnreachable(platform)
   }
@@ -148,7 +149,7 @@ export function getExternalIdOrUserName (userChannel: UserChannel) {
   if (userChannel.platformInfo.platform === 'youtube') {
     return userChannel.platformInfo.channel.youtubeId
   } else if (userChannel.platformInfo.platform === 'twitch') {
-    return userChannel.platformInfo.channel.infoHistory[0].userName
+    return userChannel.platformInfo.channel.globalInfoHistory[0].userName
   } else {
     assertUnreachable(userChannel.platformInfo)
   }

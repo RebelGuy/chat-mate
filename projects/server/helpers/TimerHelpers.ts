@@ -1,5 +1,6 @@
-import { SafeExtract } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
 import ContextClass from '@rebel/shared/context/ContextClass'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 /** At what point in the callback cycle the timer should be rescheduled.
   * - Use `start` for a constant period.
@@ -137,7 +138,7 @@ class Timer {
       this.startTimer(this.interval)
     } else if (this.behaviour === 'dynamicEnd') {
       if (typeof result !== 'number') {
-        throw new Error('Callback functions for dynamic timers must return a number')
+        throw new ChatMateError('Callback functions for dynamic timers must return a number')
       }
       this.startTimer(result)
     }

@@ -19,16 +19,16 @@ beforeEach(() => {
   }))
 })
 
-describe(nameof(CacheService, 'isChatMateStreamer'), () => {
+describe(nameof(CacheService, 'chatMateStreamerId'), () => {
   test('Returns true if the streamer is the official ChatMate streamer and caches result', async () => {
     const chatMateStreamer = cast<Streamer>({ id: 5 })
     mockStreamerStore.getStreamerByName.calledWith(mockChatMateRegisteredUserName).mockResolvedValue(chatMateStreamer)
 
-    const result1 = await cacheService.isChatMateStreamer(1)
-    const result2 = await cacheService.isChatMateStreamer(5)
+    const result1 = await cacheService.chatMateStreamerId.resolve()
+    const result2 = await cacheService.chatMateStreamerId.resolve()
 
-    expect(result1).toBe(false)
-    expect(result2).toBe(true)
+    expect(result1).toBe(chatMateStreamer.id)
+    expect(result2).toBe(chatMateStreamer.id)
     expect(mockStreamerStore.getStreamerByName.mock.calls.length).toBe(1)
   })
 })

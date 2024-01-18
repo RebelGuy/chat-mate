@@ -3,11 +3,14 @@ import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import Semaphore from '@rebel/shared/util/Semaphore'
+import { DbError } from '@rebel/shared/util/error'
+import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
+import { SafeOmit } from '@rebel/shared/types'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$executeRawUnsafe' | '$connect' | '$disconnect' | '$use'
 
-export type Db = Omit<PrismaClient, UnusedPrismaProperties>
+export type Db = SafeOmit<PrismaClient, UnusedPrismaProperties>
 
 type Deps = Dependencies<{
   logService: LogService
@@ -80,7 +83,7 @@ export default class DbProvider extends ContextClass {
           this.logService.logWarning(this, 'Detected Prisma timeout, now reconnecting to the database.')
           await this.prismaClient.$disconnect()
         }
-        throw e
+        throw new DbError(e)
       } finally {
         const duration = Date.now() - startTime
         if (duration >= this.dbSlowQueryThreshold) {

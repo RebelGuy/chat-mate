@@ -2,12 +2,12 @@ import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
-import { expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
+import * as data from '@rebel/server/_test/testData'
+import { TwitchChannel, YoutubeChannel } from '@prisma/client'
 
 export default () => {
-  const username1 = 'username1'
-  const username2 = 'username2'
-
   let db: Db
   let streamerChannelStore: StreamerChannelStore
 
@@ -19,187 +19,269 @@ export default () => {
 
   afterEach(stopTestDb)
 
-  describe(nameof(StreamerChannelStore, 'deleteStreamerYoutubeChannelLink'), () => {
+  describe(nameof(StreamerChannelStore, 'removeStreamerYoutubeChannelLink'), () => {
     test('Returns the channel that was removed', async () => {
-      const youtubeId1 = 'id1'
-      const youtubeId2 = 'id2'
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createYoutubeChannels(2)
       await db.streamerYoutubeChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}}
+        streamerId: streamer1,
+        youtubeChannelId: channel1.id,
+        timeAdded: data.time1,
+        timeRemoved: data.time2
       }})
       await db.streamerYoutubeChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        streamerId: streamer1,
+        youtubeChannelId: channel1.id,
+        timeAdded: data.time2
+      }})
+      await db.streamerYoutubeChannelLink.create({ data: {
+        streamerId: streamer2,
+        youtubeChannelId: channel2.id,
+        timeAdded: data.time2
       }})
 
-      const result = await streamerChannelStore.deleteStreamerYoutubeChannelLink(1)
+      const result = await streamerChannelStore.removeStreamerYoutubeChannelLink(streamer1)
 
-      await expectRowCount(db.streamerYoutubeChannelLink).toBe(1)
-      expect(result!.platformInfo.channel.youtubeId).toBe(youtubeId1)
+      const storedLinks = await db.streamerYoutubeChannelLink.findMany()
+      expect(storedLinks).toEqual(expectObject(storedLinks, [
+        { id: 1, timeRemoved: data.time2 },
+        { id: 2, timeRemoved: expect.any(Date) },
+        { id: 3, timeRemoved: null }
+      ]))
+      expect(result!.platformInfo.channel.youtubeId).toBe(channel1.youtubeId)
     })
 
-    test('Returns null if no channel was removed', async () => {
-      const youtubeId1 = 'id1'
-      const youtubeId2 = 'id2'
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}})
+    test(`Throws ${PrimaryChannelNotFoundError.name} if no channel was removed`, async () => {
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createYoutubeChannels(2)
       await db.streamerYoutubeChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        streamerId: streamer1,
+        youtubeChannelId: channel1.id,
+        timeAdded: data.time1,
+        timeRemoved: data.time2
+      }})
+      await db.streamerYoutubeChannelLink.create({ data: {
+        streamerId: streamer2,
+        youtubeChannelId: channel2.id,
+        timeAdded: data.time2
       }})
 
-      const result = await streamerChannelStore.deleteStreamerYoutubeChannelLink(1)
+      await expect(() => streamerChannelStore.removeStreamerYoutubeChannelLink(streamer1)).rejects.toThrowError(PrimaryChannelNotFoundError)
 
-      await expectRowCount(db.streamerYoutubeChannelLink).toBe(1)
-      expect(result).toBeNull()
+      const storedLinks = await db.streamerYoutubeChannelLink.findMany()
+      expect(storedLinks).toEqual(expectObject(storedLinks, [
+        { id: 1, timeRemoved: data.time2 },
+        { id: 2, timeRemoved: null }
+      ]))
     })
   })
 
-  describe(nameof(StreamerChannelStore, 'deleteStreamerTwitchChannelLink'), () => {
+  describe(nameof(StreamerChannelStore, 'removeStreamerTwitchChannelLink'), () => {
     test('Returns the channel that was removed', async () => {
-      const twitchId1 = 'id1'
-      const twitchId2 = 'id2'
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createTwitchChannels(2)
       await db.streamerTwitchChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}}
+        streamerId: streamer1,
+        twitchChannelId: channel1.id,
+        timeAdded: data.time1,
+        timeRemoved: data.time2
       }})
       await db.streamerTwitchChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        streamerId: streamer1,
+        twitchChannelId: channel1.id,
+        timeAdded: data.time2
+      }})
+      await db.streamerTwitchChannelLink.create({ data: {
+        streamerId: streamer2,
+        twitchChannelId: channel2.id,
+        timeAdded: data.time2
       }})
 
-      const result = await streamerChannelStore.deleteStreamerTwitchChannelLink(1)
+      const result = await streamerChannelStore.removeStreamerTwitchChannelLink(1)
 
-      await expectRowCount(db.streamerTwitchChannelLink).toBe(1)
-      expect(result!.platformInfo.channel.twitchId).toBe(twitchId1)
+      const storedLinks = await db.streamerTwitchChannelLink.findMany()
+      expect(storedLinks).toEqual(expectObject(storedLinks, [
+        { id: 1, timeRemoved: data.time2 },
+        { id: 2, timeRemoved: expect.any(Date) },
+        { id: 3, timeRemoved: null }
+      ]))
+      expect(result!.platformInfo.channel.twitchId).toBe(channel1.twitchId)
     })
 
-    test('Returns null if no channel was removed', async () => {
-      const twitchId1 = 'id1'
-      const twitchId2 = 'id2'
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}})
+    test(`Throws ${PrimaryChannelNotFoundError.name} if no channel was removed`, async () => {
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createTwitchChannels(2)
       await db.streamerTwitchChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        streamerId: streamer1,
+        twitchChannelId: channel1.id,
+        timeAdded: data.time1,
+        timeRemoved: data.time2
+      }})
+      await db.streamerTwitchChannelLink.create({ data: {
+        streamerId: streamer2,
+        twitchChannelId: channel2.id,
+        timeAdded: data.time1
       }})
 
-      const result = await streamerChannelStore.deleteStreamerTwitchChannelLink(1)
+      await expect(() => streamerChannelStore.removeStreamerTwitchChannelLink(streamer1)).rejects.toThrowError(PrimaryChannelNotFoundError)
 
-      await expectRowCount(db.streamerTwitchChannelLink).toBe(1)
-      expect(result).toBeNull()
+      const storedLinks = await db.streamerTwitchChannelLink.findMany()
+      expect(storedLinks).toEqual(expectObject(storedLinks, [
+        { id: 1, timeRemoved: data.time2 },
+        { id: 2, timeRemoved: null }
+      ]))
     })
   })
 
   describe(nameof(StreamerChannelStore, 'getPrimaryChannels'), () => {
     test('Returns the primary channels of the queried streamers', async () => {
-      const youtubeId1 = 'youtubeId1'
-      const youtubeId2 = 'youtubeId2'
-      const twitchId1 = 'twitchId1'
-      const twitchId2 = 'twitchId2'
-      const streamer1 = 1
-      const streamer2 = 2
-      const streamer3 = 3
+      const [streamer1, streamer2, streamer3] = await createStreamers(3)
+      const [youtubeChannel1, youtubeChannel2] = await createYoutubeChannels(2)
+      const [twitchChannel1, twitchChannel2] = await createTwitchChannels(2)
 
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }} }})
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }})
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user3', hashedPassword: 'pass3', aggregateChatUser: { create: {}} }} }})
       // streamer 1: youtubeId1, twitchId1
       // streamer 2: youtubeId2
       // streamer 3: twitchId2
       await db.streamerYoutubeChannelLink.create({ data: {
-        streamer: { connect: { id: streamer1 }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}}
+        streamerId: streamer1,
+        youtubeChannelId: youtubeChannel1.id,
+        timeAdded: data.time1
       }})
       await db.streamerYoutubeChannelLink.create({ data: {
-        streamer: { connect: { id: streamer2 }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        streamerId: streamer2,
+        youtubeChannelId: youtubeChannel2.id,
+        timeAdded: data.time2
       }})
       await db.streamerTwitchChannelLink.create({ data: {
-        streamer: { connect: { id: streamer1 }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}}
+        streamerId: streamer1,
+        twitchChannelId: twitchChannel1.id,
+        timeAdded: data.time3
       }})
       await db.streamerTwitchChannelLink.create({ data: {
-        streamer: { connect: { id: streamer3 }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        streamerId: streamer2,
+        twitchChannelId: twitchChannel1.id,
+        timeAdded: data.time3,
+        timeRemoved: data.time4 // should be ignored because deactivated
+      }})
+      await db.streamerTwitchChannelLink.create({ data: {
+        streamerId: streamer3, // should be ignored because different streamer
+        twitchChannelId: twitchChannel2.id,
+        timeAdded: data.time3
       }})
 
       const primaryChannels = await streamerChannelStore.getPrimaryChannels([streamer1, streamer2])
 
       expect(primaryChannels).toEqual(expectObjectDeep(primaryChannels, [
-        { streamerId: streamer1, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeId1 }}}, twitchChannel: { platformInfo: { channel: { twitchId: twitchId1 }}}},
-        { streamerId: streamer2, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeId2 }}}, twitchChannel: null},
+        { streamerId: streamer1, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeChannel1.youtubeId }}}, twitchChannel: { platformInfo: { channel: { twitchId: twitchChannel1.twitchId }}}},
+        { streamerId: streamer2, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeChannel2.youtubeId }}}, twitchChannel: null},
       ]))
     })
   })
 
   describe(nameof(StreamerChannelStore, 'setStreamerYoutubeChannelLink'), () => {
     test('Adds the primary channel', async () => {
-      const youtubeId1 = 'id1'
-      const youtubeId2 = 'id2'
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}})
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createYoutubeChannels(2)
       await db.streamerYoutubeChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        streamerId: streamer2,
+        youtubeChannelId: channel2.id,
+        timeAdded: data.time1
+      }})
+      await db.streamerYoutubeChannelLink.create({ data: {
+        streamerId: streamer1, // should be ignored since it's deactivated
+        youtubeChannelId: channel1.id,
+        timeAdded: data.time1,
+        timeRemoved: data.time2
       }})
 
-      const result = await streamerChannelStore.setStreamerYoutubeChannelLink(1, 1)
+      const result = await streamerChannelStore.setStreamerYoutubeChannelLink(streamer1, channel1.id)
 
-      await expectRowCount(db.streamerYoutubeChannelLink).toBe(2)
-      expect(result).toEqual(expectObjectDeep(result, { platformInfo: { channel: { youtubeId: youtubeId1 }}}))
+      await expectRowCount(db.streamerYoutubeChannelLink).toBe(3)
+      expect(result).toEqual(expectObjectDeep(result, { platformInfo: { channel: { youtubeId: channel1.youtubeId }}}))
     })
 
-    test('Throws if a primary channel already exists for the streamer', async () => {
-      const youtubeId1 = 'id1'
-      const youtubeId2 = 'id2'
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: youtubeId1, infoHistory: { create: createYoutubeInfoHistory() }}})
+    test(`Throws ${PrimaryChannelAlreadyExistsError.name} if a primary channel already exists for the streamer`, async () => {
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createYoutubeChannels(2)
       await db.streamerYoutubeChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        youtubeChannel: { create: { user: { create: {}}, youtubeId: youtubeId2, infoHistory: { create: createYoutubeInfoHistory() }}}
+        streamerId: streamer2,
+        youtubeChannelId: channel2.id,
+        timeAdded: data.time1
       }})
 
-      await expect(() => streamerChannelStore.setStreamerYoutubeChannelLink(2, 1)).rejects.toThrow()
+      await expect(() => streamerChannelStore.setStreamerYoutubeChannelLink(2, 1)).rejects.toThrowError(PrimaryChannelAlreadyExistsError)
+      await expectRowCount(db.streamerYoutubeChannelLink).toBe(1)
     })
   })
 
   describe(nameof(StreamerChannelStore, 'setStreamerTwitchChannelLink'), () => {
     test('Adds the primary channel', async () => {
-      const twitchId1 = 'id1'
-      const twitchId2 = 'id2'
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}})
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createTwitchChannels(2)
       await db.streamerTwitchChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        streamerId: streamer2,
+        twitchChannelId: channel2.id,
+        timeAdded: data.time1
+      }})
+      await db.streamerTwitchChannelLink.create({ data: {
+        streamerId: streamer1, // should be ignored since it's deactivated
+        twitchChannelId: channel1.id,
+        timeAdded: data.time1,
+        timeRemoved: data.time2
       }})
 
-      const result = await streamerChannelStore.setStreamerTwitchChannelLink(1, 1)
+      const result = await streamerChannelStore.setStreamerTwitchChannelLink(streamer1, 1)
 
-      await expectRowCount(db.streamerTwitchChannelLink).toBe(2)
-      expect(result).toEqual(expectObjectDeep(result, { platformInfo: { channel: { twitchId: twitchId1 }}}))
+      await expectRowCount(db.streamerTwitchChannelLink).toBe(3)
+      expect(result).toEqual(expectObjectDeep(result, { platformInfo: { channel: { twitchId: channel1.twitchId }}}))
     })
 
-    test('Throws if a primary channel already exists for the streamer', async () => {
-      const twitchId1 = 'id1'
-      const twitchId2 = 'id2'
-      await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}})
-      await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: twitchId1, infoHistory: { create: createTwitchInfoHistory() }}})
+    test(`Throws ${PrimaryChannelAlreadyExistsError.name} if a primary channel already exists for the streamer`, async () => {
+      const [streamer1, streamer2] = await createStreamers(2)
+      const [channel1, channel2] = await createTwitchChannels(2)
       await db.streamerTwitchChannelLink.create({ data: {
-        streamer: { create: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }} }},
-        twitchChannel: { create: { user: { create: {}}, twitchId: twitchId2, infoHistory: { create: createTwitchInfoHistory() }}}
+        streamerId: streamer2,
+        twitchChannelId: channel2.id,
+        timeAdded: data.time1
       }})
 
-      await expect(() => streamerChannelStore.setStreamerTwitchChannelLink(2, 1)).rejects.toThrow()
+      await expect(() => streamerChannelStore.setStreamerTwitchChannelLink(2, 1)).rejects.toThrowError(PrimaryChannelAlreadyExistsError)
+      await expectRowCount(db.streamerTwitchChannelLink).toBe(1)
     })
   })
+
+  async function createStreamers (count: number) {
+    let result: number[] = []
+    for (let i = 0; i < count; i++) {
+      const streamer = await db.streamer.create({ data: { registeredUser: { create: { username: `user${i}`, hashedPassword: `pass${i}`, aggregateChatUser: { create: {}} }}}})
+      result.push(streamer.id)
+    }
+    return result
+  }
+
+  async function createYoutubeChannels (count: number) {
+    let result: YoutubeChannel[] = []
+    for (let i = 0; i < count; i++) {
+      const youtubeChannel = await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: `id${i}`, globalInfoHistory: { create: createYoutubeInfoHistory() }}})
+      result.push(youtubeChannel)
+    }
+    return result
+  }
+
+  async function createTwitchChannels (count: number) {
+    let result: TwitchChannel[] = []
+    for (let i = 0; i < count; i++) {
+      const twitchChannel = await db.twitchChannel.create({ data: { user: { create: {}}, twitchId: `id${i}`, globalInfoHistory: { create: createTwitchInfoHistory() }}})
+      result.push(twitchChannel)
+    }
+    return result
+  }
 }
 
 function createYoutubeInfoHistory () {
-  return { imageUrl: '', isModerator: false, isOwner: false, isVerified: false, name: 'channel', time: new Date() }
+  return { imageUrl: '', isVerified: false, name: 'channel', time: new Date() }
 }
 
 function createTwitchInfoHistory () {
-  return { colour: '', displayName: '', isBroadcaster: false, isMod: false, isSubscriber: false, isVip: false, time: new Date(), userName: '', userType: '' }
+  return { colour: '', displayName: '', time: new Date(), userName: '', userType: '' }
 }

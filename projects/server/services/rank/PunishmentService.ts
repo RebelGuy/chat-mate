@@ -10,6 +10,8 @@ import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankR
 import { single } from '@rebel/shared/util/arrays'
 import UserService from '@rebel/server/services/UserService'
 import YoutubeService from '@rebel/server/services/YoutubeService'
+import { ChatMateError } from '@rebel/shared/util/error'
+import { SafeOmit } from '@rebel/shared/types'
 
 export type IgnoreOptions = {
   youtubeChannelId?: number
@@ -65,7 +67,7 @@ export default class PunishmentService extends ContextClass {
 
   public async banUser (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, message: string | null, ignoreOptions: IgnoreOptions | null): Promise<SetActionRankResult> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot ban the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot ban the user at this time. Please try again later.')
     }
 
     const args: AddUserRankArgs = {
@@ -98,7 +100,7 @@ export default class PunishmentService extends ContextClass {
   }
 
   /** Like `banUser` except we don't make any changes to UserRanks, and does not take into account any other users connected to this one. */
-  public async banUserExternal (defaultUserId: number, streamerId: number, message: string | null): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+  public async banUserExternal (defaultUserId: number, streamerId: number, message: string | null): Promise<SafeOmit<SetActionRankResult, 'rankResult'>> {
     const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels([defaultUserId]).then(single)
     const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'ban')))
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'ban')))
@@ -115,7 +117,7 @@ export default class PunishmentService extends ContextClass {
    * @throws {@link UserRankAlreadyExistsError}: When a user-rank of that type is already active. */
   public async muteUser (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, message: string | null, durationSeconds: number | null): Promise<UserRankWithRelations> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot mute the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot mute the user at this time. Please try again later.')
     }
 
     const now = new Date()
@@ -137,7 +139,7 @@ export default class PunishmentService extends ContextClass {
   /** Applies an actual timeout that is relayed to Youtube or Twitch. */
   public async timeoutUser (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, message: string | null, durationSeconds: number, ignoreOptions: IgnoreOptions | null): Promise<SetActionRankResult> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot timeout the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot timeout the user at this time. Please try again later.')
     }
 
     const now = new Date()
@@ -171,7 +173,7 @@ export default class PunishmentService extends ContextClass {
   }
 
   /** Like `timeoutUser` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. Must provide the `rankId` of the internal rank so. */
-  public async timeoutUserExternal (defaultUserId: number, streamerId: number, rankId: number, message: string | null, durationSeconds: number): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+  public async timeoutUserExternal (defaultUserId: number, streamerId: number, rankId: number, message: string | null, durationSeconds: number): Promise<SafeOmit<SetActionRankResult, 'rankResult'>> {
     const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels([defaultUserId]).then(single)
     const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'timeout', durationSeconds)))
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds.map(c => this.tryApplyTwitchPunishment(streamerId, c, message, 'timeout', durationSeconds)))
@@ -182,7 +184,7 @@ export default class PunishmentService extends ContextClass {
   /** Returns the updated punishment, if there was one. */
   public async unbanUser (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, unbanMessage: string | null, ignoreOptions: IgnoreOptions | null): Promise<SetActionRankResult> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot unban the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot unban the user at this time. Please try again later.')
     }
 
     const args: RemoveUserRankArgs = {
@@ -215,7 +217,7 @@ export default class PunishmentService extends ContextClass {
 
   public async unmuteUser (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, revokeMessage: string | null): Promise<UserRankWithRelations> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot unmute the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot unmute the user at this time. Please try again later.')
     }
 
     const args: RemoveUserRankArgs = {
@@ -234,7 +236,7 @@ export default class PunishmentService extends ContextClass {
 
   public async untimeoutUser (primaryUserId: number, streamerId: number, moderatorPrimaryUserId: number | null, revokeMessage: string | null, ignoreOptions: IgnoreOptions | null): Promise<SetActionRankResult> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot un-timeout the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot un-timeout the user at this time. Please try again later.')
     }
 
     const args: RemoveUserRankArgs = {
@@ -266,7 +268,7 @@ export default class PunishmentService extends ContextClass {
   }
 
   /** Like `untimeoutUser` except we don't make changes to UserRanks, and does not take into account any other users connected to this one. Must provide the `rankId` of the internal rank that is/was linked to the user's timeout. */
-  public async untimeoutUserExternal (defaultUserId: number, streamerId: number, rankId: number, revokeMessage: string | null): Promise<Omit<SetActionRankResult, 'rankResult'>> {
+  public async untimeoutUserExternal (defaultUserId: number, streamerId: number, rankId: number, revokeMessage: string | null): Promise<SafeOmit<SetActionRankResult, 'rankResult'>> {
     const ownedChannels = await this.channelStore.getDefaultUserOwnedChannels([defaultUserId]).then(single)
     const twitchResults = await Promise.all(ownedChannels.twitchChannelIds.map(c => this.tryApplyTwitchPunishment(streamerId, c, revokeMessage, 'untimeout')))
     const youtubeResults = await Promise.all(ownedChannels.youtubeChannelIds.map(c => this.tryApplyYoutubePunishment(streamerId, c, 'untimeout')))

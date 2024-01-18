@@ -65,7 +65,7 @@ export default class ChatMateController extends ControllerBase {
       const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed()
 
       return builder.success({
-        streamerCount: streamerCount,
+        streamerCount: streamerCount - 1, // subtract the official ChatMate streamer
         registeredUserCount: registeredUserCount,
         uniqueChannelCount: channelCount,
         chatMessageCount: messageCount,
@@ -81,10 +81,16 @@ export default class ChatMateController extends ControllerBase {
   @GET
   @Path('/masterchat/authentication')
   @PreProcessor(requireRank('admin'))
-  public getMasterchatAuthentication (): GetMasterchatAuthenticationResponse {
+  public async getMasterchatAuthentication (): Promise<GetMasterchatAuthenticationResponse> {
     const builder = this.registerResponseBuilder<GetMasterchatAuthenticationResponse>('GET /masterchat/authentication')
+
     try {
-      return builder.success({ authenticated: this.masterchatService.checkCredentials() })
+      const result = await this.masterchatService.checkAuthentication()
+
+      return builder.success({
+        authenticated: result?.isActive ?? null,
+        lastUpdatedTimestamp: result?.lastUpdated?.getTime() ?? null
+      })
     } catch (e: any) {
       return builder.failure(e)
     }
