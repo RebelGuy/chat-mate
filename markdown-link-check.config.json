@@ -2,6 +2,7 @@
   "ignorePatterns": [
     { "pattern": "http://localhost" },
     { "pattern": "github\\.com" },
-    { "pattern": "twitter\\.com" }
+    { "pattern": "twitter\\.com" },
+    { "pattern": "https://chat-mate" }
   ]
 }
