@@ -3,7 +3,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
-import { PrimaryChannelAlreadyExistsError } from '@rebel/shared/util/error'
+import { PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
 import * as data from '@rebel/server/_test/testData'
 import { TwitchChannel, YoutubeChannel } from '@prisma/client'
 
@@ -51,7 +51,7 @@ export default () => {
       expect(result!.platformInfo.channel.youtubeId).toBe(channel1.youtubeId)
     })
 
-    test('Returns null if no channel was removed', async () => {
+    test(`Throws ${PrimaryChannelNotFoundError.name} if no channel was removed`, async () => {
       const [streamer1, streamer2] = await createStreamers(2)
       const [channel1, channel2] = await createYoutubeChannels(2)
       await db.streamerYoutubeChannelLink.create({ data: {
@@ -66,14 +66,13 @@ export default () => {
         timeAdded: data.time2
       }})
 
-      const result = await streamerChannelStore.removeStreamerYoutubeChannelLink(1)
+      await expect(() => streamerChannelStore.removeStreamerYoutubeChannelLink(streamer1)).rejects.toThrowError(PrimaryChannelNotFoundError)
 
       const storedLinks = await db.streamerYoutubeChannelLink.findMany()
       expect(storedLinks).toEqual(expectObject(storedLinks, [
         { id: 1, timeRemoved: data.time2 },
         { id: 2, timeRemoved: null }
       ]))
-      expect(result).toBeNull()
     })
   })
 
@@ -109,7 +108,7 @@ export default () => {
       expect(result!.platformInfo.channel.twitchId).toBe(channel1.twitchId)
     })
 
-    test('Returns null if no channel was removed', async () => {
+    test(`Throws ${PrimaryChannelNotFoundError.name} if no channel was removed`, async () => {
       const [streamer1, streamer2] = await createStreamers(2)
       const [channel1, channel2] = await createTwitchChannels(2)
       await db.streamerTwitchChannelLink.create({ data: {
@@ -124,14 +123,13 @@ export default () => {
         timeAdded: data.time1
       }})
 
-      const result = await streamerChannelStore.removeStreamerTwitchChannelLink(1)
+      await expect(() => streamerChannelStore.removeStreamerTwitchChannelLink(streamer1)).rejects.toThrowError(PrimaryChannelNotFoundError)
 
       const storedLinks = await db.streamerTwitchChannelLink.findMany()
       expect(storedLinks).toEqual(expectObject(storedLinks, [
         { id: 1, timeRemoved: data.time2 },
         { id: 2, timeRemoved: null }
       ]))
-      expect(result).toBeNull()
     })
   })
 

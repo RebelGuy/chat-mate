@@ -8,7 +8,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { ChatMateError, ForbiddenError, PrimaryChannelAlreadyExistsError } from '@rebel/shared/util/error'
+import { ChatMateError, ForbiddenError, PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
 import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
@@ -211,11 +211,12 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
     expect(eventArgs).toEqual(expectObjectDeep(eventArgs, [EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel }]))
   })
 
-  test('Does not dispatch data if no primary channel was unset', async () => {
+  test(`Throws ${PrimaryChannelNotFoundError.name} and does not dispatch data if no primary channel exists`, async () => {
     const streamerId = 3
-    mockStreamerChannelStore.removeStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(null)
+    const err = new PrimaryChannelNotFoundError(streamerId, 'youtube')
+    mockStreamerChannelStore.removeStreamerYoutubeChannelLink.calledWith(streamerId).mockRejectedValue(err)
 
-    await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')).rejects.toThrowError(err)
 
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })

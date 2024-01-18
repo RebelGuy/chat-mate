@@ -226,6 +226,12 @@ export class PrimaryChannelAlreadyExistsError extends ChatMateError {
   }
 }
 
+export class PrimaryChannelNotFoundError extends ChatMateError {
+  constructor (streamerId: number, platform: 'youtube' | 'twitch') {
+    super(PrimaryChannelNotFoundError.prototype, `A primary ${platform} channel for streamer ${streamerId} has not been set.`)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

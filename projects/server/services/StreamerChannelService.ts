@@ -125,6 +125,7 @@ export default class StreamerChannelService extends ContextClass {
     await this.eventDispatchService.addData(EVENT_ADD_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 
+  /** @throws {@link PrimaryChannelNotFoundError}: When the streamer has not set a primary channel for the given platform. */
   public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
     const [youtubeLivestream, twitchLivestream] = await Promise.all([
       this.livestreamStore.getActiveYoutubeLivestream(streamerId),
@@ -143,8 +144,6 @@ export default class StreamerChannelService extends ContextClass {
       assertUnreachable(platform)
     }
 
-    if (userChannel != null) {
-      await this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
-    }
+    await this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 }

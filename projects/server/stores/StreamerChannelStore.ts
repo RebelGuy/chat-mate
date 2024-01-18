@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db, isKnownPrismaError } from '@rebel/server/providers/DbProvider'
 import { channelQuery_includeLatestChannelInfo, TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
-import { PrimaryChannelAlreadyExistsError } from '@rebel/shared/util/error'
+import { PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
 
 export type PrimaryChannels = {
   streamerId: number
@@ -23,58 +23,42 @@ export default class StreamerChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async removeStreamerYoutubeChannelLink (streamerId: number): Promise<UserChannel<'youtube'> | null> {
-    try {
-      const entry = await this.db.streamerYoutubeChannelLink.findFirst({ where: {
-        streamerId: streamerId,
-        timeRemoved: null
-      }})
+  /** @throws {@link PrimaryChannelNotFoundError}: When no primary Youtube channel exists for the streamer. */
+  public async removeStreamerYoutubeChannelLink (streamerId: number): Promise<UserChannel<'youtube'>> {
+    const entry = await this.db.streamerYoutubeChannelLink.findFirst({ where: {
+      streamerId: streamerId,
+      timeRemoved: null
+    }})
 
-      if (entry == null) {
-        return null
-      }
-
-      const removedLink = await this.db.streamerYoutubeChannelLink.update({
-        data: { timeRemoved: new Date() },
-        where: { id: entry.id },
-        include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
-      })
-      return youtubeLinkToUserChannel(removedLink)
-
-    } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === 'P2025') {
-        return null
-      } else {
-        throw e
-      }
+    if (entry == null) {
+      throw new PrimaryChannelNotFoundError(streamerId, 'youtube')
     }
+
+    const removedLink = await this.db.streamerYoutubeChannelLink.update({
+      data: { timeRemoved: new Date() },
+      where: { id: entry.id },
+      include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
+    })
+    return youtubeLinkToUserChannel(removedLink)
   }
 
-  public async removeStreamerTwitchChannelLink (streamerId: number): Promise<UserChannel<'twitch'> | null> {
-    try {
-      const entry = await this.db.streamerTwitchChannelLink.findFirst({ where: {
-        streamerId: streamerId,
-        timeRemoved: null
-      }})
+  /** @throws {@link PrimaryChannelNotFoundError}: When no primary Twitch channel exists for the streamer. */
+  public async removeStreamerTwitchChannelLink (streamerId: number): Promise<UserChannel<'twitch'>> {
+    const entry = await this.db.streamerTwitchChannelLink.findFirst({ where: {
+      streamerId: streamerId,
+      timeRemoved: null
+    }})
 
-      if (entry == null) {
-        return null
-      }
-
-      const removedLink = await this.db.streamerTwitchChannelLink.update({
-        data: { timeRemoved: new Date() },
-        where: { id: entry.id },
-        include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
-      })
-      return twitchLinkToUserChannel(removedLink)
-
-    } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === 'P2025') {
-        return null
-      } else {
-        throw e
-      }
+    if (entry == null) {
+      throw new PrimaryChannelNotFoundError(streamerId, 'twitch')
     }
+
+    const removedLink = await this.db.streamerTwitchChannelLink.update({
+      data: { timeRemoved: new Date() },
+      where: { id: entry.id },
+      include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
+    })
+    return twitchLinkToUserChannel(removedLink)
   }
 
   /** Returns the streamers' primary channels - the channels that were selected to be streamed on. */
