@@ -53,6 +53,6 @@ Viewers will be able to see your emoji page, and, if logged in, will be able to 
 
 ## Minecraft Mod
 
-ChatMate offers a free Minecraft mod that integrates your livestream into Minecraft and allows you to perform administration tasks, such as banning users and managing ranks. For more info, refer to the [Streamer Guide (Minecraft Mod)](https://github.com/RebelGuy/chat-mate-client/blob/master/docs/streamer-guide.md).
+ChatMate offers a free Minecraft mod that integrates your livestream into Minecraft and allows you to perform administration tasks, such as banning users and managing ranks. You can download the mod [here](https://github.com/RebelGuy/chat-mate-client/releases/latest). For more info, refer to the [Streamer Guide (Minecraft Mod)](https://github.com/RebelGuy/chat-mate-client/blob/master/docs/streamer-guide.md).
 
 ChatMate is not currently available for versions of Minecraft other than Java Edition 1.8.9, or other games. However, [ChatMate provides a rich API](../projects/server/readme.md#api-endpoints) that allows third-party developers to integrate its features into their favourite game.
