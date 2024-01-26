@@ -26,7 +26,12 @@ export type RejectApplicationResponse = ApiResponse<{ updatedApplication: Public
 export type WithdrawApplicationRequest = ApiRequest<{ message: string }>
 export type WithdrawApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
 
-export type GetPrimaryChannelsResponse = ApiResponse<{ youtubeChannelId: number | null, twitchChannelId: number | null, twitchChannelName: string | null, youtubeChannelName: string | null }>
+export type GetPrimaryChannelsResponse = ApiResponse<{
+  youtubeChannelId: number | null
+  twitchChannelId: number | null
+  twitchChannelName: string | null
+  youtubeChannelName: string | null
+}>
 
 export type SetPrimaryChannelResponse = ApiResponse<EmptyObject>
 

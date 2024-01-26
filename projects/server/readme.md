@@ -362,6 +362,25 @@ Gets the username of the official ChatMate registered account.
 Returns data with the following properties:
 - `username` (`string`): The username of the registered account.
 
+### `GET /stats`
+Gets global stats about ChatMate to be displayed on the ChatMate homepage. This endpoint does not require authentication.
+
+Returns data with the following properties:
+- `streamerCount`: (`number`): The number of individual streamers on ChatMate.
+- `youtubeStreamerCount`: (`number`): The number of ChatMate streamers that stream on Youtube.
+- `twitchStreamerCount`: (`number`): The number of ChatMate streamers that stream on Twitch.
+- `registeredUserCount`: (`number`): The total number of registered ChatMate users.
+- `uniqueChannelCount`: (`number`): The total number of Youtube/Twitch channels seen by ChatMate.
+- `uniqueYoutubeChannelCount`: (`number`): The total number of Youtube channels seen by ChatMate.
+- `uniqueTwitchChannelCount`: (`number`): The total number of Twitch channels seen by ChatMate.
+- `chatMessageCount`: (`number`): The total number of external messages sent to ChatMate livestreams.
+- `youtubeMessageCount`: (`number`): The total number of Youtube messages sent on Youtube ChatMate livestreams.
+- `twitchMessageCount`: (`number`): The total number of Twitch messages sent on Twitch ChatMate livestreams.
+- `totalExperience`: (`number`): The total number of experience earned by channels/users.
+- `totalDaysLivestreamed`: (`number`): The total number of time (in milliseconds) ChatMate streamers have livestreamed on ChatMate. Does not double-count livestreams happening on multiple platforms simultaneously.
+- `youtubeTotalDaysLivestreamed`: (`number`): The total number of time (in milliseconds) ChatMate streamers have livestreamed on Youtube.
+- `twitchTotalDaysLivestreamed`: (`number`): The total number of time (in milliseconds) ChatMate streamers have livestreamed on Twitch.
+
 ## Donation Endpoints
 Path: `/donation`.
 
@@ -859,6 +878,7 @@ Gets the logged-in streamer's primary channels, that is, the channels that they 
 Returns data with the following properties:
 - `youtubeChannelId` (`number | null`): The internal id of the streamer's primary YouTube channel, if set.
 - `twitchChannelId` (`number | null`): The internal id of the streamer's primary Twitch channel, if set.
+- `youtubeChannelName` (`string | null`): The Youtube channel name of the streamer's primary Youtube channel, if set.
 - `twitchChannelName` (`string | null`): The Twitch channel name of the streamer's primary Twitch channel, if set.
 
 ### `POST /primaryChannels/:platform/:channelId`

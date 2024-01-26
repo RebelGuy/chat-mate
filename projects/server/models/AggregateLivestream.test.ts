@@ -86,3 +86,21 @@ describe(nameof(AggregateLivestream, 'withDataReplaced'), () => {
     expect(result.data).toBe(456)
   })
 })
+
+describe(nameof(AggregateLivestream, 'getDuration'), () => {
+  test('Returns the duration of a finished livestream', () => {
+    const livestream = new AggregateLivestream(data.time2, data.time3, [])
+    
+    const result = livestream.getDuration()
+
+    expect(result).toBe(data.time3.getTime() - data.time2.getTime())
+  })
+
+  test('Returns the duration of a finished livestream', () => {
+    const livestream = new AggregateLivestream(new Date(), null, [])
+    
+    const result = livestream.getDuration()
+
+    expect(result).toBeLessThan(100)
+  })
+})

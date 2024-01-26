@@ -471,8 +471,8 @@ export default () => {
     })
   })
 
-  describe(nameof(ChatStore, 'getChatMessageCount'), () => {
-    test('Returns the number of chat messages', async () => {
+  describe(nameof(ChatStore, 'getYoutubeChatMessageCount'), () => {
+    test('Returns the number of Youtube chat messages, excluding deleted messages', async () => {
       await db.chatMessage.create({ data: {
         streamer: { connect: { id: streamer1, }},
         user: { connect: { id: youtube2UserId }},
@@ -487,21 +487,89 @@ export default () => {
         time: data.time2,
         externalId: 'x2',
         youtubeChannel: { connect: { id: 2 }},
-        twitchLivestream: { connect: { id: 1 }},
+        youtubeLivestream: { connect: { id: 1 }},
       }})
       await db.chatMessage.create({ data: {
         streamer: { connect: { id: streamer1, }},
         user: { connect: { id: youtube2UserId }},
-        time: data.time3,
+        time: data.time2,
         externalId: 'x3',
         youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+        deletedTime: data.time3
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time3,
+        externalId: 'x4',
+        twitchChannel: { connect: { id: 1 }},
         twitchLivestream: { connect: { id: 1 }},
         deletedTime: data.time4
       }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time2,
+        externalId: 'x5',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }},
+      }})
 
-      const result = await chatStore.getChatMessageCount()
+      const result = await chatStore.getYoutubeChatMessageCount()
 
       expect(result).toBe(2)
+    })
+  })
+
+  describe(nameof(ChatStore, 'getTwitchChatMessageCount'), () => {
+    test('Returns the number of Twitch chat messages, excluding deleted messages', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1,
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x3',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+        deletedTime: data.time3
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time3,
+        externalId: 'x4',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }},
+        deletedTime: data.time4
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time2,
+        externalId: 'x5',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }},
+      }})
+
+      const result = await chatStore.getTwitchChatMessageCount()
+
+      expect(result).toBe(1)
     })
   })
 

@@ -1,4 +1,5 @@
-import { Box } from '@mui/material'
+import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
+import { styled } from '@mui/material'
 import AnimatedNumber from '@rebel/studio/components/AnimatedNumber'
 import ApiError from '@rebel/studio/components/ApiError'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
@@ -6,9 +7,13 @@ import RefreshButton from '@rebel/studio/components/RefreshButton'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { getChatMateStats } from '@rebel/studio/utility/api'
-import { ReactElement } from 'react'
 
 const ANIMATION_DURATION = 2000
+
+const Cell = styled(TableCell)(() => ({
+  minWidth: 100,
+  textAlign: 'center'
+}))
 
 export default function ChatMateStats () {
   const [token, onRefresh] = useUpdateKey()
@@ -17,46 +22,54 @@ export default function ChatMateStats () {
   return <>
     <PanelHeader>ChatMate Stats {<RefreshButton isLoading={isLoading} onRefresh={onRefresh} />}</PanelHeader>
     <ApiError error={error} />
-    <Stat label="Number of streamers" number={data?.streamerCount ?? 0} />
-    <Stat label="Number of registered users" number={data?.registeredUserCount ?? 0} />
-    <Stat label="Number of unique channels" number={data?.uniqueChannelCount ?? 0} />
-    <Stat label="Number of messages sent" number={data?.chatMessageCount ?? 0} />
-    <Stat label="Total experience gained" number={data?.totalExperience ?? 0} />
-    <Stat label="Total days livestreamed on Youtube" number={data?.youtubeTotalDaysLivestreamed ?? 0} decimals={3} />
-    <Stat label="Total days livestreamed on Twitch" number={data?.twitchTotalDaysLivestreamed ?? 0} decimals={3} />
+    <Table size="small" style={{ width: 'unset' }}>
+      <TableHead>
+        <TableRow>
+          <TableCell></TableCell>
+          <Cell>Total</Cell>
+          <Cell>Youtube</Cell>
+          <Cell>Twitch</Cell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        <Stat label="Number of registered users" totalNumber={data?.registeredUserCount ?? 0} />
+        <Stat label="Number of streamers" totalNumber={data?.streamerCount ?? 0} youtubeNumber={data?.youtubeStreamerCount ?? 0} twitchNumber={data?.twitchStreamerCount ?? 0} />
+        <Stat label="Number of unique channels" totalNumber={data?.uniqueChannelCount ?? 0} youtubeNumber={data?.uniqueYoutubeChannelCount ?? 0} twitchNumber={data?.uniqueTwitchChannelCount ?? 0} />
+        <Stat label="Number of chat messages" totalNumber={data?.chatMessageCount ?? 0} youtubeNumber={data?.youtubeMessageCount ?? 0} twitchNumber={data?.twitchMessageCount ?? 0} />
+        <Stat label="Total days livestreamed" totalNumber={data?.totalDaysLivestreamed ?? 0} youtubeNumber={data?.youtubeTotalDaysLivestreamed ?? 0} twitchNumber={data?.twitchTotalDaysLivestreamed ?? 0} decimals={3} />
+        <Stat label="Total experience gained" totalNumber={data?.totalExperience ?? 0} />
+      </TableBody>
+    </Table>
   </>
 }
 
 type StatProps = {
   label: string
-  number?: number | null
+  totalNumber: number
+  youtubeNumber?: number
+  twitchNumber?: number
   decimals?: number
 }
 
 function Stat (props: StatProps) {
-  const contents = (num: number) => (
-    <StatWrapper>
-      <>{props.label}: {num.toLocaleString()}</>
-    </StatWrapper>
+  return (
+    <TableRow sx={{ m: 1 }}>
+      <Cell style={{ textAlign: 'right' }}>{props.label}</Cell>
+      <Cell><Number target={props.totalNumber} decimals={props.decimals} /></Cell>
+      <Cell><Number target={props.youtubeNumber} decimals={props.decimals} /></Cell>
+      <Cell><Number target={props.twitchNumber} decimals={props.decimals} /></Cell>
+    </TableRow>
   )
-
-  if (props.number == null) {
-    return contents(0)
-  } else {
-    return (
-      <StatWrapper>
-        <AnimatedNumber initial={0} target={props.number} duration={ANIMATION_DURATION} decimals={props.decimals} smoothVelocity>
-          {contents}
-        </AnimatedNumber>
-      </StatWrapper>
-    )
-  }
 }
 
-function StatWrapper (props: { children: ReactElement }) {
+function Number (props: { target: number | undefined, decimals: number | undefined }) {
+  if (props.target == null) {
+    return null
+  }
+
   return (
-    <Box sx={{ m: 1 }}>
-      {props.children}
-    </Box>
+    <AnimatedNumber initial={0} target={props.target} duration={ANIMATION_DURATION} decimals={props.decimals} smoothVelocity>
+      {(num: number) => <>{num.toLocaleString()}</>}
+    </AnimatedNumber>
   )
 }

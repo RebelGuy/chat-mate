@@ -54,6 +54,10 @@ export function first<T> (array: T[]): T {
   }
 }
 
+export function flatMap<T> (arrayOfArray: T[][]): T[] {
+  return arrayOfArray.flatMap(x => x)
+}
+
 export function sortByLength (array: string[], direction?: 'asc' | 'desc'): string[] {
   return sortBy(array.map(str => ({ value: str })), item => item.value.length, direction).map(item => item.value)
 }

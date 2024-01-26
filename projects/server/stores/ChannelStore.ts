@@ -129,10 +129,12 @@ export default class ChannelStore extends ContextClass {
     }
   }
 
-  public async getChannelCount (): Promise<number> {
-    const youtubeChannels = await this.db.youtubeChannel.count()
-    const twitchChannels = await this.db.twitchChannel.count()
-    return youtubeChannels + twitchChannels
+  public async getYoutubeChannelCount (): Promise<number> {
+    return await this.db.youtubeChannel.count()
+  }
+
+  public async getTwitchChannelCount (): Promise<number> {
+    return await this.db.twitchChannel.count()
   }
 
   /** Returns channels that have authored chat messages for the given streamer. */

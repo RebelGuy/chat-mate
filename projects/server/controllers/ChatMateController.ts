@@ -9,6 +9,11 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
+import CacheService from '@rebel/server/services/CacheService'
+import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
+import { flatMap } from '@rebel/shared/util/arrays'
+import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
+import { ONE_DAY } from '@rebel/shared/util/datetime'
 
 type Deps = ControllerDependencies<{
   masterchatService: MasterchatService
@@ -19,6 +24,9 @@ type Deps = ControllerDependencies<{
   chatStore: ChatStore
   experienceStore: ExperienceStore
   livestreamStore: LivestreamStore
+  cacheService: CacheService
+  aggregateLivestreamService: AggregateLivestreamService
+  streamerChannelStore: StreamerChannelStore
 }>
 
 @Path(buildPath('chatMate'))
@@ -31,6 +39,9 @@ export default class ChatMateController extends ControllerBase {
   private readonly chatStore: ChatStore
   private readonly experienceStore: ExperienceStore
   private readonly livestreamStore: LivestreamStore
+  private readonly cacheService: CacheService
+  private readonly aggregateLivestreamService: AggregateLivestreamService
+  private readonly streamerChannelStore: StreamerChannelStore
 
   constructor (deps: Deps) {
     super(deps, 'chatMate')
@@ -42,6 +53,9 @@ export default class ChatMateController extends ControllerBase {
     this.chatStore = deps.resolve('chatStore')
     this.experienceStore = deps.resolve('experienceStore')
     this.livestreamStore = deps.resolve('livestreamStore')
+    this.cacheService = deps.resolve('cacheService')
+    this.aggregateLivestreamService = deps.resolve('aggregateLivestreamService')
+    this.streamerChannelStore = deps.resolve('streamerChannelStore')
   }
 
   @GET
@@ -56,20 +70,33 @@ export default class ChatMateController extends ControllerBase {
   public async getStats (): Promise<ChatMateStatsResponse> {
     const builder = this.registerResponseBuilder<ChatMateStatsResponse>('GET /stats')
     try {
-      const streamerCount = await this.streamerStore.getStreamerCount()
+      const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
+      const streamers = await this.streamerStore.getStreamers().then(streamers => streamers.filter(s => s.id !== chatMateStreamerId))
+      const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
       const registeredUserCount = await this.accountStore.getRegisteredUserCount()
-      const channelCount = await this.channelStore.getChannelCount()
-      const messageCount = await this.chatStore.getChatMessageCount()
+      const youtubeChannelCount = await this.channelStore.getYoutubeChannelCount()
+      const twitchChannelCount = await this.channelStore.getTwitchChannelCount()
+      const youtubeMessageCount = await this.chatStore.getYoutubeChatMessageCount()
+      const twitchMessageCount = await this.chatStore.getTwitchChatMessageCount()
       const totalExperience = await this.experienceStore.getTotalGlobalExperience()
+      // todo: this is a big no-no, we should probably cache things that we know will never change (e.g. past livestreams)
+      const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id))).then(flatMap)
       const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed()
       const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed()
 
       return builder.success({
-        streamerCount: streamerCount - 1, // subtract the official ChatMate streamer
+        streamerCount: streamers.length,
+        youtubeStreamerCount: primaryChannels.filter(pc => pc.youtubeChannel != null).length,
+        twitchStreamerCount: primaryChannels.filter(pc => pc.twitchChannel != null).length,
         registeredUserCount: registeredUserCount,
-        uniqueChannelCount: channelCount,
-        chatMessageCount: messageCount,
+        uniqueChannelCount: youtubeChannelCount + twitchChannelCount,
+        uniqueYoutubeChannelCount: youtubeChannelCount,
+        uniqueTwitchChannelCount: twitchChannelCount,
+        chatMessageCount: youtubeMessageCount + twitchMessageCount,
+        youtubeMessageCount: youtubeMessageCount,
+        twitchMessageCount: twitchMessageCount,
         totalExperience: totalExperience,
+        totalDaysLivestreamed: aggregateLivestreams.reduce((time, livestream) => time + livestream.getDuration(), 0) / ONE_DAY,
         youtubeTotalDaysLivestreamed: youtubeTotalDaysLivestreamed,
         twitchTotalDaysLivestreamed: twitchTotalDaysLivestreamed
       })

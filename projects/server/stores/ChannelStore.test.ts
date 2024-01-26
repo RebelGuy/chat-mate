@@ -209,8 +209,8 @@ export default () => {
     })
   })
 
-  describe(nameof(ChannelStore, 'getChannelCount'), () => {
-    test('Returns the number of channels, including both Youtube and Twitch channels', async () => {
+  describe(nameof(ChannelStore, 'getYoutubeChannelCount'), () => {
+    test('Returns the number of Youtube channels', async () => {
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
         user: { create: {}}
@@ -224,9 +224,30 @@ export default () => {
         user: { create: {}}
       }})
 
-      const result = await channelStore.getChannelCount()
+      const result = await channelStore.getYoutubeChannelCount()
 
-      expect(result).toBe(3)
+      expect(result).toBe(2)
+    })
+  })
+
+  describe(nameof(ChannelStore, 'getTwitchChannelCount'), () => {
+    test('Returns the number of Twitch channels', async () => {
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}}
+      }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}}
+      }})
+
+      const result = await channelStore.getTwitchChannelCount()
+
+      expect(result).toBe(1)
     })
   })
 
