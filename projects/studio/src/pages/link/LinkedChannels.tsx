@@ -44,7 +44,7 @@ export default function LinkedChannels (props: Props) {
 
   return <>
     {header}
-    <RequireRank owner>
+    <RequireRank anyOwner>
       <Box>
         Primary linked channels are the channels that you will stream on. You can select at most one primary channel on YouTube, and one on Twitch.
       </Box>
