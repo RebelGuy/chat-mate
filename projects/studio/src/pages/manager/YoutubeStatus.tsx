@@ -83,7 +83,7 @@ export default function YoutubeStatus () {
         </Box>
         :
         <Box>
-          Looks like you have granted ChatMate access to your YouTube channel.
+          Looks like you have granted ChatMate access to your YouTube channel for performing moderator actions.
           If you still want to refresh authorisation for the channel {<b>{getPrimaryChannelsRequest.data?.youtubeChannelName ?? '<loading>'}</b>}, you can do so using the below button.
         </Box>
       }

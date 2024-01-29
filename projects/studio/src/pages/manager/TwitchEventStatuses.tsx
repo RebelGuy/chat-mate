@@ -3,6 +3,7 @@ import { Alert, Button, CircularProgress, IconButton, Table, TableBody, TableCel
 import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
+import OptionalAlert from '@rebel/studio/components/OptionalAlert'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
@@ -141,7 +142,7 @@ export default function TwitchEventStatuses () {
       </div>
 
       {authoriseTwitchRequest.data == null && <>
-        <Alert sx={{ mt: 1 }} severity={requiresAuth || hasBrokenEvents ? 'warning' : 'info'}>
+        <OptionalAlert sx={{ mt: 1 }} severity={requiresAuth || hasBrokenEvents ? 'warning' : 'none'}>
           {requiresAuth ?
             <div>
               Looks like some of the events are broken because ChatMate did not have permission.
@@ -166,7 +167,7 @@ export default function TwitchEventStatuses () {
           >
             Authorise ChatMate
           </Button>
-        </Alert>
+        </OptionalAlert>
       </>}
 
       <ApiError requestObj={[getLoginUrlRequest, primaryChannelsRequest, authoriseTwitchRequest]} hideRetryButton />
@@ -177,7 +178,7 @@ export default function TwitchEventStatuses () {
         </Alert>
       </>}
 
-      <Table>
+      <Table size="small" sx={{ mt: 2, maxWidth: 1200 }}>
         <TableHead>
           <TableRow>
             <TableCell>Event Name</TableCell>

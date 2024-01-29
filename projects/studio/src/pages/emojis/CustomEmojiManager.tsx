@@ -155,7 +155,7 @@ export default function CustomEmojiManager () {
 
           {isLoggedIn && <FormControlLabel
             label="Show only eligible emojis"
-            sx={{ mb: 1, display: 'block', width: 'fit-content'  }}
+            sx={{ mb: 1, display: 'block', width: 'fit-content' }}
             control={
               <Checkbox
                 checked={showOnlyEligibleEmojis}
@@ -167,7 +167,8 @@ export default function CustomEmojiManager () {
 
           <Table
             stickyHeader
-            sx={{ width: '100%', transform: 'translateY(-5px)' }}
+            size="small"
+            style={{ transform: 'translateY(-5px)' }}
           >
             <TableHead>
               <TableRow>

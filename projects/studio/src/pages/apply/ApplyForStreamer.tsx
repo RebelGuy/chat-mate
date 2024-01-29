@@ -109,7 +109,7 @@ function ApplicationHistory (props: ApplicationHistoryProps) {
       <ApiError error={props.error} isLoading={props.isLoading} />
 
       {props.data && (
-        <Table style={{ width: '100%', maxWidth: 800, margin: 'auto' }}>
+        <Table size="small" style={{ maxWidth: 1200 }}>
           <TableHead>
             <TableRow>
               <TableCell>Status</TableCell>

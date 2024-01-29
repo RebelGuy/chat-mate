@@ -48,7 +48,8 @@ export function LinkHistory (props: Props) {
     {getLinkHistoryRequest.data != null &&
       <Table
         stickyHeader
-        sx={{ width: '100%', transform: 'translateY(-5px)' }}
+        size="small"
+        style={{ maxWidth: 1200, transform: 'translateY(-5px)' }}
       >
         <TableHead>
           <TableRow>

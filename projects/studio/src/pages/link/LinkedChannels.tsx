@@ -74,7 +74,7 @@ export default function LinkedChannels (props: Props) {
       </>
     </RequireRank>
     {props.channelsRequestObj.data != null &&
-      <Table style={{ margin: 'auto' }}>
+      <Table size="small" style={{ maxWidth: 800 }}>
         <TableHead>
           <TableRow>
             <TableCell>Channel</TableCell>
