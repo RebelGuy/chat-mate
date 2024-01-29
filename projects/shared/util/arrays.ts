@@ -63,11 +63,11 @@ export function sortByLength (array: string[], direction?: 'asc' | 'desc'): stri
 }
 
 /** Sort by number. */
-export function sortBy<T extends GenericObject> (array: T[], selector: (item: T) => number, direction?: 'asc' | 'desc'): T[]
+export function sortBy<T> (array: T[], selector: (item: T) => number, direction?: 'asc' | 'desc'): T[]
 /** Sort by string comparison (case sensitive). */
-export function sortBy<T extends GenericObject> (array: T[], selector: (item: T) => string, direction?: 'asc' | 'desc'): T[]
+export function sortBy<T> (array: T[], selector: (item: T) => string, direction?: 'asc' | 'desc'): T[]
 export function sortBy<T extends GenericObject, K extends keyof NumberOnly<T>> (array: T[], key: K, direction?: 'asc' | 'desc'): T[]
-export function sortBy<T extends GenericObject> (array: T[], selector: keyof T | ((item: T) => number | string), direction: 'asc' | 'desc' = 'asc'): T[] {
+export function sortBy<T> (array: T[], selector: keyof T | ((item: T) => number | string), direction: 'asc' | 'desc' = 'asc'): T[] {
   let getValue: (item: T) => number | string
   if (typeof selector === 'string' || typeof selector === 'number' || typeof selector === 'symbol') {
     getValue = (item: T) => item[selector] as number | string

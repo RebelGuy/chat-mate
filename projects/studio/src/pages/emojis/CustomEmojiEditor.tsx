@@ -22,6 +22,7 @@ type Props = {
   onSave: (data: PublicCustomEmoji) => void
   onCancel: () => void
   onCheckDuplicateSymbol: (symbol: string) => boolean
+  onCheckDataChanged: (data: EmojiData) => boolean
 }
 
 const DEFAULT_DATA: EmojiData = {
@@ -58,7 +59,8 @@ export default function CustomEmojiEditor (props: Props) {
     symbolValidation == null &&
     levelRequirementValidation == null &&
     !isNullOrEmpty(editingData.imageData) &&
-    (!enableWhitelist || enableWhitelist && editingData.whitelistedRanks.length > 0)
+    (!enableWhitelist || enableWhitelist && editingData.whitelistedRanks.length > 0) &&
+    props.onCheckDataChanged(editingData)
 
   const setSymbol = (symbol: string) => {
     symbol = symbol.trim()
@@ -77,6 +79,10 @@ export default function CustomEmojiEditor (props: Props) {
 
   const setLevelRequirement = (levelRequirement: string) => {
     const num = Number(levelRequirement)
+    if (isNaN(num)) {
+      return
+    }
+
     onChange({ ...editingData!, levelRequirement: num })
 
     if (num < 0 || num > 100) {
@@ -229,3 +235,5 @@ export default function CustomEmojiEditor (props: Props) {
     </Dialog>
   )
 }
+
+

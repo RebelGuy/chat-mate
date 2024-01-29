@@ -3,7 +3,7 @@ import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEm
 import { getAccessibleRanks, getAllCustomEmojis } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
-import { sortBy } from '@rebel/shared/util/arrays'
+import { compareArrays, sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { Alert, Box, Button, Checkbox, createTheme, FormControlLabel, IconButton, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
@@ -78,10 +78,19 @@ export default function CustomEmojiManager () {
     updateRefreshToken()
   }
 
-  const onCheckDupliateSymbol = (symbol: string) => {
+  const onCheckDuplicateSymbol = (symbol: string) => {
     return emojisRequest.data!.emojis.find(emoji => {
       return emoji.id !== editingEmoji?.id && emoji.symbol === symbol
     }) != null
+  }
+
+  const onCheckDataChanged = (data: EmojiData) => {
+    const previousData = emojisRequest.data!.emojis.find(emoji => emoji.id == data.id)
+    if (previousData == null) {
+      return true
+    } else {
+      return compareEmojis(data, previousData)
+    }
   }
 
   const meetsEmojiRequirements = (emoji: PublicCustomEmoji): Eligibility => {
@@ -210,7 +219,8 @@ export default function CustomEmojiManager () {
         onCancel={onCancelEdit}
         onChange={onChange}
         onSave={onSave}
-        onCheckDuplicateSymbol={onCheckDupliateSymbol}
+        onCheckDuplicateSymbol={onCheckDuplicateSymbol}
+        onCheckDataChanged={onCheckDataChanged}
       />
     </>
   )
@@ -283,4 +293,13 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
       </TableRow>
     </ThemeProvider>
   )
+}
+function compareEmojis(data: EmojiData, previousData: EmojiData) {
+  // i would love to put it on the next line but then vscode grey out the whole thing : --   |
+  return data.name !== previousData.name ||
+    data.symbol !== previousData.symbol ||
+    data.levelRequirement !== previousData.levelRequirement ||
+    data.canUseInDonationMessage !== previousData.canUseInDonationMessage ||
+    data.imageData !== previousData.imageData ||
+    !compareArrays(sortBy(data.whitelistedRanks, x => x), sortBy(previousData.whitelistedRanks, x => x))
 }
