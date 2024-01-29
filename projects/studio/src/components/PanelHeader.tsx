@@ -1,6 +1,6 @@
 import { styled } from '@mui/material'
 
-const Header = styled('h3')()
+const Header = styled('h3')({})
 
 export default function PanelHeader (props: { children: React.ReactNode }) {
   return (
