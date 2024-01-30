@@ -22,7 +22,7 @@ export default function RanksSelector (props: Props) {
   }
 
   const toggleCheckbox = (rankId: number) => {
-    let ranks = props.ranks
+    let ranks = [...props.ranks]
     if (ranks.includes(rankId)) {
       ranks = ranks.filter(r => r !== rankId)
     } else {
