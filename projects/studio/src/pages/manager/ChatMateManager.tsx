@@ -22,8 +22,8 @@ export default function ChatMateManager () {
   return <div style={{ display: 'block' }}>
     {getPrimaryChannelsRequest.data != null && getPrimaryChannelsRequest.data.youtubeChannelId == null && getPrimaryChannelsRequest.data.twitchChannelId == null && <NoPrimaryChannels />}
     {getPrimaryChannelsRequest.data?.youtubeChannelId != null && <YoutubeLivestreamForm />}
-    {getPrimaryChannelsRequest.data?.youtubeChannelId != null && <YoutubeStatus />}
-    {getPrimaryChannelsRequest.data?.twitchChannelId != null && <TwitchEventStatuses />}
+    {getPrimaryChannelsRequest.data?.youtubeChannelName != null && <YoutubeStatus primaryYoutubeChannelName={getPrimaryChannelsRequest.data.youtubeChannelName} />}
+    {getPrimaryChannelsRequest.data?.twitchChannelName != null && <TwitchEventStatuses primaryTwitchChannelName={getPrimaryChannelsRequest.data.twitchChannelName} />}
     <StreamlabsWebsocketForm />
   </div>
 }

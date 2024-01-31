@@ -1,4 +1,6 @@
 import { Alert, Box, Button } from '@mui/material'
+import { GetPrimaryChannelsResponse } from '@rebel/api-models/schema/streamer'
+import { ApiResponseData } from '@rebel/api-models/types'
 import { getChannelUrlFromPublic } from '@rebel/shared/util/channel'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
@@ -9,12 +11,16 @@ import RelativeTime from '@rebel/studio/components/RelativeTime'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest, { onConfirmRequest } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { getYoutubeStatus, getChatMateRegisteredUsername, getPrimaryChannels, revokeYoutubeStreamer, authoriseYoutubeStreamer, getYoutubeStreamerLoginUrl, getYoutubeModerators, getStatus } from '@rebel/studio/utility/api'
+import { getYoutubeStatus, getChatMateRegisteredUsername, revokeYoutubeStreamer, authoriseYoutubeStreamer, getYoutubeStreamerLoginUrl, getYoutubeModerators, getStatus } from '@rebel/studio/utility/api'
 import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-export default function YoutubeStatus () {
+type Props = {
+  primaryYoutubeChannelName: string
+}
+
+export default function YoutubeStatus (props: Props) {
   const [params, setParams] = useSearchParams()
 
   // params are cleared upon mounting, but retained in state by setting them as the default value of each piece of state.
@@ -26,7 +32,6 @@ export default function YoutubeStatus () {
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const getYoutubeStatusRequest = useRequest(getYoutubeStatus(), { updateKey: refreshToken })
   const getChatMateRegisteredUsernameRequest = useRequest(getChatMateRegisteredUsername(), { updateKey: refreshToken })
-  const getPrimaryChannelsRequest = useRequest(getPrimaryChannels())
   const getYoutubeStreamerLoginUrlRequest = useRequest(getYoutubeStreamerLoginUrl())
   const authoriseYoutubeStreamerRequest = useRequest(authoriseYoutubeStreamer(code!), { onDemand: true })
   const revokeAccessRequest = useRequest(revokeYoutubeStreamer(), {
@@ -79,12 +84,12 @@ export default function YoutubeStatus () {
       {requiresAuth ?
         <Box>
           You need to grant ChatMate access to your YouTube channel.
-          This will be used to perform moderator actions. Please use your YouTube channel {<b>{getPrimaryChannelsRequest.data?.youtubeChannelName ?? '<loading>'}</b>} to provide access.
+          This will be used to perform moderator actions. Please use your YouTube channel {<b>{props.primaryYoutubeChannelName}</b>} to provide access.
         </Box>
         :
         <Box>
           Looks like you have granted ChatMate access to your YouTube channel for performing moderator actions.
-          If you still want to refresh authorisation for the channel {<b>{getPrimaryChannelsRequest.data?.youtubeChannelName ?? '<loading>'}</b>}, you can do so using the below button.
+          If you still want to refresh authorisation for the channel {<b>{props.primaryYoutubeChannelName}</b>}, you can do so using the below button.
         </Box>
       }
 

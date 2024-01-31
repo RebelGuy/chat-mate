@@ -57,7 +57,11 @@ const EVENT_INFO: Record<PublicTwitchEventStatus['eventType'], EventInfo> = {
 
 let successPoller: number | null = null
 
-export default function TwitchEventStatuses () {
+type Props = {
+  primaryTwitchChannelName: string
+}
+
+export default function TwitchEventStatuses (props: Props) {
   const [params, setParams] = useSearchParams()
 
   // params are cleared upon mounting, but retained in state by setting them as the default value of each piece of state.
@@ -68,7 +72,6 @@ export default function TwitchEventStatuses () {
   const getStatusesRequest = useRequest(getTwitchEventStatuses(), { updateKey: refreshToken })
   const reconnectChatClientRequest = useRequest(reconnectChatClient(), { onDemand: true })
   const resetTwitchSubscriptionsRequest = useRequest(resetTwitchSubscriptions(), { onDemand: true })
-  const primaryChannelsRequest = useRequest(getPrimaryChannels(), { onDemand: true })
   const getLoginUrlRequest = useRequest(getTwitchStreamerLoginUrl(), { onDemand: true })
   const authoriseTwitchRequest = useRequest(authoriseTwitchStreamer(code!), { onDemand: true })
 
@@ -87,7 +90,6 @@ export default function TwitchEventStatuses () {
       }
     }, 500)
 
-    primaryChannelsRequest.triggerRequest()
     getLoginUrlRequest.triggerRequest()
     if (code != null) {
       authoriseTwitchRequest.triggerRequest()
@@ -146,23 +148,23 @@ export default function TwitchEventStatuses () {
           {requiresAuth ?
             <div>
               Looks like some of the events are broken because ChatMate did not have permission.
-              Please use your Twitch channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} to provide access.
+              Please use your Twitch channel {<b>{props.primaryTwitchChannelName}</b>} to provide access.
             </div>
             :
             hasBrokenEvents ?
               <div>
                 Looks like one or more events are broken. Please contact an administrator.
-                You can also try refreshing authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} using the below button.
+                You can also try refreshing authorisation for the channel {<b>{props.primaryTwitchChannelName}</b>} using the below button.
               </div>
               :
               <div>
                 Looks like all events are working correctly and you do not need to authorise ChatMate again.
-                If you still want to refresh authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>}, you can do so using the below button.
+                If you still want to refresh authorisation for the channel {<b>{props.primaryTwitchChannelName}</b>}, you can do so using the below button.
               </div>
           }
           <Button
             onClick={onLoginToTwitch}
-            disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null || primaryChannelsRequest.isLoading || primaryChannelsRequest.data == null || authoriseTwitchRequest.isLoading}
+            disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null || authoriseTwitchRequest.isLoading}
             sx={{ mt: 1 }}
           >
             Authorise ChatMate
@@ -170,7 +172,7 @@ export default function TwitchEventStatuses () {
         </OptionalAlert>
       </>}
 
-      <ApiError requestObj={[getLoginUrlRequest, primaryChannelsRequest, authoriseTwitchRequest]} hideRetryButton />
+      <ApiError requestObj={[getLoginUrlRequest, authoriseTwitchRequest]} hideRetryButton />
 
       {authoriseTwitchRequest.data != null && <>
         <Alert sx={{ mt: 1 }} severity="success">

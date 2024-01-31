@@ -36,6 +36,9 @@ export type ApiResponse<T> = T extends ResponseData<infer U> ? T extends U ? ({
   error: ApiError
 })) : never : never
 
+/** Extracts the `data` component from an `ApiResponse` object. */
+export type ApiResponseData<T extends ApiResponse<any>> = Extract<T, { success: true }>['data']
+
 export type ApiRequest<T extends PublicObject<any>> = T
 
 export const API_ERRORS = {
