@@ -6,6 +6,7 @@ import { compareArrays } from '@rebel/shared/util/arrays'
 import { formatDate, formatTime } from '@rebel/shared/util/datetime'
 import { toConstCase } from '@rebel/shared/util/text'
 import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 // for some reason this unions all tables instead of creating a type whose properties are the tables.
 // probably it's got to do with the `readonly` modifies of the tables.
@@ -52,14 +53,14 @@ export default class GenericStore extends ContextClass {
     // ???????????? why is it not recognising `id` as a property when it's CLEARLY typed
     const uniqueUpdates = [...new Set(dataToReplace.map(x => (x as any).id))]
     if (uniqueUpdates.length !== dataToReplace.length) {
-      throw new Error('All data that is being replaced must refer to distinct existing entires')
+      throw new ChatMateError('All data that is being replaced must refer to distinct existing entires')
     }
 
     const allColumns = Object.keys(dataToReplace[0]).sort()
     for (const data of dataToReplace) {
       const keys = Object.keys(data).sort()
       if (!compareArrays(allColumns, keys)) {
-        throw new Error('All replacement data must have the exact same keys')
+        throw new ChatMateError('All replacement data must have the exact same keys')
       }
     }
 
@@ -82,7 +83,7 @@ export default class GenericStore extends ContextClass {
 
       const finalRows: number = await (db[table] as any).count()
       if (currentRows !== finalRows) {
-        throw new Error(`Unable to replace entries in ${table}`)
+        throw new ChatMateError(`Unable to replace entries in ${table}`)
       }
     })
   }
@@ -100,6 +101,6 @@ function sqlise (value: any): string {
   } else if (isPrimitive(value)) {
     return `'${JSON.stringify(value)}'`
   } else {
-    throw new Error('Invalid value ' + JSON.stringify(value))
+    throw new ChatMateError('Invalid value ' + JSON.stringify(value))
   }
 }

@@ -8,7 +8,7 @@ import { single, single2 } from '@rebel/shared/util/arrays'
 import { AccessToken, AccessTokenWithUserId, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
-import { AuthorisationExpiredError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 
 const adminTwitchUserId = 'admin id' as string & AccessToken
 
@@ -52,9 +52,9 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
   const storedAdminToken = cast<AccessToken>({ accessToken: 'loaded access token', refreshToken: 'loaded refresh token', scope: TWITCH_SCOPE })
 
   test('Throws if access token failed to load for RefreshingAuthProvider', async () => {
-    mockAuthStore.loadTwitchAccessTokenByChannelName.calledWith(adminTwitchUsername).mockRejectedValue(new Error('Test'))
+    mockAuthStore.loadTwitchAccessTokenByChannelName.calledWith(adminTwitchUsername).mockRejectedValue(new ChatMateError('Test'))
 
-    await expect(() => twurpleAuthProvider.initialise()).rejects.toThrow()
+    await expect(() => twurpleAuthProvider.initialise()).rejects.toThrowError(ChatMateError)
   })
 
   test('Uses loaded admion token details if access token exists for RefreshingAuthProvider', async () => {
@@ -126,7 +126,7 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     const loadedToken = cast<AccessToken>({ scope: ['differentScope'] })
     mockAuthStore.loadTwitchAccessTokenByChannelName.calledWith(adminTwitchUsername).mockResolvedValue(loadedToken)
 
-    await expect(twurpleAuthProvider.initialise()).rejects.toThrow()
+    await expect(twurpleAuthProvider.initialise()).rejects.toThrowError(ChatMateError)
   })
 })
 

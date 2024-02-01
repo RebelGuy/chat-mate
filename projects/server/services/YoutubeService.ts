@@ -6,6 +6,7 @@ import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
 import { single } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 type YoutubeMod = {
   externalChannelId: string
@@ -42,7 +43,7 @@ export default class YoutubeService extends ContextClass {
   public async getMods (streamerId: number): Promise<YoutubeMod[]> {
     const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot get moderators because streamer ${streamerId} has no active livestream.`)
+      throw new ChatMateError(`Cannot get moderators because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
@@ -61,7 +62,7 @@ export default class YoutubeService extends ContextClass {
   public async modYoutubeChannel (streamerId: number, youtubeChannelId: number) {
     const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot add moderator ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
+      throw new ChatMateError(`Cannot add moderator ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
@@ -86,7 +87,7 @@ export default class YoutubeService extends ContextClass {
   public async banYoutubeChannel (streamerId: number, youtubeChannelId: number) {
     const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot ban channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
+      throw new ChatMateError(`Cannot ban channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
@@ -98,7 +99,7 @@ export default class YoutubeService extends ContextClass {
   public async timeoutYoutubeChannel (streamerId: number, youtubeChannelId: number, durationSeconds: number) {
     const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot timeout channel ${youtubeChannelId} for ${durationSeconds} seconds because streamer ${streamerId} has no active livestream.`)
+      throw new ChatMateError(`Cannot timeout channel ${youtubeChannelId} for ${durationSeconds} seconds because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
@@ -110,7 +111,7 @@ export default class YoutubeService extends ContextClass {
   public async unbanYoutubeChannel (streamerId: number, youtubeChannelId: number) {
     const livestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (livestream == null) {
-      throw new Error(`Cannot timeout channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
+      throw new ChatMateError(`Cannot timeout channel ${youtubeChannelId} because streamer ${streamerId} has no active livestream.`)
     }
 
     const streamerExternalChannelId = await this.getExternalChannelIdFromStreamer(streamerId)
@@ -131,7 +132,7 @@ export default class YoutubeService extends ContextClass {
     const primaryChannels = await this.streamerChannelStore.getPrimaryChannels([streamerId]).then(single)
     const youtubeChannel = primaryChannels.youtubeChannel
     if (youtubeChannel == null) {
-      throw new Error(`Streamer ${streamerId} does not have a primary YouTube channel.`)
+      throw new ChatMateError(`Streamer ${streamerId} does not have a primary YouTube channel.`)
     }
 
     return youtubeChannel.platformInfo.channel.youtubeId

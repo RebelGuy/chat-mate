@@ -5,7 +5,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore, { StreamerApplicationWithUser, CloseApplicationArgs, CreateApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { single, single2 } from '@rebel/shared/util/arrays'
-import { UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { ChatMateError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import AuthStore from '@rebel/server/stores/AuthStore'
@@ -111,7 +111,7 @@ describe(nameof(StreamerService, 'authoriseTwitchLogin'), () => {
 
     mockStreamerChannelStore.getPrimaryChannels
       .calledWith(expectArray<number>([streamerId]))
-      .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: { platformInfo: { platform: 'twitch', channel: { twitchId: twitchUserId, infoHistory: [{ displayName: twitchChannelName }] }}}})])
+      .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: { platformInfo: { platform: 'twitch', channel: { twitchId: twitchUserId, globalInfoHistory: [{ displayName: twitchChannelName }] }}}})])
     mockWebService.fetch
       .calledWith(expect.stringContaining(code))
       .mockResolvedValue(cast<Response>({ ok: true, json: () => Promise.resolve({ access_token, refresh_token }) }))
@@ -135,7 +135,7 @@ describe(nameof(StreamerService, 'authoriseTwitchLogin'), () => {
       .calledWith(expectArray<number>([streamerId]))
       .mockResolvedValue([cast<PrimaryChannels>({ twitchChannel: null })])
 
-    await expect(() => streamerService.authoriseTwitchLogin(streamerId, code)).rejects.toThrow()
+    await expect(() => streamerService.authoriseTwitchLogin(streamerId, code)).rejects.toThrowError(ChatMateError)
 
     expect(mockAuthStore.saveTwitchAccessToken.mock.calls.length).toBe(0)
     expect(mockTwurpleAuthProvider.removeTokenForUser.mock.calls.length).toBe(0)

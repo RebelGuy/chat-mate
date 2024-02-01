@@ -1,9 +1,9 @@
 import { RegisteredUser, Streamer, StreamerApplication } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 export type StreamerApplicationWithUser = StreamerApplication & {
   registeredUser: RegisteredUser
@@ -38,7 +38,7 @@ export default class StreamerStore extends ContextClass {
     try {
       return await this.db.streamer.create({ data: { registeredUserId }})
     } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED) {
         throw new UserAlreadyStreamerError()
       }
 
@@ -80,10 +80,6 @@ export default class StreamerStore extends ContextClass {
 
   public async getStreamers (): Promise<Streamer[]> {
     return await this.db.streamer.findMany({})
-  }
-
-  public async getStreamerCount (): Promise<number> {
-    return await this.db.streamer.count()
   }
 
   /** Gets the list of all applications by the user or, if not defined, by all users. */

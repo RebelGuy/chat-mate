@@ -2,8 +2,9 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import { AccessToken } from '@twurple/auth'
-import { YoutubeAuth } from '@prisma/client'
+import { YoutubeAuth, YoutubeWebAuth } from '@prisma/client'
 import { New } from '@rebel/server/models/entities'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -56,9 +57,8 @@ export default class AuthStore extends ContextClass {
     })
   }
 
-  public async loadYoutubeWebAccessToken (channelId: string): Promise<string | null> {
-    const result = await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
-    return result?.accessToken ?? null
+  public async loadYoutubeWebAccessToken (channelId: string): Promise<YoutubeWebAuth | null> {
+    return await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
   }
 
   /** Must provide a Twitch username when creating a new access token (not required when refreshing the token).
@@ -73,7 +73,7 @@ export default class AuthStore extends ContextClass {
     }
 
     if (twitchUserId == null && twitchUsername == null) {
-      throw new Error('Must provide a Twitch user ID or username when saving an access token')
+      throw new ChatMateError('Must provide a Twitch user ID or username when saving an access token')
     }
 
     const existingToken = await this.dbProvider.get().twitchAuth.findFirst({
@@ -81,7 +81,7 @@ export default class AuthStore extends ContextClass {
     })
     if (existingToken == null) {
       if (twitchUsername == null) {
-        throw new Error('Must provide a Twitch username when creating a new access token')
+        throw new ChatMateError('Must provide a Twitch username when creating a new access token')
       }
 
       await this.dbProvider.get().twitchAuth.create({ data: { twitchUsername, twitchUserId, ...tokenData }})

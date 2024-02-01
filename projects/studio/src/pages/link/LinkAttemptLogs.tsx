@@ -26,7 +26,8 @@ export default function LinkAttemptLogs () {
     {getLogsRequest.data != null && <>
       <Table
         stickyHeader
-        sx={{ width: '100%', transform: 'translateY(-5px)' }}
+        size="small"
+        style={{ transform: 'translateY(-5px)' }}
       >
         <TableHead>
           <TableRow>

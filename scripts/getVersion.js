@@ -3,10 +3,8 @@
 const execSync = require('child_process').execSync
 const package = require(`../package.json`)
 
+const version = package.version
 const numCommits = execSync(`git rev-list HEAD --count`).toString().trim()
-const versionParts = package.version.split('.')
-versionParts[2] = `${numCommits}`
-const version = versionParts.join('.')
 const hash = execSync(`git rev-parse --short HEAD`)
 
-console.log(`${version} ${hash}`)
+console.log(`${version}.${numCommits} (${hash})`)

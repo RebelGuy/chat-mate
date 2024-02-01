@@ -11,7 +11,7 @@ function parseBoolean (str) {
 }
 
 // add the version number to the top of the app.js file
-const version = execSync('node ../../scripts/getVersion').toString().split(' ')[0]
+const version = execSync('node ../../scripts/getVersion').toString()
 const banner =  `${version} generated at ${new Date().toISOString()}`
 
 module.exports = (env) => {
@@ -100,7 +100,8 @@ module.exports = (env) => {
     applySchemaMigrations: './scripts/migrations/applySchemaMigrations.ts',
     TwitchAuth: './scripts/TwitchAuth.ts',
     YoutubeAuth: './scripts/YoutubeAuth.ts',
-    RefreshSnapshots: './scripts/RefreshSnapshots.ts'
+    RefreshSnapshots: './scripts/RefreshSnapshots.ts',
+    resetPassword: './scripts/resetPassword.ts'
   } : {}
 
   // skip type checking

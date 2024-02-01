@@ -19,6 +19,7 @@ import UserService from '@rebel/server/services/UserService'
 import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore'
 import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
 import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 /** This is a legacy multiplier that we used to have. We can't simply remove it because, when linking channels, experience would otherwise be gained/lost.
  * Modifying the baseExperiences was an option, but I couldn't work it out due to the complex nature of the xp equation. */
@@ -160,7 +161,7 @@ export default class ExperienceService extends ContextClass {
     return userLevels.map<RankedEntry>((userLevel, i) => {
       const channel = userChannels.find(c => getPrimaryUserId(c) === userLevel.primaryUserId)
       if (channel == null) {
-        throw new Error(`Could not find channel for primary user ${userLevel.primaryUserId}`)
+        throw new ChatMateError(`Could not find channel for primary user ${userLevel.primaryUserId}`)
       }
 
       return {
@@ -255,7 +256,7 @@ export default class ExperienceService extends ContextClass {
 
   public async modifyExperience (primaryUserId: number, streamerId: number, adminUserId: number, levelDelta: number, message: string | null): Promise<UserLevel> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error(`Cannot modify the user's experience at this time. Please try again later.`)
+      throw new ChatMateError(`Cannot modify the user's experience at this time. Please try again later.`)
     }
 
     const currentExperiences = await this.experienceStore.getExperience(streamerId, [primaryUserId])
@@ -334,7 +335,7 @@ export default class ExperienceService extends ContextClass {
         if (livestreamId != null && !isPunished) {
           const chatMessage = chatMessages.find(msg => msg.id === tx.experienceDataChatMessage.chatMessageId)
           if (chatMessage == null) {
-            throw new Error(`Expected chat message ${tx.experienceDataChatMessage.chatMessageId} to be loaded, but it was not.`)
+            throw new ChatMateError(`Expected chat message ${tx.experienceDataChatMessage.chatMessageId} to be loaded, but it was not.`)
           }
 
           const participationStreakMultiplier = participationStreakMultiplierGenerator(livestreamId, platform)

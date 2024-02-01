@@ -1,5 +1,4 @@
 import { ChatMessage, ChatMessagePart, Prisma } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -8,6 +7,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { reverse } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
+import { PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 export type ChatSave = {
   continuationToken: string | null
@@ -76,7 +76,7 @@ export default class ChatStore extends ContextClass {
           include: { chatMessageParts: true }
         })
       } catch (e: any) {
-        if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED) {
           return null
         } else {
           throw e
@@ -101,8 +101,18 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  public async getChatMessageCount (): Promise<number> {
-    return await this.db.chatMessage.count()
+  public async getYoutubeChatMessageCount (): Promise<number> {
+    return await this.db.chatMessage.count({ where: {
+      deletedTime: null,
+      youtubeChannelId: { not: null }
+    }})
+  }
+
+  public async getTwitchChatMessageCount (): Promise<number> {
+    return await this.db.chatMessage.count({ where: {
+      deletedTime: null,
+      twitchChannelId: { not: null }
+    }})
   }
 
   public async getLastYoutubeChat (streamerId: number): Promise<ChatItemWithRelations | null> {
@@ -245,7 +255,7 @@ export default class ChatStore extends ContextClass {
 
 const includeChannelInfo = {
   include: Prisma.validator<Prisma.YoutubeChannelInclude | Prisma.TwitchChannelInclude>()({
-    infoHistory: {
+    globalInfoHistory: {
       orderBy: { time: 'desc' },
       take: 1
     }

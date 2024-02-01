@@ -4,5 +4,6 @@
     { "pattern": "github\\.com" },
     { "pattern": "twitter\\.com" },
     { "pattern": "https://chat-mate" }
-  ]
+  ],
+  "aliveStatusCodes": [200, 403]
 }

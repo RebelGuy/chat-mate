@@ -1,8 +1,11 @@
 import { ApiError, ApiResponse, PublicObject, ResponseData } from '@rebel/api-models/types'
 import { Primitive } from '@rebel/shared/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { isPrimitive, NO_OP } from '@rebel/shared/util/typescript'
 import LoginContext, { LoginContextType } from '@rebel/studio/contexts/LoginContext'
 import RequestContext, { RequestContextType } from '@rebel/studio/contexts/RequestContext'
+import useRequireLogin from '@rebel/studio/hooks/useRequireLogin'
+import { LOGIN_PATH } from '@rebel/studio/utility/api'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { useContext, useEffect, useRef, useState } from 'react'
 
@@ -136,6 +139,7 @@ export default function useRequest<
   const { isLoading, setIsLoading, data, setData, apiError, setApiError, removeCache } = useContext<RequestContextType<TResponseData>>(RequestContext)(cacheKey)
   const [onRetry, setOnRetry] = useState<(() => void) | null>(null)
   let loginContext = useContext(LoginContext)
+  const { onRequireLogin } = useRequireLogin()
 
   // this is essentially `useState` but it updates the value immediately.
   // concept stolen from https://stackoverflow.com/a/60643670
@@ -145,9 +149,9 @@ export default function useRequest<
 
   if (loginContext == null) {
     if (request.requiresLogin === true && options?.loginToken == null) {
-      throw new Error('`userRequest` cannot use LoginContext because it is null and no `loginToken` has been provided')
+      throw new ChatMateError('`userRequest` cannot use LoginContext because it is null and no `loginToken` has been provided')
     } else if (request.requiresStreamer === true && options?.streamer == null) {
-      throw new Error('`userRequest` cannot use LoginContext because it is null and no `streamer` has been provided')
+      throw new ChatMateError('`userRequest` cannot use LoginContext because it is null and no `streamer` has been provided')
     }
 
     loginContext = {
@@ -198,11 +202,11 @@ export default function useRequest<
       }
 
       if (requiresLogin && loginToken == null) {
-        throw new Error('You must be logged in to do that.')
+        throw new ChatMateError('You must be logged in to do that.')
       } else if (requiresStreamer === true && streamer == null) {
-        throw new Error('You must select a streamer to do that.')
+        throw new ChatMateError('You must select a streamer to do that.')
       } else if (requiresStreamer === 'self' && !loginContext.isStreamer) {
-        throw new Error('You must be a streamer to do that.')
+        throw new ChatMateError('You must be a streamer to do that.')
       }
 
       setIsLoading(true)
@@ -229,6 +233,12 @@ export default function useRequest<
           onError(response.error, type)
         }
         returnObj = { type: 'error', error: response.error }
+
+        if (response.error.errorCode === 401 && path !== LOGIN_PATH) {
+          loginContext.logout()
+          onRequireLogin()
+          removeCache()
+        }
       }
     } catch (e: any) {
       const error: ApiError = { errorCode: 500, errorType: 'Unkonwn', internalErrorType: 'Unknown', message: e.message }

@@ -6,7 +6,7 @@ import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LogService from '@rebel/server/services/LogService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import CommandStore from '@rebel/server/stores/CommandStore'
-import { InvalidCommandArgumentsError, UnknownCommandError } from '@rebel/shared/util/error'
+import { ChatMateError, InvalidCommandArgumentsError, UnknownCommandError } from '@rebel/shared/util/error'
 import Semaphore from '@rebel/shared/util/Semaphore'
 
 export type NormalisedCommand = {
@@ -118,7 +118,7 @@ export default class CommandService extends ContextClass {
     const message = await this.chatStore.getChatById(chatCommand.chatMessageId)
 
     if (message.userId == null) {
-      throw new Error('Chat command message must have a chat user attached to it')
+      throw new ChatMateError('Chat command message must have a chat user attached to it')
     }
 
     const args = this.commandHelpers.getCommandArguments(message.chatMessageParts)

@@ -1,7 +1,11 @@
+import { styled } from '@mui/material'
+
+const Header = styled('h3')({})
+
 export default function PanelHeader (props: { children: React.ReactNode }) {
   return (
-    <h3>
+    <Header sx={{ mb: 1 }}>
       {props.children}
-    </h3>
+    </Header>
   )
 }

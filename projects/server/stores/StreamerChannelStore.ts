@@ -1,9 +1,9 @@
 import { ChatUser, StreamerTwitchChannelLink, StreamerYoutubeChannelLink } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { channelQuery_includeLatestChannelInfo, TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import { PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
 
 export type PrimaryChannels = {
   streamerId: number
@@ -23,49 +23,59 @@ export default class StreamerChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async deleteStreamerYoutubeChannelLink (streamerId: number): Promise<UserChannel<'youtube'> | null> {
-    try {
-      const removedLink = await this.db.streamerYoutubeChannelLink.delete({
-        where: { streamerId },
-        include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
-      })
-      return youtubeLinkToUserChannel(removedLink)
+  /** @throws {@link PrimaryChannelNotFoundError}: When no primary Youtube channel exists for the streamer. */
+  public async removeStreamerYoutubeChannelLink (streamerId: number): Promise<UserChannel<'youtube'>> {
+    const entry = await this.db.streamerYoutubeChannelLink.findFirst({ where: {
+      streamerId: streamerId,
+      timeRemoved: null
+    }})
 
-    } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
-        return null
-      } else {
-        throw e
-      }
+    if (entry == null) {
+      throw new PrimaryChannelNotFoundError(streamerId, 'youtube')
     }
+
+    const removedLink = await this.db.streamerYoutubeChannelLink.update({
+      data: { timeRemoved: new Date() },
+      where: { id: entry.id },
+      include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
+    })
+    return youtubeLinkToUserChannel(removedLink)
   }
 
-  public async deleteStreamerTwitchChannelLink (streamerId: number): Promise<UserChannel<'twitch'> | null> {
-    try {
-      const removedLink = await this.db.streamerTwitchChannelLink.delete({
-        where: { streamerId },
-        include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
-      })
-      return twitchLinkToUserChannel(removedLink)
+  /** @throws {@link PrimaryChannelNotFoundError}: When no primary Twitch channel exists for the streamer. */
+  public async removeStreamerTwitchChannelLink (streamerId: number): Promise<UserChannel<'twitch'>> {
+    const entry = await this.db.streamerTwitchChannelLink.findFirst({ where: {
+      streamerId: streamerId,
+      timeRemoved: null
+    }})
 
-    } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
-        return null
-      } else {
-        throw e
-      }
+    if (entry == null) {
+      throw new PrimaryChannelNotFoundError(streamerId, 'twitch')
     }
+
+    const removedLink = await this.db.streamerTwitchChannelLink.update({
+      data: { timeRemoved: new Date() },
+      where: { id: entry.id },
+      include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
+    })
+    return twitchLinkToUserChannel(removedLink)
   }
 
   /** Returns the streamers' primary channels - the channels that were selected to be streamed on. */
   public async getPrimaryChannels (streamerIds: number[]): Promise<PrimaryChannels[]> {
     const youtubeLinks = await this.db.streamerYoutubeChannelLink.findMany({
-      where: { streamerId: { in: streamerIds } },
+      where: {
+        streamerId: { in: streamerIds },
+        timeRemoved: null
+      },
       include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 
     const twitchLinks = await this.db.streamerTwitchChannelLink.findMany({
-      where: { streamerId: { in: streamerIds} },
+      where: {
+        streamerId: { in: streamerIds},
+        timeRemoved: null
+      },
       include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 
@@ -80,20 +90,50 @@ export default class StreamerChannelStore extends ContextClass {
     })
   }
 
-  /** Throws if a primary youtube channel already exists. */
+  /** @throws {@link PrimaryChannelAlreadyExistsError}: When a primary Youtube channel already exists for the streamer. */
   public async setStreamerYoutubeChannelLink (streamerId: number, youtubeChannelId: number): Promise<UserChannel<'youtube'>> {
+    const existingLink = await this.db.streamerYoutubeChannelLink.findFirst({
+      where: {
+        streamerId: streamerId,
+        timeRemoved: null
+      }
+    })
+
+    if (existingLink != null) {
+      throw new PrimaryChannelAlreadyExistsError(streamerId, 'youtube')
+    }
+
     const addedLink = await this.db.streamerYoutubeChannelLink.create({
-      data: { streamerId, youtubeChannelId },
+      data: {
+        streamerId: streamerId,
+        youtubeChannelId: youtubeChannelId,
+        timeAdded: new Date()
+      },
       include: { youtubeChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 
     return youtubeLinkToUserChannel(addedLink)
   }
 
-  /** Throws if a primary twitch channel already exists. */
+  /** @throws {@link PrimaryChannelAlreadyExistsError}: When a primary Twitch channel already exists for the streamer. */
   public async setStreamerTwitchChannelLink (streamerId: number, twitchChannelId: number): Promise<UserChannel<'twitch'>> {
+    const existingLink = await this.db.streamerTwitchChannelLink.findFirst({
+      where: {
+        streamerId: streamerId,
+        timeRemoved: null
+      }
+    })
+
+    if (existingLink != null) {
+      throw new PrimaryChannelAlreadyExistsError(streamerId, 'twitch')
+    }
+
     const addedLink = await this.db.streamerTwitchChannelLink.create({
-      data: { streamerId, twitchChannelId },
+      data: {
+        streamerId: streamerId,
+        twitchChannelId: twitchChannelId,
+        timeAdded: new Date()
+      },
       include: { twitchChannel: { include: channelQuery_includeLatestChannelInfo } }
     })
 

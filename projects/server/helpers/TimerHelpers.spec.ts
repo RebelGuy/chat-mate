@@ -1,5 +1,6 @@
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import { nameof, promised } from '@rebel/shared/testUtils'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 let timeoutSpy: jest.SpyInstance
 let timerHelpers: TimerHelpers
@@ -123,7 +124,7 @@ describe(nameof(TimerHelpers, 'createRepeatingTimer'), () => {
       callback: () => new Promise<void>(r => r()) as any
     }
 
-    await expect(() => timerHelpers.createRepeatingTimer(options, true)).rejects.toThrow()
+    await expect(() => timerHelpers.createRepeatingTimer(options, true)).rejects.toThrowError(ChatMateError)
   })
 })
 

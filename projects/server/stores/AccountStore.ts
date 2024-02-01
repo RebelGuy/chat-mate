@@ -1,12 +1,11 @@
-import { Prisma, RegisteredUser } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
+import { RegisteredUser } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { group } from '@rebel/shared/util/arrays'
-import { UsernameAlreadyExistsError } from '@rebel/shared/util/error'
+import { ChatMateError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { randomString } from '@rebel/shared/util/random'
 import { hashString } from '@rebel/shared/util/strings'
+import { PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 export type RegisteredUserCreateArgs = {
   username: string
@@ -53,7 +52,7 @@ export default class AccountStore extends ContextClass {
         aggregateChatUser: { create: {}}
       }})
     } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED) {
         throw new UsernameAlreadyExistsError(registeredUser.username)
       }
       throw e
@@ -96,7 +95,7 @@ export default class AccountStore extends ContextClass {
         }
       }
 
-      throw new Error(`User with anyUserId ${id} was identified as neither an aggregate user nor a default user.`)
+      throw new ChatMateError(`User with anyUserId ${id} was identified as neither an aggregate user nor a default user.`)
     })
   }
 
@@ -176,6 +175,12 @@ export default class AccountStore extends ContextClass {
     })
   }
 
+  public async getRegisteredUserFromName (username: string): Promise<RegisteredUser | null> {
+    return await this.db.registeredUser.findFirst({
+      where: { username: username }
+    })
+  }
+
   public async getRegisteredUserFromToken (token: string): Promise<RegisteredUser | null> {
     const result = await this.db.loginToken.findUnique({
       where: { token: token },
@@ -194,5 +199,13 @@ export default class AccountStore extends ContextClass {
   /** Returns all registered users whose display names match the given string (not case sensitive). */
   public async searchByUserName (name: string): Promise<RegisteredUser[]> {
     return await this.db.registeredUser.findMany({ where: { username: { contains: name.toLowerCase() }}})
+  }
+
+  /** Sets the password of an existing user. */
+  public async setPassword (username: string, newPassword: string): Promise<void> {
+    await this.db.registeredUser.update({
+      where: { username: username },
+      data: { hashedPassword: hashString(username + newPassword) }
+    })
   }
 }

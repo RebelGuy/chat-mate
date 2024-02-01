@@ -1,5 +1,6 @@
 require('module-alias/register')
 import { DB } from '@rebel/server/scripts/consts'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 // run using one of the following:
 // yarn workspace server snapshot:local
@@ -31,7 +32,7 @@ const main = async () => {
   if (totalTransaction === totalSnapshot) {
     console.log(`Successfully verified data integrity.`)
   } else {
-    throw new Error(`Total transaction experience (${totalTransaction}) is different from the total snapshot experience (${totalSnapshot}).`)
+    throw new ChatMateError(`Total transaction experience (${totalTransaction}) is different from the total snapshot experience (${totalSnapshot}).`)
   }
 }
 

@@ -1,6 +1,7 @@
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
 import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
@@ -21,6 +22,7 @@ type Props = {
   onSave: (data: PublicCustomEmoji) => void
   onCancel: () => void
   onCheckDuplicateSymbol: (symbol: string) => boolean
+  onCheckDataChanged: (data: EmojiData) => boolean
 }
 
 const DEFAULT_DATA: EmojiData = {
@@ -57,7 +59,8 @@ export default function CustomEmojiEditor (props: Props) {
     symbolValidation == null &&
     levelRequirementValidation == null &&
     !isNullOrEmpty(editingData.imageData) &&
-    (!enableWhitelist || enableWhitelist && editingData.whitelistedRanks.length > 0)
+    (!enableWhitelist || enableWhitelist && editingData.whitelistedRanks.length > 0) &&
+    props.onCheckDataChanged(editingData)
 
   const setSymbol = (symbol: string) => {
     symbol = symbol.trim()
@@ -76,6 +79,10 @@ export default function CustomEmojiEditor (props: Props) {
 
   const setLevelRequirement = (levelRequirement: string) => {
     const num = Number(levelRequirement)
+    if (isNaN(num)) {
+      return
+    }
+
     onChange({ ...editingData!, levelRequirement: num })
 
     if (num < 0 || num > 100) {
@@ -102,7 +109,7 @@ export default function CustomEmojiEditor (props: Props) {
       const imageData = data.substring(prefix.length)
       onChange({ ...editingData!, imageData })
     }
-    fr.onerror = () => { throw new Error() }
+    fr.onerror = () => { throw new ChatMateError() }
     fr.readAsDataURL(files[0])
   }
 
@@ -228,3 +235,5 @@ export default function CustomEmojiEditor (props: Props) {
     </Dialog>
   )
 }
+
+

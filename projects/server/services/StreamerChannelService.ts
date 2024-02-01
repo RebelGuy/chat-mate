@@ -8,7 +8,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { nonNull, single } from '@rebel/shared/util/arrays'
-import { ForbiddenError } from '@rebel/shared/util/error'
+import { ChatMateError, ForbiddenError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type TwitchStreamerChannel = {
@@ -90,6 +90,7 @@ export default class StreamerChannelService extends ContextClass {
 
   /** Sets the provided channel to be the streamer's primary youtube or twitch channel.
    * @throws {@link ForbiddenError}: When the streamer is not linked to the youtube or twitch channel.
+   * @throws {@link PrimaryChannelAlreadyExistsError}: When the streamer already has a primary channel for the given platform.
   */
   public async setPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch', youtubeOrTwitchChannelId: number) {
     const [youtubeLivestream, twitchLivestream] = await Promise.all([
@@ -97,7 +98,7 @@ export default class StreamerChannelService extends ContextClass {
       this.livestreamStore.getCurrentTwitchLivestream(streamerId)
     ])
     if (youtubeLivestream != null || twitchLivestream != null) {
-      throw new Error('Cannot set the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
+      throw new ChatMateError('Cannot set the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
     const streamer = await this.streamerStore.getStreamerById(streamerId)
@@ -124,26 +125,25 @@ export default class StreamerChannelService extends ContextClass {
     await this.eventDispatchService.addData(EVENT_ADD_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 
+  /** @throws {@link PrimaryChannelNotFoundError}: When the streamer has not set a primary channel for the given platform. */
   public async unsetPrimaryChannel (streamerId: number, platform: 'youtube' | 'twitch') {
     const [youtubeLivestream, twitchLivestream] = await Promise.all([
       this.livestreamStore.getActiveYoutubeLivestream(streamerId),
       this.livestreamStore.getCurrentTwitchLivestream(streamerId)
     ])
     if (youtubeLivestream != null || twitchLivestream != null) {
-      throw new Error('Cannot unset the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
+      throw new ChatMateError('Cannot unset the primary channel because a livestream is currently active or in progress. Please deactivate the livestream or try again later.')
     }
 
     let userChannel: UserChannel | null
     if (platform === 'youtube') {
-      userChannel = await this.streamerChannelStore.deleteStreamerYoutubeChannelLink(streamerId)
+      userChannel = await this.streamerChannelStore.removeStreamerYoutubeChannelLink(streamerId)
     } else if (platform === 'twitch') {
-      userChannel = await this.streamerChannelStore.deleteStreamerTwitchChannelLink(streamerId)
+      userChannel = await this.streamerChannelStore.removeStreamerTwitchChannelLink(streamerId)
     } else {
       assertUnreachable(platform)
     }
 
-    if (userChannel != null) {
-      await this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
-    }
+    await this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 }

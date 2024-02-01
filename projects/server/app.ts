@@ -39,14 +39,13 @@ import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthPro
 import HelixEventService from '@rebel/server/services/HelixEventService'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
-import YoutubeTimeoutRefreshService from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import PunishmentController from '@rebel/server/controllers/PunishmentController'
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
-import { TimeoutError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
+import { ChatMateError, TimeoutError } from '@rebel/shared/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
@@ -100,6 +99,7 @@ import ExternalRankDataService from '@rebel/server/services/rank/ExternalRankDat
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import CacheService from '@rebel/server/services/CacheService'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -175,6 +175,7 @@ const main = async () => {
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
+    .withClass('chatMateStateService', ChatMateStateService)
     .withClass('eventDispatchService', EventDispatchService)
     .withClass('fileService', FileService)
     .withClass('applicationInsightsService', ApplicationInsightsService)
@@ -278,7 +279,7 @@ const main = async () => {
         } catch (e: any) {
           // the response body was just a message (string), so we must construct the error object explicitly
           if (res.statusCode === 200) {
-            throw new Error('It is expected that only errors are ever sent with a simple message.')
+            throw new ChatMateError('It is expected that only errors are ever sent with a simple message.')
           }
 
           responseBody = {

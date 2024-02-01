@@ -1,4 +1,4 @@
-import { ChatCheer, ChatCommand, ChatCustomEmoji, ChatEmoji, ChatMessage, ChatMessagePart, ChatText, ChatUser, CustomEmojiVersion, RegisteredUser, TwitchChannel, TwitchChannelInfo, YoutubeChannel, YoutubeChannelInfo } from '@prisma/client'
+import { ChatCheer, ChatCommand, ChatCustomEmoji, ChatEmoji, ChatMessage, ChatMessagePart, ChatText, ChatUser, CustomEmojiVersion, RegisteredUser, TwitchChannel, TwitchChannelGlobalInfo, YoutubeChannel, YoutubeChannelGlobalInfo } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/api-models/public/chat/PublicChatItem'
 import { PublicMessageCheer } from '@rebel/api-models/public/chat/PublicMessageCheer'
@@ -16,7 +16,8 @@ import { Singular } from '@rebel/shared/types'
 import { sortByLength } from '@rebel/shared/util/arrays'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
-import { SafeExtract } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 export type ChatPlatform = 'youtube' | 'twitch'
 
@@ -182,8 +183,8 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
 
 // wtf
 export type ChatItemWithRelations = (ChatMessage & {
-  youtubeChannel: YoutubeChannel & { infoHistory: YoutubeChannelInfo[] } | null
-  twitchChannel: TwitchChannel & { infoHistory: TwitchChannelInfo[] } | null
+  youtubeChannel: YoutubeChannel & { globalInfoHistory: YoutubeChannelGlobalInfo[] } | null
+  twitchChannel: TwitchChannel & { globalInfoHistory: TwitchChannelGlobalInfo[] } | null
   chatCommand: ChatCommand | null
   user: (ChatUser & { aggregateChatUser: ChatUser | null }) | null
   chatMessageParts: (ChatMessagePart & {
@@ -244,7 +245,7 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
         name: part.cheer.name
       })
     } else {
-      throw new Error('Chat message part has an invalid type')
+      throw new ChatMateError('Chat message part has an invalid type')
     }
   }
 
@@ -274,7 +275,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   }
 
   if (chat.userId == null || chat.user == null) {
-    throw new Error('ChatItem is expected to have a userId attached')
+    throw new ChatMateError('ChatItem is expected to have a userId attached')
   }
 
   let userChannel: UserChannel
@@ -297,7 +298,7 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
       }
     }
   } else {
-    throw new Error(`Cannot determine platform of chat item ${chat.id} because both the channel and twitchChannel are null`)
+    throw new ChatMateError(`Cannot determine platform of chat item ${chat.id} because both the channel and twitchChannel are null`)
   }
 
   const levelInfo: PublicLevelInfo = {
@@ -391,7 +392,7 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
       name: part.cheer.name
     }
   } else {
-    throw new Error('ChatMessagePart must have the text, emoji, or customEmoji component defined.')
+    throw new ChatMateError('ChatMessagePart must have the text, emoji, or customEmoji component defined.')
   }
 
   const publicPart: PublicMessagePart = {
@@ -407,9 +408,9 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
 /** Returns the remainder of the text before and after the removal, if any. */
 export function removeRangeFromText (part: PartialTextChatMessage, removeStart: number, removeLength: number): [leading: PartialTextChatMessage | null, removed: PartialTextChatMessage, trailing: PartialTextChatMessage | null] {
   if (removeStart < 0 || removeStart >= part.text.length) {
-    throw new Error(`Illegal removal index ${removeStart}`)
+    throw new ChatMateError(`Illegal removal index ${removeStart}`)
   } else if (removeLength <= 0 || removeStart + removeLength > part.text.length) {
-    throw new Error(`Illegal removeal length ${removeLength}`)
+    throw new ChatMateError(`Illegal removeal length ${removeLength}`)
   }
 
   const leading: PartialTextChatMessage | null = removeStart === 0 ? null : { type: 'text', text: part.text.substring(0, removeStart), isBold: part.isBold, isItalics: part.isItalics }

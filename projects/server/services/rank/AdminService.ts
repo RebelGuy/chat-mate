@@ -9,6 +9,7 @@ import WebService from '@rebel/server/services/WebService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { getUserName, isYoutubeChannel } from '@rebel/server/services/ChannelService'
 import { single } from '@rebel/shared/util/arrays'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   twitchClientId: string
@@ -73,7 +74,7 @@ export default class AdminService extends ContextClass {
   public async getYoutubeChannelName (): Promise<string> {
     const channel = await this.channelStore.getChannelFromUserNameOrExternalId(this.youtubeChannelId)
     if (channel == null || !isYoutubeChannel(channel)) {
-      throw new Error('Admin Youtube channel not found')
+      throw new ChatMateError('Admin Youtube channel not found')
     }
 
     const userChannel = await this.channelStore.getYoutubeChannelsFromChannelIds([channel.id]).then(single)
@@ -94,7 +95,7 @@ export default class AdminService extends ContextClass {
     if (!rawResponse.ok) {
       const message = `Twitch auth response was status ${rawResponse.status}: ${await rawResponse.text()}`
       this.logService.logError(this, `Failed to update Twitch access token. ${message}`)
-      throw new Error(message)
+      throw new ChatMateError(message)
     }
 
     const response = await rawResponse.json() as any

@@ -7,10 +7,11 @@ import { expectObject, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
-import { YoutubeChannelInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelInfo } from '@prisma/client'
+import { YoutubeChannelGlobalInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelGlobalInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
-import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
+import { DbError, ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
+import { SafeOmit } from '@rebel/shared/types'
 
 const youtube1UserId = 1
 const extYoutubeChannel1 = 'channel1'
@@ -108,26 +109,20 @@ const cheer1: PartialCheerChatMessage = {
   name: 'Mr Cheerer'
 }
 
-function authorToChannelInfo (a: Author, time?: Date): Omit<YoutubeChannelInfo, 'channelId' | 'id'> {
+function authorToChannelInfo (a: Author, time?: Date): SafeOmit<YoutubeChannelGlobalInfo, 'channelId' | 'id'> {
   return {
     isVerified: a.attributes.isVerified,
-    isModerator: a.attributes.isModerator,
-    isOwner: a.attributes.isOwner,
     imageUrl: a.image,
     name: a.name!,
     time: time ?? new Date()
   }
 }
 
-function twitchAuthorToChannelInfo (a: TwitchAuthor, time?: Date): Omit<TwitchChannelInfo, 'channelId' | 'id'> {
+function twitchAuthorToChannelInfo (a: TwitchAuthor, time?: Date): SafeOmit<TwitchChannelGlobalInfo, 'channelId' | 'id'> {
   return {
     time: time ?? new Date(),
     colour: a.color ?? '',
     displayName: a.displayName,
-    isBroadcaster: a.isBroadcaster,
-    isMod: a.isMod,
-    isSubscriber: a.isSubscriber,
-    isVip: a.isVip,
     userName: a.userName,
     userType: a.userType ?? ''
   }
@@ -175,17 +170,17 @@ export default () => {
     await db.youtubeChannel.create({ data: {
       user: { create: {}}, // user id: 1
       youtubeId: ytAuthor1.channelId,
-      infoHistory: { create: authorToChannelInfo(ytAuthor1)}
+      globalInfoHistory: { create: authorToChannelInfo(ytAuthor1)}
     }})
     await db.twitchChannel.create({ data: {
       user: { create: {}}, // user id: 2
       twitchId: twitchAuthor.userId,
-      infoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
+      globalInfoHistory: { create: twitchAuthorToChannelInfo(twitchAuthor)}
     }})
     await db.youtubeChannel.create({ data: {
       user: { create: {}},
       youtubeId: ytAuthor2.channelId,
-      infoHistory: { create: authorToChannelInfo(ytAuthor2)}
+      globalInfoHistory: { create: authorToChannelInfo(ytAuthor2)}
     }})
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user1', hashedPassword: 'pass1', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 4
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 5
@@ -476,8 +471,8 @@ export default () => {
     })
   })
 
-  describe(nameof(ChatStore, 'getChatMessageCount'), () => {
-    test('Returns the number of chat messages', async () => {
+  describe(nameof(ChatStore, 'getYoutubeChatMessageCount'), () => {
+    test('Returns the number of Youtube chat messages, excluding deleted messages', async () => {
       await db.chatMessage.create({ data: {
         streamer: { connect: { id: streamer1, }},
         user: { connect: { id: youtube2UserId }},
@@ -492,12 +487,89 @@ export default () => {
         time: data.time2,
         externalId: 'x2',
         youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x3',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+        deletedTime: data.time3
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time3,
+        externalId: 'x4',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }},
+        deletedTime: data.time4
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time2,
+        externalId: 'x5',
+        twitchChannel: { connect: { id: 1 }},
         twitchLivestream: { connect: { id: 1 }},
       }})
 
-      const result = await chatStore.getChatMessageCount()
+      const result = await chatStore.getYoutubeChatMessageCount()
 
       expect(result).toBe(2)
+    })
+  })
+
+  describe(nameof(ChatStore, 'getTwitchChatMessageCount'), () => {
+    test('Returns the number of Twitch chat messages, excluding deleted messages', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1,
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x3',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }},
+        deletedTime: data.time3
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time3,
+        externalId: 'x4',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }},
+        deletedTime: data.time4
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time2,
+        externalId: 'x5',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }},
+      }})
+
+      const result = await chatStore.getTwitchChatMessageCount()
+
+      expect(result).toBe(1)
     })
   })
 
@@ -683,7 +755,7 @@ export default () => {
     })
 
     test('Throws if the user has not posted a message in the given streamer', async () => {
-      await expect(() => chatStore.getTimeOfFirstChat(streamer1, [user3])).rejects.toThrow()
+      await expect(() => chatStore.getTimeOfFirstChat(streamer1, [user3])).rejects.toThrowError(ChatMessageForStreamerNotFoundError)
     })
   })
 
@@ -836,7 +908,7 @@ export default () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      await expect(() => chatStore.getChatById(2)).rejects.toThrow()
+      await expect(() => chatStore.getChatById(2)).rejects.toThrowError(DbError)
     })
   })
 

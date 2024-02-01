@@ -5,8 +5,7 @@ import DonationStore, { DonationCreateArgs, DonationWithUser } from '@rebel/serv
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import * as data from '@rebel/server/_test/testData'
-import { randomInt } from 'crypto'
-import { DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, DbError, DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, NotFoundError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
 import { single } from '@rebel/shared/util/arrays'
 import { PartialCustomEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -185,21 +184,21 @@ export default () => {
     })
 
     test(`Throws if donation doesn't exist`, async () => {
-      await expect(() => donationStore.getDonation(streamer1, 5)).rejects.toThrow()
+      await expect(() => donationStore.getDonation(streamer1, 5)).rejects.toThrowError(DbError)
     })
 
     test('Throws if donation is deleted', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ isDeleted: true }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrow()
+      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrowError(DbError)
     })
 
     test('Throws if donation is inaccessible', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ streamerId: streamer2 }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrow()
+      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrowError(DbError)
     })
   })
 
@@ -218,14 +217,14 @@ export default () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ isDeleted: true }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.deleteDonation(streamer1, donation.id)).rejects.toThrow()
+      await expect(() => donationStore.deleteDonation(streamer1, donation.id)).rejects.toThrowError(ChatMateError)
     })
 
     test('Throws if donation is inaccessible', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ isDeleted: true, streamerId: streamer2 }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.deleteDonation(streamer1, donation.id)).rejects.toThrow()
+      await expect(() => donationStore.deleteDonation(streamer1, donation.id)).rejects.toThrowError(ChatMateError)
     })
   })
 
@@ -440,7 +439,7 @@ export default () => {
       const donation = await createDonation({ isDeleted: true })
       const time = new Date()
 
-      await expect(() => donationStore.linkUserToDonation(streamer1, donation.id, user.id, time)).rejects.toThrow()
+      await expect(() => donationStore.linkUserToDonation(streamer1, donation.id, user.id, time)).rejects.toThrowError(NotFoundError)
     })
 
     test('Throws if trying to link to a donation from another streamer', async () => {
@@ -448,7 +447,7 @@ export default () => {
       const donation = await createDonation({ streamerId: streamer2 })
       const time = new Date()
 
-      await expect(() => donationStore.linkUserToDonation(streamer1, donation.id, user.id, time)).rejects.toThrow()
+      await expect(() => donationStore.linkUserToDonation(streamer1, donation.id, user.id, time)).rejects.toThrowError(NotFoundError)
     })
   })
 
@@ -465,19 +464,19 @@ export default () => {
     test('Throws if the donation is already refunded', async () => {
       const donation = await createDonation({ isRefunded: true })
 
-      await expect(() => donationStore.refundDonation(streamer1, donation.id)).rejects.toThrow()
+      await expect(() => donationStore.refundDonation(streamer1, donation.id)).rejects.toThrowError(ChatMateError)
     })
 
     test('Throws if the donation is deleted', async () => {
       const donation = await createDonation({ isDeleted: true })
 
-      await expect(() => donationStore.refundDonation(streamer1, donation.id)).rejects.toThrow()
+      await expect(() => donationStore.refundDonation(streamer1, donation.id)).rejects.toThrowError(ChatMateError)
     })
 
     test('Throws if the donation is from another streamer', async () => {
       const donation = await createDonation({ streamerId: streamer2 })
 
-      await expect(() => donationStore.refundDonation(streamer1, donation.id)).rejects.toThrow()
+      await expect(() => donationStore.refundDonation(streamer1, donation.id)).rejects.toThrowError(ChatMateError)
     })
   })
 
@@ -529,7 +528,7 @@ export default () => {
     test('Throws if there is an existing token', async () => {
       const updatedToken = 'streame2UpdatedToken'
 
-      await expect(() => donationStore.setStreamlabsSocketToken(streamer2, updatedToken)).rejects.toThrow()
+      await expect(() => donationStore.setStreamlabsSocketToken(streamer2, updatedToken)).rejects.toThrowError(ChatMateError)
     })
 
     test('Makes no change and returns false when removing the token when none exists in the db', async () => {
@@ -612,14 +611,14 @@ export default () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ isDeleted: true }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.unlinkUserFromDonation(streamer1, donation.id)).rejects.toThrowError()
+      await expect(() => donationStore.unlinkUserFromDonation(streamer1, donation.id)).rejects.toThrowError(NotFoundError)
     })
 
     test('Throws if trying to unlink from a donation from another streamer', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ streamerId: streamer2 }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.unlinkUserFromDonation(streamer1, donation.id)).rejects.toThrowError()
+      await expect(() => donationStore.unlinkUserFromDonation(streamer1, donation.id)).rejects.toThrowError(NotFoundError)
     })
   })
 

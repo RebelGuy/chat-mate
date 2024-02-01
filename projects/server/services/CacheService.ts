@@ -1,7 +1,9 @@
+import Resolvable from '@rebel/shared/Resolvable'
 import LogService from '@rebel/server/services/LogService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   streamerStore: StreamerStore
@@ -17,7 +19,7 @@ export default class CacheService extends ContextClass {
   private readonly chatMateRegisteredUserName: string
   private readonly logService: LogService
 
-  private chatMateStreamerId: number | null = null
+  public readonly chatMateStreamerId: Resolvable<number>
 
   constructor (deps: Deps) {
     super()
@@ -25,20 +27,16 @@ export default class CacheService extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.chatMateRegisteredUserName = deps.resolve('chatMateRegisteredUserName')
     this.logService = deps.resolve('logService')
+
+    this.chatMateStreamerId = new Resolvable(this.getChatMateStreamerId)
   }
 
-  /** Whether the given streamer is the official ChatMate streamer. */
-  public async isChatMateStreamer (streamerId: number): Promise<boolean> {
-    if (this.chatMateStreamerId == null) {
-      const chatMateStreamer = await this.streamerStore.getStreamerByName(this.chatMateRegisteredUserName)
-      if (chatMateStreamer == null) {
-        this.logService.logError(this, 'Could not find the official ChatMate streamer.')
-        return false
-      }
-
-      this.chatMateStreamerId = chatMateStreamer.id
+  private getChatMateStreamerId = async (): Promise<number> => {
+    const chatMateStreamer = await this.streamerStore.getStreamerByName(this.chatMateRegisteredUserName)
+    if (chatMateStreamer == null) {
+      throw new ChatMateError('Could not find the official ChatMate streamer.')
     }
 
-    return this.chatMateStreamerId === streamerId
+    return chatMateStreamer.id
   }
 }

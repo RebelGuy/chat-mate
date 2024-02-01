@@ -6,6 +6,7 @@ import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/test
 import { MockProxy, mock } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
+import { ChatMateError } from '@rebel/shared/util/error'
 
 const streamerId = 15
 
@@ -92,7 +93,7 @@ describe(nameof(AggregateLivestreamService, 'getAggregateLivestreams'), () => {
       { start: data.time2 }
     ]))
 
-    await expect(() => aggregateLivestreamService.getAggregateLivestreams(streamerId)).rejects.toThrowError()
+    await expect(() => aggregateLivestreamService.getAggregateLivestreams(streamerId)).rejects.toThrowError(ChatMateError)
   })
 })
 

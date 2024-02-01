@@ -7,6 +7,7 @@ import { AccessToken } from '@twurple/auth'
 import { single } from '@rebel/shared/util/arrays'
 import { New } from '@rebel/server/models/entities'
 import { YoutubeAuth } from '@prisma/client'
+import { ChatMateError, DbError } from '@rebel/shared/util/error'
 
 const accessToken: AccessToken = {
   accessToken: 'accessToken1',
@@ -52,7 +53,7 @@ export default () => {
     test(`Throws if the user's token could not be found`, async () => {
       await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
 
-      await expect(() => authStore.loadTwitchAccessToken(twitchUserId2)).rejects.toThrow()
+      await expect(() => authStore.loadTwitchAccessToken(twitchUserId2)).rejects.toThrowError(DbError)
     })
   })
 
@@ -69,7 +70,7 @@ export default () => {
     test(`Throws if the user's token could not be found`, async () => {
       await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
 
-      await expect(() => authStore.loadTwitchAccessToken(twitchChannelName2)).rejects.toThrow()
+      await expect(() => authStore.loadTwitchAccessToken(twitchChannelName2)).rejects.toThrowError(DbError)
     })
   })
 
@@ -111,7 +112,7 @@ export default () => {
 
       const result = await authStore.loadYoutubeWebAccessToken('channel1')
 
-      expect(result).toBe('token1')
+      expect(result).toEqual(expectObject(result, { accessToken: 'token1' }))
     })
 
     test('Returns null if no token exists for the given channelId', async () => {
@@ -146,7 +147,7 @@ export default () => {
     })
 
     test('Throws if attempting to create a new token without providing a Twitch channel name', async () => {
-      await expect(() => authStore.saveTwitchAccessToken(twitchUserId1, null, otherAccessToken)).rejects.toThrow()
+      await expect(() => authStore.saveTwitchAccessToken(twitchUserId1, null, otherAccessToken)).rejects.toThrowError(ChatMateError)
     })
   })
 

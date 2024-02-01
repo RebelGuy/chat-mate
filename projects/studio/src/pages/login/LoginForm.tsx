@@ -28,7 +28,7 @@ export default function LoginForm () {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  const returnUrl = params.get(RETURN_URL_QUERY_PARAM)
+  const returnUrl = params.has(RETURN_URL_QUERY_PARAM) ? window.decodeURIComponent(params.get(RETURN_URL_QUERY_PARAM)!) : null
 
   const onSuccess = (data: SuccessfulResponseData<RegisterResponse | LoginResponse>) => {
     loginContext.setLogin(username, data.loginToken, 'isStreamer' in data && data.isStreamer)

@@ -5,6 +5,7 @@ import StatusService from '@rebel/server/services/StatusService'
 import ApiService from '@rebel/server/services/abstract/ApiService'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 import { Dependencies } from '@rebel/shared/context/context'
+import { ChatMateError } from '@rebel/shared/util/error'
 import { GaxiosError } from 'gaxios'
 
 // note: the youtube api is absolutely disgusting. this took a lot of trial and error to figure out
@@ -195,7 +196,7 @@ export default class YoutubeApiProxyService extends ApiService {
       .replace(/=+$/, '') // remove trailing '='
 
     if (liveChatId == null) {
-      throw new Error(`Could not retrieve liveChatId for liveId ${liveId}. Does it exist and is it active?`)
+      throw new ChatMateError(`Could not retrieve liveChatId for liveId ${liveId}. Does it exist and is it active?`)
     } else {
       return liveChatId
     }

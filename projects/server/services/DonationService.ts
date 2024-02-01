@@ -13,7 +13,7 @@ import RankStore from '@rebel/server/stores/RankStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { group, single } from '@rebel/shared/util/arrays'
 import { addTime, maxTime } from '@rebel/shared/util/datetime'
-import { UserRankAlreadyExistsError } from '@rebel/shared/util/error'
+import { ChatMateError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 import { CurrencyCode } from '@rebel/server/constants'
 
 export type NewDonation = {
@@ -121,7 +121,7 @@ export default class DonationService extends ContextClass {
    * @throws {@link DonationUserLinkAlreadyExistsError}: When a link already exists for the donation. */
   public async linkUserToDonation (streamerId: number, donationId: number, primaryUserId: number): Promise<void> {
     if (await this.userService.isUserBusy(primaryUserId)) {
-      throw new Error('Cannot link the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot link the user at this time. Please try again later.')
     }
 
     const time = this.dateTimeHelpers.now()
@@ -305,7 +305,7 @@ export default class DonationService extends ContextClass {
   public async unlinkUserFromDonation (streamerId: number, donationId: number): Promise<void> {
     const donation = await this.donationStore.getDonation(streamerId, donationId)
     if (donation.primaryUserId != null && await this.userService.isUserBusy(donation.primaryUserId)) {
-      throw new Error('Cannot unlink the user at this time. Please try again later.')
+      throw new ChatMateError('Cannot unlink the user at this time. Please try again later.')
     }
 
     const primaryUserId = await this.donationStore.unlinkUserFromDonation(streamerId, donationId)

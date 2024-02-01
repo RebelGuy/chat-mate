@@ -3,10 +3,10 @@ import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEm
 import { getAccessibleRanks, getAllCustomEmojis } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
-import { sortBy } from '@rebel/shared/util/arrays'
+import { compareArrays, sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { Box, Button, Checkbox, createTheme, FormControlLabel, IconButton, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
+import { Alert, Box, Button, Checkbox, createTheme, FormControlLabel, IconButton, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
 import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import { GetCustomEmojisResponse } from '@rebel/api-models/schema/emoji'
@@ -19,8 +19,9 @@ import ApiError from '@rebel/studio/components/ApiError'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
+import { SafeOmit } from '@rebel/shared/types'
 
-export type EmojiData = Omit<PublicCustomEmoji, 'isActive' | 'version'>
+export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version'>
 
 type Eligibility = {
   meetsLevelRequirement: boolean
@@ -77,10 +78,19 @@ export default function CustomEmojiManager () {
     updateRefreshToken()
   }
 
-  const onCheckDupliateSymbol = (symbol: string) => {
+  const onCheckDuplicateSymbol = (symbol: string) => {
     return emojisRequest.data!.emojis.find(emoji => {
       return emoji.id !== editingEmoji?.id && emoji.symbol === symbol
     }) != null
+  }
+
+  const onCheckDataChanged = (data: EmojiData) => {
+    const previousData = emojisRequest.data!.emojis.find(emoji => emoji.id == data.id)
+    if (previousData == null) {
+      return true
+    } else {
+      return compareEmojis(data, previousData)
+    }
   }
 
   const meetsEmojiRequirements = (emoji: PublicCustomEmoji): Eligibility => {
@@ -127,10 +137,19 @@ export default function CustomEmojiManager () {
     return { meetsLevelRequirement, meetsRankRequirement }
   }
 
+  const header = <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
+
+  const streamer = loginContext.allStreamers.find(s => s.username === loginContext.streamer)
+  if (streamer == null) {
+    return <>
+      {header}
+      <Alert severity="error">Invalid streamer selected.</Alert>
+    </>
+  }
+
   return (
     <>
-      <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
-
+      {header}
       {emojisRequest.data != null &&
         <Box>
           <RequireRank owner>
@@ -145,7 +164,7 @@ export default function CustomEmojiManager () {
 
           {isLoggedIn && <FormControlLabel
             label="Show only eligible emojis"
-            sx={{ mb: 1, display: 'block', width: 'fit-content'  }}
+            sx={{ mb: 1, display: 'block', width: 'fit-content' }}
             control={
               <Checkbox
                 checked={showOnlyEligibleEmojis}
@@ -157,7 +176,8 @@ export default function CustomEmojiManager () {
 
           <Table
             stickyHeader
-            sx={{ width: '100%', transform: 'translateY(-5px)' }}
+            size="small"
+            style={{ transform: 'translateY(-5px)' }}
           >
             <TableHead>
               <TableRow>
@@ -199,7 +219,8 @@ export default function CustomEmojiManager () {
         onCancel={onCancelEdit}
         onChange={onChange}
         onSave={onSave}
-        onCheckDuplicateSymbol={onCheckDupliateSymbol}
+        onCheckDuplicateSymbol={onCheckDuplicateSymbol}
+        onCheckDataChanged={onCheckDataChanged}
       />
     </>
   )
@@ -272,4 +293,13 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
       </TableRow>
     </ThemeProvider>
   )
+}
+function compareEmojis(data: EmojiData, previousData: EmojiData) {
+  // i would love to put it on the next line but then vscode grey out the whole thing : --   |
+  return data.name !== previousData.name ||
+    data.symbol !== previousData.symbol ||
+    data.levelRequirement !== previousData.levelRequirement ||
+    data.canUseInDonationMessage !== previousData.canUseInDonationMessage ||
+    data.imageData !== previousData.imageData ||
+    !compareArrays(sortBy(data.whitelistedRanks, x => x), sortBy(previousData.whitelistedRanks, x => x))
 }

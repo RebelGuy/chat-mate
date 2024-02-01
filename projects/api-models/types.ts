@@ -36,6 +36,9 @@ export type ApiResponse<T> = T extends ResponseData<infer U> ? T extends U ? ({
   error: ApiError
 })) : never : never
 
+/** Extracts the `data` component from an `ApiResponse` object. */
+export type ApiResponseData<T extends ApiResponse<any>> = Extract<T, { success: true }>['data']
+
 export type ApiRequest<T extends PublicObject<any>> = T
 
 export const API_ERRORS = {
@@ -55,6 +58,3 @@ export type ApiError = {
   errorType: string
   internalErrorType: string
 }
-
-/** Extract from T those types that are assignable to U, ensuring that U is strictly a sub-type of T. */
-export type SafeExtract<T, U extends T> = U extends Extract<T, U> ? U : never

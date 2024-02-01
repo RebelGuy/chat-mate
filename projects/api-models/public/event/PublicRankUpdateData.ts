@@ -1,7 +1,8 @@
 import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
-import { PublicObject, SafeExtract } from '@rebel/api-models/types'
+import { PublicObject } from '@rebel/api-models/types'
+import { SafeExtract } from '@rebel/shared/types'
 
 export type PublicRankUpdateData = PublicObject<{
   /** The rank type that this update represents. */

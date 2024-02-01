@@ -15,7 +15,8 @@ export default function SelectStreamer () {
   const navigate = useNavigate()
   const { streamer: streamerParam } = useParams()
 
-  const isUnknownStreamer = streamerParam != null && loginContext.isHydrated && !loginContext.allStreamers.map(s => s.username).includes(streamerParam)
+  const selectedStreamer = streamerParam ?? loginContext.streamer
+  const isUnknownStreamer = selectedStreamer != null && loginContext.isHydrated && !loginContext.allStreamers.some(s => s.username === selectedStreamer)
 
   useEffect(() => {
     const streamer = loginContext.streamer
@@ -50,7 +51,7 @@ export default function SelectStreamer () {
 
   return (
     <Box sx={{ mt: 2 }}>
-      {isUnknownStreamer && <InvalidStreamer streamerName={streamerParam} />}
+      {isUnknownStreamer && <InvalidStreamer streamerName={selectedStreamer} />}
       <div style={{ display: 'flex', flexDirection: 'row' }}>
         <FormControl fullWidth>
           <InputLabel>Streamer</InputLabel>

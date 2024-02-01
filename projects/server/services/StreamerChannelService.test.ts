@@ -8,7 +8,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore, { PrimaryChannels } from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { ForbiddenError } from '@rebel/shared/util/error'
+import { ChatMateError, ForbiddenError, PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
 import { cast, expectArray, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 
@@ -50,8 +50,8 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
 
     mockStreamerStore.getStreamers.calledWith().mockResolvedValue([cast<Streamer>({ id: streamerId1 }), cast<Streamer>({ id: streamerId2 }), cast<Streamer>({ id: streamerId3 })])
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId1, streamerId2, streamerId3])).mockResolvedValue(cast<PrimaryChannels[]>([
-      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId1, infoHistory: [{ displayName: twitchName1 }]}}} },
-      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId2, infoHistory: [{ displayName: twitchName2 }]}}} },
+      { streamerId: streamerId1, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId1, globalInfoHistory: [{ displayName: twitchName1 }]}}} },
+      { streamerId: streamerId2, twitchChannel: { platformInfo: { platform: 'twitch', channel: { id: internalTwitchId2, globalInfoHistory: [{ displayName: twitchName2 }]}}} },
       { streamerId: streamerId3, twitchChannel: null }
     ]))
 
@@ -74,7 +74,7 @@ describe(nameof(StreamerChannelService, 'getStreamerFromTwitchChannelName'), () 
     const registeredUser = cast<RegisteredUserResult>({ registeredUser: { id: registeredUserId }})
     const streamer = cast<Streamer>({ id: streamerId })
     const primaryChannels = cast<PrimaryChannels>({ twitchChannel: { platformInfo: {
-      channel: { infoHistory: [{ displayName: channelName.toUpperCase() }] },
+      channel: { globalInfoHistory: [{ displayName: channelName.toUpperCase() }] },
       platform: 'twitch'
     }}})
 
@@ -94,7 +94,7 @@ describe(nameof(StreamerChannelService, 'getTwitchChannelName'), () => {
     const streamerId = 1
     const twitchName = 'name'
     mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId])).mockResolvedValue(cast<PrimaryChannels[]>([
-      { twitchChannel: { platformInfo: { platform: 'twitch', channel: { infoHistory: [{ displayName: twitchName }]}}} }
+      { twitchChannel: { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: twitchName }]}}} }
     ]))
 
     const result = await streamerChannelService.getTwitchChannelName(streamerId)
@@ -173,12 +173,12 @@ describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
 
-  test('Throws if the primary user is already set', async () => {
+  test(`Throws ${PrimaryChannelAlreadyExistsError.name} if the primary user is already set`, async () => {
     const streamerId = 4
     const registeredUserId = 91
     const aggregateChatUserId = 58
     const youtubeChannelId = 581
-    const err = new Error()
+    const err = new PrimaryChannelAlreadyExistsError(streamerId, 'youtube')
 
     mockStreamerStore.getStreamerById.calledWith(streamerId).mockResolvedValue(cast<Streamer>({ registeredUserId }))
     mockAccountStore.getRegisteredUsersFromIds.calledWith(expectArray<number>([registeredUserId])).mockResolvedValue([cast<RegisteredUser>({ aggregateChatUserId })])
@@ -194,8 +194,8 @@ describe(nameof(StreamerChannelService, 'setPrimaryChannel'), () => {
     const streamerId = 3
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(cast<YoutubeLivestream>({}))
 
-    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'youtube', 1)).rejects.toThrowError()
-    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'twitch', 1)).rejects.toThrowError()
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'youtube', 1)).rejects.toThrowError(ChatMateError)
+    await expect(() => streamerChannelService.setPrimaryChannel(streamerId, 'twitch', 1)).rejects.toThrowError(ChatMateError)
   })
 })
 
@@ -203,7 +203,7 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
   test('Unsets primary channel and dispatches data', async () => {
     const streamerId = 3
     const userChannel = cast<UserChannel>({})
-    mockStreamerChannelStore.deleteStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(userChannel)
+    mockStreamerChannelStore.removeStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(userChannel)
 
     await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
 
@@ -211,11 +211,12 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
     expect(eventArgs).toEqual(expectObjectDeep(eventArgs, [EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel }]))
   })
 
-  test('Does not dispatch data if no primary channel was unset', async () => {
+  test(`Throws ${PrimaryChannelNotFoundError.name} and does not dispatch data if no primary channel exists`, async () => {
     const streamerId = 3
-    mockStreamerChannelStore.deleteStreamerYoutubeChannelLink.calledWith(streamerId).mockResolvedValue(null)
+    const err = new PrimaryChannelNotFoundError(streamerId, 'youtube')
+    mockStreamerChannelStore.removeStreamerYoutubeChannelLink.calledWith(streamerId).mockRejectedValue(err)
 
-    await streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')).rejects.toThrowError(err)
 
     expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
@@ -224,7 +225,7 @@ describe(nameof(StreamerChannelService, 'unsetPrimaryChannel'), () => {
     const streamerId = 3
     mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(cast<TwitchLivestream>({}))
 
-    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')).rejects.toThrowError()
-    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'twitch')).rejects.toThrowError()
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'youtube')).rejects.toThrowError(ChatMateError)
+    await expect(() => streamerChannelService.unsetPrimaryChannel(streamerId, 'twitch')).rejects.toThrowError(ChatMateError)
   })
 })

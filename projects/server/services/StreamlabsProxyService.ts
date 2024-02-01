@@ -5,7 +5,7 @@ import ApiService from '@rebel/server/services/abstract/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { single } from '@rebel/shared/util/arrays'
-import { ApiResponseError } from '@rebel/shared/util/error'
+import { ApiResponseError, ChatMateError } from '@rebel/shared/util/error'
 import { CurrencyCode } from '@rebel/server/constants'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
@@ -151,7 +151,7 @@ export default class StreamlabsProxyService extends ApiService {
 
   public setDonationCallback (callback: DonationCallback) {
     if (this.donationCallback != null) {
-      throw new Error('Already listening')
+      throw new ChatMateError('Already listening')
     }
 
     this.donationCallback = callback

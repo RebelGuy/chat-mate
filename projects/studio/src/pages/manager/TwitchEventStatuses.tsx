@@ -3,6 +3,7 @@ import { Alert, Button, CircularProgress, IconButton, Table, TableBody, TableCel
 import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
+import OptionalAlert from '@rebel/studio/components/OptionalAlert'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
@@ -56,7 +57,11 @@ const EVENT_INFO: Record<PublicTwitchEventStatus['eventType'], EventInfo> = {
 
 let successPoller: number | null = null
 
-export default function TwitchEventStatuses () {
+type Props = {
+  primaryTwitchChannelName: string
+}
+
+export default function TwitchEventStatuses (props: Props) {
   const [params, setParams] = useSearchParams()
 
   // params are cleared upon mounting, but retained in state by setting them as the default value of each piece of state.
@@ -67,7 +72,6 @@ export default function TwitchEventStatuses () {
   const getStatusesRequest = useRequest(getTwitchEventStatuses(), { updateKey: refreshToken })
   const reconnectChatClientRequest = useRequest(reconnectChatClient(), { onDemand: true })
   const resetTwitchSubscriptionsRequest = useRequest(resetTwitchSubscriptions(), { onDemand: true })
-  const primaryChannelsRequest = useRequest(getPrimaryChannels(), { onDemand: true })
   const getLoginUrlRequest = useRequest(getTwitchStreamerLoginUrl(), { onDemand: true })
   const authoriseTwitchRequest = useRequest(authoriseTwitchStreamer(code!), { onDemand: true })
 
@@ -86,7 +90,6 @@ export default function TwitchEventStatuses () {
       }
     }, 500)
 
-    primaryChannelsRequest.triggerRequest()
     getLoginUrlRequest.triggerRequest()
     if (code != null) {
       authoriseTwitchRequest.triggerRequest()
@@ -141,35 +144,35 @@ export default function TwitchEventStatuses () {
       </div>
 
       {authoriseTwitchRequest.data == null && <>
-        <Alert sx={{ mt: 1 }} severity={requiresAuth || hasBrokenEvents ? 'warning' : 'info'}>
+        <OptionalAlert sx={{ mt: 1 }} severity={requiresAuth || hasBrokenEvents ? 'warning' : 'none'}>
           {requiresAuth ?
             <div>
               Looks like some of the events are broken because ChatMate did not have permission.
-              Please use your Twitch channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} to provide access.
+              Please use your Twitch channel {<b>{props.primaryTwitchChannelName}</b>} to provide access.
             </div>
             :
             hasBrokenEvents ?
               <div>
                 Looks like one or more events are broken. Please contact an administrator.
-                You can also try refreshing authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>} using the below button.
+                You can also try refreshing authorisation for the channel {<b>{props.primaryTwitchChannelName}</b>} using the below button.
               </div>
               :
               <div>
                 Looks like all events are working correctly and you do not need to authorise ChatMate again.
-                If you still want to refresh authorisation for the channel {<b>{primaryChannelsRequest.data?.twitchChannelName ?? '<loading>'}</b>}, you can do so using the below button.
+                If you still want to refresh authorisation for the channel {<b>{props.primaryTwitchChannelName}</b>}, you can do so using the below button.
               </div>
           }
           <Button
             onClick={onLoginToTwitch}
-            disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null || primaryChannelsRequest.isLoading || primaryChannelsRequest.data == null || authoriseTwitchRequest.isLoading}
+            disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null || authoriseTwitchRequest.isLoading}
             sx={{ mt: 1 }}
           >
             Authorise ChatMate
           </Button>
-        </Alert>
+        </OptionalAlert>
       </>}
 
-      <ApiError requestObj={[getLoginUrlRequest, primaryChannelsRequest, authoriseTwitchRequest]} hideRetryButton />
+      <ApiError requestObj={[getLoginUrlRequest, authoriseTwitchRequest]} hideRetryButton />
 
       {authoriseTwitchRequest.data != null && <>
         <Alert sx={{ mt: 1 }} severity="success">
@@ -177,7 +180,7 @@ export default function TwitchEventStatuses () {
         </Alert>
       </>}
 
-      <Table>
+      <Table size="small" sx={{ mt: 2, maxWidth: 1200 }}>
         <TableHead>
           <TableRow>
             <TableCell>Event Name</TableCell>

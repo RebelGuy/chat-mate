@@ -10,6 +10,8 @@ import { EmptyObject } from '@rebel/shared/types'
 
 export type GetStreamersResponse = ApiResponse<{ streamers: PublicStreamerSummary[] }>
 
+export type GetOfficialChatMateStreamerResponse = ApiResponse<{ chatMateStreamer: PublicStreamerSummary }>
+
 export type CreateApplicationRequest = ApiRequest<{ message: string }>
 export type CreateApplicationResponse = ApiResponse<{ newApplication: PublicStreamerApplication }>
 
@@ -24,7 +26,12 @@ export type RejectApplicationResponse = ApiResponse<{ updatedApplication: Public
 export type WithdrawApplicationRequest = ApiRequest<{ message: string }>
 export type WithdrawApplicationResponse = ApiResponse<{ updatedApplication: PublicStreamerApplication }>
 
-export type GetPrimaryChannelsResponse = ApiResponse<{ youtubeChannelId: number | null, twitchChannelId: number | null, twitchChannelName: string | null, youtubeChannelName: string | null }>
+export type GetPrimaryChannelsResponse = ApiResponse<{
+  youtubeChannelId: number | null
+  twitchChannelId: number | null
+  twitchChannelName: string | null
+  youtubeChannelName: string | null
+}>
 
 export type SetPrimaryChannelResponse = ApiResponse<EmptyObject>
 

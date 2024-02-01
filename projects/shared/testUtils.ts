@@ -1,6 +1,8 @@
-import { DeepPartial, GenericObject, Primitive, Singular } from '@rebel/shared/types'
+import Resolvable from '@rebel/shared/Resolvable'
+import { DeepPartial, GenericObject, Primitive, SafeOmit, Singular } from '@rebel/shared/types'
+import { single } from '@rebel/shared/util/arrays'
 import { isNullable, isPrimitive } from '@rebel/shared/util/typescript'
-import { Matcher, MatcherCreator, MockProxy } from 'jest-mock-extended'
+import { Matcher, MockProxy, mock } from 'jest-mock-extended'
 
 type Class = new (...args: any[]) => any
 
@@ -46,7 +48,7 @@ export function promised<T> (value: T): Promise<T> {
   return new Promise(res => res(value))
 }
 
-export function deleteProps<T, Prop extends keyof T> (obj: T, ...props: Prop[]): Omit<T, Prop> {
+export function deleteProps<T, Prop extends keyof T> (obj: T, ...props: Prop[]): SafeOmit<T, Prop> {
   const result = { ...obj }
   for (const prop of props) {
     delete result[prop]
@@ -125,10 +127,22 @@ export function expectArray<T extends AnyValue> (fullOrPartialObject: T[] | Deep
   return expect.arrayContaining(partialObj)
 }
 
+export function expectInvocation<TArgs extends AnyValue[]> (fn: (...args: TArgs) => any, expectedInvocation: TArgs) {
+  const untypedFn = fn as any
+  const invocation = single(untypedFn.mock.calls) as any
+  expect(invocation).toEqual(expectedInvocation)
+}
+
 /** Matches any date. */
 export function anyDate (): Matcher<Date> {
   return new Matcher<Date>(
     (actualDate) => actualDate instanceof Date,
     'Matches any date.'
   )
+}
+
+export function mockResolvable<T> (value: T): Resolvable<T> {
+  const mockObj: MockProxy<Resolvable<T>> = mock()
+  mockObj.resolve.calledWith().mockResolvedValue(value)
+  return mockObj
 }

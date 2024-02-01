@@ -27,17 +27,18 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { filterTypes, nonNull, single, unique, zipOnStrict } from '@rebel/shared/util/arrays'
-import { ForbiddenError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { ForbiddenError, NotFoundError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
 import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, PATCH, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, GetYoutubeModeratorsResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetEventsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetTwitchLoginUrlResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, TwitchAuthorisationResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, GetYoutubeModeratorsResponse, YoutubeRevocationResponse, GetOfficialChatMateStreamerResponse } from '@rebel/api-models/schema/streamer'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 import { PublicRankUpdateData } from '@rebel/api-models/public/event/PublicRankUpdateData'
 import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import CacheService from '@rebel/server/services/CacheService'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -55,6 +56,7 @@ type Deps = ControllerDependencies<{
   youtubeAuthProvider: YoutubeAuthProvider
   youtubeService: YoutubeService
   channelStore: ChannelStore
+  cacheService: CacheService
 }>
 
 @Path(buildPath('streamer'))
@@ -74,6 +76,7 @@ export default class StreamerController extends ControllerBase {
   private readonly youtubeAuthProvider: YoutubeAuthProvider
   private readonly youtubeService: YoutubeService
   private readonly channelStore: ChannelStore
+  private readonly cacheService: CacheService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -92,6 +95,7 @@ export default class StreamerController extends ControllerBase {
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
     this.youtubeService = deps.resolve('youtubeService')
     this.channelStore = deps.resolve('channelStore')
+    this.cacheService = deps.resolve('cacheService')
   }
 
   @GET
@@ -99,7 +103,9 @@ export default class StreamerController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetStreamersResponse>('GET /')
 
     try {
-      const streamers = await this.streamerStore.getStreamers()
+      const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
+      const streamers = await this.streamerStore.getStreamers().then(col => col.filter(s => s.id !== chatMateStreamerId))
+
       const [youtubeLivestreams, twitchLivestreams, primaryChannels, users] = await Promise.all([
         this.livestreamStore.getActiveYoutubeLivestreams(),
         this.livestreamStore.getCurrentTwitchLivestreams(),
@@ -122,6 +128,37 @@ export default class StreamerController extends ControllerBase {
       })
 
       return builder.success({ streamers: streamerSummary })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/chatMate')
+  public async getOfficialChatMateStreamer (): Promise<GetOfficialChatMateStreamerResponse> {
+    const builder = this.registerResponseBuilder<GetOfficialChatMateStreamerResponse>('GET /chatMate')
+
+    try {
+      const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
+      const streamer = await this.streamerStore.getStreamerById(chatMateStreamerId)
+      if (streamer == null) {
+        throw new NotFoundError('The official ChatMate streamer cannot be found.')
+      }
+
+      const youtubeLivestream = await this.livestreamStore.getActiveYoutubeLivestream(chatMateStreamerId)
+      const twitchLivestream = await this.livestreamStore.getCurrentTwitchLivestream(chatMateStreamerId)
+      const { youtubeChannel, twitchChannel } = await this.streamerChannelStore.getPrimaryChannels([chatMateStreamerId]).then(single)
+      const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer.registeredUserId]).then(single)
+
+      return builder.success({
+        chatMateStreamer: {
+          username: registeredUser.username,
+          currentYoutubeLivestream: youtubeLivestream == null ? null : youtubeLivestreamToPublic(youtubeLivestream),
+          currentTwitchLivestream: twitchLivestream == null ? null : twitchLivestreamToPublic(twitchLivestream, youtubeChannel != null ? getUserName(youtubeChannel) : ''),
+          youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),
+          twitchChannel: twitchChannel == null ? null : channelToPublicChannel(twitchChannel)
+        }
+      })
     } catch (e: any) {
       return builder.failure(e)
     }
@@ -244,7 +281,7 @@ export default class StreamerController extends ControllerBase {
   @Path('/primaryChannels')
   @PreProcessor(requireAuth)
   public async getPrimaryChannels (): Promise<GetPrimaryChannelsResponse> {
-    const builder = this.registerResponseBuilder<GetPrimaryChannelsResponse>('POST /primaryChannels')
+    const builder = this.registerResponseBuilder<GetPrimaryChannelsResponse>('GET /primaryChannels')
 
     try {
       const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)

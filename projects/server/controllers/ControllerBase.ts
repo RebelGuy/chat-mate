@@ -4,7 +4,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import ApiService from '@rebel/server/controllers/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
-import { ApiResponse, API_ERRORS, ErrorCode, ResponseData } from '@rebel/api-models/types'
+import { ApiResponse, API_ERRORS, ErrorCode, ResponseData, ApiResponseData } from '@rebel/api-models/types'
 
 export const BASE_PATH = '/api'
 
@@ -21,11 +21,8 @@ type RequestInfo = {
   ip: string
 }
 
-/** Extracts the `data` component from an `ApiResponse` object. */
-export type ExtractedData<T extends ApiResponse<any>> = Extract<T, { success: true }>['data']
-
 /** Utility type that defines the shape any endpoint implementation methods should have. */
-export type Endpoint<Args, T extends ApiResponse<any>> = (args: Args & { builder: ResponseBuilder<ExtractedData<T>> }) => Promise<T>
+export type Endpoint<Args, T extends ApiResponse<any>> = (args: Args & { builder: ResponseBuilder<ApiResponseData<T>> }) => Promise<T>
 
 /** The input argument for an endpoint implementation method. */
 export type In<E extends Endpoint<any, any>> = Parameters<E>['0']

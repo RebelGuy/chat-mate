@@ -27,9 +27,9 @@ export namespace Entity {
 
   export type ChatUser = FullPayload<'ChatUser'>
   export type YoutubeChannel = FullPayload<'YoutubeChannel'>
-  export type YoutubeChannelInfo = FullPayload<'YoutubeChannelInfo'>
+  export type YoutubeChannelGlobalInfo = FullPayload<'YoutubeChannelGlobalInfo'>
   export type TwitchChannel = FullPayload<'TwitchChannel'>
-  export type TwitchChannelInfo = FullPayload<'TwitchChannelInfo'>
+  export type TwitchChannelGlobalInfo = FullPayload<'TwitchChannelGlobalInfo'>
 
   export type ChatMessage = FullPayload<'ChatMessage'>
   export type ChatMessagePart = FullPayload<'ChatMessagePart'>
@@ -55,7 +55,7 @@ export type New<E> = NullableToOptional<Omit<E, 'id'>>
 export type WithChildren<M extends Models, C extends keyof Omit<Includes[M], '_count'> = any> = GetPayloads<FullSelect<Selects[M]> & IncludeSpecificChildren<Includes[M], C>>[M]
 
 type Models = 'YoutubeLivestream' |
-  'ChatUser' | 'YoutubeChannel' | 'YoutubeChannelInfo' | 'TwitchChannel' | 'TwitchChannelInfo' |
+  'ChatUser' | 'YoutubeChannel' | 'YoutubeChannelGlobalInfo' | 'TwitchChannel' | 'TwitchChannelGlobalInfo' |
   'ChatMessage' | 'ChatMessagePart' | 'ChatEmoji' | 'ChatText' | 'ChatCheer' |
   'ExperienceTransaction' | 'ExperienceSnapshot' | 'ExperienceDataChatMessage' |
   'CustomEmoji'
@@ -64,9 +64,9 @@ type Models = 'YoutubeLivestream' |
     YoutubeLivestream: Prisma.YoutubeLivestreamInclude,
     ChatUser: Prisma.ChatUserInclude,
     YoutubeChannel: Prisma.YoutubeChannelInclude,
-    YoutubeChannelInfo: Prisma.YoutubeChannelInfoInclude,
+    YoutubeChannelGlobalInfo: Prisma.YoutubeChannelGlobalInfoInclude,
     TwitchChannel: Prisma.TwitchChannelInclude,
-    TwitchChannelInfo: Prisma.TwitchChannelInfoInclude,
+    TwitchChannelGlobalInfo: Prisma.TwitchChannelGlobalInfoInclude,
     ChatMessage: Prisma.ChatMessageInclude,
     ChatMessagePart: Prisma.ChatMessagePartInclude,
     ChatEmoji: Prisma.ChatEmojiInclude,
@@ -82,9 +82,9 @@ type Models = 'YoutubeLivestream' |
     YoutubeLivestream: Prisma.YoutubeLivestreamArgs,
     ChatUser: Prisma.ChatUserArgs,
     YoutubeChannel: Prisma.YoutubeChannelArgs,
-    YoutubeChannelInfo: Prisma.YoutubeChannelInfoArgs,
+    YoutubeChannelGlobalInfo: Prisma.YoutubeChannelGlobalInfoArgs,
     TwitchChannel: Prisma.TwitchChannelArgs,
-    TwitchChannelInfo: Prisma.TwitchChannelInfoArgs,
+    TwitchChannelGlobalInfo: Prisma.TwitchChannelGlobalInfoArgs,
     ChatMessage: Prisma.ChatMessageArgs,
     ChatMessagePart: Prisma.ChatMessagePartArgs,
     ChatEmoji: Prisma.ChatEmojiArgs,
@@ -100,9 +100,9 @@ type GetPayloads<T> = DbDefine<{
   YoutubeLivestream: Prisma.YoutubeLivestreamGetPayload<T extends Args['YoutubeLivestream'] ? T : never>,
   ChatUser: Prisma.ChatUserGetPayload<T extends Args['ChatUser'] ? T : never>,
   YoutubeChannel: Prisma.YoutubeChannelGetPayload<T extends Args['YoutubeChannel'] ? T : never>,
-  YoutubeChannelInfo: Prisma.YoutubeChannelInfoGetPayload<T extends Args['YoutubeChannelInfo'] ? T : never>,
+  YoutubeChannelGlobalInfo: Prisma.YoutubeChannelGlobalInfoGetPayload<T extends Args['YoutubeChannelGlobalInfo'] ? T : never>,
   TwitchChannel: Prisma.TwitchChannelGetPayload<T extends Args['TwitchChannel'] ? T : never>,
-  TwitchChannelInfo: Prisma.TwitchChannelInfoGetPayload<T extends Args['TwitchChannelInfo'] ? T : never>,
+  TwitchChannelGlobalInfo: Prisma.TwitchChannelGlobalInfoGetPayload<T extends Args['TwitchChannelGlobalInfo'] ? T : never>,
   ChatMessage: Prisma.ChatMessageGetPayload<T extends Args['ChatMessage'] ? T : never>,
   ChatMessagePart: Prisma.ChatMessagePartGetPayload<T extends Args['ChatMessagePart'] ? T : never>,
   ChatEmoji: Prisma.ChatEmojiGetPayload<T extends Args['ChatEmoji'] ? T : never>,
@@ -118,9 +118,9 @@ type Selects = DbDefine<{
   YoutubeLivestream: Prisma.YoutubeLivestreamSelect,
   ChatUser: Prisma.ChatUserSelect,
   YoutubeChannel: Prisma.YoutubeChannelSelect,
-  YoutubeChannelInfo: Prisma.YoutubeChannelInfoSelect,
+  YoutubeChannelGlobalInfo: Prisma.YoutubeChannelGlobalInfoSelect,
   TwitchChannel: Prisma.TwitchChannelSelect,
-  TwitchChannelInfo: Prisma.TwitchChannelInfoSelect,
+  TwitchChannelGlobalInfo: Prisma.TwitchChannelGlobalInfoSelect,
   ChatMessage: Prisma.ChatMessageSelect,
   ChatMessagePart: Prisma.ChatMessagePartSelect,
   ChatEmoji: Prisma.ChatEmojiSelect,

@@ -3,11 +3,11 @@ import { ChatItem, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, Parti
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
-import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateYoutubeChannelArgs, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, expectObject, nameof, promised } from '@rebel/shared/testUtils'
+import { cast, nameof, promised } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
-import { CalledWithMock, mock, MockProxy } from 'jest-mock-extended'
+import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import EmojiService from '@rebel/server/services/EmojiService'
 import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
@@ -17,9 +17,6 @@ import CommandService, { NormalisedCommand } from '@rebel/server/services/comman
 import CommandStore from '@rebel/server/stores/CommandStore'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
-
-// jest is having trouble mocking the correct overload method, so we have to force it into the correct type
-type CreateOrUpdateYoutube = CalledWithMock<Promise<YoutubeChannelWithLatestInfo>, ['youtube', string, CreateOrUpdateYoutubeChannelArgs]>
 
 const textPart: PartialTextChatMessage = {
   type: 'text',
@@ -60,13 +57,13 @@ const youtubeChannel1: YoutubeChannelWithLatestInfo = {
   id: 10,
   userId: 1,
   youtubeId: data.youtubeChannel1,
-  infoHistory: [{ ...data.youtubeChannelInfo1, id: 1, channelId: 1 }]
+  globalInfoHistory: [{ ...data.youtubeChannelGlobalInfo1, id: 1, channelId: 1 }]
 }
 const twitchChannel1: TwitchChannelWithLatestInfo = {
   id: 20,
   userId: 3,
   twitchId: data.twitchChannel3,
-  infoHistory: [{ ...data.twitchChannelInfo3, id: 2, channelId: 2 }]
+  globalInfoHistory: [{ ...data.twitchChannelGlobalInfo3, id: 2, channelId: 2 }]
 }
 
 let mockChatStore: MockProxy<ChatStore>
@@ -138,9 +135,9 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
   test('youtube: synthesises correct data and calls required services, then returns true', async () => {
     const streamerId = 2
     const addedChatMessage = cast<ChatMessage>({})
-    const livestream = cast<YoutubeLivestream>({}); // required semicolon for some reason lol
+    const livestream = cast<YoutubeLivestream>({})
 
-    (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
+    mockChannelStore.createOrUpdateYoutubeChannel.calledWith(data.youtubeChannel1, expect.objectContaining(data.youtubeChannelGlobalInfo1)).mockResolvedValue(youtubeChannel1)
     mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(addedChatMessage)
     mockEmojiService.applyCustomEmojis.calledWith(textPart, youtubeChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
     mockEmojiService.applyCustomEmojis.calledWith(emojiPart, youtubeChannel1.userId, streamerId).mockResolvedValue([emojiPart])
@@ -164,7 +161,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const addedChatMessage = cast<ChatMessage>({})
     const livestream = cast<TwitchLivestream>({})
 
-    mockChannelStore.createOrUpdate.calledWith('twitch', data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
+    mockChannelStore.createOrUpdateTwitchChannel.calledWith(data.twitchChannel3, expect.objectContaining(data.twitchChannelGlobalInfo3)).mockResolvedValue(twitchChannel1)
     mockChatStore.addChat.calledWith(chatItem2, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
     mockEmojiService.applyCustomEmojis.calledWith(textPart, twitchChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
     mockEmojiService.applyCustomEmojis.calledWith(emojiPart, twitchChannel1.userId, streamerId).mockResolvedValue([emojiPart])
@@ -186,7 +183,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const command: NormalisedCommand = { normalisedName: 'TEST' }
     const commandId = 5
 
-    mockChannelStore.createOrUpdate.calledWith('twitch', data.twitchChannel3, expect.objectContaining(data.twitchChannelInfo3)).mockResolvedValue(twitchChannel1)
+    mockChannelStore.createOrUpdateTwitchChannel.calledWith(data.twitchChannel3, expect.objectContaining(data.twitchChannelGlobalInfo3)).mockResolvedValue(twitchChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation(part => Promise.resolve([part]))
     mockChatStore.addChat.calledWith(chatItem2, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
     mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining(chatItem2.messageParts)).mockReturnValue(command)
@@ -201,8 +198,8 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
   })
 
   test('returns false if chat item already exists, and does not attempt to call services', async () => {
-    const streamerId = 2;
-    (mockChannelStore.createOrUpdate as any as CreateOrUpdateYoutube).calledWith('youtube', data.youtubeChannel1, expect.objectContaining(data.youtubeChannelInfo1)).mockResolvedValue(youtubeChannel1)
+    const streamerId = 2
+    mockChannelStore.createOrUpdateYoutubeChannel.calledWith(data.youtubeChannel1, expect.objectContaining(data.youtubeChannelGlobalInfo1)).mockResolvedValue(youtubeChannel1)
     mockEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
     mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(null)
 

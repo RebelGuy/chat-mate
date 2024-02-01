@@ -53,4 +53,8 @@ export default class AggregateLivestream<TData = never> {
       return this.endTime.getTime() > timestamp
     }
   }
+
+  public getDuration () {
+    return (this.endTime?.getTime() ?? Date.now()) - this.startTime.getTime()
+  }
 }

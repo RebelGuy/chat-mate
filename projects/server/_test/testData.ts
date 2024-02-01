@@ -1,7 +1,8 @@
-import { YoutubeChannelInfo, ChatMessage, TwitchChannelInfo, YoutubeLivestream } from '@prisma/client'
+import { YoutubeChannelGlobalInfo, ChatMessage, TwitchChannelGlobalInfo, YoutubeLivestream } from '@prisma/client'
 import { Author, ChatItem, TwitchAuthor } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
 import { ChatExperienceData } from '@rebel/server/stores/ExperienceStore'
+import { SafeOmit } from '@rebel/shared/types'
 import { addTime } from '@rebel/shared/util/datetime'
 
 export const time1 = new Date(2022, 0, 3)
@@ -48,9 +49,7 @@ export const author1: Author = {
   image: 'author1.image',
   name: 'author1.name'
 }
-export const youtubeChannelInfo1: Omit<YoutubeChannelInfo, 'id' | 'channelId'> = {
-  isModerator: author1.attributes.isModerator,
-  isOwner: author1.attributes.isOwner,
+export const youtubeChannelGlobalInfo1: SafeOmit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
   isVerified: author1.attributes.isVerified,
   imageUrl: author1.image,
   name: author1.name!,
@@ -64,9 +63,7 @@ export const author2: Author = {
   image: 'author2.image',
   name: 'author2.name'
 }
-export const youtubeChannelInfo2: Omit<YoutubeChannelInfo, 'id' | 'channelId'> = {
-  isModerator: author2.attributes.isModerator,
-  isOwner: author2.attributes.isOwner,
+export const youtubeChannelGlobalInfo2: SafeOmit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
   isVerified: author2.attributes.isVerified,
   imageUrl: author2.image,
   name: author2.name!,
@@ -87,15 +84,11 @@ export const author3: TwitchAuthor = {
   badges: new Map(),
   badgeInfo: new Map()
 }
-export const twitchChannelInfo3: Omit<TwitchChannelInfo, 'id' | 'channelId'> = {
+export const twitchChannelGlobalInfo3: SafeOmit<TwitchChannelGlobalInfo, 'id' | 'channelId'> = {
   userName: author3.userName,
   displayName: author3.displayName,
   colour: author3.color!,
   time: time1,
-  isBroadcaster: author3.isBroadcaster,
-  isMod: author3.isMod,
-  isSubscriber: author3.isSubscriber,
-  isVip: author3.isVip,
   userType: author3.userType!
 }
 
