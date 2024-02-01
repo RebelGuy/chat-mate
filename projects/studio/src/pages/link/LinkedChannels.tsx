@@ -63,7 +63,7 @@ export default function LinkedChannels (props: Props) {
     <RequireRank anyOwner>
       <>
         <Box>
-          Primary linked channels are the channels that you will stream on. You can select at most one primary channel on YouTube, and one on Twitch. Primary channels are highlighted in the below table.
+          Primary linked channels are the channels that you will stream on. You can select at most one primary channel on YouTube, and one on Twitch.
         </Box>
         {isLive && (
           <ErrorMessage>You cannot update your primary channels while livestreaming.</ErrorMessage>
@@ -85,7 +85,7 @@ export default function LinkedChannels (props: Props) {
         </TableHead>
         <TableBody>
           {props.channelsRequestObj.data.channels.map((c, i) =>
-            <TableRow key={i} style={{ background: isPrimaryChannel(c) ? 'aliceblue' : undefined }}>
+            <TableRow key={i}>
               <TableCell><a href={getChannelUrlFromPublic(c)}>{c.displayName}</a></TableCell>
               <TableCell>{c.platform === 'youtube' ? 'YouTube' : c.platform === 'twitch' ? 'Twitch' : assertUnreachable(c.platform)}</TableCell>
               <RequireRank anyOwner>
