@@ -130,7 +130,9 @@ export default function useRequest<
   const useCache = request.method === 'GET' && options?.useCache !== false || options?.useCache === true
   const thisRequestCounter = !hasGeneratedTempCacheKey.current && !useCache ? requestCounter++ : 0
   hasGeneratedTempCacheKey.current = true
-  const [cacheKey] = useState(useCache ? `${request.method}-${request.path}` : `${request.method}-${request.path}-${thisRequestCounter}`)
+
+  // sometimes, requests return different data depending on the request headers, so encode these in the cache key
+  const [cacheKey] = useState(useCache ? `${request.method}-${request.path}-${request.requiresStreamer ?? true}-${request.requiresLogin ?? true}` : `${request.method}-${request.path}-${thisRequestCounter}`)
   if (request.method !== 'GET' && options?.useCache) {
     console.warn('Cannot set useCache for non-GET requests')
   }
