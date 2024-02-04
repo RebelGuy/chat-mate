@@ -2,13 +2,13 @@ import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicLinkHistoryItem } from '@rebel/api-models/public/user/PublicLinkHistoryItem'
 import { PublicUserSearchResult } from '@rebel/api-models/public/user/PublicUserSearchResult'
-import { channelToPublicChannel, registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
+import { AllUserData, channelToPublicChannel, registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
 import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import LinkService, { UnlinkUserOptions } from '@rebel/server/services/LinkService'
 import AccountStore from '@rebel/server/stores/AccountStore'
-import ChannelStore, {  } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { intersection, nonNull, single, symmetricDifference, unique } from '@rebel/shared/util/arrays'
@@ -151,17 +151,16 @@ export default class UserController extends ControllerBase {
                 id: -1,
                 youtubeId: '',
                 userId: -1,
-                infoHistory: [{
+                globalInfoHistory: [{
                   channelId: -1,
                   id: -1,
                   imageUrl: '',
-                  isModerator: false,
-                  isOwner: false,
                   isVerified: false,
                   name: 'n/a',
                   time: new Date()
                 }]
-              }},
+              } as YoutubeChannelWithLatestInfo
+            },
             registeredUser: standaloneRegisteredUsers.find(r => r.queriedUserId === aggregateUserId)!.registeredUser,
             firstSeen: 0,
             customRankNames: {}
