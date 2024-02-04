@@ -1,6 +1,4 @@
 import { Alert, Box, Button } from '@mui/material'
-import { GetPrimaryChannelsResponse } from '@rebel/api-models/schema/streamer'
-import { ApiResponseData } from '@rebel/api-models/types'
 import { getChannelUrlFromPublic } from '@rebel/shared/util/channel'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
@@ -8,12 +6,11 @@ import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
-import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest, { onConfirmRequest } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { getYoutubeStatus, getChatMateRegisteredUsername, revokeYoutubeStreamer, authoriseYoutubeStreamer, getYoutubeStreamerLoginUrl, getYoutubeModerators, getStatus } from '@rebel/studio/utility/api'
+import { getYoutubeStatus, revokeYoutubeStreamer, authoriseYoutubeStreamer, getYoutubeStreamerLoginUrl, getYoutubeModerators, getStatus, getOfficialChatMateStreamer } from '@rebel/studio/utility/api'
 import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 type Props = {
@@ -28,10 +25,9 @@ export default function YoutubeStatus (props: Props) {
   const code = isYoutubeAuth ? params.get('code') : null
   const [hasCode] = useState(code != null)
 
-  const loginContext = useContext(LoginContext)
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const getYoutubeStatusRequest = useRequest(getYoutubeStatus(), { updateKey: refreshToken })
-  const getChatMateRegisteredUsernameRequest = useRequest(getChatMateRegisteredUsername(), { updateKey: refreshToken })
+  const getOfficialChatMateStreamerRequest = useRequest(getOfficialChatMateStreamer(), { updateKey: refreshToken })
   const getYoutubeStreamerLoginUrlRequest = useRequest(getYoutubeStreamerLoginUrl())
   const authoriseYoutubeStreamerRequest = useRequest(authoriseYoutubeStreamer(code!), { onDemand: true })
   const revokeAccessRequest = useRequest(revokeYoutubeStreamer(), {
@@ -42,10 +38,9 @@ export default function YoutubeStatus (props: Props) {
   const getStatusRequest = useRequest(getStatus(), { updateKey: refreshToken })
   const [isLivestreamActive, setIsLivestreamActive] = useState(getStatusRequest.data?.livestreamStatus != null)
 
-  const chatMateInfo = loginContext.allStreamers.find(streamer => streamer.username === getChatMateRegisteredUsernameRequest.data?.username)
   const requiresAuth = getYoutubeStatusRequest.data == null || !getYoutubeStatusRequest.data.chatMateIsAuthorised
 
-  const chatMateChannelId = chatMateInfo?.youtubeChannel?.channelId
+  const chatMateChannelId = getOfficialChatMateStreamerRequest.data?.chatMateStreamer.youtubeChannel?.channelId
   const isDefinitelyModerator = chatMateChannelId != null && getYoutubeModeratorsRequest.data?.moderators.some(mod => mod.channelId === chatMateChannelId)
 
   const onLoginToYoutube = () => {
@@ -128,16 +123,16 @@ export default function YoutubeStatus (props: Props) {
 
     <Box sx={{ mt: 4 }}>
       In order to benefit from all features, ChatMate requires that you add the&nbsp;
-      <LinkInNewTab href={chatMateInfo != null ? getChannelUrlFromPublic(chatMateInfo.youtubeChannel!) : ''}><b>{chatMateInfo?.youtubeChannel!.displayName ?? 'ChatMate'}</b></LinkInNewTab>
+      <LinkInNewTab href={getOfficialChatMateStreamerRequest.data != null ? getChannelUrlFromPublic(getOfficialChatMateStreamerRequest.data.chatMateStreamer.youtubeChannel!) : ''}><b>{getOfficialChatMateStreamerRequest.data?.chatMateStreamer.youtubeChannel!.displayName ?? 'ChatMate'}</b></LinkInNewTab>
       &nbsp;YouTube channel to the standard moderator list (
       <LinkInNewTab href="https://studio.youtube.com/">YouTube Studio</LinkInNewTab>
       &nbsp;-&gt; Settings -&gt; Community). For example, this will allow ChatMate to listen for punishments applied on YouTube, and synchronise these punishments on other accounts/platforms.
     </Box>
 
-    <ApiLoading requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest, getYoutubeModeratorsRequest, getStatusRequest]} initialOnly />
-    <ApiError requestObj={[getYoutubeStatusRequest, getChatMateRegisteredUsernameRequest, getStatusRequest]} /> {/* deliberately don't show the moderator request, as it would show an error if ChatMate is not yet authorised */}
+    <ApiLoading requestObj={[getYoutubeStatusRequest, getOfficialChatMateStreamerRequest, getYoutubeModeratorsRequest, getStatusRequest]} initialOnly />
+    <ApiError requestObj={[getYoutubeStatusRequest, getOfficialChatMateStreamerRequest, getStatusRequest]} /> {/* deliberately don't show the moderator request, as it would show an error if ChatMate is not yet authorised */}
 
-    {getYoutubeStatusRequest.data != null && getChatMateRegisteredUsernameRequest.data != null && (getYoutubeModeratorsRequest.data != null || getYoutubeModeratorsRequest.error != null) && getStatusRequest.data != null && <>
+    {getYoutubeStatusRequest.data != null && getOfficialChatMateStreamerRequest.data != null && (getYoutubeModeratorsRequest.data != null || getYoutubeModeratorsRequest.error != null) && getStatusRequest.data != null && <>
       {getYoutubeModeratorsRequest.data != null ? // in this case, we know definitely whether ChatMate is a moderator or not. technically this never comes up if we are not a moderator, because then we can't make the request
         <Box sx={{ mt: 1, mb: 1 }}>
           ChatMate is
