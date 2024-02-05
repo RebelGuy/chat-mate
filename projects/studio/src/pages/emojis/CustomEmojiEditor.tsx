@@ -32,7 +32,8 @@ const DEFAULT_DATA: EmojiData = {
   canUseInDonationMessage: true,
   imageData: '',
   levelRequirement: 0,
-  whitelistedRanks: []
+  whitelistedRanks: [],
+  sortOrder: -1
 }
 
 export default function CustomEmojiEditor (props: Props) {

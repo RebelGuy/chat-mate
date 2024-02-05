@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useState } from 'react'
+import { CSSProperties, ReactNode, useContext, useRef, useState } from 'react'
 import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { getAccessibleRanks, getAllCustomEmojis } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
@@ -11,7 +11,7 @@ import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import { GetCustomEmojisResponse } from '@rebel/api-models/schema/emoji'
 import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
-import { Close, Done, Edit } from '@mui/icons-material'
+import { Close, Done, DragHandle, Edit } from '@mui/icons-material'
 import CopyText from '@rebel/studio/components/CopyText'
 import useRequest, { SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
@@ -20,6 +20,7 @@ import RefreshButton from '@rebel/studio/components/RefreshButton'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { SafeOmit } from '@rebel/shared/types'
+import { createPortal } from 'react-dom'
 
 export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -38,6 +39,8 @@ export default function CustomEmojiManager () {
   const [openEditor, setOpenEditor] = useState<boolean>(false)
   const [editingType, setEditingType] = useState<'new' | 'edit'>('new')
   const [showOnlyEligibleEmojis, setShowOnlyEligibleEmojis] = useState(!loginContext.hasRank('owner'))
+  const [dragging, setDragging] = useState<number | null>(null)
+  const [hoveringOver, setHoveringOver] = useState<number | null>(null)
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const emojisRequest = useRequest(getAllCustomEmojis(), {
     updateKey: refreshToken,
@@ -199,7 +202,13 @@ export default function CustomEmojiManager () {
                   isLoading={isLoading}
                   meetsRequirements={meetsEmojiRequirements(emoji)}
                   showOnlyEligibleEmojis={isLoggedIn ? showOnlyEligibleEmojis : false}
+                  isDraggingOver={dragging != null && dragging !== emoji.id && hoveringOver === emoji.id}
+                  showHitboxAbove={dragging != null && dragging > emoji.id}
                   onEdit={() => onEdit(emoji.id)}
+                  onDragStart={() => setDragging(emoji.id)}
+                  onDragEnd={() => setDragging(null)}
+                  onMouseEnter={() => setHoveringOver(emoji.id)}
+                  onMouseLeave={() => setHoveringOver(id => id === emoji.id ? null : id)}
                 />)
               }
             </TableBody>
@@ -247,10 +256,19 @@ type CustomEmojiRowProps = {
   isLoading: boolean
   meetsRequirements: Eligibility
   showOnlyEligibleEmojis: boolean
-  onEdit: (id: number) => void
+  isDraggingOver: boolean
+  showHitboxAbove: boolean
+  onEdit: () => void
+  onDragStart: () => void
+  onDragEnd: () => void
+  onMouseEnter: () => void
+  onMouseLeave: () => void
 }
 
 function CustomEmojiRow (props: CustomEmojiRowProps) {
+  const [canDrag, setCanDrag] = useState(false)
+  const ref = useRef<HTMLElement | null>(null)
+
   const { meetsLevelRequirement, meetsRankRequirement } = props.meetsRequirements
   const isEligible = meetsLevelRequirement && meetsRankRequirement
   if (props.showOnlyEligibleEmojis && !isEligible) {
@@ -259,39 +277,67 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
 
   const symbol = `:${props.data.symbol}:`
 
+  // the whole row can be dragged only via the drag handle
+  function onMouseEnterDragHandle(): void {
+    setCanDrag(true)
+  }
+
+  function onMouseLeaveDragHandle(): void {
+    setCanDrag(false)
+  }
+
+  // we render a separate box as the drag-drop indicator so that it doesn't interfere with the layout
   return (
-    <ThemeProvider theme={isEligible ? {} : disabledTheme}>
-      <TableRow>
-        <TableCell>{props.data.name}</TableCell>
-        <TableCell>
-          {symbol}
-          {isEligible && <CopyText text={symbol} tooltip="Copy symbol to clipboard" sx={{ ml: 1 }} />}
-        </TableCell>
-        <TableCell>
-          <Box sx={!meetsLevelRequirement ? ineligibilityOutline : undefined}>
-            {props.data.levelRequirement}
-          </Box>
-        </TableCell>
-        <TableCell>{props.data.canUseInDonationMessage ? <Done /> : <Close />}</TableCell>
-        <TableCell>
-          <Box sx={!meetsRankRequirement ? ineligibilityOutline : undefined}>
-            <RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} />
-          </Box>
-        </TableCell>
-        <TableCell>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            {!isNullOrEmpty(props.data.imageData) && <img src={`data:image/png;base64,${props.data.imageData}`} style={{ maxHeight: 32 }} alt="" />}
-          </div>
-        </TableCell>
-        <RequireRank owner>
+    <>
+      {props.isDraggingOver && ref.current != null && createPortal(
+        <Box
+          style={{
+            height: 2,
+            width: ref.current.getBoundingClientRect().width,
+            background: 'green',
+            position: 'absolute',
+            top: props.showHitboxAbove ? ref.current.getBoundingClientRect().top : ref.current.getBoundingClientRect().bottom,
+            left: ref.current.getBoundingClientRect().left
+          }}
+        />, document.body!)
+      }
+
+      <ThemeProvider theme={isEligible ? {} : disabledTheme}>
+        <TableRow ref={r => ref.current = r} draggable={canDrag} onDragStart={props.onDragStart} onDragEnd={props.onDragEnd} onDragEnter={props.onMouseEnter} onDragExit={props.onMouseLeave}>
+          <TableCell>{props.data.name}</TableCell>
           <TableCell>
-            <IconButton disabled={props.isLoading} onClick={() => props.onEdit(props.data.id)}>
-              <Edit />
-            </IconButton>
+            {symbol}
+            {isEligible && <CopyText text={symbol} tooltip="Copy symbol to clipboard" sx={{ ml: 1 }} />}
           </TableCell>
-        </RequireRank>
-      </TableRow>
-    </ThemeProvider>
+          <TableCell>
+            <Box sx={!meetsLevelRequirement ? ineligibilityOutline : undefined}>
+              {props.data.levelRequirement}
+            </Box>
+          </TableCell>
+          <TableCell>{props.data.canUseInDonationMessage ? <Done /> : <Close />}</TableCell>
+          <TableCell>
+            <Box sx={!meetsRankRequirement ? ineligibilityOutline : undefined}>
+              <RanksDisplay ranks={props.data.whitelistedRanks} accessibleRanks={props.accessibleRanks} />
+            </Box>
+          </TableCell>
+          <TableCell>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              {!isNullOrEmpty(props.data.imageData) && <img src={`data:image/png;base64,${props.data.imageData}`} style={{ maxHeight: 32 }} alt="" />}
+            </div>
+          </TableCell>
+          <RequireRank owner>
+            <TableCell>
+              <IconButton disabled={props.isLoading} onClick={() => props.onEdit()}>
+                <Edit />
+              </IconButton>
+              <IconButton disabled={props.isLoading} onMouseEnter={onMouseEnterDragHandle} onMouseLeave={onMouseLeaveDragHandle}>
+                <DragHandle />
+              </IconButton>
+            </TableCell>
+          </RequireRank>
+        </TableRow>
+      </ThemeProvider>
+    </>
   )
 }
 function compareEmojis(data: EmojiData, previousData: EmojiData) {

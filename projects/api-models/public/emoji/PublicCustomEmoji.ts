@@ -28,6 +28,9 @@ export type PublicCustomEmoji = PublicObject<{
 
   /** The list of ranks that are allowed to use the custom emoji. If empty, all ranks have access. */
   whitelistedRanks: number[]
+
+  /** The position of this custom emoji relative to all other custom emojis. */
+  sortOrder: number
 }>
 
 export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version'>
