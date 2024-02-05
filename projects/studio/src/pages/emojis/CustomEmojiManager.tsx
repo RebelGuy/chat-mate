@@ -206,7 +206,7 @@ export default function CustomEmojiManager () {
                   showHitboxAbove={dragging != null && dragging > emoji.id}
                   onEdit={() => onEdit(emoji.id)}
                   onDragStart={() => setDragging(emoji.id)}
-                  onDragEnd={() => setDragging(null)}
+                  onDragEnd={() => { setDragging(null), setHoveringOver(null) }}
                   onMouseEnter={() => setHoveringOver(emoji.id)}
                   onMouseLeave={() => setHoveringOver(id => id === emoji.id ? null : id)}
                 />)
