@@ -3,7 +3,7 @@ import { requireRank, requireStreamer } from '@rebel/server/controllers/preProce
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import { Path, GET, POST, PATCH, PreProcessor } from 'typescript-rest'
-import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/api-models/schema/emoji'
+import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
 
 type Deps = ControllerDependencies<{
   customEmojiStore: CustomEmojiStore
@@ -79,6 +79,38 @@ export default class EmojiController extends ControllerBase {
     try {
       const emoji = await this.customEmojiStore.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji))
       return builder.success({ updatedEmoji: customEmojiToPublicObject(emoji) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @PATCH
+  @Path('/custom/sortOrder')
+  @PreProcessor(requireRank('owner'))
+  public async updateCustomEmojiSortOrder (request: UpdateCustomEmojiSortOrderRequest): Promise<UpdateCustomEmojiSortOrderResponse> {
+    const builder = this.registerResponseBuilder<UpdateCustomEmojiSortOrderResponse>('PATCH /custom/sortOrder')
+    if (request?.sortOrders == null) {
+      return builder.failure(400, 'Invalid request data.')
+    }
+
+    try {
+      const ids = Object.keys(request.sortOrders).map(id => Number(id))
+      if (ids.some(id => isNaN(id))) {
+        return builder.failure(400, 'Invalid request data.')
+      }
+
+      const sortOrders = Object.values(request.sortOrders).map(sortOrder => Number(sortOrder))
+      if (ids.some(sortOrder => isNaN(sortOrder))) {
+        return builder.failure(400, 'Invalid request data.')
+      }
+
+      const accessibleIds = await this.customEmojiStore.getAllCustomEmojis(this.getStreamerId()).then(res => res.map(e => e.id))
+      if (ids.some(id => !accessibleIds.includes(id))) {
+        return builder.failure(404, 'One or more custom emojis could not be found.')
+      }
+
+      await this.customEmojiStore.updateCustomEmojiSortOrders(ids, sortOrders)
+      return builder.success({ })
     } catch (e: any) {
       return builder.failure(e)
     }

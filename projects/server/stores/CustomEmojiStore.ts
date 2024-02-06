@@ -16,6 +16,7 @@ export type CustomEmojiWithRankWhitelist = {
   image: Buffer
   levelRequirement: number
   canUseInDonationMessage: boolean
+  sortOrder: number
   whitelistedRanks: number[]
 }
 
@@ -35,6 +36,7 @@ export type CustomEmojiCreateData = {
   image: Buffer
   levelRequirement: number
   canUseInDonationMessage: boolean
+  sortOrder: number
   whitelistedRanks: number[]
 }
 
@@ -82,6 +84,7 @@ export default class CustomEmojiStore extends ContextClass {
       modifiedAt: version.modifiedAt,
       name: version.name,
       version: version.version,
+      sortOrder: version.customEmoji.sortOrder,
       whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === version.customEmoji.id).map(w => w.rankId)
     }))
   }
@@ -91,7 +94,8 @@ export default class CustomEmojiStore extends ContextClass {
     return await this.db.$transaction(async db => {
       const newEmoji = await db.customEmoji.create({ data: {
         streamerId: data.streamerId,
-        symbol: data.symbol
+        symbol: data.symbol,
+        sortOrder: data.sortOrder
       }})
 
       // we can only do this after the emoji has been created so we have its id
@@ -123,6 +127,7 @@ export default class CustomEmojiStore extends ContextClass {
         modifiedAt: newEmojiVersion.modifiedAt,
         levelRequirement: newEmojiVersion.levelRequirement,
         canUseInDonationMessage: newEmojiVersion.canUseInDonationMessage,
+        sortOrder: newEmoji.sortOrder,
         whitelistedRanks: data.whitelistedRanks
       }
     })
@@ -211,8 +216,24 @@ export default class CustomEmojiStore extends ContextClass {
         modifiedAt: updatedEmojiVersion.modifiedAt,
         levelRequirement: updatedEmojiVersion.levelRequirement,
         canUseInDonationMessage: updatedEmojiVersion.canUseInDonationMessage,
+        sortOrder: updatedEmojiVersion.customEmoji.sortOrder,
         whitelistedRanks: data.whitelistedRanks
       }
     })
+  }
+
+  public async updateCustomEmojiSortOrders (ids: number[], sortOrders: number[]) {
+    if ([...ids, ...sortOrders].some(x => typeof x !== 'number' || isNaN(x))) {
+      throw new ChatMateError('Invalid input')
+    }
+
+    await this.db.$executeRawUnsafe(`
+      UPDATE custom_emoji
+      SET sortOrder =
+        CASE id
+          ${ids.map((id, i) => `WHEN ${id} THEN ${sortOrders[i]}`).join(' ')}
+        END
+      WHERE id IN (${ids.join(', ')})
+    `)
   }
 }

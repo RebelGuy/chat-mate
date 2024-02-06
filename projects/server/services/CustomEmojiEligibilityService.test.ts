@@ -115,6 +115,7 @@ function setupCustomEmojis (...whitelist: [EmojiData, Rank[]][]) {
     isActive: true,
     modifiedAt: new Date(),
     version: 0,
+    sortOrder: 1,
     whitelistedRanks: w[1].map(r => r.id)
   })))
 

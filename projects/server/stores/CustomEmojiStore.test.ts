@@ -57,7 +57,7 @@ export default () => {
 
     test('symbols must be unique only for the given streamer', async () => {
       const symbol = 'symbol'
-      await db.customEmoji.create({ data: { symbol: symbol, streamerId: streamer1 }})
+      await db.customEmoji.create({ data: { symbol: symbol, streamerId: streamer1, sortOrder: 1 }})
       const data = { ...getEmojiCreateData(1, streamer2), symbol: symbol }
 
       await customEmojiStore.addCustomEmoji({ ...data, whitelistedRanks: [] })
@@ -86,7 +86,7 @@ export default () => {
     })
 
     test('duplicate symbol is rejected', async () => {
-      await db.customEmoji.create({ data: { streamerId: streamer1, symbol: 'emoji1' } })
+      await db.customEmoji.create({ data: { streamerId: streamer1, symbol: 'emoji1', sortOrder: 1 } })
       const data: CustomEmojiCreateData = { ...getEmojiCreateData(1), whitelistedRanks: [] }
 
       await expect(() => customEmojiStore.addCustomEmoji(data)).rejects.toThrowError(DbError)
@@ -112,7 +112,7 @@ export default () => {
 
     test('does not return deactivated emojis', async () => {
       await db.customEmojiVersion.create({ data: {
-        customEmoji: { create: { streamerId: streamer1, symbol: 'symbol' }},
+        customEmoji: { create: { streamerId: streamer1, symbol: 'symbol', sortOrder: 1 }},
         image: Buffer.from('emoji'),
         isActive: false,
         levelRequirement: 1,
@@ -200,6 +200,33 @@ export default () => {
     })
   })
 
+  describe(nameof(CustomEmojiStore, 'updateCustomEmojiSortOrders'), () => {
+    test('Updates the custom emoji ids', async () => {
+      await db.customEmoji.createMany({ data: [
+        { streamerId: streamer1, sortOrder: 1, symbol: 'symbol1' },
+        { streamerId: streamer1, sortOrder: 2, symbol: 'symbol2' },
+        { streamerId: streamer1, sortOrder: 3, symbol: 'symbol3' },
+        { streamerId: streamer1, sortOrder: 4, symbol: 'symbol4' },
+        { streamerId: streamer1, sortOrder: 5, symbol: 'symbol5' }
+      ]})
+
+      await customEmojiStore.updateCustomEmojiSortOrders([2, 3, 5], [200, 300, 500])
+
+      const stored = await db.customEmoji.findMany()
+      expect(stored).toEqual(expectObject(stored, [
+        { id: 1, sortOrder: 1 },
+        { id: 2, sortOrder: 200 },
+        { id: 3, sortOrder: 300 },
+        { id: 4, sortOrder: 4 },
+        { id: 5, sortOrder: 500 }
+      ]))
+    })
+
+    test('Throws if the input is invalid', async () => {
+      await expect(() => customEmojiStore.updateCustomEmojiSortOrders(['test' as any], [])).rejects.toThrowError(ChatMateError)
+    })
+  })
+
   describe('integration tests', () => {
     test('TRG_CHECK_EXISTING_ACTIVE_VERSION prevents multiple active versions', async () => {
       await createEmojis([1])
@@ -217,7 +244,7 @@ export default () => {
   })
 
   async function createEmojis (ids: number[], streamerIds?: number[]) {
-    await db.customEmoji.createMany({ data: ids.map((id, i) => ({ id, symbol: 'emoji' + id, streamerId: streamerIds?.at(i) ?? streamer1 }))})
+    await db.customEmoji.createMany({ data: ids.map((id, i) => ({ id, symbol: 'emoji' + id, streamerId: streamerIds?.at(i) ?? streamer1, sortOrder: id }))})
     await db.customEmojiVersion.createMany({ data: ids.map(id => ({
       customEmojiId: id,
       image: Buffer.from('emoji' + id),
@@ -235,6 +262,7 @@ function getEmojiCreateData (id: number, streamerId?: number): SafeOmit<CustomEm
     name: 'Emoji ' + id,
     streamerId: streamerId ?? streamer1,
     symbol: 'emoji' + id,
+    sortOrder: id,
     image: Buffer.from('emoji' + id),
     levelRequirement: id,
     canUseInDonationMessage: true

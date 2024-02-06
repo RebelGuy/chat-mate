@@ -31,9 +31,9 @@ beforeEach(() => {
 
   mockCustomEmojiServiceEligibilityService = mock()
   mockCustomEmojiServiceEligibilityService.getEligibleEmojis.calledWith(primaryUserId, streamerId).mockResolvedValue([
-    { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
-    { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version },
-    { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, latestVersion: customEmoji3Version }
+    { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, sortOrder: 1, latestVersion: customEmoji1Version },
+    { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, sortOrder: 2, latestVersion: customEmoji2Version },
+    { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, sortOrder: 3, latestVersion: customEmoji3Version }
   ])
 
   emojiService = new EmojiService(new Dependencies({
@@ -136,7 +136,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 
   test('text message contains only ineligible custom emojis', async () => {
     mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([
-      { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, latestVersion: customEmoji3Version }
+      { id: customEmoji3.id, symbol: customEmoji3.symbol, streamerId: streamerId, sortOrder: 1, latestVersion: customEmoji3Version }
     ])
     const part: PartialTextChatMessage = {
       type: 'text',
@@ -152,7 +152,7 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
 
   test('text message contains one eligible and one ineligible custom emoji', async () => {
     mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([
-      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version }
+      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, sortOrder: 1, latestVersion: customEmoji1Version }
     ])
     const part: PartialTextChatMessage = {
       type: 'text',
@@ -187,9 +187,9 @@ describe(nameof(EmojiService, 'applyCustomEmojis'), () => {
     const trollEmoji: EmojiData = { id: 1, name: 'Troll', symbol: 'troll', levelRequirement: 0, image: Buffer.from('') }
     const trollEmojiVersion = 1
     mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([
-      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
-      { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version },
-      { id: trollEmoji.id, symbol: trollEmoji.symbol, streamerId: streamerId, latestVersion: trollEmojiVersion }
+      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, sortOrder: 1, latestVersion: customEmoji1Version },
+      { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, sortOrder: 2, latestVersion: customEmoji2Version },
+      { id: trollEmoji.id, symbol: trollEmoji.symbol, streamerId: streamerId, sortOrder: 3, latestVersion: trollEmojiVersion }
     ])
 
     const part: PartialTextChatMessage = {
@@ -237,8 +237,8 @@ describe(nameof(EmojiService, 'applyCustomEmojisToDonation'), () => {
 
   test('Applies only custom emojis with the donation flag enabled', async () => {
     mockCustomEmojiServiceEligibilityService.getEligibleDonationEmojis.calledWith(streamerId).mockResolvedValue([
-      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, latestVersion: customEmoji1Version },
-      { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, latestVersion: customEmoji2Version }
+      { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, sortOrder: 1, latestVersion: customEmoji1Version },
+      { id: customEmoji2.id, symbol: customEmoji2.symbol, streamerId: streamerId, sortOrder: 2, latestVersion: customEmoji2Version }
     ])
     const text = `abc :${customEmoji1.symbol}:def:${customEmoji2.symbol}: ghi`
 

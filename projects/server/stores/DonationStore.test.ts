@@ -55,6 +55,7 @@ export default () => {
       await db.customEmoji.create({ data: {
         symbol: 'test',
         streamerId: streamer1,
+        sortOrder: 1,
         customEmojiVersions: { create: {
           image: Buffer.from(''),
           isActive: true,
@@ -150,7 +151,7 @@ export default () => {
           canUseInDonationMessage: true,
           name: 'name',
           version: 0,
-          customEmoji: { create: { streamerId: streamer1, symbol: 'symbol' }}
+          customEmoji: { create: { streamerId: streamer1, symbol: 'symbol', sortOrder: 1 }}
         }}
       }})
       await db.chatMessage.create({ data: {

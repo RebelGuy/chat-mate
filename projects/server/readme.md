@@ -516,6 +516,16 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
+### `PATCH /custom/sortOrder`
+Bulk-update the sort order of custom emojis.
+
+Request data (body):
+- `sortOrders` (`Record<number, number>`): *Required.* The map of custom emoji id to sort order.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When one or more custom emojis could not be found.
+
 ## Experience Endpoints
 Path: `/experience`.
 

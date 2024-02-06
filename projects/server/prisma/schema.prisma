@@ -759,6 +759,9 @@ model CustomEmoji {
 
   symbol String @db.VarChar(32) // unique
 
+  // deliberately don't save this to the CustomEmojiVersion because it's display data that is not important to save, and we would be generating hundreds of versions otherwise
+  sortOrder Int
+
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "custom_emoji_streamerId_key")
 

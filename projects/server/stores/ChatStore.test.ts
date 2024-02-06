@@ -397,7 +397,7 @@ export default () => {
         isActive: true,
         version: 0,
         canUseInDonationMessage: true,
-        customEmoji: { create: { streamerId: streamer1, symbol: 'test' }}
+        customEmoji: { create: { streamerId: streamer1, symbol: 'test', sortOrder: 1 }}
       }})
       await db.customEmojiRankWhitelist.createMany({ data: [
         { customEmojiId: 1, rankId: 1 },

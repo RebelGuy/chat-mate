@@ -11,7 +11,8 @@ export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist):
     imageData: emoji.image.toString('base64'),
     levelRequirement: emoji.levelRequirement,
     canUseInDonationMessage: emoji.canUseInDonationMessage,
-    whitelistedRanks: emoji.whitelistedRanks
+    whitelistedRanks: emoji.whitelistedRanks,
+    sortOrder: emoji.sortOrder
   }
 }
 
@@ -23,6 +24,7 @@ export function publicObjectNewToNewCustomEmoji (emoji: PublicCustomEmojiNew, st
     image: Buffer.from(emoji.imageData, 'base64'),
     levelRequirement: emoji.levelRequirement,
     canUseInDonationMessage: emoji.canUseInDonationMessage,
+    sortOrder: emoji.sortOrder,
     whitelistedRanks: emoji.whitelistedRanks
   }
 }

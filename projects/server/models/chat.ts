@@ -195,6 +195,7 @@ export type ChatItemWithRelations = (ChatMessage & {
         emoji: ChatEmoji | null,
         customEmojiVersion: CustomEmojiVersion & { customEmoji: {
           symbol: string,
+          sortOrder: number,
           customEmojiRankWhitelist: { rankId: number }[]
         }}
       }) | null
@@ -380,6 +381,7 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
         imageData: part.customEmoji.customEmojiVersion.image.toString('base64'),
         isActive: part.customEmoji.customEmojiVersion.isActive,
         version: part.customEmoji.customEmojiVersion.version,
+        sortOrder: part.customEmoji.customEmojiVersion.customEmoji.sortOrder,
         whitelistedRanks: part.customEmoji.customEmojiVersion.customEmoji.customEmojiRankWhitelist.map(w => w.rankId)
       }
     }
