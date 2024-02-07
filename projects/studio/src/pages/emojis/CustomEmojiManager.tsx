@@ -21,6 +21,7 @@ import PanelHeader from '@rebel/studio/components/PanelHeader'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { SafeOmit } from '@rebel/shared/types'
 import { createPortal } from 'react-dom'
+import useMap from '@rebel/studio/hooks/useMap'
 
 export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -28,8 +29,6 @@ type Eligibility = {
   meetsLevelRequirement: boolean
   meetsRankRequirement: boolean
 }
-
-const emojiSorter = (data: SuccessfulResponseData<GetCustomEmojisResponse>) => ({ emojis: sortBy(data.emojis, e => e.id)})
 
 export default function CustomEmojiManager () {
   const loginContext = useContext(LoginContext)
@@ -39,13 +38,11 @@ export default function CustomEmojiManager () {
   const [openEditor, setOpenEditor] = useState<boolean>(false)
   const [editingType, setEditingType] = useState<'new' | 'edit'>('new')
   const [showOnlyEligibleEmojis, setShowOnlyEligibleEmojis] = useState(!loginContext.hasRank('owner'))
-  const [dragging, setDragging] = useState<number | null>(null)
-  const [hoveringOver, setHoveringOver] = useState<number | null>(null)
+  const [dragging, setDragging] = useState<PublicCustomEmoji | null>(null)
+  const [hoveringOver, setHoveringOver] = useState<PublicCustomEmoji | null>(null)
+  const sortOrderMap = useMap<PublicCustomEmoji, number>() // used to override the sort orders while editing
   const [refreshToken, updateRefreshToken] = useUpdateKey()
-  const emojisRequest = useRequest(getAllCustomEmojis(), {
-    updateKey: refreshToken,
-    transformer: emojiSorter
-  })
+  const emojisRequest = useRequest(getAllCustomEmojis(), { updateKey: refreshToken })
   const accessibleRanksRequest = useRequest(getAccessibleRanks(), { updateKey: refreshToken })
   const isLoading = emojisRequest.isLoading || accessibleRanksRequest.isLoading
 
@@ -140,6 +137,41 @@ export default function CustomEmojiManager () {
     return { meetsLevelRequirement, meetsRankRequirement }
   }
 
+  function getSortOrder (emoji: PublicCustomEmoji) {
+    return sortOrderMap.get(emoji) ?? emoji.sortOrder
+  }
+
+  const onDragEnd = () => {
+    if (dragging != null && hoveringOver != null) {
+      const placeAbove = getSortOrder(dragging) > getSortOrder(hoveringOver)
+      const newSortOrder = getSortOrder(hoveringOver)
+
+      if (placeAbove) {
+        // increase the sort order of all elements above the hoveringOver emoji (inclusive), up to the dragging element.
+        // then set the dragging element's sort order to the older hoveringOver emoji's sort order
+        for (const emoji of emojisRequest.data!.emojis) {
+          if (getSortOrder(emoji) >= getSortOrder(hoveringOver) && getSortOrder(emoji) < getSortOrder(dragging)) {
+            sortOrderMap.set(emoji, getSortOrder(emoji) + 1)
+          }
+        }
+
+      } else {
+        // decrease the sort order of all elements below the dragging element, up to the hoveringOver element (inclusive)
+        // set the dragging element's sort order to the older hoveringOver emoji's sort order
+        for (const emoji of emojisRequest.data!.emojis) {
+          if (getSortOrder(emoji) <= getSortOrder(hoveringOver) && getSortOrder(emoji) > getSortOrder(dragging)) {
+            sortOrderMap.set(emoji, getSortOrder(emoji) - 1)
+          }
+        }
+      }
+
+      sortOrderMap.set(dragging, newSortOrder)
+    }
+    
+    setDragging(null)
+    setHoveringOver(null)
+  }
+
   const header = <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
 
   const streamer = loginContext.allStreamers.find(s => s.username === loginContext.streamer)
@@ -194,7 +226,7 @@ export default function CustomEmojiManager () {
               </TableRow>
             </TableHead>
             <TableBody>
-              {emojisRequest.data.emojis.map(emoji =>
+              {sortBy(emojisRequest.data.emojis, getSortOrder).map(emoji =>
                 <CustomEmojiRow
                   key={emoji.id}
                   data={emoji}
@@ -202,15 +234,15 @@ export default function CustomEmojiManager () {
                   isLoading={isLoading}
                   meetsRequirements={meetsEmojiRequirements(emoji)}
                   showOnlyEligibleEmojis={isLoggedIn ? showOnlyEligibleEmojis : false}
-                  isDraggingOver={dragging != null && dragging !== emoji.id && hoveringOver === emoji.id}
-                  showHitboxAbove={dragging != null && dragging > emoji.id}
+                  isDraggingOver={dragging != null && dragging !== emoji && hoveringOver === emoji}
+                  showHitboxAbove={dragging != null && getSortOrder(emojisRequest.data!.emojis.find(e => e === dragging)!) > getSortOrder(emoji)}
                   onEdit={() => onEdit(emoji.id)}
-                  onDragStart={() => setDragging(emoji.id)}
-                  onDragEnd={() => { setDragging(null), setHoveringOver(null) }}
-                  onMouseEnter={() => setHoveringOver(emoji.id)}
-                  onMouseLeave={() => setHoveringOver(id => id === emoji.id ? null : id)}
-                />)
-              }
+                  onDragStart={() => setDragging(emoji)}
+                  onDragEnd={onDragEnd}
+                  onMouseEnter={() => setHoveringOver(emoji)}
+                  onMouseLeave={() => setHoveringOver(e => e === emoji ? null : e)}
+                />
+              )}
             </TableBody>
           </Table>
         </Box>
