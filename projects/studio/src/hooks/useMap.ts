@@ -36,5 +36,27 @@ export default function useMap<K, V> () {
     }
   }
 
-  return { size, get, set, delete: remove, has, clear }
+  function replaceKeys (keyReplacer: (oldKey: K) => K) {
+    setUpdateCounter(updateCounter + 1)
+
+    const keys = map.current.keys()
+    for (const key of keys) {
+      const newKey = keyReplacer(key)
+      if (key === newKey) {
+        continue
+      }
+
+      const value = map.current.get(key)!
+      map.current.delete(key)
+      map.current.set(newKey, value)
+    }
+  }
+
+  function toRecord (keyTransformer: (key: K) => string | number | symbol) {
+    let result: Record<string | number | symbol, V> = {}
+    map.current.forEach((v, k) => result[keyTransformer != null ? keyTransformer(k) : k as string | number | symbol] = v)
+    return result
+  }
+
+  return { size, get, set, delete: remove, has, clear, toRecord, replaceKeys }
 }

@@ -47,7 +47,7 @@ export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET',
 
 export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, UpdateCustomEmojiRequest> ('PATCH', `/emoji/custom`, 'self')
 
-export const addCustomEmojiSortOrder = requestBuilder<UpdateCustomEmojiSortOrderResponse, UpdateCustomEmojiSortOrderRequest> ('PATCH', `/emoji/custom/sortOrder`, 'self')
+export const updateCustomEmojiSortOrder = requestBuilder<UpdateCustomEmojiSortOrderResponse, UpdateCustomEmojiSortOrderRequest> ('PATCH', `/emoji/custom/sortOrder`, 'self')
 
 export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEmojiRequest> ('POST', `/emoji/custom`, 'self')
 

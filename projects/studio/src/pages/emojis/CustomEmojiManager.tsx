@@ -1,12 +1,12 @@
 import { DragEvent, ReactNode, useContext, useRef, useState } from 'react'
 import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
-import { getAccessibleRanks, getAllCustomEmojis } from '@rebel/studio/utility/api'
+import { getAccessibleRanks, getAllCustomEmojis, updateCustomEmojiSortOrder } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { compareArrays, sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { Alert, Box, Button, Card, Checkbox, createTheme, Drawer, FormControlLabel, Grow, IconButton, Slide, Stack, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider, Typography } from '@mui/material'
+import { Alert, Box, Button, Card, Checkbox, CircularProgress, createTheme, Drawer, FormControlLabel, Grow, IconButton, Slide, Stack, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider, Typography } from '@mui/material'
 import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
 import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
@@ -50,9 +50,17 @@ export default function CustomEmojiManager () {
   const headerRef = useRef<HTMLElement | null>(null)
   const sortOrderMap = useMap<PublicCustomEmoji, number>() // used to override the sort orders while editing
   const [refreshToken, updateRefreshToken] = useUpdateKey()
-  const emojisRequest = useRequest(getAllCustomEmojis(), { updateKey: refreshToken })
+  const emojisRequest = useRequest(getAllCustomEmojis(), {
+    updateKey: refreshToken,
+    onSuccess: data => {
+      replaceSortOrderKeys(data.emojis)
+      cleanUpSortOrderMap()
+    }
+  })
   const accessibleRanksRequest = useRequest(getAccessibleRanks(), { updateKey: refreshToken })
-  const isLoading = emojisRequest.isLoading || accessibleRanksRequest.isLoading
+  const updateCustomEmojiSortOrderRequest = useRequest(updateCustomEmojiSortOrder({ sortOrders: sortOrderMap.toRecord(e => e.id) }), { onDemand: true })
+
+  const isLoading = emojisRequest.isLoading || accessibleRanksRequest.isLoading || updateCustomEmojiSortOrderRequest.isLoading
 
   const onEdit = (id: number | null) => {
     setEditingEmoji(emojisRequest.data!.emojis.find(emoji => emoji.id === id) ?? null)
@@ -160,7 +168,7 @@ export default function CustomEmojiManager () {
 
   // buttery smooth *chefs kiss*
   function scrollAnimation (t: number, delta: number, params: typeof nextParams) {
-    if (params.mouseX == null || params.mouseY == null || params.prevMouseX == null || params.prevMouseY == null) {
+    if (params.mouseX == null || params.mouseY == null || params.prevMouseX == null || params.prevMouseY == null || panel == null) {
       return
     } else if (params.mouseY === 0) {
       return
@@ -209,19 +217,33 @@ export default function CustomEmojiManager () {
       }
 
       sortOrderMap.set(dragging, newSortOrder)
-      sortOrderMap.clear((emoji, sortOrder) => emoji.sortOrder === sortOrder)
+      cleanUpSortOrderMap()
     }
 
     setDragging(null)
     setHoveringOver(null)
   }
 
-  function onSaveOrder () {
-    console.log('save')
+  async function onSaveOrder () {
+    const result = await updateCustomEmojiSortOrderRequest.triggerRequest()
+
+    if (result.type === 'success') {
+      await emojisRequest.triggerRequest()
+    }
   }
 
   function onDiscardOrder () {
     sortOrderMap.clear()
+  }
+
+  function cleanUpSortOrderMap () {
+    sortOrderMap.clear((emoji, sortOrder) => emoji.sortOrder === sortOrder)
+  }
+
+  function replaceSortOrderKeys (emojis: PublicCustomEmoji[]) {
+    const knownIds = emojis.map(e => e.id)
+    sortOrderMap.clear(e => !knownIds.includes(e.id))
+    sortOrderMap.replaceKeys(e1 => emojis.find(e2 => e1.id === e2.id)!)
   }
 
   const header = <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
@@ -343,13 +365,17 @@ export default function CustomEmojiManager () {
             <Typography display="inline">
               One or more emojis have been re-ordered.
             </Typography>
-            <IconButton disabled={isLoading} onClick={onSaveOrder}>
-              <Save />
-            </IconButton>
+            {!updateCustomEmojiSortOrderRequest.isLoading ? (
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
+              <IconButton disabled={isLoading} onClick={onSaveOrder}>
+                <Save />
+              </IconButton>
+            ) : <CircularProgress size="24px" />}
             <IconButton disabled={isLoading} onClick={onDiscardOrder}>
               <Delete />
             </IconButton>
           </Stack>
+          <ApiError hideRetryButton requestObj={updateCustomEmojiSortOrderRequest} />
         </Card>
       </Grow>
     </>
