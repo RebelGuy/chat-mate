@@ -25,6 +25,7 @@ import useMap from '@rebel/studio/hooks/useMap'
 import { PanelContext } from '@rebel/studio/pages/main/MainView'
 import useMemState from '@rebel/studio/hooks/useMemState'
 import useAnimation from '@rebel/studio/hooks/useAnimation'
+import { clamp } from '@rebel/shared/util/math'
 
 export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -154,6 +155,7 @@ export default function CustomEmojiManager () {
     setMouseY(e.clientY)
   }
 
+  // note we have to pass the params into the animation function, else the `scrollAnimation` function will keep an outdated version in scope
   const nextParams = { mouseX, mouseY, prevMouseX, prevMouseY }
   useAnimation(scrollAnimation, nextParams)
 
@@ -161,17 +163,21 @@ export default function CustomEmojiManager () {
   function scrollAnimation (t: number, delta: number, params: typeof nextParams) {
     if (params.mouseX == null || params.mouseY == null || params.prevMouseX == null || params.prevMouseY == null) {
       return
+    } else if (params.mouseY === 0) {
+      return
     }
 
-    const rect = panel.getBoundingClientRect()
+    const panelRect = panel.getBoundingClientRect()
     const threshold = 100
     const maxSpeed = 20
 
-    if (params.mouseY > rect.y && params.mouseY - rect.y < threshold) {
-      panel.scrollBy({ top: -maxSpeed * (threshold - (params.mouseY - rect.y)) / threshold })
+    if (params.mouseY - panelRect.y < threshold) {
+      const distToThreshold = clamp(threshold - (params.mouseY - panelRect.y), 0, threshold)
+      panel.scrollBy({ top: -maxSpeed * distToThreshold / threshold })
       updateAnimationKey()
-    } else if (params.mouseY < rect.bottom && rect.bottom - params.mouseY < threshold) {
-      panel.scrollBy({ top: maxSpeed * (threshold - (rect.bottom - params.mouseY)) / threshold })
+    } else if (panelRect.bottom - params.mouseY < threshold) {
+      const distToThreshold = clamp(threshold - (panelRect.bottom - params.mouseY), 0, threshold)
+      panel.scrollBy({ top: maxSpeed * distToThreshold / threshold })
       updateAnimationKey()
     }
   }
@@ -370,21 +376,18 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
   if (props.isDraggingOver && ref.current != null) {
     if (props.showHitboxAbove) {
       dropIndicatorTop = ref.current.getBoundingClientRect().top
-
-      // don't show if it's behind the sticky panel header
-      const headerHeight = props.headerElement.getBoundingClientRect().height
-      const panelTop = props.panelElement.getBoundingClientRect().top
-      if (dropIndicatorTop < (panelTop + headerHeight)) {
-        dropIndicatorTop = null
-      }
-
     } else {
       dropIndicatorTop = ref.current.getBoundingClientRect().bottom
+    }
 
+    const headerHeight = props.headerElement.getBoundingClientRect().height
+    const panelTop = props.panelElement.getBoundingClientRect().top
+    if (dropIndicatorTop < (panelTop + headerHeight)) {
+      // don't show if it's behind the sticky panel header
+      dropIndicatorTop = null
+    } else if (dropIndicatorTop > props.panelElement.getBoundingClientRect().bottom) {
       // don't show if it's beyond the panel boundaries
-      if (dropIndicatorTop > props.panelElement.getBoundingClientRect().bottom) {
-        dropIndicatorTop = null
-      }
+      dropIndicatorTop = null
     }
   }
 
@@ -451,6 +454,7 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
     </>
   )
 }
+
 function compareEmojis (data: EmojiData, previousData: EmojiData) {
   // i would love to put it on the next line but then vscode grey out the whole thing : --   |
   return data.name !== previousData.name ||
