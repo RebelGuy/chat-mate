@@ -1,4 +1,4 @@
-import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/api-models/schema/emoji'
+import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
 import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
 import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetOfficialChatMateStreamerResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
@@ -46,6 +46,8 @@ export const getChatMateRegisteredUsername = requestBuilder<GetChatMateRegistere
 export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET', `/emoji/custom`, true, false)
 
 export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, UpdateCustomEmojiRequest> ('PATCH', `/emoji/custom`, 'self')
+
+export const addCustomEmojiSortOrder = requestBuilder<UpdateCustomEmojiSortOrderResponse, UpdateCustomEmojiSortOrderRequest> ('PATCH', `/emoji/custom/sortOrder`, 'self')
 
 export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEmojiRequest> ('POST', `/emoji/custom`, 'self')
 

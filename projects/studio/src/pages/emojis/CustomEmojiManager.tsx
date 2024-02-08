@@ -1,4 +1,4 @@
-import { CSSProperties, ReactNode, useContext, useRef, useState } from 'react'
+import { CSSProperties, DragEvent, ReactNode, useContext, useEffect, useRef, useState } from 'react'
 import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { getAccessibleRanks, getAllCustomEmojis } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
@@ -22,6 +22,9 @@ import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { SafeOmit } from '@rebel/shared/types'
 import { createPortal } from 'react-dom'
 import useMap from '@rebel/studio/hooks/useMap'
+import { PanelContext } from '@rebel/studio/pages/main/MainView'
+import useMemState from '@rebel/studio/hooks/useMemState'
+import useAnimation from '@rebel/studio/hooks/useAnimation'
 
 export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version'>
 
@@ -32,6 +35,7 @@ type Eligibility = {
 
 export default function CustomEmojiManager () {
   const loginContext = useContext(LoginContext)
+  const panel = useContext(PanelContext)
   const isLoggedIn = loginContext.username != null
   const [editingEmoji, setEditingEmoji] = useState<EmojiData | null>(null)
   const [editingError, setEditingError] = useState<ReactNode>(null)
@@ -40,6 +44,8 @@ export default function CustomEmojiManager () {
   const [showOnlyEligibleEmojis, setShowOnlyEligibleEmojis] = useState(!loginContext.hasRank('owner'))
   const [dragging, setDragging] = useState<PublicCustomEmoji | null>(null)
   const [hoveringOver, setHoveringOver] = useState<PublicCustomEmoji | null>(null)
+  const [mouseX, prevMouseX, setMouseX] = useMemState<number | null>(null, null)
+  const [mouseY, prevMouseY, setMouseY] = useMemState<number | null>(null, null)
   const sortOrderMap = useMap<PublicCustomEmoji, number>() // used to override the sort orders while editing
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const emojisRequest = useRequest(getAllCustomEmojis(), { updateKey: refreshToken })
@@ -85,7 +91,7 @@ export default function CustomEmojiManager () {
   }
 
   const onCheckDataChanged = (data: EmojiData) => {
-    const previousData = emojisRequest.data!.emojis.find(emoji => emoji.id == data.id)
+    const previousData = emojisRequest.data!.emojis.find(emoji => emoji.id === data.id)
     if (previousData == null) {
       return true
     } else {
@@ -141,7 +147,36 @@ export default function CustomEmojiManager () {
     return sortOrderMap.get(emoji) ?? emoji.sortOrder
   }
 
-  const onDragEnd = () => {
+  function onDragMove (e: DragEvent) {
+    setMouseX(e.clientX)
+    setMouseY(e.clientY)
+  }
+
+  const nextParams = { mouseX, mouseY, prevMouseX, prevMouseY }
+  useAnimation(scrollAnimation, nextParams)
+
+  // buttery smooth *chefs kiss*
+  function scrollAnimation (t: number, delta: number, params: typeof nextParams) {
+    if (params.mouseX == null || params.mouseY == null || params.prevMouseX == null || params.prevMouseY == null) {
+      return
+    }
+
+    const rect = panel.getBoundingClientRect()
+    const threshold = 100
+    const maxSpeed = 20
+
+    if (params.mouseY > rect.y && params.mouseY - rect.y < threshold) {
+      panel.scrollBy({ top: -maxSpeed * (threshold - (params.mouseY - rect.y)) / threshold })
+    } else if (params.mouseY < rect.bottom && rect.bottom - params.mouseY < threshold) {
+      panel.scrollBy({ top: maxSpeed * (threshold - (rect.bottom - params.mouseY)) / threshold })
+    }
+  }
+
+
+  function onDragEnd () {
+    setMouseX(null)
+    setMouseY(null)
+
     if (dragging != null && hoveringOver != null) {
       const placeAbove = getSortOrder(dragging) > getSortOrder(hoveringOver)
       const newSortOrder = getSortOrder(hoveringOver)
@@ -167,7 +202,7 @@ export default function CustomEmojiManager () {
 
       sortOrderMap.set(dragging, newSortOrder)
     }
-    
+
     setDragging(null)
     setHoveringOver(null)
   }
@@ -238,6 +273,7 @@ export default function CustomEmojiManager () {
                   showHitboxAbove={dragging != null && getSortOrder(emojisRequest.data!.emojis.find(e => e === dragging)!) > getSortOrder(emoji)}
                   onEdit={() => onEdit(emoji.id)}
                   onDragStart={() => setDragging(emoji)}
+                  onDragMove={onDragMove}
                   onDragEnd={onDragEnd}
                   onMouseEnter={() => setHoveringOver(emoji)}
                   onMouseLeave={() => setHoveringOver(e => e === emoji ? null : e)}
@@ -292,6 +328,7 @@ type CustomEmojiRowProps = {
   showHitboxAbove: boolean
   onEdit: () => void
   onDragStart: () => void
+  onDragMove: (e: DragEvent) => void
   onDragEnd: () => void
   onMouseEnter: () => void
   onMouseLeave: () => void
@@ -310,11 +347,11 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
   const symbol = `:${props.data.symbol}:`
 
   // the whole row can be dragged only via the drag handle
-  function onMouseEnterDragHandle(): void {
+  function onMouseEnterDragHandle (): void {
     setCanDrag(true)
   }
 
-  function onMouseLeaveDragHandle(): void {
+  function onMouseLeaveDragHandle (): void {
     setCanDrag(false)
   }
 
@@ -335,7 +372,15 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
       }
 
       <ThemeProvider theme={isEligible ? {} : disabledTheme}>
-        <TableRow ref={r => ref.current = r} draggable={canDrag} onDragStart={props.onDragStart} onDragEnd={props.onDragEnd} onDragEnter={props.onMouseEnter} onDragExit={props.onMouseLeave}>
+        <TableRow
+          ref={r => ref.current = r}
+          draggable={canDrag}
+          onDragStart={props.onDragStart}
+          onDragCapture={props.onDragMove}
+          onDragEnd={props.onDragEnd}
+          onDragEnter={props.onMouseEnter}
+          onDragExit={props.onMouseLeave}
+        >
           <TableCell>{props.data.name}</TableCell>
           <TableCell>
             {symbol}
@@ -372,7 +417,7 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
     </>
   )
 }
-function compareEmojis(data: EmojiData, previousData: EmojiData) {
+function compareEmojis (data: EmojiData, previousData: EmojiData) {
   // i would love to put it on the next line but then vscode grey out the whole thing : --   |
   return data.name !== previousData.name ||
     data.symbol !== previousData.symbol ||
