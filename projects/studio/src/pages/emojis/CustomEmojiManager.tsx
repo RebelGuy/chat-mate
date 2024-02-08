@@ -46,6 +46,8 @@ export default function CustomEmojiManager () {
   const [hoveringOver, setHoveringOver] = useState<PublicCustomEmoji | null>(null)
   const [mouseX, prevMouseX, setMouseX] = useMemState<number | null>(null, null)
   const [mouseY, prevMouseY, setMouseY] = useMemState<number | null>(null, null)
+  const [animationKey, updateAnimationKey] = useUpdateKey()
+  const headerRef = useRef<HTMLElement | null>(null)
   const sortOrderMap = useMap<PublicCustomEmoji, number>() // used to override the sort orders while editing
   const [refreshToken, updateRefreshToken] = useUpdateKey()
   const emojisRequest = useRequest(getAllCustomEmojis(), { updateKey: refreshToken })
@@ -167,11 +169,12 @@ export default function CustomEmojiManager () {
 
     if (params.mouseY > rect.y && params.mouseY - rect.y < threshold) {
       panel.scrollBy({ top: -maxSpeed * (threshold - (params.mouseY - rect.y)) / threshold })
+      updateAnimationKey()
     } else if (params.mouseY < rect.bottom && rect.bottom - params.mouseY < threshold) {
       panel.scrollBy({ top: maxSpeed * (threshold - (rect.bottom - params.mouseY)) / threshold })
+      updateAnimationKey()
     }
   }
-
 
   function onDragEnd () {
     setMouseX(null)
@@ -249,7 +252,7 @@ export default function CustomEmojiManager () {
             size="small"
             style={{ transform: 'translateY(-5px)' }}
           >
-            <TableHead>
+            <TableHead ref={(r) => headerRef.current = r}>
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Symbol</TableCell>
@@ -270,7 +273,11 @@ export default function CustomEmojiManager () {
                   meetsRequirements={meetsEmojiRequirements(emoji)}
                   showOnlyEligibleEmojis={isLoggedIn ? showOnlyEligibleEmojis : false}
                   isDraggingOver={dragging != null && dragging !== emoji && hoveringOver === emoji}
+                  isDragging={dragging != null && dragging === emoji}
                   showHitboxAbove={dragging != null && getSortOrder(emojisRequest.data!.emojis.find(e => e === dragging)!) > getSortOrder(emoji)}
+                  headerElement={headerRef.current!}
+                  panelElement={panel}
+                  updateKey={animationKey}
                   onEdit={() => onEdit(emoji.id)}
                   onDragStart={() => setDragging(emoji)}
                   onDragMove={onDragMove}
@@ -325,7 +332,11 @@ type CustomEmojiRowProps = {
   meetsRequirements: Eligibility
   showOnlyEligibleEmojis: boolean
   isDraggingOver: boolean
+  isDragging: boolean
   showHitboxAbove: boolean
+  headerElement: HTMLElement
+  panelElement: HTMLElement
+  updateKey: number // so that the row drop marker updates while we are scrolling [highly inefficient!]
   onEdit: () => void
   onDragStart: () => void
   onDragMove: (e: DragEvent) => void
@@ -355,18 +366,40 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
     setCanDrag(false)
   }
 
+  let dropIndicatorTop: number | null = null
+  if (props.isDraggingOver && ref.current != null) {
+    if (props.showHitboxAbove) {
+      dropIndicatorTop = ref.current.getBoundingClientRect().top
+
+      // don't show if it's behind the sticky panel header
+      const headerHeight = props.headerElement.getBoundingClientRect().height
+      const panelTop = props.panelElement.getBoundingClientRect().top
+      if (dropIndicatorTop < (panelTop + headerHeight)) {
+        dropIndicatorTop = null
+      }
+
+    } else {
+      dropIndicatorTop = ref.current.getBoundingClientRect().bottom
+
+      // don't show if it's beyond the panel boundaries
+      if (dropIndicatorTop > props.panelElement.getBoundingClientRect().bottom) {
+        dropIndicatorTop = null
+      }
+    }
+  }
+
   // we render a separate box as the drag-drop indicator so that it doesn't interfere with the layout
   return (
     <>
-      {props.isDraggingOver && ref.current != null && createPortal(
+      {dropIndicatorTop && createPortal(
         <Box
           style={{
             height: 2,
-            width: ref.current.getBoundingClientRect().width,
+            width: ref.current!.getBoundingClientRect().width,
             background: 'green',
             position: 'absolute',
-            top: props.showHitboxAbove ? ref.current.getBoundingClientRect().top : ref.current.getBoundingClientRect().bottom,
-            left: ref.current.getBoundingClientRect().left
+            top: dropIndicatorTop,
+            left: ref.current!.getBoundingClientRect().left
           }}
         />, document.body!)
       }
@@ -380,6 +413,7 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
           onDragEnd={props.onDragEnd}
           onDragEnter={props.onMouseEnter}
           onDragExit={props.onMouseLeave}
+          style={{ opacity: props.isDragging ? 0.2 : undefined }}
         >
           <TableCell>{props.data.name}</TableCell>
           <TableCell>
