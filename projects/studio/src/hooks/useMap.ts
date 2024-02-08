@@ -24,9 +24,16 @@ export default function useMap<K, V> () {
     return map.current.has(key)
   }
 
-  function clear () {
+  function clear (predicate?: (key: K, value: V) => boolean) {
     setUpdateCounter(updateCounter + 1)
-    return map.current.clear()
+
+    if (predicate == null) {
+      map.current.clear()
+    } else {
+      let keysToRemove: K[] = []
+      map.current.forEach((v, k) => predicate(k, v) ? keysToRemove.push(k) : undefined)
+      keysToRemove.forEach(k => map.current.delete(k))
+    }
   }
 
   return { size, get, set, delete: remove, has, clear }

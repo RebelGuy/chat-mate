@@ -1,4 +1,4 @@
-import { CSSProperties, DragEvent, ReactNode, useContext, useEffect, useRef, useState } from 'react'
+import { DragEvent, ReactNode, useContext, useRef, useState } from 'react'
 import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { getAccessibleRanks, getAllCustomEmojis } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
@@ -6,14 +6,13 @@ import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { compareArrays, sortBy } from '@rebel/shared/util/arrays'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { Alert, Box, Button, Checkbox, createTheme, FormControlLabel, IconButton, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider } from '@mui/material'
+import { Alert, Box, Button, Card, Checkbox, createTheme, Drawer, FormControlLabel, Grow, IconButton, Slide, Stack, SxProps, Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider, Typography } from '@mui/material'
 import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import CustomEmojiEditor from '@rebel/studio/pages/emojis/CustomEmojiEditor'
-import { GetCustomEmojisResponse } from '@rebel/api-models/schema/emoji'
 import RanksDisplay from '@rebel/studio/pages/emojis/RanksDisplay'
-import { Close, Done, DragHandle, Edit } from '@mui/icons-material'
+import { Close, Delete, Done, DragHandle, Edit, Save } from '@mui/icons-material'
 import CopyText from '@rebel/studio/components/CopyText'
-import useRequest, { SuccessfulResponseData } from '@rebel/studio/hooks/useRequest'
+import useRequest from '@rebel/studio/hooks/useRequest'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
@@ -210,10 +209,19 @@ export default function CustomEmojiManager () {
       }
 
       sortOrderMap.set(dragging, newSortOrder)
+      sortOrderMap.clear((emoji, sortOrder) => emoji.sortOrder === sortOrder)
     }
 
     setDragging(null)
     setHoveringOver(null)
+  }
+
+  function onSaveOrder () {
+    console.log('save')
+  }
+
+  function onDiscardOrder () {
+    sortOrderMap.clear()
   }
 
   const header = <PanelHeader>Emojis {<RefreshButton isLoading={emojisRequest.isLoading} onRefresh={updateRefreshToken} />}</PanelHeader>
@@ -256,7 +264,12 @@ export default function CustomEmojiManager () {
           <Table
             stickyHeader
             size="small"
-            style={{ transform: 'translateY(-5px)' }}
+            style={{
+              transform: 'translateY(-5px)',
+
+              // make sure the popover card doesn't hide any rows
+              paddingBottom: sortOrderMap.size > 0 ? 30 : undefined
+            }}
           >
             <TableHead ref={(r) => headerRef.current = r}>
               <TableRow>
@@ -312,6 +325,33 @@ export default function CustomEmojiManager () {
         onCheckDuplicateSymbol={onCheckDuplicateSymbol}
         onCheckDataChanged={onCheckDataChanged}
       />
+
+      <Grow
+        in={sortOrderMap.size > 0}
+        style={{
+          position: 'fixed',
+          bottom: 10,
+          background: 'rgb(240, 240, 240)',
+          left: 0,
+          right: 0,
+          width: 390,
+          margin: 'auto'
+        }}
+      >
+        <Card style={{ padding: 8 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography display="inline">
+              One or more emojis have been re-ordered.
+            </Typography>
+            <IconButton disabled={isLoading} onClick={onSaveOrder}>
+              <Save />
+            </IconButton>
+            <IconButton disabled={isLoading} onClick={onDiscardOrder}>
+              <Delete />
+            </IconButton>
+          </Stack>
+        </Card>
+      </Grow>
     </>
   )
 }
