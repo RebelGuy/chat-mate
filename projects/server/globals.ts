@@ -64,6 +64,12 @@ type EnvironmentVariables = {
   dbSemaphoreTimeout: OptionalVariable<number | null, null>
   dbTransactionTimeout: OptionalVariable<number, 5000>
   dbSlowQueryThreshold: OptionalVariable<number, 10000>
+
+  s3Region: string
+  s3Domain: string
+  s3Key: string
+  s3Secret: string
+  s3Bucket: string
 }
 
 // includes the variable name and allowed values. set the allowed values to null to not restrict the values to a set.
@@ -93,7 +99,12 @@ const allChatMateEnvVariables: { [K in keyof EnvironmentVariables]: readonly Val
   ngrokAuthToken: null,
   streamlabsAccessToken: null,
   twitchUsername: null,
-  chatMateRegisteredUserName: null
+  chatMateRegisteredUserName: null,
+  s3Region: null,
+  s3Domain: null,
+  s3Key: null,
+  s3Secret: null,
+  s3Bucket: null
 }
 const allKeys = Object.keys(allChatMateEnvVariables) as (keyof EnvironmentVariables)[]
 

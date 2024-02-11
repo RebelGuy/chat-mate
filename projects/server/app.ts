@@ -100,6 +100,7 @@ import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
+import S3Service from '@rebel/server/services/S3ProxyService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -130,6 +131,11 @@ const main = async () => {
   const dbSlowQueryThreshold = env('dbSlowQueryThreshold')
   const streamlabsAccessToken = env('streamlabsAccessToken')
   const twitchUsername = env('twitchUsername')
+  const s3Region = env('s3Region')
+  const s3Domain = env('s3Domain')
+  const s3Key = env('s3Key')
+  const s3Secret = env('s3Secret')
+  const s3Bucket = env('s3Bucket')
 
   let isAdministrativeMode = false
   let isContextInitialised = false
@@ -165,6 +171,11 @@ const main = async () => {
     .withProperty('twitchUsername', twitchUsername)
     .withProperty('chatMateRegisteredUserName', env('chatMateRegisteredUserName'))
     .withProperty('ngrokAuthToken', env('ngrokAuthToken')!)
+    .withProperty('s3Region', s3Region)
+    .withProperty('s3Domain', s3Domain)
+    .withProperty('s3Key', s3Key)
+    .withProperty('s3Secret', s3Secret)
+    .withProperty('s3Bucket', s3Bucket)
     .withHelpers('experienceHelpers', ExperienceHelpers)
     .withHelpers('timerHelpers', TimerHelpers)
     .withHelpers('dateTimeHelpers', DateTimeHelpers)

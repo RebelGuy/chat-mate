@@ -33,9 +33,14 @@
 
     "reset-password:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/resetPassword.js",
     "reset-password:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/resetPassword.js",
-    "reset-password:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/resetPassword.js"
+    "reset-password:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/resetPassword.js",
+
+    "migrate-emojis:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/migrateEmojis.js",
+    "migrate-emojis:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/migrateEmojis.js",
+    "migrate-emojis:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateEmojis.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.511.0",
     "@googleapis/youtube": "^13.0.0",
     "@prisma/client": "3.15.2",
     "@twurple/api": "^6.2.1",

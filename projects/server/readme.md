@@ -66,6 +66,11 @@ The following environment variables must be set in the `.env` file:
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
+- `S3_REGION`: The region code in which the storage container is hosted.
+- `S3_DOMAIN`: The domain under which the storage container is hosted.
+- `S3_KEY`: The access key for interacting with the storage container.
+- `S3_SECRET`: The secret key for interacting the storage container.
+- `S3_BUCKET`: The ChatMate bucket name to use for storing files.
 - `DB_LOG_LEVEL`: [Optional, defaults to `info`] The minimum log level to include for database logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
 - `API_LOG_LEVEL`: [Optional, defaults to `warning`] The minimum log level to include for API logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
 - `DEBUG_LOG_OUTPUT`: [Optional, defaults to `disable`] The log output method for debug messages. A value of `full` logs the message to the console and file, `file` logs the message to the file only, and `disable` skips logging the message.
