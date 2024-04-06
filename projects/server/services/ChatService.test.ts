@@ -1,11 +1,11 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import { ChatItem, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, nameof, promised } from '@rebel/shared/testUtils'
+import { cast, expectArray, nameof, promised } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -117,6 +117,29 @@ describe(nameof(ChatService, 'initialise'), () => {
     expect(args[0][1]).not.toBeNull()
     expect(args[1][0]).toBe(EVENT_CHAT_ITEM_REMOVED)
     expect(args[1][1]).not.toBeNull()
+  })
+})
+
+describe(nameof(ChatService, 'getChatSince'), () => {
+  test('Returns chat messages with signed custom emoji images', async () => {
+    const streamerId = 4
+    const since = 1234
+    const beforeOrAt = 5678
+    const limit = 5
+    const userIds = [1, 3]
+    const deletedOnly = true
+    const parts1 = cast<ChatItemWithRelations['chatMessageParts']>([])
+    const parts2 = cast<ChatItemWithRelations['chatMessageParts']>([])
+    const chat1 = cast<ChatItemWithRelations>({ chatMessageParts: parts1 })
+    const chat2 = cast<ChatItemWithRelations>({ chatMessageParts: parts2 })
+
+    mockChatStore.getChatSince.calledWith(streamerId, since, beforeOrAt, limit, userIds, deletedOnly).mockResolvedValue([chat1, chat2])
+
+    const result = await chatService.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
+
+    expect(result).toEqual(expectArray(result, [chat1, chat2]))
+    const signCalls = mockEmojiService.signEmojiImages.mock.calls.map(single)
+    expect(signCalls).toEqual(expectArray(signCalls, [parts1, parts2]))
   })
 })
 

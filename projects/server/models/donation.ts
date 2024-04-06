@@ -1,7 +1,7 @@
 import { PublicDonation } from '@rebel/api-models/public/donation/PublicDonation'
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { toPublicMessagePart } from '@rebel/server/models/chat'
-import { DonationWithMessage } from '@rebel/server/stores/DonationStore'
+import { DonationWithMessage } from '@rebel/server/services/DonationService'
 
 export function donationToPublicObject (donation: DonationWithMessage, linkIdentifier: string, linkedAt: Date | null, linkedUser: PublicUser | null): PublicDonation {
   return {

@@ -781,11 +781,8 @@ model CustomEmojiVersion {
   modifiedAt DateTime @default(now())
   version    Int
 
-  name String @db.VarChar(63)
-
-  // max 64KB of storage
-  image Bytes @db.Blob
-
+  name                    String  @db.VarChar(63)
+  imageUrl                String  @db.VarChar(63)
   levelRequirement        Int     @db.UnsignedSmallInt
   canUseInDonationMessage Boolean
 

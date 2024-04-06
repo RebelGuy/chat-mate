@@ -1,8 +1,8 @@
 import { Donation, Streamer, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import DonationHelpers, { DonationAmount } from '@rebel/server/helpers/DonationHelpers'
-import DonationService, { NewDonation } from '@rebel/server/services/DonationService'
-import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
+import DonationService, { DonationWithUser, NewDonation } from '@rebel/server/services/DonationService'
+import DonationStore from '@rebel/server/stores/DonationStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { any, mock, MockProxy } from 'jest-mock-extended'
@@ -11,7 +11,7 @@ import { single, single2 } from '@rebel/shared/util/arrays'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import EmojiService from '@rebel/server/services/EmojiService'
 import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
-import { PartialChatMessage } from '@rebel/server/models/chat'
+import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { ChatMateError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 import AccountService from '@rebel/server/services/AccountService'
@@ -102,6 +102,41 @@ describe(nameof(DonationService, 'addDonation'), () => {
 
     const addedData = single(single(mockDonationStore.addDonation.mock.calls))
     expect(addedData.messageParts.length).toBe(0)
+  })
+
+  describe(nameof(DonationService, 'getDonation'), () => {
+    test('Returns the donation with signed custom emoji images', async () => {
+      const donationId = 658
+      const messageParts = cast<ChatItemWithRelations['chatMessageParts']>([])
+      const donation = cast<DonationWithUser>({ messageParts })
+
+      mockDonationStore.getDonation.calledWith(streamerId, donationId).mockResolvedValue(donation)
+
+      const result = await donationService.getDonation(streamerId, donationId)
+
+      expect(result).toEqual(expectObject(result, donation))
+      const signCalls = single2(mockEmojiService.signEmojiImages.mock.calls)
+      expect(signCalls).toEqual(expectObject(signCalls, messageParts))
+    })
+  })
+
+  describe(nameof(DonationService, 'getDonationsSince'), () => {
+    test('Returns donations with signed custom emoji images', async () => {
+      const time = 1234
+      const includeRefunded = true
+      const parts1 = cast<ChatItemWithRelations['chatMessageParts']>([])
+      const parts2 = cast<ChatItemWithRelations['chatMessageParts']>([])
+      const donation1 = cast<DonationWithUser>({ messageParts: parts1 })
+      const donation2 = cast<DonationWithUser>({ messageParts: parts2 })
+
+      mockDonationStore.getDonationsSince.calledWith(streamerId, time, includeRefunded).mockResolvedValue([donation1, donation2])
+
+      const result = await donationService.getDonationsSince(streamerId, time, includeRefunded)
+
+      expect(result).toEqual(expectArray(result, [donation1, donation2]))
+      const signCalls = mockEmojiService.signEmojiImages.mock.calls.map(single)
+      expect(signCalls).toEqual(expectArray(signCalls, [parts1, parts2]))
+    })
   })
 
   test('Adds donation with message and custom emojis', async () => {

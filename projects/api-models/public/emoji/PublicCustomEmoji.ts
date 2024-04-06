@@ -17,8 +17,8 @@ export type PublicCustomEmoji = PublicObject<{
   /** The unique 3-10 character long symbol that identifies this emoji. */
   symbol: string
 
-  /** The Base64 encoded image data, created directly from the buffer. */
-  imageData: string
+  /** The signed image url. */
+  imageUrl: string
 
   /** The minimum level a user must be to unlock this emoji. */
   levelRequirement: number
@@ -33,6 +33,6 @@ export type PublicCustomEmoji = PublicObject<{
   sortOrder: number
 }>
 
-export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version'>
+export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version' | 'imageUrl'> & { imageDataUrl: string }
 
-export type PublicCustomEmojiUpdate = SafeOmit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version'>
+export type PublicCustomEmojiUpdate = SafeOmit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version' | 'imageUrl'> & { imageDataUrl: string }

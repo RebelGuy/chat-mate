@@ -2,7 +2,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
-import { PartialChatMessage } from '@rebel/server/models/chat'
+import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import AccountService from '@rebel/server/services/AccountService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import LogService from '@rebel/server/services/LogService'
@@ -15,6 +15,17 @@ import { group, single } from '@rebel/shared/util/arrays'
 import { addTime, maxTime } from '@rebel/shared/util/datetime'
 import { ChatMateError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 import { CurrencyCode } from '@rebel/server/constants'
+import { Donation } from '@prisma/client'
+
+export type DonationWithMessage = Donation & {
+  messageParts: ChatItemWithRelations['chatMessageParts']
+}
+
+export type DonationWithUser = DonationWithMessage & {
+  linkIdentifier: string
+  linkedAt: Date | null
+  primaryUserId: number | null
+}
 
 export type NewDonation = {
   createdAt: number
@@ -115,6 +126,18 @@ export default class DonationService extends ContextClass {
       messageParts: messageParts
     }
     return await this.donationStore.addDonation(data)
+  }
+
+  public async getDonation (streamerId: number, donationId: number): Promise<DonationWithUser> {
+    const donation = await this.donationStore.getDonation(streamerId, donationId)
+    await this.emojiService.signEmojiImages(donation.messageParts)
+    return donation
+  }
+
+  public async getDonationsSince (streamerId: number, time: number, includeRefunded: boolean): Promise<DonationWithUser[]> {
+    const donations = await this.donationStore.getDonationsSince(streamerId, time, includeRefunded)
+    await Promise.all(donations.map(donation => this.emojiService.signEmojiImages(donation.messageParts)))
+    return donations
   }
 
   /** Links the user to the donation and adds all donation ranks that the user is now eligible for.

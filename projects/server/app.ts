@@ -100,7 +100,7 @@ import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
-import S3Service from '@rebel/server/services/S3ProxyService'
+import S3ProxyService from '@rebel/server/services/S3ProxyService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -237,6 +237,7 @@ const main = async () => {
     .withClass('experienceService', ExperienceService)
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
+    .withClass('s3ProxyService', S3ProxyService)
     .withClass('emojiService', EmojiService)
     .withClass('commandStore', CommandStore)
     .withClass('donationStore', DonationStore)

@@ -16,7 +16,7 @@ async function main () {
   const allVersions = await DB.customEmojiVersion.findMany({ include: { customEmoji: true }})
 
   for (const version of allVersions) {
-    const image = version.image.toString('base64')
+    const image = (version as any).image.toString('base64')
     const fileName = getCustomEmojiFileUrl(version)
 
     await s3.uploadBase64Image(fileName, 'png', false, image)
@@ -28,6 +28,7 @@ async function main () {
 
 void main()
 
+// same as in the EmojiService
 function getCustomEmojiFileUrl (version: CustomEmojiVersion & { customEmoji: CustomEmoji }) {
-  return `custom-emojis/${version.customEmoji.streamerId}/${version.customEmoji.id}/${version.version}.png`
+  return `custom-emoji/${version.customEmoji.streamerId}/${version.customEmoji.id}/${version.version}.png`
 }

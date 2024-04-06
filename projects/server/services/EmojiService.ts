@@ -1,31 +1,148 @@
 import { CustomEmoji } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
+import { ChatItemWithRelations, PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
 import AccountService from '@rebel/server/services/AccountService'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
-import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
-import { single } from '@rebel/shared/util/arrays'
-import { ChatMateError } from '@rebel/shared/util/error'
+import CustomEmojiStore, { CurrentCustomEmoji, InternalCustomEmojiCreateData, InternalCustomEmojiUpdateData, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
+import { single, zip } from '@rebel/shared/util/arrays'
+import { ChatMateError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
+import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
+import { parseDataUrl } from '@rebel/shared/util/text'
+
+export type CustomEmojiCreateData = InternalCustomEmojiCreateData & {
+  imageDataUrl: string
+}
+
+export type CustomEmojiUpdateData = InternalCustomEmojiUpdateData & {
+  imageDataUrl: string
+}
+
+export type FullCustomEmoji = CustomEmojiWithRankWhitelist & {
+  imageUrl: SignedUrl
+}
 
 type SearchResult = {
-  searchTerm: string,
+  searchTerm: string
   startIndex: number
 }
 
 type Deps = Dependencies<{
   customEmojiEligibilityService: CustomEmojiEligibilityService
   accountService: AccountService
+  s3ProxyService: S3ProxyService
+  customEmojiStore: CustomEmojiStore
 }>
+
+const SUPPORTED_IMAGE_TYPES = ['png', 'jpg', 'jpeg']
 
 export default class EmojiService extends ContextClass {
   private readonly customEmojiEligibilityService: CustomEmojiEligibilityService
   private readonly accountService: AccountService
+  private readonly s3ProxyService: S3ProxyService
+  private readonly customEmojiStore: CustomEmojiStore
 
   constructor (deps: Deps) {
     super()
     this.customEmojiEligibilityService = deps.resolve('customEmojiEligibilityService')
     this.accountService = deps.resolve('accountService')
+    this.s3ProxyService = deps.resolve('s3ProxyService')
+    this.customEmojiStore = deps.resolve('customEmojiStore')
+  }
+
+  /** @throws {@link UnsupportedFilteTypeError}: When the image type is not supported. */
+  public async addCustomEmoji (data: CustomEmojiCreateData): Promise<FullCustomEmoji> {
+    const imageData = parseDataUrl(data.imageDataUrl)
+    if (imageData.fileType !== 'image' || !SUPPORTED_IMAGE_TYPES.includes(imageData.fileSubType)) {
+      throw new UnsupportedFilteTypeError('Unsupported file type.')
+    }
+
+    let signedImageUrl: SignedUrl
+    const newEmoji = await this.customEmojiStore.addCustomEmoji({
+      symbol: data.symbol,
+      canUseInDonationMessage: data.canUseInDonationMessage,
+      levelRequirement: data.levelRequirement,
+      name: data.name,
+      sortOrder: data.sortOrder,
+      streamerId: data.streamerId,
+      whitelistedRanks: data.whitelistedRanks
+    }, async (newEmojiId, newEmojiVersion) => {
+      // todo: convert to png before uploading
+      const fileName = getCustomEmojiFileUrl(data.streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
+      signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
+      return fileName
+    })
+
+    return {
+      id: newEmoji.id,
+      imageUrl: signedImageUrl!,
+      name: newEmoji.name,
+      symbol: newEmoji.symbol,
+      version: newEmoji.version,
+      isActive: newEmoji.isActive,
+      sortOrder: newEmoji.sortOrder,
+      streamerId: newEmoji.streamerId,
+      modifiedAt: newEmoji.modifiedAt,
+      levelRequirement: newEmoji.levelRequirement,
+      whitelistedRanks: newEmoji.whitelistedRanks,
+      canUseInDonationMessage: newEmoji.canUseInDonationMessage
+    }
+  }
+
+  public async getAllCustomEmojis (streamerId: number): Promise<FullCustomEmoji[]> {
+    const emojis = await this.customEmojiStore.getAllCustomEmojis(streamerId)
+
+    const emojiImageUrls = await Promise.all(emojis.map(emoji => {
+      return this.s3ProxyService.signUrl(emoji.imageUrl)
+    }))
+
+    return zip(emojis, emojiImageUrls.map(imageUrl => ({ imageUrl })))
+  }
+
+  /** Signs CustomEmoji image URLs in-place. */
+  public async signEmojiImages (chatMessageParts: ChatItemWithRelations['chatMessageParts']): Promise<void> {
+    await Promise.all(chatMessageParts.map(async part => {
+      if (part.customEmoji != null) {
+        part.customEmoji.customEmojiVersion.imageUrl = await this.s3ProxyService.signUrl(part.customEmoji.customEmojiVersion.imageUrl)
+      }
+    }))
+  }
+
+  /** Throws if the image is malformed. */
+  public async updateCustomEmoji (data: CustomEmojiUpdateData): Promise<FullCustomEmoji> {
+    const imageData = parseDataUrl(data.imageDataUrl)
+    if (imageData.fileType !== 'image' || !SUPPORTED_IMAGE_TYPES.includes(imageData.fileSubType)) {
+      throw new UnsupportedFilteTypeError('Unsupported file type.')
+    }
+
+    let signedImageUrl: SignedUrl
+    const newEmoji = await this.customEmojiStore.updateCustomEmoji({
+      id: data.id,
+      canUseInDonationMessage: data.canUseInDonationMessage,
+      levelRequirement: data.levelRequirement,
+      name: data.name,
+      whitelistedRanks: data.whitelistedRanks
+    }, async (streamerId, newEmojiId, newEmojiVersion) => {
+      // todo: convert to png before uploading
+      const fileName = getCustomEmojiFileUrl(streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
+      signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
+      return fileName
+    })
+
+    return {
+      id: newEmoji.id,
+      imageUrl: signedImageUrl!,
+      name: newEmoji.name,
+      symbol: newEmoji.symbol,
+      version: newEmoji.version,
+      isActive: newEmoji.isActive,
+      sortOrder: newEmoji.sortOrder,
+      streamerId: newEmoji.streamerId,
+      modifiedAt: newEmoji.modifiedAt,
+      levelRequirement: newEmoji.levelRequirement,
+      whitelistedRanks: newEmoji.whitelistedRanks,
+      canUseInDonationMessage: newEmoji.canUseInDonationMessage
+    }
   }
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */
@@ -137,4 +254,8 @@ export default class EmojiService extends ContextClass {
 // includes the troll hack, as above
 function getSymbolToMatch (customEmoji: CustomEmoji): string {
   return customEmoji.symbol === '🧌' ? '🧌' : `:${customEmoji.symbol}:`
+}
+
+function getCustomEmojiFileUrl (streamerId: number, emojiId: number, emojiVersion: number, fileType: string) {
+  return `custom-emoji/${streamerId}/${emojiId}/${emojiVersion}.${fileType}`
 }

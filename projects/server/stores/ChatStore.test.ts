@@ -391,7 +391,7 @@ export default () => {
         { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
       ]})
       await db.customEmojiVersion.create({ data: {
-        image: Buffer.from(''),
+        imageUrl: '',
         levelRequirement: 1,
         name: 'Test Emoji',
         isActive: true,

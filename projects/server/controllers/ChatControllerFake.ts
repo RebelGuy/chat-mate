@@ -6,7 +6,6 @@ import { PublicChatItem } from '@rebel/api-models/public/chat/PublicChatItem'
 import { LevelData } from '@rebel/server/helpers/ExperienceHelpers'
 import { ChatItemWithRelations, chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
-import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
 import { asGte, asLt } from '@rebel/shared/util/math'
@@ -14,17 +13,18 @@ import { chooseWeightedRandom, pickRandom, randomInt } from '@rebel/shared/util/
 import { cast } from '@rebel/shared/testUtils'
 import { Path } from 'typescript-rest'
 import { addTime } from '@rebel/shared/util/datetime'
+import ChatService from '@rebel/server/services/ChatService'
 
 @Path(buildPath('chat'))
 export default class ChatControllerFake extends ControllerBase implements IChatController {
-  private readonly chatStore: ChatStore
+  private readonly chatService: ChatService
   private readonly rankStore: RankStore
 
   private chat: ChatItemWithRelations[] | null = null
 
   constructor (deps: ChatControllerDeps) {
     super(deps, '/chat')
-    this.chatStore = deps.resolve('chatStore')
+    this.chatService = deps.resolve('chatService')
     this.rankStore = deps.resolve('rankStore')
   }
 
@@ -33,7 +33,7 @@ export default class ChatControllerFake extends ControllerBase implements IChatC
     since = since ?? 0
 
     if (this.chat == null) {
-      this.chat = await this.chatStore.getChatSince(this.getStreamerId(), 0)
+      this.chat = await this.chatService.getChatSince(this.getStreamerId(), 0)
     }
 
     const N = chooseWeightedRandom([0, 10], [1, 1], [2, 0.2])

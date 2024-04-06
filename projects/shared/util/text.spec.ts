@@ -32,3 +32,23 @@ describe(text.toParamCase, () => {
   test('single word input', () => expect(text.toParamCase('helloworld')).toBe('helloworld'))
   test('param case input', () => expect(text.toParamCase('hello_world')).toBe('hello_world'))
 })
+
+describe(text.parseDataUrl, () => {
+  test('Throws if malformed dataURL', () => {
+    expect(() => text.parseDataUrl('abc')).toThrowError(ChatMateError)
+    expect(() => text.parseDataUrl('data:abc')).toThrowError(ChatMateError)
+    expect(() => text.parseDataUrl('data:image/png,abc')).toThrowError(ChatMateError)
+    expect(() => text.parseDataUrl('data:image;base64,abc')).toThrowError(ChatMateError)
+    expect(() => text.parseDataUrl('data:image;xyz,abc')).toThrowError(ChatMateError)
+  })
+
+  test.only('Correctly extracts file type and data', () => {
+    const result = text.parseDataUrl('data:image/png;base64,abc')
+
+    expect(result).toEqual<typeof result>({
+      fileType: 'image',
+      fileSubType: 'png',
+      data: 'abc'
+    })
+  })
+})

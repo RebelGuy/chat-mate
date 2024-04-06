@@ -232,6 +232,12 @@ export class PrimaryChannelNotFoundError extends ChatMateError {
   }
 }
 
+export class UnsupportedFilteTypeError extends ChatMateError {
+  constructor (message: string) {
+    super(UnsupportedFilteTypeError.prototype, message)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

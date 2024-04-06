@@ -1,16 +1,14 @@
-import { CustomEmoji, CustomEmojiRankWhitelist, CustomEmojiVersion, Prisma } from '@prisma/client'
+import { CustomEmoji, CustomEmojiRankWhitelist, CustomEmojiVersion } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
-import { Entity, New } from '@rebel/server/models/entities'
 import { Db } from '@rebel/server/providers/DbProvider'
-import CustomEmojiStore, { CustomEmojiCreateData, CustomEmojiUpdateData, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
+import CustomEmojiStore, { InternalCustomEmojiCreateData, InternalCustomEmojiUpdateData, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
-import { anyDate, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
-import { symbolName } from 'typescript'
+import { expectObject, nameof, promised, throwAsync } from '@rebel/shared/testUtils'
 import { ChatMateError, DbError } from '@rebel/shared/util/error'
 import { SafeOmit } from '@rebel/shared/types'
 
-type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'image' | 'levelRequirement' | 'name'>
+type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'imageUrl' | 'levelRequirement' | 'name'>
 
 const rank1 = 1
 const rank2 = 2
@@ -45,37 +43,40 @@ export default () => {
   afterEach(stopTestDb)
 
   describe(nameof(CustomEmojiStore, 'addCustomEmoji'), () => {
-    test('custom emoji with no whitelisted ranks is added', async () => {
+    test('custom emoji with no whitelisted ranks is added and the imageUrl is set correctly', async () => {
       const data = getEmojiCreateData(1)
+      const imageUrl = 'url'
 
-      await customEmojiStore.addCustomEmoji({ ...data, whitelistedRanks: [] })
+      await customEmojiStore.addCustomEmoji({ ...data, whitelistedRanks: [] }, () => promised(imageUrl))
 
       await expectRowCount(db.customEmoji).toBe(1)
       await expect(db.customEmoji.findFirst()).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol, streamerId: data.streamerId }))
-      await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name }))
+      await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name, imageUrl: imageUrl }))
     })
 
     test('symbols must be unique only for the given streamer', async () => {
       const symbol = 'symbol'
       await db.customEmoji.create({ data: { symbol: symbol, streamerId: streamer1, sortOrder: 1 }})
       const data = { ...getEmojiCreateData(1, streamer2), symbol: symbol }
+      const imageUrl = 'url'
 
-      await customEmojiStore.addCustomEmoji({ ...data, whitelistedRanks: [] })
+      await customEmojiStore.addCustomEmoji({ ...data, whitelistedRanks: [] }, () => promised(imageUrl))
 
       await expectRowCount(db.customEmoji).toBe(2)
       await expect(db.customEmoji.findFirst({ where: { streamerId: streamer2 }})).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol, streamerId: data.streamerId }))
-      await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name }))
+      await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name, imageUrl: imageUrl }))
     })
 
     test('custom emoji and whitelisted ranks are added', async () => {
       const data = { ...getEmojiCreateData(1), whitelistedRanks: [rank1, rank2] }
+      const imageUrl = 'url'
 
-      await customEmojiStore.addCustomEmoji(data)
+      await customEmojiStore.addCustomEmoji(data, () => promised(imageUrl))
 
       // verify that emoji is added
       await expectRowCount(db.customEmoji, db.customEmojiRankWhitelist).toEqual([1, 2])
       await expect(db.customEmoji.findFirst()).resolves.toEqual(expectObject<CustomEmoji>({ symbol: data.symbol, streamerId: data.streamerId }))
-      await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name }))
+      await expect(db.customEmojiVersion.findFirst()).resolves.toEqual(expectObject<CustomEmojiVersion>({ name: data.name, imageUrl: imageUrl }))
 
       // verify that ranks are whitelisted
       const storedRankWhitelists = await db.customEmojiRankWhitelist.findMany()
@@ -87,9 +88,9 @@ export default () => {
 
     test('duplicate symbol is rejected', async () => {
       await db.customEmoji.create({ data: { streamerId: streamer1, symbol: 'emoji1', sortOrder: 1 } })
-      const data: CustomEmojiCreateData = { ...getEmojiCreateData(1), whitelistedRanks: [] }
+      const data: InternalCustomEmojiCreateData = { ...getEmojiCreateData(1), whitelistedRanks: [] }
 
-      await expect(() => customEmojiStore.addCustomEmoji(data)).rejects.toThrowError(DbError)
+      await expect(() => customEmojiStore.addCustomEmoji(data, throwAsync)).rejects.toThrowError(DbError)
     })
   })
 
@@ -113,7 +114,7 @@ export default () => {
     test('does not return deactivated emojis', async () => {
       await db.customEmojiVersion.create({ data: {
         customEmoji: { create: { streamerId: streamer1, symbol: 'symbol', sortOrder: 1 }},
-        image: Buffer.from('emoji'),
+        imageUrl: 'url',
         isActive: false,
         levelRequirement: 1,
         canUseInDonationMessage: true,
@@ -150,6 +151,7 @@ export default () => {
     test('updates the custom emoji correctly', async () => {
       const emojiToUpdate = 1
       const otherEmoji = 2
+      const imageUrl = 'url'
       await createEmojis([emojiToUpdate, otherEmoji])
       await db.customEmojiRankWhitelist.createMany({ data: [
         { customEmojiId: emojiToUpdate, rankId: 1 },
@@ -157,16 +159,15 @@ export default () => {
         { customEmojiId: otherEmoji, rankId: 1 },
         { customEmojiId: otherEmoji, rankId: 2 }
       ]})
-      const data: CustomEmojiUpdateData = {
+      const data: InternalCustomEmojiUpdateData = {
         id: emojiToUpdate,
         name: 'Test',
-        image: Buffer.from(''),
         levelRequirement: 1,
         canUseInDonationMessage: true,
         whitelistedRanks: [rank2, rank3]
       }
 
-      const result = await customEmojiStore.updateCustomEmoji(data)
+      const result = await customEmojiStore.updateCustomEmoji(data, () => promised(imageUrl))
 
       expect(result).toEqual(expectObject<CustomEmojiWithRankWhitelist>(data))
       await expectRowCount(db.customEmoji).toBe(2)
@@ -174,7 +175,7 @@ export default () => {
       const [oldVersion, otherVersion, newVersion] = await db.customEmojiVersion.findMany()
       expect(oldVersion).toEqual(expectObject<CustomEmojiVersion>({ customEmojiId: emojiToUpdate, isActive: false, version: 0 }))
       expect(otherVersion).toEqual(expectObject<CustomEmojiVersion>({ customEmojiId: otherEmoji, isActive: true, version: 0 }))
-      expect(newVersion).toEqual(expectObject<CustomEmojiVersion>({ customEmojiId: emojiToUpdate, isActive: true, version: 1 }))
+      expect(newVersion).toEqual(expectObject<CustomEmojiVersion>({ customEmojiId: emojiToUpdate, isActive: true, version: 1, imageUrl: imageUrl }))
 
       // ensure rank whitelists were updated - rank1 should have been removed, and rank3 should have been added.
       // the other two whitelist entries should have remained unchanged.
@@ -189,14 +190,14 @@ export default () => {
     test('throws if invalid id', async () => {
       await createEmojis([1])
 
-      await expect(() => customEmojiStore.updateCustomEmoji({ id: 2 } as any)).rejects.toThrowError(ChatMateError)
+      await expect(() => customEmojiStore.updateCustomEmoji({ id: 2 } as any, throwAsync)).rejects.toThrowError(ChatMateError)
     })
 
     test('throws if attempting to update a deactivated emoji', async () => {
       await createEmojis([1])
       db.customEmojiVersion.updateMany({ data: { isActive: false }})
 
-      await expect(() => customEmojiStore.updateCustomEmoji({ id: 1 } as any)).rejects.toThrowError(DbError)
+      await expect(() => customEmojiStore.updateCustomEmoji({ id: 1 } as any, throwAsync)).rejects.toThrowError(DbError)
     })
   })
 
@@ -234,7 +235,7 @@ export default () => {
       await expect(() => db.customEmojiVersion.create({ data: {
         customEmojiId: 1,
         isActive: true,
-        image: Buffer.from(''),
+        imageUrl: 'url',
         name: 'Test,',
         levelRequirement: 1,
         canUseInDonationMessage: true,
@@ -247,7 +248,7 @@ export default () => {
     await db.customEmoji.createMany({ data: ids.map((id, i) => ({ id, symbol: 'emoji' + id, streamerId: streamerIds?.at(i) ?? streamer1, sortOrder: id }))})
     await db.customEmojiVersion.createMany({ data: ids.map(id => ({
       customEmojiId: id,
-      image: Buffer.from('emoji' + id),
+      imageUrl: 'emoji' + id,
       isActive: true,
       levelRequirement: id,
       canUseInDonationMessage: true,
@@ -257,13 +258,12 @@ export default () => {
   }
 }
 
-function getEmojiCreateData (id: number, streamerId?: number): SafeOmit<CustomEmojiCreateData, 'whitelistedRanks'> {
+function getEmojiCreateData (id: number, streamerId?: number): SafeOmit<InternalCustomEmojiCreateData, 'whitelistedRanks'> {
   return {
     name: 'Emoji ' + id,
     streamerId: streamerId ?? streamer1,
     symbol: 'emoji' + id,
     sortOrder: id,
-    image: Buffer.from('emoji' + id),
     levelRequirement: id,
     canUseInDonationMessage: true
   }

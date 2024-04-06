@@ -13,7 +13,7 @@ export type CustomEmojiWithRankWhitelist = {
   symbol: string
   streamerId: number
   name: string
-  image: Buffer
+  imageUrl: string
   levelRequirement: number
   canUseInDonationMessage: boolean
   sortOrder: number
@@ -29,11 +29,10 @@ export type CustomEmojiWhitelistedRanks = {
   rankIds: number[]
 }
 
-export type CustomEmojiCreateData = {
+export type InternalCustomEmojiCreateData = {
   streamerId: number
   symbol: string
   name: string
-  image: Buffer
   levelRequirement: number
   canUseInDonationMessage: boolean
   sortOrder: number
@@ -41,10 +40,9 @@ export type CustomEmojiCreateData = {
 }
 
 /** Note: Updating the symbol is not permitted, as it defines the emoji. */
-export type CustomEmojiUpdateData = {
+export type InternalCustomEmojiUpdateData = {
   id: number
   name: string
-  image: Buffer
   levelRequirement: number
   canUseInDonationMessage: boolean
   whitelistedRanks: number[]
@@ -77,20 +75,21 @@ export default class CustomEmojiStore extends ContextClass {
       id: version.customEmoji.id,
       symbol: version.customEmoji.symbol,
       streamerId: version.customEmoji.streamerId,
-      image: version.image,
       isActive: version.isActive,
       levelRequirement: version.levelRequirement,
       canUseInDonationMessage: version.canUseInDonationMessage,
       modifiedAt: version.modifiedAt,
       name: version.name,
+      imageUrl: version.imageUrl,
       version: version.version,
       sortOrder: version.customEmoji.sortOrder,
       whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === version.customEmoji.id).map(w => w.rankId)
     }))
   }
 
-  /** Returns the created CustomEmoji. */
-  public async addCustomEmoji (data: CustomEmojiCreateData): Promise<CustomEmojiWithRankWhitelist> {
+  /** Since the image URL depends on the emoji that hasn't been created yet, we inject the URL by calling `onGetImageUrl` during the emoji creation process.
+   * Returns the created CustomEmoji. */
+  public async addCustomEmoji (data: InternalCustomEmojiCreateData, onGetImageUrl: (emojiId: number, version: number) => Promise<string>): Promise<CustomEmojiWithRankWhitelist> {
     return await this.db.$transaction(async db => {
       const newEmoji = await db.customEmoji.create({ data: {
         streamerId: data.streamerId,
@@ -99,9 +98,9 @@ export default class CustomEmojiStore extends ContextClass {
       }})
 
       // we can only do this after the emoji has been created so we have its id
-      const newEmojiVersion = await db.customEmojiVersion.create({ data: {
+      const tempNewEmojiVersion = await db.customEmojiVersion.create({ data: {
         name: data.name,
-        image: data.image,
+        imageUrl: '',
         levelRequirement: data.levelRequirement,
         canUseInDonationMessage: data.canUseInDonationMessage,
         isActive: true,
@@ -116,6 +115,12 @@ export default class CustomEmojiStore extends ContextClass {
         }))
       })
 
+      const imageUrl = await onGetImageUrl(newEmoji.id, tempNewEmojiVersion.version)
+      const newEmojiVersion = await db.customEmojiVersion.update({
+        where: { id: tempNewEmojiVersion.id },
+        data: { imageUrl: imageUrl }
+      })
+
       return {
         id: newEmoji.id,
         symbol: newEmoji.symbol,
@@ -123,7 +128,7 @@ export default class CustomEmojiStore extends ContextClass {
         isActive: newEmojiVersion.isActive,
         version: newEmojiVersion.version,
         name: newEmojiVersion.name,
-        image: newEmojiVersion.image,
+        imageUrl: newEmojiVersion.imageUrl,
         modifiedAt: newEmojiVersion.modifiedAt,
         levelRequirement: newEmojiVersion.levelRequirement,
         canUseInDonationMessage: newEmojiVersion.canUseInDonationMessage,
@@ -158,8 +163,9 @@ export default class CustomEmojiStore extends ContextClass {
     })
   }
 
-  /** Returns the updated CustomEmoji. */
-  public async updateCustomEmoji (data: CustomEmojiUpdateData): Promise<CustomEmojiWithRankWhitelist> {
+  /** Since the image URL depends on the emoji that hasn't been created yet, we inject the URL by calling `onGetImageUrl` during the emoji creation process.
+   * Returns the updated CustomEmoji. */
+  public async updateCustomEmoji (data: InternalCustomEmojiUpdateData, onGetImageUrl: (streamerId: number, emojiId: number, version: number) => Promise<string>): Promise<CustomEmojiWithRankWhitelist> {
     // there is a BEFORE INSERT trigger in the `custom_emoji_version` table that ensures there is only ever
     // one active version for a given custom emoji. this avoids any potential race conditions when multiple
     // requests are made at the same time
@@ -181,11 +187,11 @@ export default class CustomEmojiStore extends ContextClass {
         orderBy: { version: 'desc' }
       }))!
 
-      const updatedEmojiVersion = await db.customEmojiVersion.create({
+      const tempUpdatedEmojiVersion = await db.customEmojiVersion.create({
         data: {
           customEmojiId: data.id,
           name: data.name,
-          image: data.image,
+          imageUrl: '',
           levelRequirement: data.levelRequirement,
           canUseInDonationMessage: data.canUseInDonationMessage,
           isActive: true,
@@ -205,6 +211,16 @@ export default class CustomEmojiStore extends ContextClass {
         skipDuplicates: true
       })
 
+      // we could optimise this a little by getting the URL before creating the new version (since we know in advance what the version will be),
+      // but that runs the risk that the new version will fail to create due to a race condition with the creation of another version.
+      // it is safest to wait as long as possible before uploading the image.
+      const imageUrl = await onGetImageUrl(tempUpdatedEmojiVersion.customEmoji.streamerId, tempUpdatedEmojiVersion.customEmojiId, tempUpdatedEmojiVersion.version)
+      const updatedEmojiVersion = await db.customEmojiVersion.update({
+        where: { id: tempUpdatedEmojiVersion.id },
+        data: { imageUrl: imageUrl },
+        include: { customEmoji: true }
+      })
+
       return {
         id: updatedEmojiVersion.customEmoji.id,
         symbol: updatedEmojiVersion.customEmoji.symbol,
@@ -212,7 +228,7 @@ export default class CustomEmojiStore extends ContextClass {
         isActive: updatedEmojiVersion.isActive,
         version: updatedEmojiVersion.version,
         name: updatedEmojiVersion.name,
-        image: updatedEmojiVersion.image,
+        imageUrl: updatedEmojiVersion.imageUrl,
         modifiedAt: updatedEmojiVersion.modifiedAt,
         levelRequirement: updatedEmojiVersion.levelRequirement,
         canUseInDonationMessage: updatedEmojiVersion.canUseInDonationMessage,

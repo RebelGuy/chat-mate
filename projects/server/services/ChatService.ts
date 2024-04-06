@@ -1,7 +1,7 @@
 
 import { Dependencies } from '@rebel/shared/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { ChatItem, ChatPlatform } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations, ChatPlatform } from '@rebel/server/models/chat'
 import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ContextClass from '@rebel/shared/context/ContextClass'
@@ -68,6 +68,14 @@ export default class ChatService extends ContextClass {
   public override initialise () {
     this.eventDispatchService.onData(EVENT_CHAT_ITEM, data => this.onNewChatItem(data, data.streamerId))
     this.eventDispatchService.onData(EVENT_CHAT_ITEM_REMOVED, data => this.onChatItemRemoved(data.externalMessageId))
+  }
+
+  /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream.
+   * If `deletedOnly` is not provided, returns only active chat messages. If true, returns only deleted messages since the given time (respecting all other provided filters). */
+  public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[], deletedOnly?: boolean): Promise<ChatItemWithRelations[]> {
+    const chatItems = await this.chatStore.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
+    await Promise.all(chatItems.map(item => this.emojiService.signEmojiImages(item.chatMessageParts)))
+    return chatItems
   }
 
   public async onChatItemRemoved (externalMessageId: string) {

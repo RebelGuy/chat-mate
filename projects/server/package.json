@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.511.0",
+    "@aws-sdk/s3-request-presigner": "3.511.0",
     "@googleapis/youtube": "^13.0.0",
     "@prisma/client": "3.15.2",
     "@twurple/api": "^6.2.1",

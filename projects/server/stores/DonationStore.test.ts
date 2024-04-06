@@ -1,7 +1,7 @@
 import { StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import DonationStore, { DonationCreateArgs, DonationWithUser } from '@rebel/server/stores/DonationStore'
+import DonationStore, { DonationCreateArgs } from '@rebel/server/stores/DonationStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import * as data from '@rebel/server/_test/testData'
@@ -9,6 +9,7 @@ import { ChatMateError, DbError, DonationUserLinkAlreadyExistsError, DonationUse
 import { addTime } from '@rebel/shared/util/datetime'
 import { single } from '@rebel/shared/util/arrays'
 import { PartialCustomEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { DonationWithUser } from '@rebel/server/services/DonationService'
 
 const streamer1 = 1
 const streamer2 = 2
@@ -57,7 +58,7 @@ export default () => {
         streamerId: streamer1,
         sortOrder: 1,
         customEmojiVersions: { create: {
-          image: Buffer.from(''),
+          imageUrl: 'url',
           isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
@@ -145,7 +146,7 @@ export default () => {
       await db.chatCustomEmoji.create({ data: {
         text: { create: { isBold: false, isItalics: false, text: 'sample custom emoji' }},
         customEmojiVersion: { create: {
-          image: Buffer.from(''),
+          imageUrl: 'url',
           isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,

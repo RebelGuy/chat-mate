@@ -3,11 +3,17 @@ import { Dependencies } from '@rebel/shared/context/context'
 import * as AWS from '@aws-sdk/client-s3'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { NodeEnv } from '@rebel/server/globals'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { Branded } from '@rebel/shared/types'
 
 export type S3Image = {
   base64Data: string
   imageType: string
 }
+
+enum SignedUrlBrand {}
+
+export type SignedUrl = Branded<string, SignedUrlBrand>
 
 type Deps = Dependencies<{
   s3Region: string
@@ -19,6 +25,7 @@ type Deps = Dependencies<{
 }>
 
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-started-nodejs.html
+// https://docs.digitalocean.com/products/spaces/reference/s3-compatibility/
 export default class S3ProxyService extends ContextClass {
   readonly domain: string
   readonly client: AWS.S3Client
@@ -63,6 +70,17 @@ export default class S3ProxyService extends ContextClass {
     return { base64Data: data, imageType: fileType }
   }
 
+  public async signUrl (url: string): Promise<SignedUrl> {
+    const prefix = `https://${this.bucket}.${this.domain}/`
+    if (url.startsWith(prefix)) {
+      url = url.substring(prefix.length)
+    }
+
+    const command = new AWS.GetObjectCommand({ Bucket: this.bucket, Key: url })
+    const signedUrl = await getSignedUrl(this.client, command)
+    return (prefix + signedUrl) as SignedUrl
+  }
+
   public async uploadBase64Image (fileName: string, fileType: string, isPublic: boolean, base64Data: string) {
     await this.client.send(new AWS.PutObjectCommand({
       Bucket: this.bucket,
@@ -73,7 +91,8 @@ export default class S3ProxyService extends ContextClass {
       ContentType: `image/${fileType}`,
     }))
 
-    return this.constructUrl(fileName)
+    const url = this.constructUrl(fileName)
+    return await this.signUrl(url)
   }
 
   private getBaseFolder () {
