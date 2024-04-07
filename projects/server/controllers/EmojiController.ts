@@ -78,8 +78,8 @@ export default class EmojiController extends ControllerBase {
     }
 
     const imageData = request.updatedEmoji.imageDataUrl ?? ''
-    if (imageData.length === 0) {
-      return builder.failure(400, 'Image data must be defined')
+    if (imageData.length === 0 || imageData.toLowerCase().startsWith('http')) {
+      return builder.failure(400, 'Image data must be defined and cannot be a HTTP URL')
     }
 
     try {

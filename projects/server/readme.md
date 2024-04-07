@@ -513,7 +513,7 @@ Can return the following errors:
 Update an existing custom emoji.
 
 Request data (body):
-- `updatedEmoji` (`PublicCustomEmoji`): *Required.* The updated emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected. The `id` is used to match the new emoji to an emoji in the database.
+- `updatedEmoji` (`PublicCustomEmoji`): *Required.* The updated emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected. The `id` is used to match the new emoji to an emoji in the database. Be sure to always provide a data URL for the image, NOT a HTTP URL.
 
 Returns data with the following properties:
 - `updatedEmoji` (`PublicCustomEmoji`): The updated emoji data.

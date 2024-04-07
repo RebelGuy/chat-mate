@@ -161,3 +161,11 @@ export function parseDataUrl (dataUrl: string): DataUrlInfo {
     data: parts[1]
   }
 }
+
+/** Extracts the file extension from the given HTTP URL. Does not include the leading '.'. */
+export function getFileExtension (fullFileUrl: string) {
+  // https://syd1.digitaloceanspaces.com/chat-mate/local/custom-emoji/2/25/9.png?X-Amz-
+  const [url, queryParams] = fullFileUrl.split('?')
+  const parts = url.split('.')
+  return parts.at(-1)
+}

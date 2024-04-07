@@ -3,13 +3,14 @@ import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { getFileExtension } from '@rebel/shared/util/text'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import { EmojiData } from '@rebel/studio/pages/emojis/CustomEmojiManager'
 import RanksSelector from '@rebel/studio/pages/emojis/RanksSelector'
 import { updateCustomEmoji, addCustomEmoji } from '@rebel/studio/utility/api'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Props = {
   open: boolean
@@ -40,10 +41,11 @@ export default function CustomEmojiEditor (props: Props) {
   const [enableWhitelist, setEnableWhitelist] = useState(false)
   const [symbolValidation, setSymbolValidation] = useState<string | null>(null)
   const [levelRequirementValidation, setLevelRequirementValidation] = useState<string | null>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
 
   const { data: editingData, onChange } = props
 
-  const updateRequest = useRequest(updateCustomEmoji({ updatedEmoji: emojiDataToUpdateData(props.data)! }), {
+  const updateRequest = useRequest(updateCustomEmoji({ updatedEmoji: emojiDataToUpdateData(props.data, imageRef.current)! }), {
     onDemand: true,
     onSuccess: (data) => props.onSave(data.updatedEmoji)
   })
@@ -208,7 +210,15 @@ export default function CustomEmojiEditor (props: Props) {
               </FormControl>
               <FormControl sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  {!isNullOrEmpty(editingData.imageUrl) && <img src={editingData.imageUrl} style={{ maxHeight: 32 }} alt="" />}
+                  {!isNullOrEmpty(editingData.imageUrl) && (
+                    <img
+                      src={editingData.imageUrl}
+                      style={{ maxHeight: 32 }}
+                      alt=""
+                      ref={imageRef}
+                      crossOrigin="anonymous" // if we don't do this for https links, the canvas drawing this image will fail to export to a dataUrl (wtf)
+                    />
+                  )}
                 </Box>
                 <Button disabled={props.isLoading || request.isLoading} component="label" sx={{ mt: 1 }}>
                   <input type="file" hidden accept="image/png" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />
@@ -247,14 +257,31 @@ function emojiDataToNewData (data: EmojiData | null): PublicCustomEmojiNew | nul
 }
 
 
-function emojiDataToUpdateData (data: EmojiData | null): PublicCustomEmojiUpdate | null {
+function emojiDataToUpdateData (data: EmojiData | null, image: HTMLImageElement | null): PublicCustomEmojiUpdate | null {
   if (data == null) {
     return null
+  }
+
+  let imageDataUrl
+  if (image == null || data.imageUrl.startsWith('data:')) {
+    imageDataUrl = data.imageUrl
+  } else if (data.imageUrl.startsWith('http')) {
+    const canvas = document.createElement('canvas')
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(image, 0, 0)
+
+    const fileExtension = getFileExtension(data.imageUrl)
+    imageDataUrl = canvas.toDataURL(`image/${fileExtension}`)
+  } else {
+    throw new Error('Invalid image URL')
   }
 
   const { imageUrl, ...rest } = data
   return {
     ...rest,
-    imageDataUrl: imageUrl
+    imageDataUrl
   }
 }
