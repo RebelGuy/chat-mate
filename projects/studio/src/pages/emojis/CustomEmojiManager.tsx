@@ -502,7 +502,7 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
           </TableCell>
           <TableCell>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              {!isNullOrEmpty(props.data.imageData) && <img src={`data:image/png;base64,${props.data.imageData}`} style={{ maxHeight: 32 }} alt="" />}
+              {!isNullOrEmpty(props.data.imageUrl) && <img src={props.data.imageUrl.startsWith('http') ? props.data.imageUrl : `data:image/png;base64,${props.data.imageUrl}`} style={{ maxHeight: 32 }} alt="" />}
             </div>
           </TableCell>
           <RequireRank owner>
@@ -527,6 +527,6 @@ function compareEmojis (data: EmojiData, previousData: EmojiData) {
     data.symbol !== previousData.symbol ||
     data.levelRequirement !== previousData.levelRequirement ||
     data.canUseInDonationMessage !== previousData.canUseInDonationMessage ||
-    data.imageData !== previousData.imageData ||
+    data.imageUrl !== previousData.imageUrl ||
     !compareArrays(sortBy(data.whitelistedRanks, x => x), sortBy(previousData.whitelistedRanks, x => x))
 }

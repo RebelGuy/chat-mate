@@ -77,8 +77,7 @@ export default class S3ProxyService extends ContextClass {
     }
 
     const command = new AWS.GetObjectCommand({ Bucket: this.bucket, Key: url })
-    const signedUrl = await getSignedUrl(this.client, command)
-    return (prefix + signedUrl) as SignedUrl
+    return await getSignedUrl(this.client, command) as SignedUrl
   }
 
   public async uploadBase64Image (fileName: string, fileType: string, isPublic: boolean, base64Data: string) {

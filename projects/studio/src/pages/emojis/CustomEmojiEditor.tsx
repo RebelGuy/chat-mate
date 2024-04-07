@@ -1,5 +1,5 @@
-import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
-import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
+import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
@@ -30,7 +30,7 @@ const DEFAULT_DATA: EmojiData = {
   name: 'New Emoji',
   symbol: 'emoji',
   canUseInDonationMessage: true,
-  imageData: '',
+  imageUrl: '',
   levelRequirement: 0,
   whitelistedRanks: [],
   sortOrder: -1
@@ -43,12 +43,12 @@ export default function CustomEmojiEditor (props: Props) {
 
   const { data: editingData, onChange } = props
 
-  const updateRequest = useRequest(updateCustomEmoji({ updatedEmoji: props.data! }), {
+  const updateRequest = useRequest(updateCustomEmoji({ updatedEmoji: emojiDataToUpdateData(props.data)! }), {
     onDemand: true,
     onSuccess: (data) => props.onSave(data.updatedEmoji)
   })
 
-  const addRequest = useRequest(addCustomEmoji({ newEmoji: props.data! }), {
+  const addRequest = useRequest(addCustomEmoji({ newEmoji: emojiDataToNewData(props.data)! }), {
     onDemand: true,
     onSuccess: (data) => props.onSave(data.newEmoji)
   })
@@ -59,7 +59,7 @@ export default function CustomEmojiEditor (props: Props) {
     !request.isLoading &&
     symbolValidation == null &&
     levelRequirementValidation == null &&
-    !isNullOrEmpty(editingData.imageData) &&
+    !isNullOrEmpty(editingData.imageUrl) &&
     (!enableWhitelist || enableWhitelist && editingData.whitelistedRanks.length > 0) &&
     props.onCheckDataChanged(editingData)
 
@@ -108,7 +108,7 @@ export default function CustomEmojiEditor (props: Props) {
       const data = fr.result as string
       const prefix = 'data:image/png;base64,'
       const imageData = data.substring(prefix.length)
-      onChange({ ...editingData!, imageData })
+      onChange({ ...editingData!, imageUrl: imageData })
     }
     fr.onerror = () => { throw new ChatMateError() }
     fr.readAsDataURL(files[0])
@@ -211,7 +211,7 @@ export default function CustomEmojiEditor (props: Props) {
               </FormControl>
               <FormControl sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  {!isNullOrEmpty(editingData.imageData) && <img src={`data:image/png;base64,${editingData.imageData}`} style={{ maxHeight: 32 }} alt="" />}
+                  {!isNullOrEmpty(editingData.imageUrl) && <img src={editingData.imageUrl.startsWith('http') ? editingData.imageUrl : `data:image/png;base64,${editingData.imageUrl}`} style={{ maxHeight: 32 }} alt="" />}
                 </Box>
                 <Button disabled={props.isLoading || request.isLoading} component="label" sx={{ mt: 1 }}>
                   <input type="file" hidden accept="image/png" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />
@@ -237,4 +237,27 @@ export default function CustomEmojiEditor (props: Props) {
   )
 }
 
+function emojiDataToNewData (data: EmojiData | null): PublicCustomEmojiNew | null {
+  if (data == null) {
+    return null
+  }
 
+  const { imageUrl, ...rest } = data
+  return {
+    ...rest,
+    imageDataUrl: imageUrl
+  }
+}
+
+
+function emojiDataToUpdateData (data: EmojiData | null): PublicCustomEmojiUpdate | null {
+  if (data == null) {
+    return null
+  }
+
+  const { imageUrl, ...rest } = data
+  return {
+    ...rest,
+    imageDataUrl: imageUrl
+  }
+}
