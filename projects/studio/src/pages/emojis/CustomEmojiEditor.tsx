@@ -105,10 +105,7 @@ export default function CustomEmojiEditor (props: Props) {
     // reads as base64 encoding, including the `data:` prefix
     const fr = new FileReader()
     fr.onload = () => {
-      const data = fr.result as string
-      const prefix = 'data:image/png;base64,'
-      const imageData = data.substring(prefix.length)
-      onChange({ ...editingData!, imageUrl: imageData })
+      onChange({ ...editingData!, imageUrl: fr.result as string })
     }
     fr.onerror = () => { throw new ChatMateError() }
     fr.readAsDataURL(files[0])
@@ -211,7 +208,7 @@ export default function CustomEmojiEditor (props: Props) {
               </FormControl>
               <FormControl sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  {!isNullOrEmpty(editingData.imageUrl) && <img src={editingData.imageUrl.startsWith('http') ? editingData.imageUrl : `data:image/png;base64,${editingData.imageUrl}`} style={{ maxHeight: 32 }} alt="" />}
+                  {!isNullOrEmpty(editingData.imageUrl) && <img src={editingData.imageUrl} style={{ maxHeight: 32 }} alt="" />}
                 </Box>
                 <Button disabled={props.isLoading || request.isLoading} component="label" sx={{ mt: 1 }}>
                   <input type="file" hidden accept="image/png" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />

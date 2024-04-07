@@ -49,14 +49,18 @@ export default class S3ProxyService extends ContextClass {
     })
   }
 
-  public constructUrl (fileName: string) {
+  public constructAbsoluteUrl (fileName: string) {
     return `https://${this.bucket}.${this.domain}/${this.getBaseFolder()}/${fileName}`
+  }
+
+  public constructRelativeUrl (fileName: string) {
+    return `${this.getBaseFolder()}/${fileName}`
   }
 
   public async getImage (fileName: string): Promise<S3Image | null> {
     const result = await this.client.send(new AWS.GetObjectCommand({
       Bucket: this.bucket,
-      Key: `${this.getBaseFolder()}/${fileName}`
+      Key: this.constructRelativeUrl(fileName)
     }))
 
     if (result.ContentType == null || !result.ContentType.startsWith('image/')) {
@@ -83,14 +87,14 @@ export default class S3ProxyService extends ContextClass {
   public async uploadBase64Image (fileName: string, fileType: string, isPublic: boolean, base64Data: string) {
     await this.client.send(new AWS.PutObjectCommand({
       Bucket: this.bucket,
-      Key: `${this.getBaseFolder()}/${fileName}`,
+      Key: this.constructRelativeUrl(fileName),
       Body: Buffer.from(base64Data, 'base64'),
       ACL: isPublic ? 'public-read' : 'private',
       ContentEncoding: 'base64',
       ContentType: `image/${fileType}`,
     }))
 
-    const url = this.constructUrl(fileName)
+    const url = this.constructAbsoluteUrl(fileName)
     return await this.signUrl(url)
   }
 

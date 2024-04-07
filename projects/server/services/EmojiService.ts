@@ -70,7 +70,7 @@ export default class EmojiService extends ContextClass {
       // todo: convert to png before uploading
       const fileName = getCustomEmojiFileUrl(data.streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
       signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
-      return fileName
+      return this.s3ProxyService.constructRelativeUrl(fileName)
     })
 
     return {
@@ -126,7 +126,7 @@ export default class EmojiService extends ContextClass {
       // todo: convert to png before uploading
       const fileName = getCustomEmojiFileUrl(streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
       signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
-      return fileName
+      return this.s3ProxyService.constructRelativeUrl(fileName)
     })
 
     return {

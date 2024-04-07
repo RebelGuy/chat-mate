@@ -165,7 +165,7 @@ export default class CustomEmojiStore extends ContextClass {
 
   /** Since the image URL depends on the emoji that hasn't been created yet, we inject the URL by calling `onGetImageUrl` during the emoji creation process.
    * Returns the updated CustomEmoji. */
-  public async updateCustomEmoji (data: InternalCustomEmojiUpdateData, onGetImageUrl: (streamerId: number, emojiId: number, version: number) => Promise<string>): Promise<CustomEmojiWithRankWhitelist> {
+  public async updateCustomEmoji (data: InternalCustomEmojiUpdateData, onGetRelativeImageUrl: (streamerId: number, emojiId: number, version: number) => Promise<string>): Promise<CustomEmojiWithRankWhitelist> {
     // there is a BEFORE INSERT trigger in the `custom_emoji_version` table that ensures there is only ever
     // one active version for a given custom emoji. this avoids any potential race conditions when multiple
     // requests are made at the same time
@@ -214,7 +214,7 @@ export default class CustomEmojiStore extends ContextClass {
       // we could optimise this a little by getting the URL before creating the new version (since we know in advance what the version will be),
       // but that runs the risk that the new version will fail to create due to a race condition with the creation of another version.
       // it is safest to wait as long as possible before uploading the image.
-      const imageUrl = await onGetImageUrl(tempUpdatedEmojiVersion.customEmoji.streamerId, tempUpdatedEmojiVersion.customEmojiId, tempUpdatedEmojiVersion.version)
+      const imageUrl = await onGetRelativeImageUrl(tempUpdatedEmojiVersion.customEmoji.streamerId, tempUpdatedEmojiVersion.customEmojiId, tempUpdatedEmojiVersion.version)
       const updatedEmojiVersion = await db.customEmojiVersion.update({
         where: { id: tempUpdatedEmojiVersion.id },
         data: { imageUrl: imageUrl },
