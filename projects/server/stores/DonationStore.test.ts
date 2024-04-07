@@ -59,6 +59,8 @@ export default () => {
         sortOrder: 1,
         customEmojiVersions: { create: {
           imageUrl: 'url',
+          imageWidth: 100,
+          imageHeight: 200,
           isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
@@ -147,6 +149,8 @@ export default () => {
         text: { create: { isBold: false, isItalics: false, text: 'sample custom emoji' }},
         customEmojiVersion: { create: {
           imageUrl: 'url',
+          imageWidth: 100,
+          imageHeight: 200,
           isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,

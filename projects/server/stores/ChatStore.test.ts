@@ -392,6 +392,8 @@ export default () => {
       ]})
       await db.customEmojiVersion.create({ data: {
         imageUrl: '',
+        imageWidth: 100,
+        imageHeight: 200,
         levelRequirement: 1,
         name: 'Test Emoji',
         isActive: true,

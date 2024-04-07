@@ -60,6 +60,7 @@
     "express": "^4.17.1",
     "fs-extra": "^10.0.0",
     "html-webpack-plugin": "^5.5.0",
+    "image-size": "^1.1.1",
     "immutable": "^4.0.0",
     "module-alias": "^2.2.2",
     "@ngrok/ngrok": "^0.5.1",

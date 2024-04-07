@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import EmojiService, { CustomEmojiCreateData, CustomEmojiUpdateData } from '@rebel/server/services/EmojiService'
 import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
-import { single } from '@rebel/shared/util/arrays'
+import { single, single2 } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { ChatItemWithRelations, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
@@ -10,6 +10,7 @@ import AccountService from '@rebel/server/services/AccountService'
 import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
 import CustomEmojiStore, { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { UnsupportedFilteTypeError } from '@rebel/shared/util/error'
+import ImageHelpers from '@rebel/server/helpers/ImageHelpers'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'imageUrl' | 'levelRequirement' | 'name'>
 
@@ -27,6 +28,7 @@ let mockCustomEmojiServiceEligibilityService: MockProxy<CustomEmojiEligibilitySe
 let mockAccountService: MockProxy<AccountService>
 let mockS3ProxyService: MockProxy<S3ProxyService>
 let mockCustomEmojiStore: MockProxy<CustomEmojiStore>
+let mockImageHelpers: MockProxy<ImageHelpers>
 let emojiService: EmojiService
 
 beforeEach(() => {
@@ -42,12 +44,14 @@ beforeEach(() => {
 
   mockS3ProxyService = mock()
   mockCustomEmojiStore = mock()
+  mockImageHelpers = mock()
 
   emojiService = new EmojiService(new Dependencies({
     customEmojiEligibilityService: mockCustomEmojiServiceEligibilityService,
     accountService: mockAccountService,
     s3ProxyService: mockS3ProxyService,
-    customEmojiStore: mockCustomEmojiStore
+    customEmojiStore: mockCustomEmojiStore,
+    imageHelpers: mockImageHelpers
   }))
 })
 
@@ -70,6 +74,8 @@ describe(nameof(EmojiService, 'addCustomEmoji'), () => {
       name: 'test',
       canUseInDonationMessage: true,
       imageUrl: mockImageUrl,
+      imageWidth: 100,
+      imageHeight: 200,
       isActive: true,
       levelRequirement: 10,
       modifiedAt: new Date(),
@@ -86,6 +92,7 @@ describe(nameof(EmojiService, 'addCustomEmoji'), () => {
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
     mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde').mockResolvedValue(mockSignedImageUrl)
+    mockImageHelpers.getImageDimensions.mockReturnValue({ width: 0, height: 0 })
 
     const result = await emojiService.addCustomEmoji(createData)
 
@@ -101,8 +108,11 @@ describe(nameof(EmojiService, 'addCustomEmoji'), () => {
       streamerId: mockResult.streamerId,
       version: mockResult.version,
       whitelistedRanks: mockResult.whitelistedRanks,
-      imageUrl: mockSignedImageUrl
+      imageUrl: mockSignedImageUrl,
+      imageWidth: mockResult.imageWidth,
+      imageHeight: mockResult.imageHeight
     })
+    expect(single2(mockImageHelpers.getImageDimensions.mock.calls)).toBe('abcde')
   })
 
   test('Throws if the filetype is not supported', async () => {
@@ -170,6 +180,8 @@ describe(nameof(EmojiService, 'updateCustomEmoji'), () => {
       name: 'test',
       canUseInDonationMessage: true,
       imageUrl: mockImageUrl,
+      imageWidth: 100,
+      imageHeight: 200,
       isActive: true,
       levelRequirement: 10,
       modifiedAt: new Date(),
@@ -186,6 +198,7 @@ describe(nameof(EmojiService, 'updateCustomEmoji'), () => {
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
     mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde').mockResolvedValue(mockSignedImageUrl)
+    mockImageHelpers.getImageDimensions.mockReturnValue({ width: 0, height: 0 })
 
     const result = await emojiService.updateCustomEmoji(updateData)
 
@@ -201,8 +214,11 @@ describe(nameof(EmojiService, 'updateCustomEmoji'), () => {
       streamerId: mockResult.streamerId,
       version: mockResult.version,
       whitelistedRanks: mockResult.whitelistedRanks,
-      imageUrl: mockSignedImageUrl
+      imageUrl: mockSignedImageUrl,
+      imageWidth: mockResult.imageWidth,
+      imageHeight: mockResult.imageHeight
     })
+    expect(single2(mockImageHelpers.getImageDimensions.mock.calls)).toBe('abcde')
   })
 
   test('Throws if the filetype is not supported', async () => {

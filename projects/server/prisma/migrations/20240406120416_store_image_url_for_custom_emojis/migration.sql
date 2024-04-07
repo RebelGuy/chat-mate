@@ -7,6 +7,12 @@
 */
 -- AlterTable
 ALTER TABLE `custom_emoji_version` DROP COLUMN `image`,
-    ADD COLUMN `imageUrl` VARCHAR(63) NULL;
+    ADD COLUMN `imageUrl` VARCHAR(63) NULL,
+    ADD COLUMN `imageWidth` INT NULL,
+    ADD COLUMN `imageHeight` INT NULL;
 UPDATE `custom_emoji_version` SET `imageUrl` = '' WHERE id > 0;
-ALTER TABLE `custom_emoji_version` MODIFY COLUMN `imageUrl` VARCHAR(63) NOT NULL;
+UPDATE `custom_emoji_version` SET `imageWidth` = 0 WHERE id > 0;
+UPDATE `custom_emoji_version` SET `imageHeight` = 0 WHERE id > 0;
+ALTER TABLE `custom_emoji_version` MODIFY COLUMN `imageUrl` VARCHAR(63) NOT NULL,
+    MODIFY COLUMN `imageWidth` INT NOT NULL,
+    MODIFY COLUMN `imageHeight` INT NOT NULL;

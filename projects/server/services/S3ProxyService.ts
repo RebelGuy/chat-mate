@@ -7,6 +7,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Branded } from '@rebel/shared/types'
 
 export type S3Image = {
+  // this is the pure data without any dataUrl prefixes
   base64Data: string
   imageType: string
 }
@@ -57,16 +58,17 @@ export default class S3ProxyService extends ContextClass {
     return `${this.getBaseFolder()}/${fileName}`
   }
 
-  public async getImage (fileName: string): Promise<S3Image | null> {
+  // relativeUrl = baseFolder + fileName
+  public async getImage (relativeUrl: string): Promise<S3Image | null> {
     const result = await this.client.send(new AWS.GetObjectCommand({
       Bucket: this.bucket,
-      Key: this.constructRelativeUrl(fileName)
+      Key: relativeUrl
     }))
 
     if (result.ContentType == null || !result.ContentType.startsWith('image/')) {
-      throw new ChatMateError(`Invalid content type ${result.ContentType} for image file ${fileName}`)
+      throw new ChatMateError(`Invalid content type ${result.ContentType} for image file ${relativeUrl}`)
     } else if (result.Body == null) {
-      throw new ChatMateError(`Empty body returned for image file ${fileName}`)
+      throw new ChatMateError(`Empty body returned for image file ${relativeUrl}`)
     }
 
     const data = await result.Body.transformToString('base64')

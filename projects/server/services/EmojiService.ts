@@ -9,6 +9,7 @@ import { single, zip } from '@rebel/shared/util/arrays'
 import { ChatMateError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
 import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
 import { parseDataUrl } from '@rebel/shared/util/text'
+import ImageHelpers from '@rebel/server/helpers/ImageHelpers'
 
 export type CustomEmojiCreateData = InternalCustomEmojiCreateData & {
   imageDataUrl: string
@@ -32,6 +33,7 @@ type Deps = Dependencies<{
   accountService: AccountService
   s3ProxyService: S3ProxyService
   customEmojiStore: CustomEmojiStore
+  imageHelpers: ImageHelpers
 }>
 
 const SUPPORTED_IMAGE_TYPES = ['png', 'jpg', 'jpeg']
@@ -41,6 +43,7 @@ export default class EmojiService extends ContextClass {
   private readonly accountService: AccountService
   private readonly s3ProxyService: S3ProxyService
   private readonly customEmojiStore: CustomEmojiStore
+  private readonly imageHelpers: ImageHelpers
 
   constructor (deps: Deps) {
     super()
@@ -48,6 +51,7 @@ export default class EmojiService extends ContextClass {
     this.accountService = deps.resolve('accountService')
     this.s3ProxyService = deps.resolve('s3ProxyService')
     this.customEmojiStore = deps.resolve('customEmojiStore')
+    this.imageHelpers = deps.resolve('imageHelpers')
   }
 
   /** @throws {@link UnsupportedFilteTypeError}: When the image type is not supported. */
@@ -70,12 +74,20 @@ export default class EmojiService extends ContextClass {
       // todo: convert to png before uploading
       const fileName = getCustomEmojiFileUrl(data.streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
       signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
-      return this.s3ProxyService.constructRelativeUrl(fileName)
+      const { width, height } = this.imageHelpers.getImageDimensions(imageData.data)
+
+      return {
+        relativeImageUrl: this.s3ProxyService.constructRelativeUrl(fileName),
+        imageWidth: width,
+        imageHeight: height
+      }
     })
 
     return {
       id: newEmoji.id,
       imageUrl: signedImageUrl!,
+      imageWidth: newEmoji.imageWidth,
+      imageHeight: newEmoji.imageHeight,
       name: newEmoji.name,
       symbol: newEmoji.symbol,
       version: newEmoji.version,
@@ -126,12 +138,20 @@ export default class EmojiService extends ContextClass {
       // todo: convert to png before uploading
       const fileName = getCustomEmojiFileUrl(streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
       signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
-      return this.s3ProxyService.constructRelativeUrl(fileName)
+      const { width, height } = this.imageHelpers.getImageDimensions(imageData.data)
+
+      return {
+        relativeImageUrl: this.s3ProxyService.constructRelativeUrl(fileName),
+        imageWidth: width,
+        imageHeight: height
+      }
     })
 
     return {
       id: newEmoji.id,
       imageUrl: signedImageUrl!,
+      imageWidth: newEmoji.imageWidth,
+      imageHeight: newEmoji.imageHeight,
       name: newEmoji.name,
       symbol: newEmoji.symbol,
       version: newEmoji.version,

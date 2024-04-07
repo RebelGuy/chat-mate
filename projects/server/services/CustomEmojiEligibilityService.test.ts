@@ -10,13 +10,13 @@ import { asGte, asLte } from '@rebel/shared/util/math'
 import { CustomEmoji, CustomEmojiVersion, Rank } from '@prisma/client'
 import { expectArray } from '@rebel/shared/testUtils'
 
-type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'imageUrl' | 'levelRequirement' | 'name' | 'canUseInDonationMessage'>
+type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'imageUrl' | 'imageWidth' | 'imageHeight' | 'levelRequirement' | 'name' | 'canUseInDonationMessage'>
 
 const userId = 1
 const streamerId = 2
-const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 10, imageUrl: '', canUseInDonationMessage: true }
-const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 20, imageUrl: '', canUseInDonationMessage: false }
-const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 30, imageUrl: '', canUseInDonationMessage: true }
+const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 10, imageUrl: '', imageWidth: 100, imageHeight: 200, canUseInDonationMessage: true }
+const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 20, imageUrl: '', imageWidth: 100, imageHeight: 200, canUseInDonationMessage: false }
+const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 30, imageUrl: '', imageWidth: 100, imageHeight: 200, canUseInDonationMessage: true }
 
 const rank1 = cast<Rank>({ id: 1 })
 const rank2 = cast<Rank>({ id: 2 })

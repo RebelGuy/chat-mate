@@ -780,9 +780,13 @@ model CustomEmojiVersion {
   isActive   Boolean
   modifiedAt DateTime @default(now())
   version    Int
+  name       String   @db.VarChar(63)
 
-  name                    String  @db.VarChar(63)
-  imageUrl                String  @db.VarChar(63)
+  /// This is the relative URL without a leading slash
+  imageUrl    String @db.VarChar(63)
+  imageWidth  Int
+  imageHeight Int
+
   levelRequirement        Int     @db.UnsignedSmallInt
   canUseInDonationMessage Boolean
 

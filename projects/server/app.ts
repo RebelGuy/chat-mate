@@ -101,6 +101,7 @@ import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import S3ProxyService from '@rebel/server/services/S3ProxyService'
+import ImageHelpers from '@rebel/server/helpers/ImageHelpers'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -183,6 +184,7 @@ const main = async () => {
     .withHelpers('donationHelpers', DonationHelpers)
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
+    .withHelpers('imageHelpers', ImageHelpers)
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
