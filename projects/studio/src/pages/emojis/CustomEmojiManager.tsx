@@ -26,7 +26,7 @@ import useMemState from '@rebel/studio/hooks/useMemState'
 import useAnimation from '@rebel/studio/hooks/useAnimation'
 import { clamp } from '@rebel/shared/util/math'
 
-export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version'>
+export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version' | 'imageHeight' | 'imageWidth'>
 
 type Eligibility = {
   meetsLevelRequirement: boolean

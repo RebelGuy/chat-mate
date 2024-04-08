@@ -9,6 +9,8 @@ export function customEmojiToPublicObject (emoji: FullCustomEmoji): PublicCustom
     version: emoji.version,
     isActive: emoji.isActive,
     imageUrl: emoji.imageUrl,
+    imageWidth: emoji.imageWidth,
+    imageHeight: emoji.imageHeight,
     levelRequirement: emoji.levelRequirement,
     canUseInDonationMessage: emoji.canUseInDonationMessage,
     whitelistedRanks: emoji.whitelistedRanks,

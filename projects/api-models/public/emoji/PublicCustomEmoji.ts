@@ -20,6 +20,12 @@ export type PublicCustomEmoji = PublicObject<{
   /** The signed image url. */
   imageUrl: string
 
+  /** The pixel width of the image. */
+  imageWidth: number
+
+  /** The pixel height of the image. */
+  imageHeight: number
+
   /** The minimum level a user must be to unlock this emoji. */
   levelRequirement: number
 
@@ -33,6 +39,6 @@ export type PublicCustomEmoji = PublicObject<{
   sortOrder: number
 }>
 
-export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version' | 'imageUrl'> & { imageDataUrl: string }
+export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version' | 'imageUrl' | 'imageWidth' | 'imageHeight'> & { imageDataUrl: string }
 
-export type PublicCustomEmojiUpdate = SafeOmit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version' | 'imageUrl'> & { imageDataUrl: string }
+export type PublicCustomEmojiUpdate = SafeOmit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version' | 'imageUrl' | 'imageWidth' | 'imageHeight'> & { imageDataUrl: string }
