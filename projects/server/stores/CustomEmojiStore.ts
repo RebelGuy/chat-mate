@@ -68,6 +68,10 @@ export default class CustomEmojiStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
+  public async getCustomEmojiById (emojiId: number): Promise<CustomEmoji | null> {
+    return await this.db.customEmoji.findUnique({ where: { id: emojiId }})
+  }
+
   /** Returns the latest versions of active emojis. */
   public async getAllCustomEmojis (streamerId: number): Promise<CustomEmojiWithRankWhitelist[]> {
     const emojiWhitelistsPromise = this.db.customEmojiRankWhitelist.findMany()

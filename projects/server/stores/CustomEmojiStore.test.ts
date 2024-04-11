@@ -42,6 +42,27 @@ export default () => {
 
   afterEach(stopTestDb)
 
+  describe(nameof(CustomEmojiStore, 'getCustomEmojiById'), () => {
+    test('Returns the specified emoji', async () => {
+      await db.customEmoji.createMany({ data: [
+        { sortOrder: 1, streamerId: streamer1, symbol: '1' },
+        { sortOrder: 2, streamerId: streamer2, symbol: '2' }
+      ]})
+
+      const result = await customEmojiStore.getCustomEmojiById(2)
+
+      expect(result).toEqual<CustomEmoji>({ id: 2, sortOrder: 2, streamerId: streamer2, symbol: '2' })
+    })
+
+    test(`Returns null if the specified emoji doesn't exist`, async () => {
+      await db.customEmoji.create({ data: { sortOrder: 1, streamerId: streamer1, symbol: '1' } })
+
+      const result = await customEmojiStore.getCustomEmojiById(2)
+
+      expect(result).toBeNull()
+    })
+  })
+
   describe(nameof(CustomEmojiStore, 'addCustomEmoji'), () => {
     test('custom emoji with no whitelisted ranks is added and the imageUrl is set correctly', async () => {
       const data = getEmojiCreateData(1)

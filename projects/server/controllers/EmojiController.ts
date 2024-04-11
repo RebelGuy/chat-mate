@@ -83,6 +83,11 @@ export default class EmojiController extends ControllerBase {
     }
 
     try {
+      const existingEmoji = await this.customEmojiStore.getCustomEmojiById(request.updatedEmoji.id)
+      if (existingEmoji == null || existingEmoji.streamerId !== this.getStreamerId()) {
+        return builder.failure(404, 'Could not find emoji with the given ID')
+      }
+
       const emoji = await this.emojiService.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji))
       return builder.success({ updatedEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
