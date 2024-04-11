@@ -373,7 +373,7 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
       },
       // this is absolute trash
       customEmoji: {
-        id: part.customEmoji.id,
+        id: part.customEmoji.customEmojiVersion.customEmojiId,
         name: part.customEmoji.customEmojiVersion.name,
         symbol: part.customEmoji.customEmojiVersion.customEmoji.symbol,
         levelRequirement: part.customEmoji.customEmojiVersion.levelRequirement,
