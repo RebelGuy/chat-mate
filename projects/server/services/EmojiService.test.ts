@@ -67,6 +67,7 @@ describe(nameof(EmojiService, 'addCustomEmoji'), () => {
       streamerId: streamerId,
       whitelistedRanks: []
     }
+    mockCustomEmojiStore.getEmojiIdFromStreamerSymbol.calledWith(streamerId, createData.symbol).mockResolvedValue(null)
 
     const mockImageUrl = 'imageUrl'
     const mockResult: CustomEmojiWithRankWhitelist = {
@@ -112,6 +113,46 @@ describe(nameof(EmojiService, 'addCustomEmoji'), () => {
       imageWidth: mockResult.imageWidth,
       imageHeight: mockResult.imageHeight
     })
+    expect(single2(mockImageHelpers.getImageDimensions.mock.calls)).toBe('abcde')
+  })
+
+  test('Adds the emoji as a new version if the streamer-symbol already exists', async () => {
+    const createData = cast<CustomEmojiCreateData>({
+      symbol: ':test:',
+      imageDataUrl: 'data:image/png;base64,abcde',
+      streamerId: streamerId,
+    })
+    mockCustomEmojiStore.getEmojiIdFromStreamerSymbol.calledWith(streamerId, createData.symbol).mockResolvedValue(5)
+
+    const mockImageUrl = 'imageUrl'
+    const mockResult = cast<CustomEmojiWithRankWhitelist>({
+      id: 5,
+      imageUrl: mockImageUrl,
+      streamerId: streamerId,
+      symbol: ':test:',
+    })
+    mockCustomEmojiStore.updateCustomEmoji.mockImplementation(async (data, cb, allowDeactivated) => {
+      if (data.id !== 5) {
+        throw new Error('Unexpected id')
+      } else if (!allowDeactivated) {
+        throw new Error('Expected allowDeactivated to be true')
+      }
+      await cb(mockResult.streamerId, mockResult.id, mockResult.version)
+      return mockResult
+    })
+
+    const mockSignedImageUrl = 'signedUrl' as SignedUrl
+    mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde').mockResolvedValue(mockSignedImageUrl)
+    mockImageHelpers.getImageDimensions.mockReturnValue({ width: 0, height: 0 })
+
+    const result = await emojiService.addCustomEmoji(createData)
+
+    expect(result).toEqual(expectObject(result, {
+      id: mockResult.id,
+      symbol: mockResult.symbol,
+      streamerId: mockResult.streamerId,
+      imageUrl: mockSignedImageUrl,
+    }))
     expect(single2(mockImageHelpers.getImageDimensions.mock.calls)).toBe('abcde')
   })
 
@@ -191,7 +232,10 @@ describe(nameof(EmojiService, 'updateCustomEmoji'), () => {
       version: 2,
       whitelistedRanks: []
     }
-    mockCustomEmojiStore.updateCustomEmoji.mockImplementation(async (_, cb) => {
+    mockCustomEmojiStore.updateCustomEmoji.mockImplementation(async (_, cb, allowDeactivated) => {
+      if (allowDeactivated) {
+        throw new Error('allowDeactivated is expected to be false')
+      }
       await cb(streamerId, mockResult.id, mockResult.version)
       return mockResult
     })
@@ -200,7 +244,7 @@ describe(nameof(EmojiService, 'updateCustomEmoji'), () => {
     mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde').mockResolvedValue(mockSignedImageUrl)
     mockImageHelpers.getImageDimensions.mockReturnValue({ width: 0, height: 0 })
 
-    const result = await emojiService.updateCustomEmoji(updateData)
+    const result = await emojiService.updateCustomEmoji(updateData, false)
 
     expect(result).toEqual<typeof result>({
       id: mockResult.id,
@@ -224,7 +268,7 @@ describe(nameof(EmojiService, 'updateCustomEmoji'), () => {
   test('Throws if the filetype is not supported', async () => {
     const updateData = cast<CustomEmojiUpdateData>({ imageDataUrl: 'data:image/tiff;base64,abcde' })
 
-    await expect(() => emojiService.updateCustomEmoji(updateData)).rejects.toThrowError(UnsupportedFilteTypeError)
+    await expect(() => emojiService.updateCustomEmoji(updateData, false)).rejects.toThrowError(UnsupportedFilteTypeError)
   })
 })
 

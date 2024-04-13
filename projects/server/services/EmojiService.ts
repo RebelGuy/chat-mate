@@ -61,6 +61,11 @@ export default class EmojiService extends ContextClass {
       throw new UnsupportedFilteTypeError('Unsupported file type.')
     }
 
+    const existingEmojiId = await this.customEmojiStore.getEmojiIdFromStreamerSymbol(data.streamerId, data.symbol)
+    if (existingEmojiId != null) {
+      return await this.updateCustomEmoji({ ...data, id: existingEmojiId }, true)
+    }
+
     let signedImageUrl: SignedUrl
     const newEmoji = await this.customEmojiStore.addCustomEmoji({
       symbol: data.symbol,
@@ -121,7 +126,7 @@ export default class EmojiService extends ContextClass {
   }
 
   /** Throws if the image is malformed. */
-  public async updateCustomEmoji (data: CustomEmojiUpdateData): Promise<FullCustomEmoji> {
+  public async updateCustomEmoji (data: CustomEmojiUpdateData, allowDeactivated: boolean): Promise<FullCustomEmoji> {
     const imageData = parseDataUrl(data.imageDataUrl)
     if (imageData.fileType !== 'image' || !SUPPORTED_IMAGE_TYPES.includes(imageData.fileSubType)) {
       throw new UnsupportedFilteTypeError('Unsupported file type.')
@@ -145,7 +150,7 @@ export default class EmojiService extends ContextClass {
         imageWidth: width,
         imageHeight: height
       }
-    })
+    }, allowDeactivated)
 
     return {
       id: newEmoji.id,

@@ -1,8 +1,8 @@
 import { ControllerDependencies, buildPath, ControllerBase } from '@rebel/server/controllers/ControllerBase'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
-import { Path, GET, POST, PATCH, PreProcessor, BodyOptions } from 'typescript-rest'
-import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
+import { Path, GET, POST, PATCH, PreProcessor, BodyOptions, PathParam, DELETE } from 'typescript-rest'
+import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
 import EmojiService from '@rebel/server/services/EmojiService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 
@@ -88,8 +88,28 @@ export default class EmojiController extends ControllerBase {
         return builder.failure(404, 'Could not find emoji with the given ID')
       }
 
-      const emoji = await this.emojiService.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji))
+      const emoji = await this.emojiService.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji), false)
       return builder.success({ updatedEmoji: customEmojiToPublicObject(emoji) })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @DELETE
+  @Path('/custom')
+  @PreProcessor(requireRank('owner'))
+  public async deleteCustomEmoji (@PathParam('id') id: number): Promise<DeleteCustomEmojiResponse> {
+    const builder = this.registerResponseBuilder<DeleteCustomEmojiResponse>('DELETE /custom')
+
+
+    try {
+      const existingEmoji = await this.customEmojiStore.getCustomEmojiById(id)
+      if (existingEmoji == null || existingEmoji.streamerId !== this.getStreamerId()) {
+        return builder.failure(404, 'Could not find emoji with the given ID')
+      }
+
+      await this.customEmojiStore.deactivateCustomEmoji(id)
+      return builder.success({ })
     } catch (e: any) {
       return builder.failure(e)
     }

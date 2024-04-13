@@ -10,5 +10,7 @@ export type AddCustomEmojiResponse = ApiResponse<{ newEmoji: PublicObject<Public
 export type UpdateCustomEmojiRequest = ApiRequest<{ updatedEmoji: PublicObject<PublicCustomEmojiUpdate> }>
 export type UpdateCustomEmojiResponse = ApiResponse<{ updatedEmoji: PublicObject<PublicCustomEmoji> }>
 
+export type DeleteCustomEmojiResponse = ApiResponse<EmptyObject>
+
 export type UpdateCustomEmojiSortOrderRequest = ApiRequest<{ sortOrders: Record<number, number> }>
 export type UpdateCustomEmojiSortOrderResponse = ApiResponse<EmptyObject>

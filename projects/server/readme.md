@@ -521,6 +521,12 @@ Returns data with the following properties:
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 
+### `DELETE /custom`
+Delete an existing custom emoji. Note that data for old versions is retained, e.g. for the purpose of keeping emojis in donation messages working. However, the emoji will no longer be visible in the streamer's emoji list, and it is no longer possible to use the emoji in new chat or donation messages, nor update it.
+
+Query parameters:
+- `id` (`number`): The ID of the streamer's custom emoji that is to be deleted.
+
 ### `PATCH /custom/sortOrder`
 Bulk-update the sort order of custom emojis.
 

@@ -69,7 +69,17 @@ export default class CustomEmojiStore extends ContextClass {
   }
 
   public async getCustomEmojiById (emojiId: number): Promise<CustomEmoji | null> {
-    return await this.db.customEmoji.findUnique({ where: { id: emojiId }})
+    const emoji = await this.db.customEmojiVersion.findFirst({
+      where: {
+        customEmojiId: emojiId,
+        isActive: true
+      },
+      include: {
+        customEmoji: true
+      }
+    })
+
+    return emoji?.customEmoji ?? null
   }
 
   /** Returns the latest versions of active emojis. */
@@ -160,10 +170,21 @@ export default class CustomEmojiStore extends ContextClass {
     })
   }
 
-  /** Returns the unique rank IDs for which each of the given emojis has been whitelisted, if any. */
+  public async deactivateCustomEmoji (emojiId: number): Promise<void> {
+    await this.db.customEmojiVersion.updateMany({
+      where: { customEmojiId: emojiId },
+      data: { isActive: false }
+    })
+  }
+
+  /** Returns the unique rank IDs for which each of the given emojis has been whitelisted, if any.
+   * Deactivated emojis are treated as not having any whitelisted ranks. */
   public async getCustomEmojiWhitelistedRanks (emojiIds: number[]): Promise<CustomEmojiWhitelistedRanks[]> {
     const queryResult = await this.db.customEmojiRankWhitelist.findMany({
-      where: { customEmojiId: { in: emojiIds } }
+      where: {
+        customEmojiId: { in: emojiIds },
+        customEmoji: { customEmojiVersions: { some: { isActive: true }}}
+      }
     })
 
     const grouped = group(queryResult, w => w.customEmojiId)
@@ -185,9 +206,26 @@ export default class CustomEmojiStore extends ContextClass {
     })
   }
 
+  /** Ignores deactivated emojis. */
+  public async getEmojiIdFromStreamerSymbol (streamerId: number, symbol: string): Promise<number | null> {
+    const emoji = await this.db.customEmoji.findFirst({
+      where: {
+        streamerId: streamerId,
+        symbol: symbol
+      }
+    })
+
+    return emoji?.id ?? null
+  }
+
   /** Since the image URL depends on the emoji that hasn't been created yet, we inject the URL by calling `onGetImageUrl` during the emoji creation process.
-   * Returns the updated CustomEmoji. */
-  public async updateCustomEmoji (data: InternalCustomEmojiUpdateData, onGetImageInfo: (streamerId: number, emojiId: number, version: number) => Promise<ImageInfo>): Promise<CustomEmojiWithRankWhitelist> {
+   * Returns the updated CustomEmoji.
+   * If `allowDeactivated` is true, a new version of a previously deactivated emoji can be pushed (thereby re-activated the emoji). Otherwise, the request would be rejected. */
+  public async updateCustomEmoji (
+    data: InternalCustomEmojiUpdateData,
+    onGetImageInfo: (streamerId: number, emojiId: number, version: number) => Promise<ImageInfo>,
+    allowDeactivated: boolean
+  ): Promise<CustomEmojiWithRankWhitelist> {
     // there is a BEFORE INSERT trigger in the `custom_emoji_version` table that ensures there is only ever
     // one active version for a given custom emoji. this avoids any potential race conditions when multiple
     // requests are made at the same time
@@ -196,7 +234,7 @@ export default class CustomEmojiStore extends ContextClass {
       // use updateMany because prisma doesn't know that the search query would only ever result in a single match.
       // unfortunately, this means that we don't get back the updated record, so we have to get that ourselves
       const updateResult = await db.customEmojiVersion.updateMany({
-        where: { customEmojiId: data.id, isActive: true },
+        where: { customEmojiId: data.id, isActive: allowDeactivated ? undefined : true },
         data: { isActive: false }
       })
 
