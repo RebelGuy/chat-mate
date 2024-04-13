@@ -1,6 +1,6 @@
 import { DragEvent, ReactNode, useContext, useRef, useState } from 'react'
 import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
-import { getAccessibleRanks, getAllCustomEmojis, updateCustomEmojiSortOrder } from '@rebel/studio/utility/api'
+import { deleteCustomEmoji, getAccessibleRanks, getAllCustomEmojis, updateCustomEmojiSortOrder } from '@rebel/studio/utility/api'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { compareArrays, sortBy } from '@rebel/shared/util/arrays'
@@ -25,6 +25,7 @@ import { PanelContext } from '@rebel/studio/pages/main/MainView'
 import useMemState from '@rebel/studio/hooks/useMemState'
 import useAnimation from '@rebel/studio/hooks/useAnimation'
 import { clamp } from '@rebel/shared/util/math'
+import DeleteCustomEmoji from '@rebel/studio/pages/emojis/DeleteCustomEmoji'
 
 export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version' | 'imageHeight' | 'imageWidth'>
 
@@ -50,6 +51,7 @@ export default function CustomEmojiManager () {
   const headerRef = useRef<HTMLElement | null>(null)
   const sortOrderMap = useMap<PublicCustomEmoji, number>() // used to override the sort orders while editing
   const [refreshToken, updateRefreshToken] = useUpdateKey()
+  const [emojiToDelete, setEmojiToDelete] = useState<number | null>(null)
   const emojisRequest = useRequest(getAllCustomEmojis(), {
     updateKey: refreshToken,
     onSuccess: data => {
@@ -66,6 +68,12 @@ export default function CustomEmojiManager () {
     setEditingEmoji(emojisRequest.data!.emojis.find(emoji => emoji.id === id) ?? null)
     setOpenEditor(true)
     setEditingType(id == null ? 'new' : 'edit')
+  }
+
+  const onDeleted = (id: number) => {
+    if (emojisRequest.data != null) {
+      emojisRequest.mutate({ emojis: emojisRequest.data.emojis.filter(e => e.id !== id) })
+    }
   }
 
   const onCancelEdit = () => {
@@ -320,6 +328,7 @@ export default function CustomEmojiManager () {
                   panelElement={panel}
                   updateKey={animationKey}
                   onEdit={() => onEdit(emoji.id)}
+                  onDeleted={() => onDeleted(emoji.id)}
                   onDragStart={() => setDragging(emoji)}
                   onDragMove={onDragMove}
                   onDragEnd={onDragEnd}
@@ -410,6 +419,7 @@ type CustomEmojiRowProps = {
   panelElement: HTMLElement
   updateKey: number // so that the row drop marker updates while we are scrolling [highly inefficient!]
   onEdit: () => void
+  onDeleted: () => void
   onDragStart: () => void
   onDragMove: (e: DragEvent) => void
   onDragEnd: () => void
@@ -510,6 +520,7 @@ function CustomEmojiRow (props: CustomEmojiRowProps) {
               <IconButton disabled={props.isLoading} onClick={() => props.onEdit()}>
                 <Edit />
               </IconButton>
+              <DeleteCustomEmoji id={props.data.id} isLoading={props.isLoading} name={props.data.name} onDeleted={props.onDeleted} />
               <IconButton disabled={props.isLoading} onMouseEnter={onMouseEnterDragHandle} onMouseLeave={onMouseLeaveDragHandle}>
                 <DragHandle />
               </IconButton>

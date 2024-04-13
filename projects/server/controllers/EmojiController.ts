@@ -1,7 +1,7 @@
 import { ControllerDependencies, buildPath, ControllerBase } from '@rebel/server/controllers/ControllerBase'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
-import { Path, GET, POST, PATCH, PreProcessor, BodyOptions, PathParam, DELETE } from 'typescript-rest'
+import { Path, GET, POST, PATCH, PreProcessor, BodyOptions, PathParam, DELETE, QueryParam } from 'typescript-rest'
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
 import EmojiService from '@rebel/server/services/EmojiService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
@@ -98,9 +98,11 @@ export default class EmojiController extends ControllerBase {
   @DELETE
   @Path('/custom')
   @PreProcessor(requireRank('owner'))
-  public async deleteCustomEmoji (@PathParam('id') id: number): Promise<DeleteCustomEmojiResponse> {
+  public async deleteCustomEmoji (@QueryParam('id') id: number): Promise<DeleteCustomEmojiResponse> {
     const builder = this.registerResponseBuilder<DeleteCustomEmojiResponse>('DELETE /custom')
-
+    if (typeof id !== 'number') {
+      return builder.failure(400, 'Invalid arguments')
+    }
 
     try {
       const existingEmoji = await this.customEmojiStore.getCustomEmojiById(id)
