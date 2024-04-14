@@ -102,6 +102,7 @@ import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import S3ProxyService from '@rebel/server/services/S3ProxyService'
 import ImageHelpers from '@rebel/server/helpers/ImageHelpers'
+import EmojiService from '@rebel/server/services/EmojiService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -249,6 +250,7 @@ const main = async () => {
     .withClass('linkCommand', LinkCommand)
     .withClass('commandService', CommandService)
     .withClass('channelEventService', ChannelEventService)
+    .withClass('emojiService', EmojiService)
     .withClass('chatService', ChatService)
     .withClass('masterchatStore', MasterchatStore)
     .withClass('followerStore', FollowerStore)

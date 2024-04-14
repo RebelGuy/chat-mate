@@ -1,8 +1,8 @@
 import { PublicObject } from '@rebel/api-models/types'
 
 export type PublicChatImage = PublicObject<{
-  /** The image url for the emoji. May be an SVG. */
-  url: string
+  /** The image url for the emoji. May be an SVG. Null if not available/inaccessible. */
+  url: string | null
 
   /* Pixel width of the image at the url. Null if the url is for an SVG. */
   width: number | null

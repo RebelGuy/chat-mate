@@ -221,7 +221,7 @@ export default function CustomEmojiEditor (props: Props) {
                   )}
                 </Box>
                 <Button disabled={props.isLoading || request.isLoading} component="label" sx={{ mt: 1 }}>
-                  <input type="file" hidden accept="image/png" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />
+                  <input type="file" hidden accept="image/png, image/jpg, image/jpeg" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />
                   Select image
                 </Button>
               </FormControl>

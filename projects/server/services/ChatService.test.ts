@@ -17,6 +17,7 @@ import CommandService, { NormalisedCommand } from '@rebel/server/services/comman
 import CommandStore from '@rebel/server/stores/CommandStore'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
+import EmojiService from '@rebel/server/services/EmojiService'
 
 const textPart: PartialTextChatMessage = {
   type: 'text',
@@ -77,6 +78,7 @@ let mockCommandService: MockProxy<CommandService>
 let mockCommandHelpers: MockProxy<CommandHelpers>
 let mockCommandStore: MockProxy<CommandStore>
 let mockChannelEventService: MockProxy<ChannelEventService>
+let mockEmojiService: MockProxy<EmojiService>
 let chatService: ChatService
 
 beforeEach(() => {
@@ -91,6 +93,7 @@ beforeEach(() => {
   mockCommandHelpers = mock()
   mockCommandStore = mock()
   mockChannelEventService = mock()
+  mockEmojiService = mock()
 
   chatService = new ChatService(new Dependencies({
     chatStore: mockChatStore,
@@ -103,7 +106,8 @@ beforeEach(() => {
     commandHelpers: mockCommandHelpers,
     commandService: mockCommandService,
     commandStore: mockCommandStore,
-    channelEventService: mockChannelEventService
+    channelEventService: mockChannelEventService,
+    emojiService: mockEmojiService
   }))
 })
 
@@ -140,6 +144,37 @@ describe(nameof(ChatService, 'getChatSince'), () => {
     expect(result).toEqual(expectArray(result, [chat1, chat2]))
     const signCalls = mockCustomEmojiService.signEmojiImages.mock.calls.map(single)
     expect(signCalls).toEqual(expectArray(signCalls, [parts1, parts2]))
+  })
+
+  test('Removes emoji information for those users that are not eligible', async () => {
+    const streamerId = 3
+    const primaryUser1 = 51
+    const primaryUser2 = 658
+    const primaryUser3 = 65
+    const since = 1234
+    const beforeOrAt = 5678
+    const limit = 5
+    const userIds = [1, 3]
+    const deletedOnly = true
+
+    const chat1 = cast<ChatItemWithRelations>({
+      user: { id: primaryUser3, aggregateChatUserId: primaryUser3 }, // not eligible
+      chatMessageParts: [{ emoji: { imageUrl: 'url' }}, { customEmoji: { emoji: { imageUrl: 'url' }}}]
+    })
+    const chat2 = cast<ChatItemWithRelations>({
+      user: { id: primaryUser1, aggregateChatUserId: primaryUser1 }, // eligible
+      chatMessageParts: [{ emoji: { imageUrl: 'url' }}, { customEmoji: { emoji: { imageUrl: 'url' }}}]
+    })
+
+    mockEmojiService.getEligibleEmojiUsers.calledWith(streamerId).mockResolvedValue([primaryUser1, primaryUser2])
+    mockChatStore.getChatSince.calledWith(streamerId, since, beforeOrAt, limit, userIds, deletedOnly).mockResolvedValue([chat1, chat2])
+
+    const result = await chatService.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
+
+    expect(result[0].chatMessageParts[0].emoji!.imageUrl).toBe(null)
+    expect(result[0].chatMessageParts[1].customEmoji!.emoji!.imageUrl).toBe(null)
+    expect(result[1].chatMessageParts[0].emoji!.imageUrl).toBe('url')
+    expect(result[1].chatMessageParts[1].customEmoji!.emoji!.imageUrl).toBe('url')
   })
 })
 

@@ -345,11 +345,12 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji != null && part.text == null && part.customEmoji == null && part.cheer == null) {
     type = 'emoji'
     emoji = {
+      id: part.emoji.id,
       // so far I am yet to find an instance where either of these are null
       label: part.emoji.label!,
       name: part.emoji.name!,
       image: {
-        url: part.emoji.imageUrl!,
+        url: part.emoji.imageUrl,
         height: part.emoji.imageHeight,
         width: part.emoji.imageWidth
       }
@@ -363,10 +364,11 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
         isItalics: part.customEmoji.text.isItalics
       },
       emojiData: part.customEmoji.emoji == null ? null : {
+        id: part.customEmoji.emoji.id,
         label: part.customEmoji.emoji.label!,
         name: part.customEmoji.emoji.name!,
         image: {
-          url: part.customEmoji.emoji.imageUrl!,
+          url: part.customEmoji.emoji.imageUrl,
           width: part.customEmoji.emoji.imageWidth,
           height: part.customEmoji.emoji.imageHeight
         }

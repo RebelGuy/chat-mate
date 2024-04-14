@@ -15,6 +15,8 @@ import CommandStore from '@rebel/server/stores/CommandStore'
 import { ChatMessage } from '@prisma/client'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
+import EmojiService from '@rebel/server/services/EmojiService'
+import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 
 type ChatEvents = {
   newChatItem: {
@@ -34,6 +36,7 @@ type Deps = Dependencies<{
   commandHelpers: CommandHelpers
   commandStore: CommandStore
   channelEventService: ChannelEventService
+  emojiService: EmojiService
 }>
 
 export default class ChatService extends ContextClass {
@@ -49,6 +52,7 @@ export default class ChatService extends ContextClass {
   private readonly commandService: CommandService
   private readonly commandStore: CommandStore
   private readonly channelEventService: ChannelEventService
+  private readonly emojiService: EmojiService
 
   constructor (deps: Deps) {
     super()
@@ -63,6 +67,7 @@ export default class ChatService extends ContextClass {
     this.commandService = deps.resolve('commandService')
     this.commandStore = deps.resolve('commandStore')
     this.channelEventService = deps.resolve('channelEventService')
+    this.emojiService = deps.resolve('emojiService')
   }
 
   public override initialise () {
@@ -75,6 +80,25 @@ export default class ChatService extends ContextClass {
   public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[], deletedOnly?: boolean): Promise<ChatItemWithRelations[]> {
     const chatItems = await this.chatStore.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
     await Promise.all(chatItems.map(item => this.customEmojiService.signEmojiImages(item.chatMessageParts)))
+
+    // if there are emojis, make sure we return emoji info only for eligible users' messages
+    if (chatItems.some(c => c.chatMessageParts.find(p => p.emoji != null))) {
+      const eligibleEmojiUserIds = await this.emojiService.getEligibleEmojiUsers(streamerId)
+
+      chatItems.forEach(item => {
+        const primaryUserId = getPrimaryUserId(item.user!)
+        if (!eligibleEmojiUserIds.includes(primaryUserId)) {
+          item.chatMessageParts.forEach(part => {
+            if (part.emoji != null) {
+              part.emoji.imageUrl = null
+            } else if (part.customEmoji?.emoji != null) {
+              part.customEmoji.emoji.imageUrl = null
+            }
+          })
+        }
+      })
+    }
+
     return chatItems
   }
 
