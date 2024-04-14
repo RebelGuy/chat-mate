@@ -3,24 +3,24 @@ import { requireRank, requireStreamer } from '@rebel/server/controllers/preProce
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
 import { Path, GET, POST, PATCH, PreProcessor, BodyOptions, PathParam, DELETE, QueryParam } from 'typescript-rest'
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
-import EmojiService from '@rebel/server/services/EmojiService'
+import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 
 type Deps = ControllerDependencies<{
   customEmojiStore: CustomEmojiStore
-  emojiService: EmojiService
+  customEmojiService: CustomEmojiService
 }>
 
 @Path(buildPath('emoji'))
 @PreProcessor(requireStreamer)
 export default class EmojiController extends ControllerBase {
   private readonly customEmojiStore: CustomEmojiStore
-  private readonly emojiService: EmojiService
+  private readonly customEmojiService: CustomEmojiService
 
   constructor (deps: Deps) {
     super(deps, 'emoji')
     this.customEmojiStore = deps.resolve('customEmojiStore')
-    this.emojiService = deps.resolve('emojiService')
+    this.customEmojiService = deps.resolve('customEmojiService')
   }
 
   @GET
@@ -28,7 +28,7 @@ export default class EmojiController extends ControllerBase {
   public async getCustomEmojis (): Promise<GetCustomEmojisResponse> {
     const builder = this.registerResponseBuilder<GetCustomEmojisResponse>('GET /custom')
     try {
-      const emojis = await this.emojiService.getAllCustomEmojis(this.getStreamerId())
+      const emojis = await this.customEmojiService.getAllCustomEmojis(this.getStreamerId())
       return builder.success({ emojis: emojis.map(e => customEmojiToPublicObject(e)) })
     } catch (e: any) {
       return builder.failure(e)
@@ -60,7 +60,7 @@ export default class EmojiController extends ControllerBase {
     }
 
     try {
-      const emoji = await this.emojiService.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, this.getStreamerId()))
+      const emoji = await this.customEmojiService.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, this.getStreamerId()))
       return builder.success({ newEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)
@@ -88,7 +88,7 @@ export default class EmojiController extends ControllerBase {
         return builder.failure(404, 'Could not find emoji with the given ID')
       }
 
-      const emoji = await this.emojiService.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji), false)
+      const emoji = await this.customEmojiService.updateCustomEmoji(publicObjectToCustomEmojiUpdateData(request.updatedEmoji), false)
       return builder.success({ updatedEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)

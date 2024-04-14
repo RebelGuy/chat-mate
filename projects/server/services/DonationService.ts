@@ -4,7 +4,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import AccountService from '@rebel/server/services/AccountService'
-import EmojiService from '@rebel/server/services/EmojiService'
+import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import LogService from '@rebel/server/services/LogService'
 import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
 import UserService from '@rebel/server/services/UserService'
@@ -47,7 +47,7 @@ type Deps = Dependencies<{
   rankStore: RankStore
   donationHelpers: DonationHelpers
   dateTimeHelpers: DateTimeHelpers
-  emojiService: EmojiService
+  customEmojiService: CustomEmojiService
   streamlabsProxyService: StreamlabsProxyService
   streamerStore: StreamerStore
   logService: LogService
@@ -63,7 +63,7 @@ export default class DonationService extends ContextClass {
   private readonly rankStore: RankStore
   private readonly donationHelpers: DonationHelpers
   private readonly dateTimeHelpers: DateTimeHelpers
-  private readonly emojiService: EmojiService
+  private readonly customEmojiService: CustomEmojiService
   private readonly streamlabsProxyService: StreamlabsProxyService
   private readonly streamerStore: StreamerStore
   private readonly logService: LogService
@@ -78,7 +78,7 @@ export default class DonationService extends ContextClass {
     this.rankStore = deps.resolve('rankStore')
     this.donationHelpers = deps.resolve('donationHelpers')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
-    this.emojiService = deps.resolve('emojiService')
+    this.customEmojiService = deps.resolve('customEmojiService')
     this.streamlabsProxyService = deps.resolve('streamlabsProxyService')
     this.streamerStore = deps.resolve('streamerStore')
     this.logService = deps.resolve('logService')
@@ -111,7 +111,7 @@ export default class DonationService extends ContextClass {
   public async addDonation (donation: NewDonation, streamerId: number): Promise<number> {
     let messageParts: PartialChatMessage[] = []
     if (donation.message != null && donation.message.trim().length > 0) {
-      messageParts = await this.emojiService.applyCustomEmojisToDonation(donation.message, streamerId)
+      messageParts = await this.customEmojiService.applyCustomEmojisToDonation(donation.message, streamerId)
     }
 
     const data: DonationCreateArgs = {
@@ -130,13 +130,13 @@ export default class DonationService extends ContextClass {
 
   public async getDonation (streamerId: number, donationId: number): Promise<DonationWithUser> {
     const donation = await this.donationStore.getDonation(streamerId, donationId)
-    await this.emojiService.signEmojiImages(donation.messageParts)
+    await this.customEmojiService.signEmojiImages(donation.messageParts)
     return donation
   }
 
   public async getDonationsSince (streamerId: number, time: number, includeRefunded: boolean): Promise<DonationWithUser[]> {
     const donations = await this.donationStore.getDonationsSince(streamerId, time, includeRefunded)
-    await Promise.all(donations.map(donation => this.emojiService.signEmojiImages(donation.messageParts)))
+    await Promise.all(donations.map(donation => this.customEmojiService.signEmojiImages(donation.messageParts)))
     return donations
   }
 

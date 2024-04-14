@@ -38,7 +38,7 @@ type Deps = Dependencies<{
 
 const SUPPORTED_IMAGE_TYPES = ['png', 'jpg', 'jpeg']
 
-export default class EmojiService extends ContextClass {
+export default class CustomEmojiService extends ContextClass {
   private readonly customEmojiEligibilityService: CustomEmojiEligibilityService
   private readonly accountService: AccountService
   private readonly s3ProxyService: S3ProxyService

@@ -6,7 +6,7 @@ import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateGlobalTwitchChannelArgs, TwitchChannelWithLatestInfo, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
-import EmojiService from '@rebel/server/services/EmojiService'
+import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -27,7 +27,7 @@ type Deps = Dependencies<{
   logService: LogService,
   experienceService: ExperienceService,
   channelStore: ChannelStore,
-  emojiService: EmojiService,
+  customEmojiService: CustomEmojiService,
   eventDispatchService: EventDispatchService
   livestreamStore: LivestreamStore
   commandService: CommandService
@@ -42,7 +42,7 @@ export default class ChatService extends ContextClass {
   private readonly logService: LogService
   private readonly experienceService: ExperienceService
   private readonly channelStore: ChannelStore
-  private readonly emojiService: EmojiService
+  private readonly customEmojiService: CustomEmojiService
   private readonly eventDispatchService: EventDispatchService
   private readonly livestreamStore: LivestreamStore
   private readonly commandHelpers: CommandHelpers
@@ -56,7 +56,7 @@ export default class ChatService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.experienceService = deps.resolve('experienceService')
     this.channelStore = deps.resolve('channelStore')
-    this.emojiService = deps.resolve('emojiService')
+    this.customEmojiService = deps.resolve('customEmojiService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.livestreamStore = deps.resolve('livestreamStore')
     this.commandHelpers = deps.resolve('commandHelpers')
@@ -74,7 +74,7 @@ export default class ChatService extends ContextClass {
    * If `deletedOnly` is not provided, returns only active chat messages. If true, returns only deleted messages since the given time (respecting all other provided filters). */
   public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[], deletedOnly?: boolean): Promise<ChatItemWithRelations[]> {
     const chatItems = await this.chatStore.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
-    await Promise.all(chatItems.map(item => this.emojiService.signEmojiImages(item.chatMessageParts)))
+    await Promise.all(chatItems.map(item => this.customEmojiService.signEmojiImages(item.chatMessageParts)))
     return chatItems
   }
 
@@ -132,7 +132,7 @@ export default class ChatService extends ContextClass {
       }
 
       // inject custom emojis
-      const splitParts = await Promise.all(item.messageParts.map(part => this.emojiService.applyCustomEmojis(part, channel.userId, streamerId)))
+      const splitParts = await Promise.all(item.messageParts.map(part => this.customEmojiService.applyCustomEmojis(part, channel.userId, streamerId)))
       item.messageParts = splitParts.flatMap(p => p)
 
       // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it

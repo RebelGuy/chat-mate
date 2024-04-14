@@ -9,7 +9,7 @@ import { any, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
-import EmojiService from '@rebel/server/services/EmojiService'
+import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -23,7 +23,7 @@ let mockDonationStore: MockProxy<DonationStore>
 let mockDonationHelpers: MockProxy<DonationHelpers>
 let mockRankStore: MockProxy<RankStore>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
-let mockEmojiService: MockProxy<EmojiService>
+let mockCustomEmojiService: MockProxy<CustomEmojiService>
 let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockAccountService: MockProxy<AccountService>
@@ -35,7 +35,7 @@ beforeEach(() => {
   mockDonationHelpers = mock()
   mockRankStore = mock()
   mockDateTimeHelpers = mock()
-  mockEmojiService = mock()
+  mockCustomEmojiService = mock()
   mockStreamlabsProxyService = mock()
   mockStreamerStore = mock()
   mockAccountService = mock()
@@ -46,7 +46,7 @@ beforeEach(() => {
     donationHelpers: mockDonationHelpers,
     rankStore: mockRankStore,
     dateTimeHelpers: mockDateTimeHelpers,
-    emojiService: mockEmojiService,
+    customEmojiService: mockCustomEmojiService,
     streamlabsProxyService: mockStreamlabsProxyService,
     streamerStore: mockStreamerStore,
     accountService: mockAccountService,
@@ -98,7 +98,7 @@ describe(nameof(DonationService, 'addDonation'), () => {
 
     expect(result).toBe(createdDonationId)
 
-    expect(mockEmojiService.applyCustomEmojisToDonation.mock.calls.length).toBe(0)
+    expect(mockCustomEmojiService.applyCustomEmojisToDonation.mock.calls.length).toBe(0)
 
     const addedData = single(single(mockDonationStore.addDonation.mock.calls))
     expect(addedData.messageParts.length).toBe(0)
@@ -115,7 +115,7 @@ describe(nameof(DonationService, 'addDonation'), () => {
       const result = await donationService.getDonation(streamerId, donationId)
 
       expect(result).toEqual(expectObject(result, donation))
-      const signCalls = single2(mockEmojiService.signEmojiImages.mock.calls)
+      const signCalls = single2(mockCustomEmojiService.signEmojiImages.mock.calls)
       expect(signCalls).toEqual(expectObject(signCalls, messageParts))
     })
   })
@@ -134,7 +134,7 @@ describe(nameof(DonationService, 'addDonation'), () => {
       const result = await donationService.getDonationsSince(streamerId, time, includeRefunded)
 
       expect(result).toEqual(expectArray(result, [donation1, donation2]))
-      const signCalls = mockEmojiService.signEmojiImages.mock.calls.map(single)
+      const signCalls = mockCustomEmojiService.signEmojiImages.mock.calls.map(single)
       expect(signCalls).toEqual(expectArray(signCalls, [parts1, parts2]))
     })
   })
@@ -152,7 +152,7 @@ describe(nameof(DonationService, 'addDonation'), () => {
       streamlabsUserId: null
     }
     const parts = cast<PartialChatMessage[]>([{ type: 'text' }, { type: 'customEmoji' }])
-    mockEmojiService.applyCustomEmojisToDonation.calledWith(message, streamerId).mockResolvedValue(parts)
+    mockCustomEmojiService.applyCustomEmojisToDonation.calledWith(message, streamerId).mockResolvedValue(parts)
     const createdDonationId = 5
     mockDonationStore.addDonation.calledWith(expect.anything()).mockResolvedValue(createdDonationId)
 

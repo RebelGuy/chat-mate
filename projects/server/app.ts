@@ -27,7 +27,7 @@ import UserController from '@rebel/server/controllers/UserController'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
 import EmojiController from '@rebel/server/controllers/EmojiController'
 import MasterchatFetchService from '@rebel/server/services/MasterchatFetchService'
-import EmojiService from '@rebel/server/services/EmojiService'
+import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import TwurpleService from '@rebel/server/services/TwurpleService'
@@ -240,7 +240,7 @@ const main = async () => {
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
     .withClass('s3ProxyService', S3ProxyService)
-    .withClass('emojiService', EmojiService)
+    .withClass('customEmojiService', CustomEmojiService)
     .withClass('commandStore', CommandStore)
     .withClass('donationStore', DonationStore)
     .withClass('rankService', RankService)

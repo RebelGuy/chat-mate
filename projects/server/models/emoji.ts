@@ -1,5 +1,5 @@
 import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
-import { CustomEmojiCreateData, CustomEmojiUpdateData, FullCustomEmoji } from '@rebel/server/services/EmojiService'
+import { CustomEmojiCreateData, CustomEmojiUpdateData, FullCustomEmoji } from '@rebel/server/services/CustomEmojiService'
 
 export function customEmojiToPublicObject (emoji: FullCustomEmoji): PublicCustomEmoji {
   return {
