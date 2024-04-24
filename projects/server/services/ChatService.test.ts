@@ -1,11 +1,11 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import { ChatItem, ChatItemWithRelations, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
-import ChatService from '@rebel/server/services/ChatService'
+import ChatService, { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, expectArray, nameof, promised } from '@rebel/shared/testUtils'
+import { cast, expectArray, expectObject, expectObjectDeep, nameof, promised } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -28,7 +28,7 @@ const textPart: PartialTextChatMessage = {
 const emojiPart: PartialEmojiChatMessage = {
   type: 'emoji',
   name: 'emoji name',
-  image: { url: 'url' },
+  url: 'url',
   label: 'emoji label'
 }
 const customEmojiPart: PartialCustomEmojiChatMessage = {
@@ -36,7 +36,8 @@ const customEmojiPart: PartialCustomEmojiChatMessage = {
   customEmojiId: 1,
   customEmojiVersion: 1,
   text: textPart,
-  emoji: null
+  emoji: null,
+  processedEmoji: null
 }
 const chatItem1: ChatItem = {
   id: 'youtube_id1',
@@ -159,22 +160,30 @@ describe(nameof(ChatService, 'getChatSince'), () => {
 
     const chat1 = cast<ChatItemWithRelations>({
       user: { id: primaryUser3, aggregateChatUserId: primaryUser3 }, // not eligible
-      chatMessageParts: [{ emoji: { imageUrl: 'url' }}, { customEmoji: { emoji: { imageUrl: 'url' }}}]
+      chatMessageParts: [{ emoji: { imageUrl: 'url1', image: {} }}, { customEmoji: { emoji: { imageUrl: 'url2', image: {} }}}]
     })
     const chat2 = cast<ChatItemWithRelations>({
       user: { id: primaryUser1, aggregateChatUserId: primaryUser1 }, // eligible
-      chatMessageParts: [{ emoji: { imageUrl: 'url' }}, { customEmoji: { emoji: { imageUrl: 'url' }}}]
+      chatMessageParts: [{ emoji: { imageUrl: 'url3' }}, { customEmoji: { emoji: { imageUrl: 'url4'}}}]
     })
+    const chatItems = [chat1, chat2]
 
     mockEmojiService.getEligibleEmojiUsers.calledWith(streamerId).mockResolvedValue([primaryUser1, primaryUser2])
-    mockChatStore.getChatSince.calledWith(streamerId, since, beforeOrAt, limit, userIds, deletedOnly).mockResolvedValue([chat1, chat2])
+    mockChatStore.getChatSince.calledWith(streamerId, since, beforeOrAt, limit, userIds, deletedOnly).mockResolvedValue(chatItems)
 
     const result = await chatService.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
 
-    expect(result[0].chatMessageParts[0].emoji!.imageUrl).toBe(null)
-    expect(result[0].chatMessageParts[1].customEmoji!.emoji!.imageUrl).toBe(null)
-    expect(result[1].chatMessageParts[0].emoji!.imageUrl).toBe('url')
-    expect(result[1].chatMessageParts[1].customEmoji!.emoji!.imageUrl).toBe('url')
+    expect(result).toBe(chatItems)
+
+    const signCalls = mockEmojiService.signEmojiImages.mock.calls
+    expect(signCalls.length).toBe(2)
+    expect(single(signCalls[0])).toBe(chat1.chatMessageParts)
+    expect(single(signCalls[1])).toBe(chat2.chatMessageParts)
+
+    expect(result[0].chatMessageParts[0].emoji!.imageUrl).toBe(INACCESSIBLE_EMOJI)
+    expect(result[0].chatMessageParts[1].customEmoji!.emoji!.imageUrl).toBe(INACCESSIBLE_EMOJI)
+    expect(result[1].chatMessageParts[0].emoji!.imageUrl).toBe('url3')
+    expect(result[1].chatMessageParts[1].customEmoji!.emoji!.imageUrl).toBe('url4')
   })
 })
 
@@ -199,6 +208,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(addedChatMessage)
     mockCustomEmojiService.applyCustomEmojis.calledWith(textPart, youtubeChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
     mockCustomEmojiService.applyCustomEmojis.calledWith(emojiPart, youtubeChannel1.userId, streamerId).mockResolvedValue([emojiPart])
+    mockEmojiService.processEmoji.mockImplementation(part => Promise.resolve(part))
     mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining([textPart, customEmojiPart, emojiPart])).mockReturnValue(null)
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
 
@@ -223,6 +233,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     mockChatStore.addChat.calledWith(chatItem2, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
     mockCustomEmojiService.applyCustomEmojis.calledWith(textPart, twitchChannel1.userId, streamerId).mockResolvedValue([textPart, customEmojiPart])
     mockCustomEmojiService.applyCustomEmojis.calledWith(emojiPart, twitchChannel1.userId, streamerId).mockResolvedValue([emojiPart])
+    mockEmojiService.processEmoji.mockImplementation(part => Promise.resolve(part))
     mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining([textPart, customEmojiPart, emojiPart])).mockReturnValue(null)
     mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(livestream)
 
@@ -243,6 +254,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
     mockChannelStore.createOrUpdateTwitchChannel.calledWith(data.twitchChannel3, expect.objectContaining(data.twitchChannelGlobalInfo3)).mockResolvedValue(twitchChannel1)
     mockCustomEmojiService.applyCustomEmojis.mockImplementation(part => Promise.resolve([part]))
+    mockEmojiService.processEmoji.mockImplementation(part => Promise.resolve(part))
     mockChatStore.addChat.calledWith(chatItem2, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
     mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining(chatItem2.messageParts)).mockReturnValue(command)
     mockCommandStore.addCommand.calledWith(addedChatMessage.id, command).mockResolvedValue(commandId)
@@ -259,6 +271,7 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const streamerId = 2
     mockChannelStore.createOrUpdateYoutubeChannel.calledWith(data.youtubeChannel1, expect.objectContaining(data.youtubeChannelGlobalInfo1)).mockResolvedValue(youtubeChannel1)
     mockCustomEmojiService.applyCustomEmojis.mockImplementation((part, _) => promised([part]))
+    mockEmojiService.processEmoji.mockImplementation(part => Promise.resolve(part))
     mockChatStore.addChat.calledWith(chatItem1, streamerId, youtubeChannel1.userId, youtubeChannel1.youtubeId).mockResolvedValue(null)
 
     const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)

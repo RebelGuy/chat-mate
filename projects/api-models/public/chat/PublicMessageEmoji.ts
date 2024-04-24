@@ -11,6 +11,6 @@ export type PublicMessageEmoji = PublicObject<{
   /** Short emoji label, usually the shortcut text (e.g. `:slightly_smiling:`). */
   label: string
 
-  /** An image to the emoji. */
-  image: PublicObject<PublicChatImage>
+  /** An image to the emoji. Null if unavailable or inaccessible. */
+  image: PublicChatImage | null
 }>

@@ -199,6 +199,9 @@ module.exports = (env) => {
       // required otherwise it doesn't work lol. seems that it's because ngrok is `require()`ing the ngrok executables, which webpack doesn't like
       '@ngrok/ngrok': 'commonjs @ngrok/ngrok',
 
+      // I also don't understand why this is required but there is a parsing runtime error otherwise: https://github.com/lovell/sharp/issues/2350#issuecomment-762977956
+      'sharp': 'commonjs sharp',
+
       electron: 'require("electron")'
     },
     target: 'node',

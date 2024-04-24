@@ -9,7 +9,7 @@ import { single, zip } from '@rebel/shared/util/arrays'
 import { ChatMateError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
 import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
 import { parseDataUrl } from '@rebel/shared/util/text'
-import ImageHelpers from '@rebel/server/helpers/ImageHelpers'
+import ImageService from '@rebel/server/services/ImageService'
 
 export type CustomEmojiCreateData = InternalCustomEmojiCreateData & {
   imageDataUrl: string
@@ -33,17 +33,17 @@ type Deps = Dependencies<{
   accountService: AccountService
   s3ProxyService: S3ProxyService
   customEmojiStore: CustomEmojiStore
-  imageHelpers: ImageHelpers
+  imageService: ImageService
 }>
 
-const SUPPORTED_IMAGE_TYPES = ['png', 'jpg', 'jpeg']
+const SUPPORTED_IMAGE_TYPES = ['png', 'jpg', 'jpeg', 'svg+xml']
 
 export default class CustomEmojiService extends ContextClass {
   private readonly customEmojiEligibilityService: CustomEmojiEligibilityService
   private readonly accountService: AccountService
   private readonly s3ProxyService: S3ProxyService
   private readonly customEmojiStore: CustomEmojiStore
-  private readonly imageHelpers: ImageHelpers
+  private readonly imageService: ImageService
 
   constructor (deps: Deps) {
     super()
@@ -51,7 +51,7 @@ export default class CustomEmojiService extends ContextClass {
     this.accountService = deps.resolve('accountService')
     this.s3ProxyService = deps.resolve('s3ProxyService')
     this.customEmojiStore = deps.resolve('customEmojiStore')
-    this.imageHelpers = deps.resolve('imageHelpers')
+    this.imageService = deps.resolve('imageService')
   }
 
   /** @throws {@link UnsupportedFilteTypeError}: When the image type is not supported. */
@@ -76,10 +76,10 @@ export default class CustomEmojiService extends ContextClass {
       streamerId: data.streamerId,
       whitelistedRanks: data.whitelistedRanks
     }, async (newEmojiId, newEmojiVersion) => {
-      // todo: convert to png before uploading
-      const fileName = getCustomEmojiFileUrl(data.streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
-      signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
-      const { width, height } = this.imageHelpers.getImageDimensions(imageData.data)
+      const pngData = await this.imageService.convertToPng(data.imageDataUrl)
+      const fileName = getCustomEmojiFileUrl(data.streamerId, newEmojiId, newEmojiVersion, 'png')
+      signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, 'png', false, pngData)
+      const { width, height } = this.imageService.getImageDimensions(pngData)
 
       return {
         relativeImageUrl: this.s3ProxyService.constructRelativeUrl(fileName),
@@ -120,7 +120,7 @@ export default class CustomEmojiService extends ContextClass {
   public async signEmojiImages (chatMessageParts: ChatItemWithRelations['chatMessageParts']): Promise<void> {
     await Promise.all(chatMessageParts.map(async part => {
       if (part.customEmoji != null) {
-        part.customEmoji.customEmojiVersion.imageUrl = await this.s3ProxyService.signUrl(part.customEmoji.customEmojiVersion.imageUrl)
+        part.customEmoji.customEmojiVersion.image.url = await this.s3ProxyService.signUrl(part.customEmoji.customEmojiVersion.image.url)
       }
     }))
   }
@@ -140,10 +140,10 @@ export default class CustomEmojiService extends ContextClass {
       name: data.name,
       whitelistedRanks: data.whitelistedRanks
     }, async (streamerId, newEmojiId, newEmojiVersion) => {
-      // todo: convert to png before uploading
-      const fileName = getCustomEmojiFileUrl(streamerId, newEmojiId, newEmojiVersion, imageData.fileSubType)
-      signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, imageData.fileSubType, false, imageData.data)
-      const { width, height } = this.imageHelpers.getImageDimensions(imageData.data)
+      const pngData = await this.imageService.convertToPng(data.imageDataUrl)
+      const fileName = getCustomEmojiFileUrl(streamerId, newEmojiId, newEmojiVersion, 'png')
+      signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, 'png', false, pngData)
+      const { width, height } = this.imageService.getImageDimensions(pngData)
 
       return {
         relativeImageUrl: this.s3ProxyService.constructRelativeUrl(fileName),
@@ -213,11 +213,14 @@ export default class CustomEmojiService extends ContextClass {
           customEmojiId: eligibleEmojis[matchedIndex]!.id,
           customEmojiVersion: eligibleEmojis[matchedIndex]!.latestVersion,
           text: null,
-          emoji: part
+          emoji: part,
+          processedEmoji: null
         }]
       }
     } else if (part.type === 'cheer') {
       return [part]
+    } else if (part.type === 'processedEmoji') {
+      throw new ChatMateError('Did not expect to apply a custom emoji to a processedEmoji - emojis must be processed AFTER custom emojis have been applied')
     }
 
     const searchResults = this.findMatches(part.text, searchTerms)
@@ -240,7 +243,8 @@ export default class CustomEmojiService extends ContextClass {
         customEmojiId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.id,
         customEmojiVersion: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.latestVersion,
         text: removed,
-        emoji: null
+        emoji: null,
+        processedEmoji: null
       })
 
       remainderText = trailing

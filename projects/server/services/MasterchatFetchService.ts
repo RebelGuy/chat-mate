@@ -12,6 +12,7 @@ import ChatService from '@rebel/server/services/ChatService'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import CacheService from '@rebel/server/services/CacheService'
+import { sortBy } from '@rebel/shared/util/arrays'
 
 const LIVESTREAM_CHECK_INTERVAL = 10_000
 
@@ -241,11 +242,15 @@ export default class MasterchatFetchService extends ContextClass {
           isItalics: run.italics ?? false
         }
       } else {
+        // pick the biggest image
+        const image = sortBy(run.emoji.image.thumbnails, img => (img.height ?? 0) * (img.width ?? 0), 'desc')[0]
         return {
           type: 'emoji',
           name: run.emoji.image.accessibility!.accessibilityData.label,
           label: getEmojiLabel(run.emoji),
-          image: run.emoji.image.thumbnails[0]!
+          url: image.url,
+          width: image.width,
+          height: image.height
         }
       }
     })

@@ -6,10 +6,10 @@ import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel
 import { expectObject, nameof } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
-import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
+import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialProcessedEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
 import { YoutubeChannelGlobalInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelGlobalInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
-import { DbError, ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
+import { DbError, ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
 import { SafeOmit } from '@rebel/shared/types'
 
@@ -88,15 +88,13 @@ const text3: PartialTextChatMessage = {
   isItalics: false
 }
 
-const emoji1Saved: PartialEmojiChatMessage = {
-  type: 'emoji',
-  image: { url: 'emoji1.image' },
-  label: 'emoji1.label',
-  name: 'emoji1.name'
+const processedEmoji: PartialProcessedEmojiChatMessage = {
+  type: 'processedEmoji',
+  emojiId: 1
 }
-const emoji2New: PartialEmojiChatMessage = {
+const rawEmoji: PartialEmojiChatMessage = {
   type: 'emoji',
-  image: { url: 'emoji2.image' },
+  url: 'emoji2.image',
   label: 'emoji2.label',
   name: 'emoji2.name'
 }
@@ -186,11 +184,19 @@ export default () => {
     await db.streamer.create({ data: { registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}}}) // aggregate user id: 5
     await db.youtubeLivestream.create({ data: youtubeLivestream })
     await db.twitchLivestream.create({ data: twitchLivestream })
+
+    // for `processedEmoji`
     await db.chatEmoji.create({ data: {
       isCustomEmoji: false,
-      imageUrl: emoji1Saved.image.url,
-      label: emoji1Saved.label,
-      name: emoji1Saved.name
+      label: 'label',
+      name: 'name',
+      imageUrl: 'url',
+      image: { create: {
+        fingerprint: `emoji/url`,
+        url: 's3Url',
+        height: 10,
+        width: 10
+      }}
     }})
   }, DB_TEST_TIMEOUT)
 
@@ -220,13 +226,20 @@ export default () => {
     })
 
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
-      const chatItem = makeYtChatItem(emoji1Saved, emoji2New)
+      const chatItem = makeYtChatItem(processedEmoji)
 
       const result = await chatStore.addChat(chatItem, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
       const savedChatMessage = await db.chatMessage.findFirst()
       expect(result).toEqual(expectObject(savedChatMessage!))
-      await expectRowCount(db.chatMessage, db.chatMessagePart, db.chatEmoji).toEqual([1, 2, 2])
+      const savedChatMessagePart = single(await db.chatMessagePart.findMany())
+      expect(savedChatMessagePart).toEqual(expectObject(savedChatMessagePart, { emojiId: processedEmoji.emojiId }))
+    })
+
+    test(`Throws ${InvalidEmojiMessagePartError.name} if a raw emoji part is passed to it`, async () => {
+      const chatItem = makeYtChatItem(rawEmoji)
+
+      await expect(() => chatStore.addChat(chatItem, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)).rejects.toThrowError(InvalidEmojiMessagePartError)
     })
 
     test('adds twitch chat item with text and cheer parts', async () => {
@@ -374,7 +387,8 @@ export default () => {
         customEmojiVersion: 0,
         type: 'customEmoji',
         text: text1,
-        emoji: null
+        emoji: null,
+        processedEmoji: null
       }
       const chatItem: ChatItem = {
         author: ytAuthor1,
@@ -391,15 +405,13 @@ export default () => {
         { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
       ]})
       await db.customEmojiVersion.create({ data: {
-        imageUrl: '',
-        imageWidth: 100,
-        imageHeight: 200,
         levelRequirement: 1,
         name: 'Test Emoji',
         isActive: true,
         version: 0,
         canUseInDonationMessage: true,
-        customEmoji: { create: { streamerId: streamer1, symbol: 'test', sortOrder: 1 }}
+        customEmoji: { create: { streamerId: streamer1, symbol: 'test', sortOrder: 1 }},
+        image: { create: { url: '', fingerprint: '', width: 100, height: 200 }}
       }})
       await db.customEmojiRankWhitelist.createMany({ data: [
         { customEmojiId: 1, rankId: 1 },

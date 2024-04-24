@@ -501,7 +501,7 @@ Returns data with the following properties:
 Add a new custom emoji.
 
 Request data (body):
-- `newEmoji` (`PublicCustomEmojiNew`): *Required.* The new emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected.
+- `newEmoji` (`PublicCustomEmojiNew`): *Required.* The new emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected. The image must be encoded as a base64 data URL and one of the following MIME types: `image/png`, `image/jpeg`, `image/svg+xml`.
 
 Returns data with the following properties:
 - `newEmoji` (`PublicCustomEmoji`): The new emoji that was created.

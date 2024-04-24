@@ -3,7 +3,10 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { group } from '@rebel/shared/util/arrays'
-import { ChatMateError } from '@rebel/shared/util/error'
+import { ChatMateError, NotFoundError } from '@rebel/shared/util/error'
+import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
+
+const VERSION_START = 0
 
 export type CustomEmojiWithRankWhitelist = {
   id: number
@@ -62,10 +65,12 @@ type Deps = Dependencies<{
 
 export default class CustomEmojiStore extends ContextClass {
   private readonly db: Db
+  private readonly semaphore: GroupedSemaphore<number>
 
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
+    this.semaphore = new GroupedSemaphore(1)
   }
 
   public async getCustomEmojiById (emojiId: number): Promise<CustomEmoji | null> {
@@ -89,7 +94,7 @@ export default class CustomEmojiStore extends ContextClass {
     // note: there is a trigger in the `custom_emoji_version` table that gurantees that there is no more than one active version for each emoji
     const versions = await this.db.customEmojiVersion.findMany({
       where: { isActive: true, customEmoji: { streamerId} },
-      include: { customEmoji: true }
+      include: { customEmoji: true, image: true }
     })
     const emojiWhitelists = await emojiWhitelistsPromise
 
@@ -102,9 +107,9 @@ export default class CustomEmojiStore extends ContextClass {
       canUseInDonationMessage: version.canUseInDonationMessage,
       modifiedAt: version.modifiedAt,
       name: version.name,
-      imageUrl: version.imageUrl,
-      imageWidth: version.imageWidth,
-      imageHeight: version.imageHeight,
+      imageUrl: version.image.url,
+      imageWidth: version.image.width,
+      imageHeight: version.image.height,
       version: version.version,
       sortOrder: version.customEmoji.sortOrder,
       whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === version.customEmoji.id).map(w => w.rankId)
@@ -114,41 +119,40 @@ export default class CustomEmojiStore extends ContextClass {
   /** Since the image URL depends on the emoji that hasn't been created yet, we inject the URL by calling `onGetImageUrl` during the emoji creation process.
    * Returns the created CustomEmoji. */
   public async addCustomEmoji (data: InternalCustomEmojiCreateData, onGetImageInfo: (emojiId: number, version: number) => Promise<ImageInfo>): Promise<CustomEmojiWithRankWhitelist> {
-    return await this.db.$transaction(async db => {
-      const newEmoji = await db.customEmoji.create({ data: {
-        streamerId: data.streamerId,
-        symbol: data.symbol,
-        sortOrder: data.sortOrder
+    const newEmoji = await this.db.customEmoji.create({ data: {
+      streamerId: data.streamerId,
+      symbol: data.symbol,
+      sortOrder: data.sortOrder
+    }})
+
+    try {
+      await this.semaphore.enter(newEmoji.id)
+
+      const emojiFingerprint = getEmojiFingerprint(data.streamerId, newEmoji.id, VERSION_START)
+      const imageInfo = await onGetImageInfo(newEmoji.id, VERSION_START)
+      const image = await this.db.image.create({ data: {
+        fingerprint: emojiFingerprint,
+        url: imageInfo.relativeImageUrl,
+        width: imageInfo.imageWidth,
+        height: imageInfo.imageHeight
       }})
 
-      // we can only do this after the emoji has been created so we have its id
-      const tempNewEmojiVersion = await db.customEmojiVersion.create({ data: {
+      // we can only do this after the emoji image has been created so we have its id
+      const newEmojiVersion = await this.db.customEmojiVersion.create({ data: {
         name: data.name,
-        imageUrl: '',
-        imageWidth: 1,
-        imageHeight: 1,
         levelRequirement: data.levelRequirement,
         canUseInDonationMessage: data.canUseInDonationMessage,
         isActive: true,
-        version: 0,
-        customEmojiId: newEmoji.id
+        version: VERSION_START,
+        customEmojiId: newEmoji.id,
+        imageId: image.id
       }})
 
-      await db.customEmojiRankWhitelist.createMany({
+      await this.db.customEmojiRankWhitelist.createMany({
         data: data.whitelistedRanks.map(r => ({
           customEmojiId: newEmoji.id,
           rankId: r
         }))
-      })
-
-      const imageInfo = await onGetImageInfo(newEmoji.id, tempNewEmojiVersion.version)
-      const newEmojiVersion = await db.customEmojiVersion.update({
-        where: { id: tempNewEmojiVersion.id },
-        data: {
-          imageUrl: imageInfo.relativeImageUrl,
-          imageWidth: imageInfo.imageWidth,
-          imageHeight: imageInfo.imageHeight
-        }
       })
 
       return {
@@ -158,16 +162,19 @@ export default class CustomEmojiStore extends ContextClass {
         isActive: newEmojiVersion.isActive,
         version: newEmojiVersion.version,
         name: newEmojiVersion.name,
-        imageUrl: newEmojiVersion.imageUrl,
-        imageWidth: newEmojiVersion.imageWidth,
-        imageHeight: newEmojiVersion.imageHeight,
+        imageUrl: image.url,
+        imageWidth: image.width,
+        imageHeight: image.height,
         modifiedAt: newEmojiVersion.modifiedAt,
         levelRequirement: newEmojiVersion.levelRequirement,
         canUseInDonationMessage: newEmojiVersion.canUseInDonationMessage,
         sortOrder: newEmoji.sortOrder,
         whitelistedRanks: data.whitelistedRanks
       }
-    })
+
+    } finally {
+      this.semaphore.exit(newEmoji.id)
+    }
   }
 
   public async deactivateCustomEmoji (emojiId: number): Promise<void> {
@@ -230,61 +237,58 @@ export default class CustomEmojiStore extends ContextClass {
     // one active version for a given custom emoji. this avoids any potential race conditions when multiple
     // requests are made at the same time
 
-    return await this.db.$transaction(async db => {
+    try {
+      await this.semaphore.enter(data.id)
+
       // use updateMany because prisma doesn't know that the search query would only ever result in a single match.
       // unfortunately, this means that we don't get back the updated record, so we have to get that ourselves
-      const updateResult = await db.customEmojiVersion.updateMany({
+      const updateResult = await this.db.customEmojiVersion.updateMany({
         where: { customEmojiId: data.id, isActive: allowDeactivated ? undefined : true },
         data: { isActive: false }
       })
 
       if (updateResult.count === 0) {
-        throw new ChatMateError(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
+        throw new NotFoundError(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
       }
 
-      const previousVersion = (await db.customEmojiVersion.findFirst({
+      const previousVersion = await this.db.customEmojiVersion.findFirst({
         where: { customEmojiId: data.id },
-        orderBy: { version: 'desc' }
-      }))!
+        orderBy: { version: 'desc' },
+        include: { customEmoji: true },
+        rejectOnNotFound: true
+      })
 
-      const tempUpdatedEmojiVersion = await db.customEmojiVersion.create({
+      const emojiFingerprint = getEmojiFingerprint(previousVersion.customEmoji.streamerId, previousVersion.customEmoji.id, previousVersion.version + 1)
+      const imageInfo = await onGetImageInfo(previousVersion.customEmoji.streamerId, previousVersion.customEmojiId, previousVersion.version + 1)
+      const image = await this.db.image.create({ data: {
+        fingerprint: emojiFingerprint,
+        url: imageInfo.relativeImageUrl,
+        width: imageInfo.imageWidth,
+        height: imageInfo.imageHeight
+      }})
+
+      const updatedEmojiVersion = await this.db.customEmojiVersion.create({
         data: {
           customEmojiId: data.id,
           name: data.name,
-          imageUrl: '',
-          imageWidth: 1,
-          imageHeight: 1,
           levelRequirement: data.levelRequirement,
           canUseInDonationMessage: data.canUseInDonationMessage,
           isActive: true,
-          version: previousVersion.version + 1
+          version: previousVersion.version + 1,
+          imageId: image.id
         },
         include: { customEmoji: true }
       })
 
-      await db.customEmojiRankWhitelist.deleteMany({
+      await this.db.customEmojiRankWhitelist.deleteMany({
         where: {
           rankId: { notIn: data.whitelistedRanks },
           customEmojiId: data.id
         }
       })
-      await db.customEmojiRankWhitelist.createMany({
+      await this.db.customEmojiRankWhitelist.createMany({
         data: data.whitelistedRanks.map(r => ({ customEmojiId: data.id, rankId: r })),
         skipDuplicates: true
-      })
-
-      // we could optimise this a little by getting the URL before creating the new version (since we know in advance what the version will be),
-      // but that runs the risk that the new version will fail to create due to a race condition with the creation of another version.
-      // it is safest to wait as long as possible before uploading the image.
-      const imageInfo = await onGetImageInfo(tempUpdatedEmojiVersion.customEmoji.streamerId, tempUpdatedEmojiVersion.customEmojiId, tempUpdatedEmojiVersion.version)
-      const updatedEmojiVersion = await db.customEmojiVersion.update({
-        where: { id: tempUpdatedEmojiVersion.id },
-        data: {
-          imageUrl: imageInfo.relativeImageUrl,
-          imageWidth: imageInfo.imageWidth,
-          imageHeight: imageInfo.imageHeight
-        },
-        include: { customEmoji: true }
       })
 
       return {
@@ -294,16 +298,19 @@ export default class CustomEmojiStore extends ContextClass {
         isActive: updatedEmojiVersion.isActive,
         version: updatedEmojiVersion.version,
         name: updatedEmojiVersion.name,
-        imageUrl: updatedEmojiVersion.imageUrl,
-        imageWidth: updatedEmojiVersion.imageWidth,
-        imageHeight: updatedEmojiVersion.imageHeight,
+        imageUrl: image.url,
+        imageWidth: image.width,
+        imageHeight: image.height,
         modifiedAt: updatedEmojiVersion.modifiedAt,
         levelRequirement: updatedEmojiVersion.levelRequirement,
         canUseInDonationMessage: updatedEmojiVersion.canUseInDonationMessage,
         sortOrder: updatedEmojiVersion.customEmoji.sortOrder,
         whitelistedRanks: data.whitelistedRanks
       }
-    })
+
+    } finally {
+      this.semaphore.exit(data.id)
+    }
   }
 
   public async updateCustomEmojiSortOrders (ids: number[], sortOrders: number[]) {
@@ -320,4 +327,8 @@ export default class CustomEmojiStore extends ContextClass {
       WHERE id IN (${ids.join(', ')})
     `)
   }
+}
+
+function getEmojiFingerprint (streamerId: number, customEmojiId: number, version: number) {
+  return `custom-emoji/${streamerId}/${customEmojiId}/${version}`
 }

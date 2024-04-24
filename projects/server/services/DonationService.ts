@@ -136,6 +136,8 @@ export default class DonationService extends ContextClass {
 
   public async getDonationsSince (streamerId: number, time: number, includeRefunded: boolean): Promise<DonationWithUser[]> {
     const donations = await this.donationStore.getDonationsSince(streamerId, time, includeRefunded)
+
+    // note: we only need to sign custom emojis, and not normal emojis, because it's not possible to include platform-specific emojis in donation messages
     await Promise.all(donations.map(donation => this.customEmojiService.signEmojiImages(donation.messageParts)))
     return donations
   }

@@ -39,7 +39,8 @@ export default () => {
         customEmojiId: 1,
         customEmojiVersion: 0,
         emoji: null,
-        text: { type: 'text', text: 'Part2', isBold: false, isItalics: false }
+        text: { type: 'text', text: 'Part2', isBold: false, isItalics: false },
+        processedEmoji: null
       }
       const part3: PartialTextChatMessage = { type: 'text', text: 'Part3', isBold: false, isItalics: false }
       const donationData: DonationCreateArgs = {
@@ -58,14 +59,17 @@ export default () => {
         streamerId: streamer1,
         sortOrder: 1,
         customEmojiVersions: { create: {
-          imageUrl: 'url',
-          imageWidth: 100,
-          imageHeight: 200,
           isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
           name: 'name',
-          version: 0
+          version: 0,
+          image: { create: {
+            fingerprint: 'fingerprint',
+            url: 'url',
+            width: 100,
+            height: 200
+          }}
         }}
       }})
 
@@ -148,15 +152,18 @@ export default () => {
       await db.chatCustomEmoji.create({ data: {
         text: { create: { isBold: false, isItalics: false, text: 'sample custom emoji' }},
         customEmojiVersion: { create: {
-          imageUrl: 'url',
-          imageWidth: 100,
-          imageHeight: 200,
           isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
           name: 'name',
           version: 0,
-          customEmoji: { create: { streamerId: streamer1, symbol: 'symbol', sortOrder: 1 }}
+          customEmoji: { create: { streamerId: streamer1, symbol: 'symbol', sortOrder: 1 }},
+          image: { create: {
+            fingerprint: 'fingerprint',
+            url: 'url',
+            width: 100,
+            height: 200
+          }}
         }}
       }})
       await db.chatMessage.create({ data: {
@@ -176,6 +183,7 @@ export default () => {
       expect(result.messageParts.length).toBe(2)
       expect(result.messageParts[0].text!.text).toBe('sample text')
       expect(result.messageParts[1].customEmoji!.customEmojiVersion.customEmoji.symbol).toBe('symbol')
+      expect(result.messageParts[1].customEmoji!.customEmojiVersion.image.fingerprint).toBe('fingerprint')
     })
 
     test('Does not attach the user linked by another streamer', async () => {

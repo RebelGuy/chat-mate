@@ -16,6 +16,10 @@
   },
   "include": ["./**/*"],
   "exclude": [
+    // uncomment these if you don't want to see hundreds of errors when adding a new feature
+    // "./**/*.test.ts",
+    // "./**/*.spec.ts",
+
     "./node_modules",
     "./prisma",
 

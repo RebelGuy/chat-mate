@@ -64,6 +64,7 @@
     "immutable": "^4.0.0",
     "module-alias": "^2.2.2",
     "@ngrok/ngrok": "^0.5.1",
+    "sharp": "^0.32.6",
     "socket.io-client": "^2.3.1",
     "source-map-support": "^0.5.21",
     "tslib": "^2.3.1",

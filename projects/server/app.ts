@@ -101,8 +101,9 @@ import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import S3ProxyService from '@rebel/server/services/S3ProxyService'
-import ImageHelpers from '@rebel/server/helpers/ImageHelpers'
+import ImageService from '@rebel/server/services/ImageService'
 import EmojiService from '@rebel/server/services/EmojiService'
+import EmojiStore from '@rebel/server/stores/EmojiStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -185,7 +186,6 @@ const main = async () => {
     .withHelpers('donationHelpers', DonationHelpers)
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
-    .withHelpers('imageHelpers', ImageHelpers)
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
@@ -241,6 +241,7 @@ const main = async () => {
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
     .withClass('s3ProxyService', S3ProxyService)
+    .withClass('imageService', ImageService)
     .withClass('customEmojiService', CustomEmojiService)
     .withClass('commandStore', CommandStore)
     .withClass('donationStore', DonationStore)
@@ -250,6 +251,7 @@ const main = async () => {
     .withClass('linkCommand', LinkCommand)
     .withClass('commandService', CommandService)
     .withClass('channelEventService', ChannelEventService)
+    .withClass('emojiStore', EmojiStore)
     .withClass('emojiService', EmojiService)
     .withClass('chatService', ChatService)
     .withClass('masterchatStore', MasterchatStore)

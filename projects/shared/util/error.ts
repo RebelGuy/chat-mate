@@ -238,6 +238,12 @@ export class UnsupportedFilteTypeError extends ChatMateError {
   }
 }
 
+export class InvalidEmojiMessagePartError extends ChatMateError {
+  constructor (message: string) {
+    super(InvalidEmojiMessagePartError.prototype, message)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {

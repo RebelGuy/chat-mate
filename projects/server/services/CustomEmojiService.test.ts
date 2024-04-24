@@ -3,23 +3,23 @@ import CustomEmojiService, { CustomEmojiCreateData, CustomEmojiUpdateData } from
 import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
-import { ChatItemWithRelations, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { ChatItemWithRelations, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialProcessedEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import { CustomEmoji, CustomEmojiVersion } from '@prisma/client'
 import AccountService from '@rebel/server/services/AccountService'
 import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
 import CustomEmojiStore, { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
-import { UnsupportedFilteTypeError } from '@rebel/shared/util/error'
-import ImageHelpers from '@rebel/server/helpers/ImageHelpers'
+import { ChatMateError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
+import ImageService from '@rebel/server/services/ImageService'
 
-type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'imageUrl' | 'levelRequirement' | 'name'>
+type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'levelRequirement' | 'name'>
 
 const defaultUserId = 100
 const primaryUserId = 45
 const streamerId = 2
-const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 1, imageUrl: 'url' }
-const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 2, imageUrl: 'url' }
-const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 3, imageUrl: 'url' }
+const customEmoji1: EmojiData = { id: 1, name: 'Emoji 1', symbol: 'emoji1', levelRequirement: 1 }
+const customEmoji2: EmojiData = { id: 2, name: 'Emoji 2', symbol: 'emoji2', levelRequirement: 2 }
+const customEmoji3: EmojiData = { id: 3, name: 'Emoji 3', symbol: 'emoji3', levelRequirement: 3 }
 const customEmoji1Version = 0
 const customEmoji2Version = 1
 const customEmoji3Version = 2
@@ -28,7 +28,7 @@ let mockCustomEmojiServiceEligibilityService: MockProxy<CustomEmojiEligibilitySe
 let mockAccountService: MockProxy<AccountService>
 let mockS3ProxyService: MockProxy<S3ProxyService>
 let mockCustomEmojiStore: MockProxy<CustomEmojiStore>
-let mockImageHelpers: MockProxy<ImageHelpers>
+let mockImageService: MockProxy<ImageService>
 let customEmojiService: CustomEmojiService
 
 beforeEach(() => {
@@ -44,14 +44,14 @@ beforeEach(() => {
 
   mockS3ProxyService = mock()
   mockCustomEmojiStore = mock()
-  mockImageHelpers = mock()
+  mockImageService = mock()
 
   customEmojiService = new CustomEmojiService(new Dependencies({
     customEmojiEligibilityService: mockCustomEmojiServiceEligibilityService,
     accountService: mockAccountService,
     s3ProxyService: mockS3ProxyService,
     customEmojiStore: mockCustomEmojiStore,
-    imageHelpers: mockImageHelpers
+    imageService: mockImageService
   }))
 })
 
@@ -92,8 +92,9 @@ describe(nameof(CustomEmojiService, 'addCustomEmoji'), () => {
     })
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
-    mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde').mockResolvedValue(mockSignedImageUrl)
-    mockImageHelpers.getImageDimensions.mockReturnValue({ width: 0, height: 0 })
+    mockImageService.convertToPng.calledWith(createData.imageDataUrl).mockResolvedValue('abcde-converted')
+    mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde-converted').mockResolvedValue(mockSignedImageUrl)
+    mockImageService.getImageDimensions.mockReturnValue({ width: 0, height: 0 }) // `calledWith` omitted here and checked below
 
     const result = await customEmojiService.addCustomEmoji(createData)
 
@@ -113,7 +114,7 @@ describe(nameof(CustomEmojiService, 'addCustomEmoji'), () => {
       imageWidth: mockResult.imageWidth,
       imageHeight: mockResult.imageHeight
     })
-    expect(single2(mockImageHelpers.getImageDimensions.mock.calls)).toBe('abcde')
+    expect(single2(mockImageService.getImageDimensions.mock.calls)).toBe('abcde-converted')
   })
 
   test('Adds the emoji as a new version if the streamer-symbol already exists', async () => {
@@ -142,8 +143,9 @@ describe(nameof(CustomEmojiService, 'addCustomEmoji'), () => {
     })
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
-    mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde').mockResolvedValue(mockSignedImageUrl)
-    mockImageHelpers.getImageDimensions.mockReturnValue({ width: 0, height: 0 })
+    mockImageService.convertToPng.calledWith(createData.imageDataUrl).mockResolvedValue('abcde-converted')
+    mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde-converted').mockResolvedValue(mockSignedImageUrl)
+    mockImageService.getImageDimensions.mockReturnValue({ width: 0, height: 0 }) // `calledWith` omitted here and checked below
 
     const result = await customEmojiService.addCustomEmoji(createData)
 
@@ -153,7 +155,7 @@ describe(nameof(CustomEmojiService, 'addCustomEmoji'), () => {
       streamerId: mockResult.streamerId,
       imageUrl: mockSignedImageUrl,
     }))
-    expect(single2(mockImageHelpers.getImageDimensions.mock.calls)).toBe('abcde')
+    expect(single2(mockImageService.getImageDimensions.mock.calls)).toBe('abcde-converted')
   })
 
   test('Throws if the filetype is not supported', async () => {
@@ -190,8 +192,8 @@ describe(nameof(CustomEmojiService, 'signEmojiImages'), () => {
     const imageUrl2 = 'imageUrl2'
     const mockParts = cast<ChatItemWithRelations['chatMessageParts']>([
       { text: {}},
-      { customEmoji: { customEmojiVersion: { imageUrl: imageUrl1 }}},
-      { customEmoji: { customEmojiVersion: { imageUrl: imageUrl2 }}}
+      { customEmoji: { customEmojiVersion: { image: { url: imageUrl1 }}}},
+      { customEmoji: { customEmojiVersion: { image: { url: imageUrl2 }}}}
     ])
 
     mockS3ProxyService.signUrl.calledWith('imageUrl1').mockResolvedValue('signedImageUrl1' as SignedUrl)
@@ -199,8 +201,8 @@ describe(nameof(CustomEmojiService, 'signEmojiImages'), () => {
 
     await customEmojiService.signEmojiImages(mockParts)
 
-    expect(mockParts[1].customEmoji?.customEmojiVersion.imageUrl).toBe('signedImageUrl1')
-    expect(mockParts[2].customEmoji?.customEmojiVersion.imageUrl).toBe('signedImageUrl2')
+    expect(mockParts[1].customEmoji?.customEmojiVersion.image.url).toBe('signedImageUrl1')
+    expect(mockParts[2].customEmoji?.customEmojiVersion.image.url).toBe('signedImageUrl2')
   })
 })
 
@@ -241,8 +243,9 @@ describe(nameof(CustomEmojiService, 'updateCustomEmoji'), () => {
     })
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
-    mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde').mockResolvedValue(mockSignedImageUrl)
-    mockImageHelpers.getImageDimensions.mockReturnValue({ width: 0, height: 0 })
+    mockImageService.convertToPng.calledWith(updateData.imageDataUrl).mockResolvedValue('abcde-converted')
+    mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde-converted').mockResolvedValue(mockSignedImageUrl)
+    mockImageService.getImageDimensions.mockReturnValue({ width: 0, height: 0 }) // `calledWith` omitted here and checked below
 
     const result = await customEmojiService.updateCustomEmoji(updateData, false)
 
@@ -262,7 +265,7 @@ describe(nameof(CustomEmojiService, 'updateCustomEmoji'), () => {
       imageWidth: mockResult.imageWidth,
       imageHeight: mockResult.imageHeight
     })
-    expect(single2(mockImageHelpers.getImageDimensions.mock.calls)).toBe('abcde')
+    expect(single2(mockImageService.getImageDimensions.mock.calls)).toBe('abcde-converted')
   })
 
   test('Throws if the filetype is not supported', async () => {
@@ -290,7 +293,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
   test('non-matching emoji part is passed through', async () => {
     const emojiPart: PartialEmojiChatMessage = {
       type: 'emoji',
-      image: { url: 'testUrl' },
+      url: 'testUrl',
       label: ':test:',
       name: 'TestEmoji'
     }
@@ -317,7 +320,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
   test('matching emoji part is detected', async () => {
     const emojiPart: PartialEmojiChatMessage = {
       type: 'emoji',
-      image: { url: 'testUrl' },
+      url: 'testUrl',
       label: `:${customEmoji1.symbol.toUpperCase()}:`,
       name: 'TestEmoji'
     }
@@ -329,7 +332,8 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       customEmojiId: customEmoji1.id,
       customEmojiVersion: customEmoji1Version,
       emoji: expect.objectContaining(emojiPart),
-      text: null
+      text: null,
+      processedEmoji: null
     })
   })
 
@@ -414,7 +418,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
   })
 
   test('secondary troll emoji is matched if the user has access', async () => {
-    const trollEmoji: EmojiData = { id: 1, name: 'Troll', symbol: 'troll', levelRequirement: 0, imageUrl: 'url' }
+    const trollEmoji: EmojiData = { id: 1, name: 'Troll', symbol: 'troll', levelRequirement: 0 }
     const trollEmojiVersion = 1
     mockCustomEmojiServiceEligibilityService.getEligibleEmojis.mockReset().calledWith(primaryUserId, streamerId).mockResolvedValue([
       { id: customEmoji1.id, symbol: customEmoji1.symbol, streamerId: streamerId, sortOrder: 1, latestVersion: customEmoji1Version },
@@ -452,6 +456,15 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
     const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
 
     expect(single(result)).toEqual(expectedTextPart(part.text, part))
+  })
+
+  test('Throws if attempting to apply emojis to a processed emoji type', async () => {
+    const part: PartialProcessedEmojiChatMessage = {
+      type: 'processedEmoji',
+      emojiId: 1
+    }
+
+    await expect(() => customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)).rejects.toThrow(ChatMateError)
   })
 })
 
@@ -495,7 +508,8 @@ function expectedCustomEmojiPart (customEmoji: EmojiData, expectedVersion: numbe
       isBold: originalText.isBold,
       isItalics: originalText.isItalics
     }),
-    emoji: null
+    emoji: null,
+    processedEmoji: null
   }
 }
 

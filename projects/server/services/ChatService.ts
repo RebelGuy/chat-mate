@@ -18,6 +18,8 @@ import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 
+export const INACCESSIBLE_EMOJI = '__INACCESSIBLE_EMOJI__'
+
 type ChatEvents = {
   newChatItem: {
     item: ChatItem
@@ -78,7 +80,7 @@ export default class ChatService extends ContextClass {
   /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream.
    * If `deletedOnly` is not provided, returns only active chat messages. If true, returns only deleted messages since the given time (respecting all other provided filters). */
   public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[], deletedOnly?: boolean): Promise<ChatItemWithRelations[]> {
-    const chatItems = await this.chatStore.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
+    let chatItems = await this.chatStore.getChatSince(streamerId, since, beforeOrAt, limit, userIds, deletedOnly)
     await Promise.all(chatItems.map(item => this.customEmojiService.signEmojiImages(item.chatMessageParts)))
 
     // if there are emojis, make sure we return emoji info only for eligible users' messages
@@ -90,13 +92,21 @@ export default class ChatService extends ContextClass {
         if (!eligibleEmojiUserIds.includes(primaryUserId)) {
           item.chatMessageParts.forEach(part => {
             if (part.emoji != null) {
-              part.emoji.imageUrl = null
+              part.emoji.imageUrl = INACCESSIBLE_EMOJI
+              part.emoji.image.fingerprint = INACCESSIBLE_EMOJI
+              part.emoji.image.originalUrl = INACCESSIBLE_EMOJI
+              part.emoji.image.url = INACCESSIBLE_EMOJI
             } else if (part.customEmoji?.emoji != null) {
-              part.customEmoji.emoji.imageUrl = null
+              part.customEmoji.emoji.imageUrl = INACCESSIBLE_EMOJI
+              part.customEmoji.emoji.image.fingerprint = INACCESSIBLE_EMOJI
+              part.customEmoji.emoji.image.originalUrl = INACCESSIBLE_EMOJI
+              part.customEmoji.emoji.image.url = INACCESSIBLE_EMOJI
             }
           })
         }
       })
+
+      await Promise.all(chatItems.map(item => this.emojiService.signEmojiImages(item.chatMessageParts)))
     }
 
     return chatItems
@@ -158,6 +168,9 @@ export default class ChatService extends ContextClass {
       // inject custom emojis
       const splitParts = await Promise.all(item.messageParts.map(part => this.customEmojiService.applyCustomEmojis(part, channel.userId, streamerId)))
       item.messageParts = splitParts.flatMap(p => p)
+
+      // process public emojis (this will replace all PartialEmojiChatMessage with PartialProcessEmojiChatMessage)
+      item.messageParts = await Promise.all(item.messageParts.map(part => this.emojiService.processEmoji(part)))
 
       // there is a known issue where, since we are adding the chat in a separate transaction than the experience, it
       // is possible that calling the GET /chat endpoint returns the level information that does not yet incorporate the

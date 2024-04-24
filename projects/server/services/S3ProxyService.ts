@@ -76,13 +76,13 @@ export default class S3ProxyService extends ContextClass {
     return { base64Data: data, imageType: fileType }
   }
 
-  public async signUrl (url: string): Promise<SignedUrl> {
+  public async signUrl (relativeUrl: string): Promise<SignedUrl> {
     const prefix = `https://${this.bucket}.${this.domain}/`
-    if (url.startsWith(prefix)) {
-      url = url.substring(prefix.length)
+    if (relativeUrl.startsWith(prefix)) {
+      relativeUrl = relativeUrl.substring(prefix.length)
     }
 
-    const command = new AWS.GetObjectCommand({ Bucket: this.bucket, Key: url })
+    const command = new AWS.GetObjectCommand({ Bucket: this.bucket, Key: relativeUrl })
     return await getSignedUrl(this.client, command) as SignedUrl
   }
 

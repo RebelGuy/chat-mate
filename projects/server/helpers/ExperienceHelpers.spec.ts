@@ -309,7 +309,7 @@ function text (txt: string): PartialTextChatMessage {
 function emoji (url: string): PartialEmojiChatMessage {
   return {
     type: 'emoji',
-    image: { url: url },
+    url: url,
     label: url + '_label',
     name: url + '_name'
   }

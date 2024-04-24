@@ -48,4 +48,4 @@ Note that, again, `(value1, value2)` could be replaced with a subquery that retu
 # Add entries
 `INSERT INTO table_name (column1_name, column2_name) query`
 
-where `query` must return the correct number of columns.
+where `query` must return the correct number of ordered columns.

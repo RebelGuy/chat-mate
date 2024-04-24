@@ -10,7 +10,9 @@ import { asGte, asLte } from '@rebel/shared/util/math'
 import { CustomEmoji, CustomEmojiVersion, Rank } from '@prisma/client'
 import { expectArray } from '@rebel/shared/testUtils'
 
-type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'imageUrl' | 'imageWidth' | 'imageHeight' | 'levelRequirement' | 'name' | 'canUseInDonationMessage'>
+type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'levelRequirement' | 'name' | 'canUseInDonationMessage'> & {
+  imageUrl: string, imageWidth: number, imageHeight: number
+}
 
 const userId = 1
 const streamerId = 2
