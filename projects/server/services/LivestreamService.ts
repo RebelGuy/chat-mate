@@ -66,7 +66,7 @@ export default class LivestreamService extends ContextClass {
     }
 
     const activeLivestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
-    activeLivestreams.forEach(l => this.masterchatService.addMasterchat(l.streamerId, l.liveId))
+    await Promise.all(activeLivestreams.map(l => this.masterchatService.addMasterchat(l.streamerId, l.liveId)))
 
     const timerOptions: TimerOptions = {
       behaviour: 'end',
@@ -103,7 +103,7 @@ export default class LivestreamService extends ContextClass {
     }
 
     await this.livestreamStore.setActiveYoutubeLivestream(streamerId, liveId)
-    this.masterchatService.addMasterchat(streamerId, liveId)
+    await this.masterchatService.addMasterchat(streamerId, liveId)
     this.logService.logInfo(this, `Youtube livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
   }
 

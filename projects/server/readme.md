@@ -352,14 +352,19 @@ Pings the server.
 Returns data with no properties.
 
 ### `GET /masterchat/authentication`
-Check whether the currently active Masterchat instance is authenticated.
+Check whether the currently active Masterchat instance is authenticated. If you have recently updated the authentcation via the `YoutubeAuth` script, you will have to call the `POST /masterchat/authentication` for all active Masterchat instances to refresh their stored credentials.
 
 Returns data with the following properties:
 - `authenticated` (`boolean | null`): Whether the Masterchat instance is authenticated.
   - `true`: The Masterchat instance is authenticated.
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
-- `lastUpdatedTimestamp` (`number | null`): In the case where `authenticated` is `true`, at what time we last updated the Youtube authentication for Masterchat. `null` if Masterchat is not authenticated.
+- `lastUpdatedTimestamp` (`number | null`): At what time we last updated the Youtube authentication in the database. `null` if Masterchat is not authenticated.
+
+### `POST /masterchat/authentication`
+Refreshes the credentials stored by each active masterchat instance. To be used after updating authentication via the `YoutubeAuth` script.
+
+Returns data with no properties.
 
 ### `GET /username`
 Gets the username of the official ChatMate registered account.

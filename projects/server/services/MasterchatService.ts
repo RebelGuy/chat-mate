@@ -63,12 +63,12 @@ export default class MasterchatService extends ApiService {
     this.wrappedMasterchats = new Map()
   }
 
-  public addMasterchat (streamerId: number, liveId: string) {
+  public async addMasterchat (streamerId: number, liveId: string) {
     if (this.wrappedMasterchats.has(streamerId)) {
       throw new ChatMateError(`Cannot add masterchat instance for streamer ${streamerId} and liveId ${liveId} because one already exists with liveId ${liveId}`)
     }
 
-    const newMasterchat = this.createWrapper(streamerId, liveId, this.masterchatFactory.create(liveId))
+    const newMasterchat = this.createWrapper(streamerId, liveId, await this.masterchatFactory.create(liveId))
     this.wrappedMasterchats.set(streamerId, newMasterchat)
   }
 
@@ -120,7 +120,7 @@ export default class MasterchatService extends ApiService {
 
   /** Returns the YouTube external channel ID to which the livestream belongs. LiveId does not have to belong to an existing Masterchat instance. */
   public async getChannelIdFromAnyLiveId (liveId: string): Promise<string> {
-    const masterchat = this.masterchatFactory.create(liveId)
+    const masterchat = await this.masterchatFactory.create(liveId)
     const metadata = await masterchat.fetchMetadata()
     return metadata.channelId
   }
@@ -138,7 +138,7 @@ export default class MasterchatService extends ApiService {
       throw new NoContextTokenError(`Unable to find a context token associated with the latest chat message of ID ${lastMessage.id}, and thus was unable to determine the moderation status.`)
     }
 
-    const masterchat = this.masterchatFactory.create('')
+    const masterchat = await this.masterchatFactory.create('')
     const catalog = await masterchat.getActionCatalog(lastMessage.contextToken)
 
     return {
@@ -211,6 +211,15 @@ export default class MasterchatService extends ApiService {
 
     const result = await this.wrappedMasterchats.get(streamerId)!.removeModerator(contextMenuEndpointParams)
     return result != null
+  }
+
+  public async onAuthRefreshed () {
+    const auth = await this.authStore.loadYoutubeWebAccessToken(this.channelId)
+    if (auth == null) {
+      throw new ChatMateError(`Can't refresh the masterchat authentication because the ChatMate Youtube admin channel is not authenticated`)
+    }
+
+    this.wrappedMasterchats.forEach(masterchat  => masterchat.masterchat.setCredentials(auth.accessToken))
   }
 
   // insert some middleware to deal with automatic logging and status updates :)

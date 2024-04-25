@@ -110,7 +110,7 @@ async function createWindow () {
       await authStore.saveYoutubeWebAccessToken(channelId, accessToken)
 
       console.log('-------------------')
-      console.log('Successfully saved YouTube credentials. Please restart the Server now.')
+      console.log('Successfully saved YouTube credentials. Please ensure you refresh the Masterchat authentication via ChatMate Studio.')
       console.log('-------------------')
 
       app.quit()
