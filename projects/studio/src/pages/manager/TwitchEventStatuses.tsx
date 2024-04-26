@@ -11,7 +11,7 @@ import RelativeTime from '@rebel/studio/components/RelativeTime'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient, resetTwitchSubscriptions, revokeTwitchStreamer } from '@rebel/studio/utility/api'
+import { authoriseTwitchStreamer, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient, resetTwitchSubscriptions } from '@rebel/studio/utility/api'
 import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -75,7 +75,6 @@ export default function TwitchEventStatuses (props: Props) {
   const resetTwitchSubscriptionsRequest = useRequest(resetTwitchSubscriptions(), { onDemand: true })
   const getLoginUrlRequest = useRequest(getTwitchStreamerLoginUrl(), { onDemand: true })
   const authoriseTwitchRequest = useRequest(authoriseTwitchStreamer(code!), { onDemand: true })
-  const revokeTwitchRequest = useRequest(revokeTwitchStreamer(), { onDemand: true })
 
   const [error] = useState<string | null>(params.get('error'))
   const [errorDescription] = useState<string | null>(params.get('error_description'))
@@ -182,7 +181,7 @@ export default function TwitchEventStatuses (props: Props) {
         </OptionalAlert>
       </>}
 
-      <ApiError requestObj={[getLoginUrlRequest, authoriseTwitchRequest, revokeTwitchRequest]} hideRetryButton />
+      <ApiError requestObj={[getLoginUrlRequest, authoriseTwitchRequest]} hideRetryButton />
 
       {authoriseTwitchRequest.data != null && <>
         <Alert sx={{ mt: 1 }} severity="success">
