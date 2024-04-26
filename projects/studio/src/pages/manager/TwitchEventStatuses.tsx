@@ -3,6 +3,7 @@ import { Alert, Button, CircularProgress, IconButton, Table, TableBody, TableCel
 import { PublicTwitchEventStatus } from '@rebel/api-models/public/streamer/PublicTwitchEventStatus'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
+import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
 import OptionalAlert from '@rebel/studio/components/OptionalAlert'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
@@ -10,7 +11,7 @@ import RelativeTime from '@rebel/studio/components/RelativeTime'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
-import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient, resetTwitchSubscriptions } from '@rebel/studio/utility/api'
+import { authoriseTwitchStreamer, getPrimaryChannels, getTwitchEventStatuses, getTwitchStreamerLoginUrl, reconnectChatClient, resetTwitchSubscriptions, revokeTwitchStreamer } from '@rebel/studio/utility/api'
 import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -74,6 +75,7 @@ export default function TwitchEventStatuses (props: Props) {
   const resetTwitchSubscriptionsRequest = useRequest(resetTwitchSubscriptions(), { onDemand: true })
   const getLoginUrlRequest = useRequest(getTwitchStreamerLoginUrl(), { onDemand: true })
   const authoriseTwitchRequest = useRequest(authoriseTwitchStreamer(code!), { onDemand: true })
+  const revokeTwitchRequest = useRequest(revokeTwitchStreamer(), { onDemand: true })
 
   const [error] = useState<string | null>(params.get('error'))
   const [errorDescription] = useState<string | null>(params.get('error_description'))
@@ -165,14 +167,22 @@ export default function TwitchEventStatuses (props: Props) {
           <Button
             onClick={onLoginToTwitch}
             disabled={getLoginUrlRequest.isLoading || getLoginUrlRequest.data == null || authoriseTwitchRequest.isLoading}
-            sx={{ mt: 1 }}
+            sx={{ mt: 1, mr: 1 }}
           >
-            Authorise ChatMate
+            Authorise access
           </Button>
+          <LinkInNewTab href="https://www.twitch.tv/settings/connections">
+            <Button
+              onClickCapture={() => window.alert('You need to manually revoke access in your Twitch Settings')}
+              sx={{ mt: 1 }}
+            >
+              Revoke access
+            </Button>
+          </LinkInNewTab>
         </OptionalAlert>
       </>}
 
-      <ApiError requestObj={[getLoginUrlRequest, authoriseTwitchRequest]} hideRetryButton />
+      <ApiError requestObj={[getLoginUrlRequest, authoriseTwitchRequest, revokeTwitchRequest]} hideRetryButton />
 
       {authoriseTwitchRequest.data != null && <>
         <Alert sx={{ mt: 1 }} severity="success">
