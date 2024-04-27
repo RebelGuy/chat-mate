@@ -1,21 +1,12 @@
 import { Donation, StreamlabsSocketToken } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
+import { PartialChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { chatMessageIncludeRelations, createChatMessagePart } from '@rebel/server/stores/ChatStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ChatMateError, DonationUserLinkAlreadyExistsError, DonationUserLinkNotFoundError, NotFoundError } from '@rebel/shared/util/error'
-
-export type DonationWithMessage = Donation & {
-  messageParts: ChatItemWithRelations['chatMessageParts']
-}
-
-export type DonationWithUser = DonationWithMessage & {
-  linkIdentifier: string
-  linkedAt: Date | null
-  primaryUserId: number | null
-}
+import { DonationWithUser } from '@rebel/server/services/DonationService'
 
 export type DonationCreateArgs = {
   streamlabsId: number | null // null if not a streamlabs donation

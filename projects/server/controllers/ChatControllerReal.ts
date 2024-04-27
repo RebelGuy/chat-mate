@@ -12,6 +12,7 @@ import RankStore from '@rebel/server/stores/RankStore'
 import { allDefined, unique } from '@rebel/shared/util/arrays'
 import { Path } from 'typescript-rest'
 import { ChatMateError } from '@rebel/shared/util/error'
+import ChatService from '@rebel/server/services/ChatService'
 
 export type ChatControllerDeps = ControllerDependencies<{
   chatStore: ChatStore,
@@ -20,6 +21,7 @@ export type ChatControllerDeps = ControllerDependencies<{
   accountStore: AccountStore
   accountService: AccountService
   commandStore: CommandStore
+  chatService: ChatService
 }>
 
 @Path(buildPath('chat'))
@@ -30,6 +32,7 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
   readonly accountStore: AccountStore
   readonly accountService: AccountService
   readonly commandStore: CommandStore
+  readonly chatService: ChatService
 
   constructor (deps: ChatControllerDeps) {
     super(deps, '/chat')
@@ -39,13 +42,14 @@ export default class ChatControllerReal extends ControllerBase implements IChatC
     this.accountStore = deps.resolve('accountStore')
     this.accountService = deps.resolve('accountService')
     this.commandStore = deps.resolve('commandStore')
+    this.chatService = deps.resolve('chatService')
   }
 
   public async getChat (args: In<GetChatEndpoint>): Out<GetChatEndpoint> {
     let { builder, limit, since } = args
     since = since ?? 0
     const streamerId = this.getStreamerId()
-    const items = await this.chatStore.getChatSince(streamerId, since, undefined, limit)
+    const items = await this.chatService.getChatSince(streamerId, since, undefined, limit)
 
     const users = items.map(c => c.user)
     if (!allDefined(users)) {

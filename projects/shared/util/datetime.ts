@@ -129,3 +129,16 @@ export function getElapsedText (elapsed: number, allowMs?: boolean) {
 
   return `${amount} ${unit}`
 }
+
+/** Returns the duration in the form HH:mm:ss */
+export function getNumericElapsedHoursText (elapsed: number) {
+  const hours = Math.floor(elapsed / ONE_HOUR)
+  elapsed -= hours * ONE_HOUR
+
+  const minutes = Math.floor(elapsed / ONE_MINUTE)
+  elapsed -= minutes * ONE_MINUTE
+
+  const seconds = Math.floor(elapsed / ONE_SECOND)
+
+  return `${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+}

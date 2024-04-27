@@ -1,9 +1,12 @@
 import { PrismaClient } from '@prisma/client'
+import { NodeEnv } from '@rebel/server/globals'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import { cast } from '@rebel/shared/testUtils'
 import { NO_OP } from '@rebel/shared/util/typescript'
 import path from 'node:path'
+
+export const NODE_ENV = process.env.NODE_ENV as NodeEnv
 
 export const DATABASE_URL = process.env.DATABASE_URL!
 

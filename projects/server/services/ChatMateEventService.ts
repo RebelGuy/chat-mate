@@ -1,7 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import DonationStore, { DonationWithMessage } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { sortBy, unique } from '@rebel/shared/util/arrays'
 import ChatStore from '@rebel/server/stores/ChatStore'
@@ -9,6 +8,7 @@ import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import RankStore from '@rebel/server/stores/RankStore'
 import { ExternalRank, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { IgnoreOptions } from '@rebel/server/services/rank/ModService'
+import DonationService, { DonationWithMessage } from '@rebel/server/services/DonationService'
 
 export type ChatMateEvent = { timestamp: number } & ({
   type: 'levelUp'
@@ -41,7 +41,7 @@ export type ChatMateEvent = { timestamp: number } & ({
 type Deps = Dependencies<{
   experienceService: ExperienceService
   followerStore: FollowerStore
-  donationStore: DonationStore
+  donationService: DonationService
   chatStore: ChatStore
   rankStore: RankStore
 }>
@@ -49,7 +49,7 @@ type Deps = Dependencies<{
 export default class ChatMateEventService extends ContextClass {
   private readonly experienceService: ExperienceService
   private readonly followerStore: FollowerStore
-  private readonly donationStore: DonationStore
+  private readonly donationService: DonationService
   private readonly chatStore: ChatStore
   private readonly rankStore: RankStore
 
@@ -57,7 +57,7 @@ export default class ChatMateEventService extends ContextClass {
     super()
     this.experienceService = deps.resolve('experienceService')
     this.followerStore = deps.resolve('followerStore')
-    this.donationStore = deps.resolve('donationStore')
+    this.donationService = deps.resolve('donationService')
     this.chatStore = deps.resolve('chatStore')
     this.rankStore = deps.resolve('rankStore')
   }
@@ -88,7 +88,7 @@ export default class ChatMateEventService extends ContextClass {
       })
     }
 
-    const newDonations = await this.donationStore.getDonationsSince(streamerId, since, false)
+    const newDonations = await this.donationService.getDonationsSince(streamerId, since, false)
     for (let i = 0; i < newDonations.length; i++) {
       const donation = newDonations[i]
       events.push({

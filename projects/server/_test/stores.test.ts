@@ -8,6 +8,7 @@ import FollowerStoreSuite from '@rebel/server/stores/FollowerStore.test'
 import GenericStoreSuite from '@rebel/server/stores/GenericStore.test'
 import RankStoreSuite from '@rebel/server/stores/RankStore.test'
 import DonationStoreSuite from '@rebel/server/stores/DonationStore.test'
+import EmojiStoreSuite from '@rebel/server/stores/EmojiStore.test'
 import AccountStoreSuite from '@rebel/server/stores/AccountStore.test'
 import StreamerStoreSuite from '@rebel/server/stores/StreamerStore.test'
 import StreamerChannelStoreSuite from '@rebel/server/stores/StreamerChannelStore.test'
@@ -35,6 +36,8 @@ describeFn('CommandStore Suite', CommandStoreSuite)
 describeFn('CustomEmojiStore Suite', CustomEmojiStoreSuite)
 
 describeFn('DonationStore Suite', DonationStoreSuite)
+
+describeFn('EmojiStore Suite', EmojiStoreSuite)
 
 describeFn('ExperienceStore Suite', ExperienceStoreSuite)
 

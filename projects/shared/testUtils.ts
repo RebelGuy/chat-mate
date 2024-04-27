@@ -146,3 +146,7 @@ export function mockResolvable<T> (value: T): Resolvable<T> {
   mockObj.resolve.calledWith().mockResolvedValue(value)
   return mockObj
 }
+
+export function throwAsync (): Promise<any> {
+  return new Promise((_, rej) => rej(new Error()))
+}

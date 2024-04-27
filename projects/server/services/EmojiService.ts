@@ -1,140 +1,102 @@
-import { CustomEmoji } from '@prisma/client'
-import { Dependencies } from '@rebel/shared/context/context'
+import { ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialProcessedEmojiChatMessage } from '@rebel/server/models/chat'
+import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
+import ImageService from '@rebel/server/services/ImageService'
+import S3ProxyService from '@rebel/server/services/S3ProxyService'
+import EmojiStore from '@rebel/server/stores/EmojiStore'
+import RankStore from '@rebel/server/stores/RankStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { PartialChatMessage, PartialTextChatMessage, removeRangeFromText } from '@rebel/server/models/chat'
-import AccountService from '@rebel/server/services/AccountService'
-import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
-import { CurrentCustomEmoji } from '@rebel/server/stores/CustomEmojiStore'
-import { single } from '@rebel/shared/util/arrays'
+import { Dependencies } from '@rebel/shared/context/context'
+import { unique } from '@rebel/shared/util/arrays'
 import { ChatMateError } from '@rebel/shared/util/error'
-
-type SearchResult = {
-  searchTerm: string,
-  startIndex: number
-}
+import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 type Deps = Dependencies<{
-  customEmojiEligibilityService: CustomEmojiEligibilityService
-  accountService: AccountService
+  rankStore: RankStore
+  emojiStore: EmojiStore
+  s3ProxyService: S3ProxyService
+  imageService: ImageService
 }>
 
 export default class EmojiService extends ContextClass {
-  private readonly customEmojiEligibilityService: CustomEmojiEligibilityService
-  private readonly accountService: AccountService
+  private readonly rankStore: RankStore
+  private readonly emojiStore: EmojiStore
+  private readonly s3ProxyService: S3ProxyService
+  private readonly imageService: ImageService
 
   constructor (deps: Deps) {
     super()
-    this.customEmojiEligibilityService = deps.resolve('customEmojiEligibilityService')
-    this.accountService = deps.resolve('accountService')
+
+    this.rankStore = deps.resolve('rankStore')
+    this.emojiStore = deps.resolve('emojiStore')
+    this.s3ProxyService = deps.resolve('s3ProxyService')
+    this.imageService = deps.resolve('imageService')
   }
 
-  /** Analyses the given chat message and inserts custom emojis where applicable. */
-  public async applyCustomEmojis (part: PartialChatMessage, defaultUserId: number, streamerId: number): Promise<PartialChatMessage[]> {
-    const primaryUserId = await this.accountService.getPrimaryUserIdFromAnyUser([defaultUserId]).then(single)
-    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleEmojis(primaryUserId, streamerId)
-    return this.applyEligibleEmojis(part, eligibleEmojis)
+  /** Returns the ids of primary users that have access to use normal (i.e. non-custom) emojis. */
+  public async getEligibleEmojiUsers (streamerId: number) {
+    // todo: in the future, we will extend this to add some sort of permission system/config system to give the streamer control over who can use emojis
+    const donators = await this.rankStore.getUserRanksForGroup('donation', streamerId)
+    return unique(donators.map(d => d.primaryUserId))
   }
 
-  public async applyCustomEmojisToDonation (text: string, streamerId: number): Promise<PartialChatMessage[]> {
-    const eligibleEmojis = await this.customEmojiEligibilityService.getEligibleDonationEmojis(streamerId)
-    const part: PartialTextChatMessage = { type: 'text', text: text, isBold: false, isItalics: false }
-    return this.applyEligibleEmojis(part, eligibleEmojis)
+  /** Returns processed emojis for any public emojis. */
+  public async processEmoji (message: PartialChatMessage): Promise<PartialChatMessage> {
+    if (message.type === 'cheer' || message.type === 'text' || message.type === 'customEmoji' && message.text != null) {
+      return message
+    }
+
+    if (message.type === 'processedEmoji' || message.type === 'customEmoji' && message.processedEmoji != null) {
+      throw new ChatMateError('Unable to process emoji of a chat message that is already a processed emoji')
+    }
+
+    if (message.type === 'emoji') {
+      return await this._processEmoji(message)
+    } else if (message.type === 'customEmoji') {
+      if (message.emoji == null) {
+        throw new ChatMateError('Expected the customEmoji to have public emoji data attached to it')
+      }
+
+      message.processedEmoji = await this._processEmoji(message.emoji)
+      return message
+    } else {
+      assertUnreachable(message)
+    }
   }
 
-  private applyEligibleEmojis (part: PartialChatMessage, eligibleEmojis: CurrentCustomEmoji[]): PartialChatMessage[] {
-    if (part.type === 'customEmoji') {
-      // this should never happen
-      throw new ChatMateError('Cannot apply custom emojis to a message part of type PartialCustomEmojiChatMessage')
-    }
-
-    // ok I don't know what the proper way to do this is, but typing `:troll:` in YT will convert the message
-    // into a troll emoji of type text... so I guess if the troll emoji is available, we add a special rule here
-    const troll = eligibleEmojis.find(em => em.symbol.toLowerCase() === 'troll')
-    if (troll != null) {
-      const secondaryTrollEmoji: CurrentCustomEmoji = { ...troll, symbol: '🧌' }
-      eligibleEmojis = [...eligibleEmojis, secondaryTrollEmoji]
-    }
-
-    const searchTerms = eligibleEmojis.map(getSymbolToMatch)
-
-    if (part.type === 'emoji') {
-      // youtube emoji - check if it has the same symbol (label) as one of our custom emojis.
-      // this is an all-or-none match, so we don't need to split up the message part.
-      // note that this does not work if a youtube emoji has multiple labels and our custom emoji symbol
-      // is not the same as the shortest labels.
-      const matchedIndex = searchTerms.findIndex(sym => sym.toLowerCase() === part.label.toLowerCase())
-      if (matchedIndex === -1) {
-        return [part]
-      } else {
-        return [{
-          type: 'customEmoji',
-          customEmojiId: eligibleEmojis[matchedIndex]!.id,
-          customEmojiVersion: eligibleEmojis[matchedIndex]!.latestVersion,
-          text: null,
-          emoji: part
-        }]
+  /** Signs CustomEmoji image URLs in-place. */
+  public async signEmojiImages (chatMessageParts: ChatItemWithRelations['chatMessageParts']): Promise<void> {
+    await Promise.all(chatMessageParts.map(async part => {
+      if (part.emoji != null && part.emoji.image.url !== INACCESSIBLE_EMOJI) {
+        part.emoji.image.url = await this.s3ProxyService.signUrl(part.emoji.image.url)
+      } else if (part.customEmoji?.emoji != null && part.customEmoji.emoji.image.url !== INACCESSIBLE_EMOJI) {
+        part.customEmoji.emoji.image.url = await this.s3ProxyService.signUrl(part.customEmoji.emoji.image.url)
       }
-    } else if (part.type === 'cheer') {
-      return [part]
-    }
-
-    const searchResults = this.findMatches(part.text, searchTerms)
-
-    let remainderText: PartialTextChatMessage | null = part
-    let result: PartialChatMessage[] = []
-    for (const searchResult of searchResults) {
-      if (remainderText == null) {
-        throw new ChatMateError('The remainder text was null')
-      }
-      const indexShift = remainderText.text.length - part.text.length
-      const [leading, removed, trailing] = removeRangeFromText(remainderText, searchResult.startIndex + indexShift, searchResult.searchTerm.length)
-
-      if (leading != null) {
-        result.push(leading)
-      }
-
-      result.push({
-        type: 'customEmoji',
-        customEmojiId: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.id,
-        customEmojiVersion: eligibleEmojis.find(e => getSymbolToMatch(e) === searchResult.searchTerm)!.latestVersion,
-        text: removed,
-        emoji: null
-      })
-
-      remainderText = trailing
-    }
-
-    if (remainderText != null) {
-      result.push(remainderText)
-    }
-
-    return result
+    }))
   }
 
-  /** Attempts to match the search terms, ignoring casings. Returns ordered search results. */
-  private findMatches (text: string, searchTerms: string[]): SearchResult[] {
-    let results: SearchResult[] = []
+  private async _processEmoji (message: PartialEmojiChatMessage): Promise<PartialProcessedEmojiChatMessage> {
+    const emojiImage = await this.emojiStore.getOrCreateEmoji(message, (emojiId) => this.onGetImageInfo(message.url, emojiId))
 
-    text = text.toLowerCase()
-    for (let i = 0; i < text.length; i++) {
-      for (let j = 0; j < searchTerms.length; j++) {
-        const term = searchTerms[j].toLowerCase()
-        if (text.substring(i, i + term.length) === term) {
-          results.push({ startIndex: i, searchTerm: searchTerms[j] })
-
-          // the next outer loop iteration should start after this match.
-          // -1 because the for-loop already increments by 1
-          i += term.length - 1
-          break
-        }
-      }
+    return {
+      type: 'processedEmoji',
+      emojiId: emojiImage.id
     }
+  }
 
-    return results
+  private async onGetImageInfo (url: string, emojiId: number) {
+    const imageData = await this.imageService.convertToPng(url)
+    const fileName = getCustomEmojiFileUrl(emojiId)
+    await this.s3ProxyService.uploadBase64Image(fileName, 'png', false, imageData)
+    const relativeUrl = this.s3ProxyService.constructRelativeUrl(fileName)
+    const dimensions = this.imageService.getImageDimensions(imageData)
+    return {
+      relativeImageUrl: relativeUrl,
+      imageWidth: dimensions.width,
+      imageHeight: dimensions.height
+    }
   }
 }
 
-// includes the troll hack, as above
-function getSymbolToMatch (customEmoji: CustomEmoji): string {
-  return customEmoji.symbol === '🧌' ? '🧌' : `:${customEmoji.symbol}:`
+function getCustomEmojiFileUrl (emojiId: number) {
+  return `emoji/${emojiId}.png`
 }

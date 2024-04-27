@@ -1,5 +1,5 @@
-import { AddCustomEmojiRequest, AddCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse } from '@rebel/api-models/schema/emoji'
-import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
+import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
+import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse, RefreshMasterchatAuthenticationResponse } from '@rebel/api-models/schema/chatMate'
 import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetOfficialChatMateStreamerResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import { SERVER_URL } from '@rebel/studio/utility/global'
@@ -11,6 +11,7 @@ import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse } from '@rebel/api-models/types'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
 import { PublicObject } from '@rebel/api-models/types'
+import { GetLivestreamsResponse } from '@rebel/api-models/schema/livestream'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -47,13 +48,19 @@ export const getAllCustomEmojis = requestBuilder<GetCustomEmojisResponse>('GET',
 
 export const updateCustomEmoji = requestBuilder<UpdateCustomEmojiResponse, UpdateCustomEmojiRequest> ('PATCH', `/emoji/custom`, 'self')
 
+export const updateCustomEmojiSortOrder = requestBuilder<UpdateCustomEmojiSortOrderResponse, UpdateCustomEmojiSortOrderRequest> ('PATCH', `/emoji/custom/sortOrder`, 'self')
+
 export const addCustomEmoji = requestBuilder<AddCustomEmojiResponse, AddCustomEmojiRequest> ('POST', `/emoji/custom`, 'self')
+
+export const deleteCustomEmoji = requestBuilder<DeleteCustomEmojiResponse, false, [id: number]> ('DELETE', id => constructPath(`/emoji/custom`, { id }), 'self')
 
 export const ping = requestBuilder<PingResponse>('GET', `/chatMate/ping`, false, false)
 
 export const getChatMateStats = requestBuilder<ChatMateStatsResponse>('GET', `/chatMate/stats`, false, false)
 
 export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
+
+export const refreshasterchatAuthentication = requestBuilder<RefreshMasterchatAuthenticationResponse>('POST', `/chatMate/masterchat/authentication`, false)
 
 export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`, true, false)
 
@@ -216,6 +223,8 @@ export const releaseLinkAttempt = requestBuilder<ReleaseLinkAttemptResponse, fal
   linkAttemptId => constructPath('/admin/link/release', { linkAttemptId }),
   false
 )
+
+export const getLivestreams = requestBuilder<GetLivestreamsResponse>('GET', '/livestream', true, false)
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
   return await request('GET', path, null, loginToken, streamer)

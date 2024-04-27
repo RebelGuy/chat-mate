@@ -122,3 +122,50 @@ export function ensureMaxTextWidth (text: string, maxLength: number): string {
 export function toSentenceCase (text: string) {
   return text[0].toUpperCase() + text.substring(1)
 }
+
+export type DataUrlInfo = {
+  // e.g. "image"
+  fileType: string
+
+  // e.g. "png"
+  fileSubType: string
+
+  // the base64 encoded data
+  data: string
+}
+
+export function parseDataUrl (dataUrl: string): DataUrlInfo {
+  if (!dataUrl.startsWith('data:')) {
+    throw new ChatMateError('Cannot parse data url because it is not a data url.')
+  }
+
+  dataUrl = dataUrl.substring('data:'.length)
+  const parts = dataUrl.split(',')
+  if (parts.length !== 2) {
+    throw new ChatMateError('Cannot parse data url because it is malformed.')
+  }
+
+  const metaParts = parts[0].split(';')
+  if (metaParts.length !== 2 || metaParts[1] !== 'base64') {
+    throw new ChatMateError('Cannot parse data url because it is malformed.')
+  }
+
+  const mimeParts = metaParts[0].split('/')
+  if (mimeParts.length !== 2) {
+    throw new ChatMateError('Cannot parse data url because it is malformed.')
+  }
+
+  return {
+    fileType: mimeParts[0],
+    fileSubType: mimeParts[1],
+    data: parts[1]
+  }
+}
+
+/** Extracts the file extension from the given HTTP URL. Does not include the leading '.'. */
+export function getFileExtension (fullFileUrl: string) {
+  // https://syd1.digitaloceanspaces.com/chat-mate/local/custom-emoji/2/25/9.png?X-Amz-
+  const [url, queryParams] = fullFileUrl.split('?')
+  const parts = url.split('.')
+  return parts.at(-1)
+}

@@ -90,3 +90,5 @@ export type SafeExtract<T, U extends T> = U extends Extract<T, U> ? U : never
 
 /** Omit from T the provided keys. */
 export type SafeOmit<T, K extends keyof T> = Omit<T, K>
+
+export type SafeExclude<T, U extends T> = Exclude<T, U>

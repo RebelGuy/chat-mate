@@ -61,7 +61,7 @@ export default class ExperienceHelpers extends ContextClass {
   }
 
   private chatItemToString (item: ChatItemWithRelations) {
-    if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer') {
+    if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer' && PARTIAL_MESSAGE_TYPES !== 'processedEmoji') {
       assertUnreachableCompile(PARTIAL_MESSAGE_TYPES)
     }
 
@@ -75,6 +75,7 @@ export default class ExperienceHelpers extends ContextClass {
         } else if (p.emoji == null && p.text == null && p.customEmoji != null && p.cheer == null) {
           return p.customEmoji.customEmojiVersion.customEmoji.symbol
         } else {
+          // intentionally does not support processed emojis because there is currently no way they can come up here
           throw new ChatMateError('ChatMessagePart must have either an emoji, custom emoji, or text attached to it')
         }
       }).join('')

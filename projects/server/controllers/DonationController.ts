@@ -3,8 +3,8 @@ import { PublicDonation } from '@rebel/api-models/public/donation/PublicDonation
 import { PublicUser } from '@rebel/api-models/public/user/PublicUser'
 import { donationToPublicObject } from '@rebel/server/models/donation'
 import { userDataToPublicUser } from '@rebel/server/models/user'
-import DonationService, { NewDonation } from '@rebel/server/services/DonationService'
-import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
+import DonationService, { DonationWithUser, NewDonation } from '@rebel/server/services/DonationService'
+import DonationStore from '@rebel/server/stores/DonationStore'
 import { nonNull, unique } from '@rebel/shared/util/arrays'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { single } from '@rebel/shared/util/arrays'
@@ -43,7 +43,7 @@ export default class DonationController extends ControllerBase {
   public async getDonations (): Promise<GetDonationsResponse> {
     const builder = this.registerResponseBuilder<GetDonationsResponse>('GET /')
     try {
-      const donations = await this.donationStore.getDonationsSince(this.getStreamerId(), 0, true)
+      const donations = await this.donationService.getDonationsSince(this.getStreamerId(), 0, true)
       return builder.success({
         donations: await this.getPublicDonations(donations)
       })
@@ -100,7 +100,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
+      const donation = await this.donationService.getDonation(this.getStreamerId(), donationId)
       await this.donationStore.deleteDonation(this.getStreamerId(), donationId)
 
       if (donation.primaryUserId) {
@@ -198,7 +198,7 @@ export default class DonationController extends ControllerBase {
     }
 
     try {
-      const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
+      const donation = await this.donationService.getDonation(this.getStreamerId(), donationId)
       if (donation.refundedAt != null) {
         return builder.failure(400, 'Donation is already refunded.')
       }
@@ -247,7 +247,7 @@ export default class DonationController extends ControllerBase {
   }
 
   private async getPublicDonation (donationId: number): Promise<PublicDonation> {
-    const donation = await this.donationStore.getDonation(this.getStreamerId(), donationId)
+    const donation = await this.donationService.getDonation(this.getStreamerId(), donationId)
     return single(await this.getPublicDonations([donation]))
   }
 
