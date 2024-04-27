@@ -1,13 +1,11 @@
 import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
 import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
-import { ChatPlatform } from '@rebel/server/models/chat'
-import { isTwitchLivestream, isYoutubeLivestream } from '@rebel/server/models/livestream'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
+import { sortBy } from '@rebel/shared/util/arrays'
 import { ChatMateError } from '@rebel/shared/util/error'
-import { assertUnreachable } from '@rebel/shared/util/typescript'
 
 export type AggregateLivestreamParticipation = AggregateLivestream<{
   hasParticipated: boolean
@@ -55,7 +53,7 @@ export default class AggregateLivestreamService extends ContextClass {
     }
 
     // make sure start time are monotonically increasing
-    const allLivestreams = [...youtubeLivestreams, ...twitchLivestreams].sort(l => l.start!.getTime())
+    const allLivestreams = sortBy([...youtubeLivestreams, ...twitchLivestreams], l => l.start!.getTime())
 
     let aggregateLivestreams: AggregateLivestream[] = []
     let currentLivestreams: (YoutubeLivestream | TwitchLivestream)[] = []
