@@ -9,7 +9,7 @@ export default function useUpdateKey (options?: Options) {
   const [key, setKey] = useState(0)
   const timeoutRef = useRef<number | null>(null)
 
-  const updateKey = () => setKey(currentKey => currentKey + 1)
+  const incrementKey = () => setKey(currentKey => currentKey + 1)
 
   useEffect(() => {
     if (timeoutRef.current != null) {
@@ -21,7 +21,7 @@ export default function useUpdateKey (options?: Options) {
     }
 
     timeoutRef.current = window.setInterval(() => {
-      updateKey()
+      incrementKey()
     }, options.repeatInterval)
 
     return () => {
@@ -31,5 +31,5 @@ export default function useUpdateKey (options?: Options) {
     }
   }, [key, options?.repeatInterval])
 
-  return [key, updateKey] as const
+  return [key, incrementKey] as const
 }
