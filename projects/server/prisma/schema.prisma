@@ -763,7 +763,7 @@ model CustomEmoji {
 
   symbol String @db.VarChar(32) // unique
 
-  // deliberately don't save this to the CustomEmojiVersion because it's display data that is not important to save, and we would be generating hundreds of versions otherwise
+  // deliberately don't save this to the CustomEmojiVersion because it's display data that is not important to version-control, and we would be generating hundreds of versions otherwise
   sortOrder Int
 
   streamerId Int
@@ -1040,7 +1040,7 @@ model Image {
   width  Int
   height Int
 
-  // Technically these are 1-to-1 mappings, but it is technically possible for multiple items to reference the same image
+  // Practically these are 1-to-1 mappings, but it is technically possible for multiple items to reference the same image
   customEmojiVersions CustomEmojiVersion[]
   chatEmojis          ChatEmoji[]
 

@@ -227,7 +227,7 @@ export default class CustomEmojiStore extends ContextClass {
 
   /** Since the image URL depends on the emoji that hasn't been created yet, we inject the URL by calling `onGetImageUrl` during the emoji creation process.
    * Returns the updated CustomEmoji.
-   * If `allowDeactivated` is true, a new version of a previously deactivated emoji can be pushed (thereby re-activated the emoji). Otherwise, the request would be rejected. */
+   * If `allowDeactivated` is true, a new version of a previously deactivated emoji can be pushed (thereby re-activating the emoji). Otherwise, the request would be rejected. */
   public async updateCustomEmoji (
     data: InternalCustomEmojiUpdateData,
     onGetImageInfo: (streamerId: number, emojiId: number, version: number) => Promise<ImageInfo>,

@@ -9,7 +9,7 @@ import sizeOf from 'image-size'
 
 // this script contains two parts:
 // 1. *before the migration*, copy all emoji images from MySQL to S3
-// 2. *after the migration*, hydrate the new imageUrl fields
+// 2. *after the migration*, hydrate the image dimension fields in the new image records
 
 // usage: `yarn workspace server migrate-emoji:<local|debug|release> <pre-migration|post-migration>`
 

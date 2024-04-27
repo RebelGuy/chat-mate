@@ -22,9 +22,9 @@ Built JavaScript files live in the `./dist` folder, while generated data (e.g. l
 This refers specifically to authentication of the ChatMate channel. While some functions such as fetching chat do not require ChatMate to be authenticated, other functions such as banning or timing out viewers do require authentication.
 
 ### YouTube
-Each environment is associated with a ChatMate channel (see [here](../../readme.md#chatmate-admin-channels) for channel details). For testing, it is acceptable to use a different channel by changing the `CHANNEL_ID` [environment variable](#env).
+Each environment is associated with a ChatMate Admin Youtube channel (see [here](../../readme.md#chatmate-admin-channels) for channel details). For testing, it is acceptable to use a different channel by changing the `CHANNEL_ID` [environment variable](#env).
 
-To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID. Note that any changes will only come into effect when the Server is next restarted.
+To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID. Note that any changes will only come into effect when refreshing authentication via the Studio debug card, or calling the [`POST /chatmate/masterchat/authentication` endpoint](#post-masterchatauthentication).
 
 If the Server receives a "Rate limit exceeded" error when fetching video metadata, then Youtube has flagged us as a bot. You will need to manually log into the YouTube account again, prove you are not a bot, and then refresh the authentication token using the above command.
 
