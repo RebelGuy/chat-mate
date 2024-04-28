@@ -57,9 +57,14 @@ module.exports = (env) => {
 
   // make sure the deployed server has access to the `sharp` binary
   if (!isLocal) {
+    // no idea which node_modules folder is supposed to work
     copyPatterns.push({
       from: '../../node_modules/sharp/build/Release/sharp-linux-x64.node',
-      to: path.resolve(outPath, './[name][ext]'),
+      to: path.resolve(outPath, '../../node_modules/sharp/build/Release/sharp-linux-x64.node'),
+    })
+    copyPatterns.push({
+      from: '../../node_modules/sharp/build/Release/sharp-linux-x64.node',
+      to: path.resolve(outPath, './node_modules/sharp/build/Release/sharp-linux-x64.node'),
     })
   }
 
