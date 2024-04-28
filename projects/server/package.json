@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.30.0",
+  "version": "1.31.0",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
