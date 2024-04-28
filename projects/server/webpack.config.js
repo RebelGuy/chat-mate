@@ -55,19 +55,6 @@ module.exports = (env) => {
     })
   }
 
-  // make sure the deployed server has access to the `sharp` binary
-  if (!isLocal) {
-    // no idea which node_modules folder is supposed to work
-    copyPatterns.push({
-      from: '../../node_modules/sharp/build/Release/sharp-linux-x64.node',
-      to: path.resolve(outPath, '../../node_modules/sharp/build/Release/sharp-linux-x64.node'),
-    })
-    copyPatterns.push({
-      from: '../../node_modules/sharp/build/Release/sharp-linux-x64.node',
-      to: path.resolve(outPath, './node_modules/sharp/build/Release/sharp-linux-x64.node'),
-    })
-  }
-
   // similarly, only copy ngrok if it doesn't already exist
   const ngrokPath = path.resolve(outPath, '../bin') // it has to go here exactly, otherwise ngrok won't find it
   if (isLocal && (!fs.existsSync(ngrokPath) || !fs.readdirSync(ngrokPath).find(file => file.startsWith('ngrok')))) {
