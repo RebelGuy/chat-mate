@@ -1,5 +1,5 @@
 import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
-import { GET, Path, PreProcessor } from 'typescript-rest'
+import { GET, Path, POST, PreProcessor } from 'typescript-rest'
 import { requireRank } from '@rebel/server/controllers/preProcessors'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -8,7 +8,7 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import ExperienceStore from '@rebel/server/stores/ExperienceStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
-import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
+import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse, RefreshMasterchatAuthenticationResponse } from '@rebel/api-models/schema/chatMate'
 import CacheService from '@rebel/server/services/CacheService'
 import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
 import { flatMap } from '@rebel/shared/util/arrays'
@@ -118,6 +118,20 @@ export default class ChatMateController extends ControllerBase {
         authenticated: result?.isActive ?? null,
         lastUpdatedTimestamp: result?.lastUpdated?.getTime() ?? null
       })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/masterchat/authentication')
+  @PreProcessor(requireRank('admin'))
+  public async refreshMasterchatAuthentication (): Promise<RefreshMasterchatAuthenticationResponse> {
+    const builder = this.registerResponseBuilder<RefreshMasterchatAuthenticationResponse>('POST /masterchat/authentication')
+
+    try {
+      await this.masterchatService.onAuthRefreshed()
+      return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
     }

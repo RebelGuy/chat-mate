@@ -78,6 +78,16 @@ jobs:
       - name: Build typescript project
         run: yarn workspace server build:${{ inputs.NODE_ENV }} SKIP_TESTS=${{ !inputs.tests }}
 
+      # we don't bundle `sharp` via webpack, but need it as a dependency in the node_modules folder.
+      # create a new project, install sharp into it, then copy that project to the server output folder.
+      # note: we have to use npm for this because yarn starts crying about workspaces
+      # based off https://github.com/lovell/sharp/issues/3562#issuecomment-1438432760
+      - name: Inject `sharp` module
+        run: |
+          mkdir sharp-install
+          npm --prefix ./sharp-install install sharp@0.32.6
+          cp -r ./sharp-install/node_modules ./dist/server
+
       - name: Upload artifact for deployment job
         if: inputs.deploy
         uses: actions/upload-artifact@v2

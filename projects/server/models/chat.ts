@@ -1,4 +1,4 @@
-import { ChatCheer, ChatCommand, ChatCustomEmoji, ChatEmoji, ChatMessage, ChatMessagePart, ChatText, ChatUser, CustomEmojiVersion, RegisteredUser, TwitchChannel, TwitchChannelGlobalInfo, YoutubeChannel, YoutubeChannelGlobalInfo } from '@prisma/client'
+import { ChatCheer, ChatCommand, ChatCustomEmoji, ChatEmoji, ChatMessage, ChatMessagePart, ChatText, ChatUser, CustomEmojiVersion, Image, RegisteredUser, TwitchChannel, TwitchChannelGlobalInfo, YoutubeChannel, YoutubeChannelGlobalInfo } from '@prisma/client'
 import { YTEmoji } from '@rebel/masterchat'
 import { PublicChatItem } from '@rebel/api-models/public/chat/PublicChatItem'
 import { PublicMessageCheer } from '@rebel/api-models/public/chat/PublicMessageCheer'
@@ -18,6 +18,7 @@ import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/
 import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
 import { SafeExtract } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
+import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
 
 export type ChatPlatform = 'youtube' | 'twitch'
 
@@ -51,8 +52,8 @@ export type AuthorAttributes = {
   isVerified: boolean
 }
 
-export type PartialChatMessage = PartialTextChatMessage | PartialEmojiChatMessage | PartialCustomEmojiChatMessage | PartialCheerChatMessage
-export const PARTIAL_MESSAGE_TYPES: 'text' | 'emoji' | 'customEmoji' | 'cheer' = 'text'
+export type PartialChatMessage = PartialTextChatMessage | PartialEmojiChatMessage | PartialProcessedEmojiChatMessage | PartialCustomEmojiChatMessage | PartialCheerChatMessage
+export const PARTIAL_MESSAGE_TYPES: PartialChatMessage['type'] = 'text'
 
 export type PartialTextChatMessage = {
   type: 'text',
@@ -61,15 +62,32 @@ export type PartialTextChatMessage = {
   isItalics: boolean
 }
 
+// This is the raw emoji data coming from the platforms
 export type PartialEmojiChatMessage = {
-  type: 'emoji',
+  type: 'emoji'
 
   // the hover-over name
-  name: string,
+  name: string
 
   // short emoji label (e.g. shortcut text/search term)
-  label: string,
-  image: ChatImage
+  label: string
+
+  // external url of the emoji, might be an image, svg, or no extension
+  url: string
+
+  // dimensions not set if the image is an SVG
+  width?: number
+  height?: number
+}
+
+// This is used **ONLY in place of the `PartialEmojiChatMessage`** when saving a message to the database (ChatStore).
+// Before saving a new chat message, we both store any not-before-seen emojis as a new entry, and upload their image to S3.
+// What we are left with is the emoji (new or existing) that connects with the relevant emoji part.
+export type PartialProcessedEmojiChatMessage = {
+  type: 'processedEmoji'
+
+  /** The internal id of the processed emoji. */
+  emojiId: number
 }
 
 export type PartialCustomEmojiChatMessage = {
@@ -77,6 +95,7 @@ export type PartialCustomEmojiChatMessage = {
 
   text: PartialTextChatMessage | null
   emoji: PartialEmojiChatMessage | null
+  processedEmoji: PartialProcessedEmojiChatMessage | null // for custom emojis that are represented by a public emoji, this should be non-null when saving the chat message
   customEmojiId: number
   customEmojiVersion: number
 }
@@ -89,14 +108,6 @@ export type PartialCheerChatMessage = {
   imageUrl: string
   /** Hex colour that should be used to show the cheer amount. */
   colour: string
-}
-
-export type ChatImage = {
-  url: string,
-
-  // dimensions not set if the image is an SVG
-  width?: number,
-  height?: number
 }
 
 export type TwitchAuthor = {
@@ -120,6 +131,8 @@ export type TwitchAuthor = {
   badgeInfo: Map<string, string>
 }
 
+export type ChatEmojiWithImage = ChatEmoji & { image: Image }
+
 /** Evaluates all the getters */
 export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
   const evaluatedParts: PartialChatMessage[] = msg.parseEmotes().map(p => {
@@ -137,9 +150,7 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
         type: 'emoji',
         name: p.name,
         label: p.displayInfo.code, // symbol
-        image: {
-          url: p.displayInfo.getUrl({ animationSettings: 'default', backgroundType: 'light', size: '1.0' })
-        }
+        url: p.displayInfo.getUrl({ animationSettings: 'default', backgroundType: 'light', size: '3.0' })
       }
       return emojiPart
 
@@ -188,15 +199,19 @@ export type ChatItemWithRelations = (ChatMessage & {
   chatCommand: ChatCommand | null
   user: (ChatUser & { aggregateChatUser: ChatUser | null }) | null
   chatMessageParts: (ChatMessagePart & {
-      emoji: ChatEmoji | null
+      emoji: ChatEmojiWithImage | null
       text: ChatText | null
       customEmoji: (ChatCustomEmoji & {
         text: ChatText | null,
-        emoji: ChatEmoji | null,
-        customEmojiVersion: CustomEmojiVersion & { customEmoji: {
-          symbol: string,
-          customEmojiRankWhitelist: { rankId: number }[]
-        }}
+        emoji: ChatEmojiWithImage | null,
+        customEmojiVersion: CustomEmojiVersion & {
+          customEmoji: {
+            symbol: string,
+            sortOrder: number,
+            customEmojiRankWhitelist: { rankId: number }[]
+          },
+          image: Image
+        }
       }) | null
       cheer: ChatCheer | null
   })[]
@@ -210,13 +225,12 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
     isItalics: text.isItalics
   })
 
-  const convertEmoji = (emoji: ChatEmoji): PartialEmojiChatMessage => ({
+  // the exact emoji info is not really important here
+  const convertEmoji = (emoji: ChatEmojiWithImage): PartialEmojiChatMessage => ({
     type: 'emoji',
-    image: {
-      url: emoji.imageUrl ?? '',
-      height: emoji.imageHeight ?? 0,
-      width: emoji.imageWidth ?? 0,
-    },
+    url: emoji.image.url,
+    width: emoji.image.width,
+    height: emoji.image.height,
     label: emoji.label ?? '',
     name: emoji.name ?? ''
   })
@@ -234,6 +248,7 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
         customEmojiId: part.customEmoji.id,
         customEmojiVersion: part.customEmoji.customEmojiVersion.id,
         emoji: part.customEmoji.emoji == null ? null : convertEmoji(part.customEmoji.emoji),
+        processedEmoji: null,
         text: part.customEmoji.text == null ? null : convertText(part.customEmoji.text)
       })
     } else if (part.cheer != null) {
@@ -267,6 +282,7 @@ export function getEmojiLabel (emoji: YTEmoji): string {
   }
 }
 
+/** It is expected that all relative URLs are resolved and signed, or marked as inaccessible. */
 export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, levelData: LevelData, activeRanks: PublicUserRank[], registeredUser: RegisteredUser | null, firstSeen: number): PublicChatItem {
   const messageParts: PublicMessagePart[] = chat.chatMessageParts.map(part => toPublicMessagePart(part))
 
@@ -324,8 +340,9 @@ export function chatAndLevelToPublicChatItem (chat: ChatItemWithRelations, level
   return newItem
 }
 
+/** It is expected that all relative URLs are resolved and signed, or marked as inaccessible. */
 export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatMessageParts']>): PublicMessagePart {
-  if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer') {
+  if (PARTIAL_MESSAGE_TYPES !== 'text' && PARTIAL_MESSAGE_TYPES !== 'emoji' && PARTIAL_MESSAGE_TYPES !== 'customEmoji' && PARTIAL_MESSAGE_TYPES !== 'cheer' && PARTIAL_MESSAGE_TYPES !== 'processedEmoji') {
     assertUnreachableCompile(PARTIAL_MESSAGE_TYPES)
   }
 
@@ -344,13 +361,15 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
   } else if (part.emoji != null && part.text == null && part.customEmoji == null && part.cheer == null) {
     type = 'emoji'
     emoji = {
+      id: part.emoji.id,
       // so far I am yet to find an instance where either of these are null
       label: part.emoji.label!,
       name: part.emoji.name!,
-      image: {
-        url: part.emoji.imageUrl!,
-        height: part.emoji.imageHeight,
-        width: part.emoji.imageWidth
+      image: part.emoji.image.url === INACCESSIBLE_EMOJI ? null : {
+        id: part.emoji.image.id,
+        url: part.emoji.image.url,
+        width: part.emoji.image.width,
+        height: part.emoji.image.height
       }
     }
   } else if (part.emoji == null && part.text == null && part.customEmoji != null && part.cheer == null) {
@@ -362,24 +381,29 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
         isItalics: part.customEmoji.text.isItalics
       },
       emojiData: part.customEmoji.emoji == null ? null : {
+        id: part.customEmoji.emoji.id,
         label: part.customEmoji.emoji.label!,
         name: part.customEmoji.emoji.name!,
-        image: {
-          url: part.customEmoji.emoji.imageUrl!,
-          width: part.customEmoji.emoji.imageWidth,
-          height: part.customEmoji.emoji.imageHeight
+        image: part.customEmoji.emoji.image.url === INACCESSIBLE_EMOJI ? null : {
+          id: part.customEmoji.emoji.id,
+          url: part.customEmoji.emoji.image.url,
+          width: part.customEmoji.emoji.image.width,
+          height: part.customEmoji.emoji.image.height
         }
       },
       // this is absolute trash
       customEmoji: {
-        id: part.customEmoji.id,
+        id: part.customEmoji.customEmojiVersion.customEmojiId,
         name: part.customEmoji.customEmojiVersion.name,
         symbol: part.customEmoji.customEmojiVersion.customEmoji.symbol,
         levelRequirement: part.customEmoji.customEmojiVersion.levelRequirement,
         canUseInDonationMessage: part.customEmoji.customEmojiVersion.canUseInDonationMessage,
-        imageData: part.customEmoji.customEmojiVersion.image.toString('base64'),
+        imageUrl: part.customEmoji.customEmojiVersion.image.url,
+        imageWidth: part.customEmoji.customEmojiVersion.image.width,
+        imageHeight: part.customEmoji.customEmojiVersion.image.height,
         isActive: part.customEmoji.customEmojiVersion.isActive,
         version: part.customEmoji.customEmojiVersion.version,
+        sortOrder: part.customEmoji.customEmojiVersion.customEmoji.sortOrder,
         whitelistedRanks: part.customEmoji.customEmojiVersion.customEmoji.customEmojiRankWhitelist.map(w => w.rankId)
       }
     }

@@ -71,7 +71,22 @@ Problem: Streamlabs donations are not being received by ChatMate.
 Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
 
 # Change Log
-## v1.30 - The Cleanup Update 2 [18/1/2024]
+## v1.31 - The Emoji Update v2 [28/04/2024]
+- Server
+  - Public emoji images are now saved to S3 and the URL is included in chat messages sent by eligible users
+    - At the moment, eligible users are users with an active donation rank
+  - Custom emoji images are no longer saved in the MySQL database, but in S3 for better scalability
+  - The Masterchat authentication for the ChatMate Admin Youtube channel can now be refreshed while the server is running without requiring a restart
+  - Factored out some channel info into global info, such as name and photo, and kept streamer-specific info attached to the streamer context, such as moderator status 
+  - Improved API endpoint security and validation
+- Studio
+  - Custom emojis can now be sorted (this affects the display order only)
+  - Custom emojis can now be deleted
+  - The Streamer Info page now lists the streamer's previous livestreams
+  - Fixed stats numbers on the home page not animating correctly
+  - Fixed user ranks not loading correctly
+
+## v1.30 - The Cleanup Update v2 [18/1/2024]
 - Server
   - External channel info data is now split into global data (for example, the channel name and profile picture) and streamer data (for example, whether the user is a moderator)
   - ChatMate now checks the Twitch status of every streamer upon startup to handle the case where the streaming status has changed while we were offline and missed events

@@ -1,17 +1,20 @@
 import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
-import { CustomEmojiCreateData, CustomEmojiUpdateData, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
+import { CustomEmojiCreateData, CustomEmojiUpdateData, FullCustomEmoji } from '@rebel/server/services/CustomEmojiService'
 
-export function customEmojiToPublicObject (emoji: CustomEmojiWithRankWhitelist): PublicCustomEmoji {
+export function customEmojiToPublicObject (emoji: FullCustomEmoji): PublicCustomEmoji {
   return {
     id: emoji.id,
     name: emoji.name,
     symbol: emoji.symbol,
     version: emoji.version,
     isActive: emoji.isActive,
-    imageData: emoji.image.toString('base64'),
+    imageUrl: emoji.imageUrl,
+    imageWidth: emoji.imageWidth,
+    imageHeight: emoji.imageHeight,
     levelRequirement: emoji.levelRequirement,
     canUseInDonationMessage: emoji.canUseInDonationMessage,
-    whitelistedRanks: emoji.whitelistedRanks
+    whitelistedRanks: emoji.whitelistedRanks,
+    sortOrder: emoji.sortOrder
   }
 }
 
@@ -20,9 +23,10 @@ export function publicObjectNewToNewCustomEmoji (emoji: PublicCustomEmojiNew, st
     name: emoji.name,
     symbol: emoji.symbol,
     streamerId: streamerId,
-    image: Buffer.from(emoji.imageData, 'base64'),
+    imageDataUrl: emoji.imageDataUrl,
     levelRequirement: emoji.levelRequirement,
     canUseInDonationMessage: emoji.canUseInDonationMessage,
+    sortOrder: emoji.sortOrder,
     whitelistedRanks: emoji.whitelistedRanks
   }
 }
@@ -31,7 +35,7 @@ export function publicObjectToCustomEmojiUpdateData (emoji: PublicCustomEmojiUpd
   return {
     id: emoji.id,
     name: emoji.name,
-    image: Buffer.from(emoji.imageData, 'base64'),
+    imageDataUrl: emoji.imageDataUrl,
     levelRequirement: emoji.levelRequirement,
     canUseInDonationMessage: emoji.canUseInDonationMessage,
     whitelistedRanks: emoji.whitelistedRanks

@@ -1,15 +1,16 @@
-import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
-import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
+import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { getFileExtension } from '@rebel/shared/util/text'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import { EmojiData } from '@rebel/studio/pages/emojis/CustomEmojiManager'
 import RanksSelector from '@rebel/studio/pages/emojis/RanksSelector'
 import { updateCustomEmoji, addCustomEmoji } from '@rebel/studio/utility/api'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Props = {
   open: boolean
@@ -30,24 +31,26 @@ const DEFAULT_DATA: EmojiData = {
   name: 'New Emoji',
   symbol: 'emoji',
   canUseInDonationMessage: true,
-  imageData: '',
+  imageUrl: '',
   levelRequirement: 0,
-  whitelistedRanks: []
+  whitelistedRanks: [],
+  sortOrder: -1
 }
 
 export default function CustomEmojiEditor (props: Props) {
   const [enableWhitelist, setEnableWhitelist] = useState(false)
   const [symbolValidation, setSymbolValidation] = useState<string | null>(null)
   const [levelRequirementValidation, setLevelRequirementValidation] = useState<string | null>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
 
   const { data: editingData, onChange } = props
 
-  const updateRequest = useRequest(updateCustomEmoji({ updatedEmoji: props.data! }), {
+  const updateRequest = useRequest(updateCustomEmoji({ updatedEmoji: emojiDataToUpdateData(props.data, imageRef.current)! }), {
     onDemand: true,
     onSuccess: (data) => props.onSave(data.updatedEmoji)
   })
 
-  const addRequest = useRequest(addCustomEmoji({ newEmoji: props.data! }), {
+  const addRequest = useRequest(addCustomEmoji({ newEmoji: emojiDataToNewData(props.data)!, insertAtBeginning: true }), {
     onDemand: true,
     onSuccess: (data) => props.onSave(data.newEmoji)
   })
@@ -58,7 +61,7 @@ export default function CustomEmojiEditor (props: Props) {
     !request.isLoading &&
     symbolValidation == null &&
     levelRequirementValidation == null &&
-    !isNullOrEmpty(editingData.imageData) &&
+    !isNullOrEmpty(editingData.imageUrl) &&
     (!enableWhitelist || enableWhitelist && editingData.whitelistedRanks.length > 0) &&
     props.onCheckDataChanged(editingData)
 
@@ -104,10 +107,7 @@ export default function CustomEmojiEditor (props: Props) {
     // reads as base64 encoding, including the `data:` prefix
     const fr = new FileReader()
     fr.onload = () => {
-      const data = fr.result as string
-      const prefix = 'data:image/png;base64,'
-      const imageData = data.substring(prefix.length)
-      onChange({ ...editingData!, imageData })
+      onChange({ ...editingData!, imageUrl: fr.result as string })
     }
     fr.onerror = () => { throw new ChatMateError() }
     fr.readAsDataURL(files[0])
@@ -210,10 +210,18 @@ export default function CustomEmojiEditor (props: Props) {
               </FormControl>
               <FormControl sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  {!isNullOrEmpty(editingData.imageData) && <img src={`data:image/png;base64,${editingData.imageData}`} style={{ maxHeight: 32 }} alt="" />}
+                  {!isNullOrEmpty(editingData.imageUrl) && (
+                    <img
+                      src={editingData.imageUrl}
+                      style={{ maxHeight: 32 }}
+                      alt=""
+                      ref={imageRef}
+                      crossOrigin="anonymous" // if we don't do this for https links, the canvas drawing this image will fail to export to a dataUrl (wtf)
+                    />
+                  )}
                 </Box>
                 <Button disabled={props.isLoading || request.isLoading} component="label" sx={{ mt: 1 }}>
-                  <input type="file" hidden accept="image/png" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />
+                  <input type="file" hidden accept="image/png, image/jpg, image/jpeg, image/svg+xml" disabled={props.isLoading || request.isLoading} onChange={onSelectImage} />
                   Select image
                 </Button>
               </FormControl>
@@ -236,4 +244,44 @@ export default function CustomEmojiEditor (props: Props) {
   )
 }
 
+function emojiDataToNewData (data: EmojiData | null): PublicCustomEmojiNew | null {
+  if (data == null) {
+    return null
+  }
 
+  const { imageUrl, ...rest } = data
+  return {
+    ...rest,
+    imageDataUrl: imageUrl
+  }
+}
+
+
+function emojiDataToUpdateData (data: EmojiData | null, image: HTMLImageElement | null): PublicCustomEmojiUpdate | null {
+  if (data == null) {
+    return null
+  }
+
+  let imageDataUrl
+  if (image == null || data.imageUrl.startsWith('data:')) {
+    imageDataUrl = data.imageUrl
+  } else if (data.imageUrl.startsWith('http')) {
+    const canvas = document.createElement('canvas')
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(image, 0, 0)
+
+    const fileExtension = getFileExtension(data.imageUrl)
+    imageDataUrl = canvas.toDataURL(`image/${fileExtension}`)
+  } else {
+    throw new Error('Invalid image URL')
+  }
+
+  const { imageUrl, ...rest } = data
+  return {
+    ...rest,
+    imageDataUrl
+  }
+}

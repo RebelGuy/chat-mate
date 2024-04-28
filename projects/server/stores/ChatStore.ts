@@ -1,12 +1,12 @@
 import { ChatMessage, ChatMessagePart, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialEmojiChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { reverse } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import { ChatMessageForStreamerNotFoundError } from '@rebel/shared/util/error'
+import { ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError } from '@rebel/shared/util/error'
 import { PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 export type ChatSave = {
@@ -266,12 +266,15 @@ export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageIn
   chatMessageParts: {
     orderBy: { order: 'asc' },
     include: {
-      emoji: true,
+      emoji: { include: { image: true }},
       text: true,
       customEmoji: { include: {
-        customEmojiVersion: { include: { customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } } } }, // fuck me
+        customEmojiVersion: { include: {
+          image: true,
+          customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } } // fuck me
+        }},
         text: true,
-        emoji: true
+        emoji: { include: { image: true }}
       }},
       cheer: true
     },
@@ -283,31 +286,21 @@ export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageIn
 })
 
 export function createChatMessagePart (part: PartialChatMessage, index: number, chatMessageId: number) {
+  if (part.type === 'emoji') {
+    throw new InvalidEmojiMessagePartError('Unable to create a chat message part for an `emoji` type - you must process the emoji first and then create a part for the `processedEmoji` type.')
+  }
+
   return Prisma.validator<Prisma.ChatMessagePartCreateInput>()({
     order: index,
     chatMessage: { connect: { id: chatMessageId }},
-    text: part.type === 'text' ? { create: createText(part) } : part.type === 'emoji' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-    emoji: part.type === 'emoji' ? { connectOrCreate: connectOrCreateEmoji(part) } : part.type === 'text' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    text: part.type === 'text' ? { create: createText(part) } : part.type === 'processedEmoji' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    emoji: part.type === 'processedEmoji' ? { connect: { id: part.emojiId } } : part.type === 'text' || part.type === 'customEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
     customEmoji: part.type === 'customEmoji' ? { create: {
       text: part.text == null ? undefined : { create: createText(part.text) },
-      emoji: part.emoji == null ? undefined : { connectOrCreate: connectOrCreateEmoji(part.emoji) },
+      emoji: part.processedEmoji == null ? undefined : { connect: { id: part.processedEmoji.emojiId } },
       customEmojiVersion: { connect: { customEmojiId_version: { customEmojiId: part.customEmojiId, version: part.customEmojiVersion } } }}
-    } : part.type === 'text' || part.type === 'emoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
-    cheer: part.type === 'cheer' ? { create: createCheer(part) } : part.type === 'text' || part.type === 'emoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
-  })
-}
-
-function connectOrCreateEmoji (part: PartialEmojiChatMessage) {
-  return Prisma.validator<Prisma.ChatEmojiCreateOrConnectWithoutMessagePartsInput>()({
-    create: {
-      imageUrl: part.image.url,
-      imageHeight: part.image.height ?? null,
-      imageWidth: part.image.width ?? null,
-      label: part.label,
-      name: part.name,
-      isCustomEmoji: false
-    },
-    where: { imageUrl: part.image.url }
+    } : part.type === 'text' || part.type === 'processedEmoji' || part.type === 'cheer' ? undefined : assertUnreachable(part),
+    cheer: part.type === 'cheer' ? { create: createCheer(part) } : part.type === 'text' || part.type === 'processedEmoji' || part.type === 'customEmoji' ? undefined : assertUnreachable(part)
   })
 }
 

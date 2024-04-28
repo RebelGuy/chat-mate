@@ -6,7 +6,7 @@ import { Alert, Box, Container, Typography } from '@mui/material'
 import NavigationPanel from '@rebel/studio/pages/main/NavigationPanel'
 import UserPanel from '@rebel/studio/pages/main/UserPanel'
 import { styled } from '@mui/material'
-import { ReactNode, useContext, useEffect, useState } from 'react'
+import { ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import { getAdministrativeMode } from '@rebel/studio/utility/api'
@@ -33,6 +33,7 @@ const titleSuffix: Record<typeof NODE_ENV, string> = {
 export default function MainView () {
   const [headerHeight, setHeaderHeight] = useState(0)
   const loginContext = useContext(LoginContext)
+  const panelRef = useRef<HTMLDivElement>(null!)
   const getAdministrativeModeRequest = useRequest(getAdministrativeMode(), {
     // normally we don't need to do this, but the MainView renders before login info is completely loaded in and we need to trigger a re-request once it has finished loading
     updateKey: loginContext.isHydrated,
@@ -60,10 +61,12 @@ export default function MainView () {
         </Container>
 
         <Container style={{ minWidth: 300, maxWidth: 10000, maxHeight: `calc(100vh - ${headerHeight}px - 30px)` }}>
-          <Panel style={{ height: '100%' }}>
-            <ErrorBoundary>
-              <CurrentPage />
-            </ErrorBoundary>
+          <Panel style={{ height: '100%' }} ref={r => panelRef.current = r!}>
+            <PanelContext.Provider value={panelRef.current}>
+              <ErrorBoundary>
+                <CurrentPage />
+              </ErrorBoundary>
+            </PanelContext.Provider>
           </Panel>
         </Container>
       </div>
@@ -89,6 +92,8 @@ export default function MainView () {
     </Box>
   )
 }
+
+export const PanelContext = createContext<HTMLDivElement>(null!)
 
 function CurrentPage () {
   const loginContext = useContext(LoginContext)

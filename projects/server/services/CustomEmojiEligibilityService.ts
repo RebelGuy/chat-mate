@@ -1,7 +1,5 @@
-import { CustomEmoji } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
-import { Entity } from '@rebel/server/models/entities'
 import ExperienceService, { UserLevel } from '@rebel/server/services/ExperienceService'
 import CustomEmojiStore, { CurrentCustomEmoji, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import RankStore, { UserRanks } from '@rebel/server/stores/RankStore'
@@ -38,13 +36,13 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     return allEmojis.filter(e =>
       this.levelEligibilityCheck(e, level) &&
       this.rankEligibilityCheck(userRanks, whitelistedRanks.find(wr => wr.emojiId === e.id)!)
-    ).map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, latestVersion: e.version }))
+    ).map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, sortOrder: e.sortOrder, latestVersion: e.version }))
   }
 
   public async getEligibleDonationEmojis (streamerId: number): Promise<CurrentCustomEmoji[]> {
     const allEmojis = await this.customEmojiStore.getAllCustomEmojis(streamerId)
     return allEmojis.filter(e => e.canUseInDonationMessage)
-      .map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, latestVersion: e.version }))
+      .map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, sortOrder: e.sortOrder, latestVersion: e.version }))
   }
 
   private levelEligibilityCheck (emoji: CustomEmojiWithRankWhitelist, userLevel: UserLevel) {

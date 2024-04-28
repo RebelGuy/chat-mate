@@ -17,8 +17,14 @@ export type PublicCustomEmoji = PublicObject<{
   /** The unique 3-10 character long symbol that identifies this emoji. */
   symbol: string
 
-  /** The Base64 encoded image data, created directly from the buffer. */
-  imageData: string
+  /** The signed image url. */
+  imageUrl: string
+
+  /** The pixel width of the image. */
+  imageWidth: number
+
+  /** The pixel height of the image. */
+  imageHeight: number
 
   /** The minimum level a user must be to unlock this emoji. */
   levelRequirement: number
@@ -28,8 +34,11 @@ export type PublicCustomEmoji = PublicObject<{
 
   /** The list of ranks that are allowed to use the custom emoji. If empty, all ranks have access. */
   whitelistedRanks: number[]
+
+  /** The position of this custom emoji relative to all other custom emojis. */
+  sortOrder: number
 }>
 
-export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version'>
+export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version' | 'imageUrl' | 'imageWidth' | 'imageHeight'> & { imageDataUrl: string }
 
-export type PublicCustomEmojiUpdate = SafeOmit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version'>
+export type PublicCustomEmojiUpdate = SafeOmit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version' | 'imageUrl' | 'imageWidth' | 'imageHeight'> & { imageDataUrl: string }

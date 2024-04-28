@@ -468,22 +468,26 @@ model TwitchFollower {
 
 /// Unlike text, emoji objects are finite and can be re-used
 model ChatEmoji {
-  id          Int     @id @default(autoincrement())
-  imageUrl    String? @db.VarChar(511) // url
-  imageWidth  Int?    @db.SmallInt
-  imageHeight Int?    @db.SmallInt
-  name        String? @db.VarChar(127)
-  label       String? @db.VarChar(127)
+  id Int @id @default(autoincrement())
+
+  // this is used to ensure we don't duplicate the same emojis
+  imageUrl String  @db.VarChar(511) // unique - this points to an external location, NOT ChatMate's S3
+  name     String? @db.VarChar(127)
+  label    String? @db.VarChar(127)
 
   // for youtube only - currently unused
   isCustomEmoji Boolean
 
+  imageId Int
+  image   Image @relation(fields: [imageId], references: [id], map: "chat_emoji_imageId_fkey")
+
   messageParts ChatMessagePart[]
 
   // any custom emojis that have replaced this YouTube emoji within a chat message
-  customEmoji ChatCustomEmoji[]
+  customEmojis ChatCustomEmoji[]
 
   @@unique([imageUrl], map: "chat_emoji_imageUrl_key")
+  @@index([imageId], map: "chat_emoji_imageId_key")
   @@map("chat_emoji")
 }
 
@@ -759,6 +763,9 @@ model CustomEmoji {
 
   symbol String @db.VarChar(32) // unique
 
+  // deliberately don't save this to the CustomEmojiVersion because it's display data that is not important to version-control, and we would be generating hundreds of versions otherwise
+  sortOrder Int
+
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "custom_emoji_streamerId_key")
 
@@ -777,11 +784,10 @@ model CustomEmojiVersion {
   isActive   Boolean
   modifiedAt DateTime @default(now())
   version    Int
+  name       String   @db.VarChar(63)
 
-  name String @db.VarChar(63)
-
-  // max 64KB of storage
-  image Bytes @db.Blob
+  imageId Int
+  image   Image @relation(fields: [imageId], references: [id], map: "custom_emoji_imageId_fkey")
 
   levelRequirement        Int     @db.UnsignedSmallInt
   canUseInDonationMessage Boolean
@@ -792,6 +798,7 @@ model CustomEmojiVersion {
   chatCustomEmojis ChatCustomEmoji[]
 
   @@unique([customEmojiId, version], map: "custom_emoji_version_customEmojiId_version_key")
+  @@index([imageId], map: "custom_emoji_imageId_key")
   @@map("custom_emoji_version")
 }
 
@@ -1016,4 +1023,27 @@ model DonationLink {
   @@index([streamerId], map: "donation_link_streamerId_fkey")
   @@index([originalLinkedUserId], map: "donation_link_originalLinkedUserId_fkey")
   @@map("donation_link")
+}
+
+/// References images stored in our S3 account.
+model Image {
+  id Int @id @default(autoincrement())
+
+  modifiedAt DateTime @default(now())
+
+  /// A unique string that can be used to identify this image, e.g. a stringified id or hashed contents or a URL
+  fingerprint String // unique
+  originalUrl String?
+
+  /// Relative S3 URL without a leading slash
+  url    String @db.VarChar(127)
+  width  Int
+  height Int
+
+  // Practically these are 1-to-1 mappings, but it is technically possible for multiple items to reference the same image
+  customEmojiVersions CustomEmojiVersion[]
+  chatEmojis          ChatEmoji[]
+
+  @@unique([fingerprint], map: "image_fingerprint_key")
+  @@map("image")
 }

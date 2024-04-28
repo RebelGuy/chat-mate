@@ -1,7 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ChatMateEventService, { ChatMateEvent } from '@rebel/server/services/ChatMateEventService'
 import ExperienceService, { LevelDiff } from '@rebel/server/services/ExperienceService'
-import DonationStore, { DonationWithUser } from '@rebel/server/stores/DonationStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
@@ -12,8 +11,9 @@ import { filterTypes, single } from '@rebel/shared/util/arrays'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import RankStore, { ParsedRankEvent } from '@rebel/server/stores/RankStore'
+import DonationService, { DonationWithUser } from '@rebel/server/services/DonationService'
 
-let mockDonationStore: MockProxy<DonationStore>
+let mockDonationService: MockProxy<DonationService>
 let mockExperienceService: MockProxy<ExperienceService>
 let mockFollowerStore: MockProxy<FollowerStore>
 let mockChatStore: MockProxy<ChatStore>
@@ -21,14 +21,14 @@ let mockRankStore: MockProxy<RankStore>
 let chatMateEventService: ChatMateEventService
 
 beforeEach(() => {
-  mockDonationStore = mock()
+  mockDonationService = mock()
   mockExperienceService = mock()
   mockFollowerStore = mock()
   mockChatStore = mock()
   mockRankStore = mock()
 
   chatMateEventService = new ChatMateEventService(new Dependencies({
-    donationStore: mockDonationStore,
+    donationService: mockDonationService,
     experienceService: mockExperienceService,
     followerStore: mockFollowerStore,
     chatStore: mockChatStore,
@@ -56,7 +56,7 @@ describe(nameof(ChatMateEventService, 'getEventsSince'), () => {
 
     mockExperienceService.getLevelDiffs.calledWith(streamerId, since).mockResolvedValue([levelDiff1, levelDiff2])
     mockFollowerStore.getFollowersSince.calledWith(streamerId, since).mockResolvedValue([follower1, follower2])
-    mockDonationStore.getDonationsSince.calledWith(streamerId, since, false).mockResolvedValue([donation1, donation2])
+    mockDonationService.getDonationsSince.calledWith(streamerId, since, false).mockResolvedValue([donation1, donation2])
     mockChatStore.getChatSince.calledWith(streamerId, since, undefined, undefined, undefined, undefined).mockResolvedValue([chat1, chat2, chat3]) // duplicate chat user ids should be ignored
     mockChatStore.getTimeOfFirstChat.calledWith(streamerId, expectArray<number>([userId1, userId2])).mockResolvedValue([
       { primaryUserId: userId1, firstSeen: chat1.time.getTime() }, // before the `since` time - no first message in the window we are looking

@@ -22,9 +22,9 @@ Built JavaScript files live in the `./dist` folder, while generated data (e.g. l
 This refers specifically to authentication of the ChatMate channel. While some functions such as fetching chat do not require ChatMate to be authenticated, other functions such as banning or timing out viewers do require authentication.
 
 ### YouTube
-Each environment is associated with a ChatMate channel (see [here](../../readme.md#chatmate-admin-channels) for channel details). For testing, it is acceptable to use a different channel by changing the `CHANNEL_ID` [environment variable](#env).
+Each environment is associated with a ChatMate Admin Youtube channel (see [here](../../readme.md#chatmate-admin-channels) for channel details). For testing, it is acceptable to use a different channel by changing the `CHANNEL_ID` [environment variable](#env).
 
-To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID. Note that any changes will only come into effect when the Server is next restarted.
+To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID. Note that any changes will only come into effect when refreshing authentication via the Studio debug card, or calling the [`POST /chatmate/masterchat/authentication` endpoint](#post-masterchatauthentication).
 
 If the Server receives a "Rate limit exceeded" error when fetching video metadata, then Youtube has flagged us as a bot. You will need to manually log into the YouTube account again, prove you are not a bot, and then refresh the authentication token using the above command.
 
@@ -66,6 +66,11 @@ The following environment variables must be set in the `.env` file:
 - `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
+- `S3_REGION`: The region code in which the storage container is hosted.
+- `S3_DOMAIN`: The domain under which the storage container is hosted.
+- `S3_KEY`: The access key for interacting with the storage container.
+- `S3_SECRET`: The secret key for interacting the storage container.
+- `S3_BUCKET`: The ChatMate bucket name to use for storing files.
 - `DB_LOG_LEVEL`: [Optional, defaults to `info`] The minimum log level to include for database logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
 - `API_LOG_LEVEL`: [Optional, defaults to `warning`] The minimum log level to include for API logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
 - `DEBUG_LOG_OUTPUT`: [Optional, defaults to `disable`] The log output method for debug messages. A value of `full` logs the message to the console and file, `file` logs the message to the file only, and `disable` skips logging the message.
@@ -347,14 +352,19 @@ Pings the server.
 Returns data with no properties.
 
 ### `GET /masterchat/authentication`
-Check whether the currently active Masterchat instance is authenticated.
+Check whether the currently active Masterchat instance is authenticated. If you have recently updated the authentcation via the `YoutubeAuth` script, you will have to call the `POST /masterchat/authentication` for all active Masterchat instances to refresh their stored credentials.
 
 Returns data with the following properties:
 - `authenticated` (`boolean | null`): Whether the Masterchat instance is authenticated.
   - `true`: The Masterchat instance is authenticated.
   - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
   - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
-- `lastUpdatedTimestamp` (`number | null`): In the case where `authenticated` is `true`, at what time we last updated the Youtube authentication for Masterchat. `null` if Masterchat is not authenticated.
+- `lastUpdatedTimestamp` (`number | null`): At what time we last updated the Youtube authentication in the database. `null` if Masterchat is not authenticated.
+
+### `POST /masterchat/authentication`
+Refreshes the credentials stored by each active masterchat instance. To be used after updating authentication via the `YoutubeAuth` script.
+
+Returns data with no properties.
 
 ### `GET /username`
 Gets the username of the official ChatMate registered account.
@@ -496,7 +506,8 @@ Returns data with the following properties:
 Add a new custom emoji.
 
 Request data (body):
-- `newEmoji` (`PublicCustomEmojiNew`): *Required.* The new emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected.
+- `newEmoji` (`PublicCustomEmojiNew`): *Required.* The new emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected. The image must be encoded as a base64 data URL and one of the following MIME types: `image/png`, `image/jpeg`, `image/svg+xml`.
+- `insertAtBeginning` (`boolean`): *Optional.* If true, the streamer's custom emojis' sort orders will be adjusted such that the new emoji is first in the list. Defaults to false.
 
 Returns data with the following properties:
 - `newEmoji` (`PublicCustomEmoji`): The new emoji that was created.
@@ -508,13 +519,29 @@ Can return the following errors:
 Update an existing custom emoji.
 
 Request data (body):
-- `updatedEmoji` (`PublicCustomEmoji`): *Required.* The updated emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected. The `id` is used to match the new emoji to an emoji in the database.
+- `updatedEmoji` (`PublicCustomEmoji`): *Required.* The updated emoji's data. Note that the `symbol` must be unique, otherwise the request will get rejected. The `id` is used to match the new emoji to an emoji in the database. Be sure to always provide a data URL for the image, NOT a HTTP URL.
 
 Returns data with the following properties:
 - `updatedEmoji` (`PublicCustomEmoji`): The updated emoji data.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
+
+### `DELETE /custom`
+Delete an existing custom emoji. Note that data for old versions is retained, e.g. for the purpose of keeping emojis in donation messages working. However, the emoji will no longer be visible in the streamer's emoji list, and it is no longer possible to use the emoji in new chat or donation messages, nor update it.
+
+Query parameters:
+- `id` (`number`): The ID of the streamer's custom emoji that is to be deleted.
+
+### `PATCH /custom/sortOrder`
+Bulk-update the sort order of custom emojis.
+
+Request data (body):
+- `sortOrders` (`Record<number, number>`): *Required.* The map of custom emoji id to sort order.
+
+Can return the following errors:
+- `400`: When the request data is not sent, or is formatted incorrectly.
+- `404`: When one or more custom emojis could not be found.
 
 ## Experience Endpoints
 Path: `/experience`.

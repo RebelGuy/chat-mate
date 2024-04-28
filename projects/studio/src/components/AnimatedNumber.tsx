@@ -31,6 +31,12 @@ export default function AnimatedNumber (props: Props) {
 
   // don't reset the starting value if the target changes
   useEffect(() => {
+    // during the last frame, the animation may not have run to completion (it may have stopped at a fram of 0.999).
+    // update the effective value here using the previous target
+    const start = overridingStart ?? props.initial
+    result = getNumber(startTime, currentTime, props.duration, start, prevTarget.current, props.decimals)
+    prevNumber.current = result
+
     const newStart = Date.now()
     setStartTime(newStart)
     setCurrentTime(newStart)
@@ -41,7 +47,7 @@ export default function AnimatedNumber (props: Props) {
 
   // use the cached value if the target has changed, but the above side effect has not yet executed
   let result: number
-  if (animationHasCompleted) {
+  if (animationHasCompleted && prevTarget.current === props.target) {
     result = props.target
   } else if (!shouldRenderFrame || prevTarget.current !== props.target) {
     result = prevNumber.current ?? props.initial

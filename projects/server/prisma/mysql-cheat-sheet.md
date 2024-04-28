@@ -32,7 +32,7 @@ It is not possible to rename a foreign key. Instead, you must drop and re-add it
 # Add a non-null column with default values
 `ALTER TABLE table_name ADD COLUMN column_name data_type NULL;`
 `UPDATE table_name SET column_name = value WHERE id > 0;`
-`ALTER TABLE table_name MODIFY COLUMN column_name data_type NOT NULL;` 
+`ALTER TABLE table_name MODIFY COLUMN column_name data_type NOT NULL;`
 
 # Update a column
 `UPDATE table_name SET column_name = value WHERE condition;`
@@ -48,4 +48,4 @@ Note that, again, `(value1, value2)` could be replaced with a subquery that retu
 # Add entries
 `INSERT INTO table_name (column1_name, column2_name) query`
 
-where `query` must return the correct number of columns.
+where `query` must return the correct number of ordered columns.
