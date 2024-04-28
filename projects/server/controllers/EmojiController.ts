@@ -60,7 +60,13 @@ export default class EmojiController extends ControllerBase {
     }
 
     try {
-      const emoji = await this.customEmojiService.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, this.getStreamerId()))
+      const streamerId = this.getStreamerId()
+      let emoji = await this.customEmojiService.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, streamerId))
+
+      if (request.insertAtBeginning === true) {
+        emoji.sortOrder = await this.customEmojiService.setFirstInSortOrder(streamerId, emoji.id)
+      }
+
       return builder.success({ newEmoji: customEmojiToPublicObject(emoji) })
     } catch (e: any) {
       return builder.failure(e)

@@ -50,7 +50,7 @@ export default function CustomEmojiEditor (props: Props) {
     onSuccess: (data) => props.onSave(data.updatedEmoji)
   })
 
-  const addRequest = useRequest(addCustomEmoji({ newEmoji: emojiDataToNewData(props.data)! }), {
+  const addRequest = useRequest(addCustomEmoji({ newEmoji: emojiDataToNewData(props.data)!, insertAtBeginning: true }), {
     onDemand: true,
     onSuccess: (data) => props.onSave(data.newEmoji)
   })

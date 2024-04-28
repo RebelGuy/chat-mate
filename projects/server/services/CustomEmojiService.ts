@@ -6,10 +6,11 @@ import AccountService from '@rebel/server/services/AccountService'
 import CustomEmojiEligibilityService from '@rebel/server/services/CustomEmojiEligibilityService'
 import CustomEmojiStore, { CurrentCustomEmoji, InternalCustomEmojiCreateData, InternalCustomEmojiUpdateData, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { single, zip } from '@rebel/shared/util/arrays'
-import { ChatMateError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
+import { ChatMateError, NotFoundError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
 import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
 import { parseDataUrl } from '@rebel/shared/util/text'
 import ImageService from '@rebel/server/services/ImageService'
+import { min } from '@rebel/shared/util/math'
 
 export type CustomEmojiCreateData = InternalCustomEmojiCreateData & {
   imageDataUrl: string
@@ -168,6 +169,25 @@ export default class CustomEmojiService extends ContextClass {
       whitelistedRanks: newEmoji.whitelistedRanks,
       canUseInDonationMessage: newEmoji.canUseInDonationMessage
     }
+  }
+
+  /** Shuffles the custom emoji sort orders such that the given emoji will appear first in the list. Returns the new sort order for the given emoji. */
+  public async setFirstInSortOrder (streamerId: number, customEmojiId: number): Promise<number> {
+    const allEmojis = await this.customEmojiStore.getAllCustomEmojis(streamerId)
+    const allExceptThis = allEmojis.filter(e => e.id !== customEmojiId)
+    if (allEmojis.length === allExceptThis.length) {
+      throw new NotFoundError('Unable to find the given emoji')
+    } else if (allExceptThis.length === 0) {
+      // nothing to do here - the emoji is already first in the list
+      return single(allEmojis).sortOrder
+    }
+
+    const sortOrders = allExceptThis.map(e => e.sortOrder)
+    const [minSortOrder] = min(sortOrders)!
+    const newSortOrders = sortOrders.map(s => s + 1)
+
+    await this.customEmojiStore.updateCustomEmojiSortOrders([...allExceptThis.map(e => e.id), customEmojiId], [...newSortOrders, minSortOrder])
+    return minSortOrder
   }
 
   /** Analyses the given chat message and inserts custom emojis where applicable. */

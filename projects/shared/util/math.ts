@@ -85,9 +85,9 @@ export function sum (numbers: number[] | List<number>) {
   return numbers.reduce((s, x) => s + x, 0)
 }
 
-export function min (numbers: number[]): [minValue: number | null, index: number] {
+export function min (numbers: number[]): [minValue: number, index: number] | null {
   if (numbers.length === 0) {
-    return [null, -1]
+    return null
   }
 
   let minValue = Number.MAX_VALUE

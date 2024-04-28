@@ -9,7 +9,7 @@ import { CustomEmoji, CustomEmojiVersion } from '@prisma/client'
 import AccountService from '@rebel/server/services/AccountService'
 import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
 import CustomEmojiStore, { CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
-import { ChatMateError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
+import { ChatMateError, NotFoundError, UnsupportedFilteTypeError } from '@rebel/shared/util/error'
 import ImageService from '@rebel/server/services/ImageService'
 
 type EmojiData = Pick<CustomEmoji, 'id' | 'symbol'> & Pick<CustomEmojiVersion, 'levelRequirement' | 'name'>
@@ -272,6 +272,40 @@ describe(nameof(CustomEmojiService, 'updateCustomEmoji'), () => {
     const updateData = cast<CustomEmojiUpdateData>({ imageDataUrl: 'data:image/tiff;base64,abcde' })
 
     await expect(() => customEmojiService.updateCustomEmoji(updateData, false)).rejects.toThrowError(UnsupportedFilteTypeError)
+  })
+})
+
+describe(nameof(CustomEmojiService, 'setFirstInSortOrder'), () => {
+  test('Re-orders all other emojis', async () => {
+    const allEmojis = cast<CustomEmojiWithRankWhitelist[]>([
+      { id: 1, sortOrder: 5 },
+      { id: 2, sortOrder: 6 },
+      { id: 3, sortOrder: 7 },
+      { id: 4, sortOrder: 8 }
+    ])
+    mockCustomEmojiStore.getAllCustomEmojis.calledWith(streamerId).mockResolvedValue(allEmojis)
+
+    const result = await customEmojiService.setFirstInSortOrder(streamerId, 4)
+
+    const reorderCall = single(mockCustomEmojiStore.updateCustomEmojiSortOrders.mock.calls)
+    expect(reorderCall).toEqual<typeof reorderCall>([[1, 2, 3, 4], [6, 7, 8, 5]])
+    expect(result).toBe(5)
+  })
+
+  test(`Returns the emoji's sort order if no other emoji exists`, async () => {
+    const emojiId = 5
+    const sortOrder = 9
+    mockCustomEmojiStore.getAllCustomEmojis.calledWith(streamerId).mockResolvedValue(cast<CustomEmojiWithRankWhitelist[]>([{ id: emojiId, sortOrder }]))
+
+    const result = await customEmojiService.setFirstInSortOrder(streamerId, emojiId)
+
+    expect(result).toBe(sortOrder)
+  })
+
+  test(`Throws ${NotFoundError.name} if the given emoji was not found`, async () => {
+    mockCustomEmojiStore.getAllCustomEmojis.calledWith(streamerId).mockResolvedValue(cast<CustomEmojiWithRankWhitelist[]>([{ id: -1 }]))
+
+    await expect(() => customEmojiService.setFirstInSortOrder(streamerId, 5)).rejects.toThrowError(NotFoundError)
   })
 })
 
