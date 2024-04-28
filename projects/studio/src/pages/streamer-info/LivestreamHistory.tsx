@@ -54,9 +54,6 @@ export default function LivestreamHistory (props: Props) {
     return null
   }
 
-  const showYoutubeUrl = props.livestreams.some(aggregateLivestream => aggregateLivestream.livestreams.some(livestream => livestream.platform === 'youtube'))
-  const showTwitchIcon = props.livestreams.some(aggregateLivestream => aggregateLivestream.livestreams.some(livestream => livestream.platform === 'twitch'))
-
   return <>
     Past livestreams:
     <Table size="small" style={{ width: 'unset' }}>
@@ -65,13 +62,13 @@ export default function LivestreamHistory (props: Props) {
           <HeaderCell>Date</HeaderCell>
           <HeaderCell>Duration</HeaderCell>
           <HeaderCell>Platform</HeaderCell>
-          {showYoutubeUrl && <HeaderCell></HeaderCell>}
         </TableRow>
       </TableHead>
       <TableBody>
         {sortBy(props.livestreams, l => l.startTime, 'desc').map((aggregateLivestream, i) => {
           const singleLivestream = aggregateLivestream.livestreams.length === 1
           const showDetails = isExpanded(aggregateLivestream)
+          const livestreams = sortBy(aggregateLivestream.livestreams, l => l.startTime ?? 0, 'desc')
 
           return (
             <TableRow key={i}>
@@ -79,7 +76,7 @@ export default function LivestreamHistory (props: Props) {
                 <Box>{new Date(aggregateLivestream.startTime).toLocaleString()}</Box>
                 <Collapse in={showDetails}>
                   <AdditionalLivestreamsContainer>
-                    {aggregateLivestream.livestreams.map((livestream, j) => (
+                    {livestreams.map((livestream, j) => (
                       <ExpandBox key={j}>
                         {livestream.startTime != null ? new Date(livestream.startTime).toLocaleString() : 'Not started'}
                       </ExpandBox>
@@ -91,11 +88,11 @@ export default function LivestreamHistory (props: Props) {
                 <Box>{aggregateLivestream.endTime == null ? 'In progress' : getNumericElapsedHoursText(aggregateLivestream.endTime - aggregateLivestream.startTime)}</Box>
                 <Collapse in={showDetails}>
                   <AdditionalLivestreamsContainer>
-                    {aggregateLivestream.livestreams.map((livestream, j) => (
+                    {livestreams.map((livestream, j) => (
                       <ExpandBox key={j}>
                         {livestream.startTime != null && livestream.endTime != null
                           ? getNumericElapsedHoursText(livestream.endTime - livestream.startTime)
-                          : livestream.startTime != null ? 'Not started' : 'In progress'
+                          : livestream.startTime == null ? 'Not started' : 'In progress'
                         }
                       </ExpandBox>
                     ))}
@@ -105,17 +102,17 @@ export default function LivestreamHistory (props: Props) {
               <BodyCell>
                 <Box>
                   {singleLivestream
-                    ? <PlatformIcon livestream={aggregateLivestream.livestreams[0]} />
+                    ? <PlatformIcon livestream={livestreams[0]} />
                     : <Box position="relative">
                       <IconButton onClick={() => toggleExpandState(aggregateLivestream)} sx={{ p: 0.5, m: -0.5 }}>{showDetails ? <ExpandLess /> : <ExpandMore />}</IconButton>
                       <Box position="absolute" display="inline" pl={0.5}>
-                        {`(${aggregateLivestream.livestreams.length})`}
+                        {`(${livestreams.length})`}
                       </Box>
                     </Box>
                   }
                 </Box>
                 <Collapse in={showDetails}>
-                  {aggregateLivestream.livestreams.map((livestream, j) => (
+                  {livestreams.map((livestream, j) => (
                     <ExpandBox key={j}>
                       <PlatformIcon livestream={livestream} />
                     </ExpandBox>
