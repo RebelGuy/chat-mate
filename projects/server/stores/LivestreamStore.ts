@@ -118,7 +118,7 @@ export default class LivestreamStore extends ContextClass {
 
   public async getYoutubeTotalDaysLivestreamed (): Promise<number> {
     const queryResult = await this.db.$queryRaw<{ duration: number | null }[]>`
-      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, CURRENT_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM youtube_livestream;
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM youtube_livestream;
     `
 
     return single(queryResult).duration ?? 0
@@ -126,7 +126,7 @@ export default class LivestreamStore extends ContextClass {
 
   public async getTwitchTotalDaysLivestreamed (): Promise<number> {
     const queryResult = await this.db.$queryRaw<{ duration: number | null }[]>`
-      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, CURRENT_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM twitch_livestream;
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM twitch_livestream;
     `
 
     return single(queryResult).duration ?? 0
