@@ -227,7 +227,7 @@ export function LoginProvider (props: Props) {
   return (
     <LoginContext.Provider
       value={{
-        isHydrated,
+        isHydrated: hasLoadedAuth && isHydrated,
         loginToken,
         username,
         user: getUserRequest.data?.user ?? null,
