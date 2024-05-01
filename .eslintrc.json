@@ -45,6 +45,7 @@
     "array-callback-return": "off",
     "jsx-quotes": ["warn", "prefer-double"],
     "import/no-anonymous-default-export": "off",
+    "no-useless-concat": "off",
     
     // see https://typescript-eslint.io/rules
     "@typescript-eslint/unbound-method": "error",

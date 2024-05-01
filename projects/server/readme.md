@@ -165,6 +165,9 @@ The number of concurrent queries that the database allows is limited, and there 
 
 For example, instead of allowing getting the experience for only a specific user and thus forcing multiple queries to get the experience of multiple users, write the store method in such a way that only a single query is required to get the experience of multiple users. Due to limitations with the Prisma ORM capabilities, this may require the use of raw SQL queries.
 
+## Emojis
+Some emojis on Youtube (and Twitch) are sent as unicode characters instead of images. Normally this would be fine, but this means that the Client will struggle to render all text. We analyse all text messages and break them up into emoji objects, where appropriate. We get this data in the form of a so-called emoji map from the same source as Youtube, and, in fact, the matching algorithm is straight up stolen from Youtube. The map is optional and can be downloaded via the `yarn workspace server download-emoji-map` command. The generated JSON file should be placed in the `./data` folder.
+
 # API Endpoints
 Use the API endpoints to communicate with the server while it is running. The local API base URL is `http://localhost:3010/api`.
 

@@ -37,7 +37,9 @@
 
     "migrate-emojis:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/migrateEmojis.js",
     "migrate-emojis:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/migrateEmojis.js",
-    "migrate-emojis:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateEmojis.js"
+    "migrate-emojis:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateEmojis.js",
+
+    "download-emoji-map": "node ../../dist/server/downloadEmojiMap.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.511.0",

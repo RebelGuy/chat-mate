@@ -16,6 +16,7 @@ import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import CacheService from '@rebel/server/services/CacheService'
+import EmojiService from '@rebel/server/services/EmojiService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -99,6 +100,7 @@ let mockChatService: MockProxy<ChatService>
 let mockMasterchatStore: MockProxy<MasterchatStore>
 let mockExternalRankEventService: MockProxy<ExternalRankEventService>
 let mockCacheService: MockProxy<CacheService>
+let mockEmojiService: MockProxy<EmojiService>
 let masterchatFetchService: MasterchatFetchService
 
 beforeEach(() => {
@@ -111,6 +113,7 @@ beforeEach(() => {
   mockMasterchatStore = mock()
   mockExternalRankEventService = mock()
   mockCacheService = mock()
+  mockEmojiService = mock()
 
   mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue(currentLivestreams)
   mockChatStore.getChatSince.calledWith(expect.any(Number), expect.any(Number), undefined, undefined).mockResolvedValue([])
@@ -134,6 +137,7 @@ beforeEach(() => {
     masterchatStore: mockMasterchatStore,
     externalRankEventService: mockExternalRankEventService,
     cacheService: mockCacheService,
+    emojiService: mockEmojiService,
     isAdministrativeMode: () => false
   }))
 })
@@ -151,6 +155,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
       masterchatStore: mockMasterchatStore,
       externalRankEventService: mockExternalRankEventService,
       cacheService: mockCacheService,
+      emojiService: mockEmojiService,
       isAdministrativeMode: () => false
     }))
 
@@ -203,6 +208,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction2, chatAction1]))
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
     mockChatService.onNewChatItem.calledWith(expect.anything(), expect.anything()).mockResolvedValue(true)
+    mockEmojiService.analyseYoutubeTextForEmojis.mockImplementation(run => [run])
 
     await masterchatFetchService.initialise()
 
@@ -228,6 +234,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
     mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction1.id }), streamer1).mockRejectedValue(new Error())
     mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction3.id }), streamer2).mockResolvedValue(true)
+    mockEmojiService.analyseYoutubeTextForEmojis.mockImplementation(run => [run])
 
     await masterchatFetchService.initialise()
 

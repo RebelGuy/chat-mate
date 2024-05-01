@@ -102,7 +102,8 @@ module.exports = (env) => {
     YoutubeAuth: './scripts/YoutubeAuth.ts',
     RefreshSnapshots: './scripts/RefreshSnapshots.ts',
     resetPassword: './scripts/resetPassword.ts',
-    migrateEmojis: './scripts/migrateEmojis.ts'
+    migrateEmojis: './scripts/migrateEmojis.ts',
+    downloadEmojiMap: './scripts/downloadEmojiMap.ts'
   } : {}
 
   // skip type checking

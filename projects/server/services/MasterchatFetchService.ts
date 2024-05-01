@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { Action, AddChatItemAction, YTRun, YTTextRun } from '@rebel/masterchat'
-import { ChatItem, getEmojiLabel, PartialChatMessage } from '@rebel/server/models/chat'
+import { ChatItem, PartialChatMessage, ytEmojiToPartialEmojiChatMessage } from '@rebel/server/models/chat'
 import { clamp, clampNormFn, sum } from '@rebel/shared/util/math'
 import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -12,7 +12,7 @@ import ChatService from '@rebel/server/services/ChatService'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import CacheService from '@rebel/server/services/CacheService'
-import { sortBy } from '@rebel/shared/util/arrays'
+import EmojiService from '@rebel/server/services/EmojiService'
 
 const LIVESTREAM_CHECK_INTERVAL = 10_000
 
@@ -38,6 +38,7 @@ type Deps = Dependencies<{
   masterchatStore: MasterchatStore
   externalRankEventService: ExternalRankEventService
   cacheService: CacheService
+  emojiService: EmojiService
   isAdministrativeMode: () => boolean
 }>
 
@@ -53,6 +54,7 @@ export default class MasterchatFetchService extends ContextClass {
   private readonly masterchatStore: MasterchatStore
   private readonly externalRankEventService: ExternalRankEventService
   private readonly cacheService: CacheService
+  private readonly emojiService: EmojiService
   private readonly isAdministrativeMode: () => boolean
 
   private livestreamCheckTimer!: number
@@ -70,6 +72,7 @@ export default class MasterchatFetchService extends ContextClass {
     this.masterchatStore = deps.resolve('masterchatStore')
     this.externalRankEventService = deps.resolve('externalRankEventService')
     this.cacheService = deps.resolve('cacheService')
+    this.emojiService = deps.resolve('emojiService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
@@ -233,27 +236,26 @@ export default class MasterchatFetchService extends ContextClass {
   }
 
   private toChatItem (item: AddChatItemAction): ChatItem {
-    const messageParts = item.message!.map((run: YTRun): PartialChatMessage => {
-      if (isTextRun(run)) {
-        return {
-          type: 'text',
-          text: run.text,
-          isBold: run.bold ?? false,
-          isItalics: run.italics ?? false
+    const messageParts = item.message!
+      .flatMap((run: YTRun): YTRun[] => {
+        if (isTextRun(run)) {
+          return this.emojiService.analyseYoutubeTextForEmojis(run)
+        } else {
+          return [run]
         }
-      } else {
-        // pick the biggest image
-        const image = sortBy(run.emoji.image.thumbnails, img => (img.height ?? 0) * (img.width ?? 0), 'desc')[0]
-        return {
-          type: 'emoji',
-          name: run.emoji.image.accessibility!.accessibilityData.label,
-          label: getEmojiLabel(run.emoji),
-          url: image.url,
-          width: image.width,
-          height: image.height
+      })
+      .map((run: YTRun): PartialChatMessage => {
+        if (isTextRun(run)) {
+          return {
+            type: 'text',
+            text: run.text,
+            isBold: run.bold ?? false,
+            isItalics: run.italics ?? false
+          }
+        } else {
+          return ytEmojiToPartialEmojiChatMessage(run.emoji)
         }
-      }
-    })
+      })
 
     return {
       id: item.id,
