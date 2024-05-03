@@ -8,7 +8,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateGlobalTwitchChannelArgs, TwitchChannelWithLatestInfo, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED, EVENT_PUBLIC_CHAT_ITEM } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
@@ -178,6 +178,8 @@ export default class ChatService extends ContextClass {
       // effects have not yet been completed, but honestly that adds a lot of complexity for a small, temporary, unimportant
       // visual inconsitency. so for now just acknowledge this and leave it.
       message = await this.chatStore.addChat(item, streamerId, channel.userId, externalId)
+
+      this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_ITEM, message!)
 
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)

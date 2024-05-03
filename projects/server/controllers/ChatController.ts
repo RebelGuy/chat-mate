@@ -19,7 +19,6 @@ export interface IChatController {
 
 @Path(buildPath('chat'))
 @PreProcessor(requireStreamer)
-@PreProcessor(requireRank('owner'))
 export default class ChatController extends ControllerBase {
   private readonly implementation: IChatController
 
@@ -49,6 +48,7 @@ export default class ChatController extends ControllerBase {
 
   @GET
   @Path('/command/:commandId')
+  @PreProcessor(requireRank('owner'))
   public async getCommandStatus (
     @PathParam('commandId') commandId: number
   ): Promise<GetCommandStatusResponse> {

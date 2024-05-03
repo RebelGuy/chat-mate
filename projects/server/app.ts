@@ -104,6 +104,8 @@ import S3ProxyService from '@rebel/server/services/S3ProxyService'
 import ImageService from '@rebel/server/services/ImageService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import EmojiStore from '@rebel/server/stores/EmojiStore'
+import expressWs from 'express-ws'
+import WebsocketClient from '@rebel/server/controllers/WebsocketClient'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -114,6 +116,7 @@ const STARTUP_TIME = Date.now()
 
 const main = async () => {
   const app: Express = express()
+  const wsApp = expressWs(app, undefined, { wsOptions: { }})
 
   const port = env('port')
   const studioUrl = env('studioUrl')
@@ -385,6 +388,22 @@ const main = async () => {
     StreamerController,
     AdminController
   )
+
+
+  // test using https://piehost.com/websocket-tester
+  wsApp.app.ws('/ws', async (client, request, next) => {
+    const websocketContext = globalContext.asParent()
+      .withObject('request', request)
+      .withObject('response', {} as any)
+      .withObject('wsClient', client)
+      .withClass('apiService', ApiService)
+      .withClass('websocketService', WebsocketClient)
+      .build()
+
+    await websocketContext.initialise()
+
+    next()
+  })
 
   // at this point, none of the routes have matched, so we want to return a custom formatted error
   // from https://expressjs.com/en/starter/faq.html#how-do-i-handle-404-responses

@@ -1,14 +1,22 @@
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem } from '@rebel/server/models/chat'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
+import { ChatMessage } from '@prisma/client'
 
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
 
+/** Fires when a chat item is to be added to the database. */
 export const EVENT_CHAT_ITEM = Symbol()
 export const EVENT_CHAT_ITEM_REMOVED = Symbol()
 export const EVENT_ADD_PRIMARY_CHANNEL = Symbol()
 export const EVENT_REMOVE_PRIMARY_CHANNEL = Symbol()
+
+/** Fires when a chat item was added to the database. */
+export const EVENT_PUBLIC_CHAT_ITEM = Symbol()
+
+/** Fired when a ChatMate donation event occurs. */
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION = Symbol()
 
 export type EventData = {
   [EVENT_CHAT_ITEM]: ChatItem & {
@@ -28,6 +36,12 @@ export type EventData = {
     streamerId: number
     userChannel: UserChannel
   }
+
+  [EVENT_PUBLIC_CHAT_ITEM]: ChatMessage
+
+  // [EVENT_CHAT_MATE_EVENT]: {
+
+  // }
 }
 
 export type DataPair<T extends keyof EventData> = [T, EventData[T]]
@@ -72,11 +86,28 @@ export default class EventDispatchService extends ContextClass {
     }
   }
 
+  public isListening<T extends keyof EventData> (type: T, listener: Listener<T>) {
+    if (!this.listeners.has(type)) {
+      return false
+    } else {
+      return this.listeners.get(type)!.includes(listener)
+    }
+  }
+
   /** Starts listening to data. The listener is responsible for catching all errors. */
   public onData<T extends keyof EventData> (type: T, listener: Listener<T>) {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, [])
     }
     this.listeners.get(type)!.push(listener)
+  }
+
+  /** Removes the listener for the event type. */
+  public unsubscribe<T extends keyof EventData> (type: T, listener: Listener<T>) {
+    if (!this.listeners.has(type)) {
+      return
+    }
+
+    this.listeners.set(type, this.listeners.get(type)!.filter(l => l !== listener))
   }
 }

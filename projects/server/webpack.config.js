@@ -188,9 +188,6 @@ module.exports = (env) => {
       // this is in the node_modules/ws/lib/validation.js file, and is safe to ignore as there is a fallback mechanism for when the module doesn't exist
       'utf-8-validate': 'utf-8-validate',
 
-      // this is in the node_modules/ws/lib/buffer-util.js file, and is safe to ignore as there is a fallback mechanism for when the module doesn't exist
-      'bufferutil': 'bufferutil',
-
       // webpack is unable to find some modules required by applicationinsights, but everything seems to work fine so make it shut up 
       'applicationinsights-native-metrics': 'commonjs applicationinsights-native-metrics',
       '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
@@ -216,7 +213,7 @@ module.exports = (env) => {
     watchOptions: isLocal ? {
       poll: 1000,
       aggregateTimeout: 500,
-      ignored: ['**/node_modules', '**/dist']
+      ignored: ['**/node_modules', '**/dist', '**/*.test.ts', '**/*.spec.ts']
     } : {},
 
     output: {
