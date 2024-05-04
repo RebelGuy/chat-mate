@@ -401,8 +401,6 @@ const main = async () => {
       .build()
 
     await websocketContext.initialise()
-
-    next()
   })
 
   // at this point, none of the routes have matched, so we want to return a custom formatted error
