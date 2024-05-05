@@ -127,7 +127,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(mockExperienceStore.addChatExperience.mock.calls.length).toBe(0)
   })
 
-  test.only('calls ExperienceHelper calculation methods and submits result to ExperienceStore', async () => {
+  test('calls ExperienceHelper calculation methods and submits result to ExperienceStore', async () => {
     const primaryUserId = 3
     const connectedUserIds = [3, 5]
     const streamerId = 2
