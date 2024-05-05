@@ -1,5 +1,6 @@
 import { PublicChatImage } from '@rebel/api-models/public/chat/PublicChatImage'
 import { PublicChatItem } from '@rebel/api-models/public/chat/PublicChatItem'
+import { PublicChatMateEvent } from '@rebel/api-models/public/event/PublicChatMateEvent'
 import { SafeExtract } from '@rebel/shared/types'
 
 export type ClientMessage =
@@ -28,7 +29,7 @@ type AcknowledgeMessageData = {
 
 type EventMessageData =
   { topic: SafeExtract<StreamerTopic, 'streamerChat'>, streamer: string, data: PublicChatItem } |
-  { topic: SafeExtract<StreamerTopic, 'streamerEvents'>, streamer: string, data: PublicChatImage }
+  { topic: SafeExtract<StreamerTopic, 'streamerEvents'>, streamer: string, data: PublicChatMateEvent }
 
 export function parseClientMessage (message: Buffer | ArrayBuffer | Buffer[]): ClientMessage | null {
   if (message instanceof ArrayBuffer || Array.isArray(message)) {

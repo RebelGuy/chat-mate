@@ -2,9 +2,12 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem } from '@rebel/server/models/chat'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { ChatMessage } from '@prisma/client'
+import { UserLevel } from '@rebel/server/services/ExperienceService'
 
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
+
+// INTERNAL EVENTS
 
 /** Fires when a chat item is to be added to the database. */
 export const EVENT_CHAT_ITEM = Symbol()
@@ -12,10 +15,18 @@ export const EVENT_CHAT_ITEM_REMOVED = Symbol()
 export const EVENT_ADD_PRIMARY_CHANNEL = Symbol()
 export const EVENT_REMOVE_PRIMARY_CHANNEL = Symbol()
 
+// PUBLIC EVENTS
+
 /** Fires when a chat item was added to the database. */
 export const EVENT_PUBLIC_CHAT_ITEM = Symbol()
 
-/** Fired when a ChatMate donation event occurs. */
+/** Fires when a user levels up. */
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP = Symbol()
+
+/** Fires when a new Twitch user follows the streamer's channel. */
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER = Symbol()
+
+/** Fires when a ChatMate donation event occurs. */
 export const EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION = Symbol()
 
 export type EventData = {
@@ -39,9 +50,23 @@ export type EventData = {
 
   [EVENT_PUBLIC_CHAT_ITEM]: ChatMessage
 
-  // [EVENT_CHAT_MATE_EVENT]: {
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP]: {
+    streamerId: number
+    userLevel: UserLevel
+  }
 
-  // }
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER]: {
+    streamerId: number
+    userDisplayName: string
+  }
+
+  // todo: donation
+
+  // todo: new viewer
+
+  // todo: deleted message
+
+  // todo: rank update
 }
 
 export type DataPair<T extends keyof EventData> = [T, EventData[T]]

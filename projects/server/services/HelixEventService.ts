@@ -6,7 +6,6 @@ import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUser
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
-import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
 import { EventSubHttpBase } from '@twurple/eventsub-http/lib/EventSubHttpBase'
@@ -26,6 +25,7 @@ import { nonNull } from '@rebel/shared/util/arrays'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import { ChatMateError } from '@rebel/shared/util/error'
+import FollowerService from '@rebel/server/services/FollowerService'
 
 // if you're wondering why we are dynamically importing some things - it's because they can't be resolved at runtime on the deployed server. for whatever reason the javascript gods have decided today.
 
@@ -50,7 +50,7 @@ type Deps = Dependencies<{
   nodeEnv: NodeEnv
   hostName: string | null
   twurpleApiClientProvider: TwurpleApiClientProvider
-  followerStore: FollowerStore
+  followerService: FollowerService
   timerHelpers: TimerHelpers
   logService: LogService
   fileService: FileService
@@ -79,7 +79,7 @@ export default class HelixEventService extends ContextClass {
   private readonly nodeEnv: NodeEnv
   private readonly hostName: string | null
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
-  private readonly followerStore: FollowerStore
+  private readonly followerService: FollowerService
   private readonly timerHelpers: TimerHelpers
   private readonly logService: LogService
   private readonly logContext: LogContext
@@ -120,7 +120,7 @@ export default class HelixEventService extends ContextClass {
     this.nodeEnv = deps.resolve('nodeEnv')
     this.hostName = deps.resolve('hostName')
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
-    this.followerStore = deps.resolve('followerStore')
+    this.followerService = deps.resolve('followerService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
@@ -434,7 +434,7 @@ export default class HelixEventService extends ContextClass {
         /* eslint-disable @typescript-eslint/no-misused-promises */
         if (eventType === 'followers') {
           onCreateSubscription = () => this.eventSubBase.onChannelFollow(user, user, async (e) =>
-            await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName)
+            await this.followerService.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName)
               .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
           )
         } else if (eventType === 'ban') {

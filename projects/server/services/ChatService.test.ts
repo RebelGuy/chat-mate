@@ -5,7 +5,7 @@ import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, expectArray, expectObject, expectObjectDeep, nameof, promised } from '@rebel/shared/testUtils'
+import { cast, expectArray, nameof, promised } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -122,6 +122,51 @@ describe(nameof(ChatService, 'initialise'), () => {
     expect(args[0][1]).not.toBeNull()
     expect(args[1][0]).toBe(EVENT_CHAT_ITEM_REMOVED)
     expect(args[1][1]).not.toBeNull()
+  })
+})
+
+describe(nameof(ChatService, 'getChatById'), () => {
+  test('Returns the specified chat message with signed emoji images', async () => {
+    const streamerId = 51
+    const chatMessageId = 454
+    const userId = 5
+    const parts = cast<ChatItemWithRelations['chatMessageParts']>([{ emoji: {} }])
+    const chat = cast<ChatItemWithRelations>({
+      streamerId: streamerId,
+      user: { id: userId },
+      chatMessageParts: parts
+    })
+
+    mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chat)
+    mockEmojiService.getEligibleEmojiUsers.calledWith(streamerId).mockResolvedValue([userId])
+
+    const result = await chatService.getChatById(chatMessageId)
+
+    expect(result).toBe(chat)
+    expect(single2(mockCustomEmojiService.signEmojiImages.mock.calls)).toBe(parts)
+    expect(single2(mockEmojiService.signEmojiImages.mock.calls)).toBe(parts)
+  })
+
+  test('Marks emojis as inaccessible if the user is not eligible for public emojis', async () => {
+    const streamerId = 51
+    const chatMessageId = 454
+    const userId = 5
+    const parts = cast<ChatItemWithRelations['chatMessageParts']>([{ emoji: { image: {} } }])
+    const chat = cast<ChatItemWithRelations>({
+      streamerId: streamerId,
+      user: { id: userId },
+      chatMessageParts: parts
+    })
+
+    mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chat)
+    mockEmojiService.getEligibleEmojiUsers.calledWith(streamerId).mockResolvedValue([userId + 1])
+
+    const result = await chatService.getChatById(chatMessageId)
+
+    expect(result).toBe(chat)
+    expect(result.chatMessageParts[0].emoji!.imageUrl).toBe(INACCESSIBLE_EMOJI)
+    expect(single2(mockCustomEmojiService.signEmojiImages.mock.calls)).toBe(parts)
+    expect(mockEmojiService.signEmojiImages.mock.calls.length).toBe(0)
   })
 })
 

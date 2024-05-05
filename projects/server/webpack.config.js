@@ -213,7 +213,7 @@ module.exports = (env) => {
     watchOptions: isLocal ? {
       poll: 1000,
       aggregateTimeout: 500,
-      ignored: ['**/node_modules', '**/dist', '**/*.test.ts', '**/*.spec.ts']
+      ignored: ['**/node_modules', '**/dist']
     } : {},
 
     output: {

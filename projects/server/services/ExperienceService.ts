@@ -20,6 +20,7 @@ import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore
 import AggregateLivestreamService from '@rebel/server/services/AggregateLivestreamService'
 import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
 import { ChatMateError } from '@rebel/shared/util/error'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP } from '@rebel/server/services/EventDispatchService'
 
 /** This is a legacy multiplier that we used to have. We can't simply remove it because, when linking channels, experience would otherwise be gained/lost.
  * Modifying the baseExperiences was an option, but I couldn't work it out due to the complex nature of the xp equation. */
@@ -64,6 +65,7 @@ type Deps = Dependencies<{
   userService: UserService
   genericStore: GenericStore
   aggregateLivestreamService: AggregateLivestreamService
+  eventDispatchService: EventDispatchService
 }>
 
 export default class ExperienceService extends ContextClass {
@@ -80,6 +82,7 @@ export default class ExperienceService extends ContextClass {
   private readonly userService: UserService
   private readonly genericStore: GenericStore
   private readonly aggregateLivestreamService: AggregateLivestreamService
+  private readonly eventDispatchService: EventDispatchService
 
   public static readonly CHAT_BASE_XP = 1000
 
@@ -98,6 +101,7 @@ export default class ExperienceService extends ContextClass {
     this.userService = deps.resolve('userService')
     this.genericStore = deps.resolve('genericStore')
     this.aggregateLivestreamService = deps.resolve('aggregateLivestreamService')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
   }
 
   /** Adds experience only for chat messages sent during the livestream for unpunished users.
@@ -151,6 +155,19 @@ export default class ExperienceService extends ContextClass {
     const totalMultiplier = (VIEWERSHIP_STREAK_MULTIPLIER * participationStreakMultiplier * spamMultiplier + repetitionPenalty) * messageQualityMultiplier
     const xpAmount = Math.round(ExperienceService.CHAT_BASE_XP * totalMultiplier)
     await this.experienceStore.addChatExperience(streamerId, primaryUserId, chatItem.timestamp, xpAmount, data)
+
+    // check if the user's level increased and, if so, fire an event
+    const userExperiences = await this.experienceStore.getExperience(streamerId, [primaryUserId]).then(single)
+    const clampedExperience = clamp(userExperiences.experience, 0, null)
+    const levelAfter = this.experienceHelpers.calculateLevel(clampedExperience)
+    const levelBefore = this.experienceHelpers.calculateLevel(clamp(userExperiences.experience - xpAmount, 0, null))
+
+    if (levelAfter.level > levelBefore.level) {
+      await this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, {
+        streamerId: streamerId,
+        userLevel: { primaryUserId, level: { ...levelAfter, totalExperience: clampedExperience }}
+      })
+    }
   }
 
   /** Sorted in ascending order. */
@@ -278,8 +295,13 @@ export default class ExperienceService extends ContextClass {
     const experienceDelta = requiredExperience - currentExperience
     await this.experienceStore.addManualExperience(streamerId, primaryUserId, adminUserId, experienceDelta, message)
 
-    const updatedLevel = await this.getLevels(streamerId, [primaryUserId])
-    return single(updatedLevel)
+    const updatedLevel = await this.getLevels(streamerId, [primaryUserId]).then(single)
+
+    if (updatedLevel.level.level > currentLevel.level) {
+      await this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, userLevel: updatedLevel })
+    }
+
+    return updatedLevel
   }
 
   /** Aggregates all chat messages and punishments of all connected user for each streamer and recalculates experience data as if the user used a single account. */

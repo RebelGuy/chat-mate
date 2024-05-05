@@ -450,16 +450,16 @@ model StreamerTwitchChannelLink {
 }
 
 model TwitchFollower {
-  id          Int      @id @default(autoincrement())
-  twitchId    String   @db.VarChar(32) // unique
-  date        DateTime @default(now())
-  userName    String
-  displayName String
+  id           Int      @id @default(autoincrement())
+  date         DateTime @default(now())
+  twitchUserId String   @db.VarChar(32)
+  userName     String
+  displayName  String
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "twitch_follower_streamerId_fkey")
 
-  @@unique([twitchId], map: "twitch_follower_twitchId_key")
+  @@unique([streamerId, twitchUserId], map: "twitch_follower_streamerId_twitchUserId_key")
   @@index([streamerId], map: "twitch_follower_streamerId_fkey")
   @@map("twitch_follower")
 }

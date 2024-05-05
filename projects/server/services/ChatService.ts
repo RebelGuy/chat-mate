@@ -77,6 +77,36 @@ export default class ChatService extends ContextClass {
     this.eventDispatchService.onData(EVENT_CHAT_ITEM_REMOVED, data => this.onChatItemRemoved(data.externalMessageId))
   }
 
+  public async getChatById (chatMessageId: number) {
+    let chatItem = await this.chatStore.getChatById(chatMessageId)
+    await this.customEmojiService.signEmojiImages(chatItem.chatMessageParts)
+
+    if (chatItem.chatMessageParts.find(p => p.emoji != null || p.customEmoji?.emoji != null)) {
+      const eligibleEmojiUserIds = await this.emojiService.getEligibleEmojiUsers(chatItem.streamerId)
+      const primaryUserId = getPrimaryUserId(chatItem.user!)
+
+      if (eligibleEmojiUserIds.includes(primaryUserId)) {
+        await this.emojiService.signEmojiImages(chatItem.chatMessageParts)
+      } else {
+        chatItem.chatMessageParts.forEach(part => {
+          if (part.emoji != null) {
+            part.emoji.imageUrl = INACCESSIBLE_EMOJI
+            part.emoji.image.fingerprint = INACCESSIBLE_EMOJI
+            part.emoji.image.originalUrl = INACCESSIBLE_EMOJI
+            part.emoji.image.url = INACCESSIBLE_EMOJI
+          } else if (part.customEmoji?.emoji != null) {
+            part.customEmoji.emoji.imageUrl = INACCESSIBLE_EMOJI
+            part.customEmoji.emoji.image.fingerprint = INACCESSIBLE_EMOJI
+            part.customEmoji.emoji.image.originalUrl = INACCESSIBLE_EMOJI
+            part.customEmoji.emoji.image.url = INACCESSIBLE_EMOJI
+          }
+        })
+      }
+    }
+
+    return chatItem
+  }
+
   /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream.
    * If `deletedOnly` is not provided, returns only active chat messages. If true, returns only deleted messages since the given time (respecting all other provided filters). */
   public async getChatSince (streamerId: number, since: number, beforeOrAt?: number, limit?: number, userIds?: number[], deletedOnly?: boolean): Promise<ChatItemWithRelations[]> {
@@ -84,7 +114,7 @@ export default class ChatService extends ContextClass {
     await Promise.all(chatItems.map(item => this.customEmojiService.signEmojiImages(item.chatMessageParts)))
 
     // if there are emojis, make sure we return emoji info only for eligible users' messages
-    if (chatItems.some(c => c.chatMessageParts.find(p => p.emoji != null))) {
+    if (chatItems.some(c => c.chatMessageParts.find(p => p.emoji != null || p.customEmoji?.emoji != null))) {
       const eligibleEmojiUserIds = await this.emojiService.getEligibleEmojiUsers(streamerId)
 
       chatItems.forEach(item => {
