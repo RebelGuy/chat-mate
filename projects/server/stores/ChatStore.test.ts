@@ -223,6 +223,7 @@ export default () => {
       expect(chatMessage!.youtubeLivestreamId).toBe(youtubeLivestream.id)
       expect(chatMessage!.twitchLivestreamId).toBeNull()
       expect(result).toEqual(expectObject(chatMessage!))
+      expect(result!.user.id).toBe(youtube1UserId)
     })
 
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
@@ -262,6 +263,7 @@ export default () => {
       expect(chatMessage!.youtubeLivestreamId).toBeNull()
       expect(chatMessage!.twitchLivestreamId).toBe(twitchLivestream.id)
       expect(result).toEqual(expectObject(chatMessage!))
+      expect(result!.user.id).toBe(twitchUserId)
     })
 
     test('returns null if the chat message already exists', async () => {

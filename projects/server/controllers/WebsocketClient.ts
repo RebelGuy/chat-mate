@@ -6,7 +6,7 @@ import { Request } from 'express'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import LogService from '@rebel/server/services/LogService'
 import { ServerMessage, parseClientMessage } from '@rebel/api-models/websocket'
-import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, EventData } from '@rebel/server/services/EventDispatchService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
@@ -104,6 +104,7 @@ export default class WebsocketClient extends ContextClass {
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
+    this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
   }
 
   private onOpen = () => {
@@ -135,6 +136,9 @@ export default class WebsocketClient extends ContextClass {
         if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)) {
           this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
         }
+        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)) {
+          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
+        }
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -145,6 +149,7 @@ export default class WebsocketClient extends ContextClass {
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
+        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -281,6 +286,26 @@ export default class WebsocketClient extends ContextClass {
     } catch (e: any) {
       this.logService.logError(this, 'Unable to dispatch donation event', event, e)
     }
+  }
+
+  private onNewViewer = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER]) => {
+    const userData = await this.apiService.getAllData([event.primaryUserId]).then(single)
+
+    this.send({
+      type: 'event',
+      data: {
+        topic: 'streamerEvents',
+        streamer: await this.getStreamerName(event.streamerId),
+        data: {
+          ...emptyPublicChatMateEvent,
+          type: 'newViewer',
+          timestamp: Date.now(),
+          newViewerData: {
+            user: userDataToPublicUser(userData)
+          }
+        }
+      }
+    })
   }
 
   private async getStreamerName (streamerId: number) {

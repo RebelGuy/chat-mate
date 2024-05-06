@@ -1,4 +1,4 @@
-import { ChatMessage, ChatMessagePart, Prisma } from '@prisma/client'
+import { ChatMessage, ChatMessagePart, ChatUser, Prisma } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem, ChatItemWithRelations, PartialChatMessage, PartialCheerChatMessage, PartialTextChatMessage } from '@rebel/server/models/chat'
@@ -13,6 +13,8 @@ export type ChatSave = {
   continuationToken: string | null
   chat: ChatItem[]
 }
+
+export type AddedChatMessage = ChatMessage & { user: ChatUser }
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -34,7 +36,7 @@ export default class ChatStore extends ContextClass {
   }
 
   /** Adds the chat item and returns it when done. Returns null if the chat item already exists. */
-  public async addChat (chatItem: ChatItem, streamerId: number, defaultUserId: number, channelId: string): Promise<ChatMessage | null> {
+  public async addChat (chatItem: ChatItem, streamerId: number, defaultUserId: number, channelId: string): Promise<AddedChatMessage | null> {
     // get the youtube or twitch livestream that this chat message belongs to, if any
     let youtubeLivestreamPart: Prisma.ChatMessageCreateInput['youtubeLivestream']
     let twitchLivestreamPart: Prisma.ChatMessageCreateInput['twitchLivestream']
@@ -59,7 +61,7 @@ export default class ChatStore extends ContextClass {
     // there is a race condition where the client may request messages whose message parts haven't yet been
     // completely written to the DB. bundle everything into a single transaction to solve this.
     return await this.db.$transaction(async (db) => {
-      let chatMessage: ChatMessage & { chatMessageParts: ChatMessagePart[] }
+      let chatMessage: ChatMessage & { chatMessageParts: ChatMessagePart[], user: ChatUser | null }
       try {
         chatMessage = await db.chatMessage.create({
           data: {
@@ -73,7 +75,7 @@ export default class ChatStore extends ContextClass {
             youtubeLivestream: youtubeLivestreamPart,
             twitchLivestream: twitchLivestreamPart
           },
-          include: { chatMessageParts: true }
+          include: { chatMessageParts: true, user: true }
         })
       } catch (e: any) {
         if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED) {
@@ -95,7 +97,9 @@ export default class ChatStore extends ContextClass {
       }
 
       await Promise.all(createParts)
-      return chatMessage
+
+      // a user always exists for chat messages
+      return chatMessage as AddedChatMessage
     }, {
       timeout: this.dbTransactionTimeout ?? undefined
     })
@@ -139,13 +143,14 @@ export default class ChatStore extends ContextClass {
 
   /** For each user, returns the time of the first chat item authored by the user or any of its linked users.
    * @throws {@link ChatMessageForStreamerNotFoundError}: When no chat message was found for any of the given user ids for the specified streamer. */
-  public async getTimeOfFirstChat (streamerId: number, primaryUserIds: number[]): Promise<{ primaryUserId: number, firstSeen: number }[]> {
+  public async getTimeOfFirstChat (streamerId: number, primaryUserIds: number[]): Promise<{ primaryUserId: number, firstSeen: number, messageId: number }[]> {
     const userTimes = await this.db.chatMessage.findMany({
       distinct: ['userId'],
       orderBy: {
         time: 'asc'
       },
       select: {
+        id: true,
         time: true,
         user: true
       },
@@ -163,7 +168,7 @@ export default class ChatStore extends ContextClass {
       if (userTime == null) {
         throw new ChatMessageForStreamerNotFoundError(`Could not find a chat message for primary user ${id} for streamer ${streamerId}`)
       } else {
-        return { primaryUserId: id, firstSeen: userTime.time.getTime() }
+        return { primaryUserId: id, firstSeen: userTime.time.getTime(), messageId: userTime.id }
       }
     })
   }

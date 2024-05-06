@@ -30,6 +30,9 @@ export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER = Symbol()
 /** Fires when a ChatMate donation event occurs. */
 export const EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION = Symbol()
 
+/** Fires when a new viewer joins a streamer's chat. */
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER = Symbol()
+
 export type EventData = {
   [EVENT_CHAT_ITEM]: ChatItem & {
     streamerId: number
@@ -63,9 +66,12 @@ export type EventData = {
     userDisplayName: string
   }
 
-  [EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION] : DonationWithUser
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION]: DonationWithUser
 
-  // todo: new viewer
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER]: {
+    streamerId: number
+    primaryUserId: number
+  }
 
   // todo: deleted message
 
