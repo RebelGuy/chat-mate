@@ -6,7 +6,7 @@ import { Request } from 'express'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import LogService from '@rebel/server/services/LogService'
 import { ServerMessage, parseClientMessage } from '@rebel/api-models/websocket'
-import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, EventData } from '@rebel/server/services/EventDispatchService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
@@ -19,6 +19,10 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import ChatService from '@rebel/server/services/ChatService'
 import { PublicLevelUpData } from '@rebel/api-models/public/event/PublicLevelUpData'
 import { userDataToPublicUser } from '@rebel/server/models/user'
+import { ExternalRank } from '@rebel/server/services/rank/RankService'
+import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
+import { getUserName } from '@rebel/server/services/ChannelService'
+import ChannelStore from '@rebel/server/stores/ChannelStore'
 
 const emptyPublicChatMateEvent = {
   levelUpData: null,
@@ -41,6 +45,7 @@ type Deps = Dependencies<{
   accountStore: AccountStore
   streamerStore: StreamerStore
   chatService: ChatService
+  channelStore: ChannelStore
 }>
 
 let id = 0
@@ -59,6 +64,7 @@ export default class WebsocketClient extends ContextClass {
   private readonly accountStore: AccountStore
   private readonly streamerStore: StreamerStore
   private readonly chatService: ChatService
+  private readonly channelStore: ChannelStore
 
   private readonly id: number
 
@@ -76,6 +82,7 @@ export default class WebsocketClient extends ContextClass {
     this.accountStore = deps.resolve('accountStore')
     this.streamerStore = deps.resolve('streamerStore')
     this.chatService = deps.resolve('chatService')
+    this.channelStore = deps.resolve('channelStore')
 
     this.id = id++
     this.name = `${WebsocketClient.name}-${this.id}`
@@ -106,6 +113,7 @@ export default class WebsocketClient extends ContextClass {
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
+    this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
   }
 
   private onOpen = () => {
@@ -143,6 +151,9 @@ export default class WebsocketClient extends ContextClass {
         if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)) {
           this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
         }
+        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)) {
+          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
+        }
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -155,6 +166,7 @@ export default class WebsocketClient extends ContextClass {
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
+        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -339,6 +351,70 @@ export default class WebsocketClient extends ContextClass {
     }
   }
 
+  // todo: when you're not drunk, confirm the ignoreOptions are handled correctly here. i have no recollection of how they work lol
+  private onRankUpdate = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE]) => {
+    try {
+      const rankEvent = event.rankEvent
+      const userData = await this.apiService.getAllData([rankEvent.userId]).then(single)
+      const youtubeRankResults = rankEvent.data?.youtubeRankResults ?? []
+      const twitchRankResults = rankEvent.data?.twitchRankResults ?? []
+      const ignoreOptions = rankEvent.data?.ignoreOptions ?? null
+
+      let youtubeChannelIds = youtubeRankResults.map(r => r.youtubeChannelId)
+      if (ignoreOptions?.youtubeChannelId != null) {
+        youtubeChannelIds.push(ignoreOptions.youtubeChannelId)
+      }
+      let twitchChannelIds = twitchRankResults.map(r => r.twitchChannelId)
+      if (ignoreOptions?.twitchChannelId != null) {
+        twitchChannelIds.push(ignoreOptions.twitchChannelId)
+      }
+      const [youtubeChannels, twitchChannels] = await Promise.all([
+        this.channelStore.getYoutubeChannelsFromChannelIds(youtubeChannelIds),
+        this.channelStore.getTwitchChannelsFromChannelIds(twitchChannelIds)
+      ])
+
+      let platformRanks: PublicPlatformRank[] = [
+        ...youtubeRankResults.map<PublicPlatformRank>(r => {
+          const channel = youtubeChannels.find(c => c.platformInfo.channel.id === r.youtubeChannelId)!
+          return { platform: 'youtube', channelName: getUserName(channel), success: r.error == null }
+        }),
+        ...twitchRankResults.map<PublicPlatformRank>(r => {
+          const channel = twitchChannels.find(c => c.platformInfo.channel.id === r.twitchChannelId)!
+          return { platform: 'twitch', channelName: getUserName(channel), success: r.error == null }
+        })
+      ]
+
+      if (ignoreOptions?.youtubeChannelId != null) {
+        const channel = youtubeChannels.find(c => c.platformInfo.channel.id === ignoreOptions.youtubeChannelId)!
+        platformRanks.unshift({ platform: 'youtube', channelName: getUserName(channel), success: true })
+      } else if (ignoreOptions?.twitchChannelId != null) {
+        const channel = twitchChannels.find(c => c.platformInfo.channel.id === ignoreOptions.twitchChannelId)!
+        platformRanks.push({ platform: 'twitch', channelName: getUserName(channel), success: true })
+      }
+
+      this.send({
+        type: 'event',
+        data: {
+          topic: 'streamerEvents',
+          streamer: await this.getStreamerName(event.streamerId),
+          data: {
+            ...emptyPublicChatMateEvent,
+            type: 'newViewer',
+            timestamp: Date.now(),
+            rankUpdateData: {
+              rankName: rankEvent.rank.name as ExternalRank,
+              isAdded: rankEvent.isAdded,
+              user: userDataToPublicUser(userData),
+              platformRanks: platformRanks
+            }
+          }
+        }
+      })
+    } catch (e: any) {
+      this.logService.logError(this, 'Unable to dispatch rank update event', event, e)
+    }
+  }
+
   private async getStreamerName (streamerId: number) {
     const streamer = await this.streamerStore.getStreamerById(streamerId)
     const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer!.registeredUserId]).then(single)
@@ -374,8 +450,6 @@ export default class WebsocketClient extends ContextClass {
       }
     })
   }
-
-  // this should handle messages and route them to the correct service.
-  // it should also subscribe to chatmate internal events and notify subscribed clients.
-  // since this is a transient service, all state needs to be stored in a stateservice
 }
+
+// todo: since this is a transient service, all state needs to be stored in a stateservice

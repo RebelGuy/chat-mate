@@ -6,7 +6,7 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import RankStore, { AddUserRankArgs, groupFilter, RankEventData, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { addTime } from '@rebel/shared/util/datetime'
 import { assert, assertUnreachable } from '@rebel/shared/util/typescript'
-import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import RankService, { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { single } from '@rebel/shared/util/arrays'
 import UserService from '@rebel/server/services/UserService'
 import YoutubeService from '@rebel/server/services/YoutubeService'
@@ -33,6 +33,7 @@ type Deps = Dependencies<{
   rankStore: RankStore
   userService: UserService
   youtubeService: YoutubeService
+  rankService: RankService
 }>
 
 export default class PunishmentService extends ContextClass {
@@ -44,6 +45,7 @@ export default class PunishmentService extends ContextClass {
   private readonly channelStore: ChannelStore
   private readonly userService: UserService
   private readonly youtubeService: YoutubeService
+  private readonly rankService: RankService
 
   constructor (deps: Deps) {
     super()
@@ -54,6 +56,7 @@ export default class PunishmentService extends ContextClass {
     this.channelStore = deps.resolve('channelStore')
     this.userService = deps.resolve('userService')
     this.youtubeService = deps.resolve('youtubeService')
+    this.rankService = deps.resolve('rankService')
   }
 
   public async getCurrentPunishments (streamerId: number): Promise<UserRankWithRelations[]> {
@@ -94,7 +97,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    this.rankStore.addRankEvent(streamerId, primaryUserId, true, 'ban', rankEventData)
+    this.rankService.addRankEvent(streamerId, primaryUserId, true, 'ban', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -131,7 +134,7 @@ export default class PunishmentService extends ContextClass {
     }
     const rank = await this.rankStore.addUserRank(args)
 
-    this.rankStore.addRankEvent(streamerId, primaryUserId, true, 'mute', null)
+    this.rankService.addRankEvent(streamerId, primaryUserId, true, 'mute', null)
 
     return rank
   }
@@ -167,7 +170,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    this.rankStore.addRankEvent(streamerId, primaryUserId, true, 'timeout', rankEventData)
+    this.rankService.addRankEvent(streamerId, primaryUserId, true, 'timeout', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -210,7 +213,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    this.rankStore.addRankEvent(streamerId, primaryUserId, false, 'ban', rankEventData)
+    this.rankService.addRankEvent(streamerId, primaryUserId, false, 'ban', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -229,7 +232,7 @@ export default class PunishmentService extends ContextClass {
     }
     const rank = await this.rankStore.removeUserRank(args)
 
-    this.rankStore.addRankEvent(streamerId, primaryUserId, false, 'mute', null)
+    this.rankService.addRankEvent(streamerId, primaryUserId, false, 'mute', null)
 
     return rank
   }
@@ -262,7 +265,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    this.rankStore.addRankEvent(streamerId, primaryUserId, false, 'timeout', rankEventData)
+    this.rankService.addRankEvent(streamerId, primaryUserId, false, 'timeout', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }

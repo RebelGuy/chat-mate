@@ -1,6 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ModService, { IgnoreOptions } from '@rebel/server/services/rank/ModService'
-import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import RankService, { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs } from '@rebel/server/stores/RankStore'
@@ -17,6 +17,7 @@ let mockRankStore: MockProxy<RankStore>
 let mockTwurpleService: MockProxy<TwurpleService>
 let mockUserService: MockProxy<UserService>
 let mockYoutubeService: MockProxy<YoutubeService>
+let mockRankService: MockProxy<RankService>
 let modService: ModService
 
 beforeEach(() => {
@@ -25,6 +26,7 @@ beforeEach(() => {
   mockTwurpleService = mock()
   mockUserService = mock()
   mockYoutubeService = mock()
+  mockRankService = mock()
 
   modService = new ModService(new Dependencies({
     channelStore: mockChannelStore,
@@ -32,7 +34,8 @@ beforeEach(() => {
     rankStore: mockRankStore,
     twurpleService: mockTwurpleService,
     userService: mockUserService,
-    youtubeService: mockYoutubeService
+    youtubeService: mockYoutubeService,
+    rankService: mockRankService
   }))
 })
 
@@ -75,7 +78,7 @@ describe(nameof(ModService, 'setModRank'), () => {
     const twitchCalls = mockTwurpleService.modChannel.mock.calls
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mod', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
@@ -125,7 +128,7 @@ describe(nameof(ModService, 'setModRank'), () => {
     const twitchCalls = mockTwurpleService.unmodChannel.mock.calls
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'mod', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],

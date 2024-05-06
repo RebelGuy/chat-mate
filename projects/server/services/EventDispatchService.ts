@@ -4,6 +4,7 @@ import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { ChatMessage } from '@prisma/client'
 import { Level } from '@rebel/server/services/ExperienceService'
 import { DonationWithUser } from '@rebel/server/services/DonationService'
+import { ParsedRankEvent } from '@rebel/server/stores/RankStore'
 
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
@@ -35,6 +36,9 @@ export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER = Symbol()
 
 /** Fires when a message in a streamer's chat has been deleted. */
 export const EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED = Symbol()
+
+/** Fires when a message in a streamer's chat has been deleted. */
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE = Symbol()
 
 export type EventData = {
   [EVENT_CHAT_ITEM]: ChatItem & {
@@ -81,7 +85,10 @@ export type EventData = {
     chatMessageId: number
   }
 
-  // todo: rank update
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE]: {
+    streamerId: number
+    rankEvent: ParsedRankEvent
+  }
 }
 
 export type DataPair<T extends keyof EventData> = [T, EventData[T]]

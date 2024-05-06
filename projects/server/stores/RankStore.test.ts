@@ -108,7 +108,9 @@ export default () => {
         twitchRankResults: [{ twitchChannelId: 5, error: null }, { twitchChannelId: 6, error: 'test' }]
       }
 
-      await rankStore.addRankEvent(streamer2, user2, true, 'ban', eventData)
+      const result = await rankStore.addRankEvent(streamer2, user2, true, 'ban', eventData)
+
+      expect(result).toEqual(expectObject(result, { id: 1, data: eventData }))
 
       const storedData = await db.rankEvent.findMany({}).then(single)
       expect(storedData).toEqual(expectObject(storedData, {
@@ -119,7 +121,9 @@ export default () => {
     })
 
     test('Adds the rank event without data', async () => {
-      await rankStore.addRankEvent(streamer2, user2, true, 'ban', null)
+      const result = await rankStore.addRankEvent(streamer2, user2, true, 'ban', null)
+
+      expect(result).toEqual(expectObject(result, { id: 1, data: null }))
 
       const storedData = await db.rankEvent.findMany({}).then(single)
       expect(storedData).toEqual(expectObject(storedData, {

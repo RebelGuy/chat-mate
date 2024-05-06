@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
-import { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import RankService, { InternalRankResult, SetActionRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import UserService from '@rebel/server/services/UserService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
@@ -23,6 +23,7 @@ type Deps = Dependencies<{
   logService: LogService
   userService: UserService
   youtubeService: YoutubeService
+  rankService: RankService
 }>
 
 export default class ModService extends ContextClass {
@@ -34,6 +35,7 @@ export default class ModService extends ContextClass {
   private readonly logService: LogService
   private readonly userService: UserService
   private readonly youtubeService: YoutubeService
+  private readonly rankService: RankService
 
   constructor (deps: Deps) {
     super()
@@ -44,6 +46,7 @@ export default class ModService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.userService = deps.resolve('userService')
     this.youtubeService = deps.resolve('youtubeService')
+    this.rankService = deps.resolve('rankService')
   }
 
   // todo: currently, ChatMate is assumed to be the source of truth of rank data.
@@ -73,7 +76,7 @@ export default class ModService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    this.rankStore.addRankEvent(streamerId, primaryUserId, isMod, 'mod', rankEventData)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, isMod, 'mod', rankEventData)
 
     return {
       rankResult: internalRankResult,
