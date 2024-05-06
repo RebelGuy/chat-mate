@@ -16,6 +16,7 @@ import { addTime, maxTime } from '@rebel/shared/util/datetime'
 import { ChatMateError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 import { CurrencyCode } from '@rebel/server/constants'
 import { Donation } from '@prisma/client'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION } from '@rebel/server/services/EventDispatchService'
 
 export type DonationWithMessage = Donation & {
   messageParts: ChatItemWithRelations['chatMessageParts']
@@ -53,6 +54,7 @@ type Deps = Dependencies<{
   logService: LogService
   accountService: AccountService
   userService: UserService
+  eventDispatchService: EventDispatchService
   isAdministrativeMode: () => boolean
 }>
 
@@ -69,6 +71,7 @@ export default class DonationService extends ContextClass {
   private readonly logService: LogService
   private readonly accountService: AccountService
   private readonly userService: UserService
+  private readonly eventDispatchService: EventDispatchService
   private readonly isAdministrativeMode: () => boolean
 
   constructor (deps: Deps) {
@@ -84,6 +87,7 @@ export default class DonationService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.accountService = deps.resolve('accountService')
     this.userService = deps.resolve('userService')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
@@ -125,7 +129,12 @@ export default class DonationService extends ContextClass {
       time: new Date(donation.createdAt),
       messageParts: messageParts
     }
-    return await this.donationStore.addDonation(data)
+    const donationId = await this.donationStore.addDonation(data)
+
+    const createdDonation = await this.donationStore.getDonation(streamerId, donationId)
+    void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, createdDonation)
+
+    return donationId
   }
 
   public async getDonation (streamerId: number, donationId: number): Promise<DonationWithUser> {

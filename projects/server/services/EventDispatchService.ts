@@ -3,6 +3,7 @@ import { ChatItem } from '@rebel/server/models/chat'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { ChatMessage } from '@prisma/client'
 import { Level } from '@rebel/server/services/ExperienceService'
+import { DonationWithUser } from '@rebel/server/services/DonationService'
 
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
@@ -62,7 +63,7 @@ export type EventData = {
     userDisplayName: string
   }
 
-  // todo: donation
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION] : DonationWithUser
 
   // todo: new viewer
 

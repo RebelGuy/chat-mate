@@ -6,14 +6,14 @@ import { Request } from 'express'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import LogService from '@rebel/server/services/LogService'
 import { ServerMessage, parseClientMessage } from '@rebel/api-models/websocket'
-import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EventData } from '@rebel/server/services/EventDispatchService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import RankStore from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
-import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
+import { chatAndLevelToPublicChatItem, toPublicMessagePart } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import ChatService from '@rebel/server/services/ChatService'
@@ -103,6 +103,7 @@ export default class WebsocketClient extends ContextClass {
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
+    this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
   }
 
   private onOpen = () => {
@@ -131,6 +132,9 @@ export default class WebsocketClient extends ContextClass {
         if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)) {
           this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
         }
+        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)) {
+          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
+        }
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -140,6 +144,7 @@ export default class WebsocketClient extends ContextClass {
       } else if (parsedMessage.data.topic === 'streamerEvents') {
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
+        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -242,6 +247,39 @@ export default class WebsocketClient extends ContextClass {
       })
     } catch (e: any) {
       this.logService.logError(this, 'Unable to dispatch new follower event', event, e)
+    }
+  }
+
+  private onDonation = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION]) => {
+    try {
+      const user = event.primaryUserId == null ? null : await this.apiService.getAllData([event.primaryUserId], event.streamerId)
+        .then(single)
+        .then(userDataToPublicUser)
+
+      this.send({
+        type: 'event',
+        data: {
+          topic: 'streamerEvents',
+          streamer: await this.getStreamerName(event.streamerId),
+          data: {
+            ...emptyPublicChatMateEvent,
+            type: 'donation',
+            timestamp: Date.now(),
+            donationData: {
+              id: event.id,
+              time: event.time.getTime(),
+              amount: event.amount,
+              formattedAmount: event.formattedAmount,
+              currency: event.currency,
+              name: event.name,
+              messageParts: event.messageParts.map(toPublicMessagePart),
+              linkedUser: user
+            }
+          }
+        }
+      })
+    } catch (e: any) {
+      this.logService.logError(this, 'Unable to dispatch donation event', event, e)
     }
   }
 
