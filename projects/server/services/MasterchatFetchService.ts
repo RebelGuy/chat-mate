@@ -200,7 +200,7 @@ export default class MasterchatFetchService extends ContextClass {
         } else if (action.type === 'timeoutUserAction') {
           await this.externalRankEventService.onYoutubeChannelTimedOut(streamerId, action.userChannelName, action.moderatorChannelName, action.durationSeconds)
         } else if (action.type === 'markChatItemAsDeletedAction') {
-          await this.chatService.onChatItemRemoved(action.targetId)
+          await this.chatService.onChatItemDeleted(action.targetId)
         }
       }
     }

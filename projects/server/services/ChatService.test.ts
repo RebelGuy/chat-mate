@@ -10,7 +10,7 @@ import { single, single2 } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
-import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED, EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED, EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { ChatMessage, YoutubeLivestream, TwitchLivestream } from '@prisma/client'
 import CommandService, { NormalisedCommand } from '@rebel/server/services/command/CommandService'
@@ -232,14 +232,34 @@ describe(nameof(ChatService, 'getChatSince'), () => {
   })
 })
 
-describe(nameof(ChatService, 'onChatItemRemoved'), () => {
-  test('Removes the chat item', async () => {
+describe(nameof(ChatService, 'onChatItemDeleted'), () => {
+  test('Removes the chat item, fires event if deleted', async () => {
     const externalMessageId = 'messageId'
+    const streamerId = 5123
+    const chatMessageId = 5
+    mockChatStore.deleteChat.calledWith(externalMessageId).mockResolvedValue(cast<ChatMessage>({ id: chatMessageId, streamerId }))
 
-    await chatService.onChatItemRemoved(externalMessageId)
+    await chatService.onChatItemDeleted(externalMessageId)
 
-    const providedMessageId = single2(mockChatStore.removeChat.mock.calls)
+    const providedMessageId = single2(mockChatStore.deleteChat.mock.calls)
     expect(providedMessageId).toBe(externalMessageId)
+
+    const eventCall = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventCall).toEqual(expectObject(eventCall, [EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, { streamerId, chatMessageId }]))
+  })
+
+  test('Removes the chat item, does not fire event if not deleted', async () => {
+    const externalMessageId = 'messageId'
+    const streamerId = 5123
+    const chatMessageId = 5
+    mockChatStore.deleteChat.calledWith(externalMessageId).mockResolvedValue(null)
+
+    await chatService.onChatItemDeleted(externalMessageId)
+
+    const providedMessageId = single2(mockChatStore.deleteChat.mock.calls)
+    expect(providedMessageId).toBe(externalMessageId)
+
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
 })
 

@@ -33,6 +33,9 @@ export const EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION = Symbol()
 /** Fires when a new viewer joins a streamer's chat. */
 export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER = Symbol()
 
+/** Fires when a message in a streamer's chat has been deleted. */
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED = Symbol()
+
 export type EventData = {
   [EVENT_CHAT_ITEM]: ChatItem & {
     streamerId: number
@@ -73,7 +76,10 @@ export type EventData = {
     primaryUserId: number
   }
 
-  // todo: deleted message
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED]: {
+    streamerId: number
+    chatMessageId: number
+  }
 
   // todo: rank update
 }

@@ -244,17 +244,17 @@ export default class ChatStore extends ContextClass {
     })
   }
 
-  /** Marks the specified message as deleted. Returns true if the message was deleted. */
-  public async removeChat (externalMessageId: string): Promise<boolean> {
-    const newMessage = await this.db.chatMessage.updateMany({
-      where: {
-        externalId: externalMessageId,
-        deletedTime: null
-      },
+  /** Marks the specified message as deleted. Returns the deleted message if deletion succeeded. */
+  public async deleteChat (externalMessageId: string): Promise<ChatMessage | null> {
+    const existingMessage = await this.db.chatMessage.findFirst({ where: { externalId: externalMessageId }})
+    if (existingMessage == null || existingMessage.deletedTime != null) {
+      return null
+    }
+
+    return await this.db.chatMessage.update({
+      where: { externalId: externalMessageId },
       data: { deletedTime: new Date() }
     })
-
-    return newMessage.count > 0
   }
 }
 

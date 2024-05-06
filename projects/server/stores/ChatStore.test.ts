@@ -928,37 +928,37 @@ export default () => {
     })
   })
 
-  describe(nameof(ChatStore, 'removeChat'), () => {
+  describe(nameof(ChatStore, 'deleteChat'), () => {
     test('Marks the message as removed and returns true', async () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      const result = await chatStore.removeChat(chatItem1.id)
+      const result = await chatStore.deleteChat(chatItem1.id)
 
-      expect(result).toBe(true)
+      expect(result).toEqual(expectObject(result, { id: 1 }))
       const storedMessage = await db.chatMessage.findFirst()
       expect(storedMessage!.deletedTime).not.toBeNull()
     })
 
-    test('Returns false if the message was not found', async () => {
+    test('Returns null if the message was not found', async () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      const result = await chatStore.removeChat('unknown id')
+      const result = await chatStore.deleteChat('unknown id')
 
-      expect(result).toBe(false)
+      expect(result).toBeNull()
       const storedMessage = await db.chatMessage.findFirst()
       expect(storedMessage!.deletedTime).toBeNull()
     })
 
-    test('Returns false if the message was already deleted', async () => {
+    test('Returns null if the message was already deleted', async () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
       await db.chatMessage.updateMany({ data: { deletedTime: data.time1 }})
 
-      const result = await chatStore.removeChat(chatItem1.id)
+      const result = await chatStore.deleteChat(chatItem1.id)
 
-      expect(result).toBe(false)
+      expect(result).toBeNull()
       const storedMessage = await db.chatMessage.findFirst()
       expect(storedMessage!.deletedTime).toEqual(data.time1)
     })

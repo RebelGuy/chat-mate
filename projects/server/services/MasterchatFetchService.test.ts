@@ -283,7 +283,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
 
     await masterchatFetchService.initialise()
 
-    const externalId = single2(mockChatService.onChatItemRemoved.mock.calls)
+    const externalId = single2(mockChatService.onChatItemDeleted.mock.calls)
     expect(externalId).toBe(chatAction7.targetId)
   })
 })
