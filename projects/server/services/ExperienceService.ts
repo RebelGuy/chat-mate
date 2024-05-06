@@ -158,14 +158,17 @@ export default class ExperienceService extends ContextClass {
 
     // check if the user's level increased and, if so, fire an event
     const userExperiences = await this.experienceStore.getExperience(streamerId, [primaryUserId]).then(single)
-    const clampedExperience = clamp(userExperiences.experience, 0, null)
-    const levelAfter = this.experienceHelpers.calculateLevel(clampedExperience)
-    const levelBefore = this.experienceHelpers.calculateLevel(clamp(userExperiences.experience - xpAmount, 0, null))
+    const xpAfter = clamp(userExperiences.experience, 0, null)
+    const xpBefore = clamp(userExperiences.experience - xpAmount, 0, null)
+    const levelAfter = this.experienceHelpers.calculateLevel(xpAfter)
+    const levelBefore = this.experienceHelpers.calculateLevel(xpBefore)
 
     if (levelAfter.level > levelBefore.level) {
-      await this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, {
+      void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, {
         streamerId: streamerId,
-        userLevel: { primaryUserId, level: { ...levelAfter, totalExperience: clampedExperience }}
+        primaryUserId: primaryUserId,
+        oldLevel: { ...levelBefore, totalExperience: xpBefore },
+        newLevel: { ...levelAfter, totalExperience: xpAfter }
       })
     }
   }
@@ -298,7 +301,12 @@ export default class ExperienceService extends ContextClass {
     const updatedLevel = await this.getLevels(streamerId, [primaryUserId]).then(single)
 
     if (updatedLevel.level.level > currentLevel.level) {
-      await this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, userLevel: updatedLevel })
+      void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, {
+        streamerId: streamerId,
+        primaryUserId: primaryUserId,
+        oldLevel: { ...currentLevel, totalExperience: effectiveExperience },
+        newLevel: updatedLevel.level
+      })
     }
 
     return updatedLevel

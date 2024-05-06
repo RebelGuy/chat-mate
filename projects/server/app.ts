@@ -106,6 +106,7 @@ import EmojiService from '@rebel/server/services/EmojiService'
 import EmojiStore from '@rebel/server/stores/EmojiStore'
 import expressWs from 'express-ws'
 import WebsocketClient from '@rebel/server/controllers/WebsocketClient'
+import FollowerService from '@rebel/server/services/FollowerService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -260,6 +261,7 @@ const main = async () => {
     .withClass('masterchatStore', MasterchatStore)
     .withClass('followerStore', FollowerStore)
     .withClass('masterchatFetchService', MasterchatFetchService)
+    .withClass('followerService', FollowerService)
     .withClass('helixEventService', HelixEventService)
     .withClass('donationFetchService', DonationFetchService)
     .withClass('chatMateEventService', ChatMateEventService)

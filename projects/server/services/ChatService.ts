@@ -209,7 +209,7 @@ export default class ChatService extends ContextClass {
       // visual inconsitency. so for now just acknowledge this and leave it.
       message = await this.chatStore.addChat(item, streamerId, channel.userId, externalId)
 
-      this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_ITEM, message!)
+      void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_ITEM, message!)
 
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)

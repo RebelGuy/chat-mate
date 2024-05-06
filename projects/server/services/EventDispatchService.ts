@@ -2,7 +2,7 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatItem } from '@rebel/server/models/chat'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { ChatMessage } from '@prisma/client'
-import { UserLevel } from '@rebel/server/services/ExperienceService'
+import { Level } from '@rebel/server/services/ExperienceService'
 
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
@@ -52,7 +52,9 @@ export type EventData = {
 
   [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP]: {
     streamerId: number
-    userLevel: UserLevel
+    primaryUserId: number
+    oldLevel: Level
+    newLevel: Level
   }
 
   [EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER]: {

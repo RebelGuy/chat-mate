@@ -211,7 +211,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(storeData[4]).toEqual(expectedStoreData[4])
 
     const eventCall = single(mockEventDispatchService.addData.mock.calls)
-    expect(eventCall).toEqual(expectObjectDeep(eventCall, [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, userLevel: {} }]))
+    expect(eventCall).toEqual(expectObjectDeep(eventCall, [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, oldLevel: {}, newLevel: {} }]))
   })
 })
 
@@ -379,7 +379,7 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     expect(result).toEqual<UserLevel>({ primaryUserId: primaryUserId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
 
     const eventCall = single(mockEventDispatchService.addData.mock.calls)
-    expect(eventCall).toEqual<typeof eventCall>([EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, userLevel: result }])
+    expect(eventCall).toEqual(expectObjectDeep(eventCall, [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, oldLevel: { }, newLevel: result.level }]))
   })
 
   test('level does not fall below 0', async () => {

@@ -122,7 +122,7 @@ export default class StreamerChannelService extends ContextClass {
       assertUnreachable(platform)
     }
 
-    await this.eventDispatchService.addData(EVENT_ADD_PRIMARY_CHANNEL, { streamerId, userChannel })
+    void this.eventDispatchService.addData(EVENT_ADD_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 
   /** @throws {@link PrimaryChannelNotFoundError}: When the streamer has not set a primary channel for the given platform. */
@@ -144,6 +144,6 @@ export default class StreamerChannelService extends ContextClass {
       assertUnreachable(platform)
     }
 
-    await this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
+    void this.eventDispatchService.addData(EVENT_REMOVE_PRIMARY_CHANNEL, { streamerId, userChannel })
   }
 }

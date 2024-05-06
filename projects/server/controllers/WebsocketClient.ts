@@ -6,7 +6,7 @@ import { Request } from 'express'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import LogService from '@rebel/server/services/LogService'
 import { ServerMessage, parseClientMessage } from '@rebel/api-models/websocket'
-import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EventData } from '@rebel/server/services/EventDispatchService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
@@ -16,6 +16,18 @@ import { single } from '@rebel/shared/util/arrays'
 import { chatAndLevelToPublicChatItem } from '@rebel/server/models/chat'
 import { userRankToPublicObject } from '@rebel/server/models/rank'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
+import ChatService from '@rebel/server/services/ChatService'
+import { PublicLevelUpData } from '@rebel/api-models/public/event/PublicLevelUpData'
+import { userDataToPublicUser } from '@rebel/server/models/user'
+
+const emptyPublicChatMateEvent = {
+  levelUpData: null,
+  newTwitchFollowerData: null,
+  donationData: null,
+  newViewerData: null,
+  chatMessageDeletedData: null,
+  rankUpdateData: null
+}
 
 type Deps = Dependencies<{
   request: Request
@@ -28,12 +40,13 @@ type Deps = Dependencies<{
   rankStore: RankStore
   accountStore: AccountStore
   streamerStore: StreamerStore
+  chatService: ChatService
 }>
 
 let id = 0
 
 export default class WebsocketClient extends ContextClass {
-  public readonly name = WebsocketClient.name
+  public readonly name
 
   private readonly request: Request
   private readonly apiService: ApiService
@@ -45,6 +58,7 @@ export default class WebsocketClient extends ContextClass {
   private readonly rankStore: RankStore
   private readonly accountStore: AccountStore
   private readonly streamerStore: StreamerStore
+  private readonly chatService: ChatService
 
   private readonly id: number
 
@@ -61,8 +75,10 @@ export default class WebsocketClient extends ContextClass {
     this.rankStore = deps.resolve('rankStore')
     this.accountStore = deps.resolve('accountStore')
     this.streamerStore = deps.resolve('streamerStore')
+    this.chatService = deps.resolve('chatService')
 
     this.id = id++
+    this.name = `${WebsocketClient.name}-${this.id}`
   }
 
   public override initialise (): void | Promise<void> {
@@ -85,10 +101,12 @@ export default class WebsocketClient extends ContextClass {
     this.wsClient.off('error', this.onError)
 
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
+    this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
+    this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
   }
 
   private onOpen = () => {
-    this.logService.logInfo(this, `Websocket connection for client ${this.id} established`)
+    this.logService.logInfo(this, `Websocket connection established`)
   }
 
   private onMessage = (data: RawData, isBinary: boolean) => {
@@ -107,7 +125,12 @@ export default class WebsocketClient extends ContextClass {
           this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
         }
       } else if (parsedMessage.data.topic === 'streamerEvents') {
-        // todo: subscribe to streamer events
+        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)) {
+          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
+        }
+        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)) {
+          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
+        }
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -115,7 +138,8 @@ export default class WebsocketClient extends ContextClass {
       if (parsedMessage.data.topic === 'streamerChat') {
         this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
       } else if (parsedMessage.data.topic === 'streamerEvents') {
-        // todo: unsubscribe from streamer events
+        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
+        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
       } else {
         assertUnreachable(parsedMessage.data.topic)
       }
@@ -123,22 +147,22 @@ export default class WebsocketClient extends ContextClass {
       assertUnreachable(parsedMessage)
     }
 
-    // todo: acknowledge success
+    this.send({ type: 'acknowledge', data: { success: true }})
   }
 
   private onClose = (code: number, reason: Buffer) => {
-    this.logService.logInfo(this, `Websocket connection for client ${this.id} closed with code ${code}. Reason:`, reason)
+    this.logService.logInfo(this, `Websocket connection closed with code ${code}. Reason:`, reason)
 
     void this.dispose()
   }
 
   private onError = (error: Error) => {
-    this.logService.logError(this, `Websocket connection for client ${this.id} errored:`, error)
+    this.logService.logError(this, `Websocket connection errored:`, error)
   }
 
   private onChat = async (chatData: EventData[typeof EVENT_PUBLIC_CHAT_ITEM]) => {
     try {
-      const chat = await this.chatStore.getChatById(chatData.id)
+      const chat = await this.chatService.getChatById(chatData.id)
       if (chat.user == null) {
         this.logService.logError(this, `Chat item with ID ${chat.id} does not have a user object set and cannot be processed`)
         return
@@ -146,13 +170,13 @@ export default class WebsocketClient extends ContextClass {
 
       const streamerId = chat.streamerId
       const primaryUserId = getPrimaryUserId(chat.user)
-      const [levelResult, ranksResult, registeredUserResult, firstSeenResult, customRankNamesResult, streamerUser] = await Promise.all([
+      const [levelResult, ranksResult, registeredUserResult, firstSeenResult, customRankNamesResult, streamerName] = await Promise.all([
         this.experienceService.getLevels(streamerId, [primaryUserId]).then(single),
         this.rankStore.getUserRanks([primaryUserId], streamerId).then(single),
         this.accountStore.getRegisteredUsers([primaryUserId]).then(single),
         this.chatStore.getTimeOfFirstChat(streamerId, [primaryUserId]).then(single),
         this.rankStore.getCustomRankNamesForUsers(streamerId, [primaryUserId]).then(single),
-        this.streamerStore.getStreamerById(streamerId).then(streamer => this.accountStore.getRegisteredUsersFromIds([streamer!.registeredUserId]).then(single))
+        this.getStreamerName(streamerId)
       ])
       const activeRanks = ranksResult.ranks.map(r => userRankToPublicObject(r, customRankNamesResult.customRankNames[r.rank.name]))
       const publicChatItem = chatAndLevelToPublicChatItem(chat, levelResult.level, activeRanks, registeredUserResult.registeredUser, firstSeenResult.firstSeen)
@@ -161,18 +185,71 @@ export default class WebsocketClient extends ContextClass {
         type: 'event',
         data: {
           topic: 'streamerChat',
-          streamer: streamerUser.username,
+          streamer: streamerName,
           data: publicChatItem
         }
       })
     } catch (e: any) {
-      // todo: handle error
+      this.logService.logError(this, 'Unable to dispatch chat event', chatData, e)
     }
   }
 
-  // private onChatMateEvent = (chat: EventData[typeof EVENT_CHAT_ITEM]) => {
-    
-  // }
+  private onLevelUp = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP]) => {
+    try {
+      const [streamerName, data] = await Promise.all([
+        this.getStreamerName(event.streamerId),
+        this.apiService.getAllData([event.primaryUserId], event.streamerId).then(single)
+      ])
+
+      const publicLevelUpData: PublicLevelUpData = {
+        user: userDataToPublicUser(data),
+        oldLevel: event.oldLevel.level,
+        newLevel: event.newLevel.level,
+      }
+
+      this.send({
+        type: 'event',
+        data: {
+          topic: 'streamerEvents',
+          streamer: streamerName,
+          data: {
+            ...emptyPublicChatMateEvent,
+            type: 'levelUp',
+            timestamp: Date.now(),
+            levelUpData: publicLevelUpData
+          }
+        }
+      })
+    } catch (e: any) {
+      this.logService.logError(this, 'Unable to dispatch level up event', event, e)
+    }
+  }
+
+  private onNewFollower = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER]) => {
+    try {
+      this.send({
+        type: 'event',
+        data: {
+          topic: 'streamerEvents',
+          streamer: await this.getStreamerName(event.streamerId),
+          data: {
+            ...emptyPublicChatMateEvent,
+            type: 'newTwitchFollower',
+            timestamp: Date.now(),
+            newTwitchFollowerData: { displayName: event.userDisplayName }
+          }
+        }
+      })
+    } catch (e: any) {
+      this.logService.logError(this, 'Unable to dispatch new follower event', event, e)
+    }
+  }
+
+  private async getStreamerName (streamerId: number) {
+    const streamer = await this.streamerStore.getStreamerById(streamerId)
+    const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer!.registeredUserId]).then(single)
+    return registeredUser.username
+  }
 
   private getState () {
     if (this.wsClient.readyState === this.wsClient.CONNECTING) {

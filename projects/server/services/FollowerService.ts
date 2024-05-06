@@ -26,6 +26,6 @@ export default class FollowerService extends ContextClass {
     }
 
     await this.followerStore.saveNewFollower(streamerId, twitchUserId, userName, userDisplayName)
-    await this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, { streamerId, userDisplayName })
+    void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, { streamerId, userDisplayName })
   }
 }

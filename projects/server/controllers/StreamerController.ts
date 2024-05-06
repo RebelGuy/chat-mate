@@ -598,7 +598,6 @@ export default class StreamerController extends ControllerBase {
   @GET
   @Path('events')
   @PreProcessor(requireStreamer)
-  @PreProcessor(requireRank('owner'))
   public async getEvents (
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {

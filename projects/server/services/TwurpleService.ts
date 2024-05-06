@@ -109,7 +109,6 @@ export default class TwurpleService extends ContextClass {
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessageRemove((channel: string, messageId: string, msg: ClearMsg) => this.onMessageRemoved(channel, messageId))
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -340,15 +339,15 @@ export default class TwurpleService extends ContextClass {
       }
 
       this.logService.logInfo(this, _channel, 'Adding 1 new chat item')
-      this.eventDispatchService.addData(EVENT_CHAT_ITEM, { ...evaluated, streamerId: streamer.id })
+      void this.eventDispatchService.addData(EVENT_CHAT_ITEM, { ...evaluated, streamerId: streamer.id })
     } catch (e: any) {
       this.logService.logError(this, e)
     }
   }
 
-  private async onMessageRemoved (channel: string, messageId: string) {
+  private onMessageRemoved (channel: string, messageId: string) {
     this.logService.logInfo(this, channel, `Removing chat item ${messageId}`)
-    await this.eventDispatchService.addData(EVENT_CHAT_ITEM_REMOVED, { externalMessageId: messageId })
+    void this.eventDispatchService.addData(EVENT_CHAT_ITEM_REMOVED, { externalMessageId: messageId })
   }
 
   private async onConnected () {
