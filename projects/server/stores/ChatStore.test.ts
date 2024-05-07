@@ -756,8 +756,8 @@ export default () => {
       const result = await chatStore.getTimeOfFirstChat(streamer1, [youtube1UserId, twitchUserId])
 
       expect(result).toEqual(expectObject(result, [
-        { primaryUserId: youtube1UserId, firstSeen: data.time1.getTime() },
-        { primaryUserId: twitchUserId, firstSeen: data.time2.getTime() }
+        { primaryUserId: youtube1UserId, firstSeen: data.time1.getTime(), messageId: 2 },
+        { primaryUserId: twitchUserId, firstSeen: data.time2.getTime(), messageId: 5  }
       ]))
     })
 
@@ -765,8 +765,8 @@ export default () => {
       const result = await chatStore.getTimeOfFirstChat(streamer1, [aggregateUserId1, aggregateUserId2])
 
       expect(result).toEqual(expectObject(result, [
-        { primaryUserId: aggregateUserId1, firstSeen: data.time1.getTime() },
-        { primaryUserId: aggregateUserId2, firstSeen: data.time2.getTime() }
+        { primaryUserId: aggregateUserId1, firstSeen: data.time1.getTime(), messageId: 2 },
+        { primaryUserId: aggregateUserId2, firstSeen: data.time2.getTime(), messageId: 5 }
       ]))
     })
 
