@@ -12,33 +12,33 @@ import { ParsedRankEvent } from '@rebel/server/stores/RankStore'
 // INTERNAL EVENTS
 
 /** Fires when a chat item is to be added to the database. */
-export const EVENT_CHAT_ITEM = Symbol()
-export const EVENT_CHAT_ITEM_REMOVED = Symbol()
-export const EVENT_ADD_PRIMARY_CHANNEL = Symbol()
-export const EVENT_REMOVE_PRIMARY_CHANNEL = Symbol()
+export const EVENT_CHAT_ITEM = Symbol('EVENT_CHAT_ITEM')
+export const EVENT_CHAT_ITEM_REMOVED = Symbol('EVENT_CHAT_ITEM_REMOVED')
+export const EVENT_ADD_PRIMARY_CHANNEL = Symbol('EVENT_ADD_PRIMARY_CHANNEL')
+export const EVENT_REMOVE_PRIMARY_CHANNEL = Symbol('EVENT_REMOVE_PRIMARY_CHANNEL')
 
 // PUBLIC EVENTS
 
 /** Fires when a chat item was added to the database. */
-export const EVENT_PUBLIC_CHAT_ITEM = Symbol()
+export const EVENT_PUBLIC_CHAT_ITEM = Symbol('EVENT_PUBLIC_CHAT_ITEM')
 
 /** Fires when a user levels up. */
-export const EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP = Symbol()
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP')
 
 /** Fires when a new Twitch user follows the streamer's channel. */
-export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER = Symbol()
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER')
 
 /** Fires when a ChatMate donation event occurs. */
-export const EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION = Symbol()
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION')
 
 /** Fires when a new viewer joins a streamer's chat. */
-export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER = Symbol()
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER')
 
 /** Fires when a message in a streamer's chat has been deleted. */
-export const EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED = Symbol()
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED')
 
 /** Fires when a message in a streamer's chat has been deleted. */
-export const EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE = Symbol()
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE')
 
 export type EventData = {
   [EVENT_CHAT_ITEM]: ChatItem & {

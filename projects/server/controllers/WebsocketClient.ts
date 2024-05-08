@@ -5,7 +5,7 @@ import { RawData, WebSocket } from 'ws'
 import { Request } from 'express'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import LogService from '@rebel/server/services/LogService'
-import { ServerMessage, parseClientMessage } from '@rebel/api-models/websocket'
+import { ServerMessage, StreamerTopic, parseClientMessage } from '@rebel/api-models/websocket'
 import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, EventData } from '@rebel/server/services/EventDispatchService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -23,6 +23,7 @@ import { ExternalRank } from '@rebel/server/services/rank/RankService'
 import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
 import { getUserName } from '@rebel/server/services/ChannelService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
+import { NotFoundError } from '@rebel/shared/util/error'
 
 const emptyPublicChatMateEvent = {
   levelUpData: null,
@@ -32,6 +33,8 @@ const emptyPublicChatMateEvent = {
   chatMessageDeletedData: null,
   rankUpdateData: null
 }
+
+type ResolvedSubscription = `${StreamerTopic}-${number}`
 
 type Deps = Dependencies<{
   request: Request
@@ -68,6 +71,8 @@ export default class WebsocketClient extends ContextClass {
 
   private readonly id: number
 
+  private subscriptions: Set<ResolvedSubscription>
+
   constructor (deps: Deps) {
     super()
 
@@ -86,10 +91,12 @@ export default class WebsocketClient extends ContextClass {
 
     this.id = id++
     this.name = `${WebsocketClient.name}-${this.id}`
+    this.subscriptions = new Set()
   }
 
   public override initialise (): void | Promise<void> {
     this.wsClient.on('open', this.onOpen)
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.wsClient.on('message', this.onMessage)
     this.wsClient.on('close', this.onClose)
     this.wsClient.on('error', this.onError)
@@ -103,6 +110,7 @@ export default class WebsocketClient extends ContextClass {
     this.close()
 
     this.wsClient.off('open', this.onOpen)
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.wsClient.off('message', this.onMessage)
     this.wsClient.off('close', this.onClose)
     this.wsClient.off('error', this.onError)
@@ -114,67 +122,80 @@ export default class WebsocketClient extends ContextClass {
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
+
+    this.subscriptions = new Set()
   }
 
   private onOpen = () => {
     this.logService.logInfo(this, `Websocket connection established`)
   }
 
-  private onMessage = (data: RawData, isBinary: boolean) => {
-    const parsedMessage = isBinary ? null : parseClientMessage(data)
+  private onMessage = async (data: RawData, isBinary: boolean) => {
+    try {
+      const parsedMessage = isBinary ? null : parseClientMessage(data)
 
-    if (parsedMessage == null) {
-      this.send({ type: 'acknowledge', data: { success: false }})
-      return
-    }
-
-    // todo: keep track of which streamers' events we are listening for
-
-    if (parsedMessage.type === 'subscribe') {
-      if (parsedMessage.data.topic === 'streamerChat') {
-        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_ITEM, this.onChat)) {
-          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
-        }
-      } else if (parsedMessage.data.topic === 'streamerEvents') {
-        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)) {
-          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
-        }
-        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)) {
-          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
-        }
-        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)) {
-          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
-        }
-        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)) {
-          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
-        }
-        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)) {
-          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
-        }
-        if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)) {
-          this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
-        }
-      } else {
-        assertUnreachable(parsedMessage.data.topic)
+      if (parsedMessage == null) {
+        this.send({ type: 'acknowledge', data: { success: false }})
+        return
       }
-    } else if (parsedMessage.type === 'unsubscribe') {
-      if (parsedMessage.data.topic === 'streamerChat') {
-        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
-      } else if (parsedMessage.data.topic === 'streamerEvents') {
-        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
-        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
-        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
-        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
-        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
-        this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
-      } else {
-        assertUnreachable(parsedMessage.data.topic)
-      }
-    } else {
-      assertUnreachable(parsedMessage)
-    }
 
-    this.send({ type: 'acknowledge', data: { success: true }})
+      const resolvedTopic = await this.getResolvedSubscription(parsedMessage.data)
+
+      if (parsedMessage.type === 'subscribe') {
+        this.subscriptions.add(resolvedTopic)
+
+        if (parsedMessage.data.topic === 'streamerChat') {
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_ITEM, this.onChat)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
+          }
+        } else if (parsedMessage.data.topic === 'streamerEvents') {
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
+          }
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
+          }
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
+          }
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
+          }
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
+          }
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
+          }
+        } else {
+          assertUnreachable(parsedMessage.data.topic)
+        }
+
+      } else if (parsedMessage.type === 'unsubscribe') {
+        this.subscriptions.add(resolvedTopic)
+
+        if (parsedMessage.data.topic === 'streamerChat') {
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_ITEM, this.onChat)
+        } else if (parsedMessage.data.topic === 'streamerEvents') {
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, this.onLevelUp)
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, this.onNewFollower)
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, this.onDonation)
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
+        } else {
+          assertUnreachable(parsedMessage.data.topic)
+        }
+
+      } else {
+        assertUnreachable(parsedMessage)
+      }
+
+      this.send({ type: 'acknowledge', data: { success: true }})
+
+    } catch (e: any) {
+      this.logService.logError(this, 'Encountered error in the onMessage handler for data', data, e)
+    }
   }
 
   private onClose = (code: number, reason: Buffer) => {
@@ -189,6 +210,11 @@ export default class WebsocketClient extends ContextClass {
 
   private onChat = async (chatData: EventData[typeof EVENT_PUBLIC_CHAT_ITEM]) => {
     try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerChat', chatData.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
       const chat = await this.chatService.getChatById(chatData.id)
       if (chat.user == null) {
         this.logService.logError(this, `Chat item with ID ${chat.id} does not have a user object set and cannot be processed`)
@@ -223,6 +249,11 @@ export default class WebsocketClient extends ContextClass {
 
   private onLevelUp = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP]) => {
     try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerEvents', event.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
       const [streamerName, data] = await Promise.all([
         this.getStreamerName(event.streamerId),
         this.apiService.getAllData([event.primaryUserId], event.streamerId).then(single)
@@ -254,6 +285,11 @@ export default class WebsocketClient extends ContextClass {
 
   private onNewFollower = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER]) => {
     try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerEvents', event.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
       this.send({
         type: 'event',
         data: {
@@ -274,6 +310,11 @@ export default class WebsocketClient extends ContextClass {
 
   private onDonation = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION]) => {
     try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerEvents', event.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
       const user = event.primaryUserId == null ? null : await this.apiService.getAllData([event.primaryUserId], event.streamerId)
         .then(single)
         .then(userDataToPublicUser)
@@ -307,6 +348,11 @@ export default class WebsocketClient extends ContextClass {
 
   private onNewViewer = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER]) => {
     try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerEvents', event.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
       const userData = await this.apiService.getAllData([event.primaryUserId], event.streamerId).then(single)
 
       this.send({
@@ -331,6 +377,11 @@ export default class WebsocketClient extends ContextClass {
 
   private onMessageDeleted = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED]) => {
     try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerEvents', event.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
       this.send({
         type: 'event',
         data: {
@@ -354,6 +405,11 @@ export default class WebsocketClient extends ContextClass {
   // todo: when you're not drunk, confirm the ignoreOptions are handled correctly here. i have no recollection of how they work lol
   private onRankUpdate = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE]) => {
     try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerEvents', event.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
       const rankEvent = event.rankEvent
       const userData = await this.apiService.getAllData([rankEvent.userId], event.streamerId).then(single)
       const youtubeRankResults = rankEvent.data?.youtubeRankResults ?? []
@@ -417,8 +473,21 @@ export default class WebsocketClient extends ContextClass {
 
   private async getStreamerName (streamerId: number) {
     const streamer = await this.streamerStore.getStreamerById(streamerId)
-    const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer!.registeredUserId]).then(single)
+    if (streamer == null) {
+      throw new NotFoundError(`Unable to find streamer with id ${streamerId}`)
+    }
+
+    const registeredUser = await this.accountStore.getRegisteredUsersFromIds([streamer.registeredUserId]).then(single)
     return registeredUser.username
+  }
+
+  private async getStreamerId (streamerName: string) {
+    const streamer = await this.streamerStore.getStreamerByName(streamerName)
+    if (streamer == null) {
+      throw new NotFoundError(`Unable to find streamer with name ${streamerName}`)
+    }
+
+    return streamer.id
   }
 
   private getState () {
@@ -432,6 +501,19 @@ export default class WebsocketClient extends ContextClass {
       return 'closed'
     } else {
       assertUnreachable(this.wsClient.readyState)
+    }
+  }
+
+  private async getResolvedSubscription (data: { topic: StreamerTopic, streamer: string }): Promise<ResolvedSubscription>
+  private async getResolvedSubscription (topic: StreamerTopic, streamerId: number): Promise<ResolvedSubscription>
+  private async getResolvedSubscription (dataOrTopic: { topic: StreamerTopic, streamer: string } | StreamerTopic, streamerId?: number): Promise<ResolvedSubscription> {
+    if (streamerId == null) {
+      const data = dataOrTopic as { topic: StreamerTopic, streamer: string }
+      streamerId = await this.getStreamerId(data.streamer)
+      return `${data.topic}-${streamerId}`
+    } else {
+      const topic = dataOrTopic as StreamerTopic
+      return `${topic}-${streamerId}`
     }
   }
 
@@ -451,5 +533,3 @@ export default class WebsocketClient extends ContextClass {
     })
   }
 }
-
-// todo: since this is a transient service, all state needs to be stored in a stateservice

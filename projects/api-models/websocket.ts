@@ -17,7 +17,7 @@ type UnsubscribeMessageData = {
   streamer: string
 }
 
-type StreamerTopic = 'streamerChat' | 'streamerEvents'
+export type StreamerTopic = 'streamerChat' | 'streamerEvents'
 
 export type ServerMessage =
   { type: 'acknowledge', data: AcknowledgeMessageData } |
