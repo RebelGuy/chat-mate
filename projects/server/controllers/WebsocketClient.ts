@@ -307,7 +307,7 @@ export default class WebsocketClient extends ContextClass {
 
   private onNewViewer = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER]) => {
     try {
-      const userData = await this.apiService.getAllData([event.primaryUserId]).then(single)
+      const userData = await this.apiService.getAllData([event.primaryUserId], event.streamerId).then(single)
 
       this.send({
         type: 'event',
@@ -338,7 +338,7 @@ export default class WebsocketClient extends ContextClass {
           streamer: await this.getStreamerName(event.streamerId),
           data: {
             ...emptyPublicChatMateEvent,
-            type: 'newViewer',
+            type: 'chatMessageDeleted',
             timestamp: Date.now(),
             chatMessageDeletedData: {
               chatMessageId: event.chatMessageId
@@ -355,7 +355,7 @@ export default class WebsocketClient extends ContextClass {
   private onRankUpdate = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE]) => {
     try {
       const rankEvent = event.rankEvent
-      const userData = await this.apiService.getAllData([rankEvent.userId]).then(single)
+      const userData = await this.apiService.getAllData([rankEvent.userId], event.streamerId).then(single)
       const youtubeRankResults = rankEvent.data?.youtubeRankResults ?? []
       const twitchRankResults = rankEvent.data?.twitchRankResults ?? []
       const ignoreOptions = rankEvent.data?.ignoreOptions ?? null
@@ -399,7 +399,7 @@ export default class WebsocketClient extends ContextClass {
           streamer: await this.getStreamerName(event.streamerId),
           data: {
             ...emptyPublicChatMateEvent,
-            type: 'newViewer',
+            type: 'rankUpdate',
             timestamp: Date.now(),
             rankUpdateData: {
               rankName: rankEvent.rank.name as ExternalRank,
