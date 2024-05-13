@@ -189,6 +189,43 @@ Authentication is required for most endpoints. To authenticate a request, provid
 
 Any streamer-specific endpoints require the `X-Streamer` header. This should be set to the streamer's registered username for which the request should be made (for example, when getting custom emojis).
 
+## Websocket
+Path: `/ws`, using the `ws` protocol (not `wss`).
+
+ChatMate offers a Websocket that clients can connect to in order to receive live updates without having to query the API.
+
+Clients subscribe to topics, receive acknowledgement of their subscription, then receive messages whenever an event for their subscribed topic ocurrs.
+
+To subscribe or unsubscribe, send a JSON object with the following schema:
+- `type` (`string`): *Required* The type of message we are sending. In this case, set the value to either `"subscribe"` or `"unsubscribe"`.
+- `data`: *Required* The message data. For subscription messages, the data should look like:
+  - `topic` (`string`): *Required* The topic to subscribe to.
+  - `streamer` (`string`): *Requried* The streamer's name for which to listen to events to.
+- `id` (`number`): *Optional* A unique number that represents this message. If included, the same id will be included in the acknowledgement message.
+
+The server will respond with an acknowledgement of the form:
+- `type` (`string`): The type of message. In this case, it is always set to `"acknowledge"`.
+- `data`: The message data. For acknowledgement messages, the data looks like:
+  - `success` (`boolean`): Whether the request action was processed successfully.
+- `id` (`number | null`): The same id that was included in the client's request message or, if no id was included, `null`.
+
+Once subscribed, the client will receive event messages as follows:
+- `type` (`string`): The type of message. In this case, it is always set to `"event"`.
+- `data`: The message data. For event messages, the data looks like:
+  - `topic` (`string`): The topic to which this event belongs.
+  - `streamer` (`string`): The streamer's name to which this event belongs.
+  - `data`: The event data. Its shape depends on the event's topic (see below).
+
+### The `streamerChat` topic
+Emits new chat events in the context of a given streamer. Equivalent to calling the [`GET /chat`](#chat-endpoints) endpoint.
+
+The event data will a `PublicChatItem`.
+
+### The `streamerEvents` topic
+Emits new ChatMate events in the context of a given streamer. Equivalent to calling the [`GET /streamer/events`](#get-events) endpoint.
+
+The event data will a `PublicChatMateEvent`.
+
 ## Account Endpoints
 Path: `/account`.
 

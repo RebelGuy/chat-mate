@@ -135,10 +135,11 @@ export default class WebsocketClient extends ContextClass {
       const parsedMessage = isBinary ? null : parseClientMessage(data)
 
       if (parsedMessage == null) {
-        this.send({ type: 'acknowledge', data: { success: false }})
+        this.send({ type: 'acknowledge', id: null, data: { success: false }})
         return
       }
 
+      const messageId = parsedMessage.id ?? null
       const resolvedTopic = await this.getResolvedSubscription(parsedMessage.data)
 
       if (parsedMessage.type === 'subscribe') {
@@ -191,10 +192,12 @@ export default class WebsocketClient extends ContextClass {
         assertUnreachable(parsedMessage)
       }
 
-      this.send({ type: 'acknowledge', data: { success: true }})
+      this.send({ type: 'acknowledge', id: messageId, data: { success: true }})
 
     } catch (e: any) {
       this.logService.logError(this, 'Encountered error in the onMessage handler for data', data, e)
+
+      this.send({ type: 'acknowledge', id: null, data: { success: false }})
     }
   }
 

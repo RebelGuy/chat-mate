@@ -1,11 +1,10 @@
-import { PublicChatImage } from '@rebel/api-models/public/chat/PublicChatImage'
 import { PublicChatItem } from '@rebel/api-models/public/chat/PublicChatItem'
 import { PublicChatMateEvent } from '@rebel/api-models/public/event/PublicChatMateEvent'
 import { SafeExtract } from '@rebel/shared/types'
 
 export type ClientMessage =
-  { type: 'subscribe', data: SubscribeMessageData } |
-  { type: 'unsubscribe', data: UnsubscribeMessageData }
+  { type: 'subscribe', data: SubscribeMessageData, id?: number } |
+  { type: 'unsubscribe', data: UnsubscribeMessageData, id?: number }
 
 type SubscribeMessageData = {
   topic: StreamerTopic
@@ -20,7 +19,7 @@ type UnsubscribeMessageData = {
 export type StreamerTopic = 'streamerChat' | 'streamerEvents'
 
 export type ServerMessage =
-  { type: 'acknowledge', data: AcknowledgeMessageData } |
+  { type: 'acknowledge', data: AcknowledgeMessageData, id: number | null } |
   { type: 'event', data: EventMessageData }
 
 type AcknowledgeMessageData = {
@@ -64,8 +63,18 @@ export function parseClientMessage (message: Buffer | ArrayBuffer | Buffer[]): C
       return null
     }
 
+    let id: number | undefined = undefined
+    if ('id' in parsedMessage) {
+      if (typeof parsedMessage.id !== 'number') {
+        return null
+      } else {
+        id = parsedMessage.id
+      }
+    }
+
     return {
       type: parsedMessage.type,
+      id: id,
       data: {
         topic: parsedMessage.data.topic,
         streamer: parsedMessage.data.streamer
