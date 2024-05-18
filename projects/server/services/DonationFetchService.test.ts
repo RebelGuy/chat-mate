@@ -1,23 +1,26 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import DonationFetchService from '@rebel/server/services/DonationFetchService'
-import DonationService, { NewDonation } from '@rebel/server/services/DonationService'
+import DonationService from '@rebel/server/services/DonationService'
 import StreamlabsProxyService, { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
-import { single } from '@rebel/shared/util/arrays'
-import { cast, expectArray, nameof } from '@rebel/shared/testUtils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
+import EventDispatchService from '@rebel/server/services/EventDispatchService'
 
 const streamerId = 1
 
 let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
+let mockEventDispatchService: MockProxy<EventDispatchService>
 let mockDonationService: MockProxy<DonationService>
 let donationFetchService: DonationFetchService
 
 beforeEach(() => {
   mockStreamlabsProxyService = mock()
+  mockEventDispatchService = mock()
   mockDonationService = mock()
 
   donationFetchService = new DonationFetchService(new Dependencies({
     streamlabsProxyService: mockStreamlabsProxyService,
+    eventDispatchService: mockEventDispatchService,
     donationService: mockDonationService
   }))
 })

@@ -19,15 +19,10 @@ export default class FileService extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.dataPath = deps.resolve('dataPath')
-    this.ensureDir(this.dataPath)
   }
 
   public getDataFilePath (...relPath: string[]) {
     return path.resolve(this.dataPath, ...relPath)
-  }
-
-  public getDataFiles (): string[] {
-    return fs.readdirSync(this.dataPath)
   }
 
   public writeLine (filePath: string, contents: string, options?: WriteOptions) {

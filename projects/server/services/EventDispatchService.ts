@@ -1,10 +1,11 @@
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { ChatItem } from '@rebel/server/models/chat'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { ChatMessage } from '@prisma/client'
 import { Level } from '@rebel/server/services/ExperienceService'
 import { DonationWithUser } from '@rebel/server/services/DonationService'
 import { ParsedRankEvent } from '@rebel/server/stores/RankStore'
+import { StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
 
 // generic and centralised service for collecting and distributing data.
 // this helps avoid complicated or even circular service dependencies.
@@ -16,6 +17,7 @@ export const EVENT_CHAT_ITEM = Symbol('EVENT_CHAT_ITEM')
 export const EVENT_CHAT_ITEM_REMOVED = Symbol('EVENT_CHAT_ITEM_REMOVED')
 export const EVENT_ADD_PRIMARY_CHANNEL = Symbol('EVENT_ADD_PRIMARY_CHANNEL')
 export const EVENT_REMOVE_PRIMARY_CHANNEL = Symbol('EVENT_REMOVE_PRIMARY_CHANNEL')
+export const EVENT_STREAMLABS_DONATION = Symbol('EVENT_STREAMLABS_DONATION')
 
 // PUBLIC EVENTS
 
@@ -59,6 +61,11 @@ export type EventData = {
     userChannel: UserChannel
   }
 
+  [EVENT_STREAMLABS_DONATION]: {
+    streamerId: number
+    streamlabsDonation: StreamlabsDonation
+  }
+
   [EVENT_PUBLIC_CHAT_ITEM]: ChatMessage
 
   [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP]: {
@@ -95,7 +102,7 @@ export type DataPair<T extends keyof EventData> = [T, EventData[T]]
 
 type Listener<T extends keyof EventData = any> = (data: EventData[T]) => any | Promise<any>
 
-export default class EventDispatchService extends ContextClass {
+export default class EventDispatchService extends SingletonContextClass {
   private isReady: boolean
   private tempStore: DataPair<any>[]
   private listeners: Map<keyof EventData, Listener[]>

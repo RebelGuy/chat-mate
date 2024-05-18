@@ -5,9 +5,10 @@ import ApiService from '@rebel/server/services/abstract/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { single } from '@rebel/shared/util/arrays'
-import { ApiResponseError, ChatMateError } from '@rebel/shared/util/error'
+import { ApiResponseError } from '@rebel/shared/util/error'
 import { CurrencyCode } from '@rebel/server/constants'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
+import EventDispatchService, { EVENT_STREAMLABS_DONATION } from '@rebel/server/services/EventDispatchService'
 
 const REST_BASE_URL = 'https://streamlabs.com/api/v1.0'
 
@@ -87,14 +88,15 @@ type Deps = Dependencies<{
   nodeEnv: NodeEnv
   websocketFactory: WebsocketFactory
   platformApiStore: PlatformApiStore
+  eventDispatchService: EventDispatchService
 }>
 
 export default class StreamlabsProxyService extends ApiService {
   private readonly accessToken: string
   private readonly nodeEnv: NodeEnv
   private readonly websocketFactory: WebsocketFactory
+  private readonly eventDispatchService: EventDispatchService
 
-  private donationCallback: DonationCallback | null
   private readonly streamerWebSockets: Map<number, SocketIOClient.Socket>
 
   constructor (deps: Deps) {
@@ -109,8 +111,8 @@ export default class StreamlabsProxyService extends ApiService {
     this.accessToken = deps.resolve('streamlabsAccessToken')
     this.nodeEnv = deps.resolve('nodeEnv')
     this.websocketFactory = deps.resolve('websocketFactory')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
 
-    this.donationCallback = null
     this.streamerWebSockets = new Map()
   }
 
@@ -149,14 +151,6 @@ export default class StreamlabsProxyService extends ApiService {
     }))
   }
 
-  public setDonationCallback (callback: DonationCallback) {
-    if (this.donationCallback != null) {
-      throw new ChatMateError('Already listening')
-    }
-
-    this.donationCallback = callback
-  }
-
   public listenToStreamerDonations (streamerId: number, socketToken: string) {
     const adapter: WebsocketAdapter<WebsocketMessage> = {
       onMessage: (data: WebsocketMessage) => this.onSocketData(streamerId, data),
@@ -192,22 +186,22 @@ export default class StreamlabsProxyService extends ApiService {
       return
     }
 
-    const message = single(data.message)
-    const donation: StreamlabsDonation = {
-      donationId: message.id,
-      streamlabsUserId: message.from_user_id ?? null,
-      amount: Number.parseFloat(message.amount),
-      formattedAmount: message.formattedAmount,
-      createdAt: new Date().getTime(),
-      currency: message.currency,
-      message: message.message,
-      name: message.from
-    }
-
     try {
-      await this.donationCallback!(donation, streamerId)
+      const message = single(data.message)
+      const streamlabsDonation: StreamlabsDonation = {
+        donationId: message.id,
+        streamlabsUserId: message.from_user_id ?? null,
+        amount: Number.parseFloat(message.amount),
+        formattedAmount: message.formattedAmount,
+        createdAt: new Date().getTime(),
+        currency: message.currency,
+        message: message.message,
+        name: message.from
+      }
+
+      await this.eventDispatchService.addData(EVENT_STREAMLABS_DONATION, { streamerId, streamlabsDonation })
     } catch (e: any) {
-      this.logService.logError(this, `Donation callback failed to run for donation id ${donation.donationId}:`, e)
+      this.logService.logError(this, `Donation callback failed to run for donation id ${data.message[0]?.id}:`, e)
     }
   }
 

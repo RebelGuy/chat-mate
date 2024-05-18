@@ -64,8 +64,6 @@ export default () => {
     bannedRank = await db.rank.create({ data: { name: 'ban', displayNameNoun: '', displayNameAdjective: '', group: 'punishment' }})
     mutedRank = await db.rank.create({ data: { name: 'mute', displayNameNoun: '', displayNameAdjective: '', group: 'punishment' }})
     donatorRank = await db.rank.create({ data: { name: 'donator', displayNameNoun: '', displayNameAdjective: '', group: 'donation' }})
-
-    await rankStore.initialise()
   }, DB_TEST_TIMEOUT)
 
   afterEach(() => {

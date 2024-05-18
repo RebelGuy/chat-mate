@@ -5,32 +5,21 @@ import * as AI from 'applicationinsights'
 import { SeverityLevel } from 'applicationinsights/out/Declarations/Contracts'
 
 type Deps = Dependencies<{
-  applicationInsightsConnectionString: string | null
+  appInsightsClient: AI.TelemetryClient | null
 }>
 
 export default class ApplicationInsightsService extends ContextClass {
-  private readonly client: AI.TelemetryClient | null
+  private readonly appInsightsClient: AI.TelemetryClient | null
 
   constructor (deps: Deps) {
     super()
 
-    const connectionString = deps.resolve('applicationInsightsConnectionString')
-    if (connectionString == null) {
-      this.client = null
-    } else {
-      console.debug('Starting ApplicationInsights client...')
-      AI.setup(connectionString)
-        .setAutoCollectConsole(false) // doesn't seem to work properly - instead, we manually track these via `trackTrace()` for better control
-        .setSendLiveMetrics(true) // so we can monitor the app in real-time
-        .start()
-      this.client = AI.defaultClient
-      console.debug('Successfully started ApplicationInsights client')
-    }
+    this.appInsightsClient = deps.resolve('appInsightsClient')
   }
 
   // for some reason, this doesn't show up in ApplicationInsights (there should be an `Exception` event type for this)
   public trackException (args: any[]) {
-    if (this.client == null) {
+    if (this.appInsightsClient == null) {
       return
     }
 
@@ -38,7 +27,7 @@ export default class ApplicationInsightsService extends ContextClass {
     let data = args.filter(arg => !(arg instanceof Error))
 
     for (const error of errors) {
-      this.client.trackException({
+      this.appInsightsClient.trackException({
         exception: error,
         properties: {
           additionalData: data
@@ -49,12 +38,12 @@ export default class ApplicationInsightsService extends ContextClass {
     }
 
     if (errors.length > 0) {
-      this.client.flush()
+      this.appInsightsClient.flush()
     }
   }
 
   public trackTrace (type: 'info' | 'warning' | 'error', message: string) {
-    if (this.client == null) {
+    if (this.appInsightsClient == null) {
       return
     }
 
@@ -71,6 +60,6 @@ export default class ApplicationInsightsService extends ContextClass {
       assertUnreachable(type)
     }
 
-    this.client.trackTrace({ message, severity })
+    this.appInsightsClient.trackTrace({ message, severity })
   }
 }

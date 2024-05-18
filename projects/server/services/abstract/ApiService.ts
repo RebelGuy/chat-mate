@@ -1,4 +1,4 @@
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { NO_OP } from '@rebel/shared/util/typescript'
@@ -6,7 +6,7 @@ import { transformPrimitiveValues } from '@rebel/shared/util/objects'
 import { DataObject, rawDataSymbol } from '@twurple/common'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
-export default abstract class ApiService extends ContextClass {
+export default abstract class ApiService extends SingletonContextClass {
   public readonly name: string
 
   protected readonly logService: LogService

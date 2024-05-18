@@ -107,6 +107,7 @@ import EmojiStore from '@rebel/server/stores/EmojiStore'
 import expressWs from 'express-ws'
 import WebsocketClient from '@rebel/server/controllers/WebsocketClient'
 import FollowerService from '@rebel/server/services/FollowerService'
+import * as AI from 'applicationinsights'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -147,10 +148,24 @@ const main = async () => {
   let isAdministrativeMode = false
   let isContextInitialised = false
 
+  let appInsightsClient: AI.TelemetryClient | null
+  if (applicationInsightsConnectionString == null) {
+    appInsightsClient = null
+  } else {
+    console.debug('Starting ApplicationInsights client...')
+    AI.setup(applicationInsightsConnectionString)
+      .setAutoCollectConsole(false) // doesn't seem to work properly - instead, we manually track these via `trackTrace()` for better control
+      .setSendLiveMetrics(true) // so we can monitor the app in real-time
+      .start()
+    appInsightsClient = AI.defaultClient
+    console.debug('Successfully started ApplicationInsights client')
+  }
+
   const globalContext = ContextProvider.create()
     .withVariable('isAdministrativeMode', () => isAdministrativeMode)
     .withVariable('isContextInitialised', () => isContextInitialised)
     .withObject('app', app)
+    .withObject('appInsightsClient', appInsightsClient)
     .withProperty('port', port)
     .withProperty('studioUrl', studioUrl)
     .withProperty('channelId', env('channelId'))
@@ -162,7 +177,6 @@ const main = async () => {
     .withProperty('disableExternalApis', env('useFakeControllers') === true)
     .withProperty('twitchClientId', twitchClientId)
     .withProperty('twitchClientSecret', twitchClientSecret)
-    .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
     .withProperty('dbLogLevel', dbLogLevel)
     .withProperty('apiLogLevel', apiLogLevel)
     .withProperty('debugLogOutput', debugLogOutput)

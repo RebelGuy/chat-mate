@@ -4,7 +4,7 @@ import ChatStore, { AddedChatMessage } from '@rebel/server/stores/ChatStore'
 import { ChatItem, ChatItemWithRelations, ChatPlatform } from '@rebel/server/models/chat'
 import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import ContextClass, { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateGlobalTwitchChannelArgs, TwitchChannelWithLatestInfo, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
@@ -41,7 +41,7 @@ type Deps = Dependencies<{
   emojiService: EmojiService
 }>
 
-export default class ChatService extends ContextClass {
+export default class ChatService extends SingletonContextClass {
   readonly name = ChatService.name
   private readonly chatStore: ChatStore
   private readonly logService: LogService

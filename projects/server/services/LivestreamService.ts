@@ -1,6 +1,6 @@
 import { LiveStatus, MasterchatError, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
@@ -32,7 +32,7 @@ type Deps = Dependencies<{
   chatMateStateService: ChatMateStateService
 }>
 
-export default class LivestreamService extends ContextClass {
+export default class LivestreamService extends SingletonContextClass {
   readonly name: string = LivestreamService.name
 
   private readonly livestreamStore: LivestreamStore

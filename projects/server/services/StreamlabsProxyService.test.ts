@@ -1,22 +1,25 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import WebsocketFactory from '@rebel/server/factories/WebsocketFactory'
 import StatusService from '@rebel/server/services/StatusService'
-import StreamlabsProxyService, { DonationCallback, StreamlabsDonation } from '@rebel/server/services/StreamlabsProxyService'
-import { expectObject } from '@rebel/shared/testUtils'
+import StreamlabsProxyService from '@rebel/server/services/StreamlabsProxyService'
+import { expectObjectDeep } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
+import EventDispatchService, { EVENT_STREAMLABS_DONATION } from '@rebel/server/services/EventDispatchService'
 
 const streamlabsAccessToken = 'accessToken'
 
 let mockStreamlabsStatusService: MockProxy<StatusService>
 let mockWebsocketFactory: MockProxy<WebsocketFactory>
 let mockPlatformApiStore: MockProxy<PlatformApiStore>
+let mockEventDispatchService: MockProxy<EventDispatchService>
 let streamlabsProxyService: StreamlabsProxyService
 
 beforeEach(() => {
   mockStreamlabsStatusService = mock()
   mockWebsocketFactory = mock()
   mockPlatformApiStore = mock()
+  mockEventDispatchService = mock()
 
   streamlabsProxyService = new StreamlabsProxyService(new Dependencies({
     logService: mock(),
@@ -24,7 +27,8 @@ beforeEach(() => {
     streamlabsAccessToken: streamlabsAccessToken,
     streamlabsStatusService: mockStreamlabsStatusService,
     websocketFactory: mockWebsocketFactory,
-    platformApiStore: mockPlatformApiStore
+    platformApiStore: mockPlatformApiStore,
+    eventDispatchService: mockEventDispatchService
   }))
 })
 
@@ -39,11 +43,6 @@ describe('Integration tests', () => {
     const streamer2Socket: MockProxy<SocketIOClient.Socket> = mock()
     mockWebsocketFactory.create.calledWith(expect.stringContaining(streamer1Token), expect.anything(), expect.anything()).mockReturnValue(streamer1Socket)
     mockWebsocketFactory.create.calledWith(expect.stringContaining(streamer2Token), expect.anything(), expect.anything()).mockReturnValue(streamer2Socket)
-
-    // set up callback - this will be called back when we emit a donation message
-    let callbackInvocations: [donation: StreamlabsDonation, streamerId: number][] = []
-    const donationCallback: DonationCallback = (donation, streamerId) => { callbackInvocations.push([donation, streamerId]) }
-    streamlabsProxyService.setDonationCallback(donationCallback)
 
     // act
     streamlabsProxyService.listenToStreamerDonations(streamer1, streamer1Token)
@@ -83,15 +82,11 @@ describe('Integration tests', () => {
     await listener1!(message1)
 
     // this should have been relayed to the donation callback
-    expect(callbackInvocations.length).toBe(2)
-    expect(callbackInvocations[0]).toEqual([
-      expectObject<StreamlabsDonation>({ donationId: message2.message[0].id }),
-      streamer2
-    ])
-    expect(callbackInvocations[1]).toEqual([
-      expectObject<StreamlabsDonation>({ donationId: message1.message[0].id }),
-      streamer1
-    ])
+    const addDataCalls = mockEventDispatchService.addData.mock.calls
+    expect(addDataCalls).toEqual(expectObjectDeep(addDataCalls, [
+      [EVENT_STREAMLABS_DONATION, { streamlabsDonation: { donationId: message2.message[0].id }}],
+      [EVENT_STREAMLABS_DONATION, { streamlabsDonation: { donationId: message1.message[0].id }}]
+    ]))
 
     // stop listening to streamer 1
     streamlabsProxyService.stopListeningToStreamerDonations(streamer1)

@@ -244,6 +244,12 @@ export class InvalidEmojiMessagePartError extends ChatMateError {
   }
 }
 
+export class NonDisposableClassError extends ChatMateError {
+  constructor () {
+    super(NonDisposableClassError.prototype, `This is a singleton class and cannot be disposed. Its lifetime should span the lifespan of the application.`)
+  }
+}
+
 /** Intended to be used in .catch(). */
 export function ignoreError (predicate: (e: any) => boolean) {
   return (e: any) => {
