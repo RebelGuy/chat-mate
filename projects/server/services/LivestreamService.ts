@@ -66,7 +66,7 @@ export default class LivestreamService extends SingletonContextClass {
     }
 
     const activeLivestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
-    await Promise.all(activeLivestreams.map(l => this.masterchatService.addMasterchat(l.streamerId, l.liveId)))
+    activeLivestreams.map(l => this.masterchatService.addMasterchat(l.streamerId, l.liveId))
 
     const timerOptions: TimerOptions = {
       behaviour: 'end',
@@ -76,7 +76,7 @@ export default class LivestreamService extends SingletonContextClass {
     await this.timerHelpers.createRepeatingTimer(timerOptions, true)
   }
 
-  /** Sets the streamer's current Youtube livestream as inactive, also removing the associated masterchat instance. */
+  /** Sets the streamer's current Youtube livestream as inactive, also removing the associated Masterchat. */
   public async deactivateYoutubeLivestream (streamerId: number) {
     const activeLivestream = await this.livestreamStore.getActiveYoutubeLivestream(streamerId)
     if (activeLivestream == null) {
@@ -88,7 +88,7 @@ export default class LivestreamService extends SingletonContextClass {
     this.logService.logInfo(this, `Youtube livestream with id ${activeLivestream.liveId} for streamer ${streamerId} has been deactivated.`)
   }
 
-  /** Sets the given Youtube livestream as active for the streamer, and creates a masterchat instance.
+  /** Sets the given Youtube livestream as active for the streamer, and creates a Masterchat.
    * Please ensure you deactivate the previous Youtube livestream first, if applicable.
    * Attempts of activating a livestream that is from a different channel than the streamer's primary channel will throw. */
   public async setActiveYoutubeLivestream (streamerId: number, liveId: string) {
@@ -103,7 +103,7 @@ export default class LivestreamService extends SingletonContextClass {
     }
 
     await this.livestreamStore.setActiveYoutubeLivestream(streamerId, liveId)
-    await this.masterchatService.addMasterchat(streamerId, liveId)
+    this.masterchatService.addMasterchat(streamerId, liveId)
     this.logService.logInfo(this, `Youtube livestream with id ${liveId} for streamer ${streamerId} has been activated.`)
   }
 

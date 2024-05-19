@@ -24,7 +24,7 @@ This refers specifically to authentication of the ChatMate channel. While some f
 ### YouTube
 Each environment is associated with a ChatMate Admin Youtube channel (see [here](../../readme.md#chatmate-admin-channels) for channel details). For testing, it is acceptable to use a different channel by changing the `CHANNEL_ID` [environment variable](#env).
 
-To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID. Note that any changes will only come into effect when refreshing authentication via the Studio debug card, or calling the [`POST /chatmate/masterchat/authentication` endpoint](#post-masterchatauthentication).
+To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID.
 
 If the Server receives a "Rate limit exceeded" error when fetching video metadata, then Youtube has flagged us as a bot. You will need to manually log into the YouTube account again, prove you are not a bot, and then refresh the authentication token using the above command.
 
@@ -392,19 +392,14 @@ Pings the server.
 Returns data with no properties.
 
 ### `GET /masterchat/authentication`
-Check whether the currently active Masterchat instance is authenticated. If you have recently updated the authentcation via the `YoutubeAuth` script, you will have to call the `POST /masterchat/authentication` for all active Masterchat instances to refresh their stored credentials.
+Check whether Masterchat is authenticated. We can only infer authentication from the previous request - if you refresh credentials and the endpoint still indicates missing authentication, you may have to wait a bit.
 
 Returns data with the following properties:
-- `authenticated` (`boolean | null`): Whether the Masterchat instance is authenticated.
-  - `true`: The Masterchat instance is authenticated.
-  - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
-  - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
+- `authenticated` (`boolean | null`): Whether Masterchat is authenticated.
+  - `true`: Masterchat is authenticated.
+  - `false`: Masterchat is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
+  - `null`: Unknown - no Masterchat instance can be created, or authentication has not been verified yet.
 - `lastUpdatedTimestamp` (`number | null`): At what time we last updated the Youtube authentication in the database. `null` if Masterchat is not authenticated.
-
-### `POST /masterchat/authentication`
-Refreshes the credentials stored by each active masterchat instance. To be used after updating authentication via the `YoutubeAuth` script.
-
-Returns data with no properties.
 
 ### `GET /username`
 Gets the username of the official ChatMate registered account.

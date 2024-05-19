@@ -16,7 +16,6 @@ type Deps = Dependencies<{
   twurpleStatusService: StatusService
   twurpleApiClientProvider: TwurpleApiClientProvider
   twurpleChatClientProvider: TwurpleChatClientProvider
-  twitchUsername: string
   platformApiStore: PlatformApiStore
   isAdministrativeMode: () => boolean
 }>
@@ -25,10 +24,8 @@ type Deps = Dependencies<{
 export default class TwurpleApiProxyService extends ApiService {
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
   private readonly twurpleChatClientProvider: TwurpleChatClientProvider
-  private readonly twitchUsername: string
   private readonly isAdministrativeMode: () => boolean
   private wrappedApi!: (streamerId: number, twitchUserId: string | null) => Promise<ApiClient>
-  private chat!: ChatClient
   private wrappedChat!: (streamerId: number) => DeepPartial<ChatClient>
 
   constructor (deps: Deps) {
@@ -42,7 +39,6 @@ export default class TwurpleApiProxyService extends ApiService {
 
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
     this.twurpleChatClientProvider = deps.resolve('twurpleChatClientProvider')
-    this.twitchUsername = deps.resolve('twitchUsername')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
@@ -53,8 +49,6 @@ export default class TwurpleApiProxyService extends ApiService {
     }
 
     this.wrappedApi = this.createApiWrapper()
-
-    this.chat = this.twurpleChatClientProvider.get()
     this.wrappedChat = this.createChatWrapper()
   }
 
@@ -145,7 +139,8 @@ export default class TwurpleApiProxyService extends ApiService {
 
   private createChatWrapper (): (streamerId: number) => Partial<ChatClient> {
     return (streamerId: number) => {
-      const say = super.wrapRequest((channel: string, message: string, attributes: ChatSayMessageAttributes | undefined) => this.chat.say(channel, message, attributes), 'twurpleChatClient.say', streamerId)
+      const chat = this.twurpleChatClientProvider.get()
+      const say = super.wrapRequest((channel: string, message: string, attributes: ChatSayMessageAttributes | undefined) => chat.say(channel, message, attributes), 'twurpleChatClient.say', streamerId)
 
       return {
         say,

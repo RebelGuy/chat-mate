@@ -6,6 +6,7 @@ import { expectObjectDeep } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
 import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import EventDispatchService, { EVENT_STREAMLABS_DONATION } from '@rebel/server/services/EventDispatchService'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 const streamlabsAccessToken = 'accessToken'
 
@@ -13,6 +14,7 @@ let mockStreamlabsStatusService: MockProxy<StatusService>
 let mockWebsocketFactory: MockProxy<WebsocketFactory>
 let mockPlatformApiStore: MockProxy<PlatformApiStore>
 let mockEventDispatchService: MockProxy<EventDispatchService>
+let mockChatMateStateService: MockProxy<ChatMateStateService>
 let streamlabsProxyService: StreamlabsProxyService
 
 beforeEach(() => {
@@ -20,6 +22,7 @@ beforeEach(() => {
   mockWebsocketFactory = mock()
   mockPlatformApiStore = mock()
   mockEventDispatchService = mock()
+  mockChatMateStateService = mock()
 
   streamlabsProxyService = new StreamlabsProxyService(new Dependencies({
     logService: mock(),
@@ -28,11 +31,14 @@ beforeEach(() => {
     streamlabsStatusService: mockStreamlabsStatusService,
     websocketFactory: mockWebsocketFactory,
     platformApiStore: mockPlatformApiStore,
-    eventDispatchService: mockEventDispatchService
+    eventDispatchService: mockEventDispatchService,
+    chatMateStateService: mockChatMateStateService
   }))
 })
 
 describe('Integration tests', () => {
+  let streamerSockets = new Map()
+
   test('Listening to donations creates one websocket for each streamer and calls back the DonationCallback, and stops calling it back after we stopped listening', async () => {
     const streamer1 = 1
     const streamer1Token = 'streamer1Token'
@@ -43,6 +49,7 @@ describe('Integration tests', () => {
     const streamer2Socket: MockProxy<SocketIOClient.Socket> = mock()
     mockWebsocketFactory.create.calledWith(expect.stringContaining(streamer1Token), expect.anything(), expect.anything()).mockReturnValue(streamer1Socket)
     mockWebsocketFactory.create.calledWith(expect.stringContaining(streamer2Token), expect.anything(), expect.anything()).mockReturnValue(streamer2Socket)
+    mockChatMateStateService.getStreamlabsStreamerWebsockets.calledWith().mockReturnValue(streamerSockets)
 
     // act
     streamlabsProxyService.listenToStreamerDonations(streamer1, streamer1Token)

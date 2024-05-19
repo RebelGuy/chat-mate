@@ -9,6 +9,7 @@ import { ApiResponseError } from '@rebel/shared/util/error'
 import { CurrencyCode } from '@rebel/server/constants'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 import EventDispatchService, { EVENT_STREAMLABS_DONATION } from '@rebel/server/services/EventDispatchService'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 const REST_BASE_URL = 'https://streamlabs.com/api/v1.0'
 
@@ -89,6 +90,7 @@ type Deps = Dependencies<{
   websocketFactory: WebsocketFactory
   platformApiStore: PlatformApiStore
   eventDispatchService: EventDispatchService
+  chatMateStateService: ChatMateStateService
 }>
 
 export default class StreamlabsProxyService extends ApiService {
@@ -96,8 +98,7 @@ export default class StreamlabsProxyService extends ApiService {
   private readonly nodeEnv: NodeEnv
   private readonly websocketFactory: WebsocketFactory
   private readonly eventDispatchService: EventDispatchService
-
-  private readonly streamerWebSockets: Map<number, SocketIOClient.Socket>
+  private readonly chatMateStateService: ChatMateStateService
 
   constructor (deps: Deps) {
     const name = StreamlabsProxyService.name
@@ -112,14 +113,7 @@ export default class StreamlabsProxyService extends ApiService {
     this.nodeEnv = deps.resolve('nodeEnv')
     this.websocketFactory = deps.resolve('websocketFactory')
     this.eventDispatchService = deps.resolve('eventDispatchService')
-
-    this.streamerWebSockets = new Map()
-  }
-
-  public override dispose (): void | Promise<void> {
-    for (const [_, socket] of this.streamerWebSockets) {
-      socket.disconnect()
-    }
+    this.chatMateStateService = deps.resolve('chatMateStateService')
   }
 
   // https://streamlabs.readme.io/docs/donations
@@ -166,18 +160,19 @@ export default class StreamlabsProxyService extends ApiService {
     const webSocket = this.websocketFactory.create(`${SOCKET_BASE_URL}?token=${socketToken}`, adapter, options)
     webSocket.connect()
 
-    this.streamerWebSockets.set(streamerId, webSocket)
+    this.chatMateStateService.getStreamlabsStreamerWebsockets().set(streamerId, webSocket)
   }
 
   public stopListeningToStreamerDonations (streamerId: number) {
-    if (this.streamerWebSockets.has(streamerId)) {
-      this.streamerWebSockets.get(streamerId)!.disconnect()
-      this.streamerWebSockets.delete(streamerId)
+    const websockets = this.chatMateStateService.getStreamlabsStreamerWebsockets()
+    if (websockets.has(streamerId)) {
+      websockets.get(streamerId)!.disconnect()
+      websockets.delete(streamerId)
     }
   }
 
   public getWebsocket (streamerId: number): SocketIOClient.Socket | null {
-    return this.streamerWebSockets.get(streamerId) ?? null
+    return this.chatMateStateService.getStreamlabsStreamerWebsockets().get(streamerId) ?? null
   }
 
   private onSocketData = async (streamerId: number, data: WebsocketMessage) => {

@@ -1,5 +1,5 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
-import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse, RefreshMasterchatAuthenticationResponse } from '@rebel/api-models/schema/chatMate'
+import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
 import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
 import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetOfficialChatMateStreamerResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import { SERVER_URL } from '@rebel/studio/utility/global'
@@ -59,8 +59,6 @@ export const ping = requestBuilder<PingResponse>('GET', `/chatMate/ping`, false,
 export const getChatMateStats = requestBuilder<ChatMateStatsResponse>('GET', `/chatMate/stats`, false, false)
 
 export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
-
-export const refreshasterchatAuthentication = requestBuilder<RefreshMasterchatAuthenticationResponse>('POST', `/chatMate/masterchat/authentication`, false)
 
 export const getAccessibleRanks = requestBuilder<GetAccessibleRanksResponse>('GET', `/rank/accessible`, true, false)
 

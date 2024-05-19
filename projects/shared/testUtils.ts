@@ -27,6 +27,7 @@ type NonFunctionPropertyNames<T> = {
 }[keyof T] & string
 
 // custom getter mock from https://github.com/marchaos/jest-mock-extended/issues/4#issuecomment-587446452
+// usage: mockGetter(<object>, <getter method name>).mockReturnValue(<return value>)
 export function mockGetter<T, GetterName extends NonFunctionPropertyNames<T>> (obj: MockProxy<T>, getterName: GetterName) {
   const mockedGetter = jest.fn() as jest.Mock<T[GetterName], []>
   Object.defineProperty(obj, getterName, {

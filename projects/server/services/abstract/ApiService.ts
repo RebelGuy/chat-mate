@@ -1,4 +1,4 @@
-import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
+import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
 import { NO_OP } from '@rebel/shared/util/typescript'
@@ -6,7 +6,9 @@ import { transformPrimitiveValues } from '@rebel/shared/util/objects'
 import { DataObject, rawDataSymbol } from '@twurple/common'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
-export default abstract class ApiService extends SingletonContextClass {
+let requestId = 0
+
+export default abstract class ApiService extends ContextClass {
   public readonly name: string
 
   protected readonly logService: LogService
@@ -15,8 +17,6 @@ export default abstract class ApiService extends SingletonContextClass {
   private readonly apiPlatform: ApiPlatform
   private readonly timeoutMs: number | null
   private readonly trimLogs: boolean
-
-  private requestId: number
 
   constructor (name: string, logService: LogService, statusService: StatusService, platformApiStore: PlatformApiStore, apiPlatform: ApiPlatform, timeoutMs: number | null, trimLogs: boolean) {
     super()
@@ -27,8 +27,6 @@ export default abstract class ApiService extends SingletonContextClass {
     this.apiPlatform = apiPlatform
     this.timeoutMs = timeoutMs
     this.trimLogs = trimLogs
-
-    this.requestId = 0
   }
 
   /** Base wrapper that takes care of logging, timeouts, and updating the underlying status service. */
@@ -40,7 +38,7 @@ export default abstract class ApiService extends SingletonContextClass {
   ): (...query: TQuery) => Promise<TResponse> {
     return async (...query: TQuery) => {
       // set up
-      const id = this.requestId++
+      const id = requestId++
       const startTime = Date.now()
 
       // do request

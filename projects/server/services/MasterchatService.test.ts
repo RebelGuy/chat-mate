@@ -3,7 +3,7 @@ import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatService, { MasterchatAuthentication } from '@rebel/server/services/MasterchatService'
 import StatusService from '@rebel/server/services/StatusService'
-import { cast, mockGetter, nameof } from '@rebel/shared/testUtils'
+import { cast, nameof } from '@rebel/shared/testUtils'
 import { any, mock, MockProxy } from 'jest-mock-extended'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import ChatStore from '@rebel/server/stores/ChatStore'
@@ -13,7 +13,7 @@ import PlatformApiStore from '@rebel/server/stores/PlatformApiStore'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import * as data from '@rebel/server/_test/testData'
 import { YoutubeWebAuth } from '@prisma/client'
-import { single2 } from '@rebel/shared/util/arrays'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 const liveId = 'liveId'
 const streamerId = 10000
@@ -26,9 +26,11 @@ let mockMasterchat: MockProxy<Masterchat>
 let mockChatStore: MockProxy<ChatStore>
 let mockPlatformApiStore: MockProxy<PlatformApiStore>
 let mockAuthStore: MockProxy<AuthStore>
+let mockChatMateStateService: MockProxy<ChatMateStateService>
+let mockMasterchatMap: Map<number, string>
 let masterchatService: MasterchatService
 
-beforeEach(async () => {
+beforeEach(() => {
   mockLogService = mock()
   mockStatusService = mock()
   mockMasterchatFactory = mock()
@@ -36,8 +38,11 @@ beforeEach(async () => {
   mockChatStore = mock()
   mockPlatformApiStore = mock()
   mockAuthStore = mock()
+  mockChatMateStateService = mock()
+  mockMasterchatMap = new Map()
 
   mockMasterchatFactory.create.calledWith(liveId).mockResolvedValue(mockMasterchat)
+  mockChatMateStateService.getMasterchatStreamerIdLiveIdMap.calledWith().mockReturnValue(mockMasterchatMap)
 
   masterchatService = new MasterchatService(new Dependencies({
     logService: mockLogService,
@@ -46,18 +51,19 @@ beforeEach(async () => {
     chatStore: mockChatStore,
     platformApiStore: mockPlatformApiStore,
     authStore: mockAuthStore,
-    channelId: mockChannelId
+    channelId: mockChannelId,
+    chatMateStateService: mockChatMateStateService
   }))
 
-  await masterchatService.addMasterchat(streamerId, liveId)
+  masterchatService.addMasterchat(streamerId, liveId)
 })
 
 describe(nameof(MasterchatService, 'addMasterchat'), () => {
-  test('Throws if attempting to add an instance for an existing streamer', async () => {
-    await expect(() => masterchatService.addMasterchat(streamerId, liveId)).rejects.toThrowError(ChatMateError)
+  test('Throws if attempting to add an instance for an existing streamer', () => {
+    expect(() => masterchatService.addMasterchat(streamerId, liveId)).toThrowError(ChatMateError)
   })
 
-  test('creates masterchat instance with specified liveId', async () => {
+  test('stores masterchat streamer-liveIds', async () => {
     const testLiveId1 = 'testLiveId1'
     const testLiveId2 = 'testLiveId2'
     const streamer1 = 1
@@ -68,12 +74,12 @@ describe(nameof(MasterchatService, 'addMasterchat'), () => {
     mockMasterchatFactory.create.calledWith(testLiveId1).mockResolvedValue(testMasterchat1)
     mockMasterchatFactory.create.calledWith(testLiveId2).mockResolvedValue(testMasterchat2)
 
-    await masterchatService.addMasterchat(streamer1, testLiveId1)
-    await masterchatService.addMasterchat(streamer2, testLiveId2)
+    masterchatService.addMasterchat(streamer1, testLiveId1)
+    masterchatService.addMasterchat(streamer2, testLiveId2)
 
-    expect(mockMasterchatFactory.create.mock.calls).toEqual([[testLiveId1], [testLiveId2]])
+    expect([...mockMasterchatMap.values()]).toEqual([liveId, testLiveId1, testLiveId2])
 
-    // new instances are usable
+    // check the map is being used
     const chatResponse1: ChatResponse = {} as any
     const chatResponse2: ChatResponse = {} as any
     testMasterchat1.fetch.mockResolvedValue(chatResponse1)
@@ -254,7 +260,7 @@ describe(nameof(MasterchatService, 'unbanYoutubeChannel'), () => {
 })
 
 describe(nameof(MasterchatService, 'removeMasterchat'), () => {
-  test('removes masterchat instance with specified liveId', async () => {
+  test('removes masterchat streamer-liveId', async () => {
     masterchatService.removeMasterchat(streamerId)
 
     await expect(masterchatService.fetch(streamerId, undefined)).rejects.toThrowError(ChatMateError)
@@ -273,7 +279,7 @@ describe(nameof(MasterchatService, 'checkAuthentication'), () => {
 
   test('Returns data with inactive authentication if masterchat instance is logged out', async () => {
     const lastUpdated = data.time2
-    mockGetter(mockMasterchat, 'isLoggedOut').mockReturnValue(true)
+    mockChatMateStateService.getMasterchatLoggedIn.mockReturnValue(false)
     mockAuthStore.loadYoutubeWebAccessToken.calledWith(mockChannelId).mockResolvedValue(cast<YoutubeWebAuth>({ updateTime: lastUpdated }))
 
     const result = await masterchatService.checkAuthentication()
@@ -283,7 +289,7 @@ describe(nameof(MasterchatService, 'checkAuthentication'), () => {
 
   test('Returns data with active authentication if masterchat instance is logged in', async () => {
     const lastUpdated = data.time2
-    mockGetter(mockMasterchat, 'isLoggedOut').mockReturnValue(false)
+    mockChatMateStateService.getMasterchatLoggedIn.mockReturnValue(true)
     mockAuthStore.loadYoutubeWebAccessToken.calledWith(mockChannelId).mockResolvedValue(cast<YoutubeWebAuth>({ updateTime: lastUpdated }))
 
     const result = await masterchatService.checkAuthentication()
@@ -337,37 +343,6 @@ describe(nameof(MasterchatService, 'unmod'), () => {
     mockMasterchat.removeModerator.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
 
     await testFailing(() => masterchatService.unmod(streamerId, contextMenuEndpointParams), error)
-  })
-})
-
-describe(nameof(MasterchatService, 'onAuthRefreshed'), () => {
-  test('Updates the credentials of each active masterchat instance', async () => {
-    const accessToken = 'accessToken'
-    mockAuthStore.loadYoutubeWebAccessToken.calledWith(mockChannelId).mockResolvedValue(cast<YoutubeWebAuth>({ accessToken }))
-
-    const streamer1 = 1
-    const streamer2 = 2
-    const testLiveId1 = 'testLiveId1'
-    const testLiveId2 = 'testLiveId2'
-    const testMasterchat1 = mock<Masterchat>()
-    const testMasterchat2 = mock<Masterchat>()
-    mockMasterchatFactory.create.mockReset()
-    mockMasterchatFactory.create.calledWith(testLiveId1).mockResolvedValue(testMasterchat1)
-    mockMasterchatFactory.create.calledWith(testLiveId2).mockResolvedValue(testMasterchat2)
-
-    await masterchatService.addMasterchat(streamer1, testLiveId1)
-    await masterchatService.addMasterchat(streamer2, testLiveId2)
-
-    await masterchatService.onAuthRefreshed()
-
-    expect(single2(testMasterchat1.setCredentials.mock.calls)).toBe(accessToken)
-    expect(single2(testMasterchat2.setCredentials.mock.calls)).toBe(accessToken)
-  })
-
-  test('Throws if the authentication does not exist', async () => {
-    mockAuthStore.loadYoutubeWebAccessToken.calledWith(mockChannelId).mockResolvedValue(null)
-
-    await expect(() => masterchatService.onAuthRefreshed()).rejects.toThrowError(ChatMateError)
   })
 })
 
