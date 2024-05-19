@@ -31,13 +31,6 @@ export default class MasterchatFactory extends ContextClass {
 
   public async create (liveId: string): Promise<Masterchat> {
     const auth = await this.authStore.loadYoutubeWebAccessToken(this.channelId)
-
-    if (auth == null) {
-      this.logService.logWarning(this, 'Access token is not set in the db for channelId', this.channelId)
-    } else {
-      this.logService.logInfo(this, 'Successfully loaded access token for channelId', this.channelId)
-    }
-
     const logContext = createLogContext(this.logService, { name: `masterchat[${liveId}]`})
     return new Masterchat(
       logContext,
