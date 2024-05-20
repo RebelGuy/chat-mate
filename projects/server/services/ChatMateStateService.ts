@@ -1,4 +1,5 @@
 import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
+import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
 import { ChatMateError } from '@rebel/shared/util/error'
 
 type State = {
@@ -6,6 +7,8 @@ type State = {
   streamlabsStreamerWebsockets: Map<number, SocketIOClient.Socket>
   masterchatStreamerIdLiveIdMap: Map<number, string>
   masterchatLoggedIn: boolean
+  emojiSemaphore: GroupedSemaphore<string>
+  customEmojiSemaphore: GroupedSemaphore<number>
 }
 
 export default class ChatMateStateService extends SingletonContextClass {
@@ -13,7 +16,9 @@ export default class ChatMateStateService extends SingletonContextClass {
     hasInitialisedLivestreamMetadata: false,
     streamlabsStreamerWebsockets: new Map(),
     masterchatStreamerIdLiveIdMap: new Map(),
-    masterchatLoggedIn: false
+    masterchatLoggedIn: false,
+    emojiSemaphore: new GroupedSemaphore(1),
+    customEmojiSemaphore: new GroupedSemaphore(1)
   }
 
   public hasInitialisedLivestreamMetadata () {
@@ -42,5 +47,13 @@ export default class ChatMateStateService extends SingletonContextClass {
 
   public setMasterchatLoggedIn (isLoggedIn: boolean) {
     this.state.masterchatLoggedIn = isLoggedIn
+  }
+
+  public getEmojiSemaphore () {
+    return this.state.emojiSemaphore
+  }
+
+  public getCustomEmojiSemaphore () {
+    return this.state.customEmojiSemaphore
   }
 }

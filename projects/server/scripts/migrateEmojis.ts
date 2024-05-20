@@ -1,4 +1,5 @@
 import { ChatEmoji } from '@prisma/client'
+import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
 import { ARGS, DB, LOG_SERVICE, NODE_ENV } from '@rebel/server/scripts/consts'
 import ImageService from '@rebel/server/services/ImageService'
 import S3ProxyService, { S3Image } from '@rebel/server/services/S3ProxyService'
@@ -34,10 +35,14 @@ type PartialPublicEmoji = {
 const s3 = new S3ProxyService(new Dependencies({
   s3Bucket: process.env.S3_BUCKET!,
   s3Domain: process.env.S3_DOMAIN!,
-  s3Key: process.env.S3_KEY!,
-  s3Region: process.env.S3_REGION!,
-  s3Secret: process.env.S3_SECRET!,
-  nodeEnv: NODE_ENV
+  nodeEnv: NODE_ENV,
+  s3ClientProvider: new S3ClientProvider(new Dependencies({
+    s3Bucket: process.env.S3_BUCKET!,
+    s3Domain: process.env.S3_DOMAIN!,
+    s3Key: process.env.S3_KEY!,
+    s3Region: process.env.S3_REGION!,
+    s3Secret: process.env.S3_SECRET!
+  }))
 }))
 const imageService = new ImageService(new Dependencies({
   webService: new WebService(),

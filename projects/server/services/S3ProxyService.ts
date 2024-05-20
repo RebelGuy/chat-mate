@@ -5,6 +5,7 @@ import { ChatMateError } from '@rebel/shared/util/error'
 import { NodeEnv } from '@rebel/server/globals'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Branded } from '@rebel/shared/types'
+import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
 
 export type S3Image = {
   // this is the pure data without any dataUrl prefixes
@@ -17,12 +18,10 @@ enum SignedUrlBrand {}
 export type SignedUrl = Branded<string, SignedUrlBrand>
 
 type Deps = Dependencies<{
-  s3Region: string
   s3Domain: string
-  s3Key: string
-  s3Secret: string
   s3Bucket: string
   nodeEnv: NodeEnv
+  s3ClientProvider: S3ClientProvider
 }>
 
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-started-nodejs.html
@@ -40,14 +39,7 @@ export default class S3ProxyService extends ContextClass {
     this.bucket = deps.resolve('s3Bucket')
     this.nodeEnv = deps.resolve('nodeEnv')
 
-    this.client = new AWS.S3Client({
-      endpoint: `https://${this.domain}`,
-      region: deps.resolve('s3Region'),
-      credentials: {
-        accessKeyId: deps.resolve('s3Key'),
-        secretAccessKey: deps.resolve('s3Secret')
-      }
-    })
+    this.client = deps.resolve('s3ClientProvider').get()
   }
 
   public constructAbsoluteUrl (fileName: string) {

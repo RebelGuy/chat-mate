@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import { getUserName } from '@rebel/server/services/ChannelService'
@@ -20,7 +20,6 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 import { waitUntil } from '@rebel/shared/util/typescript'
-import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 export type TwitchMetadata = {
   streamId: string
@@ -45,10 +44,9 @@ type Deps = Dependencies<{
   isContextInitialised: () => boolean
   dateTimeHelpers: DateTimeHelpers
   twitchUsername: string
-  timerHelpers: TimerHelpers
 }>
 
-export default class TwurpleService extends ContextClass {
+export default class TwurpleService extends SingletonContextClass {
   readonly name = TwurpleService.name
 
   private readonly logService: LogService
@@ -65,7 +63,6 @@ export default class TwurpleService extends ContextClass {
   private readonly isAdministrativeMode: () => boolean
   private readonly isContextInitialised: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
-  private readonly timerHelpers: TimerHelpers
   private userApi!: HelixUserApi
   private chatClient!: ChatClient
 
@@ -88,7 +85,6 @@ export default class TwurpleService extends ContextClass {
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.isContextInitialised = deps.resolve('isContextInitialised')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
-    this.timerHelpers = deps.resolve('timerHelpers')
   }
 
   public override async initialise () {

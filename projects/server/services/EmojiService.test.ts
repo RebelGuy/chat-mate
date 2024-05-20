@@ -1,4 +1,5 @@
 import { ChatEmojiWithImage, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
+import CacheService from '@rebel/server/services/CacheService'
 import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
 import EmojiService, { EmojiMap } from '@rebel/server/services/EmojiService'
 import FileService from '@rebel/server/services/FileService'
@@ -16,6 +17,7 @@ let mockEmojiStore: MockProxy<EmojiStore>
 let mockS3ProxyService: MockProxy<S3ProxyService>
 let mockImageService: MockProxy<ImageService>
 let mockFileService: MockProxy<FileService>
+let mockCacheService: MockProxy<CacheService>
 let emojiService: EmojiService
 
 beforeEach(() => {
@@ -24,6 +26,7 @@ beforeEach(() => {
   mockS3ProxyService = mock()
   mockImageService = mock()
   mockFileService = mock()
+  mockCacheService = mock()
 
   emojiService = new EmojiService(new Dependencies({
     rankStore: mockRankStore,
@@ -31,7 +34,8 @@ beforeEach(() => {
     s3ProxyService: mockS3ProxyService,
     imageService: mockImageService,
     fileService: mockFileService,
-    logService: mock()
+    logService: mock(),
+    cacheService: mockCacheService
   }))
 })
 
@@ -55,8 +59,7 @@ describe(nameof(EmojiService, 'analyseYoutubeTextForEmojis'), () => {
     const filePath = 'filePath'
     mockFileService.getDataFilePath.calledWith('emojiMap.json').mockReturnValue(filePath)
     mockFileService.readObject.calledWith(filePath).mockReturnValue(emojiMap)
-
-    emojiService.initialise()
+    mockCacheService.getOrSetEmojiRegex.mockImplementation(cb => cb())
   })
 
   test('Strips out emojis padded with text correctly', () => {

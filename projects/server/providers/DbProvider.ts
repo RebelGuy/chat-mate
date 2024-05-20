@@ -1,10 +1,9 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import Semaphore from '@rebel/shared/util/Semaphore'
 import { DbError } from '@rebel/shared/util/error'
-import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
 import { SafeOmit } from '@rebel/shared/types'
 
 // remove properties from PrismaClient that we will never need
@@ -20,7 +19,7 @@ type Deps = Dependencies<{
   dbSlowQueryThreshold: number
 }>
 
-export default class DbProvider extends ContextClass {
+export default class DbProvider extends SingletonContextClass {
   readonly name = DbProvider.name
 
   private readonly logService: LogService
@@ -101,10 +100,6 @@ export default class DbProvider extends ContextClass {
 
   public override async initialise () {
     await this.prismaClient.$connect()
-  }
-
-  public override async dispose () {
-    await this.prismaClient.$disconnect()
   }
 }
 

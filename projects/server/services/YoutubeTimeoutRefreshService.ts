@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 
@@ -26,7 +26,7 @@ type Deps = Dependencies<{
   dateTimeHelpers: DateTimeHelpers
 }>
 
-export default class YoutubeTimeoutRefreshService extends ContextClass {
+export default class YoutubeTimeoutRefreshService extends SingletonContextClass {
   readonly name = YoutubeTimeoutRefreshService.name
 
   private readonly timerHelpers: TimerHelpers

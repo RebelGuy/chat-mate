@@ -16,6 +16,9 @@ export default class CacheService extends SingletonContextClass {
   private readonly streamerStore: StreamerStore
   private readonly chatMateRegisteredUserName: string
 
+  /** Null if no map exists, undefined if unknown. */
+  private emojiRegex: RegExp | null | undefined
+
   public readonly chatMateStreamerId: Resolvable<number>
 
   constructor (deps: Deps) {
@@ -25,6 +28,7 @@ export default class CacheService extends SingletonContextClass {
     this.chatMateRegisteredUserName = deps.resolve('chatMateRegisteredUserName')
 
     this.chatMateStreamerId = new Resolvable(this.getChatMateStreamerId)
+    this.emojiRegex = undefined
   }
 
   private getChatMateStreamerId = async (): Promise<number> => {
@@ -34,5 +38,13 @@ export default class CacheService extends SingletonContextClass {
     }
 
     return chatMateStreamer.id
+  }
+
+  public getOrSetEmojiRegex = (onGetEmojiRegex: () => RegExp | null) => {
+    if (this.emojiRegex === undefined) {
+      this.emojiRegex = onGetEmojiRegex()
+    }
+
+    return this.emojiRegex
   }
 }

@@ -43,7 +43,6 @@ let mockAccountStore: MockProxy<AccountStore>
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockStreamerChannelService: MockProxy<StreamerChannelService>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
-let mockTimerHelpers: MockProxy<TimerHelpers>
 const mockTwitchUsername = 'twitchUsername'
 let twurpleService: TwurpleService
 
@@ -69,7 +68,6 @@ beforeEach(() => {
   mockStreamerStore = mock()
   mockStreamerChannelService = mock()
   mockDateTimeHelpers = mock()
-  mockTimerHelpers = mock()
 
   twurpleService = new TwurpleService(new Dependencies({
     logService: mock(),
@@ -86,8 +84,7 @@ beforeEach(() => {
     isAdministrativeMode: () => false,
     isContextInitialised: () => true,
     dateTimeHelpers: mockDateTimeHelpers,
-    twitchUsername: mockTwitchUsername,
-    timerHelpers: mockTimerHelpers
+    twitchUsername: mockTwitchUsername
   }))
 
   mockStreamerChannelService.getAllTwitchStreamerChannels.calledWith().mockResolvedValue([])
@@ -110,8 +107,7 @@ describe(nameof(TwurpleService, 'initialise'), () => {
       isAdministrativeMode: () => false,
       isContextInitialised: () => true,
       dateTimeHelpers: mockDateTimeHelpers,
-      twitchUsername: mockTwitchUsername,
-      timerHelpers: mockTimerHelpers
+      twitchUsername: mockTwitchUsername
     }))
 
     await twurpleService.initialise()
@@ -136,8 +132,7 @@ describe(nameof(TwurpleService, 'initialise'), () => {
       isAdministrativeMode: () => true,
       isContextInitialised: () => true,
       dateTimeHelpers: mockDateTimeHelpers,
-      twitchUsername: mockTwitchUsername,
-      timerHelpers: mockTimerHelpers
+      twitchUsername: mockTwitchUsername
     }))
 
     await twurpleService.initialise()

@@ -108,6 +108,7 @@ import expressWs from 'express-ws'
 import WebsocketClient from '@rebel/server/controllers/WebsocketClient'
 import FollowerService from '@rebel/server/services/FollowerService'
 import * as AI from 'applicationinsights'
+import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -259,6 +260,7 @@ const main = async () => {
     .withClass('experienceService', ExperienceService)
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
+    .withClass('s3ClientProvider', S3ClientProvider)
     .withClass('s3ProxyService', S3ProxyService)
     .withClass('imageService', ImageService)
     .withClass('customEmojiService', CustomEmojiService)

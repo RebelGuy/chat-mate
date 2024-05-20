@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import LogService from '@rebel/server/services/LogService'
@@ -23,7 +23,7 @@ type Deps = Dependencies<{
 
 const CHAT_INTENT = 'chat'
 
-export default class TwurpleAuthProvider extends ContextClass {
+export default class TwurpleAuthProvider extends SingletonContextClass {
   readonly name = TwurpleAuthProvider.name
 
   private readonly disableExternalApis: boolean

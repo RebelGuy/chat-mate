@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { ChatClient, LogLevel } from '@twurple/chat'
@@ -14,7 +14,7 @@ type Deps = Dependencies<{
   isAdministrativeMode: () => boolean
 }>
 
-export default class TwurpleChatClientProvider extends ContextClass {
+export default class TwurpleChatClientProvider extends SingletonContextClass {
   readonly name = TwurpleChatClientProvider.name
 
   private readonly twurkpleAuthProvider: TwurpleAuthProvider
@@ -26,7 +26,6 @@ export default class TwurpleChatClientProvider extends ContextClass {
   private chatClient!: ChatClient
 
   private disconnects = 0
-  private cancelCheckInterval!: () => void
 
   constructor (deps: Deps) {
     super()
@@ -69,18 +68,7 @@ export default class TwurpleChatClientProvider extends ContextClass {
     this.logService.logInfo(this, 'Initiating connection to the Twurple chat client')
 
     void this.chatClient.connect()
-    this.cancelCheckInterval = this.timerHelpers.setInterval(() => this.onCheckHealth(), 10_000)
-  }
-
-  override dispose (): void {
-    this.cancelCheckInterval()
-
-    try {
-      this.chatClient.quit()
-      this.logService.logInfo(this, 'Disconnected from the Twurple chat client')
-    } catch (e: any) {
-      this.logService.logError(this, 'Failed to disconnect from the Twurple chat client:', e)
-    }
+    this.timerHelpers.setInterval(() => this.onCheckHealth(), 10_000)
   }
 
   get () {

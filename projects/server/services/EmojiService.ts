@@ -1,5 +1,6 @@
 import { YTEmoji, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialProcessedEmojiChatMessage } from '@rebel/server/models/chat'
+import CacheService from '@rebel/server/services/CacheService'
 import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
 import FileService from '@rebel/server/services/FileService'
 import ImageService from '@rebel/server/services/ImageService'
@@ -25,6 +26,7 @@ type Deps = Dependencies<{
   imageService: ImageService
   fileService: FileService
   logService: LogService
+  cacheService: CacheService
 }>
 
 export default class EmojiService extends ContextClass {
@@ -36,9 +38,7 @@ export default class EmojiService extends ContextClass {
   private readonly imageService: ImageService
   private readonly fileService: FileService
   private readonly logService: LogService
-
-  // null if no map exists
-  private emojiRegex!: RegExp | null
+  private readonly cacheService: CacheService
 
   constructor (deps: Deps) {
     super()
@@ -49,22 +49,13 @@ export default class EmojiService extends ContextClass {
     this.imageService = deps.resolve('imageService')
     this.fileService = deps.resolve('fileService')
     this.logService = deps.resolve('logService')
-  }
-
-  public override initialise (): void | Promise<void> {
-    const emojiMap = this.loadEmojiMap()
-    if (emojiMap == null) {
-      this.logService.logWarning(this, 'Could not find the `emojiMap.json` file. Unicode emojis will not be processed.')
-      this.emojiRegex = null
-      return
-    }
-
-    this.emojiRegex = RegExp(Object.keys(emojiMap).join('|').replace('*', '\\*'))
+    this.cacheService = deps.resolve('cacheService')
   }
 
   /** Checks if there are any known emojis in the given text run and, if so, splits up the run appropriately. */
   public analyseYoutubeTextForEmojis (run: YTTextRun): YTRun[] {
-    if (this.emojiRegex == null) {
+    const emojiRegex = this.cacheService.getOrSetEmojiRegex(this.loadEmojiRegex)
+    if (emojiRegex == null) {
       return [run]
     }
 
@@ -75,7 +66,7 @@ export default class EmojiService extends ContextClass {
     let emojiMap: EmojiMap | null = null
 
     // exact same algorithm that youtube uses, but with more readability
-    while ((match = this.emojiRegex.exec(text.substring(k))) != null) {
+    while ((match = emojiRegex.exec(text.substring(k))) != null) {
       if (emojiMap == null) {
         emojiMap = this.loadEmojiMap()!
       }
@@ -169,6 +160,16 @@ export default class EmojiService extends ContextClass {
   private loadEmojiMap (): EmojiMap | null {
     const path = this.fileService.getDataFilePath('emojiMap.json')
     return this.fileService.readObject<EmojiMap>(path)
+  }
+
+  private loadEmojiRegex = () => {
+    const emojiMap = this.loadEmojiMap()
+    if (emojiMap == null) {
+      this.logService.logWarning(this, 'Could not find the `emojiMap.json` file. Unicode emojis will not be processed.')
+      return null
+    }
+
+    return RegExp(Object.keys(emojiMap).join('|').replace('*', '\\*'))
   }
 }
 

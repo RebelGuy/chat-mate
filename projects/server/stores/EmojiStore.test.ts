@@ -1,9 +1,12 @@
 import { startTestDb, DB_TEST_TIMEOUT, expectRowCount, stopTestDb } from '@rebel/server/_test/db'
 import { PartialEmojiChatMessage } from '@rebel/server/models/chat'
 import { Db } from '@rebel/server/providers/DbProvider'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import EmojiStore from '@rebel/server/stores/EmojiStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { cast, expectObjectDeep, nameof, promised, throwAsync } from '@rebel/shared/testUtils'
+import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
+import { mock } from 'jest-mock-extended'
 
 export default () => {
   let emojiStore: EmojiStore
@@ -13,7 +16,9 @@ export default () => {
     const dbProvider = await startTestDb()
     db = dbProvider.get()
 
-    emojiStore = new EmojiStore(new Dependencies({ dbProvider }))
+    const chatMateStateService = mock<ChatMateStateService>({ getEmojiSemaphore: () => new GroupedSemaphore(1) })
+
+    emojiStore = new EmojiStore(new Dependencies({ dbProvider, chatMateStateService }))
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)

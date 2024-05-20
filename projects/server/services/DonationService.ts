@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import DonationHelpers, { DonationAmount, DONATION_EPOCH_DAYS } from '@rebel/server/helpers/DonationHelpers'
 import { ChatItemWithRelations, PartialChatMessage } from '@rebel/server/models/chat'
@@ -58,7 +58,7 @@ type Deps = Dependencies<{
   isAdministrativeMode: () => boolean
 }>
 
-export default class DonationService extends ContextClass {
+export default class DonationService extends SingletonContextClass {
   public readonly name = DonationService.name
 
   private readonly donationStore: DonationStore

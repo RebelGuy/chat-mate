@@ -7,7 +7,7 @@ import LogService from '@rebel/server/services/LogService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatService from '@rebel/server/services/MasterchatService'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import ChatService from '@rebel/server/services/ChatService'
 import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
@@ -42,7 +42,7 @@ type Deps = Dependencies<{
   isAdministrativeMode: () => boolean
 }>
 
-export default class MasterchatFetchService extends ContextClass {
+export default class MasterchatFetchService extends SingletonContextClass {
   readonly name = MasterchatFetchService.name
   private readonly chatService: ChatService
   private readonly chatStore: ChatStore
@@ -90,15 +90,6 @@ export default class MasterchatFetchService extends ContextClass {
       callback: this.checkLivestreams
     }
     this.livestreamCheckTimer = await this.timerHelpers.createRepeatingTimer(timerOptions, true)
-  }
-
-  public override dispose (): void | Promise<void> {
-    this.timerHelpers.disposeSingle(this.livestreamCheckTimer)
-
-    for (const timer of this.chatTimers.values()) {
-      this.timerHelpers.disposeSingle(timer)
-    }
-    this.chatTimers.clear()
   }
 
   /** Esures that there is one timer active for every YouTube livestream. */
