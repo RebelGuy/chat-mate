@@ -26,7 +26,7 @@ export default () => {
     const dbProvider = await startTestDb()
     db = dbProvider.get()
 
-    const chatMateStateService = mock<ChatMateStateService>({ getEmojiSemaphore: () => new GroupedSemaphore(1) })
+    const chatMateStateService = mock<ChatMateStateService>({ getCustomEmojiSemaphore: () => new GroupedSemaphore(1) })
 
     await db.rank.createMany({ data: [
       { name: 'donator', group: 'cosmetic', displayNameAdjective: 'rank1', displayNameNoun: 'rank1' },
