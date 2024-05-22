@@ -9,6 +9,7 @@ import LinkStore from '@rebel/server/stores/LinkStore'
 import { PublicLinkAttemptLog } from '@rebel/api-models/public/user/PublicLinkAttemptLog'
 import { PublicLinkAttemptStep } from '@rebel/api-models/public/user/PublicLinkAttemptStep'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
+import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
   adminService: AdminService
@@ -72,6 +73,11 @@ export default class AdminController extends ControllerBase {
   ): Promise<TwitchAuthorisationResponse> {
     const builder = this.registerResponseBuilder<TwitchAuthorisationResponse>('POST /twitch/authorise')
 
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
+
     try {
       await this.adminService.authoriseTwitchLogin(code)
       return builder.success({})
@@ -126,6 +132,11 @@ export default class AdminController extends ControllerBase {
     @QueryParam('code') code: string
   ): Promise<YoutubeAuthorisationResponse> {
     const builder = this.registerResponseBuilder<YoutubeAuthorisationResponse>('POST /youtube/authorise')
+
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       await this.youtubeAuthProvider.authoriseChannel(code, 'admin')
@@ -182,6 +193,11 @@ export default class AdminController extends ControllerBase {
     @QueryParam('linkAttemptId') linkAttemptId: number
   ): Promise<ReleaseLinkAttemptResponse> {
     const builder = this.registerResponseBuilder<ReleaseLinkAttemptResponse>('POST /link/release')
+
+    const validationError = builder.validateInput({ linkAttemptId: { type: 'number' }}, { linkAttemptId })
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       await this.linkStore.releaseLink(linkAttemptId)

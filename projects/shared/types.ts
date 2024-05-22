@@ -92,3 +92,6 @@ export type SafeExtract<T, U extends T> = U extends Extract<T, U> ? U : never
 export type SafeOmit<T, K extends keyof T> = Omit<T, K>
 
 export type SafeExclude<T, U extends T> = Exclude<T, U>
+
+/** Converts { x?: y } to { x?: y | undefined } */
+export type ConcreteOptional<T> = T & T[OptionalKeys<T>]

@@ -74,8 +74,10 @@ export default class ExperienceController extends ControllerBase {
     @QueryParam('id') anyUserId: number
   ): Promise<GetRankResponse> {
     const builder = this.registerResponseBuilder<GetRankResponse>('GET /rank')
-    if (anyUserId == null) {
-      return builder.failure(400, `A value for 'id' must be provided.`)
+
+    const validationError = builder.validateInput({ id: { type: 'number' }}, { id: anyUserId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -128,8 +130,14 @@ export default class ExperienceController extends ControllerBase {
   @Path('modify')
   public async modifyExperience (request: ModifyExperienceRequest): Promise<ModifyExperienceResponse> {
     const builder = this.registerResponseBuilder<ModifyExperienceResponse>('POST /modify')
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      deltaLevels: { type: 'number' },
+      message: { type: 'string', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {

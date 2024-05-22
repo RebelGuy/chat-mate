@@ -1,4 +1,6 @@
-import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
+import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
+import { PublicCustomEmojiNew } from '@rebel/api-models/public/emoji/PublicCustomEmojiNew'
+import { PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmojiUpdate'
 import { ApiResponse, PublicObject, ApiRequest } from '@rebel/api-models/types'
 import { EmptyObject } from '@rebel/shared/types'
 
@@ -6,7 +8,7 @@ export type GetCustomEmojisResponse = ApiResponse<{ emojis: PublicObject<PublicC
 
 export type AddCustomEmojiRequest = ApiRequest<{
   newEmoji: PublicObject<PublicCustomEmojiNew>,
-  insertAtBeginning?: boolean
+  insertAtBeginning: boolean | undefined
 }>
 export type AddCustomEmojiResponse = ApiResponse<{ newEmoji: PublicObject<PublicCustomEmoji> }>
 

@@ -4,7 +4,6 @@ import { buildPath, ControllerBase, Endpoint } from '@rebel/server/controllers/C
 import env from '@rebel/server/globals'
 import { GET, Path, PathParam, PreProcessor, QueryParam } from 'typescript-rest'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime'
 import { GetChatResponse, GetCommandStatusResponse } from '@rebel/api-models/schema/chat'
 import { isKnownPrismaError, PRISMA_CODE_DOES_NOT_EXIST } from '@rebel/server/prismaUtil'
 
@@ -35,6 +34,15 @@ export default class ChatController extends ControllerBase {
     @QueryParam('limit') limit?: number
   ): Promise<GetChatResponse> {
     const builder = this.registerResponseBuilder<GetChatResponse>('GET /')
+
+    const validationError = builder.validateInput({
+      since: { type: 'number', optional: true },
+      limit: { type: 'number', optional: true }
+    }, { since, limit })
+    if (validationError != null) {
+      return validationError
+    }
+
     try {
       return await this.implementation.getChat({
         builder,
@@ -54,8 +62,9 @@ export default class ChatController extends ControllerBase {
   ): Promise<GetCommandStatusResponse> {
     const builder = this.registerResponseBuilder<GetCommandStatusResponse>('GET /command/:commandId')
 
-    if (commandId == null) {
-      return builder.failure(400, 'CommandId must be provided.')
+    const validationError = builder.validateInput({ commandId: { type: 'number' }}, { commandId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {

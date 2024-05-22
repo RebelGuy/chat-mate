@@ -1,10 +1,12 @@
 import { ControllerDependencies, buildPath, ControllerBase } from '@rebel/server/controllers/ControllerBase'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { customEmojiToPublicObject, publicObjectToCustomEmojiUpdateData, publicObjectNewToNewCustomEmoji } from '@rebel/server/models/emoji'
-import { Path, GET, POST, PATCH, PreProcessor, BodyOptions, PathParam, DELETE, QueryParam } from 'typescript-rest'
+import { Path, GET, POST, PATCH, PreProcessor, BodyOptions, DELETE, QueryParam } from 'typescript-rest'
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
+import { isNullOrEmpty } from '@rebel/shared/util/strings'
+import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
   customEmojiStore: CustomEmojiStore
@@ -41,22 +43,37 @@ export default class EmojiController extends ControllerBase {
   @BodyOptions({ limit: '1mb' })
   public async addCustomEmoji (request: AddCustomEmojiRequest): Promise<AddCustomEmojiResponse> {
     const builder = this.registerResponseBuilder<AddCustomEmojiResponse>('POST /custom')
-    if (request == null || request.newEmoji == null) {
-      return builder.failure(400, 'Invalid request data.')
-    }
 
-    const symbol = request.newEmoji.symbol ?? ''
-    if (symbol.length < 1 || symbol.length > 32) {
-      return builder.failure(400, 'Symbol must be between 1 and 32 characters.')
-    }
+    const validationError = builder.validateInput({
+      newEmoji: {
+        type: 'object',
+        body: {
+          name: { type: 'string' },
+          symbol: {
+            type: 'string',
+            validators: [
+              { onValidate: (s: string) => s.length < 1 || s.length > 32, errorMessage: 'Symbol must be between 1 and 32 characters' },
+              { onValidate: (s: string) => s.includes(':'), errorMessage: `Symbol cannot include the character ':'` }
+            ]
+          },
+          levelRequirement: { type: 'number' },
+          canUseInDonationMessage: { type: 'boolean' },
+          whitelistedRanks: { type: 'number', isArray: true },
+          sortOrder: { type: 'number' },
+          imageDataUrl: {
+            type: 'string',
+            validators: [
+              nonEmptyStringValidator,
+              { onValidate: (s: string) => s.toLowerCase().startsWith('http'), errorMessage: 'Image cannot be a HTTP URL' }
+            ]
+          }
+        }
+      },
+      insertAtBeginning: { type: 'boolean', optional: true }
+    }, request)
 
-    if (symbol.includes(':')) {
-      return builder.failure(400, `Symbol cannot include the character ':'`)
-    }
-
-    const imageData = request.newEmoji.imageDataUrl ?? ''
-    if (imageData.length === 0) {
-      return builder.failure(400, 'Image data must be defined')
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -79,13 +96,30 @@ export default class EmojiController extends ControllerBase {
   @BodyOptions({ limit: '1mb' })
   public async updateCustomEmoji (request: UpdateCustomEmojiRequest): Promise<UpdateCustomEmojiResponse> {
     const builder = this.registerResponseBuilder<UpdateCustomEmojiResponse>('PATCH /custom')
-    if (request == null) {
-      return builder.failure(400, 'Invalid request data.')
-    }
 
-    const imageData = request.updatedEmoji.imageDataUrl ?? ''
-    if (imageData.length === 0 || imageData.toLowerCase().startsWith('http')) {
-      return builder.failure(400, 'Image data must be defined and cannot be a HTTP URL')
+    const validationError = builder.validateInput({
+      updatedEmoji: {
+        type: 'object',
+        body: {
+          id: { type: 'number' },
+          name: { type: 'string' },
+          levelRequirement: { type: 'number' },
+          canUseInDonationMessage: { type: 'boolean' },
+          whitelistedRanks: { type: 'number', isArray: true },
+          sortOrder: { type: 'number' },
+          imageDataUrl: {
+            type: 'string',
+            validators: [
+              nonEmptyStringValidator,
+              { onValidate: (s: string) => s.toLowerCase().startsWith('http'), errorMessage: 'Image cannot be a HTTP URL' }
+            ]
+          }
+        }
+      }
+    }, request)
+
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -106,8 +140,10 @@ export default class EmojiController extends ControllerBase {
   @PreProcessor(requireRank('owner'))
   public async deleteCustomEmoji (@QueryParam('id') id: number): Promise<DeleteCustomEmojiResponse> {
     const builder = this.registerResponseBuilder<DeleteCustomEmojiResponse>('DELETE /custom')
-    if (typeof id !== 'number') {
-      return builder.failure(400, 'Invalid arguments')
+
+    const validationError = builder.validateInput({ id: { type: 'number' }}, { id })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -134,13 +170,14 @@ export default class EmojiController extends ControllerBase {
 
     try {
       const ids = Object.keys(request.sortOrders).map(id => Number(id))
-      if (ids.some(id => isNaN(id))) {
-        return builder.failure(400, 'Invalid request data.')
-      }
-
       const sortOrders = Object.values(request.sortOrders).map(sortOrder => Number(sortOrder))
-      if (ids.some(sortOrder => isNaN(sortOrder))) {
-        return builder.failure(400, 'Invalid request data.')
+      const validationError = builder.validateInput({
+        ids: { type: 'number', isArray: true },
+        sortOrders: { type: 'number', isArray: true },
+      }, { ids, sortOrders })
+
+      if (validationError != null) {
+        return validationError
       }
 
       const accessibleIds = await this.customEmojiStore.getAllCustomEmojis(this.getStreamerId()).then(res => res.map(e => e.id))

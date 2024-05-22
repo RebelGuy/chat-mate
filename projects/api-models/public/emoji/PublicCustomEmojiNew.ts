@@ -1,29 +1,11 @@
 import { PublicObject } from '@rebel/api-models/types'
 
-export type PublicCustomEmoji = PublicObject<{
-  /** The internal emoji id. An emoji is uniquely identified by an id-version pair. */
-  id: number
-
-  /** The current emoji version. */
-  version: number
-
-  /** Whether the emoji is currently active and accessible to users. */
-  isActive: boolean
-
+export type PublicCustomEmojiNew = PublicObject<{
   /** The human readable name of the emoji. */
   name: string
 
   /** The unique 3-10 character long symbol that identifies this emoji. */
   symbol: string
-
-  /** The signed image url. */
-  imageUrl: string
-
-  /** The pixel width of the image. */
-  imageWidth: number
-
-  /** The pixel height of the image. */
-  imageHeight: number
 
   /** The minimum level a user must be to unlock this emoji. */
   levelRequirement: number
@@ -36,4 +18,7 @@ export type PublicCustomEmoji = PublicObject<{
 
   /** The position of this custom emoji relative to all other custom emojis. */
   sortOrder: number
+
+  /** The base64-encoded data URL of the image (must not be a HTTP URL). */
+  imageDataUrl: string
 }>

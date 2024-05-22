@@ -39,6 +39,8 @@ import { PublicRankUpdateData } from '@rebel/api-models/public/event/PublicRankU
 import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatformRank'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import CacheService from '@rebel/server/services/CacheService'
+import { generateStringRangeValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
+import { ONE_DAY } from '@rebel/shared/util/datetime'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -186,6 +188,11 @@ export default class StreamerController extends ControllerBase {
   public async createApplication (request: CreateApplicationRequest): Promise<CreateApplicationResponse> {
     const builder = this.registerResponseBuilder<CreateApplicationResponse>('POST /application')
 
+    const validationError = builder.validateInput({ message: { type: 'string', validators: [nonEmptyStringValidator] }}, request)
+    if (validationError != null) {
+      return validationError
+    }
+
     try {
       const registeredUserId = super.getCurrentUser().id
       const application = await this.streamerService.createStreamerApplication(registeredUserId, request.message)
@@ -208,6 +215,14 @@ export default class StreamerController extends ControllerBase {
   ): Promise<ApproveApplicationResponse> {
     const builder = this.registerResponseBuilder<ApproveApplicationResponse>('POST /application/:streamerApplicationId/approve')
 
+    const validationError = builder.validateInput({
+      message: { type: 'string', validators: [nonEmptyStringValidator] },
+      streamerApplicationId: { type: 'number' }
+    }, { ...request, streamerApplicationId })
+    if (validationError != null) {
+      return validationError
+    }
+
     try {
       const application = await this.streamerService.approveStreamerApplication(streamerApplicationId, request.message, this.getCurrentUser().id)
       return builder.success({ updatedApplication: streamerApplicationToPublicObject(application) })
@@ -228,6 +243,14 @@ export default class StreamerController extends ControllerBase {
     request: RejectApplicationRequest
   ): Promise<RejectApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/reject')
+
+    const validationError = builder.validateInput({
+      message: { type: 'string', validators: [nonEmptyStringValidator] },
+      streamerApplicationId: { type: 'number' }
+    }, { ...request, streamerApplicationId })
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       const data: CloseApplicationArgs = {
@@ -255,12 +278,20 @@ export default class StreamerController extends ControllerBase {
   ): Promise<WithdrawApplicationResponse> {
     const builder = this.registerResponseBuilder<RejectApplicationResponse>('POST /application/:streamerApplicationId/withdraw')
 
-    const applications = await this.streamerStore.getStreamerApplications(this.getCurrentUser().id)
-    if (!applications.map(app => app.id).includes(streamerApplicationId)) {
-      return builder.failure(404, 'Not Found')
+    const validationError = builder.validateInput({
+      message: { type: 'string', validators: [nonEmptyStringValidator] },
+      streamerApplicationId: { type: 'number' }
+    }, { ...request, streamerApplicationId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
+      const applications = await this.streamerStore.getStreamerApplications(this.getCurrentUser().id)
+      if (!applications.map(app => app.id).includes(streamerApplicationId)) {
+        return builder.failure(404, 'Not Found')
+      }
+
       const data: CloseApplicationArgs = {
         id: streamerApplicationId,
         approved: null,
@@ -310,13 +341,12 @@ export default class StreamerController extends ControllerBase {
   ): Promise<SetPrimaryChannelResponse> {
     const builder = this.registerResponseBuilder<SetPrimaryChannelResponse>('POST /primaryChannels/:platform/:channelId')
 
-    if (platform == null || channelId == null) {
-      return builder.failure(400, 'Platform and ChannelId must be provided.')
-    }
-
-    platform = platform.toLowerCase()
-    if (platform !== 'youtube' && platform !== 'twitch') {
-      return builder.failure(400, 'Platform must be either `youtube` or `twitch`.')
+    const validationError = builder.validateInput({
+      platform: { type: 'string', validators: [generateStringRangeValidator('youtube', 'twitch')] },
+      channelId: { type: 'number' }
+    }, { platform, channelId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -344,13 +374,9 @@ export default class StreamerController extends ControllerBase {
   ): Promise<UnsetPrimaryChannelResponse> {
     const builder = this.registerResponseBuilder<UnsetPrimaryChannelResponse>('DELETE /primaryChannels/:platform')
 
-    if (platform == null) {
-      return builder.failure(400, 'Platform must be provided.')
-    }
-
-    platform = platform.toLowerCase()
-    if (platform !== 'youtube' && platform !== 'twitch') {
-      return builder.failure(400, 'Platform must be either `youtube` or `twitch`.')
+    const validationError = builder.validateInput({ platform: { type: 'string', validators: [generateStringRangeValidator('youtube', 'twitch')] }}, { platform })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -426,6 +452,11 @@ export default class StreamerController extends ControllerBase {
     @QueryParam('code') code: string
   ): Promise<TwitchAuthorisationResponse> {
     const builder = this.registerResponseBuilder<TwitchAuthorisationResponse>('POST /twitch/authorise')
+
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
@@ -511,6 +542,11 @@ export default class StreamerController extends ControllerBase {
     @QueryParam('code') code: string
   ): Promise<YoutubeAuthorisationResponse> {
     const builder = this.registerResponseBuilder<YoutubeAuthorisationResponse>('POST /youtube/authorise')
+
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       const streamer = await this.streamerStore.getStreamerByRegisteredUserId(this.getCurrentUser().id)
@@ -602,8 +638,14 @@ export default class StreamerController extends ControllerBase {
     @QueryParam('since') since: number
   ): Promise<GetEventsResponse> {
     const builder = this.registerResponseBuilder<GetEventsResponse>('GET /events')
-    if (since == null) {
-      return builder.failure(400, `A value for 'since' must be provided.`)
+
+    const validationError = builder.validateInput({ since: { type: 'number' }}, { since })
+    if (validationError != null) {
+      return validationError
+    }
+
+    if (Date.now() - since > ONE_DAY) {
+      return builder.failure(400, 'You cannot get events from more than 1 day ago.')
     }
 
     try {
@@ -736,8 +778,10 @@ export default class StreamerController extends ControllerBase {
   @PreProcessor(requireRank('owner'))
   public async setActiveLivestream (request: SetActiveLivestreamRequest): Promise<SetActiveLivestreamResponse> {
     const builder = this.registerResponseBuilder<SetActiveLivestreamResponse>('PATCH /livestream')
-    if (request == null || request.livestream === undefined) {
-      return builder.failure(400, `A value for 'livestream' must be provided or set to null.`)
+
+    const validationError = builder.validateInput({ livestream: { type: 'string', nullable: true, validators: [nonEmptyStringValidator] }}, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
