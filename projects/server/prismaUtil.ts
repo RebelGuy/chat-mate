@@ -1,4 +1,4 @@
-import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
+import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime/library'
 import { DbError } from '@rebel/shared/util/error'
 
 // https://www.prisma.io/docs/reference/api-reference/error-reference

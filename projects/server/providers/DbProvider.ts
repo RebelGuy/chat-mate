@@ -7,7 +7,7 @@ import { DbError } from '@rebel/shared/util/error'
 import { SafeOmit } from '@rebel/shared/types'
 
 // remove properties from PrismaClient that we will never need
-type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$connect' | '$disconnect' | '$use'
+type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$connect' | '$disconnect' | '$use' | '$extends'
 
 export type Db = SafeOmit<PrismaClient, UnusedPrismaProperties>
 
