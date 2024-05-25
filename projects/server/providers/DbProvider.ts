@@ -39,7 +39,6 @@ export default class DbProvider extends SingletonContextClass {
     const client = new PrismaClient({
       datasources: { db: { url: this.databaseUrl }},
       errorFormat: 'pretty',
-      rejectOnNotFound: false,
       log: [
         { level: 'query', emit: 'event' },
         { level: 'info', emit: 'event' },

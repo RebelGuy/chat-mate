@@ -253,11 +253,10 @@ export default class CustomEmojiStore extends ContextClass {
         throw new NotFoundError(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
       }
 
-      const previousVersion = await this.db.customEmojiVersion.findFirst({
+      const previousVersion = await this.db.customEmojiVersion.findFirstOrThrow({
         where: { customEmojiId: data.id },
         orderBy: { version: 'desc' },
-        include: { customEmoji: true },
-        rejectOnNotFound: true
+        include: { customEmoji: true }
       })
 
       const emojiFingerprint = getEmojiFingerprint(previousVersion.customEmoji.streamerId, previousVersion.customEmoji.id, previousVersion.version + 1)

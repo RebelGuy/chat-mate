@@ -237,10 +237,9 @@ export default class ChatStore extends ContextClass {
   }
 
   public async getChatById (chatMessageId: number): Promise<ChatItemWithRelations> {
-    return await this.db.chatMessage.findUnique({
+    return await this.db.chatMessage.findUniqueOrThrow({
       where: { id: chatMessageId },
-      include: chatMessageIncludeRelations,
-      rejectOnNotFound: true
+      include: chatMessageIncludeRelations
     })
   }
 
@@ -261,7 +260,7 @@ export default class ChatStore extends ContextClass {
 const includeChannelInfo = {
   include: Prisma.validator<Prisma.YoutubeChannelInclude | Prisma.TwitchChannelInclude>()({
     globalInfoHistory: {
-      orderBy: { time: 'desc' },
+      orderBy: { time: Prisma.SortOrder.desc },
       take: 1
     }
   })
@@ -269,7 +268,7 @@ const includeChannelInfo = {
 
 export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>()({
   chatMessageParts: {
-    orderBy: { order: 'asc' },
+    orderBy: { order: Prisma.SortOrder.asc },
     include: {
       emoji: { include: { image: true }},
       text: true,

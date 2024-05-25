@@ -110,9 +110,8 @@ export default class DonationStore extends ContextClass {
   }
 
   public async getDonation (streamerId: number, donationId: number): Promise<DonationWithUser> {
-    const donation = await this.db.donation.findFirst({
+    const donation = await this.db.donation.findFirstOrThrow({
       where: { id: donationId, deletedAt: null, streamerId: streamerId },
-      rejectOnNotFound: true,
       include: { chatMessage: {
         // hehe
         include: { chatMessageParts: chatMessageIncludeRelations.chatMessageParts }
@@ -123,8 +122,7 @@ export default class DonationStore extends ContextClass {
     const donationLink = await this.db.donationLink.findUnique({
       where: {
         linkIdentifier_streamerId: { linkIdentifier: linkIdentifier, streamerId: streamerId }
-      },
-      rejectOnNotFound: false
+      }
     })
 
     return {

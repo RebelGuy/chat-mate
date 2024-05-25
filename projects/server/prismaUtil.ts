@@ -13,7 +13,3 @@ export function isKnownPrismaError (e: any): e is DbError<PrismaClientKnownReque
 export function isUnknownPrismaError (e: any): e is DbError<PrismaClientUnknownRequestError> {
   return e instanceof DbError && e.innerError instanceof PrismaClientUnknownRequestError
 }
-
-export function isNotFoundPrismaError (e: any): e is DbError<Error> {
-  return e instanceof DbError && e.innerError.name === 'NotFoundError'
-}
