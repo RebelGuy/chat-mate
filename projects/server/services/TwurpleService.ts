@@ -11,8 +11,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { ChatClient, ClearMsg } from '@twurple/chat'
-import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
+import { ChatClient, ChatMessage, ClearMsg } from '@twurple/chat'
 import { HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
@@ -222,7 +221,7 @@ export default class TwurpleService extends SingletonContextClass {
   }
 
   public reconnectClient () {
-    void this.chatClient.reconnect()
+    this.chatClient.reconnect()
   }
 
   public async timeout (streamerId: number, twitchChannelId: number, reason: string | null, durationSeconds: number) {
@@ -315,9 +314,9 @@ export default class TwurpleService extends SingletonContextClass {
     return user
   }
 
-  private async onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
+  private async onMessage (_channel: string, _user: string, text: string, msg: ChatMessage) {
     try {
-      const evaluated = evalTwitchPrivateMessage(msg)
+      const evaluated = evalTwitchPrivateMessage(text, msg)
       const channelId = msg.channelId
       if (channelId == null) {
         throw new ChatMateError(`Cannot add Twitch chat message from channel ${_channel} because the message's channelId property was null`)

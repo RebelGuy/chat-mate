@@ -57,7 +57,6 @@ type Deps = Dependencies<{
   app: Express
   streamerChannelService: StreamerChannelService
   eventDispatchService: EventDispatchService
-  twitchClientId: string
   ngrokAuthToken: string
   isAdministrativeMode: () => boolean
   isContextInitialised: () => boolean
@@ -87,7 +86,6 @@ export default class HelixEventService extends ContextClass {
   private readonly app: Express
   private readonly streamerChannelService: StreamerChannelService
   private readonly eventDispatchService: EventDispatchService
-  private readonly twitchClientId: string
   private readonly ngrokAuthToken: string
   private readonly isAdministrativeMode: () => boolean
   private readonly isContextInitialised: () => boolean
@@ -128,7 +126,6 @@ export default class HelixEventService extends ContextClass {
     this.app = deps.resolve('app')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
-    this.twitchClientId = deps.resolve('twitchClientId')
     this.ngrokAuthToken = deps.resolve('ngrokAuthToken')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.isContextInitialised = deps.resolve('isContextInitialised')
@@ -296,8 +293,8 @@ export default class HelixEventService extends ContextClass {
     this.eventSubBase.onSubscriptionDeleteSuccess(this.onSubscriptionDeleteSuccess)
     this.eventSubBase.onSubscriptionDeleteFailure(this.onSubscriptionDeleteFailure)
 
-    this.eventSubBase.onUserAuthorizationGrant(this.twitchClientId, this.onUserAuthorizationGrant)
-    this.eventSubBase.onUserAuthorizationRevoke(this.twitchClientId, this.onUserAuthorizationRevoke)
+    this.eventSubBase.onUserAuthorizationGrant(this.onUserAuthorizationGrant)
+    this.eventSubBase.onUserAuthorizationRevoke(this.onUserAuthorizationRevoke)
     /* eslint-enable @typescript-eslint/no-misused-promises */
 
     this.logService.logInfo(this, 'Subscribed to base events')
@@ -641,7 +638,6 @@ export default class HelixEventService extends ContextClass {
       apiClient: this.twurpleApiClientProvider.getClientApi(),
       adapter: await this.createAdapter(),
       secret: this.getSecret(),
-      legacySecrets: false,
       logger: {
         custom: {
           log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)

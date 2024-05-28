@@ -45,7 +45,7 @@ beforeEach(() => {
 describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
   test('successful request', async () => {
     const streamerChannelName = 'streamerChannelName'
-    const mockedResponse: HelixStream = new HelixStream({ viewer_count: 10 } as any, mockApiClient)
+    const mockedResponse: HelixStream = new HelixStream({ viewer_count: 10 } as any)
     mockApiClient.streams.getStreamByUserName.calledWith(streamerChannelName).mockResolvedValue(mockedResponse)
 
     const metadata = await twurpleApiProxyService.fetchMetadata(streamerId, streamerChannelName)

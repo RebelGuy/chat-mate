@@ -15,10 +15,11 @@ import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { Singular } from '@rebel/shared/types'
 import { sortBy, sortByLength } from '@rebel/shared/util/arrays'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
-import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
+import { ChatMessage as TwitchChatMessage } from '@twurple/chat'
 import { SafeExtract } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
+import { buildEmoteImageUrl, parseChatMessage } from '@twurple/chat'
 
 export type ChatPlatform = 'youtube' | 'twitch'
 
@@ -134,8 +135,8 @@ export type TwitchAuthor = {
 export type ChatEmojiWithImage = ChatEmoji & { image: Image }
 
 /** Evaluates all the getters */
-export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
-  const evaluatedParts: PartialChatMessage[] = msg.parseEmotes().map(p => {
+export function evalTwitchPrivateMessage (text: string, msg: TwitchChatMessage): ChatItem {
+  const evaluatedParts: PartialChatMessage[] = parseChatMessage(text, msg.emoteOffsets).map(p => {
     if (p.type === 'text') {
       const textPart: PartialTextChatMessage = {
         type: 'text',
@@ -149,8 +150,8 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
       const emojiPart: PartialEmojiChatMessage = {
         type: 'emoji',
         name: p.name,
-        label: p.displayInfo.code, // symbol
-        url: p.displayInfo.getUrl({ animationSettings: 'default', backgroundType: 'light', size: '3.0' })
+        label: p.id, // symbol
+        url: buildEmoteImageUrl(p.id, { animationSettings: 'default', backgroundType: 'light', size: '3.0' })
       }
       return emojiPart
 
@@ -159,8 +160,8 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
         type: 'cheer',
         amount: p.amount,
         name: p.name,
-        colour: p.displayInfo.color,
-        imageUrl: p.displayInfo.url
+        colour: '',
+        imageUrl: ''
       }
       return cheerPart
 

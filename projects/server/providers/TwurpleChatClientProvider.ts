@@ -67,7 +67,7 @@ export default class TwurpleChatClientProvider extends SingletonContextClass {
 
     this.logService.logInfo(this, 'Initiating connection to the Twurple chat client')
 
-    void this.chatClient.connect()
+    this.chatClient.connect()
     this.timerHelpers.setInterval(() => this.onCheckHealth(), 10_000)
   }
 
@@ -75,7 +75,7 @@ export default class TwurpleChatClientProvider extends SingletonContextClass {
     return this.chatClient
   }
 
-  private async onCheckHealth () {
+  private onCheckHealth () {
     if (this.chatClient.isConnected) {
       this.disconnects = 0
     } else {
@@ -84,7 +84,7 @@ export default class TwurpleChatClientProvider extends SingletonContextClass {
       if (this.disconnects >= 3) {
         this.logService.logError(this, 'Detected that the ChatClient was disconnected for at least the last 3 intervals. Reconnecting.')
         try {
-          await this.chatClient.reconnect()
+          this.chatClient.reconnect()
         } catch (e: any) {
           this.logService.logError(this, 'Failed to reconnect to the ChatClient:', e)
         }
