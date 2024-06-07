@@ -6,7 +6,6 @@ import { EventSubSubscription, EventSubUserAuthorizationGrantEvent, EventSubUser
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService, { onTwurpleClientLog } from '@rebel/server/services/LogService'
 import { HelixEventSubApi, HelixEventSubSubscription } from '@twurple/api/lib'
-import FollowerStore from '@rebel/server/stores/FollowerStore'
 import FileService from '@rebel/server/services/FileService'
 import { Express } from 'express-serve-static-core'
 import { EventSubHttpBase } from '@twurple/eventsub-http/lib/EventSubHttpBase'
@@ -26,6 +25,7 @@ import { nonNull } from '@rebel/shared/util/arrays'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import LivestreamService from '@rebel/server/services/LivestreamService'
 import { ChatMateError } from '@rebel/shared/util/error'
+import FollowerService from '@rebel/server/services/FollowerService'
 
 // if you're wondering why we are dynamically importing some things - it's because they can't be resolved at runtime on the deployed server. for whatever reason the javascript gods have decided today.
 
@@ -50,14 +50,13 @@ type Deps = Dependencies<{
   nodeEnv: NodeEnv
   hostName: string | null
   twurpleApiClientProvider: TwurpleApiClientProvider
-  followerStore: FollowerStore
+  followerService: FollowerService
   timerHelpers: TimerHelpers
   logService: LogService
   fileService: FileService
   app: Express
   streamerChannelService: StreamerChannelService
   eventDispatchService: EventDispatchService
-  twitchClientId: string
   ngrokAuthToken: string
   isAdministrativeMode: () => boolean
   isContextInitialised: () => boolean
@@ -79,7 +78,7 @@ export default class HelixEventService extends ContextClass {
   private readonly nodeEnv: NodeEnv
   private readonly hostName: string | null
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
-  private readonly followerStore: FollowerStore
+  private readonly followerService: FollowerService
   private readonly timerHelpers: TimerHelpers
   private readonly logService: LogService
   private readonly logContext: LogContext
@@ -87,7 +86,6 @@ export default class HelixEventService extends ContextClass {
   private readonly app: Express
   private readonly streamerChannelService: StreamerChannelService
   private readonly eventDispatchService: EventDispatchService
-  private readonly twitchClientId: string
   private readonly ngrokAuthToken: string
   private readonly isAdministrativeMode: () => boolean
   private readonly isContextInitialised: () => boolean
@@ -120,7 +118,7 @@ export default class HelixEventService extends ContextClass {
     this.nodeEnv = deps.resolve('nodeEnv')
     this.hostName = deps.resolve('hostName')
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
-    this.followerStore = deps.resolve('followerStore')
+    this.followerService = deps.resolve('followerService')
     this.timerHelpers = deps.resolve('timerHelpers')
     this.logService = deps.resolve('logService')
     this.logContext = createLogContext(this.logService, this)
@@ -128,7 +126,6 @@ export default class HelixEventService extends ContextClass {
     this.app = deps.resolve('app')
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
-    this.twitchClientId = deps.resolve('twitchClientId')
     this.ngrokAuthToken = deps.resolve('ngrokAuthToken')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.isContextInitialised = deps.resolve('isContextInitialised')
@@ -296,8 +293,8 @@ export default class HelixEventService extends ContextClass {
     this.eventSubBase.onSubscriptionDeleteSuccess(this.onSubscriptionDeleteSuccess)
     this.eventSubBase.onSubscriptionDeleteFailure(this.onSubscriptionDeleteFailure)
 
-    this.eventSubBase.onUserAuthorizationGrant(this.twitchClientId, this.onUserAuthorizationGrant)
-    this.eventSubBase.onUserAuthorizationRevoke(this.twitchClientId, this.onUserAuthorizationRevoke)
+    this.eventSubBase.onUserAuthorizationGrant(this.onUserAuthorizationGrant)
+    this.eventSubBase.onUserAuthorizationRevoke(this.onUserAuthorizationRevoke)
     /* eslint-enable @typescript-eslint/no-misused-promises */
 
     this.logService.logInfo(this, 'Subscribed to base events')
@@ -434,7 +431,7 @@ export default class HelixEventService extends ContextClass {
         /* eslint-disable @typescript-eslint/no-misused-promises */
         if (eventType === 'followers') {
           onCreateSubscription = () => this.eventSubBase.onChannelFollow(user, user, async (e) =>
-            await this.followerStore.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName)
+            await this.followerService.saveNewFollower(streamerId, e.userId, e.userName, e.userDisplayName)
               .catch(err => this.logService.logError(this, `Handler of event ${eventType} encountered an exception:`, err))
           )
         } else if (eventType === 'ban') {
@@ -641,7 +638,6 @@ export default class HelixEventService extends ContextClass {
       apiClient: this.twurpleApiClientProvider.getClientApi(),
       adapter: await this.createAdapter(),
       secret: this.getSecret(),
-      legacySecrets: false,
       logger: {
         custom: {
           log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)

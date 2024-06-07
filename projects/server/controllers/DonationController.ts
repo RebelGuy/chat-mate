@@ -15,7 +15,8 @@ import { CreateDonationRequest, CreateDonationResponse, DeleteDonationResponse, 
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { CURRENCIES, CurrencyCode } from '@rebel/server/constants'
 import { mapOverKeys } from '@rebel/shared/util/objects'
-import { isNotFoundPrismaError } from '@rebel/server/prismaUtil'
+import { isKnownPrismaError, PRISMA_CODE_DOES_NOT_EXIST } from '@rebel/server/prismaUtil'
+import { generateExclusiveNumberRangeValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
   donationService: DonationService
@@ -57,8 +58,15 @@ export default class DonationController extends ControllerBase {
   public async createDonation (request: CreateDonationRequest): Promise<CreateDonationResponse> {
     const builder = this.registerResponseBuilder<CreateDonationResponse>('POST /')
 
-    if (request == null || request.amount == null || request.amount <= 0 || request.amount >= 100_000 || isNullOrEmpty(request.currencyCode) || isNullOrEmpty(request.name)) {
-      return builder.failure(400, 'Invalid or missing data.')
+    const validationError = builder.validateInput({
+      amount: { type: 'number', validators: [generateExclusiveNumberRangeValidator(0, 100_000)] },
+      currencyCode: { type: 'string', validators: [nonEmptyStringValidator] },
+      name: { type: 'string', validators: [nonEmptyStringValidator] },
+      message: { type: 'string', nullable: true, optional: true }
+    }, request)
+
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -95,8 +103,9 @@ export default class DonationController extends ControllerBase {
   ): Promise<DeleteDonationResponse> {
     const builder = this.registerResponseBuilder<DeleteDonationResponse>('DELETE /')
 
-    if (donationId == null) {
-      return builder.failure(400, 'A donation ID must be provided.')
+    const validationError = builder.validateInput({ donationId: { type: 'number' }}, { donationId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -109,7 +118,7 @@ export default class DonationController extends ControllerBase {
 
       return builder.success({ })
     } catch (e: any) {
-      if (isNotFoundPrismaError(e)) {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
         return builder.failure(404, 'Not found.')
       } else {
         return builder.failure(e)
@@ -138,8 +147,12 @@ export default class DonationController extends ControllerBase {
   ): Promise<LinkUserResponse> {
     const builder = this.registerResponseBuilder<LinkUserResponse>('POST /link')
 
-    if (donationId == null || anyUserId == null) {
-      return builder.failure('A donation ID and user ID must be provided.')
+    const validationError = builder.validateInput({
+      donationId: { type: 'number' },
+      userId: { type: 'number' }
+    }, { donationId, userId: anyUserId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -150,7 +163,7 @@ export default class DonationController extends ControllerBase {
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (isNotFoundPrismaError(e)) {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
         return builder.failure(404, 'Not found.')
       } else if (e instanceof DonationUserLinkAlreadyExistsError) {
         return builder.failure(400, e)
@@ -166,8 +179,9 @@ export default class DonationController extends ControllerBase {
   ): Promise<LinkUserResponse> {
     const builder = this.registerResponseBuilder<UnlinkUserResponse>('DELETE /link')
 
-    if (donationId == null) {
-      return builder.failure(400, 'A donation ID must be provided.')
+    const validationError = builder.validateInput({ donationId: { type: 'number' }}, { donationId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -177,7 +191,7 @@ export default class DonationController extends ControllerBase {
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (isNotFoundPrismaError(e)) {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
         return builder.failure(404, 'Not found.')
       } else if (e instanceof DonationUserLinkNotFoundError) {
         return builder.failure(404, e)
@@ -193,8 +207,9 @@ export default class DonationController extends ControllerBase {
   ): Promise<RefundDonationResponse> {
     const builder = this.registerResponseBuilder<RefundDonationResponse>('POST /refund')
 
-    if (donationId == null) {
-      return builder.failure(400, 'A donation ID must be provided.')
+    const validationError = builder.validateInput({ donationId: { type: 'number' }}, { donationId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -212,7 +227,7 @@ export default class DonationController extends ControllerBase {
       const updatedDonation = await this.getPublicDonations([{ ...donation, refundedAt: new Date() }]).then(single)
       return builder.success({ updatedDonation })
     } catch (e: any) {
-      if (isNotFoundPrismaError(e)) {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
         return builder.failure(404, 'Not found.')
       } else {
         return builder.failure(e)
@@ -224,6 +239,11 @@ export default class DonationController extends ControllerBase {
   @Path('/streamlabs/socketToken')
   public async setWebsocketToken (request: SetWebsocketTokenRequest): Promise<SetWebsocketTokenResponse> {
     const builder = this.registerResponseBuilder<SetWebsocketTokenResponse>('POST /streamlabs/socketToken')
+
+    const validationError = builder.validateInput({ websocketToken: { type: 'string', nullable: true, validators: [nonEmptyStringValidator] }},request)
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       const hasUpdated = await this.donationService.setStreamlabsSocketToken(this.getStreamerId(), request.websocketToken)

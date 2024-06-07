@@ -6,10 +6,10 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { InvalidUsernameError, NotLoggedInError, TimeoutError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { sleep } from '@rebel/shared/util/node'
 import Semaphore from '@rebel/shared/util/Semaphore'
-import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { Path, POST, PreProcessor } from 'typescript-rest'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse } from '@rebel/api-models/schema/account'
 import AccountService from '@rebel/server/services/AccountService'
+import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 
 // prevent brute-force login attacks by limiting the number of concurrent requests
 const loginSemaphore = new Semaphore(3, 10000)
@@ -42,8 +42,12 @@ export default class AccountController extends ControllerBase {
   public async register (request: RegisterRequest): Promise<RegisterResponse> {
     const builder = this.registerResponseBuilder<RegisterResponse>('POST /register')
 
-    if (isNullOrEmpty(request.username) || isNullOrEmpty(request.password)) {
-      return builder.failure(400, 'Username and password must be provided')
+    const validationError = builder.validateInput({
+      username: { type: 'string', validators: [nonEmptyStringValidator] },
+      password: { type: 'string', validators: [nonEmptyStringValidator] }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -79,8 +83,12 @@ export default class AccountController extends ControllerBase {
   public async login (request: LoginRequest): Promise<LoginResponse> {
     const builder = this.registerResponseBuilder<LoginResponse>('POST /login')
 
-    if (isNullOrEmpty(request.username) || isNullOrEmpty(request.password)) {
-      return builder.failure(400, 'Username and password must be provided')
+    const validationError = builder.validateInput({
+      username: { type: 'string', validators: [nonEmptyStringValidator] },
+      password: { type: 'string', validators: [nonEmptyStringValidator] }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -153,8 +161,12 @@ export default class AccountController extends ControllerBase {
   public async resetPassword (request: ResetPasswordRequest): Promise<ResetPasswordResponse> {
     const builder = this.registerResponseBuilder<ResetPasswordResponse>('POST /resetPassword')
 
-    if (isNullOrEmpty(request.newPassword)) {
-      return builder.failure(400, 'New password must be provided')
+    const validationError = builder.validateInput({
+      oldPassword: { type: 'string' },
+      newPassword: { type: 'string', validators: [nonEmptyStringValidator] }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {

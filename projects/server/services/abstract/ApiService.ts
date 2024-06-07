@@ -6,6 +6,8 @@ import { transformPrimitiveValues } from '@rebel/shared/util/objects'
 import { DataObject, rawDataSymbol } from '@twurple/common'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
+let requestId = 0
+
 export default abstract class ApiService extends ContextClass {
   public readonly name: string
 
@@ -16,8 +18,6 @@ export default abstract class ApiService extends ContextClass {
   private readonly timeoutMs: number | null
   private readonly trimLogs: boolean
 
-  private requestId: number
-
   constructor (name: string, logService: LogService, statusService: StatusService, platformApiStore: PlatformApiStore, apiPlatform: ApiPlatform, timeoutMs: number | null, trimLogs: boolean) {
     super()
     this.name = name
@@ -27,8 +27,6 @@ export default abstract class ApiService extends ContextClass {
     this.apiPlatform = apiPlatform
     this.timeoutMs = timeoutMs
     this.trimLogs = trimLogs
-
-    this.requestId = 0
   }
 
   /** Base wrapper that takes care of logging, timeouts, and updating the underlying status service. */
@@ -40,7 +38,7 @@ export default abstract class ApiService extends ContextClass {
   ): (...query: TQuery) => Promise<TResponse> {
     return async (...query: TQuery) => {
       // set up
-      const id = this.requestId++
+      const id = requestId++
       const startTime = Date.now()
 
       // do request

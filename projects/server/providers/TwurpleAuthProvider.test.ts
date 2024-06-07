@@ -76,7 +76,8 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     expect(config).toEqual(expectObject(config, { clientId, clientSecret }))
 
     const refreshedToken = cast<AccessToken>({ refreshToken: 'refreshed' })
-    await config.onRefresh!(adminTwitchUserId, refreshedToken)
+    const onRefresh = single2(mockRefreshingAuthProvider.onRefresh.mock.calls)
+    await onRefresh(adminTwitchUserId, refreshedToken)
 
     const args = single(mockAuthStore.saveTwitchAccessToken.mock.calls)
     expect(args).toEqual(expectArray(args, [adminTwitchUsername, adminTwitchUserId, refreshedToken])) // order of args is wrong?! but it's passing
@@ -90,8 +91,8 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
     await twurpleAuthProvider.initialise()
 
     const refreshedToken = cast<AccessToken>({ refreshToken: 'refreshed' })
-    const { onRefresh } = single2(mockRefreshingAuthProviderFactory.create.mock.calls)
-    await onRefresh!(streamerTwitchUserId, refreshedToken)
+    const onRefresh = single2(mockRefreshingAuthProvider.onRefresh.mock.calls)
+    await onRefresh(streamerTwitchUserId, refreshedToken)
 
     const args = single(mockAuthStore.saveTwitchAccessToken.mock.calls)
     expect(args).toEqual(expectArray(args, [streamerTwitchUserId, null, refreshedToken]))
@@ -104,8 +105,8 @@ describe(nameof(TwurpleAuthProvider, 'initialise'), () => {
 
     await twurpleAuthProvider.initialise()
 
-    const { onRefreshFailure } = single2(mockRefreshingAuthProviderFactory.create.mock.calls)
-    await onRefreshFailure!(streamerTwitchUserId)
+    const onRefreshFailure = single2(mockRefreshingAuthProvider.onRefreshFailure.mock.calls)
+    await onRefreshFailure(streamerTwitchUserId, new Error())
 
     const deletedUserId = single2(mockAuthStore.tryDeleteTwitchAccessToken.mock.calls)
     expect(deletedUserId).toBe(streamerTwitchUserId)

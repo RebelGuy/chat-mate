@@ -3,7 +3,7 @@ import { YOUTUBE_SCOPE } from '@rebel/server/constants'
 import { New } from '@rebel/server/models/entities'
 import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
 import { compareArrays } from '@rebel/shared/util/arrays'
 import { InconsistentScopesError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
@@ -23,7 +23,7 @@ type Deps = Dependencies<{
 }>
 
 // https://github.com/googleapis/google-api-nodejs-client#oauth2-client
-export default class YoutubeAuthProvider extends ContextClass {
+export default class YoutubeAuthProvider extends SingletonContextClass {
   public readonly name = YoutubeAuthProvider.name
 
   private readonly authStore: AuthStore

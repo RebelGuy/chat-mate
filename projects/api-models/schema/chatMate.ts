@@ -30,6 +30,4 @@ export type GetMasterchatAuthenticationResponse = ApiResponse<{
   lastUpdatedTimestamp: number | null
 }>
 
-export type RefreshMasterchatAuthenticationResponse = ApiResponse<EmptyObject>
-
 export type GetChatMateRegisteredUsernameResponse = ApiResponse<{ username: string }>

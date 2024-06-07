@@ -2,8 +2,8 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ExperienceHelpers, { LevelData, RepetitionPenalty, SpamMult } from '@rebel/server/helpers/ExperienceHelpers'
 import ExperienceService, { RankedEntry, UserLevel } from '@rebel/server/services/ExperienceService'
 import ExperienceStore, { ChatExperience, ChatExperienceData, UserExperience } from '@rebel/server/stores/ExperienceStore'
-import LivestreamStore, { YoutubeLivestreamParticipation } from '@rebel/server/stores/LivestreamStore'
-import { cast, nameof, expectObject, expectArray } from '@rebel/shared/testUtils'
+import LivestreamStore from '@rebel/server/stores/LivestreamStore'
+import { cast, nameof, expectObject, expectArray, expectObjectDeep } from '@rebel/shared/testUtils'
 import { single } from '@rebel/shared/util/arrays'
 import { anyNumber, mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
@@ -24,6 +24,7 @@ import GenericStore, { ReplacementData } from '@rebel/server/stores/GenericStore
 import AggregateLivestreamService, { AggregateLivestreamParticipation } from '@rebel/server/services/AggregateLivestreamService'
 import AggregateLivestream from '@rebel/server/models/AggregateLivestream'
 import { ChatMateError } from '@rebel/shared/util/error'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP } from '@rebel/server/services/EventDispatchService'
 
 let mockExperienceHelpers: MockProxy<ExperienceHelpers>
 let mockExperienceStore: MockProxy<ExperienceStore>
@@ -38,6 +39,7 @@ let mockAccountService: MockProxy<AccountService>
 let mockUserService: MockProxy<UserService>
 let mockGenericStore: MockProxy<GenericStore>
 let mockAggregateLivestreamService: MockProxy<AggregateLivestreamService>
+let mockEventDispatchService: MockProxy<EventDispatchService>
 let experienceService: ExperienceService
 
 beforeEach(() => {
@@ -55,6 +57,7 @@ beforeEach(() => {
   // @ts-ignore
   mockGenericStore = mock<GenericStore>()
   mockAggregateLivestreamService = mock<AggregateLivestreamService>()
+  mockEventDispatchService = mock<EventDispatchService>()
 
   experienceService = new ExperienceService(new Dependencies({
     experienceHelpers: mockExperienceHelpers,
@@ -69,7 +72,8 @@ beforeEach(() => {
     accountService: mockAccountService,
     userService: mockUserService,
     genericStore: mockGenericStore,
-    aggregateLivestreamService: mockAggregateLivestreamService
+    aggregateLivestreamService: mockAggregateLivestreamService,
+    eventDispatchService: mockEventDispatchService
   }))
 })
 
@@ -190,6 +194,10 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockChatStore.getChatSince.calledWith(streamerId, anyNumber()).mockResolvedValue(chatItems as ChatItemWithRelations[])
     mockExperienceHelpers.calculateRepetitionPenalty.calledWith(chatItem.timestamp, expect.arrayContaining([chatItems[0]])).mockReturnValue(asRange(experienceData.repetitionPenalty!, -2, 0))
 
+    // for the event dispatch
+    mockExperienceStore.getExperience.calledWith(streamerId, expectArray([primaryUserId])).mockResolvedValue([{ primaryUserId, experience: 1 }])
+    mockExperienceHelpers.calculateLevel.mockImplementation(xp => ({ levelProgress: asLt(asGte(0), 1), level: asGte(xp, 0) }))
+
     await experienceService.addExperienceForChat(chatItem, streamerId)
 
     const storeData = single(mockExperienceStore.addChatExperience.mock.calls)
@@ -201,6 +209,9 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     expect(storeData[2]).toEqual(expectedStoreData[2])
     expect(storeData[3]).toBeCloseTo(expectedStoreData[3]) // floating point error!
     expect(storeData[4]).toEqual(expectedStoreData[4])
+
+    const eventCall = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventCall).toEqual(expectObjectDeep(eventCall, [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, oldLevel: {}, newLevel: {} }]))
   })
 })
 
@@ -366,6 +377,9 @@ describe(nameof(ExperienceService, 'modifyExperience'), () => {
     const call = single(mockExperienceStore.addManualExperience.mock.calls)
     expect(call).toEqual<typeof call>([streamerId, primaryUserId, loggedInRegisteredUserId, 500, 'Test'])
     expect(result).toEqual<UserLevel>({ primaryUserId: primaryUserId, level: { ...updatedLevel, totalExperience: asGte(650, 0) }})
+
+    const eventCall = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventCall).toEqual(expectObjectDeep(eventCall, [EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, { streamerId, oldLevel: { }, newLevel: result.level }]))
   })
 
   test('level does not fall below 0', async () => {

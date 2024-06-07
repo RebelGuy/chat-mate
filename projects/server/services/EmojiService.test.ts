@@ -1,12 +1,14 @@
 import { ChatEmojiWithImage, ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
+import CacheService from '@rebel/server/services/CacheService'
 import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
-import EmojiService from '@rebel/server/services/EmojiService'
+import EmojiService, { EmojiMap } from '@rebel/server/services/EmojiService'
+import FileService from '@rebel/server/services/FileService'
 import ImageService from '@rebel/server/services/ImageService'
 import S3ProxyService, { SignedUrl } from '@rebel/server/services/S3ProxyService'
 import EmojiStore from '@rebel/server/stores/EmojiStore'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { Dependencies } from '@rebel/shared/context/context'
-import { cast, nameof } from '@rebel/shared/testUtils'
+import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { MockProxy, mock } from 'jest-mock-extended'
 
@@ -14,6 +16,8 @@ let mockRankStore: MockProxy<RankStore>
 let mockEmojiStore: MockProxy<EmojiStore>
 let mockS3ProxyService: MockProxy<S3ProxyService>
 let mockImageService: MockProxy<ImageService>
+let mockFileService: MockProxy<FileService>
+let mockCacheService: MockProxy<CacheService>
 let emojiService: EmojiService
 
 beforeEach(() => {
@@ -21,13 +25,96 @@ beforeEach(() => {
   mockEmojiStore = mock()
   mockS3ProxyService = mock()
   mockImageService = mock()
+  mockFileService = mock()
+  mockCacheService = mock()
 
   emojiService = new EmojiService(new Dependencies({
     rankStore: mockRankStore,
     emojiStore: mockEmojiStore,
     s3ProxyService: mockS3ProxyService,
-    imageService: mockImageService
+    imageService: mockImageService,
+    fileService: mockFileService,
+    logService: mock(),
+    cacheService: mockCacheService
   }))
+})
+
+describe(nameof(EmojiService, 'analyseYoutubeTextForEmojis'), () => {
+  const emojiMap: EmojiMap = {
+    emoji1: {
+      emojiId: 'emoji1',
+      image: { thumbnails: [{ url: 'url1' }]},
+      searchTerms: [],
+      shortcuts: []
+    },
+    emoji2: {
+      emojiId: 'emoji2',
+      image: { thumbnails: [{ url: 'url2' }]},
+      searchTerms: [],
+      shortcuts: []
+    }
+  }
+
+  beforeEach(() => {
+    const filePath = 'filePath'
+    mockFileService.getDataFilePath.calledWith('emojiMap.json').mockReturnValue(filePath)
+    mockFileService.readObject.calledWith(filePath).mockReturnValue(emojiMap)
+    mockCacheService.getOrSetEmojiRegex.mockImplementation(cb => cb())
+  })
+
+  test('Strips out emojis padded with text correctly', () => {
+    const run = { text: 'a' + 'emoji1' + 'b' + 'emoji2' + 'c' }
+
+    const result = emojiService.analyseYoutubeTextForEmojis(run)
+
+    expect(result).toEqual(expectObject(result, [
+      { text: 'a' },
+      { emoji: emojiMap.emoji1 },
+      { text: 'b' },
+      { emoji: emojiMap.emoji2 },
+      { text: 'c' }
+    ]))
+  })
+
+  test('Does nothing if the text does not contain any emojis', () => {
+    const run = { text: 'abc' }
+
+    const result = emojiService.analyseYoutubeTextForEmojis(run)
+
+    expect(result).toEqual([run])
+  })
+
+  test('Strips out lonely emoji', () => {
+    const run = { text: 'emoji1' }
+
+    const result = emojiService.analyseYoutubeTextForEmojis(run)
+
+    expect(result).toEqual([{ emoji: emojiMap.emoji1 }])
+  })
+
+  test('Strips out emoji pair', () => {
+    const run = { text: 'emoji1' + 'emoji2' }
+
+    const result = emojiService.analyseYoutubeTextForEmojis(run)
+
+    expect(result).toEqual([{ emoji: emojiMap.emoji1 }, { emoji: emojiMap.emoji2 }])
+  })
+
+  test('Strips out emoji with leading text', () => {
+    const run = { text: 'abc' + 'emoji1' }
+
+    const result = emojiService.analyseYoutubeTextForEmojis(run)
+
+    expect(result).toEqual([{ text: 'abc' }, { emoji: emojiMap.emoji1 }])
+  })
+
+  test('Strips out emoji with trailing text', () => {
+    const run = { text: 'emoji1' + 'abc' }
+
+    const result = emojiService.analyseYoutubeTextForEmojis(run)
+
+    expect(result).toEqual([{ emoji: emojiMap.emoji1 }, { text: 'abc' }])
+  })
 })
 
 describe(nameof(EmojiService, 'getEligibleEmojiUsers'), () => {

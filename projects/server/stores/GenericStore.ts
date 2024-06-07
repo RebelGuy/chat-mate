@@ -11,10 +11,10 @@ import { ChatMateError } from '@rebel/shared/util/error'
 // for some reason this unions all tables instead of creating a type whose properties are the tables.
 // probably it's got to do with the `readonly` modifies of the tables.
 type DbTable = {
-  [K in keyof Db]: Db[K] extends (...args: any[]) => any ? never : Db[K]
+  [K in keyof Db]: Db[K] extends (...args: any[]) => any ? never : K extends symbol ? never : Db[K]
 }[keyof Db] // get rid of the `never`s
 
-type DbTableName = Exclude<keyof Db, '$executeRaw' | '$queryRaw' | '$transaction'>
+type DbTableName = Exclude<keyof Db, '$executeRaw' | '$queryRaw' | '$transaction' | symbol>
 
 // I got these step by step by just following the types in the PrismaClient decleration file
 type Columns<T extends DbTable> = T['createMany'] extends (args: infer CreateManyArgs) => any

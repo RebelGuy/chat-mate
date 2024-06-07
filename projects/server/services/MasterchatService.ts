@@ -9,6 +9,7 @@ import ChatStore from '@rebel/server/stores/ChatStore'
 import { ChatMateError, NoContextTokenError, NoYoutubeChatMessagesError } from '@rebel/shared/util/error'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 import AuthStore from '@rebel/server/stores/AuthStore'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 export type ChatMateModeratorStatus = {
   isModerator: boolean
@@ -35,6 +36,7 @@ type Deps = Dependencies<{
   platformApiStore: PlatformApiStore
   authStore: AuthStore
   channelId: string
+  chatMateStateService: ChatMateStateService
 }>
 
 export default class MasterchatService extends ApiService {
@@ -42,9 +44,7 @@ export default class MasterchatService extends ApiService {
   private readonly chatStore: ChatStore
   private readonly authStore: AuthStore
   private readonly channelId: string
-
-  // note that some endpoints are livestream-agnostic
-  private readonly wrappedMasterchats: Map<number, PartialMasterchat>
+  private readonly chatMateStateService: ChatMateStateService
 
   constructor (deps: Deps) {
     const name = MasterchatService.name
@@ -59,66 +59,59 @@ export default class MasterchatService extends ApiService {
     this.chatStore = deps.resolve('chatStore')
     this.authStore = deps.resolve('authStore')
     this.channelId = deps.resolve('channelId')
-
-    this.wrappedMasterchats = new Map()
+    this.chatMateStateService = deps.resolve('chatMateStateService')
   }
 
-  public async addMasterchat (streamerId: number, liveId: string) {
-    if (this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`Cannot add masterchat instance for streamer ${streamerId} and liveId ${liveId} because one already exists with liveId ${liveId}`)
+  public addMasterchat (streamerId: number, liveId: string) {
+    // we keep track of the streamer-liveId pairs to avoid having to get livestream info later on.
+    // we technically don't need this right now (as we can get the liveId for fetch requests easily enough),
+    // but it is required for ChatMate actions, which are not currently used anywhere
+    const map = this.chatMateStateService.getMasterchatStreamerIdLiveIdMap()
+    if (map.has(streamerId)) {
+      throw new ChatMateError(`Cannot add masterchat entry for streamer ${streamerId} and liveId ${liveId} because one already exists with liveId ${map.get(streamerId)}`)
     }
 
-    const newMasterchat = this.createWrapper(streamerId, liveId, await this.masterchatFactory.create(liveId))
-    this.wrappedMasterchats.set(streamerId, newMasterchat)
+    map.set(streamerId, liveId)
   }
 
   public removeMasterchat (streamerId: number) {
-    const masterchat = this.wrappedMasterchats.get(streamerId)
-    if (masterchat != null) {
-      masterchat.masterchat.stop()
-    }
-
-    this.wrappedMasterchats.delete(streamerId)
+    this.chatMateStateService.getMasterchatStreamerIdLiveIdMap().delete(streamerId)
   }
 
   /** If an instance of Masterchat is active and authenticated, returns information about the credentials.
    * Returns null if the authentication is missing or not active - some Masterchat requests will fail. */
   public async checkAuthentication (): Promise<MasterchatAuthentication | null> {
-    const masterchat = firstOrDefault(this.wrappedMasterchats, null)
-    if (masterchat == null) {
+    const map = this.chatMateStateService.getMasterchatStreamerIdLiveIdMap()
+    const liveId = firstOrDefault(map, null)
+    if (liveId == null) {
       return null
     }
 
     const accessToken = await this.authStore.loadYoutubeWebAccessToken(this.channelId)
     return {
-      isActive: !masterchat.masterchat.isLoggedOut,
+      isActive: accessToken != null && this.chatMateStateService.getMasterchatLoggedIn(),
       lastUpdated: accessToken?.updateTime ?? null
     }
   }
 
   // the second argument is not optional to avoid bugs where `fetch(continuationToken)` is erroneously called.
   public async fetch (streamerId: number, continuationToken: string | undefined): Promise<ChatResponse> {
-    if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`No Masterchat instance exists for streamer ${streamerId}`)
-    }
+    const masterchat = await this.getMasterchatForStreamer(streamerId)
 
     // this quirky code is required for typescript to recognise which overloaded `fetch` method we are using
     if (continuationToken == null) {
-      return await this.wrappedMasterchats.get(streamerId)!.fetch()
+      return await masterchat.fetch()
     } else {
-      return await this.wrappedMasterchats.get(streamerId)!.fetch(continuationToken)
+      return await masterchat.fetch(continuationToken)
     }
   }
 
   public async fetchMetadata (streamerId: number): Promise<Metadata> {
-    if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`No Masterchat instance exists for streamer ${streamerId}`)
-    }
-
-    return await this.wrappedMasterchats.get(streamerId)!.fetchMetadata()
+    const masterchat = await this.getMasterchatForStreamer(streamerId)
+    return await masterchat.fetchMetadata()
   }
 
-  /** Returns the YouTube external channel ID to which the livestream belongs. LiveId does not have to belong to an existing Masterchat instance. */
+  /** Returns the YouTube external channel ID to which the livestream belongs. LiveId does not have to belong to a ChatMate streamer. */
   public async getChannelIdFromAnyLiveId (liveId: string): Promise<string> {
     const masterchat = await this.masterchatFactory.create(liveId)
     const metadata = await masterchat.fetchMetadata()
@@ -158,12 +151,10 @@ export default class MasterchatService extends ApiService {
   /** Returns true if the channel was banned. False indicates that the 'hide channel' option
    * was not included in the latest chat item's context menu. */
   public async banYoutubeChannel (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
-    if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
-    }
+    const masterchat = await this.getMasterchatForStreamer(streamerId)
 
     // only returns null if the action is not available in the context menu, e.g. if the user is already banned
-    const result = await this.wrappedMasterchats.get(streamerId)!.hide(contextMenuEndpointParams)
+    const result = await masterchat.hide(contextMenuEndpointParams)
     return result != null
   }
 
@@ -172,57 +163,47 @@ export default class MasterchatService extends ApiService {
    * Returns true if the channel was banned. False indicates that the 'timeout channel'
    * option was not included in the latest chat item's context menu. */
   public async timeout (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
-    if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
-    }
-
-    const result = await this.wrappedMasterchats.get(streamerId)!.timeout(contextMenuEndpointParams)
+    const masterchat = await this.getMasterchatForStreamer(streamerId)
+    const result = await masterchat.timeout(contextMenuEndpointParams)
     return result != null
   }
 
   /** Returns true if the channel was banned. False indicates that the 'unhide channel' option
    * was not included in the latest chat item's context menu. */
   public async unbanYoutubeChannel (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
-    if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
-    }
-
-    const result = await this.wrappedMasterchats.get(streamerId)!.unhide(contextMenuEndpointParams)
+    const masterchat = await this.getMasterchatForStreamer(streamerId)
+    const result = await masterchat.unhide(contextMenuEndpointParams)
     return result != null
   }
 
   /** Returns true if the channel was modded. False indicates that the 'add moderator' option
    * was not included in the latest chat item's context menu. */
   public async mod (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
-    if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
-    }
-
-    const result = await this.wrappedMasterchats.get(streamerId)!.addModerator(contextMenuEndpointParams)
+    const masterchat = await this.getMasterchatForStreamer(streamerId)
+    const result = await masterchat.addModerator(contextMenuEndpointParams)
     return result != null
   }
 
   /** Returns true if the channel was modded. False indicates that the 'remove moderator' option
    * was not included in the latest chat item's context menu. */
   public async unmod (streamerId: number, contextMenuEndpointParams: string): Promise<boolean> {
-    if (!this.wrappedMasterchats.has(streamerId)) {
-      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} has not yet been initialised. Does an active livestream exist?`)
-    }
-
-    const result = await this.wrappedMasterchats.get(streamerId)!.removeModerator(contextMenuEndpointParams)
+    const masterchat = await this.getMasterchatForStreamer(streamerId)
+    const result = await masterchat.removeModerator(contextMenuEndpointParams)
     return result != null
   }
 
-  public async onAuthRefreshed () {
-    const auth = await this.authStore.loadYoutubeWebAccessToken(this.channelId)
-    if (auth == null) {
-      throw new ChatMateError(`Can't refresh the masterchat authentication because the ChatMate Youtube admin channel is not authenticated`)
+  private async getMasterchatForStreamer (streamerId: number): Promise<PartialMasterchat> {
+    const map = this.chatMateStateService.getMasterchatStreamerIdLiveIdMap()
+    if (!map.has(streamerId)) {
+      throw new ChatMateError(`Masterchat instance for streamer ${streamerId} can not be created. Does an active livestream exist?`)
     }
 
-    this.wrappedMasterchats.forEach(masterchat  => masterchat.masterchat.setCredentials(auth.accessToken))
+    const liveId = map.get(streamerId)!
+    return this.createWrapper(streamerId, liveId, await this.masterchatFactory.create(liveId))
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
+  // note that some endpoints are livestream agnostic
   private createWrapper (streamerId: number, liveId: string, masterchat: Masterchat): PartialMasterchat {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.

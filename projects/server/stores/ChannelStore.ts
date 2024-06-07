@@ -422,7 +422,7 @@ export default class ChannelStore extends ContextClass {
 
 export const channelQuery_includeLatestChannelInfo = Prisma.validator<Prisma.YoutubeChannelInclude>()({
   globalInfoHistory: {
-    orderBy: { time: 'desc' },
+    orderBy: { time: Prisma.SortOrder.desc },
     take: 1
   },
   user: true

@@ -15,6 +15,8 @@ export type ChatExperienceData = Pick<Entity.ExperienceDataChatMessage,
 
 export type UserExperience = { primaryUserId: number, experience: number }
 
+type QueriedUserExperience = { primaryUserId: number, experience: Prisma.Decimal }
+
 type Deps = Dependencies<{
   dbProvider: DbProvider
 }>
@@ -143,7 +145,7 @@ export default class ExperienceStore extends ContextClass {
     // for each user, sums the total experience since the last snapshot (if one exists), then
     // adds the snapshot experience to get the current total experience.
     // oof
-    return await this.db.$queryRaw<UserExperience[]>`
+    const result = await this.db.$queryRaw<QueriedUserExperience[]>`
       SELECT User.id AS primaryUserId, (COALESCE(SUM(TxsAfterSnap.xp), 0) + COALESCE(Snapshot.experience, 0)) AS experience
       FROM (
         SELECT * FROM experience_snapshot AS snapshot
@@ -169,6 +171,11 @@ export default class ExperienceStore extends ContextClass {
       GROUP BY User.id, Snapshot.experience
       ORDER BY experience DESC;
     `
+
+    return result.map(userExperience => ({
+      primaryUserId: userExperience.primaryUserId,
+      experience: userExperience.experience.toNumber()
+    }))
   }
 
   /** Returns the transactions in ascending order. */

@@ -1,5 +1,7 @@
 import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, Switch, TextField } from '@mui/material'
-import { PublicCustomEmoji, PublicCustomEmojiNew, PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
+import { PublicCustomEmoji } from '@rebel/api-models/public/emoji/PublicCustomEmoji'
+import { PublicCustomEmojiNew } from '@rebel/api-models/public/emoji/PublicCustomEmojiNew'
+import { PublicCustomEmojiUpdate } from '@rebel/api-models/public/emoji/PublicCustomEmojiUpdate'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { isNullOrEmpty } from '@rebel/shared/util/strings'

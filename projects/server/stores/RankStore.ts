@@ -8,7 +8,7 @@ import { ChatMateError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFo
 import { IgnoreOptions } from '@rebel/server/services/rank/PunishmentService'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { SafeOmit } from '@rebel/shared/types'
-import { PRISMA_CODE_DOES_NOT_EXIST, isKnownPrismaError, isNotFoundPrismaError, isUnknownPrismaError } from '@rebel/server/prismaUtil'
+import { PRISMA_CODE_DOES_NOT_EXIST, isKnownPrismaError, isUnknownPrismaError } from '@rebel/server/prismaUtil'
 
 export type UserRanks = {
   primaryUserId: number
@@ -127,18 +127,36 @@ export default class RankStore extends ContextClass {
     }
   }
 
-  public async addRankEvent (streamerId: number, primaryUserId: number, isAdded: boolean, rankName: RankName, data: RankEventData | null) {
+  public async addRankEvent (streamerId: number, primaryUserId: number, isAdded: boolean, rankName: RankName, data: RankEventData | null): Promise<ParsedRankEvent> {
     const rank = await this.db.rank.findUnique({ where: { name: rankName }})
 
-    await this.db.rankEvent.create({ data: {
-      streamerId: streamerId,
-      userId: primaryUserId,
-      isAdded: isAdded,
-      rankId: rank!.id,
+    const rankEvent = await this.db.rankEvent.create({
+      data: {
+        streamerId: streamerId,
+        userId: primaryUserId,
+        isAdded: isAdded,
+        rankId: rank!.id,
 
-      // deliberately don't truncate the string, else we might be saving an invalid json object that can't be parsed
-      serialisedData: data == null ? null : JSON.stringify(data)
-    }})
+        // deliberately don't truncate the string, else we might be saving an invalid json object that can't be parsed
+        serialisedData: data == null ? null : JSON.stringify(data),
+      }, include: {rank: true }
+    })
+
+    const rankEventData: RankEventData | null = rankEvent.serialisedData == null ? null : JSON.parse(rankEvent.serialisedData)
+    if (rankEventData != null && rankEventData.version !== 1) {
+      throw new ChatMateError(`Invalid rank event data version ${rankEventData.version}. Expected 1.`)
+    }
+
+    return {
+      id: rankEvent.id,
+      isAdded: rankEvent.isAdded,
+      rankId: rankEvent.rankId,
+      rank: rankEvent.rank,
+      streamerId: rankEvent.streamerId,
+      time: rankEvent.time,
+      userId: rankEvent.userId,
+      data: rankEventData
+    }
   }
 
   /** Adds the rank to the user.
@@ -367,18 +385,17 @@ export default class RankStore extends ContextClass {
   public async removeUserRank (args: RemoveUserRankArgs): Promise<UserRankWithRelations> {
     let existing: { id: number }
     try {
-      existing = await this.db.userRank.findFirst({
+      existing = await this.db.userRank.findFirstOrThrow({
         where: {
           ...activeUserRankFilter(args.streamerId),
           streamerId: args.streamerId, // override filter - the streamerId must match exactly
           userId: args.primaryUserId,
           rank: { name: args.rank },
         },
-        rejectOnNotFound: true,
         select: { id: true }
       })
     } catch (e: any) {
-      if (isNotFoundPrismaError(e)) {
+      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
         throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for chat user ${args.primaryUserId} in the context of streamer ${args.streamerId}.`)
       }
 

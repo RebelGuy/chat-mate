@@ -2,9 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["interactiveTransactions"]
-  binaryTargets   = ["native", "debian-openssl-1.1.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
@@ -450,16 +449,16 @@ model StreamerTwitchChannelLink {
 }
 
 model TwitchFollower {
-  id          Int      @id @default(autoincrement())
-  twitchId    String   @db.VarChar(32) // unique
-  date        DateTime @default(now())
-  userName    String
-  displayName String
+  id           Int      @id @default(autoincrement())
+  date         DateTime @default(now())
+  twitchUserId String   @db.VarChar(32)
+  userName     String
+  displayName  String
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "twitch_follower_streamerId_fkey")
 
-  @@unique([twitchId], map: "twitch_follower_twitchId_key")
+  @@unique([streamerId, twitchUserId], map: "twitch_follower_streamerId_twitchUserId_key")
   @@index([streamerId], map: "twitch_follower_streamerId_fkey")
   @@map("twitch_follower")
 }
@@ -688,7 +687,7 @@ model ExperienceTransaction {
 
   /// The user to which the experience was originally linked to. If null, the experience has not been re-linked and the original user is implied to be identical to the current user.
   originalUserId Int?
-  originalUser   ChatUser? @relation(name: "experience_transaction_originalUser", fields: [userId], references: [id], map: "experience_transaction_originalUserId_fkey")
+  originalUser   ChatUser? @relation(name: "experience_transaction_originalUser", fields: [originalUserId], references: [id], map: "experience_transaction_originalUserId_fkey")
 
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "experience_transaction_streamerId_fkey")

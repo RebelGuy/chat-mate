@@ -8,7 +8,6 @@ import { single, sortBy, unique } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { isOneOf } from '@rebel/shared/util/validation'
 import { ChatMateError, InvalidCustomRankNameError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import RankService, { CustomisableRank, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { addTime } from '@rebel/shared/util/datetime'
@@ -18,6 +17,7 @@ import UserService from '@rebel/server/services/UserService'
 import { channelToPublicChannel } from '@rebel/server/models/user'
 import { AddModRankRequest, AddModRankResponse, AddUserRankRequest, AddUserRankResponse, DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, RemoveModRankRequest, RemoveModRankResponse, RemoveUserRankRequest, RemoveUserRankResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
 import { PublicUserRank } from '@rebel/api-models/public/rank/PublicUserRank'
+import { generateStringRangeValidator, positiveNumberValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
   logService: LogService
@@ -55,6 +55,14 @@ export default class RankController extends ControllerBase {
     @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active ranks
   ): Promise<GetUserRanksResponse> {
     const builder = this.registerResponseBuilder<GetUserRanksResponse>('GET')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number', optional: true },
+      includeInactive: { type: 'boolean', optional: true }
+    }, { userId: anyUserId, includeInactive })
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       if (anyUserId == null) {
@@ -98,8 +106,15 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireRank('owner'))
   public async addUserRank (request: AddUserRankRequest): Promise<AddUserRankResponse> {
     const builder = this.registerResponseBuilder<AddUserRankResponse>('POST')
-    if (request == null || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true },
+      durationSeconds: { type: 'number', nullable: true, validators: [positiveNumberValidator] },
+      rank: { type: 'string', validators: [generateStringRangeValidator('famous', 'donator', 'supporter', 'member')] }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -134,8 +149,14 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireRank('owner'))
   public async removeUserRank (request: RemoveUserRankRequest): Promise<RemoveUserRankResponse> {
     const builder = this.registerResponseBuilder<RemoveUserRankResponse>('DELETE')
-    if (request == null || request.userId == null || !isOneOf(request.rank, ...['famous', 'donator', 'supporter', 'member'] as const)) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true },
+      rank: { type: 'string', validators: [generateStringRangeValidator('famous', 'donator', 'supporter', 'member')] }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -169,8 +190,13 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireRank('owner'))
   public async addModRank (request: AddModRankRequest): Promise<AddModRankResponse> {
     const builder = this.registerResponseBuilder<AddModRankResponse>('POST /mod')
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -192,8 +218,13 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireRank('owner'))
   public async removeModRank (request: RemoveModRankRequest): Promise<RemoveModRankResponse> {
     const builder = this.registerResponseBuilder<RemoveModRankResponse>('DELETE /mod')
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -230,8 +261,14 @@ export default class RankController extends ControllerBase {
   @PreProcessor(requireStreamer)
   public async setCustomName (request: SetCustomRankNameRequest): Promise<SetCustomRankNameResponse> {
     const builder = this.registerResponseBuilder<SetCustomRankNameResponse>('POST /customise')
-    if (request == null || request.name == null || typeof request.name !== 'string' || request.rank == null || typeof request.rank !== 'string') {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      name: { type: 'string' },
+      rank: { type: 'string' },
+      isActive: { type: 'boolean', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -260,6 +297,13 @@ export default class RankController extends ControllerBase {
     @QueryParam('rank') rank: CustomisableRank
   ): Promise<DeleteCustomRankNameResponse> {
     const builder = this.registerResponseBuilder<SetCustomRankNameResponse>('DELETE /customise')
+
+    const validationError = builder.validateInput({
+      rank: { type: 'string', validators: [generateStringRangeValidator('donator', 'supporter', 'member')] }
+    }, { rank })
+    if (validationError != null) {
+      return validationError
+    }
 
     try {
       await this.rankStore.deleteCustomRankName(this.getStreamerId(), this.getCurrentUser().aggregateChatUserId, rank)

@@ -1,7 +1,7 @@
 import { Rank } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import RankService, { CustomisableRank } from '@rebel/server/services/rank/RankService'
-import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import RankStore, { AddUserRankArgs, ParsedRankEvent, RankEventData, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { single } from '@rebel/shared/util/arrays'
 import { ChatMateError, InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
@@ -10,6 +10,7 @@ import * as data from '@rebel/server/_test/testData'
 import { Singular } from '@rebel/shared/types'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import UserService from '@rebel/server/services/UserService'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE } from '@rebel/server/services/EventDispatchService'
 
 const ownerRank = cast<Rank>({ name: 'owner', group: 'administration' })
 const famousRank = cast<Rank>({ name: 'famous', group: 'cosmetic' })
@@ -26,19 +27,39 @@ const user1 = 85
 let mockRankStore: MockProxy<RankStore>
 let mockRankHelpers: MockProxy<RankHelpers>
 let mockUserService: MockProxy<UserService>
+let mockEventDispatchService: MockProxy<EventDispatchService>
 let rankService: RankService
 
 beforeEach(() => {
   mockRankStore = mock()
   mockRankHelpers = mock()
   mockUserService = mock()
+  mockEventDispatchService = mock()
 
   rankService = new RankService(new Dependencies({
     rankStore: mockRankStore,
     rankHelpers: mockRankHelpers,
     userService: mockUserService,
     logService: mock(),
+    eventDispatchService: mockEventDispatchService
   }))
+})
+
+describe(nameof(RankService, 'addRankEvent'), () => {
+  test('Adds the rank event and emits an event', async () => {
+    const streamerId = 5
+    const primaryUserId = 5123
+    const isAdded = true
+    const rankName = 'mod'
+    const eventData = cast<RankEventData>({})
+    const rankEvent = cast<ParsedRankEvent>({ id: 51})
+    mockRankStore.addRankEvent.calledWith(streamerId, primaryUserId, isAdded, rankName, eventData).mockResolvedValue(rankEvent)
+
+    await rankService.addRankEvent(streamerId, primaryUserId, isAdded, rankName, eventData)
+
+    const eventDispatchCall = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventDispatchCall).toEqual(expectObject([EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, { streamerId, rankEvent }]))
+  })
 })
 
 describe(nameof(RankService, 'addOrUpdateCustomRankName'), () => {

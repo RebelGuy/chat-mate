@@ -104,6 +104,11 @@ import S3ProxyService from '@rebel/server/services/S3ProxyService'
 import ImageService from '@rebel/server/services/ImageService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import EmojiStore from '@rebel/server/stores/EmojiStore'
+import expressWs from 'express-ws'
+import WebsocketClient from '@rebel/server/controllers/WebsocketClient'
+import FollowerService from '@rebel/server/services/FollowerService'
+import * as AI from 'applicationinsights'
+import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -114,6 +119,7 @@ const STARTUP_TIME = Date.now()
 
 const main = async () => {
   const app: Express = express()
+  const wsApp = expressWs(app, undefined, { wsOptions: { }})
 
   const port = env('port')
   const studioUrl = env('studioUrl')
@@ -143,10 +149,24 @@ const main = async () => {
   let isAdministrativeMode = false
   let isContextInitialised = false
 
+  let appInsightsClient: AI.TelemetryClient | null
+  if (applicationInsightsConnectionString == null) {
+    appInsightsClient = null
+  } else {
+    console.debug('Starting ApplicationInsights client...')
+    AI.setup(applicationInsightsConnectionString)
+      .setAutoCollectConsole(false) // doesn't seem to work properly - instead, we manually track these via `trackTrace()` for better control
+      .setSendLiveMetrics(true) // so we can monitor the app in real-time
+      .start()
+    appInsightsClient = AI.defaultClient
+    console.debug('Successfully started ApplicationInsights client')
+  }
+
   const globalContext = ContextProvider.create()
     .withVariable('isAdministrativeMode', () => isAdministrativeMode)
     .withVariable('isContextInitialised', () => isContextInitialised)
     .withObject('app', app)
+    .withObject('appInsightsClient', appInsightsClient)
     .withProperty('port', port)
     .withProperty('studioUrl', studioUrl)
     .withProperty('channelId', env('channelId'))
@@ -158,7 +178,6 @@ const main = async () => {
     .withProperty('disableExternalApis', env('useFakeControllers') === true)
     .withProperty('twitchClientId', twitchClientId)
     .withProperty('twitchClientSecret', twitchClientSecret)
-    .withProperty('applicationInsightsConnectionString', applicationInsightsConnectionString)
     .withProperty('dbLogLevel', dbLogLevel)
     .withProperty('apiLogLevel', apiLogLevel)
     .withProperty('debugLogOutput', debugLogOutput)
@@ -230,6 +249,7 @@ const main = async () => {
     .withClass('youtubeApiClientProvider', YoutubeApiClientProvider)
     .withClass('youtubeApiProxyService', YoutubeApiProxyService)
     .withClass('youtubeService', YoutubeService)
+    .withClass('rankService', RankService)
     .withClass('punishmentService', PunishmentService)
     .withClass('genericStore', GenericStore)
     .withClass('aggregateLivestreamService', AggregateLivestreamService)
@@ -240,12 +260,12 @@ const main = async () => {
     .withClass('experienceService', ExperienceService)
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
+    .withClass('s3ClientProvider', S3ClientProvider)
     .withClass('s3ProxyService', S3ProxyService)
     .withClass('imageService', ImageService)
     .withClass('customEmojiService', CustomEmojiService)
     .withClass('commandStore', CommandStore)
     .withClass('donationStore', DonationStore)
-    .withClass('rankService', RankService)
     .withClass('donationService', DonationService)
     .withClass('linkService', LinkService)
     .withClass('linkCommand', LinkCommand)
@@ -257,6 +277,7 @@ const main = async () => {
     .withClass('masterchatStore', MasterchatStore)
     .withClass('followerStore', FollowerStore)
     .withClass('masterchatFetchService', MasterchatFetchService)
+    .withClass('followerService', FollowerService)
     .withClass('helixEventService', HelixEventService)
     .withClass('donationFetchService', DonationFetchService)
     .withClass('chatMateEventService', ChatMateEventService)
@@ -266,7 +287,7 @@ const main = async () => {
     .build()
 
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*')
+    res.header('Access-Control-Allow-Origin', req.headers.origin ?? '*')
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
     res.header('Access-Control-Allow-Headers', '*')
 
@@ -385,6 +406,20 @@ const main = async () => {
     StreamerController,
     AdminController
   )
+
+
+  // test using https://piehost.com/websocket-tester
+  wsApp.app.ws('/ws', async (client, request, next) => {
+    const websocketContext = globalContext.asParent()
+      .withObject('request', request)
+      .withObject('response', {} as any)
+      .withObject('wsClient', client)
+      .withClass('apiService', ApiService)
+      .withClass('websocketService', WebsocketClient)
+      .build()
+
+    await websocketContext.initialise()
+  })
 
   // at this point, none of the routes have matched, so we want to return a custom formatted error
   // from https://expressjs.com/en/starter/faq.html#how-do-i-handle-404-responses

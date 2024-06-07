@@ -4,13 +4,13 @@ import ChatService, { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatServ
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import LogService from '@rebel/server/services/LogService'
 import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
-import ChatStore from '@rebel/server/stores/ChatStore'
-import { cast, expectArray, expectObject, expectObjectDeep, nameof, promised } from '@rebel/shared/testUtils'
+import ChatStore, { AddedChatMessage } from '@rebel/server/stores/ChatStore'
+import { cast, expectArray, expectObject, nameof, promised } from '@rebel/shared/testUtils'
 import { single, single2 } from '@rebel/shared/util/arrays'
 import { mock, MockProxy } from 'jest-mock-extended'
 import * as data from '@rebel/server/_test/testData'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
-import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED, EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { ChatMessage, YoutubeLivestream, TwitchLivestream } from '@prisma/client'
 import CommandService, { NormalisedCommand } from '@rebel/server/services/command/CommandService'
@@ -125,6 +125,51 @@ describe(nameof(ChatService, 'initialise'), () => {
   })
 })
 
+describe(nameof(ChatService, 'getChatById'), () => {
+  test('Returns the specified chat message with signed emoji images', async () => {
+    const streamerId = 51
+    const chatMessageId = 454
+    const userId = 5
+    const parts = cast<ChatItemWithRelations['chatMessageParts']>([{ emoji: {} }])
+    const chat = cast<ChatItemWithRelations>({
+      streamerId: streamerId,
+      user: { id: userId },
+      chatMessageParts: parts
+    })
+
+    mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chat)
+    mockEmojiService.getEligibleEmojiUsers.calledWith(streamerId).mockResolvedValue([userId])
+
+    const result = await chatService.getChatById(chatMessageId)
+
+    expect(result).toBe(chat)
+    expect(single2(mockCustomEmojiService.signEmojiImages.mock.calls)).toBe(parts)
+    expect(single2(mockEmojiService.signEmojiImages.mock.calls)).toBe(parts)
+  })
+
+  test('Marks emojis as inaccessible if the user is not eligible for public emojis', async () => {
+    const streamerId = 51
+    const chatMessageId = 454
+    const userId = 5
+    const parts = cast<ChatItemWithRelations['chatMessageParts']>([{ emoji: { image: {} } }])
+    const chat = cast<ChatItemWithRelations>({
+      streamerId: streamerId,
+      user: { id: userId },
+      chatMessageParts: parts
+    })
+
+    mockChatStore.getChatById.calledWith(chatMessageId).mockResolvedValue(chat)
+    mockEmojiService.getEligibleEmojiUsers.calledWith(streamerId).mockResolvedValue([userId + 1])
+
+    const result = await chatService.getChatById(chatMessageId)
+
+    expect(result).toBe(chat)
+    expect(result.chatMessageParts[0].emoji!.imageUrl).toBe(INACCESSIBLE_EMOJI)
+    expect(single2(mockCustomEmojiService.signEmojiImages.mock.calls)).toBe(parts)
+    expect(mockEmojiService.signEmojiImages.mock.calls.length).toBe(0)
+  })
+})
+
 describe(nameof(ChatService, 'getChatSince'), () => {
   test('Returns chat messages with signed custom emoji images', async () => {
     const streamerId = 4
@@ -187,21 +232,43 @@ describe(nameof(ChatService, 'getChatSince'), () => {
   })
 })
 
-describe(nameof(ChatService, 'onChatItemRemoved'), () => {
-  test('Removes the chat item', async () => {
+describe(nameof(ChatService, 'onChatItemDeleted'), () => {
+  test('Removes the chat item, fires event if deleted', async () => {
     const externalMessageId = 'messageId'
+    const streamerId = 5123
+    const chatMessageId = 5
+    mockChatStore.deleteChat.calledWith(externalMessageId).mockResolvedValue(cast<ChatMessage>({ id: chatMessageId, streamerId }))
 
-    await chatService.onChatItemRemoved(externalMessageId)
+    await chatService.onChatItemDeleted(externalMessageId)
 
-    const providedMessageId = single2(mockChatStore.removeChat.mock.calls)
+    const providedMessageId = single2(mockChatStore.deleteChat.mock.calls)
     expect(providedMessageId).toBe(externalMessageId)
+
+    const eventCall = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventCall).toEqual(expectObject(eventCall, [EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, { streamerId, chatMessageId }]))
+  })
+
+  test('Removes the chat item, does not fire event if not deleted', async () => {
+    const externalMessageId = 'messageId'
+    const streamerId = 5123
+    const chatMessageId = 5
+    mockChatStore.deleteChat.calledWith(externalMessageId).mockResolvedValue(null)
+
+    await chatService.onChatItemDeleted(externalMessageId)
+
+    const providedMessageId = single2(mockChatStore.deleteChat.mock.calls)
+    expect(providedMessageId).toBe(externalMessageId)
+
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
   })
 })
 
 describe(nameof(ChatService, 'onNewChatItem'), () => {
-  test('youtube: synthesises correct data and calls required services, then returns true', async () => {
+  test('youtube: synthesises correct data and calls required services, then returns true. Emits new viewer event', async () => {
     const streamerId = 2
-    const addedChatMessage = cast<ChatMessage>({})
+    const primaryUserId = 5
+    const newMessageId = 5152
+    const addedChatMessage = cast<AddedChatMessage>({ id: newMessageId, user: { id: primaryUserId }})
     const livestream = cast<YoutubeLivestream>({})
 
     mockChannelStore.createOrUpdateYoutubeChannel.calledWith(data.youtubeChannel1, expect.objectContaining(data.youtubeChannelGlobalInfo1)).mockResolvedValue(youtubeChannel1)
@@ -211,10 +278,16 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     mockEmojiService.processEmoji.mockImplementation(part => Promise.resolve(part))
     mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining([textPart, customEmojiPart, emojiPart])).mockReturnValue(null)
     mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockChatStore.getTimeOfFirstChat.calledWith(streamerId, expectArray([primaryUserId])).mockResolvedValue([{ messageId: newMessageId, primaryUserId, firstSeen: 0 }])
 
     const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
 
     expect(addedChat).toBe(true)
+
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(2)
+    const [newViewerArgs, chatItemArgs] = mockEventDispatchService.addData.mock.calls
+    expect(newViewerArgs).toEqual(expectObject(newViewerArgs, [EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, { streamerId, primaryUserId }]))
+    expect(chatItemArgs).toEqual(expectObject(chatItemArgs, [EVENT_PUBLIC_CHAT_ITEM, addedChatMessage]))
 
     const [passedChatItem_, passedStreamerId_] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(passedChatItem_).toBe(chatItem1)
@@ -224,9 +297,11 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     expect(channelEventServiceArgs).toEqual<typeof channelEventServiceArgs>([streamerId, youtubeChannel1.id])
   })
 
-  test('twitch: synthesises correct data and calls required services, then returns true', async () => {
+  test('twitch: synthesises correct data and calls required services, then returns true. Does not emit new viewer event', async () => {
     const streamerId = 2
-    const addedChatMessage = cast<ChatMessage>({})
+    const primaryUserId = 5
+    const newMessageId = 5152
+    const addedChatMessage = cast<AddedChatMessage>({ id: newMessageId, user: { id: primaryUserId }})
     const livestream = cast<TwitchLivestream>({})
 
     mockChannelStore.createOrUpdateTwitchChannel.calledWith(data.twitchChannel3, expect.objectContaining(data.twitchChannelGlobalInfo3)).mockResolvedValue(twitchChannel1)
@@ -236,10 +311,14 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     mockEmojiService.processEmoji.mockImplementation(part => Promise.resolve(part))
     mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining([textPart, customEmojiPart, emojiPart])).mockReturnValue(null)
     mockLivestreamStore.getCurrentTwitchLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+    mockChatStore.getTimeOfFirstChat.calledWith(streamerId, expectArray([primaryUserId])).mockResolvedValue([{ firstSeen: 0, primaryUserId, messageId: -1 }])
 
     const addedChat = await chatService.onNewChatItem(chatItem2, streamerId)
 
     expect(addedChat).toBe(true)
+
+    const chatItemArgs = single(mockEventDispatchService.addData.mock.calls)
+    expect(chatItemArgs).toEqual(expectObject(chatItemArgs, [EVENT_PUBLIC_CHAT_ITEM, addedChatMessage]))
 
     const [passedChatItem_, passedStreamerId_] = single(mockExperienceService.addExperienceForChat.mock.calls)
     expect(passedChatItem_).toBe(chatItem2)
@@ -248,7 +327,8 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
 
   test('Executes command and does not perform normal chat side effects', async () => {
     const streamerId = 2
-    const addedChatMessage = cast<ChatMessage>({ id: 56 })
+    const primaryUserId = 5
+    const addedChatMessage = cast<AddedChatMessage>({ id: 56, user: { id: primaryUserId }})
     const command: NormalisedCommand = { normalisedName: 'TEST' }
     const commandId = 5
 
@@ -258,10 +338,14 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     mockChatStore.addChat.calledWith(chatItem2, streamerId, twitchChannel1.userId, twitchChannel1.twitchId).mockResolvedValue(addedChatMessage)
     mockCommandHelpers.extractNormalisedCommand.calledWith(expect.arrayContaining(chatItem2.messageParts)).mockReturnValue(command)
     mockCommandStore.addCommand.calledWith(addedChatMessage.id, command).mockResolvedValue(commandId)
+    mockChatStore.getTimeOfFirstChat.calledWith(streamerId, expectArray([primaryUserId])).mockResolvedValue([{ firstSeen: 0, primaryUserId, messageId: -1 }])
 
     const addedChat = await chatService.onNewChatItem(chatItem2, streamerId)
 
     expect(addedChat).toBe(true)
+
+    const chatItemArgs = single(mockEventDispatchService.addData.mock.calls)
+    expect(chatItemArgs).toEqual(expectObject(chatItemArgs, [EVENT_PUBLIC_CHAT_ITEM, addedChatMessage]))
 
     expect(single(mockCommandService.queueCommandExecution.mock.calls)).toEqual([commandId])
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
@@ -277,6 +361,8 @@ describe(nameof(ChatService, 'onNewChatItem'), () => {
     const addedChat = await chatService.onNewChatItem(chatItem1, streamerId)
 
     expect(addedChat).toBe(false)
+
+    expect(mockEventDispatchService.addData.mock.calls.length).toBe(0)
 
     expect(mockExperienceService.addExperienceForChat.mock.calls.length).toBe(0)
 

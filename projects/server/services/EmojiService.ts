@@ -1,6 +1,10 @@
+import { YTEmoji, YTRun, YTTextRun } from '@rebel/masterchat'
 import { ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, PartialProcessedEmojiChatMessage } from '@rebel/server/models/chat'
+import CacheService from '@rebel/server/services/CacheService'
 import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
+import FileService from '@rebel/server/services/FileService'
 import ImageService from '@rebel/server/services/ImageService'
+import LogService from '@rebel/server/services/LogService'
 import S3ProxyService from '@rebel/server/services/S3ProxyService'
 import EmojiStore from '@rebel/server/stores/EmojiStore'
 import RankStore from '@rebel/server/stores/RankStore'
@@ -10,18 +14,31 @@ import { unique } from '@rebel/shared/util/arrays'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
+// this is a selector sometimes used by emojis - it is an undesirably artefact, apparently
+const variationSelector = RegExp('\ufe0f', 'g')
+
+export type EmojiMap = Record<string, YTEmoji>
+
 type Deps = Dependencies<{
   rankStore: RankStore
   emojiStore: EmojiStore
   s3ProxyService: S3ProxyService
   imageService: ImageService
+  fileService: FileService
+  logService: LogService
+  cacheService: CacheService
 }>
 
 export default class EmojiService extends ContextClass {
+  public readonly name = EmojiService.name
+
   private readonly rankStore: RankStore
   private readonly emojiStore: EmojiStore
   private readonly s3ProxyService: S3ProxyService
   private readonly imageService: ImageService
+  private readonly fileService: FileService
+  private readonly logService: LogService
+  private readonly cacheService: CacheService
 
   constructor (deps: Deps) {
     super()
@@ -30,6 +47,50 @@ export default class EmojiService extends ContextClass {
     this.emojiStore = deps.resolve('emojiStore')
     this.s3ProxyService = deps.resolve('s3ProxyService')
     this.imageService = deps.resolve('imageService')
+    this.fileService = deps.resolve('fileService')
+    this.logService = deps.resolve('logService')
+    this.cacheService = deps.resolve('cacheService')
+  }
+
+  /** Checks if there are any known emojis in the given text run and, if so, splits up the run appropriately. */
+  public analyseYoutubeTextForEmojis (run: YTTextRun): YTRun[] {
+    const emojiRegex = this.cacheService.getOrSetEmojiRegex(this.loadEmojiRegex)
+    if (emojiRegex == null) {
+      return [run]
+    }
+
+    let text = run.text.replace(variationSelector, '')
+    let k = 0
+    let result: YTRun[] = []
+    let match: RegExpExecArray | null
+    let emojiMap: EmojiMap | null = null
+
+    // exact same algorithm that youtube uses, but with more readability
+    while ((match = emojiRegex.exec(text.substring(k))) != null) {
+      if (emojiMap == null) {
+        emojiMap = this.loadEmojiMap()!
+      }
+
+      const matchIndex = match.index + k
+      const emoji = emojiMap[match[0]] // the map of emojis to urls
+      if (emoji != null) {
+        // extract the text between the previous emoji and this emoji
+        if (matchIndex > 0 && k < matchIndex) {
+          result.push({ ...run, text: text.substring(k, matchIndex) })
+        }
+
+        // add this emoji
+        result.push({ emoji: emoji })
+      }
+
+      k = matchIndex + match[0].length
+    }
+
+    if (k < text.length) {
+      result.push({ ...run, text: text.substring(k) })
+    }
+
+    return result
   }
 
   /** Returns the ids of primary users that have access to use normal (i.e. non-custom) emojis. */
@@ -94,6 +155,21 @@ export default class EmojiService extends ContextClass {
       imageWidth: dimensions.width,
       imageHeight: dimensions.height
     }
+  }
+
+  private loadEmojiMap (): EmojiMap | null {
+    const path = this.fileService.getDataFilePath('emojiMap.json')
+    return this.fileService.readObject<EmojiMap>(path)
+  }
+
+  private loadEmojiRegex = () => {
+    const emojiMap = this.loadEmojiMap()
+    if (emojiMap == null) {
+      this.logService.logWarning(this, 'Could not find the `emojiMap.json` file. Unicode emojis will not be processed.')
+      return null
+    }
+
+    return RegExp(Object.keys(emojiMap).join('|').replace('*', '\\*'))
   }
 }
 

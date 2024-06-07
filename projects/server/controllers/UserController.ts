@@ -2,29 +2,25 @@ import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server
 import { requireAuth, requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { PublicLinkHistoryItem } from '@rebel/api-models/public/user/PublicLinkHistoryItem'
 import { PublicUserSearchResult } from '@rebel/api-models/public/user/PublicUserSearchResult'
-import { AllUserData, channelToPublicChannel, registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
+import { channelToPublicChannel, registeredUserToPublic, userDataToPublicUser } from '@rebel/server/models/user'
 import ChannelService, { getExternalIdOrUserName, getUserName } from '@rebel/server/services/ChannelService'
-import ExperienceService from '@rebel/server/services/ExperienceService'
 import LinkDataService from '@rebel/server/services/LinkDataService'
 import LinkService, { UnlinkUserOptions } from '@rebel/server/services/LinkService'
 import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore, { YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
 import LinkStore from '@rebel/server/stores/LinkStore'
-import RankStore from '@rebel/server/stores/RankStore'
 import { intersection, nonNull, single, symmetricDifference, unique } from '@rebel/shared/util/arrays'
 import { ChatMateError, ChatMessageForStreamerNotFoundError, LinkAttemptInProgressError, NotFoundError, UserAlreadyLinkedToAggregateUserError } from '@rebel/shared/util/error'
 import { asGte, asLte } from '@rebel/shared/util/math'
 import { sleep } from '@rebel/shared/util/node'
-import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
 import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse } from '@rebel/api-models/schema/user'
+import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
   channelStore: ChannelStore
-  experienceService: ExperienceService
-  rankStore: RankStore
   linkDataService: LinkDataService
   accountStore: AccountStore
   linkService: LinkService
@@ -35,8 +31,6 @@ type Deps = ControllerDependencies<{
 export default class UserController extends ControllerBase {
   private readonly channelService: ChannelService
   private readonly channelStore: ChannelStore
-  private readonly experienceService: ExperienceService
-  private readonly rankStore: RankStore
   private readonly linkDataService: LinkDataService
   private readonly accountStore: AccountStore
   private readonly linkService: LinkService
@@ -46,8 +40,6 @@ export default class UserController extends ControllerBase {
     super(deps, 'user')
     this.channelService = deps.resolve('channelService')
     this.channelStore = deps.resolve('channelStore')
-    this.experienceService = deps.resolve('experienceService')
-    this.rankStore = deps.resolve('rankStore')
     this.linkDataService = deps.resolve('linkDataService')
     this.accountStore = deps.resolve('accountStore')
     this.linkService = deps.resolve('linkService')
@@ -78,8 +70,10 @@ export default class UserController extends ControllerBase {
   @PreProcessor(requireRank('owner'))
   public async search (request: SearchUserRequest): Promise<SearchUserResponse> {
     const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search')
-    if (request == null || isNullOrEmpty(request.searchTerm)) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({ searchTerm: { type: 'string', validators: [nonEmptyStringValidator] }}, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -115,8 +109,10 @@ export default class UserController extends ControllerBase {
   @PreProcessor(requireRank('admin'))
   public async searchRegisteredUsers (request: SearchUserRequest): Promise<SearchUserResponse> {
     const builder = this.registerResponseBuilder<SearchUserResponse>('POST /search')
-    if (request == null || isNullOrEmpty(request.searchTerm)) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({ searchTerm: { type: 'string', validators: [nonEmptyStringValidator] }}, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -188,6 +184,11 @@ export default class UserController extends ControllerBase {
       builder.failure(403, 'You do not have permission to use the `admin_aggregateUserId` query parameter.')
     }
 
+    const validationError = builder.validateInput({ admin_aggregateUserId: { type: 'number', optional: true }}, { admin_aggregateUserId })
+    if (validationError != null) {
+      return validationError
+    }
+
     try {
       const channels = await this.channelService.getConnectedUserChannels([admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId]).then(single)
       const registeredUser = await this.accountStore.getRegisteredUsers([admin_aggregateUserId ?? this.getCurrentUser().aggregateChatUserId]).then(single)
@@ -214,8 +215,12 @@ export default class UserController extends ControllerBase {
   ): Promise<AddLinkedChannelResponse> {
     const builder = this.registerResponseBuilder<AddLinkedChannelResponse>('POST /link/channels/:aggregateUserId/:defaultUserId')
 
-    if (aggregateUserId == null || defaultUserId == null) {
-      return builder.failure(400, 'An aggregate and default user id must be provided.')
+    const validationError = builder.validateInput({
+      aggregateUserId: { type: 'number' },
+      defaultUserId: { type: 'number' }
+    }, { aggregateUserId, defaultUserId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -242,8 +247,14 @@ export default class UserController extends ControllerBase {
   ): Promise<RemoveLinkedChannelResponse> {
     const builder = this.registerResponseBuilder<RemoveLinkedChannelResponse>('DELETE /link/channels/:defaultUserId')
 
-    if (defaultUserId == null) {
-      return builder.failure(400, 'Default user id must be provided.')
+    const validationError = builder.validateInput({
+      defaultUserId: { type: 'number' },
+      transferRanks: { type: 'boolean', optional: true },
+      relinkChatExperience: { type: 'boolean', optional: true },
+      relinkDonations: { type: 'boolean', optional: true }
+    }, { defaultUserId, transferRanks, relinkChatExperience, relinkDonations })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -269,6 +280,11 @@ export default class UserController extends ControllerBase {
 
     if (!this.hasRankOrAbove('admin') && admin_aggregateUserId != null) {
       builder.failure(403, 'You do not have permission to use the `admin_aggregateUserId` query parameter.')
+    }
+
+    const validationError = builder.validateInput({ admin_aggregateUserId: { type: 'number', optional: true }}, { admin_aggregateUserId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -339,8 +355,9 @@ export default class UserController extends ControllerBase {
   ): Promise<CreateLinkTokenResponse> {
     const builder = this.registerResponseBuilder<CreateLinkTokenResponse>('POST /link/token')
 
-    if (externalId == null || externalId.length === 0) {
-      return builder.failure(400, 'ExternalId must be provided')
+    const validationError = builder.validateInput({ externalId: { type: 'string', validators: [nonEmptyStringValidator] }}, { externalId })
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -365,8 +382,9 @@ export default class UserController extends ControllerBase {
   ): Promise<DeleteLinkTokenResponse> {
     const builder = this.registerResponseBuilder<DeleteLinkTokenResponse>('DELETE /link/token')
 
-    if (isNullOrEmpty(linkToken)) {
-      return builder.failure(400, 'linkToken must be provided')
+    const validationError = builder.validateInput({ linkToken: { type: 'string', validators: [nonEmptyStringValidator] }}, { linkToken })
+    if (validationError != null) {
+      return validationError
     }
 
     try {

@@ -2,7 +2,6 @@ import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server
 import PunishmentService from '@rebel/server/services/rank/PunishmentService'
 import { single, sortBy, unique } from '@rebel/shared/util/arrays'
 import { Path, GET, QueryParam, POST, PathParam, PreProcessor } from 'typescript-rest'
-import { YOUTUBE_TIMEOUT_DURATION } from '@rebel/server/services/YoutubeTimeoutRefreshService'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
@@ -14,6 +13,7 @@ import { requireRank, requireStreamer } from '@rebel/server/controllers/preProce
 import AccountService from '@rebel/server/services/AccountService'
 import { channelToPublicChannel } from '@rebel/server/models/user'
 import { BanUserRequest, BanUserResponse, GetSinglePunishment, GetUserPunishments, MuteUserRequest, MuteUserResponse, RevokeTimeoutRequest, RevokeTimeoutResponse, TimeoutUserRequest, TimeoutUserResponse, UnbanUserRequest, UnbanUserResponse, UnmuteUserRequest, UnmuteUserResponse } from '@rebel/api-models/schema/punishment'
+import { positiveNumberValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
   rankStore: RankStore
@@ -45,6 +45,12 @@ export default class PunishmentController extends ControllerBase {
     @PathParam('id') id: number
   ): Promise<GetSinglePunishment> {
     const builder = this.registerResponseBuilder<GetSinglePunishment>('GET /:id')
+
+    const validationError = builder.validateInput({ id: { type: 'number' }}, { id })
+    if (validationError != null) {
+      return validationError
+    }
+
     try {
       const streamerId = this.getStreamerId()
       const punishment = await this.rankStore.getUserRankById(id)
@@ -65,6 +71,15 @@ export default class PunishmentController extends ControllerBase {
     @QueryParam('includeInactive') includeInactive?: boolean // if not set, returns only active punishments
   ): Promise<GetUserPunishments> {
     const builder = this.registerResponseBuilder<GetUserPunishments>('GET')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number', optional: true },
+      includeInactive: { type: 'boolean', optional: true }
+    }, { userId: anyUserId, includeInactive })
+    if (validationError != null) {
+      return validationError
+    }
+
     try {
       const streamerId = this.getStreamerId()
       const primaryUserId = anyUserId == null ? null : await this.accountService.getPrimaryUserIdFromAnyUser([anyUserId]).then(single)
@@ -100,8 +115,13 @@ export default class PunishmentController extends ControllerBase {
   @Path('/ban')
   public async banUser (request: BanUserRequest): Promise<BanUserResponse> {
     const builder = this.registerResponseBuilder<BanUserResponse>('POST /ban')
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -123,8 +143,13 @@ export default class PunishmentController extends ControllerBase {
   @Path('/unban')
   public async unbanUser (request: UnbanUserRequest): Promise<UnbanUserResponse> {
     const builder = this.registerResponseBuilder<UnbanUserResponse>('POST /unban')
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -147,11 +172,20 @@ export default class PunishmentController extends ControllerBase {
   public async timeoutUser (request: TimeoutUserRequest): Promise<TimeoutUserResponse> {
     const builder = this.registerResponseBuilder<TimeoutUserResponse>('POST /timeout')
 
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
-    } else if (request.durationSeconds == null || request.durationSeconds < 1 || request.durationSeconds > 24 * 3600) {
-      // the 1 day limit is imposed to us by the fantastic youtube api!
-      return builder.failure(400, `Duration must be at least 1 second and at most 1 day.`)
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true },
+      durationSeconds: {
+        type: 'number',
+        validators: [{
+          // the 1 day limit is imposed on us by the fantastic youtube api!
+          onValidate: (n: number) => n >= 1 && n <= 24 * 3600,
+          errorMessage: 'Duration must be at least 1 second and at most 1 day'
+        }]
+      }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -174,8 +208,13 @@ export default class PunishmentController extends ControllerBase {
   @Path('/revokeTimeout')
   public async revokeTimeout (request: RevokeTimeoutRequest): Promise<RevokeTimeoutResponse> {
     const builder = this.registerResponseBuilder<RevokeTimeoutResponse>('POST /revokeTimeout')
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -197,8 +236,14 @@ export default class PunishmentController extends ControllerBase {
   @Path('/mute')
   public async muteUser (request: MuteUserRequest): Promise<MuteUserResponse> {
     const builder = this.registerResponseBuilder<MuteUserResponse>('POST /mute')
-    if (request == null || request.userId == null || (request.durationSeconds != null && request.durationSeconds < 0)) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true },
+      durationSeconds: { type: 'number', nullable: true, validators: [positiveNumberValidator] }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {
@@ -221,8 +266,13 @@ export default class PunishmentController extends ControllerBase {
   @Path('/unmute')
   public async unmuteUser (request: UnmuteUserRequest): Promise<UnmuteUserResponse> {
     const builder = this.registerResponseBuilder<UnmuteUserResponse>('POST /unmute')
-    if (request == null || request.userId == null) {
-      return builder.failure(400, 'Invalid request data.')
+
+    const validationError = builder.validateInput({
+      userId: { type: 'number' },
+      message: { type: 'string', nullable: true }
+    }, request)
+    if (validationError != null) {
+      return validationError
     }
 
     try {

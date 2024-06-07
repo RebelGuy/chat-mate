@@ -1,6 +1,6 @@
 import { GenericObject, NumberOnly, PrimitiveKeys, SafeOmit, UnionToIntersection } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
-import { assertUnreachable } from '@rebel/shared/util/typescript'
+import { IDENTITY, assertUnreachable } from '@rebel/shared/util/typescript'
 
 // uses default equality comparison
 export function unique<T> (array: T[], transformer?: (item: T) => any): T[] {
@@ -60,6 +60,10 @@ export function flatMap<T> (arrayOfArray: T[][]): T[] {
 
 export function sortByLength (array: string[], direction?: 'asc' | 'desc'): string[] {
   return sortBy(array.map(str => ({ value: str })), item => item.value.length, direction).map(item => item.value)
+}
+
+export function sortByNum (array: number[], direction?: 'asc' | 'desc') {
+  return sortBy(array, IDENTITY, direction)
 }
 
 /** Sort by number. */

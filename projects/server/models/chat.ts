@@ -13,12 +13,13 @@ import { channelToPublicChannel, registeredUserToPublic } from '@rebel/server/mo
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import { UserChannel } from '@rebel/server/stores/ChannelStore'
 import { Singular } from '@rebel/shared/types'
-import { sortByLength } from '@rebel/shared/util/arrays'
+import { sortBy, sortByLength } from '@rebel/shared/util/arrays'
 import { assertUnreachable, assertUnreachableCompile } from '@rebel/shared/util/typescript'
-import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
+import { ChatMessage as TwitchChatMessage } from '@twurple/chat'
 import { SafeExtract } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
+import { buildEmoteImageUrl, parseChatMessage } from '@twurple/chat'
 
 export type ChatPlatform = 'youtube' | 'twitch'
 
@@ -134,8 +135,8 @@ export type TwitchAuthor = {
 export type ChatEmojiWithImage = ChatEmoji & { image: Image }
 
 /** Evaluates all the getters */
-export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
-  const evaluatedParts: PartialChatMessage[] = msg.parseEmotes().map(p => {
+export function evalTwitchPrivateMessage (text: string, msg: TwitchChatMessage): ChatItem {
+  const evaluatedParts: PartialChatMessage[] = parseChatMessage(text, msg.emoteOffsets).map(p => {
     if (p.type === 'text') {
       const textPart: PartialTextChatMessage = {
         type: 'text',
@@ -149,8 +150,8 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
       const emojiPart: PartialEmojiChatMessage = {
         type: 'emoji',
         name: p.name,
-        label: p.displayInfo.code, // symbol
-        url: p.displayInfo.getUrl({ animationSettings: 'default', backgroundType: 'light', size: '3.0' })
+        label: p.id, // symbol
+        url: buildEmoteImageUrl(p.id, { animationSettings: 'default', backgroundType: 'light', size: '3.0' })
       }
       return emojiPart
 
@@ -159,8 +160,8 @@ export function evalTwitchPrivateMessage (msg: TwitchPrivateMessage): ChatItem {
         type: 'cheer',
         amount: p.amount,
         name: p.name,
-        colour: p.displayInfo.color,
-        imageUrl: p.displayInfo.url
+        colour: '',
+        imageUrl: ''
       }
       return cheerPart
 
@@ -269,16 +270,47 @@ export function convertInternalMessagePartsToExternal (messageParts: ChatItemWit
 
 // this is unique, and usually of the form :emoji_description:. if more than one descriptions are available, uses the shortest one.
 // it MAY be the emoji symbol itself if no further information is available
-export function getEmojiLabel (emoji: YTEmoji): string {
+function getEmojiLabel (emoji: YTEmoji): string {
   if (emoji.shortcuts != null && emoji.shortcuts.length > 0) {
     // e.g. ['wheelchair', 'wheelchair_symbol']
     return sortByLength(emoji.shortcuts, 'asc')[0]
   } else if (emoji.searchTerms != null && emoji.searchTerms.length > 0) {
     // e.g. ['wheelchair', 'symbol']
     return sortByLength(emoji.searchTerms, 'asc')[0]
+  } else if (emoji.image.accessibility?.accessibilityData.label != null) {
+    return emoji.image.accessibility.accessibilityData.label
   } else {
-    // this could be the ascii representation of the emoji
+    // this could be the unicode representation of the emoji
     return emoji.emojiId
+  }
+}
+
+// i don't really know how this should be different from the label
+function getEmojiName (emoji: YTEmoji): string {
+  if (emoji.image.accessibility?.accessibilityData.label != null) {
+    return emoji.image.accessibility.accessibilityData.label
+  } else if (emoji.searchTerms != null && emoji.searchTerms.length > 0) {
+    // e.g. ['wheelchair', 'symbol']
+    return sortByLength(emoji.searchTerms, 'asc')[0]
+  } else if (emoji.shortcuts != null && emoji.shortcuts.length > 0) {
+    // e.g. ['wheelchair', 'wheelchair_symbol']
+    return sortByLength(emoji.shortcuts, 'asc')[0]
+  } else {
+    // this could be the unicode representation of the emoji
+    return emoji.emojiId
+  }
+}
+
+export function ytEmojiToPartialEmojiChatMessage (emoji: YTEmoji): PartialEmojiChatMessage {
+  // pick the biggest image
+  const image = sortBy(emoji.image.thumbnails, img => (img.height ?? 0) * (img.width ?? 0), 'desc')[0]
+  return {
+    type: 'emoji',
+    name: getEmojiName(emoji),
+    label: getEmojiLabel(emoji),
+    url: image.url,
+    width: image.width,
+    height: image.height
   }
 }
 

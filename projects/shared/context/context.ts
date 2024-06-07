@@ -7,7 +7,7 @@ import { assertUnreachable } from '@rebel/shared/util/typescript'
 // make sure we don't accidentally override non-context-related properties when assigning the context to an object
 const CONTEXT_SYMBOL = Symbol('context')
 
-export type Injectable = GenericObject
+export type Injectable = GenericObject | null
 
 type VariableResult = Injectable | Primitive | null
 

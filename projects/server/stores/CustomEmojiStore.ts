@@ -5,6 +5,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { group } from '@rebel/shared/util/arrays'
 import { ChatMateError, NotFoundError } from '@rebel/shared/util/error'
 import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 
 const VERSION_START = 0
 
@@ -61,6 +62,7 @@ export type ImageInfo = {
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
+  chatMateStateService: ChatMateStateService
 }>
 
 export default class CustomEmojiStore extends ContextClass {
@@ -70,7 +72,7 @@ export default class CustomEmojiStore extends ContextClass {
   constructor (deps: Deps) {
     super()
     this.db = deps.resolve('dbProvider').get()
-    this.semaphore = new GroupedSemaphore(1)
+    this.semaphore = deps.resolve('chatMateStateService').getCustomEmojiSemaphore()
   }
 
   public async getCustomEmojiById (emojiId: number): Promise<CustomEmoji | null> {
@@ -251,11 +253,10 @@ export default class CustomEmojiStore extends ContextClass {
         throw new NotFoundError(`Unable to update emoji ${data.id} because it does not exist or has been deactivated`)
       }
 
-      const previousVersion = await this.db.customEmojiVersion.findFirst({
+      const previousVersion = await this.db.customEmojiVersion.findFirstOrThrow({
         where: { customEmojiId: data.id },
         orderBy: { version: 'desc' },
-        include: { customEmoji: true },
-        rejectOnNotFound: true
+        include: { customEmoji: true }
       })
 
       const emojiFingerprint = getEmojiFingerprint(previousVersion.customEmoji.streamerId, previousVersion.customEmoji.id, previousVersion.version + 1)

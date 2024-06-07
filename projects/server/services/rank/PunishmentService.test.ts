@@ -10,7 +10,7 @@ import { addTime } from '@rebel/shared/util/datetime'
 import TwurpleService from '@rebel/server/services/TwurpleService'
 import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { ChatMateError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
-import { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
+import RankService, { InternalRankResult, TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import UserService from '@rebel/server/services/UserService'
 import YoutubeService from '@rebel/server/services/YoutubeService'
 
@@ -113,6 +113,7 @@ let mockChannelStore: MockProxy<ChannelStore>
 let mockTwurpleService: MockProxy<TwurpleService>
 let mockUserService: MockProxy<UserService>
 let mockYoutubeService: MockProxy<YoutubeService>
+let mockRankService: MockProxy<RankService>
 let punishmentService: PunishmentService
 
 beforeEach(() => {
@@ -121,6 +122,7 @@ beforeEach(() => {
   mockTwurpleService = mock()
   mockUserService = mock()
   mockYoutubeService = mock()
+  mockRankService = mock()
 
   punishmentService = new PunishmentService(new Dependencies({
     logService: mock(),
@@ -128,7 +130,8 @@ beforeEach(() => {
     channelStore: mockChannelStore,
     twurpleService: mockTwurpleService,
     userService: mockUserService,
-    youtubeService: mockYoutubeService
+    youtubeService: mockYoutubeService,
+    rankService: mockRankService
   }))
 })
 
@@ -165,7 +168,7 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     const twitchCalls = mockTwurpleService.banChannel.mock.calls
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1, 'test'], [streamerId1, 2, 'test']])
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'ban', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: error2 }],
@@ -247,7 +250,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
 
     expect(result).toBe(newPunishment)
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mute', null]))
   })
 
@@ -261,7 +264,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
 
     expect(result).toBe(newPunishment)
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mute', null]))
   })
 
@@ -320,7 +323,7 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     const timeoutCalls = mockTwurpleService.timeout.mock.calls
     expect(timeoutCalls).toEqual<typeof timeoutCalls>([[streamerId1, 1, 'test', 1000], [streamerId1, 2, 'test', 1000]])
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'timeout', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: error1 }, { youtubeChannelId: 4, error: null }],
@@ -425,7 +428,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     const twitchCalls = mockTwurpleService.unbanChannel.mock.calls
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1], [streamerId1, 2]])
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'ban', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
@@ -460,7 +463,7 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
 
     expect(result).toBe(expectedResult)
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'mute', null]))
   })
 
@@ -510,7 +513,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     const twitchCalls = mockTwurpleService.untimeout.mock.calls
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1], [streamerId1, 2]])
 
-    const rankEventCalls = single(mockRankStore.addRankEvent.mock.calls)
+    const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
     expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'timeout', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],

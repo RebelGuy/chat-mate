@@ -18,7 +18,6 @@ let mockStatusService: MockProxy<StatusService>
 let mockApiClient: DeepMockProxy<ApiClient>
 let mockChatClient: MockProxy<ChatClient>
 let mockPlatformApiStore: MockProxy<PlatformApiStore>
-let mockTwitchUsername: string
 let twurpleApiProxyService: TwurpleApiProxyService
 
 beforeEach(() => {
@@ -30,7 +29,6 @@ beforeEach(() => {
   const mockTwurpleApiClientProvider = mock<TwurpleApiClientProvider>({ get: () => Promise.resolve(mockApiClient) })
   mockChatClient = mock()
   const mockTwurpleChatClientProvider = mock<TwurpleChatClientProvider>({ get: () => mockChatClient })
-  mockTwitchUsername = 'twitchUsername'
 
   twurpleApiProxyService = new TwurpleApiProxyService(new Dependencies({
     logService: mockLogService,
@@ -38,7 +36,6 @@ beforeEach(() => {
     twurpleChatClientProvider: mockTwurpleChatClientProvider,
     twurpleStatusService: mockStatusService,
     isAdministrativeMode: () => false,
-    twitchUsername: mockTwitchUsername,
     platformApiStore: mockPlatformApiStore
   }))
   twurpleApiProxyService.initialise()
@@ -48,7 +45,7 @@ beforeEach(() => {
 describe(nameof(TwurpleApiProxyService, 'fetchMetadata'), () => {
   test('successful request', async () => {
     const streamerChannelName = 'streamerChannelName'
-    const mockedResponse: HelixStream = new HelixStream({ viewer_count: 10 } as any, mockApiClient)
+    const mockedResponse: HelixStream = new HelixStream({ viewer_count: 10 } as any)
     mockApiClient.streams.getStreamByUserName.calledWith(streamerChannelName).mockResolvedValue(mockedResponse)
 
     const metadata = await twurpleApiProxyService.fetchMetadata(streamerId, streamerChannelName)
