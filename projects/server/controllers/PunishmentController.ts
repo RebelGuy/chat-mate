@@ -178,7 +178,7 @@ export default class PunishmentController extends ControllerBase {
       durationSeconds: {
         type: 'number',
         validators: [{
-          // the 1 day limit is imposed to us by the fantastic youtube api!
+          // the 1 day limit is imposed on us by the fantastic youtube api!
           onValidate: (n: number) => n >= 1 && n <= 24 * 3600,
           errorMessage: 'Duration must be at least 1 second and at most 1 day'
         }]

@@ -200,7 +200,7 @@ To subscribe or unsubscribe, send a JSON object with the following schema:
 - `type` (`string`): *Required* The type of message we are sending. In this case, set the value to either `"subscribe"` or `"unsubscribe"`.
 - `data`: *Required* The message data. For subscription messages, the data should look like:
   - `topic` (`string`): *Required* The topic to subscribe to.
-  - `streamer` (`string`): *Requried* The streamer's name for which to listen to events to.
+  - `streamer` (`string`): *Required* The streamer's name for which to listen to events.
 - `id` (`number`): *Optional* A unique number that represents this message. If included, the same id will be included in the acknowledgement message.
 
 The server will respond with an acknowledgement of the form:

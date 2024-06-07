@@ -14,7 +14,7 @@ import { unique } from '@rebel/shared/util/arrays'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 
-// this is a selector sometimes used by emojis - it is an undesirably artefact, aparently
+// this is a selector sometimes used by emojis - it is an undesirably artefact, apparently
 const variationSelector = RegExp('\ufe0f', 'g')
 
 export type EmojiMap = Record<string, YTEmoji>
