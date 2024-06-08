@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { evalTwitchPrivateMessage } from '@rebel/server/models/chat'
 import TwurpleChatClientProvider from '@rebel/server/providers/TwurpleChatClientProvider'
 import { getUserName } from '@rebel/server/services/ChannelService'
@@ -11,8 +11,7 @@ import AccountStore from '@rebel/server/stores/AccountStore'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { single } from '@rebel/shared/util/arrays'
-import { ChatClient, ClearMsg } from '@twurple/chat'
-import { TwitchPrivateMessage } from '@twurple/chat/lib/commands/TwitchPrivateMessage'
+import { ChatClient, ChatMessage, ClearMsg } from '@twurple/chat'
 import { HelixUser, HelixUserApi } from '@twurple/api/lib'
 import TwurpleApiClientProvider from '@rebel/server/providers/TwurpleApiClientProvider'
 import { SubscriptionStatus } from '@rebel/server/services/StreamerTwitchEventService'
@@ -20,7 +19,6 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 import { waitUntil } from '@rebel/shared/util/typescript'
-import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 
 export type TwitchMetadata = {
   streamId: string
@@ -45,10 +43,9 @@ type Deps = Dependencies<{
   isContextInitialised: () => boolean
   dateTimeHelpers: DateTimeHelpers
   twitchUsername: string
-  timerHelpers: TimerHelpers
 }>
 
-export default class TwurpleService extends ContextClass {
+export default class TwurpleService extends SingletonContextClass {
   readonly name = TwurpleService.name
 
   private readonly logService: LogService
@@ -65,7 +62,6 @@ export default class TwurpleService extends ContextClass {
   private readonly isAdministrativeMode: () => boolean
   private readonly isContextInitialised: () => boolean
   private readonly dateTimeHelpers: DateTimeHelpers
-  private readonly timerHelpers: TimerHelpers
   private userApi!: HelixUserApi
   private chatClient!: ChatClient
 
@@ -88,7 +84,6 @@ export default class TwurpleService extends ContextClass {
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
     this.isContextInitialised = deps.resolve('isContextInitialised')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
-    this.timerHelpers = deps.resolve('timerHelpers')
   }
 
   public override async initialise () {
@@ -109,7 +104,6 @@ export default class TwurpleService extends ContextClass {
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessageRemove((channel: string, messageId: string, msg: ClearMsg) => this.onMessageRemoved(channel, messageId))
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -227,7 +221,7 @@ export default class TwurpleService extends ContextClass {
   }
 
   public reconnectClient () {
-    void this.chatClient.reconnect()
+    this.chatClient.reconnect()
   }
 
   public async timeout (streamerId: number, twitchChannelId: number, reason: string | null, durationSeconds: number) {
@@ -320,9 +314,9 @@ export default class TwurpleService extends ContextClass {
     return user
   }
 
-  private async onMessage (_channel: string, _user: string, _message: string, msg: TwitchPrivateMessage) {
+  private async onMessage (_channel: string, _user: string, text: string, msg: ChatMessage) {
     try {
-      const evaluated = evalTwitchPrivateMessage(msg)
+      const evaluated = evalTwitchPrivateMessage(text, msg)
       const channelId = msg.channelId
       if (channelId == null) {
         throw new ChatMateError(`Cannot add Twitch chat message from channel ${_channel} because the message's channelId property was null`)
@@ -340,15 +334,15 @@ export default class TwurpleService extends ContextClass {
       }
 
       this.logService.logInfo(this, _channel, 'Adding 1 new chat item')
-      this.eventDispatchService.addData(EVENT_CHAT_ITEM, { ...evaluated, streamerId: streamer.id })
+      void this.eventDispatchService.addData(EVENT_CHAT_ITEM, { ...evaluated, streamerId: streamer.id })
     } catch (e: any) {
       this.logService.logError(this, e)
     }
   }
 
-  private async onMessageRemoved (channel: string, messageId: string) {
+  private onMessageRemoved (channel: string, messageId: string) {
     this.logService.logInfo(this, channel, `Removing chat item ${messageId}`)
-    await this.eventDispatchService.addData(EVENT_CHAT_ITEM_REMOVED, { externalMessageId: messageId })
+    void this.eventDispatchService.addData(EVENT_CHAT_ITEM_REMOVED, { externalMessageId: messageId })
   }
 
   private async onConnected () {

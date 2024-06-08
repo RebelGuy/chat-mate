@@ -5,6 +5,7 @@ import ApiService from '@rebel/server/controllers/ApiService'
 import LogService from '@rebel/server/services/LogService'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
 import { ApiResponse, API_ERRORS, ErrorCode, ResponseData, ApiResponseData } from '@rebel/api-models/types'
+import { Schema, SchemaType, validateObject } from '@rebel/server/controllers/schema'
 
 export const BASE_PATH = '/api'
 
@@ -124,6 +125,38 @@ export class ResponseBuilder<T extends ResponseData<T>> {
         errorType: API_ERRORS[errorCode],
         internalErrorType: error.type ?? 'Error',
         message: error.message
+      }
+    }
+  }
+
+  public validateInput<S extends Schema> (schema: S, input: SchemaType<S>): Extract<ApiResponse<any>, { success: false }> | null {
+    try {
+      const invalidInputs = validateObject(schema, input)
+      if (invalidInputs.length === 0) {
+        return null
+      } else {
+        return {
+          success: false,
+          timestamp: new Date().getTime(),
+          error: {
+            errorCode: 400,
+            errorType: API_ERRORS[400],
+            internalErrorType: 'Error',
+            message: `The following inputs are invalid: ${invalidInputs.map(x => x.stringify()).join(', ')}`
+          }
+        }
+      }
+    } catch (e: any) {
+      this.logContext.logError('Failed to validate inputs', e)
+      return {
+        success: false,
+        timestamp: new Date().getTime(),
+        error: {
+          errorCode: 500,
+          errorType: API_ERRORS[500],
+          internalErrorType: 'Error',
+          message: `Failed to validate inputs: ${e.message}`
+        }
       }
     }
   }

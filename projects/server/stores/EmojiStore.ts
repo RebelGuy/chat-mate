@@ -1,6 +1,7 @@
-import { ChatEmoji, Image } from '@prisma/client'
+import { ChatEmoji } from '@prisma/client'
 import { ChatEmojiWithImage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import { ImageInfo } from '@rebel/server/stores/CustomEmojiStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
@@ -8,19 +9,18 @@ import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
+  chatMateStateService: ChatMateStateService
 }>
 
 export default class EmojiStore extends ContextClass {
   private readonly db: Db
   private readonly semaphore: GroupedSemaphore<string>
 
-  private semaphoreToken: number = Date.now()
-
   constructor (deps: Deps) {
     super()
 
-    this.semaphore = new GroupedSemaphore(1)
     this.db = deps.resolve('dbProvider').get()
+    this.semaphore = deps.resolve('chatMateStateService').getEmojiSemaphore()
   }
 
   public async getOrCreateEmoji (chatEmojiMessage: PartialEmojiChatMessage, onGetImageInfo: (emojiId: number) => Promise<ImageInfo>): Promise<ChatEmojiWithImage> {
@@ -42,7 +42,7 @@ export default class EmojiStore extends ContextClass {
         name: chatEmojiMessage.name ?? null,
         isCustomEmoji: false,
         image: { create: {
-          fingerprint: `TEMP-${this.semaphoreToken++}`,
+          fingerprint: `TEMP-${Date.now()}`,
           url: 'TEMP',
           width: 0,
           height: 0

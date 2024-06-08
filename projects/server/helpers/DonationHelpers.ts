@@ -2,6 +2,7 @@ import { RankName } from '@prisma/client'
 import { SafeExtract } from '@rebel/shared/types'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { sum } from '@rebel/shared/util/math'
+import { sortByNum } from '@rebel/shared/util/arrays'
 
 export type DonationAmount = [date: Date, amount: number]
 
@@ -34,7 +35,7 @@ export default class DonationHelpers extends ContextClass {
     }
 
     const monthMs = (365.25 / 12) * 24 * 3600 * 1000
-    const times = donations.map(d => d[0].getTime()).sort().reverse()
+    const times = sortByNum(donations.map(d => d[0].getTime()), 'desc')
 
     // last donation must have been made within the last month
     if (now.getTime() - times[0] > monthMs) {

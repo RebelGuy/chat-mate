@@ -71,6 +71,18 @@ Problem: Streamlabs donations are not being received by ChatMate.
 Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
 
 # Change Log
+## v1.32 - The Websocket Update [07/06/2024]
+- Server
+  - Added a Websocket for listening to chat and streamer events (level up events, new Twitch followers, donations, first-time viewers, deleted messages, rank updates)
+  - Added handling for unicode emojis sent in the Youtube chat
+  - Added input validation to all controllers
+  - Removed long-living Masterchat instances - these are now created as needed on a per-request basis
+  - Internal updates (Twurple, Prisma, squashed migrations)
+- Studio
+  - Fixed flickering when loading the page
+  - Fixed URL path being cleared when loading the page while logged in
+  - Added help text to the home page's stats
+
 ## v1.31 - The Emoji Update v2 [28/04/2024]
 - Server
   - Public emoji images are now saved to S3 and the URL is included in chat messages sent by eligible users

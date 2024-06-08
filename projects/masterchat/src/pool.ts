@@ -8,6 +8,7 @@ import {
   Masterchat,
   MasterchatOptions,
 } from "./masterchat";
+import { NO_OP } from '@rebel/shared/util/typescript'
 
 interface StreamPoolEvents {
   data: (data: ChatResponse, mc: Masterchat) => void;
@@ -114,7 +115,7 @@ export class StreamPool extends EventEmitter {
   ): Masterchat {
     if (this.has(videoId)) return this.pool.get(videoId)!;
 
-    const mc = new Masterchat(logContext, videoId, channelId, this.options);
+    const mc = new Masterchat(logContext, videoId, channelId, this.options, NO_OP);
 
     mc.on("end", (reason) => this._handleEnd(mc, reason));
     mc.on("error", (err) => this._handleError(mc, err));

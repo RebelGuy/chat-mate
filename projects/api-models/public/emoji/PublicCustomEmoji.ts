@@ -1,5 +1,4 @@
 import { PublicObject } from '@rebel/api-models/types'
-import { SafeOmit } from '@rebel/shared/types'
 
 export type PublicCustomEmoji = PublicObject<{
   /** The internal emoji id. An emoji is uniquely identified by an id-version pair. */
@@ -38,7 +37,3 @@ export type PublicCustomEmoji = PublicObject<{
   /** The position of this custom emoji relative to all other custom emojis. */
   sortOrder: number
 }>
-
-export type PublicCustomEmojiNew = SafeOmit<PublicCustomEmoji, 'id' | 'isActive' | 'version' | 'imageUrl' | 'imageWidth' | 'imageHeight'> & { imageDataUrl: string }
-
-export type PublicCustomEmojiUpdate = SafeOmit<PublicCustomEmoji, 'symbol' | 'isActive' | 'version' | 'imageUrl' | 'imageWidth' | 'imageHeight'> & { imageDataUrl: string }

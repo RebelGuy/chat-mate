@@ -6,6 +6,8 @@ export const NO_OP = () => { /* Do nothing */ }
 
 export const NO_OP_ASYNC = async () => { /* Do nothing */ }
 
+export const IDENTITY = <T>(x: T) => x
+
 export function assert (condition: any, msg: string): asserts condition {
   if (!condition) {
     throw new ChatMateError(msg)

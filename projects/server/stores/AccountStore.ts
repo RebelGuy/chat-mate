@@ -106,8 +106,7 @@ export default class AccountStore extends ContextClass {
   public async checkPassword (username: string, password: string): Promise<boolean> {
     const hashedPassword = hashString(username + password)
     const match = await this.db.registeredUser.findUnique({
-      where: { username: username },
-      rejectOnNotFound: false
+      where: { username: username }
     })
 
     return match?.hashedPassword === hashedPassword
@@ -184,7 +183,6 @@ export default class AccountStore extends ContextClass {
   public async getRegisteredUserFromToken (token: string): Promise<RegisteredUser | null> {
     const result = await this.db.loginToken.findUnique({
       where: { token: token },
-      rejectOnNotFound: false,
       include: { registeredUser: true }
     })
     return result?.registeredUser ?? null

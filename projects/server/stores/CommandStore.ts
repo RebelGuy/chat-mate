@@ -61,10 +61,9 @@ export default class CommandStore extends ContextClass {
   }
 
   public async getCommand (commandId: number): Promise<CommandWithMessage> {
-    return await this.db.chatCommand.findUnique({
+    return await this.db.chatCommand.findUniqueOrThrow({
       where: { id: commandId },
-      include: { chatMessage: true },
-      rejectOnNotFound: true
+      include: { chatMessage: true }
     })
   }
 }

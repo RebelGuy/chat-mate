@@ -119,9 +119,8 @@ export default class LinkStore extends ContextClass {
    * @throws {@link UserAlreadyLinkedToAggregateUserError}: When the user is already linked to an aggregate user.
   */
   public async linkUser (defaultUserId: number, aggregateChatUserId: number): Promise<void> {
-    const defaultUser = await this.db.chatUser.findUnique({
-      where: { id: defaultUserId },
-      rejectOnNotFound: true
+    const defaultUser = await this.db.chatUser.findUniqueOrThrow({
+      where: { id: defaultUserId }
     })
 
     if (defaultUser.aggregateChatUserId != null) {
@@ -151,9 +150,8 @@ export default class LinkStore extends ContextClass {
    * @throws {@link UserNotLinkedError}: When the default user is not currently linked to an aggregate user.
   */
   public async startUnlinkAttempt (defaultUserId: number): Promise<number> {
-    const defaultUser = await this.db.chatUser.findUnique({
-      where: { id: defaultUserId },
-      rejectOnNotFound: true
+    const defaultUser = await this.db.chatUser.findUniqueOrThrow({
+      where: { id: defaultUserId }
     })
 
     if (defaultUser.aggregateChatUserId == null) {
@@ -190,9 +188,8 @@ export default class LinkStore extends ContextClass {
   /** Returns the aggregate user's id that was unlinked. Throws if the user is not linked.
    * @throws {@link UserNotLinkedError}: When the default user is not currently linked to an aggregate user. */
   public async unlinkUser (defaultUserId: number): Promise<number> {
-    const defaultUser = await this.db.chatUser.findUnique({
-      where: { id: defaultUserId },
-      rejectOnNotFound: true
+    const defaultUser = await this.db.chatUser.findUniqueOrThrow({
+      where: { id: defaultUserId }
     })
 
     if (defaultUser.aggregateChatUserId == null) {

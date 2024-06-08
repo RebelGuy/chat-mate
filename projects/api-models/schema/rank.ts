@@ -19,7 +19,6 @@ export type AddUserRankResponse = ApiResponse<{
 }>
 
 export type RemoveUserRankRequest = ApiRequest<{
-  removedByRegisteredUserId: number
   userId: number,
   message: string | null,
   rank: 'famous' | 'donator' | 'supporter' | 'member'

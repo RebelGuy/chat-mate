@@ -1,22 +1,22 @@
 
 import { Dependencies } from '@rebel/shared/context/context'
-import ChatStore from '@rebel/server/stores/ChatStore'
+import ChatStore, { AddedChatMessage } from '@rebel/server/stores/ChatStore'
 import { ChatItem, ChatItemWithRelations, ChatPlatform } from '@rebel/server/models/chat'
 import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import ContextClass, { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateGlobalTwitchChannelArgs, TwitchChannelWithLatestInfo, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_CHAT_ITEM, EVENT_CHAT_ITEM_REMOVED, EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER } from '@rebel/server/services/EventDispatchService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import CommandService from '@rebel/server/services/command/CommandService'
 import CommandStore from '@rebel/server/stores/CommandStore'
-import { ChatMessage } from '@prisma/client'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
+import { single } from '@rebel/shared/util/arrays'
 
 export const INACCESSIBLE_EMOJI = '__INACCESSIBLE_EMOJI__'
 
@@ -41,7 +41,7 @@ type Deps = Dependencies<{
   emojiService: EmojiService
 }>
 
-export default class ChatService extends ContextClass {
+export default class ChatService extends SingletonContextClass {
   readonly name = ChatService.name
   private readonly chatStore: ChatStore
   private readonly logService: LogService
@@ -74,7 +74,37 @@ export default class ChatService extends ContextClass {
 
   public override initialise () {
     this.eventDispatchService.onData(EVENT_CHAT_ITEM, data => this.onNewChatItem(data, data.streamerId))
-    this.eventDispatchService.onData(EVENT_CHAT_ITEM_REMOVED, data => this.onChatItemRemoved(data.externalMessageId))
+    this.eventDispatchService.onData(EVENT_CHAT_ITEM_REMOVED, data => this.onChatItemDeleted(data.externalMessageId))
+  }
+
+  public async getChatById (chatMessageId: number) {
+    let chatItem = await this.chatStore.getChatById(chatMessageId)
+    await this.customEmojiService.signEmojiImages(chatItem.chatMessageParts)
+
+    if (chatItem.chatMessageParts.find(p => p.emoji != null || p.customEmoji?.emoji != null)) {
+      const eligibleEmojiUserIds = await this.emojiService.getEligibleEmojiUsers(chatItem.streamerId)
+      const primaryUserId = getPrimaryUserId(chatItem.user!)
+
+      if (eligibleEmojiUserIds.includes(primaryUserId)) {
+        await this.emojiService.signEmojiImages(chatItem.chatMessageParts)
+      } else {
+        chatItem.chatMessageParts.forEach(part => {
+          if (part.emoji != null) {
+            part.emoji.imageUrl = INACCESSIBLE_EMOJI
+            part.emoji.image.fingerprint = INACCESSIBLE_EMOJI
+            part.emoji.image.originalUrl = INACCESSIBLE_EMOJI
+            part.emoji.image.url = INACCESSIBLE_EMOJI
+          } else if (part.customEmoji?.emoji != null) {
+            part.customEmoji.emoji.imageUrl = INACCESSIBLE_EMOJI
+            part.customEmoji.emoji.image.fingerprint = INACCESSIBLE_EMOJI
+            part.customEmoji.emoji.image.originalUrl = INACCESSIBLE_EMOJI
+            part.customEmoji.emoji.image.url = INACCESSIBLE_EMOJI
+          }
+        })
+      }
+    }
+
+    return chatItem
   }
 
   /** Returns ordered chat items (from earliest to latest) that may or may not be from the current livestream.
@@ -84,7 +114,7 @@ export default class ChatService extends ContextClass {
     await Promise.all(chatItems.map(item => this.customEmojiService.signEmojiImages(item.chatMessageParts)))
 
     // if there are emojis, make sure we return emoji info only for eligible users' messages
-    if (chatItems.some(c => c.chatMessageParts.find(p => p.emoji != null))) {
+    if (chatItems.some(c => c.chatMessageParts.find(p => p.emoji != null || p.customEmoji?.emoji != null))) {
       const eligibleEmojiUserIds = await this.emojiService.getEligibleEmojiUsers(streamerId)
 
       chatItems.forEach(item => {
@@ -112,18 +142,22 @@ export default class ChatService extends ContextClass {
     return chatItems
   }
 
-  public async onChatItemRemoved (externalMessageId: string) {
+  public async onChatItemDeleted (externalMessageId: string) {
     try {
-      const isRemoved = await this.chatStore.removeChat(externalMessageId)
-      this.logService.logInfo(this, `Removed chat item ${externalMessageId}: ${isRemoved}`)
+      const removedMessage = await this.chatStore.deleteChat(externalMessageId)
+      this.logService.logInfo(this, `Deleted chat item ${externalMessageId}: ${removedMessage != null}`)
+
+      if (removedMessage) {
+        void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, { streamerId: removedMessage.streamerId, chatMessageId: removedMessage.id })
+      }
     } catch (e: any) {
-      this.logService.logError(this, `Failed to remove chat item ${externalMessageId}:`, e)
+      this.logService.logError(this, `Failed to delete chat item ${externalMessageId}:`, e)
     }
   }
 
   /** Returns true if the chat item was new and added to the DB, and false if it wasn't because it already existed. Throws if something went wrong while adding the chat item. */
   public async onNewChatItem (item: ChatItem, streamerId: number): Promise<boolean> {
-    let message: ChatMessage | null = null
+    let message: AddedChatMessage | null = null
     let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
     let externalId: string
     let platform: ChatPlatform
@@ -179,6 +213,16 @@ export default class ChatService extends ContextClass {
       // visual inconsitency. so for now just acknowledge this and leave it.
       message = await this.chatStore.addChat(item, streamerId, channel.userId, externalId)
 
+      // send events
+      if (message != null) {
+        const primaryUserId = getPrimaryUserId(message.user)
+        const firstChat = await this.chatStore.getTimeOfFirstChat(streamerId, [primaryUserId]).then(single)
+        if (firstChat.messageId === message.id) {
+          void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, { streamerId, primaryUserId })
+        }
+
+        void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_ITEM, message)
+      }
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', e)
       throw e

@@ -1,12 +1,12 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import CommandHelpers from '@rebel/server/helpers/CommandHelpers'
 import LinkCommand from '@rebel/server/services/command/LinkCommand'
 import LogService from '@rebel/server/services/LogService'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import CommandStore from '@rebel/server/stores/CommandStore'
-import { ChatMateError, InvalidCommandArgumentsError, UnknownCommandError } from '@rebel/shared/util/error'
+import { ChatMateError, UnknownCommandError } from '@rebel/shared/util/error'
 import Semaphore from '@rebel/shared/util/Semaphore'
 
 export type NormalisedCommand = {
@@ -39,7 +39,7 @@ type Deps = Dependencies<{
 }>
 
 // this class has an in-memory state
-export default class CommandService extends ContextClass {
+export default class CommandService extends SingletonContextClass {
   public readonly name = CommandService.name
 
   private readonly logService: LogService

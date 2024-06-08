@@ -1,7 +1,6 @@
 import { TwitchFollower } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import AuthStore from '@rebel/server/stores/AuthStore'
 import FollowerStore from '@rebel/server/stores/FollowerStore'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { nameof } from '@rebel/shared/testUtils'
@@ -31,6 +30,32 @@ export default () => {
 
   afterEach(stopTestDb)
 
+  describe(nameof(FollowerStore, 'getFollower'), () => {
+    test('Returns the follower', async () => {
+      const twitchUserId1 = '1'
+      const twitchUserId2 = '2'
+      await db.twitchFollower.createMany({ data: [
+        { streamerId: streamer1, twitchUserId: twitchUserId1, displayName: '', userName: '' },
+        { streamerId: streamer1, twitchUserId: twitchUserId2, displayName: '', userName: '' },
+        { streamerId: streamer2, twitchUserId: twitchUserId1, displayName: '', userName: '' }
+      ]})
+
+      const follower = await followerStore.getFollower(streamer1, twitchUserId2)
+
+      expect(follower!.id).toBe(2)
+    })
+
+    test('Returns the follower', async () => {
+      const twitchUserId1 = '1'
+      const twitchUserId2 = '2'
+      await db.twitchFollower.create({ data: { streamerId: streamer1, twitchUserId: twitchUserId1, displayName: '', userName: '' }})
+
+      const follower = await followerStore.getFollower(streamer1, twitchUserId2)
+
+      expect(follower).toBeNull()
+    })
+  })
+
   describe(nameof(FollowerStore, 'getFollowersSince'), () => {
     test('returns empty array if no followers since given time', async () => {
       await addFollower(streamer1, '1', 'a', 'A', data.time1)
@@ -49,7 +74,7 @@ export default () => {
       const result = await followerStore.getFollowersSince(streamer1, data.time2.getTime())
 
       expect(result.length).toBe(2)
-      expect(result.map(r => r.twitchId)).toEqual(['2', '3'])
+      expect(result.map(r => r.twitchUserId)).toEqual(['2', '3'])
     })
   })
 
@@ -62,7 +87,7 @@ export default () => {
       // add a second because db time could be slightly different apparently
       const maxDate = addTime(new Date(), 'seconds', 1).getTime()
       const expected: Partial<TwitchFollower> = {
-        twitchId: '12345',
+        twitchUserId: '12345',
         userName: 'testuser',
         'displayName': 'TestUser',
       }
@@ -84,7 +109,7 @@ export default () => {
   async function addFollower (streamerId: number, id: string, userName: string, displayName: string, time?: Date) {
     await db.twitchFollower.create({ data: {
       streamerId: streamerId,
-      twitchId: id,
+      twitchUserId: id,
       userName: userName,
       displayName: displayName,
       date: time

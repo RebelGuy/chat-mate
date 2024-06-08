@@ -2,13 +2,14 @@ import { Rank, RankName } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import LogService from '@rebel/server/services/LogService'
-import RankStore, { AddUserRankArgs, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
+import RankStore, { AddUserRankArgs, RankEventData, RemoveUserRankArgs, UserRanks, UserRankWithRelations } from '@rebel/server/stores/RankStore'
 import { singleOrNull, unique } from '@rebel/shared/util/arrays'
 import { ChatMateError, InvalidCustomRankError, UserRankAlreadyExistsError, UserRankNotFoundError } from '@rebel/shared/util/error'
 import { isOneOf } from '@rebel/shared/util/validation'
 import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import UserService from '@rebel/server/services/UserService'
 import { SafeExtract } from '@rebel/shared/types'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE } from '@rebel/server/services/EventDispatchService'
 
 /** Non-special ranks that do not have specific constraints and are not associated with external platforms. */
 export type RegularRank = SafeExtract<RankName, 'famous' | 'donator' | 'supporter' | 'member'>
@@ -62,6 +63,7 @@ type Deps = Dependencies<{
   logService: LogService
   rankHelpers: RankHelpers
   userService: UserService
+  eventDispatchService: EventDispatchService
 }>
 
 export default class RankService extends ContextClass {
@@ -71,6 +73,7 @@ export default class RankService extends ContextClass {
   private readonly logService: LogService
   private readonly rankHelpers: RankHelpers
   private readonly userService: UserService
+  private readonly eventDispatchService: EventDispatchService
 
   constructor (deps: Deps) {
     super()
@@ -78,6 +81,7 @@ export default class RankService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.rankHelpers = deps.resolve('rankHelpers')
     this.userService = deps.resolve('userService')
+    this.eventDispatchService = deps.resolve('eventDispatchService')
   }
 
   /** @throws {@link InvalidCustomRankNameError}: When the given custom rank name is invalid.
@@ -94,6 +98,12 @@ export default class RankService extends ContextClass {
     }
 
     await this.rankStore.addOrUpdateCustomRankName(streamerId, primaryUserId, rankName, name, isActive)
+  }
+
+  public async addRankEvent (streamerId: number, primaryUserId: number, isAdded: boolean, rankName: RankName, data: RankEventData | null): Promise<void> {
+    const rankEvent = await this.rankStore.addRankEvent(streamerId, primaryUserId, isAdded, rankName, data)
+
+    void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, { streamerId, rankEvent })
   }
 
   public async getAccessibleRanks (): Promise<Rank[]> {

@@ -38,6 +38,7 @@ import {
   withContext,
 } from "./utils";
 import { createEmptyLogContext, LogContext } from '@rebel/shared/ILogService'
+import { NO_OP } from '@rebel/shared/util/typescript'
 
 export type RetryOptions = {
   retry?: number;
@@ -115,8 +116,8 @@ export class Masterchat extends EventEmitter {
   public channelName?: string;
   public title?: string;
 
-  /** If true, either the credentials have not been set or have expired. Some actions require masterchat to be authenticated and will fail. */
-  public isLoggedOut: boolean = true;
+  /** If true, either the credentials are invalid or have expired. Some actions require masterchat to be authenticated and will fail. */
+  onIsLoggedOut: (loggedOut: boolean) => void
 
   private readonly logContext: LogContext;
   private axiosInstance: AxiosInstance;
@@ -137,7 +138,7 @@ export class Masterchat extends EventEmitter {
     // set channelId "" as populateMetadata will fill out it anyways
     const mc = new Masterchat(createEmptyLogContext(), videoId, "", {
       ...options,
-    });
+    }, NO_OP);
     await mc.populateMetadata();
     return mc;
   }
@@ -149,7 +150,8 @@ export class Masterchat extends EventEmitter {
     logContext: LogContext,
     videoId: string,
     channelId: string,
-    { mode, credentials, axiosInstance }: MasterchatOptions = {}
+    { mode, credentials, axiosInstance }: MasterchatOptions = {},
+    onIsLoggedOut: (loggedOut: boolean) => void
   ) {
     super();
     this.logContext = logContext;
@@ -157,6 +159,7 @@ export class Masterchat extends EventEmitter {
     this.channelId = channelId;
     this.isLive =
       mode === "live" ? true : mode === "replay" ? false : undefined;
+    this.onIsLoggedOut = onIsLoggedOut
 
     this.axiosInstance =
       axiosInstance ??
@@ -165,8 +168,6 @@ export class Masterchat extends EventEmitter {
       });
 
     this.setCredentials(credentials);
-
-    this.logContext.logInfo('Created masterchat instance for channel', channelId, 'and video', videoId)
   }
 
   get stopped() {
@@ -194,7 +195,6 @@ export class Masterchat extends EventEmitter {
     }
 
     this.credentials = credentials;
-    this.isLoggedOut = credentials == null;
   }
 
   /**
@@ -922,8 +922,16 @@ export class Masterchat extends EventEmitter {
       data: body,
     });
 
-    this.isLoggedOut = response?.data?.responseContext?.mainAppWebResponseContext?.loggedOut === true
-    if (requireLoggedIn && this.isLoggedOut) {
+    const isLoggedOut = response?.data?.responseContext?.mainAppWebResponseContext?.loggedOut === true
+    const isLoggedIn = response?.data?.responseContext?.mainAppWebResponseContext?.loggedOut === false
+
+    if (isLoggedOut) {
+      this.onIsLoggedOut(true)
+    } else if (isLoggedIn) {
+      this.onIsLoggedOut(false)
+    }
+
+    if (requireLoggedIn && isLoggedOut) {
       throw new LoggedOutError('Youtube user is not logged in.')
     } else {
       return response

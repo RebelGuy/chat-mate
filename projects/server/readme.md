@@ -24,7 +24,7 @@ This refers specifically to authentication of the ChatMate channel. While some f
 ### YouTube
 Each environment is associated with a ChatMate Admin Youtube channel (see [here](../../readme.md#chatmate-admin-channels) for channel details). For testing, it is acceptable to use a different channel by changing the `CHANNEL_ID` [environment variable](#env).
 
-To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID. Note that any changes will only come into effect when refreshing authentication via the Studio debug card, or calling the [`POST /chatmate/masterchat/authentication` endpoint](#post-masterchatauthentication).
+To complete authentication, run `yarn auth:youtube:<local|debug|release>` and log in using the account from which ChatMate should make requests. The access token will automatically be stored in the database (`youtube_auth` table) against the channel ID.
 
 If the Server receives a "Rate limit exceeded" error when fetching video metadata, then Youtube has flagged us as a bot. You will need to manually log into the YouTube account again, prove you are not a bot, and then refresh the authentication token using the above command.
 
@@ -165,6 +165,9 @@ The number of concurrent queries that the database allows is limited, and there 
 
 For example, instead of allowing getting the experience for only a specific user and thus forcing multiple queries to get the experience of multiple users, write the store method in such a way that only a single query is required to get the experience of multiple users. Due to limitations with the Prisma ORM capabilities, this may require the use of raw SQL queries.
 
+## Emojis
+Some emojis on Youtube (and Twitch) are sent as unicode characters instead of images. Normally this would be fine, but this means that the Client will struggle to render all text. We analyse all text messages and break them up into emoji objects, where appropriate. We get this data in the form of a so-called emoji map from the same source as Youtube, and, in fact, the matching algorithm is straight up stolen from Youtube. The map is optional and can be downloaded via the `yarn workspace server download-emoji-map` command. The generated JSON file should be placed in the `./data` folder.
+
 # API Endpoints
 Use the API endpoints to communicate with the server while it is running. The local API base URL is `http://localhost:3010/api`.
 
@@ -185,6 +188,43 @@ All non-primitive properties of `data` are of type `PublicObject`, which are reu
 Authentication is required for most endpoints. To authenticate a request, provide the login token returned by the `/account/register` or `/account/login` endpoints, and add it to requests via the `X-Login-Token` header.
 
 Any streamer-specific endpoints require the `X-Streamer` header. This should be set to the streamer's registered username for which the request should be made (for example, when getting custom emojis).
+
+## Websocket
+Path: `/ws`, using the `ws` protocol (not `wss`).
+
+ChatMate offers a Websocket that clients can connect to in order to receive live updates without having to query the API.
+
+Clients subscribe to topics, receive acknowledgement of their subscription, then receive messages whenever an event for their subscribed topic ocurrs.
+
+To subscribe or unsubscribe, send a JSON object with the following schema:
+- `type` (`string`): *Required* The type of message we are sending. In this case, set the value to either `"subscribe"` or `"unsubscribe"`.
+- `data`: *Required* The message data. For subscription messages, the data should look like:
+  - `topic` (`string`): *Required* The topic to subscribe to.
+  - `streamer` (`string`): *Required* The streamer's name for which to listen to events.
+- `id` (`number`): *Optional* A unique number that represents this message. If included, the same id will be included in the acknowledgement message.
+
+The server will respond with an acknowledgement of the form:
+- `type` (`string`): The type of message. In this case, it is always set to `"acknowledge"`.
+- `data`: The message data. For acknowledgement messages, the data looks like:
+  - `success` (`boolean`): Whether the request action was processed successfully.
+- `id` (`number | null`): The same id that was included in the client's request message or, if no id was included, `null`.
+
+Once subscribed, the client will receive event messages as follows:
+- `type` (`string`): The type of message. In this case, it is always set to `"event"`.
+- `data`: The message data. For event messages, the data looks like:
+  - `topic` (`string`): The topic to which this event belongs.
+  - `streamer` (`string`): The streamer's name to which this event belongs.
+  - `data`: The event data. Its shape depends on the event's topic (see below).
+
+### The `streamerChat` topic
+Emits new chat events in the context of a given streamer. Equivalent to calling the [`GET /chat`](#chat-endpoints) endpoint.
+
+The event data will a `PublicChatItem`.
+
+### The `streamerEvents` topic
+Emits new ChatMate events in the context of a given streamer. Equivalent to calling the [`GET /streamer/events`](#get-events) endpoint.
+
+The event data will a `PublicChatMateEvent`.
 
 ## Account Endpoints
 Path: `/account`.
@@ -352,19 +392,14 @@ Pings the server.
 Returns data with no properties.
 
 ### `GET /masterchat/authentication`
-Check whether the currently active Masterchat instance is authenticated. If you have recently updated the authentcation via the `YoutubeAuth` script, you will have to call the `POST /masterchat/authentication` for all active Masterchat instances to refresh their stored credentials.
+Check whether Masterchat is authenticated. We can only infer authentication from the previous request - if you refresh credentials and the endpoint still indicates missing authentication, you may have to wait a bit.
 
 Returns data with the following properties:
-- `authenticated` (`boolean | null`): Whether the Masterchat instance is authenticated.
-  - `true`: The Masterchat instance is authenticated.
-  - `false`: The Masterchat instance is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
-  - `null`: Unknown - no Masterchat instance is active, or authentication has not been verified yet.
+- `authenticated` (`boolean | null`): Whether Masterchat is authenticated.
+  - `true`: Masterchat is authenticated.
+  - `false`: Masterchat is not authenticated. This could be because the provided credentials are invalid, or have expired. Actions requiring a logged-in user will fail (e.g. livestream moderation).
+  - `null`: Unknown - no Masterchat instance can be created, or authentication has not been verified yet.
 - `lastUpdatedTimestamp` (`number | null`): At what time we last updated the Youtube authentication in the database. `null` if Masterchat is not authenticated.
-
-### `POST /masterchat/authentication`
-Refreshes the credentials stored by each active masterchat instance. To be used after updating authentication via the `YoutubeAuth` script.
-
-Returns data with no properties.
 
 ### `GET /username`
 Gets the username of the official ChatMate registered account.

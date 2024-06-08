@@ -21,9 +21,8 @@ export default class AuthStore extends ContextClass {
 
   /** Loads the Twitch access token for the given user. Throws if the token doesn't exist (the user must authorise ChatMate via Studio). */
   public async loadTwitchAccessToken (twitchUserId: string): Promise<AccessToken> {
-    const auth = await this.dbProvider.get().twitchAuth.findUnique({
-      where: { twitchUserId: twitchUserId },
-      rejectOnNotFound: true
+    const auth = await this.dbProvider.get().twitchAuth.findUniqueOrThrow({
+      where: { twitchUserId: twitchUserId }
     })
 
     return {
@@ -37,9 +36,8 @@ export default class AuthStore extends ContextClass {
 
   /** Loads the Twitch access token for the Twitch channel. Throws if the access token doesn't exist. */
   public async loadTwitchAccessTokenByChannelName (twitchChannelName: string): Promise<AccessToken> {
-    const auth = await this.dbProvider.get().twitchAuth.findFirst({
-      where: { twitchUsername: twitchChannelName },
-      rejectOnNotFound: true
+    const auth = await this.dbProvider.get().twitchAuth.findFirstOrThrow({
+      where: { twitchUsername: twitchChannelName }
     })
 
     return {
@@ -101,8 +99,7 @@ export default class AuthStore extends ContextClass {
 
   public async saveYoutubeAccessToken (youtubeAuth: New<YoutubeAuth>): Promise<void> {
     const existingToken = await this.dbProvider.get().youtubeAuth.findUnique({
-      where: { externalYoutubeChannelId: youtubeAuth.externalYoutubeChannelId },
-      rejectOnNotFound: false
+      where: { externalYoutubeChannelId: youtubeAuth.externalYoutubeChannelId }
     })
 
     // for some reason, we can't use upsert here but I don't understand why (weird runtime error)

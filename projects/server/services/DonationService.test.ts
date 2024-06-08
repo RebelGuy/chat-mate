@@ -16,6 +16,7 @@ import StreamerStore from '@rebel/server/stores/StreamerStore'
 import { ChatMateError, UserRankAlreadyExistsError } from '@rebel/shared/util/error'
 import AccountService from '@rebel/server/services/AccountService'
 import UserService from '@rebel/server/services/UserService'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION } from '@rebel/server/services/EventDispatchService'
 
 const streamerId = 3
 
@@ -28,6 +29,7 @@ let mockStreamlabsProxyService: MockProxy<StreamlabsProxyService>
 let mockStreamerStore: MockProxy<StreamerStore>
 let mockAccountService: MockProxy<AccountService>
 let mockUserService: MockProxy<UserService>
+let mockEventDispatchService: MockProxy<EventDispatchService>
 let donationService: DonationService
 
 beforeEach(() => {
@@ -40,6 +42,7 @@ beforeEach(() => {
   mockStreamerStore = mock()
   mockAccountService = mock()
   mockUserService = mock()
+  mockEventDispatchService = mock()
 
   donationService = new DonationService(new Dependencies({
     donationStore: mockDonationStore,
@@ -52,6 +55,7 @@ beforeEach(() => {
     accountService: mockAccountService,
     userService: mockUserService,
     logService: mock(),
+    eventDispatchService: mockEventDispatchService,
     isAdministrativeMode: () => false
   }))
 })
@@ -81,8 +85,10 @@ describe(nameof(DonationService, 'initialise'), () => {
 
 describe(nameof(DonationService, 'addDonation'), () => {
   test('Adds donation without message', async () => {
+    const amount = 1
+    const primaryUserId = 652
     const donation: NewDonation = {
-      amount: 1,
+      amount: amount,
       createdAt: data.time1.getTime(),
       currency: 'USD',
       streamlabsDonationId: 100,
@@ -93,6 +99,7 @@ describe(nameof(DonationService, 'addDonation'), () => {
     }
     const createdDonationId = 5
     mockDonationStore.addDonation.calledWith(expect.anything()).mockResolvedValue(createdDonationId)
+    mockDonationStore.getDonation.calledWith(streamerId, createdDonationId).mockResolvedValue(cast<DonationWithUser>({ amount, primaryUserId, streamerId }))
 
     const result = await donationService.addDonation(donation, streamerId)
 
@@ -102,6 +109,9 @@ describe(nameof(DonationService, 'addDonation'), () => {
 
     const addedData = single(single(mockDonationStore.addDonation.mock.calls))
     expect(addedData.messageParts.length).toBe(0)
+
+    const eventData = single(mockEventDispatchService.addData.mock.calls)
+    expect(eventData).toEqual(expectObject(eventData, [EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, { streamerId, amount, primaryUserId }]))
   })
 
   describe(nameof(DonationService, 'getDonation'), () => {

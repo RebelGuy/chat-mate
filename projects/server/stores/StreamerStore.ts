@@ -58,9 +58,8 @@ export default class StreamerStore extends ContextClass {
 
   /** @throws {@link StreamerApplicationAlreadyClosedError}: When attempting to close an application that has already been closed. */
   public async closeStreamerApplication (data: CloseApplicationArgs): Promise<StreamerApplicationWithUser> {
-    const application = await this.db.streamerApplication.findUnique({
-      where: { id: data.id },
-      rejectOnNotFound: true
+    const application = await this.db.streamerApplication.findUniqueOrThrow({
+      where: { id: data.id }
     })
 
     if (application.timeClosed != null) {

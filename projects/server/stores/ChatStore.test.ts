@@ -223,6 +223,7 @@ export default () => {
       expect(chatMessage!.youtubeLivestreamId).toBe(youtubeLivestream.id)
       expect(chatMessage!.twitchLivestreamId).toBeNull()
       expect(result).toEqual(expectObject(chatMessage!))
+      expect(result!.user.id).toBe(youtube1UserId)
     })
 
     test('adds youtube chat item with message parts that reference existing emoji and new emoji', async () => {
@@ -262,6 +263,7 @@ export default () => {
       expect(chatMessage!.youtubeLivestreamId).toBeNull()
       expect(chatMessage!.twitchLivestreamId).toBe(twitchLivestream.id)
       expect(result).toEqual(expectObject(chatMessage!))
+      expect(result!.user.id).toBe(twitchUserId)
     })
 
     test('returns null if the chat message already exists', async () => {
@@ -754,8 +756,8 @@ export default () => {
       const result = await chatStore.getTimeOfFirstChat(streamer1, [youtube1UserId, twitchUserId])
 
       expect(result).toEqual(expectObject(result, [
-        { primaryUserId: youtube1UserId, firstSeen: data.time1.getTime() },
-        { primaryUserId: twitchUserId, firstSeen: data.time2.getTime() }
+        { primaryUserId: youtube1UserId, firstSeen: data.time1.getTime(), messageId: 2 },
+        { primaryUserId: twitchUserId, firstSeen: data.time2.getTime(), messageId: 5  }
       ]))
     })
 
@@ -763,8 +765,8 @@ export default () => {
       const result = await chatStore.getTimeOfFirstChat(streamer1, [aggregateUserId1, aggregateUserId2])
 
       expect(result).toEqual(expectObject(result, [
-        { primaryUserId: aggregateUserId1, firstSeen: data.time1.getTime() },
-        { primaryUserId: aggregateUserId2, firstSeen: data.time2.getTime() }
+        { primaryUserId: aggregateUserId1, firstSeen: data.time1.getTime(), messageId: 2 },
+        { primaryUserId: aggregateUserId2, firstSeen: data.time2.getTime(), messageId: 5 }
       ]))
     })
 
@@ -926,37 +928,37 @@ export default () => {
     })
   })
 
-  describe(nameof(ChatStore, 'removeChat'), () => {
+  describe(nameof(ChatStore, 'deleteChat'), () => {
     test('Marks the message as removed and returns true', async () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      const result = await chatStore.removeChat(chatItem1.id)
+      const result = await chatStore.deleteChat(chatItem1.id)
 
-      expect(result).toBe(true)
+      expect(result).toEqual(expectObject(result, { id: 1 }))
       const storedMessage = await db.chatMessage.findFirst()
       expect(storedMessage!.deletedTime).not.toBeNull()
     })
 
-    test('Returns false if the message was not found', async () => {
+    test('Returns null if the message was not found', async () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      const result = await chatStore.removeChat('unknown id')
+      const result = await chatStore.deleteChat('unknown id')
 
-      expect(result).toBe(false)
+      expect(result).toBeNull()
       const storedMessage = await db.chatMessage.findFirst()
       expect(storedMessage!.deletedTime).toBeNull()
     })
 
-    test('Returns false if the message was already deleted', async () => {
+    test('Returns null if the message was already deleted', async () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
       await db.chatMessage.updateMany({ data: { deletedTime: data.time1 }})
 
-      const result = await chatStore.removeChat(chatItem1.id)
+      const result = await chatStore.deleteChat(chatItem1.id)
 
-      expect(result).toBe(false)
+      expect(result).toBeNull()
       const storedMessage = await db.chatMessage.findFirst()
       expect(storedMessage!.deletedTime).toEqual(data.time1)
     })

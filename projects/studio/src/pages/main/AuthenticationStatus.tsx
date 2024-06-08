@@ -1,4 +1,4 @@
-import { getMasterchatAuthentication, refreshasterchatAuthentication } from '@rebel/studio/utility/api'
+import { getMasterchatAuthentication } from '@rebel/studio/utility/api'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import RelativeTime from '@rebel/studio/components/RelativeTime'
@@ -10,9 +10,8 @@ const WARNING_THRESHOLD = 7 * 24 * 3600 * 1000
 export default function AuthenticationStatus () {
   const [key] = useUpdateKey({ repeatInterval: 5000 })
   const { data } = useRequest(getMasterchatAuthentication(), { updateKey: key })
-  const refreshAuthRequest = useRequest(refreshasterchatAuthentication(), { onDemand: true })
 
-  // if the masterchat instance needs to be refreshed soon, show a warning appearance
+  // if Masterchat needs to be refreshed soon, show a warning appearance
   let masterchatSx: SxProps | undefined = undefined
   if (data?.lastUpdatedTimestamp != null && data.lastUpdatedTimestamp + REFRESHING_INTERVAL - Date.now() < WARNING_THRESHOLD) {
     masterchatSx = { fontWeight: 1000, color: 'orange' }
@@ -25,10 +24,6 @@ export default function AuthenticationStatus () {
         {data?.authenticated != null ? String(data?.authenticated) : 'unknown'}
         {data?.lastUpdatedTimestamp != null && <RelativeTime time={data.lastUpdatedTimestamp} prefix=" (" suffix=" ago)" />}
       </div>
-    </Box>
-    <Box>
-      <button style={{ fontSize: 'inherit' }} onClick={refreshAuthRequest.triggerRequest} disabled={refreshAuthRequest.isLoading}>Refresh authentication</button>
-      <div style={{ color: 'red' }}>{refreshAuthRequest.error?.message}</div>
     </Box>
   </Box>
 }

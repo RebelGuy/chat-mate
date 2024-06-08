@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import AppTokenAuthProviderFactory from '@rebel/server/factories/AppTokenAuthProviderFactory'
 import RefreshingAuthProviderFactory from '@rebel/server/factories/RefreshingAuthProviderFactory'
 import LogService from '@rebel/server/services/LogService'
@@ -23,7 +23,7 @@ type Deps = Dependencies<{
 
 const CHAT_INTENT = 'chat'
 
-export default class TwurpleAuthProvider extends ContextClass {
+export default class TwurpleAuthProvider extends SingletonContextClass {
   readonly name = TwurpleAuthProvider.name
 
   private readonly disableExternalApis: boolean
@@ -64,12 +64,14 @@ export default class TwurpleAuthProvider extends ContextClass {
 
     this.userTokenAuthProvider = this.refreshingAuthProviderFactory.create({
       clientId: this.clientId,
-      clientSecret: this.clientSecret,
-      // async callbacks are allowed as per the example at https://twurple.js.org/docs/auth/providers/refreshing.html
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      onRefresh: async (twitchUserId: string, newToken: AccessToken) => await this.saveAccessToken(twitchUserId, newToken),
-      onRefreshFailure: async (twitchUserId: string) => await this.onRefreshFailure(twitchUserId)
+      clientSecret: this.clientSecret
     })
+
+    // async callbacks are allowed as per the example at https://twurple.js.org/docs/auth/providers/refreshing.html
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.userTokenAuthProvider.onRefresh(async (twitchUserId: string, newToken: AccessToken) => await this.saveAccessToken(twitchUserId, newToken))
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.userTokenAuthProvider.onRefreshFailure(async (twitchUserId: string, error: Error) => await this.onRefreshFailure(twitchUserId, error))
 
     await this.userTokenAuthProvider.addUserForToken(token!, [CHAT_INTENT]) // i don't understand intents
     this.isInitialised = true
@@ -90,7 +92,7 @@ export default class TwurpleAuthProvider extends ContextClass {
         try {
           await this.userTokenAuthProvider.refreshAccessTokenForUser(twitchUserId)
         } catch (innerError: any) {
-          await this.onRefreshFailure(twitchUserId)
+          await this.onRefreshFailure(twitchUserId, innerError)
           throw new AuthorisationExpiredError()
         }
       } catch (e: any) {
@@ -131,8 +133,8 @@ export default class TwurpleAuthProvider extends ContextClass {
     return this.appTokenAuthProvider
   }
 
-  private async onRefreshFailure (twitchUserId: string) {
-    this.logService.logWarning(this, `Unable to refresh token for Twitch user ID ${twitchUserId}. Removing saved access token from the DB.`)
+  private async onRefreshFailure (twitchUserId: string, error: Error) {
+    this.logService.logWarning(this, `Unable to refresh token for Twitch user ID ${twitchUserId}. Removing saved access token from the DB.`, error)
     await this.deleteAccessToken(twitchUserId)
     this.removeTokenForUser(twitchUserId)
   }

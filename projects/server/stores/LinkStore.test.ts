@@ -32,7 +32,7 @@ export default () => {
 
       await linkStore.addLinkAttemptToLinkToken(linkToken, 1)
 
-      const stored = await db.linkAttempt.findUnique({ where: { id: 1 }, rejectOnNotFound: true })
+      const stored = await db.linkAttempt.findUniqueOrThrow({ where: { id: 1 } })
       expect(stored.linkTokenId).toBe(1)
     })
   })
@@ -513,7 +513,7 @@ export default () => {
       const result = await linkStore.unlinkUser(3)
 
       expect(result).toBe(1)
-      const storedUser = await db.chatUser.findUnique({ where: { id: 3 }, rejectOnNotFound: true })
+      const storedUser = await db.chatUser.findUniqueOrThrow({ where: { id: 3 } })
       expect(storedUser).toEqual(expectObject<ChatUser>({ aggregateChatUserId: null, linkedAt: null }))
     })
 

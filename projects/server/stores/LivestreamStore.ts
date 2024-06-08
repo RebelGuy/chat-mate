@@ -6,6 +6,7 @@ import { LIVESTREAM_PARTICIPATION_TYPES } from '@rebel/server/services/ChannelSe
 import { assertUnreachableCompile } from '@rebel/shared/util/typescript'
 import { single } from '@rebel/shared/util/arrays'
 import { ChatMateError } from '@rebel/shared/util/error'
+import { Prisma } from '@prisma/client'
 
 export type YoutubeLivestreamParticipation = YoutubeLivestream & { participated: boolean }
 
@@ -117,19 +118,19 @@ export default class LivestreamStore extends ContextClass {
   }
 
   public async getYoutubeTotalDaysLivestreamed (): Promise<number> {
-    const queryResult = await this.db.$queryRaw<{ duration: number | null }[]>`
-      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, CURRENT_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM youtube_livestream;
+    const queryResult = await this.db.$queryRaw<{ duration: Prisma.Decimal | null }[]>`
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM youtube_livestream;
     `
 
-    return single(queryResult).duration ?? 0
+    return single(queryResult).duration?.toNumber() ?? 0
   }
 
   public async getTwitchTotalDaysLivestreamed (): Promise<number> {
-    const queryResult = await this.db.$queryRaw<{ duration: number | null }[]>`
-      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, CURRENT_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM twitch_livestream;
+    const queryResult = await this.db.$queryRaw<{ duration: Prisma.Decimal | null }[]>`
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM twitch_livestream;
     `
 
-    return single(queryResult).duration ?? 0
+    return single(queryResult).duration?.toNumber() ?? 0
   }
 
   /** Sets the streamer's given livestream as active, such that `LivestreamStore.activeYoutubeLivestream` returns this stream.

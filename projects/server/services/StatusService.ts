@@ -1,5 +1,5 @@
 import { Dependencies } from '@rebel/shared/context/context'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { GenericObject } from '@rebel/shared/types'
 import { avg } from '@rebel/shared/util/math'
 
@@ -11,7 +11,7 @@ type ApiStatus = {
   avgRoundtrip: number | null;
 }
 
-export default class StatusService extends ContextClass {
+export default class StatusService extends SingletonContextClass {
   private responseTimes: number[]
   private lastOk: number | null
   private lastStatus: 'ok' | 'error' | null

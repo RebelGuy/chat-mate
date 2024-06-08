@@ -169,13 +169,15 @@ export default class ApiService extends ContextClass {
     return this.ranks!.includes(rank)
   }
 
-  public async getAllData (primaryUserIds: number[]): Promise<AllUserData[]> {
+  public async getAllData (primaryUserIds: number[]): Promise<AllUserData[]>
+  public async getAllData (primaryUserIds: number[], streamerId: number): Promise<AllUserData[]>
+  public async getAllData (primaryUserIds: number[], streamerId?: number): Promise<AllUserData[]> {
     if (primaryUserIds.length === 0) {
       return []
     }
 
     primaryUserIds = unique(primaryUserIds)
-    const streamerId = this.getStreamerId()
+    streamerId = streamerId ?? this.getStreamerId()
 
     // it's not pretty but it's efficient!
     const [activeUserChannels, levels, ranks, registeredUsers, firstSeen, customRankNames] = await Promise.all([

@@ -11,12 +11,16 @@ import { ChatClient, ChatSayMessageAttributes } from '@twurple/chat/lib'
 import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 
+type PartialApiClient = {
+  streams: Pick<ApiClient['streams'], 'getStreamByUserName'>
+  moderation: Pick<ApiClient['moderation'], 'banUser' | 'unbanUser' | 'addModerator' | 'removeModerator'>
+}
+
 type Deps = Dependencies<{
   logService: LogService
   twurpleStatusService: StatusService
   twurpleApiClientProvider: TwurpleApiClientProvider
   twurpleChatClientProvider: TwurpleChatClientProvider
-  twitchUsername: string
   platformApiStore: PlatformApiStore
   isAdministrativeMode: () => boolean
 }>
@@ -25,10 +29,8 @@ type Deps = Dependencies<{
 export default class TwurpleApiProxyService extends ApiService {
   private readonly twurpleApiClientProvider: TwurpleApiClientProvider
   private readonly twurpleChatClientProvider: TwurpleChatClientProvider
-  private readonly twitchUsername: string
   private readonly isAdministrativeMode: () => boolean
-  private wrappedApi!: (streamerId: number, twitchUserId: string | null) => Promise<ApiClient>
-  private chat!: ChatClient
+  private wrappedApi!: (streamerId: number, twitchUserId: string | null) => Promise<PartialApiClient>
   private wrappedChat!: (streamerId: number) => DeepPartial<ChatClient>
 
   constructor (deps: Deps) {
@@ -42,7 +44,6 @@ export default class TwurpleApiProxyService extends ApiService {
 
     this.twurpleApiClientProvider = deps.resolve('twurpleApiClientProvider')
     this.twurpleChatClientProvider = deps.resolve('twurpleChatClientProvider')
-    this.twitchUsername = deps.resolve('twitchUsername')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
@@ -53,8 +54,6 @@ export default class TwurpleApiProxyService extends ApiService {
     }
 
     this.wrappedApi = this.createApiWrapper()
-
-    this.chat = this.twurpleChatClientProvider.get()
     this.wrappedChat = this.createChatWrapper()
   }
 
@@ -64,7 +63,7 @@ export default class TwurpleApiProxyService extends ApiService {
       reason: reason ?? '<no reason provided>'
     }
     const api = await this.wrappedApi(streamerId, broadcaster.id)
-    await api.moderation.banUser(broadcaster, broadcaster, data)
+    await api.moderation.banUser(broadcaster, data)
   }
 
   /** Returns null if the stream hasn't started. */
@@ -102,12 +101,12 @@ export default class TwurpleApiProxyService extends ApiService {
       reason: reason ?? '<no reason provided>'
     }
     const api = await this.wrappedApi(streamerId, broadcaster.id)
-    await api.moderation.banUser!(broadcaster, broadcaster, data)
+    await api.moderation.banUser!(broadcaster, data)
   }
 
   public async unban (streamerId: number, broadcaster: HelixUser, user: HelixUser) {
     const api = await this.wrappedApi(streamerId, broadcaster.id)
-    await api.moderation.unbanUser(broadcaster, broadcaster, user)
+    await api.moderation.unbanUser(broadcaster, user)
   }
 
   public async unmod (streamerId: number, broadcaster: HelixUser, user: HelixUser) {
@@ -117,16 +116,18 @@ export default class TwurpleApiProxyService extends ApiService {
 
   public async unTimeout (streamerId: number, broadcaster: HelixUser, user: HelixUser) {
     const api = await this.wrappedApi(streamerId, broadcaster.id)
-    await api.moderation.unbanUser(broadcaster, broadcaster, user)
+    await api.moderation.unbanUser(broadcaster, user)
   }
 
   // insert some middleware to deal with automatic logging and status updates :)
+  // note that, where authentication is required, requests are made on behalf of the broadcaster. if this ever needs to change
+  // (e.g. to make requests on behalf of a moderator), use the `api.asUser().<action>` interface.
   private createApiWrapper = () => {
     return async (streamerId: number, twitchUserId: string | null) => {
       const api = await this.twurpleApiClientProvider.get(twitchUserId)
       const getStreamByUserName = super.wrapRequest((userName: string) => api.streams.getStreamByUserName(userName), 'twurpleApiClient.streams.getStreamByUserName', streamerId, true)
-      const banUser = super.wrapRequest((broadcaster: UserIdResolvable, moderator: UserIdResolvable, data: HelixBanUserRequest) => api.moderation.banUser(broadcaster, moderator, data), 'twurpleChatClient.moderation.banUser', streamerId)
-      const unbanUser = super.wrapRequest((broadcaster: UserIdResolvable, moderator: UserIdResolvable, user: UserIdResolvable) => api.moderation.unbanUser(broadcaster, moderator, user), 'twurpleChatClient.moderation.unbanUser', streamerId)
+      const banUser = super.wrapRequest((broadcaster: UserIdResolvable, data: HelixBanUserRequest) => api.moderation.banUser(broadcaster, data), 'twurpleChatClient.moderation.banUser', streamerId)
+      const unbanUser = super.wrapRequest((broadcaster: UserIdResolvable, user: UserIdResolvable) => api.moderation.unbanUser(broadcaster, user), 'twurpleChatClient.moderation.unbanUser', streamerId)
       const addModerator = super.wrapRequest((channel: string, twitchUserName: string) => api.moderation.addModerator(channel, twitchUserName), 'twurpleApiClient.moderation.addModerator', streamerId)
       const removeModerator = super.wrapRequest((channel: string, twitchUserName: string) => api.moderation.removeModerator(channel, twitchUserName), 'twurpleApiClient.moderation.removeModerator', streamerId)
 
@@ -139,13 +140,14 @@ export default class TwurpleApiProxyService extends ApiService {
           addModerator,
           removeModerator
         }
-      } as ApiClient
+      }
     }
   }
 
   private createChatWrapper (): (streamerId: number) => Partial<ChatClient> {
     return (streamerId: number) => {
-      const say = super.wrapRequest((channel: string, message: string, attributes: ChatSayMessageAttributes | undefined) => this.chat.say(channel, message, attributes), 'twurpleChatClient.say', streamerId)
+      const chat = this.twurpleChatClientProvider.get()
+      const say = super.wrapRequest((channel: string, message: string, attributes: ChatSayMessageAttributes | undefined) => chat.say(channel, message, attributes), 'twurpleChatClient.say', streamerId)
 
       return {
         say,

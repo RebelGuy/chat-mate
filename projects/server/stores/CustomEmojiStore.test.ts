@@ -7,6 +7,9 @@ import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel
 import { expectObject, nameof, promised, throwAsync } from '@rebel/shared/testUtils'
 import { ChatMateError, DbError, NotFoundError } from '@rebel/shared/util/error'
 import { SafeOmit } from '@rebel/shared/types'
+import { mock } from 'jest-mock-extended'
+import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
+import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
 
 const rank1 = 1
 const rank2 = 2
@@ -23,6 +26,8 @@ export default () => {
     const dbProvider = await startTestDb()
     db = dbProvider.get()
 
+    const chatMateStateService = mock<ChatMateStateService>({ getCustomEmojiSemaphore: () => new GroupedSemaphore(1) })
+
     await db.rank.createMany({ data: [
       { name: 'donator', group: 'cosmetic', displayNameAdjective: 'rank1', displayNameNoun: 'rank1' },
       { name: 'supporter', group: 'cosmetic', displayNameAdjective: 'rank2', displayNameNoun: 'rank2' },
@@ -35,7 +40,7 @@ export default () => {
       registeredUser: { create: { username: 'user2', hashedPassword: 'pass2', aggregateChatUser: { create: {}} }}
     }})
 
-    customEmojiStore = new CustomEmojiStore(new Dependencies({ dbProvider }))
+    customEmojiStore = new CustomEmojiStore(new Dependencies({ dbProvider, chatMateStateService }))
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)

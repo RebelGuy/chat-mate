@@ -1,14 +1,13 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
-import ContextClass from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import Semaphore from '@rebel/shared/util/Semaphore'
 import { DbError } from '@rebel/shared/util/error'
-import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime'
 import { SafeOmit } from '@rebel/shared/types'
 
 // remove properties from PrismaClient that we will never need
-type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$connect' | '$disconnect' | '$use'
+type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$connect' | '$disconnect' | '$use' | '$extends'
 
 export type Db = SafeOmit<PrismaClient, UnusedPrismaProperties>
 
@@ -20,7 +19,7 @@ type Deps = Dependencies<{
   dbSlowQueryThreshold: number
 }>
 
-export default class DbProvider extends ContextClass {
+export default class DbProvider extends SingletonContextClass {
   readonly name = DbProvider.name
 
   private readonly logService: LogService
@@ -40,7 +39,6 @@ export default class DbProvider extends ContextClass {
     const client = new PrismaClient({
       datasources: { db: { url: this.databaseUrl }},
       errorFormat: 'pretty',
-      rejectOnNotFound: false,
       log: [
         { level: 'query', emit: 'event' },
         { level: 'info', emit: 'event' },
@@ -101,10 +99,6 @@ export default class DbProvider extends ContextClass {
 
   public override async initialise () {
     await this.prismaClient.$connect()
-  }
-
-  public override async dispose () {
-    await this.prismaClient.$disconnect()
   }
 }
 
