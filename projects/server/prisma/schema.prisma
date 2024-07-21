@@ -358,7 +358,7 @@ model YoutubeChannel {
 
 model LiveReaction {
   id    Int      @id @default(autoincrement())
-  time  DateTime // unique with `streamerId`
+  time  DateTime @default(now())
   count Int
 
   streamerId Int // unique with `time`
@@ -367,7 +367,6 @@ model LiveReaction {
   emojiId Int
   emoji   ChatEmoji @relation(fields: [emojiId], references: [id], map: "live_reaction_emojiId_fkey")
 
-  @@unique([streamerId, time], map: "live_reaction_streamerId_time_key")
   @@index([streamerId], map: "live_reaction_streamerId_fkey")
   @@index([emojiId], map: "live_reaction_emojiId_fkey")
   @@map("live_reaction")
