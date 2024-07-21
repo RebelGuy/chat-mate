@@ -17,7 +17,7 @@ import {
   NoPermissionError,
   UnavailableError,
 } from "./errors";
-import { ChatResponse, Credentials, Metadata } from "./interfaces";
+import { ChatResponse, Credentials, LiveReactions, Metadata } from "./interfaces";
 import { Action, AddChatItemAction } from "./interfaces/actions";
 import { ActionCatalog, ActionInfo } from "./interfaces/contextActions";
 import {
