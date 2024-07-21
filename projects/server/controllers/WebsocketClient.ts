@@ -6,7 +6,7 @@ import { Request } from 'express'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import LogService from '@rebel/server/services/LogService'
 import { ServerMessage, StreamerTopic, parseClientMessage } from '@rebel/api-models/websocket'
-import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, EventData } from '@rebel/server/services/EventDispatchService'
+import EventDispatchService, { EVENT_PUBLIC_CHAT_ITEM, EVENT_PUBLIC_CHAT_MATE_EVENT_DONATION, EVENT_PUBLIC_CHAT_MATE_EVENT_LEVEL_UP, EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION, EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_FOLLOWER, EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, EventData } from '@rebel/server/services/EventDispatchService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
 import AccountStore from '@rebel/server/stores/AccountStore'
@@ -24,6 +24,8 @@ import { PublicPlatformRank } from '@rebel/api-models/public/event/PublicPlatfor
 import { getUserName } from '@rebel/server/services/ChannelService'
 import ChannelStore from '@rebel/server/stores/ChannelStore'
 import { NotFoundError } from '@rebel/shared/util/error'
+import EmojiStore from '@rebel/server/stores/EmojiStore'
+import S3ProxyService from '@rebel/server/services/S3ProxyService'
 
 const emptyPublicChatMateEvent = {
   levelUpData: null,
@@ -31,7 +33,8 @@ const emptyPublicChatMateEvent = {
   donationData: null,
   newViewerData: null,
   chatMessageDeletedData: null,
-  rankUpdateData: null
+  rankUpdateData: null,
+  liveReactionsData: null
 }
 
 type ResolvedSubscription = `${StreamerTopic}-${number}`
@@ -49,6 +52,8 @@ type Deps = Dependencies<{
   streamerStore: StreamerStore
   chatService: ChatService
   channelStore: ChannelStore
+  emojiStore: EmojiStore
+  s3ProxyService: S3ProxyService
 }>
 
 let id = 0
@@ -68,6 +73,8 @@ export default class WebsocketClient extends ContextClass {
   private readonly streamerStore: StreamerStore
   private readonly chatService: ChatService
   private readonly channelStore: ChannelStore
+  private readonly emojiStore: EmojiStore
+  private readonly s3ProxyService: S3ProxyService
 
   private readonly id: number
 
@@ -88,6 +95,8 @@ export default class WebsocketClient extends ContextClass {
     this.streamerStore = deps.resolve('streamerStore')
     this.chatService = deps.resolve('chatService')
     this.channelStore = deps.resolve('channelStore')
+    this.emojiStore = deps.resolve('emojiStore')
+    this.s3ProxyService = deps.resolve('s3ProxyService')
 
     this.id = id++
     this.name = `${WebsocketClient.name}-${this.id}`
@@ -122,6 +131,7 @@ export default class WebsocketClient extends ContextClass {
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
     this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
+    this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION, this.onLiveReaction)
 
     this.subscriptions = new Set()
   }
@@ -168,6 +178,9 @@ export default class WebsocketClient extends ContextClass {
           if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)) {
             this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
           }
+          if (!this.eventDispatchService.isListening(EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION, this.onLiveReaction)) {
+            this.eventDispatchService.onData(EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION, this.onLiveReaction)
+          }
         } else {
           assertUnreachable(parsedMessage.data.topic)
         }
@@ -184,6 +197,7 @@ export default class WebsocketClient extends ContextClass {
           this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_NEW_VIEWER, this.onNewViewer)
           this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED, this.onMessageDeleted)
           this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, this.onRankUpdate)
+          this.eventDispatchService.unsubscribe(EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION, this.onLiveReaction)
         } else {
           assertUnreachable(parsedMessage.data.topic)
         }
@@ -471,6 +485,42 @@ export default class WebsocketClient extends ContextClass {
       })
     } catch (e: any) {
       this.logService.logError(this, 'Unable to dispatch rank update event', event, e)
+    }
+  }
+
+  private onLiveReaction = async (event: EventData[typeof EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION]) => {
+    try {
+      const requiredSubscription = await this.getResolvedSubscription('streamerEvents', event.streamerId)
+      if (!this.subscriptions.has(requiredSubscription)) {
+        return
+      }
+
+      const emoji = await this.emojiStore.getEmojiById(event.emojiId)
+      const signedUrl = await this.s3ProxyService.signUrl(emoji.image.url)
+
+      this.send({
+        type: 'event',
+        data: {
+          topic: 'streamerEvents',
+          streamer: await this.getStreamerName(event.streamerId),
+          data: {
+            ...emptyPublicChatMateEvent,
+            type: 'liveReactions',
+            timestamp: Date.now(),
+            liveReactionsData: {
+              reactionCount: event.reactionCount,
+              emojiImage: {
+                id: emoji.id,
+                url: signedUrl,
+                width: emoji.image.width,
+                height: emoji.image.height
+              }
+            }
+          }
+        }
+      })
+    } catch (e: any) {
+      this.logService.logError(this, 'Unable to dispatch live reaction event', event, e)
     }
   }
 

@@ -1331,6 +1331,55 @@ export interface YTConfigData {
   rootVisualElementType: number;
 }
 
+export interface YTFrameworkUpdates {
+  entityBatchUpdate: YTEntityBatchUpdate
+}
+
+export interface YTEntityBatchUpdate {
+  mutations: YTMutation[]
+  timestamp: YTTimestamp 
+}
+
+export interface YTMutation {
+  entityKey: string // base64 encoded, like `8<liveId>youtube/app/live_reactions_setting_entity_key (` or `%youtube/app/emoji_fountain_entity_key (7`
+  type: 'ENTITY_MUTATION_TYPE_REPLACE'
+  payload: YTMutatationEmojiFountainEntity | YTMutationLiveReactionsSettingEntity
+}
+
+export interface YTMutatationEmojiFountainEntity {
+  emojiFountainDataEntity: {
+    key: string // same as entityKey in the YTMutation object
+    updateTimeUsec: string // e.g. '1721304176690885'
+
+    // there can be multiple buckets for the same emoji, and buckets may be empty (no reaction data)
+    reactionBuckets: YTReactionBucket[]
+  }
+}
+
+export interface YTReactionBucket {
+  totalReactions: number
+  intensityScore: 1 | 0.75 // 1 if there is no reaction data, 0.75 if there is
+  duration: { seconds: '1' } // always 1 second
+  reactionsData?: YTReactionsData[]
+}
+
+export interface YTReactionsData {
+  unicodeEmojiId: string
+  reactionCount: number
+}
+
+export interface  YTMutationLiveReactionsSettingEntity {
+  booleanEntity: {
+    key: string // same as entityKey in the YTMutation object
+    value: boolean
+  }
+}
+
+export interface YTTimestamp {
+  seconds: string
+  nanos: number
+}
+
 export interface Topbar {
   desktopTopbarRenderer: DesktopTopbarRenderer;
 }

@@ -19,7 +19,7 @@ export const EVENT_ADD_PRIMARY_CHANNEL = Symbol('EVENT_ADD_PRIMARY_CHANNEL')
 export const EVENT_REMOVE_PRIMARY_CHANNEL = Symbol('EVENT_REMOVE_PRIMARY_CHANNEL')
 export const EVENT_STREAMLABS_DONATION = Symbol('EVENT_STREAMLABS_DONATION')
 
-// PUBLIC EVENTS
+// PUBLIC EVENTS - these are directly relayed to clients via the WebSocket
 
 /** Fires when a chat item was added to the database. */
 export const EVENT_PUBLIC_CHAT_ITEM = Symbol('EVENT_PUBLIC_CHAT_ITEM')
@@ -41,6 +41,8 @@ export const EVENT_PUBLIC_CHAT_MATE_EVENT_MESSAGE_DELETED = Symbol('EVENT_PUBLIC
 
 /** Fires when a message in a streamer's chat has been deleted. */
 export const EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE')
+
+export const EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION = Symbol('EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION')
 
 export type EventData = {
   [EVENT_CHAT_ITEM]: ChatItem & {
@@ -95,6 +97,12 @@ export type EventData = {
   [EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE]: {
     streamerId: number
     rankEvent: ParsedRankEvent
+  }
+
+  [EVENT_PUBLIC_CHAT_MATE_EVENT_LIVE_REACTION]: {
+    streamerId: number
+    emojiId: number
+    reactionCount: number
   }
 }
 

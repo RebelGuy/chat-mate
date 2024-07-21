@@ -23,6 +23,14 @@ export default class EmojiStore extends ContextClass {
     this.semaphore = deps.resolve('chatMateStateService').getEmojiSemaphore()
   }
 
+  /** Throws if the emoji was not found. */
+  public async getEmojiById (emojiId: number): Promise<ChatEmojiWithImage> {
+    return await this.db.chatEmoji.findUniqueOrThrow({
+      where: { id: emojiId },
+      include: { image: true }
+    })
+  }
+
   public async getOrCreateEmoji (chatEmojiMessage: PartialEmojiChatMessage, onGetImageInfo: (emojiId: number) => Promise<ImageInfo>): Promise<ChatEmojiWithImage> {
     try {
       await this.semaphore.enter(chatEmojiMessage.url)

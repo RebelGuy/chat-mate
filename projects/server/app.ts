@@ -109,6 +109,8 @@ import WebsocketClient from '@rebel/server/controllers/WebsocketClient'
 import FollowerService from '@rebel/server/services/FollowerService'
 import * as AI from 'applicationinsights'
 import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
+import LiveReactionService from '@rebel/server/services/LiveReactionService'
+import LiveReactionStore from '@rebel/server/stores/LiveReactionStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -276,6 +278,8 @@ const main = async () => {
     .withClass('chatService', ChatService)
     .withClass('masterchatStore', MasterchatStore)
     .withClass('followerStore', FollowerStore)
+    .withClass('liveReactionStore', LiveReactionStore)
+    .withClass('liveReactionService', LiveReactionService)
     .withClass('masterchatFetchService', MasterchatFetchService)
     .withClass('followerService', FollowerService)
     .withClass('helixEventService', HelixEventService)
