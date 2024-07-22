@@ -508,6 +508,7 @@ export default class WebsocketClient extends ContextClass {
             type: 'liveReactions',
             timestamp: Date.now(),
             liveReactionsData: {
+              emojiId: event.emojiId,
               reactionCount: event.reactionCount,
               emojiImage: {
                 id: emoji.id,
