@@ -14,6 +14,7 @@ import AggregateLivestreamService from '@rebel/server/services/AggregateLivestre
 import { flatMap } from '@rebel/shared/util/arrays'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import { ONE_DAY } from '@rebel/shared/util/datetime'
+import LiveReactionStore from '@rebel/server/stores/LiveReactionStore'
 
 type Deps = ControllerDependencies<{
   masterchatService: MasterchatService
@@ -27,6 +28,7 @@ type Deps = ControllerDependencies<{
   cacheService: CacheService
   aggregateLivestreamService: AggregateLivestreamService
   streamerChannelStore: StreamerChannelStore
+  liveReactionStore: LiveReactionStore
 }>
 
 @Path(buildPath('chatMate'))
@@ -42,6 +44,7 @@ export default class ChatMateController extends ControllerBase {
   private readonly cacheService: CacheService
   private readonly aggregateLivestreamService: AggregateLivestreamService
   private readonly streamerChannelStore: StreamerChannelStore
+  private readonly liveReactionStore: LiveReactionStore
 
   constructor (deps: Deps) {
     super(deps, 'chatMate')
@@ -56,6 +59,7 @@ export default class ChatMateController extends ControllerBase {
     this.cacheService = deps.resolve('cacheService')
     this.aggregateLivestreamService = deps.resolve('aggregateLivestreamService')
     this.streamerChannelStore = deps.resolve('streamerChannelStore')
+    this.liveReactionStore = deps.resolve('liveReactionStore')
   }
 
   @GET
@@ -78,6 +82,7 @@ export default class ChatMateController extends ControllerBase {
       const twitchChannelCount = await this.channelStore.getTwitchChannelCount()
       const youtubeMessageCount = await this.chatStore.getYoutubeChatMessageCount()
       const twitchMessageCount = await this.chatStore.getTwitchChatMessageCount()
+      const youtubeLiveReactions = await this.liveReactionStore.getTotalLiveReactions()
       const totalExperience = await this.experienceStore.getTotalGlobalExperience()
       // todo: this is a big no-no, we should probably cache things that we know will never change (e.g. past livestreams)
       const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id))).then(flatMap)
@@ -95,6 +100,7 @@ export default class ChatMateController extends ControllerBase {
         chatMessageCount: youtubeMessageCount + twitchMessageCount,
         youtubeMessageCount: youtubeMessageCount,
         twitchMessageCount: twitchMessageCount,
+        youtubeLiveReactions: youtubeLiveReactions,
         totalExperience: totalExperience,
         totalDaysLivestreamed: aggregateLivestreams.reduce((time, livestream) => time + livestream.getDuration(), 0) / ONE_DAY,
         youtubeTotalDaysLivestreamed: youtubeTotalDaysLivestreamed,

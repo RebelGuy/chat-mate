@@ -18,6 +18,8 @@ export type ChatMateStatsResponse = ApiResponse<{
   youtubeMessageCount: number
   twitchMessageCount: number
 
+  youtubeLiveReactions: number
+
   totalExperience: number
 
   totalDaysLivestreamed: number
