@@ -94,7 +94,7 @@ export default class ApiService extends ContextClass {
       if (optional) {
         return
       } else {
-        throw new PreProcessorError(401, `The ${STREAMER_HEADER} header is required for this endpoint.`)
+        throw new PreProcessorError(400, `The ${STREAMER_HEADER} header is required for this endpoint.`)
       }
     } else if (Array.isArray(streamerHeader)) {
       throw new PreProcessorError(400, `The ${STREAMER_HEADER} header was malformed.`)
