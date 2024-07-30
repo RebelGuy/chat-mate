@@ -111,6 +111,8 @@ import * as AI from 'applicationinsights'
 import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
 import LiveReactionService from '@rebel/server/services/LiveReactionService'
 import LiveReactionStore from '@rebel/server/stores/LiveReactionStore'
+import VisitorService from '@rebel/server/services/VisitorService'
+import VisitorStore from '@rebel/server/stores/VisitorStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -210,13 +212,14 @@ const main = async () => {
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
-    .withClass('chatMateStateService', ChatMateStateService)
-    .withClass('eventDispatchService', EventDispatchService)
     .withClass('fileService', FileService)
     .withClass('applicationInsightsService', ApplicationInsightsService)
     .withClass('logService', LogService)
-    .withClass('webService', WebService)
     .withClass('dbProvider', DbProvider)
+    .withClass('visitorStore', VisitorStore)
+    .withClass('chatMateStateService', ChatMateStateService)
+    .withClass('eventDispatchService', EventDispatchService)
+    .withClass('webService', WebService)
     .withClass('authStore', AuthStore)
     .withClass('masterchatFactory', MasterchatFactory)
     .withClass('masterchatStatusService', StatusService)
@@ -288,6 +291,7 @@ const main = async () => {
     .withClass('streamerService', StreamerService)
     .withClass('linkDataService', LinkDataService)
     .withClass('streamerTwitchEventService', StreamerTwitchEventService)
+    .withClass('visitorService', VisitorService)
     .build()
 
   app.use((req, res, next) => {

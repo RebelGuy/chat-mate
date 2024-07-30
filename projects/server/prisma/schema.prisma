@@ -1064,3 +1064,16 @@ model Image {
   @@unique([fingerprint], map: "image_fingerprint_key")
   @@map("image")
 }
+
+model Visitor {
+  id Int @id @default(autoincrement())
+
+  visitorId String @db.VarChar(127) // unique with the `date` column
+
+  // the `dbgenerated` values have to be exactly this, otherwise things like "CURRENT_DATE" will be converted into curdate() and cause prisma to bitch about it
+  date DateTime @default(dbgenerated("(curdate())")) @db.Date() // unique with the `visitorId` column
+  time DateTime @default(dbgenerated("(curtime())")) @db.Time()
+
+  @@unique([visitorId, date], map: "visitor_visitorId_date_key")
+  @@map("visitor")
+}

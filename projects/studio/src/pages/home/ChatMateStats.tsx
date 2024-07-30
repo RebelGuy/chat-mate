@@ -33,6 +33,7 @@ export default function ChatMateStats () {
         </TableRow>
       </TableHead>
       <TableBody>
+        <Stat label="Number of website visitors" help="The number of unique users that have visited the ChatMate website." totalNumber={data?.totalVisitors ?? 0} />
         <Stat label="Number of registered users" help="The number of users that have created a free ChatMate account." totalNumber={data?.registeredUserCount ?? 0} />
         <Stat label="Number of streamers" help="The number of registered users who have signed up as a ChatMate streamer. Each streamer declares a primary streaming channel on Youtube, Twitch, or both." totalNumber={data?.streamerCount ?? 0} youtubeNumber={data?.youtubeStreamerCount ?? 0} twitchNumber={data?.twitchStreamerCount ?? 0} />
         <Stat label="Number of unique channels" help="The number of channels that have participated in livestreams connected to ChatMate." totalNumber={data?.uniqueChannelCount ?? 0} youtubeNumber={data?.uniqueYoutubeChannelCount ?? 0} twitchNumber={data?.uniqueTwitchChannelCount ?? 0} />

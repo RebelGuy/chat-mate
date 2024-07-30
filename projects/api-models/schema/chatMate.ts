@@ -4,6 +4,8 @@ import { EmptyObject } from '@rebel/shared/types'
 export type PingResponse = ApiResponse<EmptyObject>
 
 export type ChatMateStatsResponse = ApiResponse<{
+  totalVisitors: number
+
   streamerCount: number
   youtubeStreamerCount: number
   twitchStreamerCount: number

@@ -14,6 +14,7 @@ import { ChatMateError, PreProcessorError } from '@rebel/shared/util/error'
 import { Request, Response } from 'express'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { AllUserData } from '@rebel/server/models/user'
+import VisitorService from '@rebel/server/services/VisitorService'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 
@@ -30,6 +31,8 @@ type Deps = Dependencies<{
   experienceService: ExperienceService
   logService: LogService
   chatStore: ChatStore
+  visitorService: VisitorService
+  studioUrl: string
 }>
 
 // we could do a lot of these things directly in the ControllerBase, but it will be trickier to get the preProcessors to work because we don't know which controller instance from the context to use
@@ -46,6 +49,8 @@ export default class ApiService extends ContextClass {
   private readonly experienceService: ExperienceService
   private readonly logService: LogService
   private readonly chatStore: ChatStore
+  private readonly visitorService: VisitorService
+  private readonly studioUrl: string
 
   private registeredUser: RegisteredUser | null = null
   private streamerId: number | null = null
@@ -63,6 +68,15 @@ export default class ApiService extends ContextClass {
     this.experienceService = deps.resolve('experienceService')
     this.logService = deps.resolve('logService')
     this.chatStore = deps.resolve('chatStore')
+    this.visitorService = deps.resolve('visitorService')
+    this.studioUrl = deps.resolve('studioUrl')
+  }
+
+  public override initialise (): void {
+    // persist the visitor that hits any API endpoint from ChatMate Studio
+    if (this.request.get('Origin') === this.studioUrl) {
+      void this.visitorService.addVisitor(this.request.ip)
+    }
   }
 
   /** If this method runs to completion, `getCurrentUser` will return a non-null object.
