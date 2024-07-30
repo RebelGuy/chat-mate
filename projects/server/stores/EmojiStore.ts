@@ -6,6 +6,7 @@ import { ImageInfo } from '@rebel/server/stores/CustomEmojiStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
 import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
+import { randomString } from '@rebel/shared/util/random'
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -50,7 +51,7 @@ export default class EmojiStore extends ContextClass {
         name: chatEmojiMessage.name ?? null,
         isCustomEmoji: false,
         image: { create: {
-          fingerprint: `TEMP-${Date.now()}`,
+          fingerprint: `TEMP-${randomString(12)}`,
           url: 'TEMP',
           width: 0,
           height: 0
