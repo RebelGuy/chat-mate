@@ -1,7 +1,7 @@
 import { YoutubeLivestream, TwitchLivestream, RegisteredUser, Streamer, TwitchChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import EventDispatchService, { EVENT_ADD_PRIMARY_CHANNEL, EVENT_REMOVE_PRIMARY_CHANNEL } from '@rebel/server/services/EventDispatchService'
-import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
+import StreamerChannelService, { TwitchStreamerChannel, YoutubeStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import AccountStore, { RegisteredUserResult } from '@rebel/server/stores/AccountStore'
 import ChannelStore, { UserChannel, UserOwnedChannels } from '@rebel/server/stores/ChannelStore'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
@@ -60,6 +60,32 @@ describe(nameof(StreamerChannelService, 'getAllTwitchStreamerChannels'), () => {
     expect(result).toEqual<TwitchStreamerChannel[]>([
       {streamerId: streamerId1, twitchChannelName: twitchName1, internalChannelId: internalTwitchId1 },
       {streamerId: streamerId2, twitchChannelName: twitchName2, internalChannelId: internalTwitchId2 }
+    ])
+  })
+})
+
+describe(nameof(StreamerChannelService, 'getAllYoutubeStreamerChannels'), () => {
+  test('Returns a list of all youtube streamer channels', async () => {
+    const streamerId1 = 1
+    const streamerId2 = 2
+    const streamerId3 = 3
+    const externalYoutubeId1 = 'id1'
+    const externalYoutubeId2 = 'id2'
+    const internalYoutubeId1 = 5
+    const internalYoutubeId2 = 6
+
+    mockStreamerStore.getStreamers.calledWith().mockResolvedValue([cast<Streamer>({ id: streamerId1 }), cast<Streamer>({ id: streamerId2 }), cast<Streamer>({ id: streamerId3 })])
+    mockStreamerChannelStore.getPrimaryChannels.calledWith(expectArray<number>([streamerId1, streamerId2, streamerId3])).mockResolvedValue(cast<PrimaryChannels[]>([
+      { streamerId: streamerId1, youtubeChannel: { platformInfo: { platform: 'youtube', channel: { id: internalYoutubeId1, youtubeId: externalYoutubeId1 }}} },
+      { streamerId: streamerId2, youtubeChannel: { platformInfo: { platform: 'youtube', channel: { id: internalYoutubeId2, youtubeId: externalYoutubeId2 }}} },
+      { streamerId: streamerId3, youtubeChannel: null }
+    ]))
+
+    const result = await streamerChannelService.getAllYoutubeStreamerChannels()
+
+    expect(result).toEqual<YoutubeStreamerChannel[]>([
+      { streamerId: streamerId1, externalChannelId: externalYoutubeId1, internalChannelId: internalYoutubeId1 },
+      { streamerId: streamerId2, externalChannelId: externalYoutubeId2, internalChannelId: internalYoutubeId2 }
     ])
   })
 })

@@ -55,6 +55,15 @@ export default class AuthStore extends ContextClass {
     })
   }
 
+  /** Returns all Youtube external channel ids for channels that have authorised ChatMate. */
+  public async getExternalChannelIdsWithYoutubeAuth (): Promise<string[]> {
+    const result = await this.dbProvider.get().youtubeAuth.findMany({
+      select: { externalYoutubeChannelId: true }
+    })
+
+    return result.map(r => r.externalYoutubeChannelId)
+  }
+
   public async loadYoutubeWebAccessToken (channelId: string): Promise<YoutubeWebAuth | null> {
     return await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
   }

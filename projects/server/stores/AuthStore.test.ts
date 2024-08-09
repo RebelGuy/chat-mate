@@ -103,6 +103,22 @@ export default () => {
     })
   })
 
+  describe(nameof(AuthStore, 'getExternalChannelIdsWithYoutubeAuth'), () => {
+    test('Returns the external ids of youtube auth entries', async () => {
+      const channelId1 = 'channelId1'
+      const channelId2 = 'channelId2'
+
+      await db.youtubeAuth.createMany({ data: [
+        { externalYoutubeChannelId: channelId1, accessToken: '', expiryDate: new Date(), refreshToken: '', scope: '' },
+        { externalYoutubeChannelId: channelId2, accessToken: '', expiryDate: new Date(), refreshToken: '', scope: '' }
+      ]})
+
+      const result = await authStore.getExternalChannelIdsWithYoutubeAuth()
+
+      expect(result).toEqual<typeof result>([channelId1, channelId2])
+    })
+  })
+
   describe(nameof(AuthStore, 'loadYoutubeWebAccessToken'), () => {
     test('Returns access token for channelId', async () => {
       await db.youtubeWebAuth.createMany({ data: [
