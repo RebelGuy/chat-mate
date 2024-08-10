@@ -12,12 +12,15 @@ import MasterchatService from '@rebel/server/services/MasterchatService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import { addTime } from '@rebel/shared/util/datetime'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
-import StreamerChannelService, { TwitchStreamerChannel } from '@rebel/server/services/StreamerChannelService'
+import StreamerChannelService, { TwitchStreamerChannel, YoutubeStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import { TwitchMetadata } from '@rebel/server/services/TwurpleService'
 import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
 import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import { ChatMateError } from '@rebel/shared/util/error'
+import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
+import AuthStore from '@rebel/server/stores/AuthStore'
+import { sleep } from '@rebel/shared/util/node'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -54,6 +57,7 @@ function makeTwitchStream (start: Date, end: Date | null): TwitchLivestream {
 const streamerId = 65
 const viewCount = 5
 const twitchChannelName = 'twitchChannel'
+const mockChatMateStreamerId = -1
 
 let mockLivestreamStore: MockProxy<LivestreamStore>
 let mockMasterchatService: MockProxy<MasterchatService>
@@ -64,6 +68,8 @@ let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let mockStreamerChannelService: MockProxy<StreamerChannelService>
 let mockCacheService: MockProxy<CacheService>
 let mockChatMateStateService: MockProxy<ChatMateStateService>
+let mockAuthStore: MockProxy<AuthStore>
+let mockYoutubeApiProxyService: MockProxy<YoutubeApiProxyService>
 let livestreamService: LivestreamService
 
 beforeEach(() => {
@@ -76,6 +82,8 @@ beforeEach(() => {
   mockStreamerChannelService = mock()
   mockCacheService = mock()
   mockChatMateStateService = mock()
+  mockAuthStore = mock()
+  mockYoutubeApiProxyService = mock()
 
   // automatically execute callback passed to TimerHelpers
   const createRepeatingTimer = mockTimerHelpers.createRepeatingTimer as any as CreateRepeatingTimer
@@ -85,7 +93,7 @@ beforeEach(() => {
   })
 
   mockDateTimeHelpers.now.calledWith().mockReturnValue(new Date())
-  mockGetter(mockCacheService, 'chatMateStreamerId').mockReturnValue(mockResolvable(-1))
+  mockGetter(mockCacheService, 'chatMateStreamerId').mockReturnValue(mockResolvable(mockChatMateStreamerId))
 
   livestreamService = new LivestreamService(new Dependencies({
     livestreamStore: mockLivestreamStore,
@@ -97,7 +105,9 @@ beforeEach(() => {
     dateTimeHelpers: mockDateTimeHelpers,
     streamerChannelService: mockStreamerChannelService,
     cacheService: mockCacheService,
-    chatMateStateService: mockChatMateStateService
+    chatMateStateService: mockChatMateStateService,
+    authStore: mockAuthStore,
+    youtubeApiProxyService: mockYoutubeApiProxyService
   }))
 })
 
@@ -113,7 +123,9 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       dateTimeHelpers: mockDateTimeHelpers,
       streamerChannelService: mockStreamerChannelService,
       cacheService: mockCacheService,
-      chatMateStateService: mockChatMateStateService
+      chatMateStateService: mockChatMateStateService,
+      authStore: mockAuthStore,
+      youtubeApiProxyService: mockYoutubeApiProxyService
     }))
 
     await livestreamService.initialise()
@@ -122,10 +134,15 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     expect(mockMasterchatService.fetchMetadata.mock.calls.length).toBe(0)
   })
 
-  describe('Youtube tests', () => {
+  describe('Youtube metadata tests', () => {
     beforeEach(() => {
+      // disable twitch metadata functions
       mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([])
       mockChatMateStateService.hasInitialisedLivestreamMetadata.calledWith().mockReturnValue(true)
+
+      // disable youtube livestream discovery functions
+      mockStreamerChannelService.getAllYoutubeStreamerChannels.calledWith().mockResolvedValue([])
+      mockAuthStore.getExternalChannelIdsWithYoutubeAuth.calledWith().mockResolvedValue([])
     })
 
     test(`Ignores times and views if livestream hasn't started`, async () => {
@@ -229,16 +246,6 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       expect(addedLiveIds).toEqual<typeof addedLiveIds>([[livestream1.streamerId, livestream1.liveId], [livestream2.streamerId, livestream2.liveId]])
     })
 
-    test('Updates metadata regularly', async () => {
-      const livestream = makeYoutubeStream(null, null)
-      mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([livestream])
-      mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(makeYoutubeMetadata('not_started'))
-
-      await livestreamService.initialise()
-
-      expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expect.anything(), true])
-    })
-
     test('Does not fetch metadata for the official ChatMate stream', async () => {
       const livestream = makeYoutubeStream(null, null)
       mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([livestream])
@@ -262,7 +269,85 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     })
   })
 
-  describe('Twitch tests', () => {
+  describe('Youtube livestream discovery tests', () => {
+    beforeEach(() => {
+      // disable twitch metadata functions
+      mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([])
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.calledWith().mockReturnValue(true)
+
+      // disable youtube metadata functions
+      mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(twitchChannelName)
+      mockChatMateStateService.hasInitialisedLivestreamMetadata.calledWith().mockReturnValue(true)
+    })
+
+    test('Attempts to discover the livestream of all Youtube streamers that meet the requirements', async () => {
+      // in this test, streamer 1 and 2 are considered to have started a livestream, so we should be automatically activating their streams
+      const streamerChannel1: YoutubeStreamerChannel = { streamerId: 51, internalChannelId: 1, externalChannelId: 'streamer1' }
+      const streamerChannel2: YoutubeStreamerChannel = { streamerId: 52, internalChannelId: 2, externalChannelId: 'streamer2' }
+      const streamerChannel3: YoutubeStreamerChannel = { streamerId: 53, internalChannelId: 3, externalChannelId: 'streamer3' }
+      const streamer1LiveId = 'liveId1'
+      const streamer2LiveId = 'liveId2'
+
+      mockStreamerChannelService.getAllYoutubeStreamerChannels.calledWith().mockResolvedValue([streamerChannel1, streamerChannel2, streamerChannel3])
+      mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([])
+      mockAuthStore.getExternalChannelIdsWithYoutubeAuth.calledWith().mockResolvedValue([streamerChannel1.externalChannelId, streamerChannel2.externalChannelId, streamerChannel3.externalChannelId])
+      mockYoutubeApiProxyService.getBroadcastId.calledWith(streamerChannel1.streamerId, streamerChannel1.externalChannelId).mockResolvedValue(streamer1LiveId)
+      mockYoutubeApiProxyService.getBroadcastId.calledWith(streamerChannel2.streamerId, streamerChannel2.externalChannelId).mockResolvedValue(streamer2LiveId)
+      mockYoutubeApiProxyService.getBroadcastId.calledWith(streamerChannel3.streamerId, streamerChannel3.externalChannelId).mockResolvedValue(null)
+
+      mockStreamerChannelService.getYoutubeExternalId.calledWith(streamerChannel1.streamerId).mockResolvedValue(streamerChannel1.externalChannelId)
+      mockStreamerChannelService.getYoutubeExternalId.calledWith(streamerChannel2.streamerId).mockResolvedValue(streamerChannel2.externalChannelId)
+      mockMasterchatService.getChannelIdFromAnyLiveId.calledWith(streamer1LiveId).mockResolvedValue(streamerChannel1.externalChannelId)
+      mockMasterchatService.getChannelIdFromAnyLiveId.calledWith(streamer2LiveId).mockResolvedValue(streamerChannel2.externalChannelId)
+
+      await livestreamService.initialise()
+      await sleep(1)
+
+      const activeLivestreamCalls = mockLivestreamStore.setActiveYoutubeLivestream.mock.calls
+      expect(activeLivestreamCalls).toEqual<typeof activeLivestreamCalls>([
+        [streamerChannel1.streamerId, streamer1LiveId],
+        [streamerChannel2.streamerId, streamer2LiveId]
+      ])
+    })
+
+    test('Ignores the official ChatMate streamer', async () => {
+      const streamerChannel: YoutubeStreamerChannel = { streamerId: mockChatMateStreamerId, internalChannelId: 1, externalChannelId: 'streamer1' }
+      mockStreamerChannelService.getAllYoutubeStreamerChannels.calledWith().mockResolvedValue([streamerChannel])
+      mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([])
+      mockAuthStore.getExternalChannelIdsWithYoutubeAuth.calledWith().mockResolvedValue([streamerChannel.externalChannelId])
+
+      await livestreamService.initialise()
+      await sleep(1)
+
+      expect(mockYoutubeApiProxyService.getBroadcastId.mock.calls.length).toBe(0)
+    })
+
+    test('Ignores streamers that already have an active livestream', async () => {
+      const streamerChannel: YoutubeStreamerChannel = { streamerId: 51, internalChannelId: 1, externalChannelId: 'streamer1' }
+      mockStreamerChannelService.getAllYoutubeStreamerChannels.calledWith().mockResolvedValue([streamerChannel])
+      mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue(cast<YoutubeLivestream[]>([{ streamerId: streamerChannel.streamerId }]))
+      mockAuthStore.getExternalChannelIdsWithYoutubeAuth.calledWith().mockResolvedValue([streamerChannel.externalChannelId])
+
+      await livestreamService.initialise()
+      await sleep(1)
+
+      expect(mockYoutubeApiProxyService.getBroadcastId.mock.calls.length).toBe(0)
+    })
+
+    test('Ignores streamers without auth', async () => {
+      const streamerChannel: YoutubeStreamerChannel = { streamerId: 51, internalChannelId: 1, externalChannelId: 'streamer1' }
+      mockStreamerChannelService.getAllYoutubeStreamerChannels.calledWith().mockResolvedValue([streamerChannel])
+      mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([])
+      mockAuthStore.getExternalChannelIdsWithYoutubeAuth.calledWith().mockResolvedValue([])
+
+      await livestreamService.initialise()
+      await sleep(1)
+
+      expect(mockYoutubeApiProxyService.getBroadcastId.mock.calls.length).toBe(0)
+    })
+  })
+
+  describe('Twitch metadata tests', () => {
     const twitchMetadata: TwitchMetadata = {
       startTime: new Date(),
       streamId: '123',
@@ -271,9 +356,14 @@ describe(nameof(LivestreamService, 'initialise'), () => {
     }
 
     beforeEach(() => {
+      // disable youtube metadata functions
       mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([])
       mockStreamerChannelService.getTwitchChannelName.calledWith(streamerId).mockResolvedValue(twitchChannelName)
       mockChatMateStateService.hasInitialisedLivestreamMetadata.calledWith().mockReturnValue(true)
+
+      // disable youtube livestream discovery functions
+      mockStreamerChannelService.getAllYoutubeStreamerChannels.calledWith().mockResolvedValue([])
+      mockAuthStore.getExternalChannelIdsWithYoutubeAuth.calledWith().mockResolvedValue([])
     })
 
     test(`Syncs the Twitch livestreams upon startup (does nothing if the streamer did not go live while we weren't listening)`, async () => {
@@ -361,16 +451,6 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       const livestreamTimesArgs = single(mockLivestreamStore.addTwitchLiveViewCount.mock.calls)
       expect(livestreamTimesArgs).toEqual<typeof livestreamTimesArgs>([livestream.id, viewCount])
       expect(mockLivestreamStore.setTwitchLivestreamTimes.mock.calls.length).toBe(0)
-    })
-
-    test('Updates metadata regularly', async () => {
-      const livestream = makeTwitchStream(data.time2, null)
-      mockLivestreamStore.getCurrentTwitchLivestreams.calledWith().mockResolvedValue([livestream])
-      mockTwurpleApiProxyService.fetchMetadata.calledWith(livestream.streamerId, twitchChannelName).mockResolvedValue(twitchMetadata)
-
-      await livestreamService.initialise()
-
-      expect(single(mockTimerHelpers.createRepeatingTimer.mock.calls)).toEqual([expect.anything(), true])
     })
 
     test('Ignores API errors', async () => {

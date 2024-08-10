@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "1.32.0",
+  "version": "1.33.0",
   "main": "../../dist/studio/index.js",
   "scripts": {
     "start": "node fixStudioTypescriptBuild.js && npx react-app-rewired start",

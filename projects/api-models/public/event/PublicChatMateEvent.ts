@@ -5,10 +5,11 @@ import { PublicNewTwitchFollowerData } from '@rebel/api-models/public/event/Publ
 import { PublicNewViewerData } from '@rebel/api-models/public/event/PublicNewViewerData'
 import { PublicChatMessageDeletedData } from '@rebel/api-models/public/event/PublicChatMessageDeletedData'
 import { PublicRankUpdateData } from '@rebel/api-models/public/event/PublicRankUpdateData'
+import { PublicLiveReactionsData } from '@rebel/api-models/public/event/PublicLiveReactionsData'
 
 export type PublicChatMateEvent = PublicObject<{
   /** The type of event that has occurred. */
-  type: 'levelUp' | 'newTwitchFollower' | 'donation' | 'newViewer' | 'chatMessageDeleted' | 'rankUpdate'
+  type: 'levelUp' | 'newTwitchFollower' | 'donation' | 'newViewer' | 'chatMessageDeleted' | 'rankUpdate' | 'liveReactions'
 
   /** The time at which the event occurred. */
   timestamp: number
@@ -30,4 +31,7 @@ export type PublicChatMateEvent = PublicObject<{
 
   /** Only set if `type` is `rankUpdate`. */
   rankUpdateData: PublicRankUpdateData | null
+
+  /** Only set if `type` is `liveReactions`. */
+  liveReactionsData: PublicLiveReactionsData | null
 }>

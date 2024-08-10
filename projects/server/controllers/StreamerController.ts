@@ -759,7 +759,8 @@ export default class StreamerController extends ControllerBase {
           donationData,
           newViewerData,
           chatMessageDeletedData,
-          rankUpdateData
+          rankUpdateData,
+          liveReactionsData: null // not available on-demand. users must subscribe to the WebSocket to receive live reaction events
         })
       }
 

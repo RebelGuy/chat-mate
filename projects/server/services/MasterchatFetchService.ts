@@ -13,6 +13,7 @@ import MasterchatStore from '@rebel/server/stores/MasterchatStore'
 import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEventService'
 import CacheService from '@rebel/server/services/CacheService'
 import EmojiService from '@rebel/server/services/EmojiService'
+import LiveReactionService from '@rebel/server/services/LiveReactionService'
 
 const LIVESTREAM_CHECK_INTERVAL = 10_000
 
@@ -39,6 +40,7 @@ type Deps = Dependencies<{
   externalRankEventService: ExternalRankEventService
   cacheService: CacheService
   emojiService: EmojiService
+  liveReactionService: LiveReactionService
   isAdministrativeMode: () => boolean
 }>
 
@@ -55,6 +57,7 @@ export default class MasterchatFetchService extends SingletonContextClass {
   private readonly externalRankEventService: ExternalRankEventService
   private readonly cacheService: CacheService
   private readonly emojiService: EmojiService
+  private readonly liveReactionService: LiveReactionService
   private readonly isAdministrativeMode: () => boolean
 
   private livestreamCheckTimer!: number
@@ -73,6 +76,7 @@ export default class MasterchatFetchService extends SingletonContextClass {
     this.externalRankEventService = deps.resolve('externalRankEventService')
     this.cacheService = deps.resolve('cacheService')
     this.emojiService = deps.resolve('emojiService')
+    this.liveReactionService = deps.resolve('liveReactionService')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
@@ -193,6 +197,10 @@ export default class MasterchatFetchService extends SingletonContextClass {
         } else if (action.type === 'markChatItemAsDeletedAction') {
           await this.chatService.onChatItemDeleted(action.targetId)
         }
+      }
+
+      for (const unicodeEmoji of Object.keys(response.reactions)) {
+        await this.liveReactionService.onLiveReaction(streamerId, unicodeEmoji, response.reactions[unicodeEmoji])
       }
     }
 

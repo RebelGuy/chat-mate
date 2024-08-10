@@ -222,7 +222,7 @@ Emits new chat events in the context of a given streamer. Equivalent to calling 
 The event data will a `PublicChatItem`.
 
 ### The `streamerEvents` topic
-Emits new ChatMate events in the context of a given streamer. Equivalent to calling the [`GET /streamer/events`](#get-events) endpoint.
+Emits new ChatMate events in the context of a given streamer. Equivalent to calling the [`GET /streamer/events`](#get-events) endpoint, except it also includes events of type `liveReactions`.
 
 The event data will a `PublicChatMateEvent`.
 
@@ -1065,7 +1065,7 @@ Query parameters:
 
 Returns data with the following properties:
 - `reusableTimestamp` (`number`): Use this value as the `since` query parameter in the next request for continuous data flow (no duplicates).
-- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp, sorted by time in ascending order.
+- `events` (`PublicChatMateEvent[]`): The list of events that have occurred since the given timestamp, sorted by time in ascending order. Note that all event types are included, except `liveReactions`. To get data about `liveReactions` events, use the [WebSocket](#websocket).
 
 Can return the following errors:
 - `400`: When the required query parameters have not been provided.

@@ -278,6 +278,7 @@ model Streamer {
   platformApiCalls            PlatformApiCall[]
   youtubeChannelStreamerInfos YoutubeChannelStreamerInfo[]
   twitchChannelStreamerInfos  TwitchChannelStreamerInfo[]
+  liveReactions               LiveReaction[]
 
   @@unique([registeredUserId], map: "streamer_registeredUserId_fkey")
   @@map("streamer")
@@ -353,6 +354,22 @@ model YoutubeChannel {
   @@unique([youtubeId], map: "youtube_channel_youtubeId_key")
   @@unique([userId], map: "youtube_channel_userId_fkey")
   @@map("youtube_channel")
+}
+
+model LiveReaction {
+  id    Int      @id @default(autoincrement())
+  time  DateTime @default(now())
+  count Int
+
+  streamerId Int // unique with `time`
+  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "live_reaction_streamerId_fkey")
+
+  emojiId Int
+  emoji   ChatEmoji @relation(fields: [emojiId], references: [id], map: "live_reaction_emojiId_fkey")
+
+  @@index([streamerId], map: "live_reaction_streamerId_fkey")
+  @@index([emojiId], map: "live_reaction_emojiId_fkey")
+  @@map("live_reaction")
 }
 
 model TwitchChannelGlobalInfo {
@@ -480,7 +497,8 @@ model ChatEmoji {
   imageId Int
   image   Image @relation(fields: [imageId], references: [id], map: "chat_emoji_imageId_fkey")
 
-  messageParts ChatMessagePart[]
+  messageParts  ChatMessagePart[]
+  liveReactions LiveReaction[]
 
   // any custom emojis that have replaced this YouTube emoji within a chat message
   customEmojis ChatCustomEmoji[]
@@ -1045,4 +1063,17 @@ model Image {
 
   @@unique([fingerprint], map: "image_fingerprint_key")
   @@map("image")
+}
+
+model Visitor {
+  id Int @id @default(autoincrement())
+
+  visitorId String @db.VarChar(127) // unique with the `date` column
+
+  // the `dbgenerated` values have to be exactly this, otherwise things like "CURRENT_DATE" will be converted into curdate() and cause prisma to bitch about it
+  date DateTime @default(dbgenerated("(curdate())")) @db.Date() // unique with the `visitorId` column
+  time DateTime @default(dbgenerated("(curtime())")) @db.Time()
+
+  @@unique([visitorId, date], map: "visitor_visitorId_date_key")
+  @@map("visitor")
 }

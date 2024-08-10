@@ -12,6 +12,22 @@ import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { MockProxy, mock } from 'jest-mock-extended'
 
+const filePath = 'filePath'
+const emojiMap: EmojiMap = {
+  emoji1: {
+    emojiId: 'emoji1',
+    image: { thumbnails: [{ url: 'url1' }]},
+    searchTerms: [],
+    shortcuts: []
+  },
+  emoji2: {
+    emojiId: 'emoji2',
+    image: { thumbnails: [{ url: 'url2' }]},
+    searchTerms: [],
+    shortcuts: []
+  }
+}
+
 let mockRankStore: MockProxy<RankStore>
 let mockEmojiStore: MockProxy<EmojiStore>
 let mockS3ProxyService: MockProxy<S3ProxyService>
@@ -40,23 +56,7 @@ beforeEach(() => {
 })
 
 describe(nameof(EmojiService, 'analyseYoutubeTextForEmojis'), () => {
-  const emojiMap: EmojiMap = {
-    emoji1: {
-      emojiId: 'emoji1',
-      image: { thumbnails: [{ url: 'url1' }]},
-      searchTerms: [],
-      shortcuts: []
-    },
-    emoji2: {
-      emojiId: 'emoji2',
-      image: { thumbnails: [{ url: 'url2' }]},
-      searchTerms: [],
-      shortcuts: []
-    }
-  }
-
   beforeEach(() => {
-    const filePath = 'filePath'
     mockFileService.getDataFilePath.calledWith('emojiMap.json').mockReturnValue(filePath)
     mockFileService.readObject.calledWith(filePath).mockReturnValue(emojiMap)
     mockCacheService.getOrSetEmojiRegex.mockImplementation(cb => cb())
@@ -125,6 +125,29 @@ describe(nameof(EmojiService, 'getEligibleEmojiUsers'), () => {
     const result = await emojiService.getEligibleEmojiUsers(streamerId)
 
     expect(result).toEqual([1, 2])
+  })
+})
+
+describe(nameof(EmojiService, 'parseEmojiByUnicode'), () => {
+  const unicodeEmoji = Object.keys(emojiMap)[0]
+
+  test('Loads the emoji from the emoji map', () => {
+    mockFileService.getDataFilePath.calledWith('emojiMap.json').mockReturnValue(filePath)
+    mockFileService.readObject.calledWith(filePath).mockReturnValue(emojiMap)
+    mockCacheService.getOrSetEmojiRegex.mockImplementation(cb => cb())
+
+    const result = emojiService.parseEmojiByUnicode(unicodeEmoji)
+
+    expect(result).toEqual(emojiMap[unicodeEmoji])
+  })
+
+  test('Returns null if the emoji map is not present', () => {
+    mockFileService.getDataFilePath.calledWith('emojiMap.json').mockReturnValue(filePath)
+    mockFileService.readObject.calledWith(filePath).mockReturnValue(null)
+
+    const result = emojiService.parseEmojiByUnicode(unicodeEmoji)
+
+    expect(result).toBeNull()
   })
 })
 

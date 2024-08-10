@@ -1,5 +1,5 @@
 import { YoutubeLivestream } from '@prisma/client'
-import { Action, AddChatItemAction, ChatResponse, HideUserAction, MarkChatItemAsDeletedAction, UnhideUserAction, TimeoutUserAction, YTRun } from '@rebel/masterchat'
+import { Action, AddChatItemAction, ChatResponse, HideUserAction, MarkChatItemAsDeletedAction, UnhideUserAction, TimeoutUserAction, YTRun, LiveReactions } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import MasterchatFetchService from '@rebel/server/services/MasterchatFetchService'
@@ -17,6 +17,7 @@ import ExternalRankEventService from '@rebel/server/services/rank/ExternalRankEv
 import { single, single2 } from '@rebel/shared/util/arrays'
 import CacheService from '@rebel/server/services/CacheService'
 import EmojiService from '@rebel/server/services/EmojiService'
+import LiveReactionService from '@rebel/server/services/LiveReactionService'
 
 // jest is having trouble mocking the correct overload method, so we have to force it into the correct type
 type CreateRepeatingTimer = CalledWithMock<Promise<number>, [TimerOptions, true]>
@@ -101,6 +102,7 @@ let mockMasterchatStore: MockProxy<MasterchatStore>
 let mockExternalRankEventService: MockProxy<ExternalRankEventService>
 let mockCacheService: MockProxy<CacheService>
 let mockEmojiService: MockProxy<EmojiService>
+let mockLiveReactionService: MockProxy<LiveReactionService>
 let masterchatFetchService: MasterchatFetchService
 
 beforeEach(() => {
@@ -114,6 +116,7 @@ beforeEach(() => {
   mockExternalRankEventService = mock()
   mockCacheService = mock()
   mockEmojiService = mock()
+  mockLiveReactionService = mock()
 
   mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue(currentLivestreams)
   mockChatStore.getChatSince.calledWith(expect.any(Number), expect.any(Number), undefined, undefined).mockResolvedValue([])
@@ -138,6 +141,7 @@ beforeEach(() => {
     externalRankEventService: mockExternalRankEventService,
     cacheService: mockCacheService,
     emojiService: mockEmojiService,
+    liveReactionService: mockLiveReactionService,
     isAdministrativeMode: () => false
   }))
 })
@@ -156,6 +160,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
       externalRankEventService: mockExternalRankEventService,
       cacheService: mockCacheService,
       emojiService: mockEmojiService,
+      liveReactionService: mockLiveReactionService,
       isAdministrativeMode: () => false
     }))
 
@@ -286,11 +291,28 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
     const externalId = single2(mockChatService.onChatItemDeleted.mock.calls)
     expect(externalId).toBe(chatAction7.targetId)
   })
+
+  test('Processes live reactions', async () => {
+    const unicodeEmoji1 = 'emoji1'
+    const unicodeEmoji2 = 'emoji2'
+    const liveReactions: LiveReactions = { [unicodeEmoji1]: 1, [unicodeEmoji2]: 2 }
+
+    mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [], liveReactions))
+
+    await masterchatFetchService.initialise()
+
+    const calls = mockLiveReactionService.onLiveReaction.mock.calls
+    expect(calls).toEqual(expectArray(calls, [
+      [currentLivestreams[0].streamerId, unicodeEmoji1, liveReactions[unicodeEmoji1]],
+      [currentLivestreams[0].streamerId, unicodeEmoji2, liveReactions[unicodeEmoji2]]
+    ]))
+  })
 })
 
-function createChatResponse (continuationToken: string, actions?: Action[]): ChatResponse {
+function createChatResponse (continuationToken: string, actions?: Action[], liveReactions?: LiveReactions): ChatResponse {
   return {
     continuation: { token: continuationToken, timeoutMs: 10000 },
+    reactions: liveReactions ?? {},
     error: null,
     actions: actions ?? []
   }
