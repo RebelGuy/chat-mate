@@ -71,6 +71,16 @@ Problem: Streamlabs donations are not being received by ChatMate.
 Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
 
 # Change Log
+## v1.33 - The Youtube Update v2 [10/08/2024]
+- Server
+  - ChatMate now detects live reactions from Youtube livestreams
+    - Note that, while live reactions are a type of ChatMate event, they must be consumed by clients via the ChatMate websocket - they are not available via the REST API
+  - Youtube livestreams are now automatically detected and assigned to the streamer's active livestream, if they haven't already set one themselves
+    - This feature requires that streamers authorise ChatMate to make API requests to Youtube on their behalf
+- Studio
+  - The homepage now displays the total number of unique users 
+  - The homepage now displays the total number of Youtube reactions
+
 ## v1.32 - The Websocket Update [07/06/2024]
 - Server
   - Added a Websocket for listening to chat and streamer events (level up events, new Twitch followers, donations, first-time viewers, deleted messages, rank updates)
