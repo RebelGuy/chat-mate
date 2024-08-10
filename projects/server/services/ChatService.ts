@@ -224,7 +224,7 @@ export default class ChatService extends SingletonContextClass {
         void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_ITEM, message)
       }
     } catch (e: any) {
-      this.logService.logError(this, 'Failed to add chat.', e)
+      this.logService.logError(this, 'Failed to add chat.', item, e)
       throw e
     }
 

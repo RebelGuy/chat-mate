@@ -2,7 +2,9 @@ import { youtube_v3 } from '@googleapis/youtube'
 import { YoutubeApiClientProvider } from '@rebel/server/providers/YoutubeApiClientProvider'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
+import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
 import ApiService from '@rebel/server/services/abstract/ApiService'
+import AuthStore from '@rebel/server/stores/AuthStore'
 import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { ChatMateError } from '@rebel/shared/util/error'
@@ -24,7 +26,8 @@ type Endpoint =
   'youtube_v3.liveChatModerators.delete' |
   'youtube_v3.liveChatBans.insert' |
   'youtube_v3.liveChatBans.delete' |
-  'youtube_v3.videos.list'
+  'youtube_v3.videos.list' |
+  'youtube_v3.liveBroadcasts.list'
 
 // the nice devs over at youtube didn't think it was necessary to document these, so i took it upon myself to find these
 // via the API quota dashboard: console.cloud.google.com -> APIs and services -> YouTube Data API v3 -> Quotas.
@@ -37,7 +40,8 @@ const ENDPOINT_COSTS: Record<Endpoint, number> = {
   'youtube_v3.liveChatModerators.delete': 200,
   'youtube_v3.liveChatBans.insert': 200,
   'youtube_v3.liveChatBans.delete': 200,
-  'youtube_v3.videos.list': 1
+  'youtube_v3.videos.list': 1,
+  'youtube_v3.liveBroadcasts.list': 1
 }
 
 type Deps = Dependencies<{
@@ -45,10 +49,14 @@ type Deps = Dependencies<{
   youtubeStatusService: StatusService
   youtubeApiClientProvider: YoutubeApiClientProvider
   platformApiStore: PlatformApiStore
+  authStore: AuthStore
+  streamerChannelService: StreamerChannelService
 }>
 
 export default class YoutubeApiProxyService extends ApiService {
   private readonly youtubeApiClientProvider: YoutubeApiClientProvider
+  private readonly authStore: AuthStore
+  private readonly streamerChannelService: StreamerChannelService
 
   private readonly wrappedApi: (streamerId: number, requestOwnerExternalChannelId: string) => Promise<youtube_v3.Youtube>
 
@@ -60,9 +68,24 @@ export default class YoutubeApiProxyService extends ApiService {
     const apiPlatform: ApiPlatform = 'youtubeApi'
     const timeout = null
     super(name, logService, statusService, platformApiStore, apiPlatform, timeout, false)
+
     this.youtubeApiClientProvider = deps.resolve('youtubeApiClientProvider')
+    this.authStore = deps.resolve('authStore')
+    this.streamerChannelService = deps.resolve('streamerChannelService')
 
     this.wrappedApi = this.createApiWrapper()
+  }
+
+  public async getBroadcastId (streamerId: number, ownerExternalChannelId: string): Promise<string | null> {
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
+
+    // https://developers.google.com/youtube/v3/live/docs/liveBroadcasts/list
+    const result = await api.liveBroadcasts.list({
+      part: ['id', 'snippet', 'status'], // we could use `snippet` to sort by time in case there are multiple active streams
+      broadcastStatus: 'all' // we are looking for either `upcoming` or `active`
+    })
+
+    return result.data.items!.find(broadcast => broadcast.status?.lifeCycleStatus !== 'complete')?.id ?? null
   }
 
   public async mod (streamerId: number, ownerExternalChannelId: string, userExternalChannelId: string, liveId: string): Promise<string> {
@@ -218,6 +241,9 @@ export default class YoutubeApiProxyService extends ApiService {
         },
         videos: {
           list: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Videos$List) => client.videos.list(params), streamerId, 'youtube_v3.videos.list')
+        },
+        liveBroadcasts: {
+          list: this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Livebroadcasts$List) => client.liveBroadcasts.list(params), streamerId, 'youtube_v3.liveBroadcasts.list')
         }
       } as youtube_v3.Youtube
     }
@@ -232,7 +258,17 @@ export default class YoutubeApiProxyService extends ApiService {
 
       } catch (e: any) {
         if (e instanceof GaxiosError) {
-          this.logService.logError(this, `Request ${endpoint} received an error response:`, e.response?.data)
+          this.logService.logError(this, `Request ${endpoint} received an error response (code ${e.status}):`, e.response?.data)
+
+          if (e.message === 'invalid_grant') {
+            this.logService.logInfo(this, `Invalidating access token for streamer ${streamerId}...`)
+            const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamerId)
+            if (externalChannelId == null) {
+              this.logService.logError(this, `Unable to invalidate access token for streamer ${streamerId} because no primary youtube channel exists`)
+            } else {
+              await this.authStore.tryDeleteYoutubeAccessToken(externalChannelId)
+            }
+          }
         }
 
         throw e

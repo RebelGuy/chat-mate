@@ -6,6 +6,7 @@ import EmojiStore from '@rebel/server/stores/EmojiStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { cast, expectObjectDeep, nameof, promised, throwAsync } from '@rebel/shared/testUtils'
 import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
+import { DbError } from '@rebel/shared/util/error'
 import { mock } from 'jest-mock-extended'
 
 export default () => {
@@ -22,6 +23,21 @@ export default () => {
   }, DB_TEST_TIMEOUT)
 
   afterEach(stopTestDb)
+
+  describe(nameof(EmojiStore, 'getEmojiById'), () => {
+    test('Returns the correct emoji', async () => {
+      await db.chatEmoji.create({ data: { imageUrl: 'url1', isCustomEmoji: false, image: { create: { fingerprint: '1', url: 'url1', width: 1, height: 1 }} }})
+      await db.chatEmoji.create({ data: { imageUrl: 'url2', isCustomEmoji: false, image: { create: { fingerprint: '2', url: 'url2', width: 2, height: 2 }} }})
+
+      const result = await emojiStore.getEmojiById(2)
+
+      expect(result).toEqual(expectObjectDeep(result, { id: 2, image: { url: 'url2' } }))
+    })
+
+    test('Throws if the emoji does not exist', async () => {
+      await expect(() => emojiStore.getEmojiById(123)).rejects.toThrowError(DbError)
+    })
+  })
 
   describe(nameof(EmojiStore, 'getOrCreateEmoji'), () => {
     test('Creates an emoji with the correct image data', async () => {

@@ -100,6 +100,28 @@ export default class EmojiService extends ContextClass {
     return unique(donators.map(d => d.primaryUserId))
   }
 
+  public parseEmojiByUnicode (unicodeEmoji: string): YTEmoji | null {
+    const emojiRegex = this.cacheService.getOrSetEmojiRegex(this.loadEmojiRegex)
+    if (emojiRegex == null) {
+      return null
+    }
+
+    const match = emojiRegex.exec(unicodeEmoji)
+    if (match == null) {
+      this.logService.logWarning(this, 'Unable to parse emoji from unicode character', unicodeEmoji)
+      return null
+    }
+
+    const emojiMap = this.loadEmojiMap()!
+    const emoji = emojiMap[match[0]]
+    if (emoji == null) {
+      this.logService.logWarning(this, 'Unable to find parsed emoji in the emoji map', match[0])
+      return null
+    }
+
+    return emoji
+  }
+
   /** Returns processed emojis for any public emojis. */
   public async processEmoji (message: PartialChatMessage): Promise<PartialChatMessage> {
     if (message.type === 'cheer' || message.type === 'text' || message.type === 'customEmoji' && message.text != null) {

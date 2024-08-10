@@ -5,7 +5,7 @@ import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers, { TimerOptions } from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatService from '@rebel/server/services/MasterchatService'
-import StreamerChannelService from '@rebel/server/services/StreamerChannelService'
+import StreamerChannelService, { YoutubeStreamerChannel } from '@rebel/server/services/StreamerChannelService'
 import TwurpleApiProxyService from '@rebel/server/services/TwurpleApiProxyService'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { addTime } from '@rebel/shared/util/datetime'
@@ -14,10 +14,14 @@ import { TwitchLivestream, YoutubeLivestream } from '@prisma/client'
 import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import { ChatMateError } from '@rebel/shared/util/error'
+import AuthStore from '@rebel/server/stores/AuthStore'
+import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
 
 export const METADATA_SYNC_INTERVAL_MS = 12_000
 
 const STREAM_CONTINUITY_ALLOWANCE = 5 * 60_000
+
+const LIVESTREAM_DISCOVERY_SYNC_INTERVAL_MS = 60_000
 
 type Deps = Dependencies<{
   livestreamStore: LivestreamStore
@@ -30,6 +34,8 @@ type Deps = Dependencies<{
   streamerChannelService: StreamerChannelService
   cacheService: CacheService
   chatMateStateService: ChatMateStateService
+  authStore: AuthStore
+  youtubeApiProxyService: YoutubeApiProxyService
 }>
 
 export default class LivestreamService extends SingletonContextClass {
@@ -45,6 +51,8 @@ export default class LivestreamService extends SingletonContextClass {
   private readonly streamerChannelService: StreamerChannelService
   private readonly cacheService: CacheService
   private readonly chatMateStateService: ChatMateStateService
+  private readonly authStore: AuthStore
+  private readonly youtubeApiProxyService: YoutubeApiProxyService
 
   constructor (deps: Deps) {
     super()
@@ -58,6 +66,8 @@ export default class LivestreamService extends SingletonContextClass {
     this.streamerChannelService = deps.resolve('streamerChannelService')
     this.cacheService = deps.resolve('cacheService')
     this.chatMateStateService = deps.resolve('chatMateStateService')
+    this.authStore = deps.resolve('authStore')
+    this.youtubeApiProxyService = deps.resolve('youtubeApiProxyService')
   }
 
   public override async initialise (): Promise<void> {
@@ -68,12 +78,19 @@ export default class LivestreamService extends SingletonContextClass {
     const activeLivestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
     activeLivestreams.map(l => this.masterchatService.addMasterchat(l.streamerId, l.liveId))
 
-    const timerOptions: TimerOptions = {
+    const metadataTimerOptions: TimerOptions = {
       behaviour: 'end',
       callback: () => this.updateAllMetadata(),
       interval: METADATA_SYNC_INTERVAL_MS
     }
-    await this.timerHelpers.createRepeatingTimer(timerOptions, true)
+    await this.timerHelpers.createRepeatingTimer(metadataTimerOptions, true)
+
+    const livestreamDiscoveryTimerOptions: TimerOptions = {
+      behaviour: 'end',
+      callback: () => this.discoverAllLivestreams(),
+      interval: LIVESTREAM_DISCOVERY_SYNC_INTERVAL_MS
+    }
+    void this.timerHelpers.createRepeatingTimer(livestreamDiscoveryTimerOptions, true)
   }
 
   /** Sets the streamer's current Youtube livestream as inactive, also removing the associated Masterchat. */
@@ -317,5 +334,43 @@ export default class LivestreamService extends SingletonContextClass {
     }
 
     return await this.twurpleApiProxyService.fetchMetadata(streamerId, channelName)
+  }
+
+  private async discoverAllLivestreams (): Promise<void> {
+    const streamerChannels = await this.streamerChannelService.getAllYoutubeStreamerChannels()
+    const livestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
+    const authorisedChannelIds = await this.authStore.getExternalChannelIdsWithYoutubeAuth()
+
+    const streamerIdsWithLivestream = livestreams.map(l => l.streamerId)
+    const streamerChannelsToPoll = streamerChannels
+      .filter(sc => authorisedChannelIds.includes(sc.externalChannelId)) // streamer must have authorised ChatMate since we are using the youtube API
+      .filter(sc => !streamerIdsWithLivestream.includes(sc.streamerId)) // streamer must not already have an active Youtube livestream
+
+    this.logService.logDebug(this, 'Discovering livestreams of streamers', streamerChannelsToPoll.map(sc => sc.streamerId))
+    await Promise.all(streamerChannelsToPoll.map(sc => this.discoverLivestream(sc)))
+    this.logService.logDebug(this, 'Finished livestream discovery')
+  }
+
+  private async discoverLivestream (streamerChannel: YoutubeStreamerChannel): Promise<void> {
+    // no point in fetching streams for the official ChatMate streamer since it will never go live
+    const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
+    if (streamerChannel.streamerId === chatMateStreamerId) {
+      return
+    }
+
+    try {
+      // this doesn't scale because of rate/quota limits; we could also get the same data by fetching https://www.youtube.com/channel/<channelId>/live,
+      // then parsing the html to extract the liveId: `<link rel="canonical" href="https://www.youtube.com/watch?v=<liveId>">`
+      // we can modify the fetch request to only return a section of the webpage, i.e. the <head> section
+      const liveId = await this.youtubeApiProxyService.getBroadcastId(streamerChannel.streamerId, streamerChannel.externalChannelId)
+      if (liveId == null) {
+        return
+      }
+
+      this.logService.logInfo(this, `Discovered livestream for streamer ${streamerChannel.streamerId} with live id ${liveId}. Setting active livestream...`)
+      await this.setActiveYoutubeLivestream(streamerChannel.streamerId, liveId)
+    } catch (e: any) {
+      this.logService.logError(this, `Unable to discover livestream for streamer ${streamerChannel.streamerId}:`, e)
+    }
   }
 }

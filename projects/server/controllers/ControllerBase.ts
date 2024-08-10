@@ -181,7 +181,7 @@ export class ResponseBuilder<T extends ResponseData<T>> {
     return {
       username: this.apiService.getCurrentUser(true)?.username ?? null,
       streamerId: this.apiService.getStreamerId(true) ?? null,
-      ip: this.apiService.getRequest().ip
+      ip: this.apiService.getClientIp()
     }
   }
 }

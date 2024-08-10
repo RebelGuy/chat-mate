@@ -17,6 +17,12 @@ export type TwitchStreamerChannel = {
   internalChannelId: number
 }
 
+export type YoutubeStreamerChannel = {
+  streamerId: number
+  externalChannelId: string
+  internalChannelId: number
+}
+
 type Deps = Dependencies<{
   streamerStore: StreamerStore
   streamerChannelStore: StreamerChannelStore
@@ -49,6 +55,13 @@ export default class StreamerChannelService extends ContextClass {
     const streamers = await this.streamerStore.getStreamers()
     const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(s => s.id))
     return nonNull(primaryChannels.map(c => c.twitchChannel != null ? { streamerId: c.streamerId, twitchChannelName: getUserName(c.twitchChannel), internalChannelId: c.twitchChannel.platformInfo.channel.id } : null))
+  }
+
+  /** Gets the list of all streamers and their primary Youtube channel, for those that have a primary Youtube channel set.  */
+  public async getAllYoutubeStreamerChannels (): Promise<YoutubeStreamerChannel[]> {
+    const streamers = await this.streamerStore.getStreamers()
+    const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(s => s.id))
+    return nonNull(primaryChannels.map(c => c.youtubeChannel != null ? { streamerId: c.streamerId, externalChannelId: c.youtubeChannel.platformInfo.channel.youtubeId, internalChannelId: c.youtubeChannel.platformInfo.channel.id } : null))
   }
 
   /** Case insensitive. Returns a non-null value only if the channel exists and is the primary Twitch channel of the streamer. */

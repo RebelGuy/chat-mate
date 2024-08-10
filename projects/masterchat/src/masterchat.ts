@@ -17,7 +17,7 @@ import {
   NoPermissionError,
   UnavailableError,
 } from "./errors";
-import { ChatResponse, Credentials, Metadata } from "./interfaces";
+import { ChatResponse, Credentials, LiveReactions, Metadata } from "./interfaces";
 import { Action, AddChatItemAction } from "./interfaces/actions";
 import { ActionCatalog, ActionInfo } from "./interfaces/contextActions";
 import {
@@ -464,7 +464,7 @@ export class Masterchat extends EventEmitter {
         throw err;
       }
 
-      const { continuationContents } = payload;
+      const { continuationContents, frameworkUpdates } = payload;
 
       if (!continuationContents) {
         /** there's several possibilities lied here:
@@ -504,6 +504,7 @@ export class Masterchat extends EventEmitter {
         // {} => Live stream ended
         return {
           actions: [],
+          reactions: {},
           continuation: undefined,
           error: null,
         };
@@ -512,11 +513,36 @@ export class Masterchat extends EventEmitter {
       const newContinuation = getTimedContinuation(continuationContents);
 
       let rawActions = continuationContents.liveChatContinuation.actions;
+      let reactionBuckets = frameworkUpdates?.entityBatchUpdate?.mutations?.flatMap(mut => 'emojiFountainDataEntity' in mut.payload ? mut.payload.emojiFountainDataEntity.reactionBuckets : []) ?? []
+
+      let reactions: LiveReactions = {}
+      for (let bucket of reactionBuckets) {
+        if (bucket.totalReactions === 0 || bucket.reactionsData == null) {
+          continue
+        }
+
+        if (bucket.intensityScore !== 0.75) {
+          this.logContext.logWarning(this.videoId, `A reaction bucket's intensity score was not 0.75:`, bucket)
+        }
+        if (bucket.duration.seconds !== '1') {
+          this.logContext.logWarning(this.videoId, `A reaction bucket's duration was not 1 second:`, bucket)
+        }
+
+        for (const data of bucket.reactionsData) {
+          if (data.reactionCount === 0) {
+            continue
+          }
+
+          const existingReactions = reactions[data.unicodeEmojiId] ?? 0
+          reactions[data.unicodeEmojiId] = existingReactions + data.reactionCount
+        }
+      }
 
       // this means no chat available between the time window
       if (!rawActions) {
         return {
           actions: [],
+          reactions: reactions,
           continuation: newContinuation,
           error: null,
         };
@@ -541,6 +567,7 @@ export class Masterchat extends EventEmitter {
 
       const chat: ChatResponse = {
         actions,
+        reactions: reactions,
         continuation: newContinuation,
         error: null,
       };

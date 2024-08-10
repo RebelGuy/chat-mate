@@ -22,9 +22,13 @@ export interface Metadata {
 
 export interface ChatResponse {
   actions: Action[];
+  reactions: LiveReactions;
   continuation: TimedContinuation | undefined;
   error: null;
 }
+
+/** Maps the unicode emoji id to the number of reactions for that emoji. */
+export type LiveReactions = Record<string, number>
 
 export interface Credentials {
   SAPISID: string;
