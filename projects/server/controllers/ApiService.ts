@@ -75,7 +75,7 @@ export default class ApiService extends ContextClass {
   public override initialise (): void {
     // persist the visitor that hits any API endpoint from ChatMate Studio
     if (this.request.get('Origin') === this.studioUrl) {
-      void this.visitorService.addVisitor(this.request.ip)
+      void this.visitorService.addVisitor(this.getClientIp())
     }
   }
 
@@ -218,5 +218,9 @@ export default class ApiService extends ContextClass {
 
   public getResponse (): Response {
     return this.response
+  }
+
+  public getClientIp (): string {
+    return (this.request.get('x-client-ip') as string | undefined) ?? this.request.ip ?? '<unknown IP>'
   }
 }
