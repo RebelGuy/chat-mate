@@ -302,18 +302,24 @@ model StreamerApplication {
 }
 
 model YoutubeChannelGlobalInfo {
-  id         Int     @id @default(autoincrement())
-  name       String  @db.VarChar(255)
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  // Note: despite replicating this url in the `Image` object, it is useful to keep it on here for the purposes of more easily detecting changes in the global info.
   imageUrl   String  @db.VarChar(511)
   isVerified Boolean
 
   /// first seen with this info
   time DateTime
 
+  imageId Int
+  image   Image @relation(fields: [imageId], references: [id], map: "youtube_channel_global_info_imageId_fkey")
+
   channelId Int
   channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_global_info_channelId_fkey")
 
   @@index([channelId], map: "youtube_channel_global_info_channelId_fkey")
+  @@index([imageId], map: "youtube_channel_global_info_imageId_fkey")
   @@index([time], map: "youtube_channel_global_info_time_key")
   @@map("youtube_channel_global_info")
 }
@@ -1060,6 +1066,8 @@ model Image {
   // Practically these are 1-to-1 mappings, but it is technically possible for multiple items to reference the same image
   customEmojiVersions CustomEmojiVersion[]
   chatEmojis          ChatEmoji[]
+
+  youtubeChannels YoutubeChannelGlobalInfo[]
 
   @@unique([fingerprint], map: "image_fingerprint_key")
   @@map("image")

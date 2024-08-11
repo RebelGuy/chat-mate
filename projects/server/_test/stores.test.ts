@@ -6,6 +6,7 @@ import ExperienceStoreSuite from '@rebel/server/stores/ExperienceStore.test'
 import CustomEmojiStoreSuite from '@rebel/server/stores/CustomEmojiStore.test'
 import FollowerStoreSuite from '@rebel/server/stores/FollowerStore.test'
 import GenericStoreSuite from '@rebel/server/stores/GenericStore.test'
+import ImageStoreSuite from '@rebel/server/stores/ImageStore.test'
 import LiveReactionStoreSuite from '@rebel/server/stores/LiveReactionStore.test'
 import RankStoreSuite from '@rebel/server/stores/RankStore.test'
 import DonationStoreSuite from '@rebel/server/stores/DonationStore.test'
@@ -46,6 +47,8 @@ describeFn('ExperienceStore Suite', ExperienceStoreSuite)
 describeFn('FollowerStore Suite', FollowerStoreSuite)
 
 describeFn('GenericStore Suite', GenericStoreSuite)
+
+describeFn('ImageStore Suite', ImageStoreSuite)
 
 describeFn('LiveReactionStore Suite', LiveReactionStoreSuite)
 

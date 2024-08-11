@@ -39,6 +39,10 @@
     "migrate-emojis:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/migrateEmojis.js",
     "migrate-emojis:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateEmojis.js",
 
+    "migrate-youtube-channel-images:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/migrateYoutubeChannelImages.js",
+    "migrate-youtube-channel-images:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/migrateYoutubeChannelImages.js",
+    "migrate-youtube-channel-images:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateYoutubeChannelImages.js",
+
     "download-emoji-map": "node ../../dist/server/downloadEmojiMap.js"
   },
   "dependencies": {
