@@ -122,7 +122,7 @@ jobs:
         run: yarn install
 
       - name: Migrate test database
-        if: inputs.migrations
+        if: inputs.migrations && inputs.deploy
         run: yarn workspace server test:db
           
       - name: Generate Prisma client
