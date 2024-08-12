@@ -112,7 +112,8 @@ function authorToChannelInfo (a: Author, time?: Date): SafeOmit<YoutubeChannelGl
     isVerified: a.attributes.isVerified,
     imageUrl: a.image,
     name: a.name!,
-    time: time ?? new Date()
+    time: time ?? new Date(),
+    imageId: 1
   }
 }
 
@@ -165,6 +166,7 @@ export default () => {
     }))
     db = dbProvider.get()
 
+    await db.image.create({ data: { fingerprint: 'test', height: 0, width: 0, url: '' }})
     await db.youtubeChannel.create({ data: {
       user: { create: {}}, // user id: 1
       youtubeId: ytAuthor1.channelId,

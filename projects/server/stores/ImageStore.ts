@@ -1,3 +1,4 @@
+import { Image } from '@prisma/client'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
@@ -15,8 +16,8 @@ export default class ImageStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async hasImage (fingerprint: string): Promise<boolean> {
-    const result = await this.db.image.findUnique({ where: { fingerprint: fingerprint }})
-    return result != null
+  /** Returns null if no image with the given fingerprint exists. */
+  public async getImageByFingerprint (fingerprint: string): Promise<Image | null> {
+    return await this.db.image.findUnique({ where: { fingerprint: fingerprint }})
   }
 }

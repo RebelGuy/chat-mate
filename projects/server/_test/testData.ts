@@ -49,7 +49,7 @@ export const author1: Author = {
   image: 'author1.image',
   name: 'author1.name'
 }
-export const youtubeChannelGlobalInfo1: SafeOmit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
+export const youtubeChannelGlobalInfo1: SafeOmit<YoutubeChannelGlobalInfo, 'id' | 'channelId' | 'imageId'> = {
   isVerified: author1.attributes.isVerified,
   imageUrl: author1.image,
   name: author1.name!,
@@ -62,12 +62,6 @@ export const author2: Author = {
   channelId: youtubeChannel2,
   image: 'author2.image',
   name: 'author2.name'
-}
-export const youtubeChannelGlobalInfo2: SafeOmit<YoutubeChannelGlobalInfo, 'id' | 'channelId'> = {
-  isVerified: author2.attributes.isVerified,
-  imageUrl: author2.image,
-  name: author2.name!,
-  time: time1
 }
 
 export const twitchChannel3 = 'twitchChannel3'

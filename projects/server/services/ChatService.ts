@@ -4,7 +4,7 @@ import ChatStore, { AddedChatMessage } from '@rebel/server/stores/ChatStore'
 import { ChatItem, ChatItemWithRelations, ChatPlatform } from '@rebel/server/models/chat'
 import LogService, {  } from '@rebel/server/services/LogService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
-import ContextClass, { SingletonContextClass } from '@rebel/shared/context/ContextClass'
+import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import ChannelStore, { YoutubeChannelWithLatestInfo, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateGlobalTwitchChannelArgs, TwitchChannelWithLatestInfo, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
@@ -17,6 +17,8 @@ import ChannelEventService from '@rebel/server/services/ChannelEventService'
 import EmojiService from '@rebel/server/services/EmojiService'
 import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import { single } from '@rebel/shared/util/arrays'
+import ChannelService from '@rebel/server/services/ChannelService'
+import { SafeOmit } from '@rebel/shared/types'
 
 export const INACCESSIBLE_EMOJI = '__INACCESSIBLE_EMOJI__'
 
@@ -30,7 +32,6 @@ type Deps = Dependencies<{
   chatStore: ChatStore,
   logService: LogService,
   experienceService: ExperienceService,
-  channelStore: ChannelStore,
   customEmojiService: CustomEmojiService,
   eventDispatchService: EventDispatchService
   livestreamStore: LivestreamStore
@@ -39,6 +40,7 @@ type Deps = Dependencies<{
   commandStore: CommandStore
   channelEventService: ChannelEventService
   emojiService: EmojiService
+  channelService: ChannelService
 }>
 
 export default class ChatService extends SingletonContextClass {
@@ -46,7 +48,6 @@ export default class ChatService extends SingletonContextClass {
   private readonly chatStore: ChatStore
   private readonly logService: LogService
   private readonly experienceService: ExperienceService
-  private readonly channelStore: ChannelStore
   private readonly customEmojiService: CustomEmojiService
   private readonly eventDispatchService: EventDispatchService
   private readonly livestreamStore: LivestreamStore
@@ -55,13 +56,13 @@ export default class ChatService extends SingletonContextClass {
   private readonly commandStore: CommandStore
   private readonly channelEventService: ChannelEventService
   private readonly emojiService: EmojiService
+  private readonly channelService: ChannelService
 
   constructor (deps: Deps) {
     super()
     this.chatStore = deps.resolve('chatStore')
     this.logService = deps.resolve('logService')
     this.experienceService = deps.resolve('experienceService')
-    this.channelStore = deps.resolve('channelStore')
     this.customEmojiService = deps.resolve('customEmojiService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
     this.livestreamStore = deps.resolve('livestreamStore')
@@ -70,6 +71,7 @@ export default class ChatService extends SingletonContextClass {
     this.commandStore = deps.resolve('commandStore')
     this.channelEventService = deps.resolve('channelEventService')
     this.emojiService = deps.resolve('emojiService')
+    this.channelService = deps.resolve('channelService')
   }
 
   public override initialise () {
@@ -163,7 +165,7 @@ export default class ChatService extends SingletonContextClass {
     let platform: ChatPlatform
     try {
       if (item.platform === 'youtube') {
-        const channelInfo: CreateOrUpdateGlobalYoutubeChannelArgs & CreateOrUpdateStreamerYoutubeChannelArgs = {
+        const channelInfo: SafeOmit<CreateOrUpdateGlobalYoutubeChannelArgs & CreateOrUpdateStreamerYoutubeChannelArgs, 'imageId'> = {
           name: item.author.name ?? '',
           time: new Date(item.timestamp),
           streamerId: streamerId,
@@ -174,7 +176,7 @@ export default class ChatService extends SingletonContextClass {
         }
         externalId = item.author.channelId
         platform = 'youtube'
-        channel = await this.channelStore.createOrUpdateYoutubeChannel(externalId, channelInfo)
+        channel = await this.channelService.createOrUpdateYoutubeChannel(externalId, channelInfo)
 
         await this.channelEventService.checkYoutubeChannelForModEvent(streamerId, channel.id)
 
@@ -193,7 +195,7 @@ export default class ChatService extends SingletonContextClass {
         }
         externalId = item.author.userId
         platform = 'twitch'
-        channel = await this.channelStore.createOrUpdateTwitchChannel(externalId, channelInfo)
+        channel = await this.channelService.createOrUpdateTwitchChannel(externalId, channelInfo)
 
       } else {
         assertUnreachable(item)

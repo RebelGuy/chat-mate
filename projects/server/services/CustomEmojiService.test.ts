@@ -92,7 +92,7 @@ describe(nameof(CustomEmojiService, 'addCustomEmoji'), () => {
     })
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
-    mockImageService.convertToPng.calledWith(createData.imageDataUrl).mockResolvedValue('abcde-converted')
+    mockImageService.convertToPng.calledWith(createData.imageDataUrl, expect.any(String)).mockResolvedValue('abcde-converted')
     mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde-converted').mockResolvedValue(mockSignedImageUrl)
     mockImageService.getImageDimensions.mockReturnValue({ width: 0, height: 0 }) // `calledWith` omitted here and checked below
 
@@ -143,7 +143,7 @@ describe(nameof(CustomEmojiService, 'addCustomEmoji'), () => {
     })
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
-    mockImageService.convertToPng.calledWith(createData.imageDataUrl).mockResolvedValue('abcde-converted')
+    mockImageService.convertToPng.calledWith(createData.imageDataUrl, expect.any(String)).mockResolvedValue('abcde-converted')
     mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde-converted').mockResolvedValue(mockSignedImageUrl)
     mockImageService.getImageDimensions.mockReturnValue({ width: 0, height: 0 }) // `calledWith` omitted here and checked below
 
@@ -243,7 +243,7 @@ describe(nameof(CustomEmojiService, 'updateCustomEmoji'), () => {
     })
 
     const mockSignedImageUrl = 'signedUrl' as SignedUrl
-    mockImageService.convertToPng.calledWith(updateData.imageDataUrl).mockResolvedValue('abcde-converted')
+    mockImageService.convertToPng.calledWith(updateData.imageDataUrl, expect.any(String)).mockResolvedValue('abcde-converted')
     mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, 'abcde-converted').mockResolvedValue(mockSignedImageUrl)
     mockImageService.getImageDimensions.mockReturnValue({ width: 0, height: 0 }) // `calledWith` omitted here and checked below
 

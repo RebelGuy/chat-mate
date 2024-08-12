@@ -3,7 +3,7 @@ import { ChatItemWithRelations, PartialChatMessage, PartialEmojiChatMessage, Par
 import CacheService from '@rebel/server/services/CacheService'
 import { INACCESSIBLE_EMOJI } from '@rebel/server/services/ChatService'
 import FileService from '@rebel/server/services/FileService'
-import ImageService from '@rebel/server/services/ImageService'
+import ImageService, { ImageInfo } from '@rebel/server/services/ImageService'
 import LogService from '@rebel/server/services/LogService'
 import S3ProxyService from '@rebel/server/services/S3ProxyService'
 import EmojiStore from '@rebel/server/stores/EmojiStore'
@@ -166,8 +166,8 @@ export default class EmojiService extends ContextClass {
     }
   }
 
-  private async onGetImageInfo (url: string, emojiId: number) {
-    const imageData = await this.imageService.convertToPng(url)
+  private async onGetImageInfo (url: string, emojiId: number): Promise<ImageInfo> {
+    const imageData = await this.imageService.convertToPng(url, 'questionMark')
     const fileName = getCustomEmojiFileUrl(emojiId)
     await this.s3ProxyService.uploadBase64Image(fileName, 'png', false, imageData)
     const relativeUrl = this.s3ProxyService.constructRelativeUrl(fileName)
