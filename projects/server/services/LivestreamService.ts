@@ -180,9 +180,11 @@ export default class LivestreamService extends SingletonContextClass {
       return
     }
 
-    if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'minutes', 2)) {
+    if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'seconds', 30)) {
       // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
       // (after some delay), so there is no need to keep it around.
+      // we don't deactivate it immediately because new messages may still be sent, but we also don't want to wait around for too long
+      // because the streamer may start a new stream that we need to be ready for.
       this.logService.logInfo(this, `Automatically deactivating current Youtube livestream with id ${livestream.liveId} for streamer ${livestream.streamerId} because it has ended.`)
       await this.deactivateYoutubeLivestream(livestream.streamerId)
       return
