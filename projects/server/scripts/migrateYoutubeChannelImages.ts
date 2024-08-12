@@ -1,6 +1,6 @@
 import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
 import { DB, LOG_SERVICE, NODE_ENV } from '@rebel/server/scripts/consts'
-import ImageService from '@rebel/server/services/ImageService'
+import ImageService, { QUESTION_MARK_BASE64 } from '@rebel/server/services/ImageService'
 import S3ProxyService from '@rebel/server/services/S3ProxyService'
 import WebService from '@rebel/server/services/WebService'
 import { Dependencies } from '@rebel/shared/context/context'
@@ -37,10 +37,21 @@ async function main () {
 
   const channelInfos = await DB.youtubeChannelGlobalInfo.findMany({ include: { image: true }})
   for (const channelInfo of channelInfos) {
+    if (channelInfo.image.width > 0) {
+      console.log(`Skipping image for channel id ${channelInfo.channelId} (info id ${channelInfo.id}) as it is already done...`)
+      continue
+    }
+
     try {
       const originalUrl = channelInfo.image.originalUrl!
       const scaledUrl = upsizeYoutubeImage(originalUrl)
-      const image = await imageService.convertToPng(scaledUrl, 'null') ?? await imageService.convertToPng(originalUrl, 'questionMark')
+      let image = QUESTION_MARK_BASE64
+      try {
+        image = await imageService.convertToPng(scaledUrl, 'null') ?? await imageService.convertToPng(originalUrl, 'questionMark')
+      } catch (e: any) {
+        console.error(`  -  Failed to fetch image for channel id ${channelInfo.channelId} (info id ${channelInfo.id}), setting to question mark image. Error:`, e.message)
+      }
+
       const fileName = getChannelImageUrl(channelInfo.channelId, channelInfo.id)
 
       await s3.uploadBase64Image(fileName, 'png', false, image)
@@ -57,7 +68,7 @@ async function main () {
 
       console.log(`Processed image for channel id ${channelInfo.channelId} (info id ${channelInfo.id})`)
     } catch (e: any) {
-      console.error(`Failed to process image for channel id ${channelInfo.channelId} (info id ${channelInfo.id})`)
+      console.error(`Failed to process image for channel id ${channelInfo.channelId} (info id ${channelInfo.id}):`, e.message)
       throw e
     }
   }

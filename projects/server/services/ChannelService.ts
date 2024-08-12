@@ -89,6 +89,7 @@ export default class ChannelService extends ContextClass {
       const storedGlobalInfo = currentChannel?.globalInfoHistory[0]
       const storedImage = await this.imageStore.getImageByFingerprint(getYoutubeChannelImageFingerprint(channelInfo.imageUrl))
       if (storedImage == null || globalChannelInfoHasChanged('youtube', storedGlobalInfo, channelInfo)) {
+        this.logService.logInfo(this, `Global info for youtube channel ${currentChannel.id} has changed and will be updated`)
         currentChannel = await this.channelStore.updateYoutubeChannel_Global(
           externalId,
           channelInfo,
@@ -99,6 +100,7 @@ export default class ChannelService extends ContextClass {
 
       const storedStreamerInfo: YoutubeChannelStreamerInfo | null = await this.channelStore.getYoutubeChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
       if (storedStreamerInfo == null || streamerChannelInfoHasChanged('youtube', storedStreamerInfo, channelInfo)) {
+        this.logService.logInfo(this, `Streamer info for youtube channel ${currentChannel.id} (streamer ${channelInfo.streamerId}) has changed and will be updated`)
         await this.channelStore.updateYoutubeChannel_Streamer(externalId, channelInfo)
       }
 
@@ -121,11 +123,13 @@ export default class ChannelService extends ContextClass {
       // check if anything has changed - if so, update info
       const storedGlobalInfo = currentChannel.globalInfoHistory[0]
       if (globalChannelInfoHasChanged('twitch', storedGlobalInfo, channelInfo)) {
+        this.logService.logInfo(this, `Global info for twitch channel ${currentChannel.id} has changed and will be updated`)
         currentChannel = await this.channelStore.updateTwitchChannel_Global(externalId, channelInfo)
       }
 
       const storedStreamerInfo: TwitchChannelStreamerInfo | null = await this.channelStore.getTwitchChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
       if (storedStreamerInfo == null || streamerChannelInfoHasChanged('twitch', storedStreamerInfo, channelInfo)) {
+        this.logService.logInfo(this, `Streamer info for twitch channel ${currentChannel.id} (streamer ${channelInfo.streamerId}) has changed and will be updated`)
         await this.channelStore.updateTwitchChannel_Streamer(externalId, channelInfo)
       }
 
