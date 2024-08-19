@@ -310,6 +310,43 @@ export default () => {
     })
   })
 
+  describe(nameof(ChatStore, 'deleteContextTokens'), () => {
+    test('Deletes the context token of the specified messages', async () => {
+      const ids = [1, 3, 4]
+      await db.chatMessage.createMany({ data: [
+        { streamerId: streamer1, externalId: 'id1', contextToken: 'token1', time: data.time1 },
+        { streamerId: streamer1, externalId: 'id2', contextToken: 'token2', time: data.time1 },
+        { streamerId: streamer1, externalId: 'id3', contextToken: 'token3', time: data.time1 },
+        { streamerId: streamer1, externalId: 'id4', contextToken: null, time: data.time1 },
+      ]})
+
+      await chatStore.deleteContextTokens(ids)
+
+      const chatMessages = await db.chatMessage.findMany({})
+      expect(single(chatMessages.filter(msg => msg.contextToken != null)).id).toBe(2)
+    })
+  })
+
+  describe(nameof(ChatStore, 'getChatWithContextToken'), () => {
+    test('Retrieves the chat items that have a context token present', async () => {
+      await db.chatMessage.createMany({ data: [
+        { streamerId: streamer1, externalId: 'id1', contextToken: 'token1', youtubeChannelId: 1, time: data.time1 },
+        { streamerId: streamer1, externalId: 'id2', contextToken: 'token2', youtubeChannelId: 2, time: data.time1 },
+        { streamerId: streamer2, externalId: 'id3', contextToken: 'token3', youtubeChannelId: 1, time: data.time1 },
+        { streamerId: streamer2, externalId: 'id4', contextToken: null, youtubeChannelId: 2, time: data.time1 },
+      ]})
+
+      const result = await chatStore.getChatWithContextToken()
+
+      expect(result).toEqual<typeof result>([
+        { id: 1, streamerId: streamer1, youtubeChannelId: 1 },
+        { id: 2, streamerId: streamer1, youtubeChannelId: 2 },
+        { id: 3, streamerId: streamer2, youtubeChannelId: 1 }
+      ])
+    })
+  })
+
+
   describe(nameof(ChatStore, 'getChatSince'), () => {
     test('empty database returns empty array', async () => {
       const result = await chatStore.getChatSince(streamer1, new Date().getTime())

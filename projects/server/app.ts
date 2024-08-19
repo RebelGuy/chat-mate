@@ -114,6 +114,9 @@ import LiveReactionStore from '@rebel/server/stores/LiveReactionStore'
 import VisitorService from '@rebel/server/services/VisitorService'
 import VisitorStore from '@rebel/server/stores/VisitorStore'
 import ImageStore from '@rebel/server/stores/ImageStore'
+import TaskService from '@rebel/server/services/task/TaskService'
+import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUpYoutubeContextTokensTask'
+import TaskStore from '@rebel/server/stores/TaskStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -294,6 +297,9 @@ const main = async () => {
     .withClass('linkDataService', LinkDataService)
     .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .withClass('visitorService', VisitorService)
+    .withClass('cleanUpYoutubeContextTokensTask', CleanUpYoutubeContextTokensTask)
+    .withClass('taskStore', TaskStore)
+    .withClass('taskService', TaskService)
     .build()
 
   app.use((req, res, next) => {
