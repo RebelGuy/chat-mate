@@ -192,12 +192,28 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       const livestream = makeYoutubeStream(startDate, endDate)
       mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([livestream])
       mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+      mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(makeYoutubeMetadata('finished'))
 
       await livestreamService.initialise()
 
       expect(single2(mockLivestreamStore.deactivateYoutubeLivestream.mock.calls)).toBe(streamerId)
       expect(mockLivestreamStore.setYoutubeLivestreamTimes.mock.calls.length).toBe(0)
       expect(mockLivestreamStore.addYoutubeLiveViewCount.mock.calls.length).toBe(0)
+    })
+
+    test('Reactivates finished livestream if still live', async () => {
+      const startDate = addTime(new Date(), 'minutes', -10)
+      const endDate = addTime(new Date(), 'minutes', -5)
+      const livestream = makeYoutubeStream(startDate, endDate)
+      mockLivestreamStore.getActiveYoutubeLivestreams.calledWith().mockResolvedValue([livestream])
+      mockLivestreamStore.getActiveYoutubeLivestream.calledWith(streamerId).mockResolvedValue(livestream)
+      mockMasterchatService.fetchMetadata.calledWith(livestream.streamerId).mockResolvedValue(makeYoutubeMetadata('live'))
+
+      await livestreamService.initialise()
+
+      expect(mockLivestreamStore.deactivateYoutubeLivestream.mock.calls.length).toBe(0)
+      const livestreamTimesArgs = single(mockLivestreamStore.setYoutubeLivestreamTimes.mock.calls)
+      expect(livestreamTimesArgs).toEqual<typeof livestreamTimesArgs>([livestream.liveId, { start: startDate, end: null }])
     })
 
     test('Deactivates livestream if not available', async () => {

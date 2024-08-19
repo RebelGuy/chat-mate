@@ -180,16 +180,6 @@ export default class LivestreamService extends SingletonContextClass {
       return
     }
 
-    if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'seconds', 30)) {
-      // automatically deactivate public livestream after stream has ended - fetching chat will error out anyway
-      // (after some delay), so there is no need to keep it around.
-      // we don't deactivate it immediately because new messages may still be sent, but we also don't want to wait around for too long
-      // because the streamer may start a new stream that we need to be ready for.
-      this.logService.logInfo(this, `Automatically deactivating current Youtube livestream with id ${livestream.liveId} for streamer ${livestream.streamerId} because it has ended.`)
-      await this.deactivateYoutubeLivestream(livestream.streamerId)
-      return
-    }
-
     const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.streamerId)
     if (youtubeMetadata == null) {
       // failed to fetch metadata
@@ -201,6 +191,14 @@ export default class LivestreamService extends SingletonContextClass {
 
       if (updatedTimes) {
         await this.livestreamStore.setYoutubeLivestreamTimes(livestream.liveId, updatedTimes)
+      } else if (livestream.end != null && this.dateTimeHelpers.now() > addTime(livestream.end, 'seconds', 30)) {
+        // automatically deactivate livestream after stream has ended - fetching chat will error out anyway
+        // (after some delay), so there is no need to keep it around.
+        // we don't deactivate it immediately because new messages may still be sent, but we also don't want to wait around for too long
+        // because the streamer may start a new stream that we need to be ready for.
+        this.logService.logInfo(this, `Automatically deactivating current Youtube livestream with id ${livestream.liveId} for streamer ${livestream.streamerId} because it has ended.`)
+        await this.deactivateYoutubeLivestream(livestream.streamerId)
+        return
       }
 
       if (youtubeMetadata.liveStatus === 'live' && youtubeMetadata.viewerCount != null) {
@@ -217,11 +215,10 @@ export default class LivestreamService extends SingletonContextClass {
       return await this.masterchatService.fetchMetadata(streamerId)
     } catch (e: any) {
       if (e instanceof MasterchatError) {
-        // we won't be able to recover from this - deactivate
-        this.logService.logError(this, `Cannot fetch Youtube metadata for streamer ${streamerId} because of a masterchat error. Deactivating livestream.`, e.name, e.message)
+        this.logService.logError(this, `Cannot fetch Youtube metadata for streamer ${streamerId} because of a masterchat error.`, e)
         await this.deactivateYoutubeLivestream(streamerId)
       } else {
-        this.logService.logError(this, `Encountered error while fetching Youtube metadata for streamer ${streamerId}.`, e.message)
+        this.logService.logError(this, `Encountered error while fetching Youtube metadata for streamer ${streamerId}.`, e)
       }
       return null
     }
@@ -235,7 +232,7 @@ export default class LivestreamService extends SingletonContextClass {
     }
 
     const existingStatus = LivestreamService.getYoutubeLivestreamStatus(existingLivestream)
-    if (existingStatus === 'finished' && newStatus !== 'finished' || existingStatus === 'live' && newStatus === 'not_started') {
+    if (existingStatus === 'live' && newStatus === 'not_started') {
       // invalid status
       throw new ChatMateError(`Unable to update livestream times because current status '${existingStatus}' is incompatible with new status '${newStatus}'.`)
     } else if (existingStatus === newStatus) {
@@ -260,6 +257,12 @@ export default class LivestreamService extends SingletonContextClass {
       return {
         start: existingLivestream.start,
         end: this.dateTimeHelpers.now()
+      }
+    } else if (existingStatus === 'finished' && newStatus !== 'finished') {
+      // weird edge case: the streamer has deactivated their livestream while live, then re-enabled it while still live
+      return {
+        start: existingLivestream.start,
+        end: null // clear the end time
       }
     } else {
       throw new ChatMateError('Did not expect to get here')
