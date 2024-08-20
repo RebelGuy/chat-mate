@@ -69,7 +69,7 @@ async function preMigration () {
   const allPublicEmojis = await DB.$queryRawUnsafe<ChatEmoji[]>('SELECT id, imageUrl FROM chat_emoji ORDER BY id')
   for (const emoji of allPublicEmojis) {
     try {
-      const imageData = await imageService.convertToPng(emoji.imageUrl)
+      const imageData = await imageService.convertToPng(emoji.imageUrl, 'questionMark')
       const fileName = getPublicEmojiFileUrl(emoji)
 
       await s3.uploadBase64Image(fileName, 'png', false, imageData)

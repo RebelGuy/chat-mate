@@ -17,6 +17,7 @@ type State = {
   masterchatLoggedIn: boolean
   emojiSemaphore: GroupedSemaphore<string>
   customEmojiSemaphore: GroupedSemaphore<number>
+  channelSemaphore: GroupedSemaphore<string>
   visitorCountSemaphore: GroupedSemaphore<string>
   visitorCache: Set<string>
   today: number
@@ -41,6 +42,7 @@ export default class ChatMateStateService extends SingletonContextClass {
       masterchatLoggedIn: false,
       emojiSemaphore: new GroupedSemaphore(1),
       customEmojiSemaphore: new GroupedSemaphore(1),
+      channelSemaphore: new GroupedSemaphore(1),
       visitorCountSemaphore: new GroupedSemaphore(1),
       visitorCache: new Set(),
       today: this.dateTimeHelpers.getStartOfToday()
@@ -86,6 +88,10 @@ export default class ChatMateStateService extends SingletonContextClass {
 
   public getCustomEmojiSemaphore () {
     return this.state.customEmojiSemaphore
+  }
+
+  public getChannelSemaphore () {
+    return this.state.channelSemaphore
   }
 
   public getVisitorCountSemaphore () {

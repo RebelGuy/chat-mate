@@ -113,6 +113,10 @@ import LiveReactionService from '@rebel/server/services/LiveReactionService'
 import LiveReactionStore from '@rebel/server/stores/LiveReactionStore'
 import VisitorService from '@rebel/server/services/VisitorService'
 import VisitorStore from '@rebel/server/stores/VisitorStore'
+import ImageStore from '@rebel/server/stores/ImageStore'
+import TaskService from '@rebel/server/services/task/TaskService'
+import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUpYoutubeContextTokensTask'
+import TaskStore from '@rebel/server/stores/TaskStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -258,6 +262,10 @@ const main = async () => {
     .withClass('punishmentService', PunishmentService)
     .withClass('genericStore', GenericStore)
     .withClass('aggregateLivestreamService', AggregateLivestreamService)
+    .withClass('imageService', ImageService)
+    .withClass('s3ClientProvider', S3ClientProvider)
+    .withClass('s3ProxyService', S3ProxyService)
+    .withClass('imageStore', ImageStore)
     .withClass('channelService', ChannelService)
     .withClass('externalRankDataService', ExternalRankDataService)
     .withClass('modService', ModService)
@@ -265,9 +273,6 @@ const main = async () => {
     .withClass('experienceService', ExperienceService)
     .withClass('customEmojiStore', CustomEmojiStore)
     .withClass('customEmojiEligibilityService', CustomEmojiEligibilityService)
-    .withClass('s3ClientProvider', S3ClientProvider)
-    .withClass('s3ProxyService', S3ProxyService)
-    .withClass('imageService', ImageService)
     .withClass('customEmojiService', CustomEmojiService)
     .withClass('commandStore', CommandStore)
     .withClass('donationStore', DonationStore)
@@ -292,6 +297,9 @@ const main = async () => {
     .withClass('linkDataService', LinkDataService)
     .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .withClass('visitorService', VisitorService)
+    .withClass('cleanUpYoutubeContextTokensTask', CleanUpYoutubeContextTokensTask)
+    .withClass('taskStore', TaskStore)
+    .withClass('taskService', TaskService)
     .build()
 
   app.use((req, res, next) => {

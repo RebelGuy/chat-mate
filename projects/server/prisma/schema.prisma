@@ -302,18 +302,24 @@ model StreamerApplication {
 }
 
 model YoutubeChannelGlobalInfo {
-  id         Int     @id @default(autoincrement())
-  name       String  @db.VarChar(255)
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  // Note: despite replicating this url in the `Image` object, it is useful to keep it on here for the purposes of more easily detecting changes in the global info.
   imageUrl   String  @db.VarChar(511)
   isVerified Boolean
 
   /// first seen with this info
   time DateTime
 
+  imageId Int
+  image   Image @relation(fields: [imageId], references: [id], map: "youtube_channel_global_info_imageId_fkey")
+
   channelId Int
   channel   YoutubeChannel @relation(fields: [channelId], references: [id], map: "youtube_channel_global_info_channelId_fkey")
 
   @@index([channelId], map: "youtube_channel_global_info_channelId_fkey")
+  @@index([imageId], map: "youtube_channel_global_info_imageId_fkey")
   @@index([time], map: "youtube_channel_global_info_time_key")
   @@map("youtube_channel_global_info")
 }
@@ -1061,6 +1067,8 @@ model Image {
   customEmojiVersions CustomEmojiVersion[]
   chatEmojis          ChatEmoji[]
 
+  youtubeChannels YoutubeChannelGlobalInfo[]
+
   @@unique([fingerprint], map: "image_fingerprint_key")
   @@map("image")
 }
@@ -1076,4 +1084,40 @@ model Visitor {
 
   @@unique([visitorId, date], map: "visitor_visitorId_date_key")
   @@map("visitor")
+}
+
+enum TaskType {
+  cleanUpYoutubeContextTokensTask
+}
+
+model Task {
+  id Int @id @default(autoincrement())
+
+  taskType   TaskType // unique
+  intervalMs Int
+
+  taskLogs TaskLog[]
+
+  @@unique([taskType], map: "task_taskType_key")
+  @@map("task")
+}
+
+model TaskLog {
+  id Int @id @default(autoincrement())
+
+  startTime DateTime
+  endTime   DateTime?
+
+  // if you change the lengths here, it must also be updated in the TaskStore class
+  /// The log contains debug/info logs and may be present while the task is still running, or finished, regardless of outcome.
+  log          String? @db.VarChar(4096)
+  /// If `endTime` is not null, the absence of an `errorMessage` indicates that the task finished successfully.
+  errorMessage String? @db.VarChar(4096)
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id], map: "task_log_taskId_fkey")
+
+  @@index([taskId], map: "task_log_taskId_fkey")
+  @@index([startTime], map: "task_log_startTime_key")
+  @@map("task_log")
 }

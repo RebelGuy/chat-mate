@@ -168,7 +168,7 @@ describe(nameof(EmojiService, 'processEmoji'), () => {
 
       return emoji
     })
-    mockImageService.convertToPng.calledWith(message.url).mockResolvedValue(convertedData)
+    mockImageService.convertToPng.calledWith(message.url, expect.any(String)).mockResolvedValue(convertedData)
     mockS3ProxyService.uploadBase64Image.calledWith(expect.any(String), 'png', false, convertedData)
     mockS3ProxyService.constructRelativeUrl.calledWith(expect.any(String)).mockReturnValue(relativeUrl)
     mockImageService.getImageDimensions.calledWith(convertedData).mockReturnValue({ width: 1, height: 2 })

@@ -6,6 +6,7 @@ import { group } from '@rebel/shared/util/arrays'
 import { ChatMateError, NotFoundError } from '@rebel/shared/util/error'
 import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
+import { ImageInfo } from '@rebel/server/services/ImageService'
 
 const VERSION_START = 0
 
@@ -52,12 +53,6 @@ export type InternalCustomEmojiUpdateData = {
   levelRequirement: number
   canUseInDonationMessage: boolean
   whitelistedRanks: number[]
-}
-
-export type ImageInfo = {
-  relativeImageUrl: string
-  imageWidth: number
-  imageHeight: number
 }
 
 type Deps = Dependencies<{

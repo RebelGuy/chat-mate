@@ -103,7 +103,8 @@ module.exports = (env) => {
     RefreshSnapshots: './scripts/RefreshSnapshots.ts',
     resetPassword: './scripts/resetPassword.ts',
     migrateEmojis: './scripts/migrateEmojis.ts',
-    downloadEmojiMap: './scripts/downloadEmojiMap.ts'
+    downloadEmojiMap: './scripts/downloadEmojiMap.ts',
+    migrateYoutubeChannelImages: './scripts/migrateYoutubeChannelImages.ts'
   } : {}
 
   // skip type checking

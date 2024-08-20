@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.33.0",
+  "version": "1.33.1",
   "main": "../../dist/server/app.js",
   "scripts": {
     "auth:youtube:local":   "cross-env NODE_ENV=local   dotenv -e local.env   electron ../../dist/server/YoutubeAuth.js",
@@ -38,6 +38,10 @@
     "migrate-emojis:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/migrateEmojis.js",
     "migrate-emojis:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/migrateEmojis.js",
     "migrate-emojis:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateEmojis.js",
+
+    "migrate-youtube-channel-images:local":   "cross-env NODE_ENV=local   dotenv -e local.env   node ../../dist/server/migrateYoutubeChannelImages.js",
+    "migrate-youtube-channel-images:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/migrateYoutubeChannelImages.js",
+    "migrate-youtube-channel-images:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateYoutubeChannelImages.js",
 
     "download-emoji-map": "node ../../dist/server/downloadEmojiMap.js"
   },

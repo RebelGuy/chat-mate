@@ -6,7 +6,7 @@ import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import { reverse } from '@rebel/shared/util/arrays'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
-import { ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError } from '@rebel/shared/util/error'
+import { ChatMateError, ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError } from '@rebel/shared/util/error'
 import { PRISMA_CODE_UNIQUE_CONSTRAINT_FAILED, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 export type ChatSave = {
@@ -15,6 +15,12 @@ export type ChatSave = {
 }
 
 export type AddedChatMessage = ChatMessage & { user: ChatUser }
+
+export type ChatWithContextToken = {
+  id: number
+  streamerId: number
+  youtubeChannelId: number
+}
 
 type Deps = Dependencies<{
   dbProvider: DbProvider
@@ -103,6 +109,27 @@ export default class ChatStore extends ContextClass {
     }, {
       timeout: this.dbTransactionTimeout ?? undefined
     })
+  }
+
+  public async deleteContextTokens (chatMessageIds: number[]): Promise<void> {
+    await this.db.chatMessage.updateMany({
+      where: { id: { in: chatMessageIds }},
+      data: { contextToken: null }
+    })
+  }
+
+  public async getChatWithContextToken (): Promise<ChatWithContextToken[]> {
+    const result = await this.db.chatMessage.findMany({
+      where: { contextToken: { not: null }},
+      select: { id: true, streamerId: true, youtubeChannelId: true },
+      orderBy: { id: 'asc' }
+    })
+
+    if (result.some(msg => msg.youtubeChannelId == null)) {
+      throw new ChatMateError('One or more messages with a context token do not have a youtube channel attached to them')
+    }
+
+    return result.map(msg => ({ id: msg.id, streamerId: msg.streamerId, youtubeChannelId: msg.youtubeChannelId! }))
   }
 
   public async getYoutubeChatMessageCount (): Promise<number> {

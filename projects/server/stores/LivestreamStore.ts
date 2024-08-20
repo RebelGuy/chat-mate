@@ -45,9 +45,15 @@ export default class LivestreamStore extends ContextClass {
       return
     }
 
+    // end it if live
+    let end = activeLivestream.end
+    if (end == null && activeLivestream.start != null) {
+      end = new Date()
+    }
+
     await this.db.youtubeLivestream.update({
       where: { liveId: activeLivestream.liveId },
-      data: { isActive: false }
+      data: { isActive: false, end: end }
     })
   }
 

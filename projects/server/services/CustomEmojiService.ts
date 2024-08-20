@@ -77,7 +77,7 @@ export default class CustomEmojiService extends ContextClass {
       streamerId: data.streamerId,
       whitelistedRanks: data.whitelistedRanks
     }, async (newEmojiId, newEmojiVersion) => {
-      const pngData = await this.imageService.convertToPng(data.imageDataUrl)
+      const pngData = await this.imageService.convertToPng(data.imageDataUrl, 'throw')
       const fileName = getCustomEmojiFileUrl(data.streamerId, newEmojiId, newEmojiVersion, 'png')
       signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, 'png', false, pngData)
       const { width, height } = this.imageService.getImageDimensions(pngData)
@@ -141,7 +141,7 @@ export default class CustomEmojiService extends ContextClass {
       name: data.name,
       whitelistedRanks: data.whitelistedRanks
     }, async (streamerId, newEmojiId, newEmojiVersion) => {
-      const pngData = await this.imageService.convertToPng(data.imageDataUrl)
+      const pngData = await this.imageService.convertToPng(data.imageDataUrl, 'throw')
       const fileName = getCustomEmojiFileUrl(streamerId, newEmojiId, newEmojiVersion, 'png')
       signedImageUrl = await this.s3ProxyService.uploadBase64Image(fileName, 'png', false, pngData)
       const { width, height } = this.imageService.getImageDimensions(pngData)

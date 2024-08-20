@@ -70,8 +70,22 @@ export default () => {
 
       const livestream1 = await db.youtubeLivestream.findUnique({ where: { liveId: liveId1 } })
       const livestream2 = await db.youtubeLivestream.findUnique({ where: { liveId: liveId2 } })
-      expect(livestream1).toEqual(expectObject<YoutubeLivestream>({ liveId: liveId1, isActive: true }))
-      expect(livestream2).toEqual(expectObject<YoutubeLivestream>({ liveId: liveId2, isActive: false }))
+      expect(livestream1).toEqual(expectObject<YoutubeLivestream>({ liveId: liveId1, isActive: true, end: null }))
+      expect(livestream2).toEqual(expectObject<YoutubeLivestream>({ liveId: liveId2, isActive: false, end: null }))
+    })
+
+    test('Ends the livestream if deactivating while live', async () => {
+      await db.youtubeLivestream.createMany({ data: [
+        { liveId: liveId1, streamerId: streamer1, isActive: true },
+        { liveId: liveId2, streamerId: streamer2, isActive: true, start: data.time1 }
+      ]})
+
+      await livestreamStore.deactivateYoutubeLivestream(streamer2)
+
+      const livestream1 = await db.youtubeLivestream.findUnique({ where: { liveId: liveId1 } })
+      const livestream2 = await db.youtubeLivestream.findUnique({ where: { liveId: liveId2 } })
+      expect(livestream1).toEqual(expectObject<YoutubeLivestream>({ liveId: liveId1, isActive: true, end: null }))
+      expect(livestream2).toEqual(expectObject<YoutubeLivestream>({ liveId: liveId2, isActive: false, start: data.time1, end: expect.any(Date) }))
     })
   })
 

@@ -43,7 +43,7 @@ async function createWindow () {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   mainWindow.webContents.on('did-finish-load', async (e: any) => {
     const url = e.sender.getURL()
-    if (url === 'https://www.youtube.com/') {
+    if (url === 'https://www.youtube.com/account_advanced') {
       const match = await mainWindow!.webContents.executeJavaScript(
         '/ytcfg\\.set\\(({.+?})\\);/.exec(document.head.innerHTML)',
         true
@@ -68,20 +68,11 @@ async function createWindow () {
       let channelId: string
       try {
         const channelUrl = await mainWindow!.webContents.executeJavaScript(`
-          // open the top drawer
-          document.getElementById("avatar-btn").click()
-
           // wait for the dom to update
           new Promise(resolve => setTimeout(resolve, 500))
             .then(() => {
               // this element is now available
-              // getting the element by ID works in the normal browser, but not in electron. here's a workaround:
-              const matches = Array.from(document.getElementsByClassName("yt-simple-endpoint style-scope yt-formatted-string"))
-                .filter(el => el.parentNode.id === 'manage-account' && el.nodeName === 'A' && el.href.includes("/channel/"))
-              if (matches.length !== 1) {
-                throw new Error('Matched ' + matches.length + ' elements.')
-              }
-              return matches[0].href
+              return document.querySelectorAll("[id='share-url']")[1].value
             })
         `)
         if (channelUrl == null) {
@@ -118,7 +109,7 @@ async function createWindow () {
   })
 
   await mainWindow.loadURL(
-    'https://accounts.google.com/ServiceLogin?service=youtube&passive=true&continue=https://www.youtube.com/signin?action_handle_signin=true',
+    'https://accounts.google.com/ServiceLogin?service=youtube&passive=true&continue=https://www.youtube.com/account_advanced',
     { userAgent: 'Chrome' }
   )
 }

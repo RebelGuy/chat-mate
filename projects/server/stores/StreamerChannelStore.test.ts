@@ -260,6 +260,9 @@ export default () => {
   }
 
   async function createYoutubeChannels (count: number) {
+    // required for the global info
+    await db.image.create({ data: { fingerprint: '', width: 0, height: 0, url: '' }})
+
     let result: YoutubeChannel[] = []
     for (let i = 0; i < count; i++) {
       const youtubeChannel = await db.youtubeChannel.create({ data: { user: { create: {}}, youtubeId: `id${i}`, globalInfoHistory: { create: createYoutubeInfoHistory() }}})
@@ -279,7 +282,7 @@ export default () => {
 }
 
 function createYoutubeInfoHistory () {
-  return { imageUrl: '', isVerified: false, name: 'channel', time: new Date() }
+  return { imageUrl: '', isVerified: false, name: 'channel', time: new Date(), imageId: 1 }
 }
 
 function createTwitchInfoHistory () {
