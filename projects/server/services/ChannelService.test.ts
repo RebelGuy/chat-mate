@@ -54,8 +54,8 @@ beforeEach(() => {
 })
 
 describe(nameof(ChannelService, 'createOrUpdateYoutubeChannel'), () => {
-  const imageUrl = 'https://yt4.ggpht.com/ytc/AKedOLRnMOuUVFqNyJD65GsRx0CtfF5VYq2xF8Oqv2qi=s64-c-k-c0x00ffffff-no-rj'
-  const upsizedImageUrl = 'https://yt4.ggpht.com/ytc/AKedOLRnMOuUVFqNyJD65GsRx0CtfF5VYq2xF8Oqv2qi=s1024-c-k-c0x00ffffff-no-rj'
+  const imageUrl = 'https://yt4.ggpht.com/ytc/AIdro_kYPLrNqS3olctyR8r2XmDY4Sth6dZ67IBm7tq1W4lGqec=s64-c-k-c0x00ffffff-no-rj'
+  const upsizedImageUrl = 'https://yt4.ggpht.com/ytc/AIdro_kYPLrNqS3olctyR8r2XmDY4Sth6dZ67IBm7tq1W4lGqec=s2048'
 
   test('Creates a new channel with correct image data if seeing this channel for the first time', async () => {
     const channelInfo = cast<CreateOrUpdateYoutubeChannelArgs>({ imageUrl: imageUrl })
