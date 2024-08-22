@@ -6,12 +6,14 @@ import ExperienceStoreSuite from '@rebel/server/stores/ExperienceStore.test'
 import CustomEmojiStoreSuite from '@rebel/server/stores/CustomEmojiStore.test'
 import FollowerStoreSuite from '@rebel/server/stores/FollowerStore.test'
 import GenericStoreSuite from '@rebel/server/stores/GenericStore.test'
+import ImageStoreSuite from '@rebel/server/stores/ImageStore.test'
 import LiveReactionStoreSuite from '@rebel/server/stores/LiveReactionStore.test'
 import RankStoreSuite from '@rebel/server/stores/RankStore.test'
 import DonationStoreSuite from '@rebel/server/stores/DonationStore.test'
 import EmojiStoreSuite from '@rebel/server/stores/EmojiStore.test'
 import AccountStoreSuite from '@rebel/server/stores/AccountStore.test'
 import StreamerStoreSuite from '@rebel/server/stores/StreamerStore.test'
+import TaskStoreSuite from '@rebel/server/stores/TaskStore.test'
 import VisitorStoreSuite from '@rebel/server/stores/VisitorStore.test'
 import StreamerChannelStoreSuite from '@rebel/server/stores/StreamerChannelStore.test'
 import LinkStoreSuite from '@rebel/server/stores/LinkStore.test'
@@ -47,6 +49,8 @@ describeFn('FollowerStore Suite', FollowerStoreSuite)
 
 describeFn('GenericStore Suite', GenericStoreSuite)
 
+describeFn('ImageStore Suite', ImageStoreSuite)
+
 describeFn('LiveReactionStore Suite', LiveReactionStoreSuite)
 
 describeFn('LivestreamStore Suite', LivestreamStoreSuite)
@@ -62,5 +66,7 @@ describeFn('RankStore Suite', RankStoreSuite)
 describeFn('StreamerChannelStore Suite', StreamerChannelStoreSuite)
 
 describeFn('StreamerStore Suite', StreamerStoreSuite)
+
+describeFn('TaskStore Suite', TaskStoreSuite)
 
 describeFn('VisitorStore Suite', VisitorStoreSuite)

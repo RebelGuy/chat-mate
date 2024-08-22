@@ -1,7 +1,7 @@
 import { CustomEmoji, CustomEmojiRankWhitelist, CustomEmojiVersion } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import { Db } from '@rebel/server/providers/DbProvider'
-import CustomEmojiStore, { InternalCustomEmojiCreateData, InternalCustomEmojiUpdateData, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist, ImageInfo } from '@rebel/server/stores/CustomEmojiStore'
+import CustomEmojiStore, { InternalCustomEmojiCreateData, InternalCustomEmojiUpdateData, CustomEmojiWhitelistedRanks, CustomEmojiWithRankWhitelist } from '@rebel/server/stores/CustomEmojiStore'
 import { single, sortBy } from '@rebel/shared/util/arrays'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { expectObject, nameof, promised, throwAsync } from '@rebel/shared/testUtils'
@@ -10,6 +10,7 @@ import { SafeOmit } from '@rebel/shared/types'
 import { mock } from 'jest-mock-extended'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
+import { ImageInfo } from '@rebel/server/services/ImageService'
 
 const rank1 = 1
 const rank2 = 2

@@ -1,5 +1,6 @@
-import { Alert } from '@mui/material'
+import { Alert, styled } from '@mui/material'
 import { Box } from '@mui/system'
+import { PublicChannel } from '@rebel/api-models/public/user/PublicChannel'
 import ApiError from '@rebel/studio/components/ApiError'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
@@ -11,7 +12,7 @@ import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import LivestreamHistory from '@rebel/studio/pages/streamer-info/LivestreamHistory'
 import { getLivestreams } from '@rebel/studio/utility/api'
 import { isStreamerLive } from '@rebel/studio/utility/misc'
-import { useContext, useEffect } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 
 export default function StreamerInfo () {
   const loginContext = useContext(LoginContext)
@@ -58,11 +59,105 @@ export default function StreamerInfo () {
       </>}
     </Box>
 
-    <StreamerLinks streamerName={loginContext.streamer!} />
+    <Box sx={{ pb: 2 }}>
+      <StreamerLinks streamerName={loginContext.streamer!} />
+    </Box>
+
+    <Box display="inline">
+      {/* we can only embed a youtube livestream, not a channel. there is supposedly a way to emebed a channel itself, but that is currently broken. */}
+      {info.youtubeChannel != null && info.currentYoutubeLivestream && <EmbedYoutubeStream liveId={info.currentYoutubeLivestream.livestreamLink.split('/').at(-1)!} streamerName={info.youtubeChannel.displayName} />}
+      {info.twitchChannel != null && <EmbedTwitchStream channel={info.twitchChannel} />}
+    </Box>
+
     {getLivestreamsRequest.data != null && <Box sx={{ mt: 2 }}>
       <LivestreamHistory livestreams={getLivestreamsRequest.data!.aggregateLivestreams} />
     </Box>}
 
     <ApiError requestObj={getLivestreamsRequest} />
   </>
+}
+
+type EmbedTwitchStreamProps = {
+  channel: PublicChannel
+}
+
+declare global {
+  const Twitch: any
+}
+
+const EmbedContainer = styled(Box)({
+  width: '50%',
+  minWidth: 364,
+  maxWidth: 600,
+  aspectRatio: '1.778', // 16:9
+  display: 'inline-block',
+  paddingRight: 20
+})
+
+// https://dev.twitch.tv/docs/embed/everything/
+function EmbedTwitchStream (props: EmbedTwitchStreamProps) {
+  const [scriptReady, setScriptReady] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  const channelName = props.channel.externalIdOrUserName
+
+  // load the embed script
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://embed.twitch.tv/embed/v1.js'
+    script.onload = () => setScriptReady(true)
+    document.body.append(script)
+
+    return () => {
+      script.remove()
+    }
+  }, [])
+
+  // set up the video player
+  useEffect(() => {
+    if (!scriptReady) {
+      return
+    }
+
+    const embeddedStream = new Twitch.Embed(containerRef.current, {
+      width: '100%',
+      height: '100%',
+      channel: channelName,
+      autoplay: true,
+      muted: true,
+      layout: 'video' // don't show chat
+    })
+
+    return () => {
+      embeddedStream.destroy()
+    }
+  }, [channelName, scriptReady])
+
+  // the video player will be rendered into this box
+  return (
+    <EmbedContainer
+      ref={containerRef}
+    />
+  )
+}
+
+type EmbedYoutubeStreamProps = {
+  streamerName: string
+  liveId: string
+}
+
+function EmbedYoutubeStream (props: EmbedYoutubeStreamProps) {
+  return (
+    <EmbedContainer>
+      <iframe
+        title={`${props.streamerName}'s Youtube Livestream`}
+        width="100%"
+        height="100%"
+        src={`https://www.youtube.com/embed/${props.liveId}?autoplay=1`}
+        allowFullScreen
+        style={{ border: 0 }}
+      >
+      </iframe>
+    </EmbedContainer>
+  )
 }

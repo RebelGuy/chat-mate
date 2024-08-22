@@ -5,16 +5,20 @@ import ContextClass from '@rebel/shared/context/ContextClass'
 import { ChatPlatform } from '@rebel/server/models/chat'
 import { New, Entity } from '@rebel/server/models/entities'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
-import { ObjectComparator, SafeOmit } from '@rebel/shared/types'
-import { assertUnreachable, compare } from '@rebel/shared/util/typescript'
+import { SafeOmit } from '@rebel/shared/types'
 import { SafeExtract } from '@rebel/shared/types'
 import { ChatMateError } from '@rebel/shared/util/error'
+import { ImageInfo } from '@rebel/server/services/ImageService'
+import { randomString } from '@rebel/shared/util/random'
 
 export type CreateOrUpdateGlobalYoutubeChannelArgs = SafeOmit<New<YoutubeChannelGlobalInfo>, 'channelId'>
 export type CreateOrUpdateGlobalTwitchChannelArgs = SafeOmit<New<TwitchChannelGlobalInfo>, 'channelId'>
 
 export type CreateOrUpdateStreamerYoutubeChannelArgs = SafeOmit<New<YoutubeChannelStreamerInfo>, 'channelId'>
 export type CreateOrUpdateStreamerTwitchChannelArgs = SafeOmit<New<TwitchChannelStreamerInfo>, 'channelId'>
+
+export type CreateOrUpdateYoutubeChannelArgs = SafeOmit<CreateOrUpdateGlobalYoutubeChannelArgs, 'imageId'> & CreateOrUpdateStreamerYoutubeChannelArgs
+export type CreateOrUpdateTwitchChannelArgs = CreateOrUpdateGlobalTwitchChannelArgs & CreateOrUpdateStreamerTwitchChannelArgs
 
 export type YoutubeChannelWithLatestInfo = SafeOmit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLinks' | 'streamerInfoHistory'>
 export type TwitchChannelWithLatestInfo = SafeOmit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLinks' | 'streamerInfoHistory'>
@@ -54,79 +58,60 @@ export default class ChannelStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async createOrUpdateYoutubeChannel (externalId: string, channelInfo: CreateOrUpdateGlobalYoutubeChannelArgs & CreateOrUpdateStreamerYoutubeChannelArgs): Promise<YoutubeChannelWithLatestInfo> {
-    let currentChannel = await this.tryGetYoutubeChannelWithLatestInfo(externalId)
-    const storedGlobalInfo = currentChannel?.globalInfoHistory[0] ?? null
+  public async createYoutubeChannel (
+    externalId: string,
+    channelInfo: CreateOrUpdateYoutubeChannelArgs,
+    onGetImageInfo: (channelId: number, channelGlobalInfoId: number) => Promise<ImageInfo>
+  ): Promise<YoutubeChannelWithLatestInfo> {
+    // create the channel
+    const channel = await this.db.youtubeChannel.create({
+      data: {
+        youtubeId: externalId,
+        user: { create: {}},
+        globalInfoHistory: { create: {
+          time: channelInfo.time,
+          name: channelInfo.name,
+          imageUrl: channelInfo.imageUrl,
+          isVerified: channelInfo.isVerified,
+          image: { create: {
+            fingerprint: getYoutubeChannelImageFingerprint(`youtube/TEMP-${randomString(12)}`),
+            url: 'TEMP',
+            width: 0,
+            height: 0
+          }}
+        }},
+        streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isOwner: channelInfo.isOwner, isModerator: channelInfo.isModerator } }
+      },
+      include: channelQuery_includeLatestChannelInfo
+    })
 
-    if (currentChannel != null) {
-      // check if anything has changed - if so, update info
-      if (globalChannelInfoHasChanged('youtube', storedGlobalInfo!, channelInfo)) {
-        currentChannel = await this.db.youtubeChannel.update({
-          where: { youtubeId: externalId },
-          data: { globalInfoHistory: { create: { time: channelInfo.time, name: channelInfo.name, imageUrl: channelInfo.imageUrl, isVerified: channelInfo.isVerified } } },
-          include: channelQuery_includeLatestChannelInfo
-        })
+    // create the image
+    const globalInfo = channel.globalInfoHistory[0]
+    const imageInfo = await onGetImageInfo(channel.id, globalInfo.id)
+    await this.db.image.update({
+      where: { id: globalInfo.imageId },
+      data: {
+        fingerprint: getYoutubeChannelImageFingerprint(globalInfo.imageUrl),
+        url: imageInfo.relativeImageUrl,
+        originalUrl: globalInfo.imageUrl,
+        width: imageInfo.imageWidth,
+        height: imageInfo.imageHeight
       }
+    })
 
-      const storedStreamerInfo: YoutubeChannelStreamerInfo | null = await this.getYoutubeChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
-      if (storedStreamerInfo == null || streamerChannelInfoHasChanged('youtube', storedStreamerInfo, channelInfo)) {
-        await this.db.youtubeChannel.update({
-          where: { youtubeId: externalId },
-          data: { streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isOwner: channelInfo.isOwner, isModerator: channelInfo.isModerator } } }
-        })
-      }
-
-      return currentChannel
-
-    } else {
-      // create new channel
-      return await this.db.youtubeChannel.create({
-        data: {
-          youtubeId: externalId,
-          user: { create: {}},
-          globalInfoHistory: { create: { time: channelInfo.time, name: channelInfo.name, imageUrl: channelInfo.imageUrl, isVerified: channelInfo.isVerified } }
-        },
-        include: channelQuery_includeLatestChannelInfo
-      })
-    }
+    return channel
   }
 
-  public async createOrUpdateTwitchChannel (externalId: string, channelInfo: CreateOrUpdateGlobalTwitchChannelArgs & CreateOrUpdateStreamerTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo> {
-    let currentChannel = await this.tryGetTwitchChannelWithLatestInfo(externalId)
-    const storedGlobalInfo = currentChannel?.globalInfoHistory[0] ?? null
-
-    if (currentChannel != null) {
-      // check if anything has changed - if so, update info
-      if (globalChannelInfoHasChanged('twitch', storedGlobalInfo!, channelInfo)) {
-        currentChannel = await this.db.twitchChannel.update({
-          where: { twitchId: externalId },
-          data: { globalInfoHistory: { create: { time: channelInfo.time, userName: channelInfo.userName, displayName: channelInfo.displayName, userType: channelInfo.userType, colour: channelInfo.colour } } },
-          include: channelQuery_includeLatestChannelInfo
-        })
-      }
-
-      const storedStreamerInfo: TwitchChannelStreamerInfo | null = await this.getTwitchChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
-      if (storedStreamerInfo == null || streamerChannelInfoHasChanged('twitch', storedStreamerInfo, channelInfo)) {
-        await this.db.twitchChannel.update({
-          where: { twitchId: externalId },
-          data: { streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isBroadcaster: channelInfo.isBroadcaster, isMod: channelInfo.isMod, isSubscriber: channelInfo.isSubscriber, isVip: channelInfo.isVip } } }
-        })
-      }
-
-      return currentChannel
-
-    } else {
-      // create new channel
-      return await this.db.twitchChannel.create({
-        data: {
-          twitchId: externalId,
-          user: { create: {}},
-          globalInfoHistory: { create: { time: channelInfo.time, userName: channelInfo.userName, displayName: channelInfo.displayName, userType: channelInfo.userType, colour: channelInfo.colour } },
-          streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isBroadcaster: channelInfo.isBroadcaster, isMod: channelInfo.isMod, isSubscriber: channelInfo.isSubscriber, isVip: channelInfo.isVip } }
-        },
-        include: channelQuery_includeLatestChannelInfo
-      })
-    }
+  public async createTwitchChannel (externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo> {
+    return await this.db.twitchChannel.create({
+      data: {
+        twitchId: externalId,
+        user: { create: {}},
+        globalInfoHistory: { create: { time: channelInfo.time, userName: channelInfo.userName, displayName: channelInfo.displayName, userType: channelInfo.userType, colour: channelInfo.colour } },
+        streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isBroadcaster: channelInfo.isBroadcaster, isMod: channelInfo.isMod, isSubscriber: channelInfo.isSubscriber, isVip: channelInfo.isVip } }
+      },
+      include: channelQuery_includeLatestChannelInfo
+    })
   }
 
   public async getYoutubeChannelCount (): Promise<number> {
@@ -405,17 +390,83 @@ export default class ChannelStore extends ContextClass {
     }
   }
 
-  private async tryGetYoutubeChannelWithLatestInfo (youtubeChannelId: string) {
+  public async tryGetYoutubeChannelWithLatestInfo (youtubeChannelId: string): Promise<YoutubeChannelWithLatestInfo | null> {
     return await this.db.youtubeChannel.findUnique({
       where: { youtubeId: youtubeChannelId },
       include: channelQuery_includeLatestChannelInfo
     })
   }
 
-  private async tryGetTwitchChannelWithLatestInfo (twitchChannelId: string) {
+  public async tryGetTwitchChannelWithLatestInfo (twitchChannelId: string): Promise<TwitchChannelWithLatestInfo | null> {
     return await this.db.twitchChannel.findUnique({
       where: { twitchId: twitchChannelId },
       include: channelQuery_includeLatestChannelInfo
+    })
+  }
+
+  /** `previousOrExistingImageId` must be the id of the `image` attached to the previous global channel info if `onGetImageInfo` is null, and the id of the existing `image` object associated with the new imageUrl otherwise. If `onGetImageInfo` is null, no new image will be created and thus no update will be made to the `imageId`. */
+  public async updateYoutubeChannel_Global (
+    externalId: string,
+    channelInfo: SafeOmit<CreateOrUpdateGlobalYoutubeChannelArgs, 'imageId'>,
+    previousOrExistingImageId: number,
+    onGetImageInfo: ((channelId: number, channelGlobalInfoId: number) => Promise<ImageInfo>) | null
+  ): Promise<YoutubeChannelWithLatestInfo> {
+    const channel = await this.db.youtubeChannel.update({
+      where: { youtubeId: externalId },
+      data: { globalInfoHistory: { create: { time: channelInfo.time, name: channelInfo.name, imageUrl: channelInfo.imageUrl, isVerified: channelInfo.isVerified, imageId: previousOrExistingImageId } } },
+      include: channelQuery_includeLatestChannelInfo
+    })
+
+    // check if we need to update the image and, if so, update the record we just created
+    const globalInfo = channel.globalInfoHistory[0]
+    let imageId = globalInfo.imageId
+    if (onGetImageInfo != null) {
+      const imageInfo = await onGetImageInfo(channel.id, globalInfo.id)
+      const newImage = await this.db.image.create({
+        data: {
+          fingerprint: getYoutubeChannelImageFingerprint(globalInfo.imageUrl),
+          url: imageInfo.relativeImageUrl,
+          originalUrl: globalInfo.imageUrl,
+          width: imageInfo.imageWidth,
+          height: imageInfo.imageHeight
+        }
+      })
+      imageId = newImage.id
+      await this.db.youtubeChannelGlobalInfo.update({
+        where: { id: globalInfo.id },
+        data: { imageId: imageId }
+      })
+    }
+
+    // mutate the full result to reflect the correct image id
+    return {
+      ...channel,
+      globalInfoHistory: [{
+        ...globalInfo,
+        imageId: imageId
+      }]
+    }
+  }
+
+  public async updateYoutubeChannel_Streamer (externalId: string, channelInfo: CreateOrUpdateStreamerYoutubeChannelArgs): Promise<void> {
+    await this.db.youtubeChannel.update({
+      where: { youtubeId: externalId },
+      data: { streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isOwner: channelInfo.isOwner, isModerator: channelInfo.isModerator } } }
+    })
+  }
+
+  public async updateTwitchChannel_Global (externalId: string, channelInfo: CreateOrUpdateGlobalTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo> {
+    return await this.db.twitchChannel.update({
+      where: { twitchId: externalId },
+      data: { globalInfoHistory: { create: { time: channelInfo.time, userName: channelInfo.userName, displayName: channelInfo.displayName, userType: channelInfo.userType, colour: channelInfo.colour } } },
+      include: channelQuery_includeLatestChannelInfo
+    })
+  }
+
+  public async updateTwitchChannel_Streamer (externalId: string, channelInfo: CreateOrUpdateStreamerTwitchChannelArgs): Promise<void> {
+    await this.db.twitchChannel.update({
+      where: { twitchId: externalId },
+      data: { streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isBroadcaster: channelInfo.isBroadcaster, isMod: channelInfo.isMod, isSubscriber: channelInfo.isSubscriber, isVip: channelInfo.isVip } } }
     })
   }
 }
@@ -428,57 +479,6 @@ export const channelQuery_includeLatestChannelInfo = Prisma.validator<Prisma.You
   user: true
 })
 
-const youtubeChannelGlobalInfoComparator: ObjectComparator<CreateOrUpdateGlobalYoutubeChannelArgs> = {
-  imageUrl: 'default',
-  name: 'default',
-  time: null,
-  isVerified: 'default'
-}
-const youtubeChannelStreamerInfoComparator: ObjectComparator<CreateOrUpdateStreamerYoutubeChannelArgs> = {
-  time: null,
-  streamerId: null,
-  isOwner: 'default',
-  isModerator: 'default'
-}
-
-const twitchChannelGlobalInfoComparator: ObjectComparator<CreateOrUpdateGlobalTwitchChannelArgs> = {
-  time: null,
-  userName: 'default',
-  displayName: 'default',
-  userType: 'default',
-  colour: 'default'
-}
-const twitchChannelStreamerInfoComparator: ObjectComparator<CreateOrUpdateStreamerTwitchChannelArgs> = {
-  time: null,
-  streamerId: null,
-  isBroadcaster: 'default',
-  isSubscriber: 'default',
-  isMod: 'default',
-  isVip: 'default'
-}
-
-function globalChannelInfoHasChanged (platform: ChatPlatform, storedInfo: YoutubeChannelGlobalInfo | TwitchChannelGlobalInfo, newInfo: CreateOrUpdateGlobalYoutubeChannelArgs | CreateOrUpdateGlobalTwitchChannelArgs): boolean {
-  let comparator: ObjectComparator<CreateOrUpdateGlobalYoutubeChannelArgs> | ObjectComparator<CreateOrUpdateGlobalTwitchChannelArgs>
-  if (platform === 'youtube') {
-    comparator = youtubeChannelGlobalInfoComparator
-  } else if (platform === 'twitch') {
-    comparator = twitchChannelGlobalInfoComparator
-  } else {
-    assertUnreachable(platform)
-  }
-
-  return storedInfo!.time < newInfo.time && !compare(storedInfo, newInfo, comparator)
-}
-
-function streamerChannelInfoHasChanged (platform: ChatPlatform, storedInfo: YoutubeChannelStreamerInfo | TwitchChannelStreamerInfo, newInfo: CreateOrUpdateStreamerYoutubeChannelArgs | CreateOrUpdateStreamerTwitchChannelArgs): boolean {
-  let comparator: ObjectComparator<CreateOrUpdateStreamerYoutubeChannelArgs> | ObjectComparator<CreateOrUpdateStreamerTwitchChannelArgs>
-  if (platform === 'youtube') {
-    comparator = youtubeChannelStreamerInfoComparator
-  } else if (platform === 'twitch') {
-    comparator = twitchChannelStreamerInfoComparator
-  } else {
-    assertUnreachable(platform)
-  }
-
-  return storedInfo!.time < newInfo.time && !compare(storedInfo, newInfo, comparator)
+export function getYoutubeChannelImageFingerprint (url: string) {
+  return `channel/youtube/${url}`
 }

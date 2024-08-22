@@ -82,7 +82,7 @@ export default class YoutubeApiProxyService extends ApiService {
     // https://developers.google.com/youtube/v3/live/docs/liveBroadcasts/list
     const result = await api.liveBroadcasts.list({
       part: ['id', 'snippet', 'status'], // we could use `snippet` to sort by time in case there are multiple active streams
-      broadcastStatus: 'all' // we are looking for either `upcoming` or `active`
+      broadcastStatus: 'active' // if we set this to `all`, it will also include the persistent stream (thought it is not marked as such so we cannot distinguish it from scheduled streams)
     })
 
     return result.data.items!.find(broadcast => broadcast.status?.lifeCycleStatus !== 'complete')?.id ?? null

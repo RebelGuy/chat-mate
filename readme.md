@@ -77,7 +77,12 @@ Solution: If the streamer has set a socket access token and is still unable to r
     - Note that, while live reactions are a type of ChatMate event, they must be consumed by clients via the ChatMate websocket - they are not available via the REST API
   - Youtube livestreams are now automatically detected and assigned to the streamer's active livestream, if they haven't already set one themselves
     - This feature requires that streamers authorise ChatMate to make API requests to Youtube on their behalf
+    - Only streams that are live are detected
+  - Youtube channel images are now saved externally to avoid broken URLs
+  - Added internal service for regularly executing long-running tasks
+  - Youtube livestream bug fixes
 - Studio
+  - A streamer's Youtube/Twitch livestreams are now embedded on their ChatMate Studio info page while they are live
   - The homepage now displays the total number of unique users 
   - The homepage now displays the total number of Youtube reactions
 

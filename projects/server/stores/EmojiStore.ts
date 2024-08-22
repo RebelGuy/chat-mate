@@ -2,7 +2,7 @@ import { ChatEmoji } from '@prisma/client'
 import { ChatEmojiWithImage, PartialEmojiChatMessage } from '@rebel/server/models/chat'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
-import { ImageInfo } from '@rebel/server/stores/CustomEmojiStore'
+import { ImageInfo } from '@rebel/server/services/ImageService'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
 import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
@@ -51,7 +51,7 @@ export default class EmojiStore extends ContextClass {
         name: chatEmojiMessage.name ?? null,
         isCustomEmoji: false,
         image: { create: {
-          fingerprint: `TEMP-${randomString(12)}`,
+          fingerprint: getEmojiFingerprint(`TEMP-${randomString(12)}`),
           url: 'TEMP',
           width: 0,
           height: 0
@@ -62,7 +62,7 @@ export default class EmojiStore extends ContextClass {
       const image = await this.db.image.update({
         where: { id: chatEmoji.imageId },
         data: {
-          fingerprint: getEmojiFingerprint(chatEmoji),
+          fingerprint: getEmojiFingerprint(chatEmoji.imageUrl),
           url: imageInfo.relativeImageUrl,
           originalUrl: chatEmoji.imageUrl,
           width: imageInfo.imageWidth,
@@ -83,6 +83,6 @@ export default class EmojiStore extends ContextClass {
 
 // fingerprinting by the url ensures we don't accidentally create duplicate records for the same url
 // (and also it's consistent with the imageUrl being a unique column on chat_emoji)
-function getEmojiFingerprint (emoji: ChatEmoji) {
-  return `emoji/${emoji.imageUrl}`
+function getEmojiFingerprint (imageUrl: string) {
+  return `emoji/${imageUrl}`
 }
