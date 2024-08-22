@@ -226,15 +226,15 @@ export default class ChannelService extends ContextClass {
 
   private upsizeYoutubeImage (originalUrl: string) {
     // all images seem to conform to the format `...=s64-...`, where 64 represents the image size in pixels.
-    // turns out we can increase this size - if the underlying photo is smaller, youtube will just upscale the image;
-    // otherwise, we get back a better quality image.
+    // turns out we can increase this size - if we strip off characters url parts after the size, youtube
+    // will return to us the original image, or, if larger than our number, the original image scaled down to our number.
     const sizeStartIndex = originalUrl.indexOf('=s64-')
     if (sizeStartIndex < 0) {
       this.logService.logError(this, 'Could not find sizing information in the original URL:', originalUrl)
       return originalUrl
     }
 
-    return originalUrl.replace('=s64-', '=s1024-')
+    return originalUrl.substring(0, sizeStartIndex + '=s'.length) + '2048' // retrieve the original size of the image, or a size of 2048, whichever is smaller
   }
 }
 

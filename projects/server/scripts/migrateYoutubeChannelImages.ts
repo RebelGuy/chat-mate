@@ -66,7 +66,7 @@ async function main () {
         }
       })
 
-      console.log(`Processed image for channel id ${channelInfo.channelId} (info id ${channelInfo.id})`)
+      console.log(`Processed image for channel id ${channelInfo.channelId} (info id ${channelInfo.id}) with w=${width} h=${height}`)
     } catch (e: any) {
       console.error(`Failed to process image for channel id ${channelInfo.channelId} (info id ${channelInfo.id}):`, e.message)
       throw e
@@ -94,15 +94,15 @@ function getBaseFolder () {
 }
 
 function upsizeYoutubeImage (originalUrl: string) {
-  // all images in the db conform to the standard where the size is given by `...=s64-...`, where 64 represents the image size in pixels.
-  // turns out we can increase this size - if the underlying photo is smaller, youtube will upscale the image; otherwise, we get a better
-  // quality image.
+  // all images seem to conform to the format `...=s64-...`, where 64 represents the image size in pixels.
+  // turns out we can increase this size - if we strip off characters url parts after the size, youtube
+  // will return to us the original image, or, if larger than our number, the original image scaled down to our number.
   const sizeStartIndex = originalUrl.indexOf('=s64-')
   if (sizeStartIndex < 0) {
     throw new Error('Could not find sizing information in the original URL')
   }
 
-  return originalUrl.replace('=s64-', '=s1024-')
+  return originalUrl.substring(0, sizeStartIndex + '=s'.length) + '2048' // retrieve the original size of the image, or a size of 2048, whichever is smaller
 }
 
 void main()
