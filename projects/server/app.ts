@@ -117,6 +117,7 @@ import ImageStore from '@rebel/server/stores/ImageStore'
 import TaskService from '@rebel/server/services/task/TaskService'
 import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUpYoutubeContextTokensTask'
 import TaskStore from '@rebel/server/stores/TaskStore'
+import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -298,6 +299,7 @@ const main = async () => {
     .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .withClass('visitorService', VisitorService)
     .withClass('cleanUpYoutubeContextTokensTask', CleanUpYoutubeContextTokensTask)
+    .withClass('cleanUpApiCallsTask', CleanUpApiCallsTask)
     .withClass('taskStore', TaskStore)
     .withClass('taskService', TaskService)
     .build()

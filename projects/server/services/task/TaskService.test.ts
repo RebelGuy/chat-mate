@@ -1,6 +1,7 @@
 import { Task } from '@prisma/client'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
+import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
 import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUpYoutubeContextTokensTask'
 import TaskService from '@rebel/server/services/task/TaskService'
 import TaskStore from '@rebel/server/stores/TaskStore'
@@ -10,6 +11,7 @@ import { single } from '@rebel/shared/util/arrays'
 import { MockProxy, mock } from 'jest-mock-extended'
 
 let mockCleanUpYoutubeContextTokensTask: MockProxy<CleanUpYoutubeContextTokensTask>
+let mockCleanUpApiCallsTask: MockProxy<CleanUpApiCallsTask>
 let mockDateTimeHelpers: MockProxy<DateTimeHelpers>
 let mockTaskStore: MockProxy<TaskStore>
 let mockTimerHelpers: MockProxy<TimerHelpers>
@@ -17,12 +19,16 @@ let taskService: TaskService
 
 beforeEach(() => {
   mockCleanUpYoutubeContextTokensTask = mock()
+  mockCleanUpApiCallsTask = mock()
   mockDateTimeHelpers = mock()
   mockTaskStore = mock()
   mockTimerHelpers = mock()
 
+  mockTaskStore.getTaskTypes.calledWith().mockResolvedValue(['cleanUpYoutubeContextTokensTask'])
+
   taskService = new TaskService(new Dependencies({
     cleanUpYoutubeContextTokensTask: mockCleanUpYoutubeContextTokensTask,
+    cleanUpApiCallsTask: mockCleanUpApiCallsTask,
     dateTimeHelpers: mockDateTimeHelpers,
     logService: mock(),
     taskStore: mockTaskStore,

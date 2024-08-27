@@ -37,6 +37,14 @@ export default () => {
     })
   })
 
+  describe(nameof(TaskStore, 'getTaskTypes'), () => {
+    test('Returns the list of task types available in the database', async () => {
+      const result = await taskStore.getTaskTypes()
+
+      expect(result).toEqual(tasks.map(t => t.taskType))
+    })
+  })
+
   describe(nameof(TaskStore, 'getTimeSinceLastTaskExecution'), () => {
     test('Returns the timestamp of the last execution', async () => {
       await db.taskLog.createMany({ data: [

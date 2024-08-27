@@ -32,4 +32,12 @@ export default class PlatformApiStore extends ContextClass {
       error: error?.substring(0, MAX_ERROR_LENGTH) ?? null
     }})
   }
+
+  /** Removes successful entries since the given time (inclusive) that match the given endpoint. */
+  public async removeSuccessfulRequestsSince (since: number, endpoint: string): Promise<number> {
+    return await this.db.$executeRaw`
+      DELETE FROM platform_api_call
+      WHERE end <= ${new Date(since)} AND error IS NULL AND endpoint LIKE ${endpoint}
+    `
+  }
 }

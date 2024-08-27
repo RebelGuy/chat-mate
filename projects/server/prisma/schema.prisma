@@ -1088,6 +1088,7 @@ model Visitor {
 
 enum TaskType {
   cleanUpYoutubeContextTokensTask
+  cleanUpApiCallsTask
 }
 
 model Task {
