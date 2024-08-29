@@ -22,7 +22,12 @@ export default function ChatMateStats () {
   const [since, setSince] = useState<number | undefined>(undefined)
   const { data, isLoading, error } = useRequest(getChatMateStats(since), { updateKey: token })
 
-  const onChangeTime = (_: any, newTime: 'lifetime' | 'today') => {
+  const onChangeTime = (_: any, newTime: 'lifetime' | 'today' | null) => {
+    if (newTime == null) {
+      // null if the selection hasn't changed (why?!)
+      return
+    }
+
     setSince(newTime === 'lifetime' ? undefined : Date.now())
   }
 
