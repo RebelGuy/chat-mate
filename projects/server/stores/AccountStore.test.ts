@@ -7,6 +7,7 @@ import { DbError, UsernameAlreadyExistsError } from '@rebel/shared/util/error'
 import { hashString } from '@rebel/shared/util/strings'
 import { DB_TEST_TIMEOUT, expectRowCount, startTestDb, stopTestDb } from '@rebel/server/_test/db'
 import { expectObject, nameof } from '@rebel/shared/testUtils'
+import * as data from '@rebel/server/_test/testData'
 
 export default () => {
   let db: Db
@@ -80,9 +81,21 @@ export default () => {
         { username: 'user2', hashedPassword: 'pass2', aggregateChatUserId: 2 }
       ]})
 
-      const result = await accountStore.getRegisteredUserCount()
+      const result = await accountStore.getRegisteredUserCount(0)
 
       expect(result).toBe(2)
+    })
+
+    test('Returns the number of registered accounts', async () => {
+      await db.chatUser.createMany({ data: [{}, {}]})
+      await db.registeredUser.createMany({ data: [
+        { username: 'user1', hashedPassword: 'pass1', aggregateChatUserId: 1, registeredAt: data.time1 },
+        { username: 'user2', hashedPassword: 'pass2', aggregateChatUserId: 2, registeredAt: data.time3 }
+      ]})
+
+      const result = await accountStore.getRegisteredUserCount(data.time2.getTime())
+
+      expect(result).toBe(1)
     })
   })
 

@@ -94,7 +94,7 @@ export default class ChatMateController extends ControllerBase {
       const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
       const streamers = await this.streamerStore.getStreamers().then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
       const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
-      const registeredUserCount = await this.accountStore.getRegisteredUserCount()
+      const registeredUserCount = await this.accountStore.getRegisteredUserCount(since)
       const youtubeChannelCount = await this.channelStore.getYoutubeChannelCount(since)
       const twitchChannelCount = await this.channelStore.getTwitchChannelCount(since)
       const youtubeMessageCount = await this.chatStore.getYoutubeChatMessageCount(since)
@@ -109,8 +109,8 @@ export default class ChatMateController extends ControllerBase {
       return builder.success({
         totalVisitors: totalVisitors,
         streamerCount: streamers.length,
-        youtubeStreamerCount: primaryChannels.filter(pc => pc.youtubeChannel != null).length,
-        twitchStreamerCount: primaryChannels.filter(pc => pc.twitchChannel != null).length,
+        youtubeStreamerCount: primaryChannels.filter(pc => pc.youtubeChannel != null && pc.youtubeChannelSince! >= since!).length,
+        twitchStreamerCount: primaryChannels.filter(pc => pc.twitchChannel != null && pc.twitchChannelSince! >= since!).length,
         registeredUserCount: registeredUserCount,
         uniqueChannelCount: youtubeChannelCount + twitchChannelCount,
         uniqueYoutubeChannelCount: youtubeChannelCount,
