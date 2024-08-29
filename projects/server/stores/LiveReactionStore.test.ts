@@ -46,7 +46,7 @@ export default () => {
     })
   })
 
-  describe.only(nameof(LiveReactionStore, 'getTotalLiveReactions'), () => {
+  describe(nameof(LiveReactionStore, 'getTotalLiveReactions'), () => {
     test('Gets the correct number of reactions', async () => {
       await db.chatUser.createMany({ data: [{}, {}]})
 

@@ -571,7 +571,38 @@ export default () => {
         twitchLivestream: { connect: { id: 1 }},
       }})
 
-      const result = await chatStore.getYoutubeChatMessageCount()
+      const result = await chatStore.getYoutubeChatMessageCount(0)
+
+      expect(result).toBe(2)
+    })
+
+    test('Returns only messages after the specified time', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1,
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time3,
+        externalId: 'x3',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }}
+      }})
+
+      const result = await chatStore.getYoutubeChatMessageCount(data.time2.getTime())
 
       expect(result).toBe(2)
     })
@@ -622,9 +653,40 @@ export default () => {
         twitchLivestream: { connect: { id: 1 }},
       }})
 
-      const result = await chatStore.getTwitchChatMessageCount()
+      const result = await chatStore.getTwitchChatMessageCount(0)
 
       expect(result).toBe(1)
+    })
+
+    test('Returns only messages after the specified time', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time1,
+        externalId: 'x1',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time2,
+        externalId: 'x2',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time3,
+        externalId: 'x3',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }}
+      }})
+
+      const result = await chatStore.getTwitchChatMessageCount(data.time2.getTime())
+
+      expect(result).toBe(2)
     })
   })
 
