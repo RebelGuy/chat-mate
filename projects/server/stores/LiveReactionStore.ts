@@ -23,8 +23,9 @@ export default class LiveReactionStore extends SingletonContextClass {
     }})
   }
 
-  async getTotalLiveReactions (): Promise<number> {
+  async getTotalLiveReactions (since: number): Promise<number> {
     const result = await this.db.liveReaction.aggregate({
+      where: { time: { gte: new Date(since) }},
       _sum: { count: true }
     })
 
