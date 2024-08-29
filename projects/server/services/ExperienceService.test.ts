@@ -175,7 +175,7 @@ describe(nameof(ExperienceService, 'addExperienceForChat'), () => {
     mockAccountStore.getConnectedChatUserIds.calledWith(expect.arrayContaining([primaryUserId])).mockResolvedValue([{ queriedAnyUserId: primaryUserId, connectedChatUserIds: connectedUserIds }])
     mockPunishmentService.isUserPunished.calledWith(primaryUserId, streamerId).mockResolvedValue(false)
     mockExperienceStore.getPreviousChatExperience.calledWith(streamerId, primaryUserId, null).mockResolvedValue(prevData)
-    mockAggregateLivestreamService.getAggregateLivestreams.calledWith(streamerId).mockResolvedValue([
+    mockAggregateLivestreamService.getAggregateLivestreams.calledWith(streamerId, 0).mockResolvedValue([
       createAggregateLivestreamParticipation(data.livestream1),
       createAggregateLivestreamParticipation(data.livestream2),
       createAggregateLivestreamParticipation(data.livestream3)
@@ -501,7 +501,7 @@ describe(nameof(ExperienceService, 'recalculateChatExperience'), () => {
     mockChatStore.getChatSince.calledWith(streamerIds[0], 0, undefined, undefined, expectArray<number>(connectedUserIds)).mockResolvedValue([chatMessage1, chatMessage2])
     mockChatStore.getChatSince.calledWith(streamerIds[1], 0, undefined, undefined, expectArray<number>(connectedUserIds)).mockResolvedValue([chatMessage3])
 
-    mockAggregateLivestreamService.getAggregateLivestreams.calledWith(expect.anything()).mockResolvedValue(aggregateLivestreams as AggregateLivestream[])
+    mockAggregateLivestreamService.getAggregateLivestreams.calledWith(expect.anything(), 0).mockResolvedValue(aggregateLivestreams as AggregateLivestream[])
     mockAggregateLivestreamService.getLivestreamParticipation.calledWith(streamerIds[0], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer1)
     mockAggregateLivestreamService.getLivestreamParticipation.calledWith(streamerIds[1], expectArray<number>(connectedUserIds)).mockResolvedValue(livestreamParticipationStreamer2)
     mockExperienceHelpers.calculateParticipationMultiplier.mockImplementation(score => score + 1 as GreaterThanOrEqual<1>)

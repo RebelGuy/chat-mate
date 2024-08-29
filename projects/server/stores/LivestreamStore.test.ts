@@ -206,9 +206,23 @@ export default () => {
         ]
       })
 
-      const result = await livestreamStore.getYoutubeLivestreams(streamer2)
+      const result = await livestreamStore.getYoutubeLivestreams(streamer2, 0)
 
       expect(result.map(l => l.id)).toEqual([4, 1, 2])
+    })
+
+    test('Only returns livestreams since the given time', async () => {
+      await db.youtubeLivestream.createMany({
+        data: [
+          { liveId: 'puS6DpPKZ3g', streamerId: streamer1, start: data.time1, end: data.time2, isActive: false },
+          { liveId: 'puS6DpPKZ3h', streamerId: streamer1, start: data.time3, end: data.time4, isActive: false },
+          { liveId: 'puS6DpPKZ3E', streamerId: streamer1, start: data.time5, end: null, isActive: true }
+        ]
+      })
+
+      const result = await livestreamStore.getYoutubeLivestreams(streamer1, data.time3.getTime() + 1)
+
+      expect(result.map(l => l.id)).toEqual([2, 3])
     })
   })
 
@@ -220,9 +234,21 @@ export default () => {
         { streamerId: streamer1, start: data.time1 }
       ]})
 
-      const result = await livestreamStore.getTwitchLivestreams(streamer1)
+      const result = await livestreamStore.getTwitchLivestreams(streamer1, 0)
 
       expect(result.map(l => l.id)).toEqual([3, 2])
+    })
+
+    test('Only returns livestreams since the given time', async () => {
+      await db.twitchLivestream.createMany({ data: [
+        { streamerId: streamer1, start: data.time1, end: data.time2 },
+        { streamerId: streamer1, start: data.time3, end: data.time4 },
+        { streamerId: streamer1, start: data.time5, end: null }
+      ]})
+
+      const result = await livestreamStore.getTwitchLivestreams(streamer1, data.time3.getTime() + 1)
+
+      expect(result.map(l => l.id)).toEqual([2, 3])
     })
   })
 

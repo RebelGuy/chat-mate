@@ -135,7 +135,7 @@ export default class ExperienceService extends ContextClass {
     const participationStreakMultiplier = await this.getParticipationMultiplierGenerator(streamerId, connectedUserIds)
       .then(generator => generator(youtubeLivestream?.id ?? twitchLivestream!.id, youtubeLivestream != null ? 'youtube' : 'twitch'))
     const prevChatExperience = await this.experienceStore.getPreviousChatExperience(streamerId, primaryUserId, null)
-    const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId)
+    const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)
     const spamMultiplier = this.getSpamMultiplier(youtubeLivestream?.id ?? null, twitchLivestream?.id ?? null, prevChatExperience, chatItem.timestamp, aggregateLivestreams)
     const messageQualityMultiplier = this.getMessageQualityMultiplier(chatItem.messageParts)
     const repetitionPenalty = await this.getMessageRepetitionPenalty(streamerId, time.getTime(), connectedUserIds)
@@ -327,7 +327,7 @@ export default class ExperienceService extends ContextClass {
 
       const punishments = (await Promise.all(connectedUserIds.map(userId => this.punishmentService.getPunishmentHistory(userId, streamerId)))).flatMap(x => x)
       const chatMessages = await this.chatStore.getChatSince(streamerId, 0, undefined, undefined, connectedUserIds) // pre-fetch all messages - we don't know which ones we need, so have to get them all
-      const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId)
+      const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)
       const participationStreakMultiplierGenerator = await this.getParticipationMultiplierGenerator(streamerId, connectedUserIds)
 
       // cache, updates every iteration

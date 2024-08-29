@@ -100,10 +100,16 @@ export default class LivestreamStore extends ContextClass {
     })
   }
 
-  /** Gets the list of all of the streamer's Youtube livestreams, sorted by time in ascending order (with not-yet-started livestreams placed at the end). */
-  public async getYoutubeLivestreams (streamerId: number): Promise<YoutubeLivestream[]> {
+  /** Gets the list of the streamer's Youtube livestreams since the given time, sorted by time in ascending order (with not-yet-started livestreams placed at the end). */
+  public async getYoutubeLivestreams (streamerId: number, since: number): Promise<YoutubeLivestream[]> {
     const orderedLivestreams = await this.db.youtubeLivestream.findMany({
-      where: { streamerId },
+      where: {
+        streamerId: streamerId,
+        OR: [
+          { end: null },
+          { end: { gte: new Date(since) }}
+        ]
+      },
       orderBy: { start: 'asc' }
     })
 
@@ -113,10 +119,16 @@ export default class LivestreamStore extends ContextClass {
     return result
   }
 
-  /** Gets the list of all of the streamer's Twitch livestreams, sorted by time in ascending order. */
-  public async getTwitchLivestreams (streamerId: number): Promise<TwitchLivestream[]> {
+  /** Gets the list of the streamer's Twitch livestreams since the given time, sorted by time in ascending order. */
+  public async getTwitchLivestreams (streamerId: number, since: number): Promise<TwitchLivestream[]> {
     const orderedLivestreams = await this.db.twitchLivestream.findMany({
-      where: { streamerId },
+      where: {
+        streamerId: streamerId,
+        OR: [
+          { end: null },
+          { end: { gte: new Date(since) }}
+        ]
+      },
       orderBy: { start: 'asc' }
     })
 

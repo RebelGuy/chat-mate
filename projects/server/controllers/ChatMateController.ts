@@ -102,7 +102,7 @@ export default class ChatMateController extends ControllerBase {
       const youtubeLiveReactions = await this.liveReactionStore.getTotalLiveReactions()
       const totalExperience = await this.experienceStore.getTotalGlobalExperience()
       // todo: this is a big no-no, we should probably cache things that we know will never change (e.g. past livestreams)
-      const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id))).then(flatMap)
+      const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id, since!))).then(flatMap)
       const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed(since)
       const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed(since)
 
