@@ -1,4 +1,5 @@
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
 import VisitorStore from '@rebel/server/stores/VisitorStore'
 import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
@@ -8,6 +9,7 @@ import { ChatMateError } from '@rebel/shared/util/error'
 type Deps = Dependencies<{
   dateTimeHelpers: DateTimeHelpers
   visitorStore: VisitorStore
+  visitorHelpers: VisitorHelpers
 }>
 
 type State = {
@@ -20,12 +22,13 @@ type State = {
   channelSemaphore: GroupedSemaphore<string>
   visitorCountSemaphore: GroupedSemaphore<string>
   visitorCache: Set<string>
-  today: number
+  currentTimeString: string
 }
 
 export default class ChatMateStateService extends SingletonContextClass {
   private readonly dateTimeHelpers: DateTimeHelpers
   private readonly visitorStore: VisitorStore
+  private readonly visitorHelpers: VisitorHelpers
 
   private state: State
 
@@ -34,6 +37,7 @@ export default class ChatMateStateService extends SingletonContextClass {
 
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
     this.visitorStore = deps.resolve('visitorStore')
+    this.visitorHelpers = deps.resolve('visitorHelpers')
 
     this.state = {
       hasInitialisedLivestreamMetadata: false,
@@ -45,12 +49,12 @@ export default class ChatMateStateService extends SingletonContextClass {
       channelSemaphore: new GroupedSemaphore(1),
       visitorCountSemaphore: new GroupedSemaphore(1),
       visitorCache: new Set(),
-      today: this.dateTimeHelpers.getStartOfToday()
+      currentTimeString: this.visitorHelpers.getTimeString(this.dateTimeHelpers.now())
     }
   }
 
   public override async initialise (): Promise<void> {
-    const visitors = await this.visitorStore.getVisitorsForDay(this.state.today)
+    const visitors = await this.visitorStore.getVisitorsForTimeString(this.state.currentTimeString)
     visitors.forEach(v => this.state.visitorCache.add(v))
   }
 
@@ -98,12 +102,11 @@ export default class ChatMateStateService extends SingletonContextClass {
     return this.state.visitorCountSemaphore
   }
 
-  /** Returns true if the visitor was added to the cache (i.e. not yet seen today). */
-  public cacheVisitor (visitorId: string): boolean {
-    const today = this.dateTimeHelpers.getStartOfToday()
-    if (this.state.today !== today) {
+  /** Returns true if the visitor was added to the cache (i.e. not yet seen for this timeString). */
+  public cacheVisitor (visitorId: string, timeString: string): boolean {
+    if (this.state.currentTimeString !== timeString) {
       this.state.visitorCache.clear()
-      this.state.today = today
+      this.state.currentTimeString = timeString
     }
 
     if (this.state.visitorCache.has(visitorId)) {

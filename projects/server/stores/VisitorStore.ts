@@ -23,40 +23,27 @@ export default class VisitorStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async addVisitor (visitorId: string) {
+  public async addVisitor (visitorId: string, timeString: string) {
     await this.db.visitor.create({ data: {
-      visitorId: visitorId
+      visitorId: visitorId,
+      timeString: timeString
     }})
   }
 
-  /** Returns the number of unique visitors for each day since the given timestamp, in ascending order.
-   * It is expected that the given timestamp marks the beginning of a day.
-   * Empty groups are omitted. */
-  public async getGroupedUniqueVisitors (startOfDay: number): Promise<GroupedVisitors[]> {
-    const groups = await this.db.visitor.groupBy({
-      by: 'date',
-      where: { date: { gte: new Date(startOfDay) } },
-      _count: { visitorId: true },
-      orderBy: { date: 'asc' }
-    })
-
-    return groups.map(g => ({ timestamp: g.date.getTime(), visitors: g._count.visitorId }))
-  }
-
-  public async getUniqueVisitors (): Promise<number> {
+  public async getUniqueVisitors (since: number): Promise<number> {
     const result = await this.db.visitor.findMany({
       distinct: 'visitorId',
+      where: { time: { gte: new Date(since) }},
       select: { id: true }
     })
 
     return result.length
   }
 
-  /** Returns the array of visitor ids for the given day. May be empty.
-   * It is expected that the given timestamp marks the beginning of a day. */
-  public async getVisitorsForDay (startOfDay: number): Promise<string[]> {
+  public async getVisitorsForTimeString (timeString: string): Promise<string[]> {
     const result = await this.db.visitor.findMany({
-      where: { date: new Date(startOfDay) }
+      where: { timeString },
+      select: { visitorId: true }
     })
 
     return result.map(r => r.visitorId)

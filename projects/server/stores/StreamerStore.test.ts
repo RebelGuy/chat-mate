@@ -5,6 +5,7 @@ import StreamerStore, { CloseApplicationArgs, CreateApplicationArgs, StreamerApp
 import { StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel/server/_test/db'
 import { expectObject, nameof } from '@rebel/shared/testUtils'
+import * as data from '@rebel/server/_test/testData'
 
 export default () => {
   const username1 = 'username1'
@@ -109,6 +110,16 @@ export default () => {
       const result = await streamerStore.getStreamers()
 
       expect(result.length).toBe(2)
+    })
+  })
+
+  describe(nameof(StreamerStore, 'getStreamersSince'), () => {
+    test('Returns all streamers', async () => {
+      await db.streamer.createMany({ data: [{ registeredUserId: 1, time: data.time1 }, { registeredUserId: 2, time: data.time3 }]})
+
+      const result = await streamerStore.getStreamersSince(data.time2.getTime())
+
+      expect(result.length).toBe(1)
     })
   })
 

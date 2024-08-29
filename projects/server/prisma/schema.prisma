@@ -257,6 +257,8 @@ model LoginToken {
 model Streamer {
   id Int @id @default(autoincrement())
 
+  time DateTime @default(now())
+
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
@@ -1076,13 +1078,12 @@ model Image {
 model Visitor {
   id Int @id @default(autoincrement())
 
-  visitorId String @db.VarChar(127) // unique with the `date` column
+  visitorId  String @db.VarChar(127) // unique with the `timeString` column
+  timeString String @db.VarChar(31) // unique with the `visitorId` column
 
-  // the `dbgenerated` values have to be exactly this, otherwise things like "CURRENT_DATE" will be converted into curdate() and cause prisma to bitch about it
-  date DateTime @default(dbgenerated("(curdate())")) @db.Date() // unique with the `visitorId` column
-  time DateTime @default(dbgenerated("(curtime())")) @db.Time()
+  time DateTime @default(now())
 
-  @@unique([visitorId, date], map: "visitor_visitorId_date_key")
+  @@unique([visitorId, timeString], map: "visitor_visitorId_timeString_key")
   @@map("visitor")
 }
 

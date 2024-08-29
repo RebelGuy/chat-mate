@@ -90,9 +90,9 @@ export default class ChatMateController extends ControllerBase {
     since = since ?? 0
 
     try {
-      const totalVisitors = await this.visitorStore.getUniqueVisitors()
+      const totalVisitors = await this.visitorStore.getUniqueVisitors(since)
       const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
-      const streamers = await this.streamerStore.getStreamers().then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
+      const streamers = await this.streamerStore.getStreamersSince(since).then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
       const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
       const registeredUserCount = await this.accountStore.getRegisteredUserCount(since)
       const youtubeChannelCount = await this.channelStore.getYoutubeChannelCount(since)

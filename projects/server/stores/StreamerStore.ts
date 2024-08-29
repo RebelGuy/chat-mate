@@ -81,6 +81,12 @@ export default class StreamerStore extends ContextClass {
     return await this.db.streamer.findMany({})
   }
 
+  public async getStreamersSince (since: number): Promise<Streamer[]> {
+    return await this.db.streamer.findMany({ where: {
+      time: { gte: new Date(since) }
+    }})
+  }
+
   /** Gets the list of all applications by the user or, if not defined, by all users. */
   public async getStreamerApplications (registeredUserId: number | undefined): Promise<StreamerApplicationWithUser[]> {
     return await this.db.streamerApplication.findMany({

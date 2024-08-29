@@ -118,6 +118,7 @@ import TaskService from '@rebel/server/services/task/TaskService'
 import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUpYoutubeContextTokensTask'
 import TaskStore from '@rebel/server/stores/TaskStore'
 import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
+import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -214,6 +215,7 @@ const main = async () => {
     .withHelpers('donationHelpers', DonationHelpers)
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
+    .withHelpers('visitorHelpers', VisitorHelpers)
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
