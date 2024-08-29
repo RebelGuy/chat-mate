@@ -185,7 +185,7 @@ const main = async () => {
     .withProperty('dataPath', dataPath)
     .withProperty('nodeEnv', env('nodeEnv'))
     .withProperty('databaseUrl', env('databaseUrl'))
-    .withProperty('disableExternalApis', env('useFakeControllers') === true)
+    .withProperty('disableExternalApis', env('disableExternalApis') === true)
     .withProperty('twitchClientId', twitchClientId)
     .withProperty('twitchClientSecret', twitchClientSecret)
     .withProperty('dbLogLevel', dbLogLevel)
@@ -492,8 +492,8 @@ const main = async () => {
     throw error
   })
 
-  if (env('useFakeControllers')) {
-    logContext.logInfo(`Using fake controllers`)
+  if (env('disableExternalApis')) {
+    logContext.logInfo(`Disabling external APIs`)
   }
 
   // ensure the server can still run if Twitch auth fails, so that we can re-authenticate via the Studio Twitch admin page

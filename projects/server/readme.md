@@ -84,7 +84,7 @@ The following environment variables must be set in the `.env` file:
 
 The following environment variables are available only for **local development** (that is, where `NODE_ENV`=`local`):
 - `NGROK_AUTH_TOKEN`: The ngrok auth token retrieved at https://dashboard.ngrok.com/get-started/your-authtoken. It is required to be able to listen to Twitch events locally.
-- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
+- `DISABLE_EXTERNAL_APIS`: [Optional, defaults to `false`] If true, communication with external APIs is disabled (that is, ChatMate is run entirely offline).
 
 The following environmnet variables are available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*

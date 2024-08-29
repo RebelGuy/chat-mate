@@ -55,6 +55,7 @@ type Deps = Dependencies<{
   accountService: AccountService
   userService: UserService
   eventDispatchService: EventDispatchService
+  disableExternalApis: boolean
   isAdministrativeMode: () => boolean
 }>
 
@@ -72,6 +73,7 @@ export default class DonationService extends SingletonContextClass {
   private readonly accountService: AccountService
   private readonly userService: UserService
   private readonly eventDispatchService: EventDispatchService
+  private readonly disableExternalApis: boolean
   private readonly isAdministrativeMode: () => boolean
 
   constructor (deps: Deps) {
@@ -88,11 +90,15 @@ export default class DonationService extends SingletonContextClass {
     this.accountService = deps.resolve('accountService')
     this.userService = deps.resolve('userService')
     this.eventDispatchService = deps.resolve('eventDispatchService')
+    this.disableExternalApis = deps.resolve('disableExternalApis')
     this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   public override async initialise () {
-    if (this.isAdministrativeMode()) {
+    if (this.disableExternalApis) {
+      this.logService.logInfo(this, 'Skipping initialisation because external APIs are disabled.')
+      return
+    } else if (this.isAdministrativeMode()) {
       this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }

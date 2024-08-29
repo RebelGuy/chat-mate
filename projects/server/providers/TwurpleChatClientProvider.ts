@@ -39,6 +39,7 @@ export default class TwurpleChatClientProvider extends SingletonContextClass {
 
   override initialise (): void {
     if (this.disableExternalApis) {
+      this.logService.logInfo(this, 'Skipping initialisation because external APIs are disabled.')
       return
     } else if (this.isAdministrativeMode()) {
       this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
@@ -60,7 +61,10 @@ export default class TwurpleChatClientProvider extends SingletonContextClass {
   }
 
   public override onReady (): void {
-    if (this.isAdministrativeMode()) {
+    if (this.disableExternalApis) {
+      this.logService.logInfo(this, 'Skipping onReady action because external APIs are disabled.')
+      return
+    } else if (this.isAdministrativeMode()) {
       this.logService.logInfo(this, 'Skipping onReady action because we are in administrative mode.')
       return
     }
