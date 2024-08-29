@@ -1,5 +1,6 @@
 import { Box, Table, TableBody, TableCell, TableHead, TableRow, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import { styled } from '@mui/material'
+import { addTime } from '@rebel/shared/util/datetime'
 import AnimatedNumber from '@rebel/studio/components/AnimatedNumber'
 import ApiError from '@rebel/studio/components/ApiError'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
@@ -28,12 +29,12 @@ export default function ChatMateStats () {
       return
     }
 
-    setSince(newTime === 'lifetime' ? undefined : Date.now())
+    setSince(newTime === 'lifetime' ? undefined : get24HoursAgoTimestamp())
   }
 
   const onRefresh = () => {
     onUpdateToken()
-    setSince(since == null ? since : Date.now())
+    setSince(since == null ? since : get24HoursAgoTimestamp())
   }
 
   return <>
@@ -110,4 +111,8 @@ function Number (props: { target: number | undefined, decimals: number | undefin
       {(num: number) => <>{num.toLocaleString()}</>}
     </AnimatedNumber>
   )
+}
+
+function get24HoursAgoTimestamp () {
+  return addTime(new Date(), 'days', -1).getTime()
 }
