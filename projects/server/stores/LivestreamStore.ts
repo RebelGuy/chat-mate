@@ -123,17 +123,19 @@ export default class LivestreamStore extends ContextClass {
     return orderedLivestreams
   }
 
-  public async getYoutubeTotalDaysLivestreamed (): Promise<number> {
+  public async getYoutubeTotalDaysLivestreamed (since: number): Promise<number> {
     const queryResult = await this.db.$queryRaw<{ duration: Prisma.Decimal | null }[]>`
-      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM youtube_livestream;
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - GREATEST(UNIX_TIMESTAMP(start), ${since / 1000})) / 3600 / 24 AS duration FROM youtube_livestream
+      WHERE end IS NULL OR end >= ${new Date(since)};
     `
 
     return single(queryResult).duration?.toNumber() ?? 0
   }
 
-  public async getTwitchTotalDaysLivestreamed (): Promise<number> {
+  public async getTwitchTotalDaysLivestreamed (since: number): Promise<number> {
     const queryResult = await this.db.$queryRaw<{ duration: Prisma.Decimal | null }[]>`
-      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - UNIX_TIMESTAMP(start)) / 3600 / 24 AS duration FROM twitch_livestream;
+      SELECT SUM(UNIX_TIMESTAMP(COALESCE(end, UTC_TIMESTAMP())) - GREATEST(UNIX_TIMESTAMP(start), ${since / 1000})) / 3600 / 24 AS duration FROM twitch_livestream
+      WHERE end IS NULL OR end >= ${new Date(since)};
     `
 
     return single(queryResult).duration?.toNumber() ?? 0

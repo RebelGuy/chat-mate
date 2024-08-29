@@ -1,5 +1,5 @@
 import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
-import { GET, Path, PreProcessor } from 'typescript-rest'
+import { GET, Path, PreProcessor, QueryParam } from 'typescript-rest'
 import { requireRank } from '@rebel/server/controllers/preProcessors'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -75,8 +75,20 @@ export default class ChatMateController extends ControllerBase {
 
   @GET
   @Path('/stats')
-  public async getStats (): Promise<ChatMateStatsResponse> {
+  public async getStats (
+    @QueryParam('since') since?: number
+  ): Promise<ChatMateStatsResponse> {
     const builder = this.registerResponseBuilder<ChatMateStatsResponse>('GET /stats')
+
+    const validationError = builder.validateInput({
+      since: { type: 'number', optional: true }
+    }, { since })
+    if (validationError != null) {
+      return validationError
+    }
+
+    since = since ?? 0
+
     try {
       const totalVisitors = await this.visitorStore.getUniqueVisitors()
       const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
@@ -91,7 +103,7 @@ export default class ChatMateController extends ControllerBase {
       const totalExperience = await this.experienceStore.getTotalGlobalExperience()
       // todo: this is a big no-no, we should probably cache things that we know will never change (e.g. past livestreams)
       const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id))).then(flatMap)
-      const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed()
+      const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed(since)
       const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed()
 
       return builder.success({

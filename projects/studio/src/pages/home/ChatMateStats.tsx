@@ -1,4 +1,4 @@
-import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
+import { Box, Table, TableBody, TableCell, TableHead, TableRow, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import { styled } from '@mui/material'
 import AnimatedNumber from '@rebel/studio/components/AnimatedNumber'
 import ApiError from '@rebel/studio/components/ApiError'
@@ -8,6 +8,7 @@ import TextWithHelp from '@rebel/studio/components/TextWithHelp'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { getChatMateStats } from '@rebel/studio/utility/api'
+import { useState } from 'react'
 
 const ANIMATION_DURATION = 2000
 
@@ -17,32 +18,60 @@ const Cell = styled(TableCell)(() => ({
 }))
 
 export default function ChatMateStats () {
-  const [token, onRefresh] = useUpdateKey()
-  const { data, isLoading, error } = useRequest(getChatMateStats(), { updateKey: token })
+  const [token, onUpdateToken] = useUpdateKey()
+  const [since, setSince] = useState<number | undefined>(undefined)
+  const { data, isLoading, error } = useRequest(getChatMateStats(since), { updateKey: token })
+
+  const onChangeTime = (_: any, newTime: 'lifetime' | 'today') => {
+    setSince(newTime === 'lifetime' ? undefined : Date.now())
+  }
+
+  const onRefresh = () => {
+    onUpdateToken()
+    setSince(since == null ? since : Date.now())
+  }
 
   return <>
     <PanelHeader>ChatMate Stats {<RefreshButton isLoading={isLoading} onRefresh={onRefresh} />}</PanelHeader>
     <ApiError error={error} />
-    <Table size="small" style={{ width: 'unset' }}>
-      <TableHead>
-        <TableRow>
-          <TableCell></TableCell>
-          <Cell>Total</Cell>
-          <Cell>Youtube</Cell>
-          <Cell>Twitch</Cell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        <Stat label="Number of website visitors" help="The number of unique users that have visited the ChatMate website." totalNumber={data?.totalVisitors ?? 0} />
-        <Stat label="Number of registered users" help="The number of users that have created a free ChatMate account." totalNumber={data?.registeredUserCount ?? 0} />
-        <Stat label="Number of streamers" help="The number of registered users who have signed up as a ChatMate streamer. Each streamer declares a primary streaming channel on Youtube, Twitch, or both." totalNumber={data?.streamerCount ?? 0} youtubeNumber={data?.youtubeStreamerCount ?? 0} twitchNumber={data?.twitchStreamerCount ?? 0} />
-        <Stat label="Number of unique channels" help="The number of channels that have participated in livestreams connected to ChatMate." totalNumber={data?.uniqueChannelCount ?? 0} youtubeNumber={data?.uniqueYoutubeChannelCount ?? 0} twitchNumber={data?.uniqueTwitchChannelCount ?? 0} />
-        <Stat label="Number of chat messages" help="The number of chat messages that have been received in livestreams connected to ChatMate." totalNumber={data?.chatMessageCount ?? 0} youtubeNumber={data?.youtubeMessageCount ?? 0} twitchNumber={data?.twitchMessageCount ?? 0} />
-        <Stat label="Number of live reactions" help="The number of live reactions sent in Youtube chat." totalNumber={data?.youtubeLiveReactions ?? 0} youtubeNumber={data?.youtubeLiveReactions} />
-        <Stat label="Total days livestreamed" help="The number of days ChatMate streamers have been live for. A livestream represents a continuous span of time during which a streamer was live, either on Youtube, Twitch, or both." totalNumber={data?.totalDaysLivestreamed ?? 0} youtubeNumber={data?.youtubeTotalDaysLivestreamed ?? 0} twitchNumber={data?.twitchTotalDaysLivestreamed ?? 0} decimals={3} />
-        <Stat label="Total experience gained" help="The amount of experience gained by users interacting in livestreams connected to ChatMate. Experience is used for the chat levelling system." totalNumber={data?.totalExperience ?? 0} />
-      </TableBody>
-    </Table>
+
+    <Box style={{ width: 'fit-content' }}>
+      <Table size="small" style={{ width: 'unset' }}>
+        <TableHead>
+          <TableRow>
+            <TableCell></TableCell>
+            <Cell>Total</Cell>
+            <Cell>Youtube</Cell>
+            <Cell>Twitch</Cell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          <Stat label="Number of website visitors" help="The number of unique users that have visited the ChatMate website." totalNumber={data?.totalVisitors ?? 0} />
+          <Stat label="Number of registered users" help="The number of users that have created a free ChatMate account." totalNumber={data?.registeredUserCount ?? 0} />
+          <Stat label="Number of streamers" help="The number of registered users who have signed up as a ChatMate streamer. Each streamer declares a primary streaming channel on Youtube, Twitch, or both." totalNumber={data?.streamerCount ?? 0} youtubeNumber={data?.youtubeStreamerCount ?? 0} twitchNumber={data?.twitchStreamerCount ?? 0} />
+          <Stat label="Number of unique channels" help="The number of channels that have participated in livestreams connected to ChatMate." totalNumber={data?.uniqueChannelCount ?? 0} youtubeNumber={data?.uniqueYoutubeChannelCount ?? 0} twitchNumber={data?.uniqueTwitchChannelCount ?? 0} />
+          <Stat label="Number of chat messages" help="The number of chat messages that have been received in livestreams connected to ChatMate." totalNumber={data?.chatMessageCount ?? 0} youtubeNumber={data?.youtubeMessageCount ?? 0} twitchNumber={data?.twitchMessageCount ?? 0} />
+          <Stat label="Number of live reactions" help="The number of live reactions sent in Youtube chat." totalNumber={data?.youtubeLiveReactions ?? 0} youtubeNumber={data?.youtubeLiveReactions} />
+          <Stat label="Total days livestreamed" help="The number of days ChatMate streamers have been live for. A livestream represents a continuous span of time during which a streamer was live, either on Youtube, Twitch, or both." totalNumber={data?.totalDaysLivestreamed ?? 0} youtubeNumber={data?.youtubeTotalDaysLivestreamed ?? 0} twitchNumber={data?.twitchTotalDaysLivestreamed ?? 0} decimals={3} />
+          <Stat label="Total experience gained" help="The amount of experience gained by users interacting in livestreams connected to ChatMate. Experience is used for the chat levelling system." totalNumber={data?.totalExperience ?? 0} />
+        </TableBody>
+      </Table>
+      <ToggleButtonGroup
+        value={since == null ? 'lifetime' : 'today'}
+        onChange={onChangeTime}
+        exclusive
+        sx={{ mt: 1 }}
+        style={{ width: '100%', justifyContent: 'center' }}
+      >
+        <ToggleButton value="lifetime">
+          Lifetime stats
+        </ToggleButton>
+        <ToggleButton value="today">
+          Today's stats
+        </ToggleButton>
+      </ToggleButtonGroup>
+
+    </Box>
   </>
 }
 
