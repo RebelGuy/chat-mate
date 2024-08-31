@@ -791,6 +791,8 @@ model CustomEmoji {
   // deliberately don't save this to the CustomEmojiVersion because it's display data that is not important to version-control, and we would be generating hundreds of versions otherwise
   sortOrder Int
 
+  deletedAt DateTime?
+
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "custom_emoji_streamerId_key")
 
@@ -802,11 +804,9 @@ model CustomEmoji {
   @@map("custom_emoji")
 }
 
-// this table has a BEFORE INSERT trigger `TRG_CHECK_EXISTING_ACTIVE_VERSION`
 model CustomEmojiVersion {
   id Int @id @default(autoincrement())
 
-  isActive   Boolean
   modifiedAt DateTime @default(now())
   version    Int
   name       String   @db.VarChar(63)

@@ -114,7 +114,7 @@ function setupCustomEmojis (...whitelist: [EmojiData, Rank[]][]) {
   mockCustomEmojiStore.getAllCustomEmojis.calledWith(streamerId).mockResolvedValue(whitelist.map(w => ({
     ...w[0],
     streamerId: streamerId,
-    isActive: true,
+    deletedAt: null,
     modifiedAt: new Date(),
     version: 0,
     sortOrder: 1,

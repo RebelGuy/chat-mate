@@ -9,7 +9,7 @@ export function customEmojiToPublicObject (emoji: FullCustomEmoji): PublicCustom
     name: emoji.name,
     symbol: emoji.symbol,
     version: emoji.version,
-    isActive: emoji.isActive,
+    deletedAt: emoji.deletedAt,
     imageUrl: emoji.imageUrl,
     imageWidth: emoji.imageWidth,
     imageHeight: emoji.imageHeight,

@@ -433,7 +433,7 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
         imageUrl: part.customEmoji.customEmojiVersion.image.url,
         imageWidth: part.customEmoji.customEmojiVersion.image.width,
         imageHeight: part.customEmoji.customEmojiVersion.image.height,
-        isActive: part.customEmoji.customEmojiVersion.isActive,
+        deletedAt: null,
         version: part.customEmoji.customEmojiVersion.version,
         sortOrder: part.customEmoji.customEmojiVersion.customEmoji.sortOrder,
         whitelistedRanks: part.customEmoji.customEmojiVersion.customEmoji.customEmojiRankWhitelist.map(w => w.rankId)

@@ -448,7 +448,6 @@ export default () => {
       await db.customEmojiVersion.create({ data: {
         levelRequirement: 1,
         name: 'Test Emoji',
-        isActive: true,
         version: 0,
         canUseInDonationMessage: true,
         customEmoji: { create: { streamerId: streamer1, symbol: 'test', sortOrder: 1 }},

@@ -27,7 +27,7 @@ import useAnimation from '@rebel/studio/hooks/useAnimation'
 import { clamp } from '@rebel/shared/util/math'
 import DeleteCustomEmoji from '@rebel/studio/pages/emojis/DeleteCustomEmoji'
 
-export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version' | 'imageHeight' | 'imageWidth'>
+export type EmojiData = SafeOmit<PublicCustomEmoji, 'deletedAt' | 'version' | 'imageHeight' | 'imageWidth'>
 
 type Eligibility = {
   meetsLevelRequirement: boolean

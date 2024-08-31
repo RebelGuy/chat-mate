@@ -36,13 +36,13 @@ export default class CustomEmojiEligibilityService extends ContextClass {
     return allEmojis.filter(e =>
       this.levelEligibilityCheck(e, level) &&
       this.rankEligibilityCheck(userRanks, whitelistedRanks.find(wr => wr.emojiId === e.id)!)
-    ).map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, sortOrder: e.sortOrder, latestVersion: e.version }))
+    ).map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, sortOrder: e.sortOrder, latestVersion: e.version, deletedAt: e.deletedAt }))
   }
 
   public async getEligibleDonationEmojis (streamerId: number): Promise<CurrentCustomEmoji[]> {
     const allEmojis = await this.customEmojiStore.getAllCustomEmojis(streamerId)
     return allEmojis.filter(e => e.canUseInDonationMessage)
-      .map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, sortOrder: e.sortOrder, latestVersion: e.version }))
+      .map(e => ({ id: e.id, symbol: e.symbol, streamerId: e.streamerId, sortOrder: e.sortOrder, latestVersion: e.version, deletedAt: e.deletedAt }))
   }
 
   private levelEligibilityCheck (emoji: CustomEmojiWithRankWhitelist, userLevel: UserLevel) {

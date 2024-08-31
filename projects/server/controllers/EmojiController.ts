@@ -52,8 +52,8 @@ export default class EmojiController extends ControllerBase {
           symbol: {
             type: 'string',
             validators: [
-              { onValidate: (s: string) => s.length < 1 || s.length > 32, errorMessage: 'Symbol must be between 1 and 32 characters' },
-              { onValidate: (s: string) => s.includes(':'), errorMessage: `Symbol cannot include the character ':'` }
+              { onValidate: (s: string) => s.trim().length >= 1 && s.trim().length <= 32, errorMessage: 'Symbol must be between 1 and 32 characters' },
+              { onValidate: (s: string) => !s.includes(':'), errorMessage: `Symbol cannot include the character ':'` }
             ]
           },
           levelRequirement: { type: 'number' },
@@ -64,7 +64,7 @@ export default class EmojiController extends ControllerBase {
             type: 'string',
             validators: [
               nonEmptyStringValidator,
-              { onValidate: (s: string) => s.toLowerCase().startsWith('http'), errorMessage: 'Image cannot be a HTTP URL' }
+              { onValidate: (s: string) => !s.toLowerCase().startsWith('http'), errorMessage: 'Image cannot be a HTTP URL' }
             ]
           }
         }
@@ -78,6 +78,7 @@ export default class EmojiController extends ControllerBase {
 
     try {
       const streamerId = this.getStreamerId()
+      request.newEmoji.symbol = request.newEmoji.symbol.trim()
       let emoji = await this.customEmojiService.addCustomEmoji(publicObjectNewToNewCustomEmoji(request.newEmoji, streamerId))
 
       if (request.insertAtBeginning === true) {

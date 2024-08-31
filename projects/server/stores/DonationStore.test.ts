@@ -59,7 +59,6 @@ export default () => {
         streamerId: streamer1,
         sortOrder: 1,
         customEmojiVersions: { create: {
-          isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
           name: 'name',
@@ -152,7 +151,6 @@ export default () => {
       await db.chatCustomEmoji.create({ data: {
         text: { create: { isBold: false, isItalics: false, text: 'sample custom emoji' }},
         customEmojiVersion: { create: {
-          isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
           name: 'name',
