@@ -51,7 +51,6 @@ export default function CustomEmojiManager () {
   const headerRef = useRef<HTMLElement | null>(null)
   const sortOrderMap = useMap<PublicCustomEmoji, number>() // used to override the sort orders while editing
   const [refreshToken, updateRefreshToken] = useUpdateKey()
-  const [emojiToDelete, setEmojiToDelete] = useState<number | null>(null)
   const emojisRequest = useRequest(getAllCustomEmojis(), {
     updateKey: refreshToken,
     onSuccess: data => {

@@ -5,7 +5,6 @@ import { Path, GET, POST, PATCH, PreProcessor, BodyOptions, DELETE, QueryParam }
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
 import CustomEmojiService from '@rebel/server/services/CustomEmojiService'
 import CustomEmojiStore from '@rebel/server/stores/CustomEmojiStore'
-import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
@@ -112,7 +111,7 @@ export default class EmojiController extends ControllerBase {
             type: 'string',
             validators: [
               nonEmptyStringValidator,
-              { onValidate: (s: string) => s.toLowerCase().startsWith('http'), errorMessage: 'Image cannot be a HTTP URL' }
+              { onValidate: (s: string) => !s.toLowerCase().startsWith('http'), errorMessage: 'Image cannot be a HTTP URL' }
             ]
           }
         }

@@ -63,7 +63,7 @@ type QueriedCustomEmoji = {
   streamerId: number
   deletedAt: Date | null
   levelRequirement: number
-  canUseInDonationMessage: boolean
+  canUseInDonationMessage: number
   modifiedAt: Date
   name: string
   imageUrl: string
@@ -147,7 +147,7 @@ export default class CustomEmojiStore extends ContextClass {
       streamerId: emoji.streamerId,
       deletedAt: emoji.deletedAt?.getTime() ?? null,
       levelRequirement: emoji.levelRequirement,
-      canUseInDonationMessage: emoji.canUseInDonationMessage,
+      canUseInDonationMessage: emoji.canUseInDonationMessage === 1,
       modifiedAt: emoji.modifiedAt,
       name: emoji.name,
       imageUrl: emoji.imageUrl,
