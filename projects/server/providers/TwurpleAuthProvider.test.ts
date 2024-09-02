@@ -8,7 +8,7 @@ import { single, single2 } from '@rebel/shared/util/arrays'
 import { AccessToken, AccessTokenWithUserId, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { mock, MockProxy } from 'jest-mock-extended'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
-import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, NotFoundError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 
 const adminTwitchUserId = 'admin id' as string & AccessToken
 
@@ -167,7 +167,7 @@ describe(nameof(TwurpleAuthProvider, 'getUserTokenAuthProvider'), () => {
 
   test(`Throws ${TwitchNotAuthorisedError.name} if the user has not yet provided authorisation for ChatMate`, async () => {
     mockRefreshingAuthProvider.hasUser.calledWith(userId).mockReturnValue(false)
-    mockAuthStore.loadTwitchAccessToken.calledWith(userId).mockRejectedValue(new Error())
+    mockAuthStore.loadTwitchAccessToken.calledWith(userId).mockRejectedValue(new NotFoundError(''))
 
     await expect(() => twurpleAuthProvider.getUserTokenAuthProvider(userId)).rejects.toThrowError(TwitchNotAuthorisedError)
   })
