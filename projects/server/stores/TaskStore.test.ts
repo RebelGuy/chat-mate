@@ -4,7 +4,7 @@ import { Db } from '@rebel/server/providers/DbProvider'
 import TaskStore from '@rebel/server/stores/TaskStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { nameof } from '@rebel/shared/testUtils'
-import { DbError } from '@rebel/shared/util/error'
+import { DbError, NotFoundError } from '@rebel/shared/util/error'
 import * as data from '@rebel/server/_test/testData'
 
 const tasks: Task[] = [
@@ -33,7 +33,7 @@ export default () => {
     })
 
     test('Throws if the specified task was not found', async () => {
-      await expect(() => taskStore.getTask('abc' as any)).rejects.toThrowError(DbError)
+      await expect(() => taskStore.getTask('cleanUpApiCallsTask')).rejects.toThrowError(NotFoundError)
     })
   })
 

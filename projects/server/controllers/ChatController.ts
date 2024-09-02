@@ -2,7 +2,6 @@ import { buildPath, ControllerBase, ControllerDependencies, Endpoint } from '@re
 import { GET, Path, PathParam, PreProcessor, QueryParam } from 'typescript-rest'
 import { requireRank, requireStreamer } from '@rebel/server/controllers/preProcessors'
 import { GetChatResponse, GetCommandStatusResponse } from '@rebel/api-models/schema/chat'
-import { isKnownPrismaError, PRISMA_CODE_DOES_NOT_EXIST } from '@rebel/server/prismaUtil'
 import AccountService, { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import ChatService from '@rebel/server/services/ChatService'
 import ExperienceService from '@rebel/server/services/ExperienceService'
@@ -131,11 +130,7 @@ export default class ChatController extends ControllerBase {
         durationMs: command.endTime != null && command.startTime != null ? command.endTime.getTime() - command.startTime.getTime() : null
       })
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
-        return builder.failure(404, 'Command not found.')
-      } else {
-        return builder.failure(e)
-      }
+      return builder.failure(e)
     }
   }
 }

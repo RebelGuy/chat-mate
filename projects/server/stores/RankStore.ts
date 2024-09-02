@@ -8,7 +8,7 @@ import { ChatMateError, NotFoundError, UserRankAlreadyExistsError, UserRankNotFo
 import { IgnoreOptions } from '@rebel/server/services/rank/PunishmentService'
 import { TwitchRankResult, YoutubeRankResult } from '@rebel/server/services/rank/RankService'
 import { SafeOmit } from '@rebel/shared/types'
-import { PRISMA_CODE_DOES_NOT_EXIST, isKnownPrismaError, isUnknownPrismaError } from '@rebel/server/prismaUtil'
+import { isUnknownPrismaError } from '@rebel/server/prismaUtil'
 
 export type UserRanks = {
   primaryUserId: number
@@ -395,7 +395,7 @@ export default class RankStore extends ContextClass {
         select: { id: true }
       })
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
+      if (e instanceof NotFoundError) {
         throw new UserRankNotFoundError(`Could not find an active '${args.rank}' rank for chat user ${args.primaryUserId} in the context of streamer ${args.streamerId}.`)
       }
 
@@ -428,7 +428,7 @@ export default class RankStore extends ContextClass {
 
       return rawDataToUserRankWithRelations(result)
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
+      if (e instanceof NotFoundError) {
         throw new UserRankNotFoundError(`Could not update expiration for rank ${rankId} because it does not exist.`)
       }
 

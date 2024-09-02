@@ -9,7 +9,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialProcessedEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
 import { YoutubeChannelGlobalInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelGlobalInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
-import { DbError, ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError } from '@rebel/shared/util/error'
+import { DbError, ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError, NotFoundError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
 import { SafeOmit } from '@rebel/shared/types'
 
@@ -1024,7 +1024,7 @@ export default () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      await expect(() => chatStore.getChatById(2)).rejects.toThrowError(DbError)
+      await expect(() => chatStore.getChatById(2)).rejects.toThrowError(NotFoundError)
     })
   })
 

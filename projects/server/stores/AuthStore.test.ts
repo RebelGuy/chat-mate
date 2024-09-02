@@ -7,7 +7,7 @@ import { AccessToken } from '@twurple/auth'
 import { single } from '@rebel/shared/util/arrays'
 import { New } from '@rebel/server/models/entities'
 import { YoutubeAuth } from '@prisma/client'
-import { ChatMateError, DbError } from '@rebel/shared/util/error'
+import { ChatMateError, DbError, NotFoundError } from '@rebel/shared/util/error'
 
 const accessToken: AccessToken = {
   accessToken: 'accessToken1',
@@ -53,7 +53,7 @@ export default () => {
     test(`Throws if the user's token could not be found`, async () => {
       await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
 
-      await expect(() => authStore.loadTwitchAccessToken(twitchUserId2)).rejects.toThrowError(DbError)
+      await expect(() => authStore.loadTwitchAccessToken(twitchUserId2)).rejects.toThrowError(NotFoundError)
     })
   })
 
@@ -70,7 +70,7 @@ export default () => {
     test(`Throws if the user's token could not be found`, async () => {
       await addTwitchAccessToken(db, twitchUserId1, twitchChannelName1, accessToken)
 
-      await expect(() => authStore.loadTwitchAccessToken(twitchChannelName2)).rejects.toThrowError(DbError)
+      await expect(() => authStore.loadTwitchAccessToken(twitchChannelName2)).rejects.toThrowError(NotFoundError)
     })
   })
 
