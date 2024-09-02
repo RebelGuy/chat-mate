@@ -133,8 +133,8 @@ export default () => {
       // verify that ranks are whitelisted
       const storedRankWhitelists = await db.customEmojiRankWhitelist.findMany()
       expect(storedRankWhitelists).toEqual<CustomEmojiRankWhitelist[]>([
-        { id: 1, customEmojiId: 1, rankId: 1 },
-        { id: 2, customEmojiId: 1, rankId: 2 }
+        { id: 1, customEmojiVersionId: 1, rankId: 1 },
+        { id: 2, customEmojiVersionId: 1, rankId: 2 }
       ])
     })
 
@@ -150,9 +150,9 @@ export default () => {
     test('returns all custom emojis for the streamer', async () => {
       await createEmojis([1, 2, 3, 4], [streamer1, streamer1, streamer1, streamer2])
       await db.customEmojiRankWhitelist.createMany({ data: [
-        { customEmojiId: 1, rankId: rank1 },
-        { customEmojiId: 1, rankId: rank2 },
-        { customEmojiId: 2, rankId: rank1 },
+        { customEmojiVersionId: 1, rankId: rank1 },
+        { customEmojiVersionId: 1, rankId: rank2 },
+        { customEmojiVersionId: 2, rankId: rank1 },
       ]})
 
       const result = await customEmojiStore.getAllCustomEmojis(streamer1)
@@ -230,11 +230,11 @@ export default () => {
     test('returns the rank whitelist for each specified emoji', async () => {
       await createEmojis([1, 2, 3, 4, 5])
       await db.customEmojiRankWhitelist.createMany({ data: [
-        { customEmojiId: 1, rankId: 1 },
-        { customEmojiId: 1, rankId: 2 },
-        { customEmojiId: 2, rankId: 1 },
-        { customEmojiId: 4, rankId: 1 }, // deactivated
-        { customEmojiId: 5, rankId: 1 },
+        { customEmojiVersionId: 1, rankId: 1 },
+        { customEmojiVersionId: 1, rankId: 2 },
+        { customEmojiVersionId: 2, rankId: 1 },
+        { customEmojiVersionId: 4, rankId: 1 }, // deactivated
+        { customEmojiVersionId: 5, rankId: 1 },
       ]})
       await db.customEmoji.update({ where: { id: 4 }, data: { deletedAt: new Date() } })
 
@@ -283,10 +283,10 @@ export default () => {
       }
       await createEmojis([emojiToUpdate, otherEmoji])
       await db.customEmojiRankWhitelist.createMany({ data: [
-        { customEmojiId: emojiToUpdate, rankId: 1 },
-        { customEmojiId: emojiToUpdate, rankId: 2 },
-        { customEmojiId: otherEmoji, rankId: 1 },
-        { customEmojiId: otherEmoji, rankId: 2 }
+        { customEmojiVersionId: emojiToUpdate, rankId: 1 },
+        { customEmojiVersionId: emojiToUpdate, rankId: 2 },
+        { customEmojiVersionId: otherEmoji, rankId: 1 },
+        { customEmojiVersionId: otherEmoji, rankId: 2 }
       ]})
       const data: InternalCustomEmojiUpdateData = {
         id: emojiToUpdate,
@@ -312,12 +312,14 @@ export default () => {
 
       // ensure rank whitelists were updated - rank1 should have been removed, and rank3 should have been added.
       // the other two whitelist entries should have remained unchanged.
-      await expectRowCount(db.customEmojiRankWhitelist).toBe(4)
-      const [whitelist1, whitelist2, whitelist3, whitelist4] = sortBy(await db.customEmojiRankWhitelist.findMany(), x => x.id)
-      expect(whitelist1).toEqual<CustomEmojiRankWhitelist>({ id: 2, customEmojiId: emojiToUpdate, rankId: rank2 })
-      expect(whitelist2).toEqual<CustomEmojiRankWhitelist>({ id: 3, customEmojiId: otherEmoji, rankId: rank1 })
-      expect(whitelist3).toEqual<CustomEmojiRankWhitelist>({ id: 4, customEmojiId: otherEmoji, rankId: rank2 })
-      expect(whitelist4).toEqual<CustomEmojiRankWhitelist>({ id: 5, customEmojiId: emojiToUpdate, rankId: rank3 })
+      await expectRowCount(db.customEmojiRankWhitelist).toBe(6)
+      const [whitelist1, whitelist2, whitelist3, whitelist4, whitelist5, whitelist6] = sortBy(await db.customEmojiRankWhitelist.findMany(), x => x.id)
+      expect(whitelist1).toEqual<CustomEmojiRankWhitelist>({ id: 1, customEmojiVersionId: oldVersion.id, rankId: rank1 })
+      expect(whitelist2).toEqual<CustomEmojiRankWhitelist>({ id: 2, customEmojiVersionId: oldVersion.id, rankId: rank2 })
+      expect(whitelist3).toEqual<CustomEmojiRankWhitelist>({ id: 3, customEmojiVersionId: otherVersion.id, rankId: rank1 })
+      expect(whitelist4).toEqual<CustomEmojiRankWhitelist>({ id: 4, customEmojiVersionId: otherVersion.id, rankId: rank2 })
+      expect(whitelist5).toEqual<CustomEmojiRankWhitelist>({ id: 5, customEmojiVersionId: newVersion.id, rankId: rank2 })
+      expect(whitelist6).toEqual<CustomEmojiRankWhitelist>({ id: 6, customEmojiVersionId: newVersion.id, rankId: rank3 })
     })
 
     test('Updates the deactivated custom emoji with allowDeactivated = true and reactivates the emoji', async () => {

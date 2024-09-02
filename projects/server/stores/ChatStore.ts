@@ -295,6 +295,7 @@ const includeChannelInfo = {
   })
 }
 
+// fuck me
 export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>()({
   chatMessageParts: {
     orderBy: { order: Prisma.SortOrder.asc },
@@ -304,7 +305,8 @@ export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageIn
       customEmoji: { include: {
         customEmojiVersion: { include: {
           image: true,
-          customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } } // fuck me
+          customEmojiRankWhitelist: { select: { rankId: true }},
+          customEmoji: true
         }},
         text: true,
         emoji: { include: { image: true }}

@@ -796,8 +796,7 @@ model CustomEmoji {
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "custom_emoji_streamerId_key")
 
-  customEmojiVersions      CustomEmojiVersion[]
-  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
+  customEmojiVersions CustomEmojiVersion[]
 
   @@unique([streamerId, symbol], map: "custom_emoji_streamerId_symbol_key")
   @@index([streamerId], map: "custom_emoji_streamerId_key")
@@ -820,7 +819,8 @@ model CustomEmojiVersion {
   customEmojiId Int
   customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_customEmojiId_fkey")
 
-  chatCustomEmojis ChatCustomEmoji[]
+  chatCustomEmojis         ChatCustomEmoji[]
+  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
 
   @@unique([customEmojiId, version], map: "custom_emoji_version_customEmojiId_version_key")
   @@index([imageId], map: "custom_emoji_imageId_key")
@@ -830,13 +830,13 @@ model CustomEmojiVersion {
 model CustomEmojiRankWhitelist {
   id Int @id @default(autoincrement())
 
-  customEmojiId Int
-  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_rank_whitelist_customEmojiId_fkey")
+  customEmojiVersionId Int
+  customEmojiVersion   CustomEmojiVersion @relation(fields: [customEmojiVersionId], references: [id], map: "custom_emoji_rank_whitelist_customEmojiVersionId_fkey")
 
   rankId Int
   rank   Rank @relation(fields: [rankId], references: [id], map: "custom_emoji_rank_whitelist_rankId_fkey")
 
-  @@unique([customEmojiId, rankId])
+  @@unique([customEmojiVersionId, rankId])
   @@map("custom_emoji_rank_whitelist")
 }
 

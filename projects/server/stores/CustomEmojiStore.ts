@@ -71,6 +71,7 @@ type QueriedCustomEmoji = {
   imageHeight: number
   version: number
   sortOrder: number
+  emojiVersionId: number
 }
 
 type Deps = Dependencies<{
@@ -105,7 +106,9 @@ export default class CustomEmojiStore extends ContextClass {
 
   /** Returns the latest versions of active emojis. */
   public async getAllCustomEmojis (streamerId: number): Promise<CustomEmojiWithRankWhitelist[]> {
-    const emojiWhitelistsPromise = this.db.customEmojiRankWhitelist.findMany()
+    const emojiWhitelistsPromise = this.db.customEmojiRankWhitelist.findMany({
+      where: { customEmojiVersion: { customEmoji: { streamerId }}}
+    })
 
     const emojis = await this.db.$queryRaw<QueriedCustomEmoji[]>`
       SELECT
@@ -121,7 +124,8 @@ export default class CustomEmojiStore extends ContextClass {
         i.width AS imageWidth,
         i.height AS imageHeight,
         ev.version AS version,
-        e.sortOrder AS sortOrder
+        e.sortOrder AS sortOrder,
+        ev.id AS emojiVersionId
       FROM custom_emoji e
       JOIN custom_emoji_version ev ON e.id = ev.customEmojiId
       JOIN image i ON ev.imageId = i.id
@@ -138,9 +142,20 @@ export default class CustomEmojiStore extends ContextClass {
     const emojiWhitelists = await emojiWhitelistsPromise
 
     return emojis.map(emoji => ({
-      ...emoji,
-      deletedAt: null,
-      whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiId === emoji.id).map(w => w.rankId)
+      id: emoji.id,
+      symbol: emoji.symbol,
+      streamerId: emoji.streamerId,
+      deletedAt: emoji.deletedAt?.getTime() ?? null,
+      levelRequirement: emoji.levelRequirement,
+      canUseInDonationMessage: emoji.canUseInDonationMessage,
+      modifiedAt: emoji.modifiedAt,
+      name: emoji.name,
+      imageUrl: emoji.imageUrl,
+      imageWidth: emoji.imageWidth,
+      imageHeight: emoji.imageHeight,
+      version: emoji.version,
+      sortOrder: emoji.sortOrder,
+      whitelistedRanks: emojiWhitelists.filter(w => w.customEmojiVersionId === emoji.emojiVersionId).map(w => w.rankId)
     }))
   }
 
@@ -177,8 +192,8 @@ export default class CustomEmojiStore extends ContextClass {
 
       await this.db.customEmojiRankWhitelist.createMany({
         data: data.whitelistedRanks.map(r => ({
-          customEmojiId: newEmoji.id,
-          rankId: r
+          customEmojiVersionId: newEmojiVersion.id,
+          rankId: r,
         }))
       })
 
@@ -216,17 +231,26 @@ export default class CustomEmojiStore extends ContextClass {
   public async getCustomEmojiWhitelistedRanks (emojiIds: number[]): Promise<CustomEmojiWhitelistedRanks[]> {
     const queryResult = await this.db.customEmojiRankWhitelist.findMany({
       where: {
-        customEmojiId: { in: emojiIds },
-        customEmoji: { deletedAt: null }
+        customEmojiVersion: {
+          customEmoji: {
+            id: { in: emojiIds },
+            deletedAt: null
+          }
+        }
+      },
+      select: {
+        rankId: true,
+        customEmojiVersion: { select: { customEmojiId: true } }
       }
     })
 
-    const grouped = group(queryResult, w => w.customEmojiId)
+    const grouped = group(queryResult, w => w.customEmojiVersion.customEmojiId)
 
     // keep the original order of ids
     return emojiIds.map(id => {
       const whitelistGroup = grouped.find(g => g.group === id)
       if (whitelistGroup == null) {
+        // deleted
         return {
           emojiId: id,
           rankIds: []
@@ -307,14 +331,8 @@ export default class CustomEmojiStore extends ContextClass {
         })
       }
 
-      await this.db.customEmojiRankWhitelist.deleteMany({
-        where: {
-          rankId: { notIn: data.whitelistedRanks },
-          customEmojiId: data.id
-        }
-      })
       await this.db.customEmojiRankWhitelist.createMany({
-        data: data.whitelistedRanks.map(r => ({ customEmojiId: data.id, rankId: r })),
+        data: data.whitelistedRanks.map(r => ({ customEmojiVersionId: updatedEmojiVersion.id, rankId: r })),
         skipDuplicates: true
       })
 

@@ -445,7 +445,7 @@ export default () => {
         { name: 'supporter', group: 'cosmetic', displayNameAdjective: 'rank2', displayNameNoun: 'rank2' },
         { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
       ]})
-      await db.customEmojiVersion.create({ data: {
+      const emojiVersion = await db.customEmojiVersion.create({ data: {
         levelRequirement: 1,
         name: 'Test Emoji',
         version: 0,
@@ -454,8 +454,8 @@ export default () => {
         image: { create: { url: '', fingerprint: '', width: 100, height: 200 }}
       }})
       await db.customEmojiRankWhitelist.createMany({ data: [
-        { customEmojiId: 1, rankId: 1 },
-        { customEmojiId: 1, rankId: 2 }
+        { customEmojiVersionId: emojiVersion.id, rankId: 1 },
+        { customEmojiVersionId: emojiVersion.id, rankId: 2 }
       ]})
       await chatStore.addChat(chatItem, streamer1, youtube1UserId, extYoutubeChannel1)
 
@@ -464,7 +464,7 @@ export default () => {
       const emojiResult = single(single(result).chatMessageParts).customEmoji!
       expect(emojiResult.text!.id).toBe(1)
       expect(emojiResult.customEmojiVersion.customEmojiId).toBe(1)
-      expect(emojiResult.customEmojiVersion.customEmoji.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
+      expect(emojiResult.customEmojiVersion.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
     })
 
     test('ignores donation messages', async () => {

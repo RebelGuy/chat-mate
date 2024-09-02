@@ -206,10 +206,11 @@ export type ChatItemWithRelations = (ChatMessage & {
         text: ChatText | null,
         emoji: ChatEmojiWithImage | null,
         customEmojiVersion: CustomEmojiVersion & {
+          customEmojiRankWhitelist: { rankId: number }[]
+        } & {
           customEmoji: {
             symbol: string,
             sortOrder: number,
-            customEmojiRankWhitelist: { rankId: number }[]
           },
           image: Image
         }
@@ -436,7 +437,7 @@ export function toPublicMessagePart (part: Singular<ChatItemWithRelations['chatM
         deletedAt: null,
         version: part.customEmoji.customEmojiVersion.version,
         sortOrder: part.customEmoji.customEmojiVersion.customEmoji.sortOrder,
-        whitelistedRanks: part.customEmoji.customEmojiVersion.customEmoji.customEmojiRankWhitelist.map(w => w.rankId)
+        whitelistedRanks: part.customEmoji.customEmojiVersion.customEmojiRankWhitelist.map(w => w.rankId)
       }
     }
   } else if (part.emoji == null && part.text == null && part.customEmoji == null && part.cheer != null) {
