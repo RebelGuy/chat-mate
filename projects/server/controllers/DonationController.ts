@@ -15,7 +15,6 @@ import { CreateDonationRequest, CreateDonationResponse, DeleteDonationResponse, 
 import { isNullOrEmpty } from '@rebel/shared/util/strings'
 import { CURRENCIES, CurrencyCode } from '@rebel/server/constants'
 import { mapOverKeys } from '@rebel/shared/util/objects'
-import { isKnownPrismaError, PRISMA_CODE_DOES_NOT_EXIST } from '@rebel/server/prismaUtil'
 import { generateExclusiveNumberRangeValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 
 type Deps = ControllerDependencies<{
@@ -118,11 +117,7 @@ export default class DonationController extends ControllerBase {
 
       return builder.success({ })
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
-        return builder.failure(404, 'Not found.')
-      } else {
-        return builder.failure(e)
-      }
+      return builder.failure(e)
     }
   }
 
@@ -163,9 +158,7 @@ export default class DonationController extends ControllerBase {
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
-        return builder.failure(404, 'Not found.')
-      } else if (e instanceof DonationUserLinkAlreadyExistsError) {
+      if (e instanceof DonationUserLinkAlreadyExistsError) {
         return builder.failure(400, e)
       }
       return builder.failure(e)
@@ -191,9 +184,7 @@ export default class DonationController extends ControllerBase {
         updatedDonation: await this.getPublicDonation(donationId)
       })
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
-        return builder.failure(404, 'Not found.')
-      } else if (e instanceof DonationUserLinkNotFoundError) {
+      if (e instanceof DonationUserLinkNotFoundError) {
         return builder.failure(404, e)
       }
       return builder.failure(e)
@@ -227,11 +218,7 @@ export default class DonationController extends ControllerBase {
       const updatedDonation = await this.getPublicDonations([{ ...donation, refundedAt: new Date() }]).then(single)
       return builder.success({ updatedDonation })
     } catch (e: any) {
-      if (isKnownPrismaError(e) && e.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
-        return builder.failure(404, 'Not found.')
-      } else {
-        return builder.failure(e)
-      }
+      return builder.failure(e)
     }
   }
 

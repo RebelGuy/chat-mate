@@ -87,20 +87,16 @@ export default class TwurpleService extends SingletonContextClass {
   }
 
   public override async initialise () {
-    if (this.isAdministrativeMode()) {
+    if (this.disableExternalApis) {
+      this.logService.logInfo(this, 'Skipping initialisation because external APIs are disabled.')
+      return
+    } else if (this.isAdministrativeMode()) {
       this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 
     this.chatClient = this.chatClientProvider.get()
     this.userApi = await this.twurpleApiClientProvider.get(null).then(client => client.users)
-
-    if (this.disableExternalApis) {
-      return
-    } else if (this.isAdministrativeMode()) {
-      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
-      return
-    }
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.chatClient.onMessage((channel, user, message, msg) => this.onMessage(channel, user, message, msg))

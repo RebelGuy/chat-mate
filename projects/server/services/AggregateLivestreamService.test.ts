@@ -25,17 +25,17 @@ beforeEach(() => {
 describe(nameof(AggregateLivestreamService, 'getAggregateLivestreams'), () => {
   // for consistency and ease of testing we deal only with yt livestreams
   beforeEach(() => {
-    mockLivestreamStore.getTwitchLivestreams.calledWith(streamerId).mockResolvedValue([])
+    mockLivestreamStore.getTwitchLivestreams.calledWith(streamerId, expect.any(Number)).mockResolvedValue([])
   })
 
   test('Creates separate aggregate livestreams if not connected', async () => {
-    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId).mockResolvedValue(cast<YoutubeLivestream[]>([
+    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId, 0).mockResolvedValue(cast<YoutubeLivestream[]>([
       { id: 1, start: data.time1, end: data.time2 },
       { id: 2, start: data.time3, end: data.time4 },
       { id: 3, start: data.time5, end: null }
     ]))
 
-    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId)
+    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)
 
     expect(result).toEqual(expectObjectDeep(result, [
       { startTime: data.time1, endTime: data.time2, livestreams: [{ id: 1 }] },
@@ -45,13 +45,13 @@ describe(nameof(AggregateLivestreamService, 'getAggregateLivestreams'), () => {
   })
 
   test('Joins aggregate livestreams if connected (in-progress)', async () => {
-    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId).mockResolvedValue(cast<YoutubeLivestream[]>([
+    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId, 0).mockResolvedValue(cast<YoutubeLivestream[]>([
       { id: 1, start: data.time1, end: data.time3 },
       { id: 2, start: data.time2, end: data.time4 },
       { id: 3, start: data.time3, end: null }
     ]))
 
-    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId)
+    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)
 
     expect(result).toEqual(expectObjectDeep(result, [
       { startTime: data.time1, endTime: null, livestreams: [{ id: 1 }, { id: 2 }, { id: 3 }] }
@@ -59,13 +59,13 @@ describe(nameof(AggregateLivestreamService, 'getAggregateLivestreams'), () => {
   })
 
   test('Joins aggregate livestreams if connected (ended)', async () => {
-    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId).mockResolvedValue(cast<YoutubeLivestream[]>([
+    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId, 0).mockResolvedValue(cast<YoutubeLivestream[]>([
       { id: 1, start: data.time1, end: data.time3 },
       { id: 2, start: data.time2, end: data.time4 },
       { id: 3, start: data.time3, end: data.time5 }
     ]))
 
-    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId)
+    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)
 
     expect(result).toEqual(expectObjectDeep(result, [
       { startTime: data.time1, endTime: data.time5, livestreams: [{ id: 1 }, { id: 2 }, { id: 3 }] }
@@ -73,13 +73,13 @@ describe(nameof(AggregateLivestreamService, 'getAggregateLivestreams'), () => {
   })
 
   test('Mix of joined/separated aggregate livestreams', async () => {
-    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId).mockResolvedValue(cast<YoutubeLivestream[]>([
+    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId, 0).mockResolvedValue(cast<YoutubeLivestream[]>([
       { id: 1, start: data.time1, end: data.time3 },
       { id: 2, start: data.time2, end: data.time4 },
       { id: 3, start: data.time5, end: null }
     ]))
 
-    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId)
+    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)
 
     expect(result).toEqual(expectObjectDeep(result, [
       { startTime: data.time1, endTime: data.time4, livestreams: [{ id: 1 }, { id: 2 }] },
@@ -88,12 +88,28 @@ describe(nameof(AggregateLivestreamService, 'getAggregateLivestreams'), () => {
   })
 
   test('Throws if there are multiple livestreams', async () => {
-    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId).mockResolvedValue(cast<YoutubeLivestream[]>([
+    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId, 0).mockResolvedValue(cast<YoutubeLivestream[]>([
       { start: data.time1 },
       { start: data.time2 }
     ]))
 
-    await expect(() => aggregateLivestreamService.getAggregateLivestreams(streamerId)).rejects.toThrowError(ChatMateError)
+    await expect(() => aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)).rejects.toThrowError(ChatMateError)
+  })
+
+  test('Truncates livestreams if they start before the `since` timestamp.', async () => {
+    const since = data.time3.getTime()
+
+    // both of these streams start before the `since` time
+    mockLivestreamStore.getYoutubeLivestreams.calledWith(streamerId, since).mockResolvedValue(cast<YoutubeLivestream[]>([
+      { id: 1, start: data.time1, end: data.time4 },
+      { id: 2, start: data.time2, end: null }
+    ]))
+
+    const result = await aggregateLivestreamService.getAggregateLivestreams(streamerId, since)
+
+    expect(result).toEqual(expectObjectDeep(result, [
+      { startTime: data.time3, endTime: null, livestreams: [{ id: 1 }, { id: 2 }] }
+    ]))
   })
 })
 
@@ -124,7 +140,7 @@ describe(nameof(AggregateLivestreamService, 'getLivestreamParticipation'), () =>
     // replace the getAggregateLivestreams method with a mock so this test is simplified
     const hybridAggregateLivestreamService: MockProxy<AggregateLivestreamService> = mock()
     aggregateLivestreamService.getAggregateLivestreams = hybridAggregateLivestreamService.getAggregateLivestreams
-    hybridAggregateLivestreamService.getAggregateLivestreams.calledWith(streamerId).mockResolvedValue([aggregateLivestream1, aggregateLivestream2, aggregateLivestream3])
+    hybridAggregateLivestreamService.getAggregateLivestreams.calledWith(streamerId, 0).mockResolvedValue([aggregateLivestream1, aggregateLivestream2, aggregateLivestream3])
 
     const result = await aggregateLivestreamService.getLivestreamParticipation(streamerId, anyUserIds)
 

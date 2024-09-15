@@ -27,7 +27,7 @@ import useAnimation from '@rebel/studio/hooks/useAnimation'
 import { clamp } from '@rebel/shared/util/math'
 import DeleteCustomEmoji from '@rebel/studio/pages/emojis/DeleteCustomEmoji'
 
-export type EmojiData = SafeOmit<PublicCustomEmoji, 'isActive' | 'version' | 'imageHeight' | 'imageWidth'>
+export type EmojiData = SafeOmit<PublicCustomEmoji, 'deletedAt' | 'version' | 'imageHeight' | 'imageWidth'>
 
 type Eligibility = {
   meetsLevelRequirement: boolean
@@ -51,7 +51,6 @@ export default function CustomEmojiManager () {
   const headerRef = useRef<HTMLElement | null>(null)
   const sortOrderMap = useMap<PublicCustomEmoji, number>() // used to override the sort orders while editing
   const [refreshToken, updateRefreshToken] = useUpdateKey()
-  const [emojiToDelete, setEmojiToDelete] = useState<number | null>(null)
   const emojisRequest = useRequest(getAllCustomEmojis(), {
     updateKey: refreshToken,
     onSuccess: data => {
@@ -290,6 +289,9 @@ export default function CustomEmojiManager () {
               />
             }
           />}
+          {!isLoggedIn && <Alert severity="info" sx={{ mb: 1 }}>
+            Log in and link your channel to see which emojis you are eligible for.
+          </Alert>}
 
           <Table
             stickyHeader

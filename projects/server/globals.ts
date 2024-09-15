@@ -45,8 +45,7 @@ type EnvironmentVariables = {
 
   databaseUrl: string
 
-  // replaces some controllers with fake ones
-  useFakeControllers: OptionalLocalVariable<boolean, false>
+  disableExternalApis: OptionalLocalVariable<boolean, false>
 
   ngrokAuthToken: LocalVariable<string>
 
@@ -95,7 +94,7 @@ const allChatMateEnvVariables: { [K in keyof EnvironmentVariables]: readonly Val
   studioUrl: null,
   twitchClientId: null,
   twitchClientSecret: null,
-  useFakeControllers: null,
+  disableExternalApis: null,
   ngrokAuthToken: null,
   streamlabsAccessToken: null,
   twitchUsername: null,
@@ -123,7 +122,7 @@ type ValueType<V extends keyof EnvironmentVariables> = EnvironmentVariables[V] e
 
 // local variables can only be accessed when running the server locally, and return null otherwise.
 const localVariables: Record<VariablesOfType<'local'>, true> = {
-  useFakeControllers: true,
+  disableExternalApis: true,
   ngrokAuthToken: true
 }
 
@@ -135,7 +134,7 @@ const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
 
 // optional variables resolve to the default value if they are not included in the environment definition.
 const optionalVariables: OptionalVariablesWithDefaults = {
-  useFakeControllers: false,
+  disableExternalApis: false,
   dbLogLevel: 'info',
   apiLogLevel: 'warning',
   debugLogOutput: 'disable',

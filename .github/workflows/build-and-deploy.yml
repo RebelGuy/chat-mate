@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload artifact for deployment job
         if: inputs.deploy
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: built-server-files
           path: ./dist/**
@@ -193,7 +193,7 @@ jobs:
 
       - name: Upload artifact for deployment job
         if: inputs.deploy
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: built-studio-files
           path: ./projects/studio/build/**
@@ -243,7 +243,7 @@ jobs:
 
     steps:
       - name: Download built server files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: built-server-files
 
@@ -267,7 +267,7 @@ jobs:
 
     steps:
       - name: Download built studio files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: built-studio-files
 

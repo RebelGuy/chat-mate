@@ -56,6 +56,7 @@ beforeEach(() => {
     userService: mockUserService,
     logService: mock(),
     eventDispatchService: mockEventDispatchService,
+    disableExternalApis: false,
     isAdministrativeMode: () => false
   }))
 })

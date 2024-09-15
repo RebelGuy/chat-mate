@@ -33,9 +33,9 @@ export default class LivestreamController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetLivestreamsResponse>('GET /')
     try {
       const streamerId = this.getStreamerId()
-      const youtubeLivestreams = await this.livestreamStore.getYoutubeLivestreams(streamerId)
-      const twitchLivestreams = await this.livestreamStore.getTwitchLivestreams(streamerId)
-      const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId)
+      const youtubeLivestreams = await this.livestreamStore.getYoutubeLivestreams(streamerId, 0)
+      const twitchLivestreams = await this.livestreamStore.getTwitchLivestreams(streamerId, 0)
+      const aggregateLivestreams = await this.aggregateLivestreamService.getAggregateLivestreams(streamerId, 0)
       const twitchChannelName = await this.streamerChannelService.getTwitchChannelName(streamerId)
 
       return builder.success({

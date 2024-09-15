@@ -84,7 +84,7 @@ The following environment variables must be set in the `.env` file:
 
 The following environment variables are available only for **local development** (that is, where `NODE_ENV`=`local`):
 - `NGROK_AUTH_TOKEN`: The ngrok auth token retrieved at https://dashboard.ngrok.com/get-started/your-authtoken. It is required to be able to listen to Twitch events locally.
-- `USE_FAKE_CONTROLLERS`: [Optional, defaults to `false`] If true, replaces some controllers with test-only implementations that generate fake data. This also disables communication with external APIs (that is, it is run entirely offline).
+- `DISABLE_EXTERNAL_APIS`: [Optional, defaults to `false`] If true, communication with external APIs is disabled (that is, ChatMate is run entirely offline).
 
 The following environmnet variables are available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
@@ -106,6 +106,18 @@ The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `re
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
 At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. This should also be run if the project structure changes in some way. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, refer to the [Prisma docs](https://www.prisma.io/docs/concepts/components/prisma-client).
+
+For more predictable handling of `datetime` entries, you may want to set your database timezone to UTC. This way, any dates you enter into the database will not have to be converted into UTC. You will also be able to use Javascript `Date`s' timestamps and the database's timestamps interchangeably without having to worry about conversions, plus, the deployed database uses a UTC timezone as well.
+
+- Edit the MySql config: `sudo nano /etc/mysql/my.cnf`.
+- Add the following:
+  ```
+  [mysqld]
+  default-time-zone='+00:00'
+  ```
+- Restart the MySql service: `sudo systemctl restart mysql`.
+- Verify the time zone has been set: `SELECT @@global.time_zone AS global_time_zone;`.
+
 
 ### Migrations
 Run `yarn migrate:schema` to generate a new `migration.sql` file for updating the MySQL database, which will automatically be opened for editing. Note that while this migration is not applied, any earlier unapplied migrations will be executed prior to generating the new migration. All outstanding migrations can be applied explicitly, and a new Prisma Client generated, using `yarn migrate:apply`.
@@ -409,6 +421,9 @@ Returns data with the following properties:
 
 ### `GET /stats`
 Gets global stats about ChatMate to be displayed on the ChatMate homepage. This endpoint does not require authentication.
+
+Query parameters:
+- `since` (`number`): *Optional.* Gets stats only after the given time (unix ms), inclusive.
 
 Returns data with the following properties:
 - `streamerCount`: (`number`): The number of individual streamers on ChatMate.

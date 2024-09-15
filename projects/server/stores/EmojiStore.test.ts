@@ -6,7 +6,7 @@ import EmojiStore from '@rebel/server/stores/EmojiStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { cast, expectObjectDeep, nameof, promised, throwAsync } from '@rebel/shared/testUtils'
 import { GroupedSemaphore } from '@rebel/shared/util/Semaphore'
-import { DbError } from '@rebel/shared/util/error'
+import { DbError, NotFoundError } from '@rebel/shared/util/error'
 import { mock } from 'jest-mock-extended'
 
 export default () => {
@@ -35,7 +35,7 @@ export default () => {
     })
 
     test('Throws if the emoji does not exist', async () => {
-      await expect(() => emojiStore.getEmojiById(123)).rejects.toThrowError(DbError)
+      await expect(() => emojiStore.getEmojiById(123)).rejects.toThrowError(NotFoundError)
     })
   })
 

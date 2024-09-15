@@ -99,8 +99,10 @@ export default class AccountStore extends ContextClass {
     })
   }
 
-  public async getRegisteredUserCount (): Promise<number> {
-    return await this.db.registeredUser.count()
+  public async getRegisteredUserCount (since: number): Promise<number> {
+    return await this.db.registeredUser.count({ where: {
+      registeredAt: { gte: new Date(since) }
+    }})
   }
 
   public async checkPassword (username: string, password: string): Promise<boolean> {

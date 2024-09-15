@@ -56,7 +56,7 @@ export const deleteCustomEmoji = requestBuilder<DeleteCustomEmojiResponse, false
 
 export const ping = requestBuilder<PingResponse>('GET', `/chatMate/ping`, false, false)
 
-export const getChatMateStats = requestBuilder<ChatMateStatsResponse>('GET', `/chatMate/stats`, false, false)
+export const getChatMateStats = requestBuilder<ChatMateStatsResponse, false, [since?: number]>('GET', since => constructPath(`/chatMate/stats`, { since }), false, false)
 
 export const getMasterchatAuthentication = requestBuilder<GetMasterchatAuthenticationResponse>('GET', `/chatMate/masterchat/authentication`, false)
 

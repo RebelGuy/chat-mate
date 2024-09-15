@@ -114,12 +114,18 @@ export default class ChannelStore extends ContextClass {
     })
   }
 
-  public async getYoutubeChannelCount (): Promise<number> {
-    return await this.db.youtubeChannel.count()
+  public async getYoutubeChannelCount (since: number): Promise<number> {
+    return await this.db.youtubeChannel.count({ where: {
+      // if any global info is recorded before the since date, it means the channel is older than the since date so we shouldn't include it
+      globalInfoHistory: { none: { time: { lt: new Date(since) } }}
+    }})
   }
 
-  public async getTwitchChannelCount (): Promise<number> {
-    return await this.db.twitchChannel.count()
+  public async getTwitchChannelCount (since: number): Promise<number> {
+    return await this.db.twitchChannel.count({ where: {
+      // if any global info is recorded before the since date, it means the channel is older than the since date so we shouldn't include it
+      globalInfoHistory: { none: { time: { lt: new Date(since) } }}
+    }})
   }
 
   /** Returns channels that have authored chat messages for the given streamer. */

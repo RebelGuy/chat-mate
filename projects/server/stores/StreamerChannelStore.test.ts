@@ -160,20 +160,20 @@ export default () => {
       await db.streamerTwitchChannelLink.create({ data: {
         streamerId: streamer2,
         twitchChannelId: twitchChannel1.id,
-        timeAdded: data.time3,
-        timeRemoved: data.time4 // should be ignored because deactivated
+        timeAdded: data.time4,
+        timeRemoved: data.time5 // should be ignored because deactivated
       }})
       await db.streamerTwitchChannelLink.create({ data: {
         streamerId: streamer3, // should be ignored because different streamer
         twitchChannelId: twitchChannel2.id,
-        timeAdded: data.time3
+        timeAdded: data.time4
       }})
 
       const primaryChannels = await streamerChannelStore.getPrimaryChannels([streamer1, streamer2])
 
       expect(primaryChannels).toEqual(expectObjectDeep(primaryChannels, [
-        { streamerId: streamer1, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeChannel1.youtubeId }}}, twitchChannel: { platformInfo: { channel: { twitchId: twitchChannel1.twitchId }}}},
-        { streamerId: streamer2, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeChannel2.youtubeId }}}, twitchChannel: null},
+        { streamerId: streamer1, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeChannel1.youtubeId }}}, youtubeChannelSince: data.time1.getTime(), twitchChannel: { platformInfo: { channel: { twitchId: twitchChannel1.twitchId }}}, twitchChannelSince: data.time3.getTime() },
+        { streamerId: streamer2, youtubeChannel: { platformInfo: { channel: { youtubeId: youtubeChannel2.youtubeId }}}, youtubeChannelSince: data.time2.getTime(),  twitchChannel: null}
       ]))
     })
   })

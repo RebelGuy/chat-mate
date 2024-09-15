@@ -132,17 +132,19 @@ export default class ChatStore extends ContextClass {
     return result.map(msg => ({ id: msg.id, streamerId: msg.streamerId, youtubeChannelId: msg.youtubeChannelId! }))
   }
 
-  public async getYoutubeChatMessageCount (): Promise<number> {
+  public async getYoutubeChatMessageCount (since: number): Promise<number> {
     return await this.db.chatMessage.count({ where: {
       deletedTime: null,
-      youtubeChannelId: { not: null }
+      youtubeChannelId: { not: null },
+      time: { gte: new Date(since) }
     }})
   }
 
-  public async getTwitchChatMessageCount (): Promise<number> {
+  public async getTwitchChatMessageCount (since: number): Promise<number> {
     return await this.db.chatMessage.count({ where: {
       deletedTime: null,
-      twitchChannelId: { not: null }
+      twitchChannelId: { not: null },
+      time: { gte: new Date(since) }
     }})
   }
 
@@ -293,6 +295,7 @@ const includeChannelInfo = {
   })
 }
 
+// fuck me
 export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageInclude>()({
   chatMessageParts: {
     orderBy: { order: Prisma.SortOrder.asc },
@@ -302,7 +305,8 @@ export const chatMessageIncludeRelations = Prisma.validator<Prisma.ChatMessageIn
       customEmoji: { include: {
         customEmojiVersion: { include: {
           image: true,
-          customEmoji: { include: { customEmojiRankWhitelist: { select: { rankId: true } } } } // fuck me
+          customEmojiRankWhitelist: { select: { rankId: true }},
+          customEmoji: true
         }},
         text: true,
         emoji: { include: { image: true }}

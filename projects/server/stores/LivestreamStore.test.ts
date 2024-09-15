@@ -206,9 +206,23 @@ export default () => {
         ]
       })
 
-      const result = await livestreamStore.getYoutubeLivestreams(streamer2)
+      const result = await livestreamStore.getYoutubeLivestreams(streamer2, 0)
 
       expect(result.map(l => l.id)).toEqual([4, 1, 2])
+    })
+
+    test('Only returns livestreams since the given time', async () => {
+      await db.youtubeLivestream.createMany({
+        data: [
+          { liveId: 'puS6DpPKZ3g', streamerId: streamer1, start: data.time1, end: data.time2, isActive: false },
+          { liveId: 'puS6DpPKZ3h', streamerId: streamer1, start: data.time3, end: data.time4, isActive: false },
+          { liveId: 'puS6DpPKZ3E', streamerId: streamer1, start: data.time5, end: null, isActive: true }
+        ]
+      })
+
+      const result = await livestreamStore.getYoutubeLivestreams(streamer1, data.time3.getTime() + 1)
+
+      expect(result.map(l => l.id)).toEqual([2, 3])
     })
   })
 
@@ -220,9 +234,21 @@ export default () => {
         { streamerId: streamer1, start: data.time1 }
       ]})
 
-      const result = await livestreamStore.getTwitchLivestreams(streamer1)
+      const result = await livestreamStore.getTwitchLivestreams(streamer1, 0)
 
       expect(result.map(l => l.id)).toEqual([3, 2])
+    })
+
+    test('Only returns livestreams since the given time', async () => {
+      await db.twitchLivestream.createMany({ data: [
+        { streamerId: streamer1, start: data.time1, end: data.time2 },
+        { streamerId: streamer1, start: data.time3, end: data.time4 },
+        { streamerId: streamer1, start: data.time5, end: null }
+      ]})
+
+      const result = await livestreamStore.getTwitchLivestreams(streamer1, data.time3.getTime() + 1)
+
+      expect(result.map(l => l.id)).toEqual([2, 3])
     })
   })
 
@@ -233,7 +259,7 @@ export default () => {
         { isActive: true, start: data.time3, end: data.time4, liveId: '2', streamerId: streamer2 }
       ]})
 
-      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed()
+      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed(0)
 
       const expectedMs = data.time2.getTime() - data.time1.getTime() + data.time4.getTime() - data.time3.getTime()
       const expectedDays = expectedMs / 1000 / 3600 / 24
@@ -244,7 +270,7 @@ export default () => {
       const time = addTime(new Date(), 'days', -5)
       await db.youtubeLivestream.create({ data: { isActive: true, start: time, liveId: '1', streamerId: streamer1 }})
 
-      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed()
+      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed(0)
 
       expect(Math.round(result)).toBe(5)
     })
@@ -252,9 +278,28 @@ export default () => {
     test('Ignores Youtube livestreams that have not been started', async () => {
       await db.youtubeLivestream.create({ data: { isActive: true, liveId: '1', streamerId: streamer1 }})
 
-      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed()
+      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed(0)
 
       expect(result).toBe(0)
+    })
+
+    test('Ignores livestreams before the since date', async () => {
+      await db.youtubeLivestream.create({ data: { isActive: true, start: data.time1, end: data.time2, liveId: '1', streamerId: streamer1 }})
+
+      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed(data.time3.getTime())
+
+      expect(result).toBe(0)
+    })
+
+    test('Considers only the partial livestream if it the since time intersects an ongoing livestream', async () => {
+      await db.youtubeLivestream.create({ data: { isActive: true, start: data.time1, end: data.time3, liveId: '1', streamerId: streamer1 }})
+
+      const result = await livestreamStore.getYoutubeTotalDaysLivestreamed(data.time2.getTime())
+
+      // if you get a different time here, it's likely that you haven't set your database timezone to UTC.
+      // I still don't fully understand the problem, just change your timezone and shut up please.
+      const expectedDays = (data.time3.getTime() - data.time2.getTime()) / 1000 / 3600 / 24
+      expect(result).toBe(expectedDays)
     })
   })
 
@@ -265,7 +310,7 @@ export default () => {
         { start: data.time3, end: data.time4, streamerId: streamer2 }
       ]})
 
-      const result = await livestreamStore.getTwitchTotalDaysLivestreamed()
+      const result = await livestreamStore.getTwitchTotalDaysLivestreamed(0)
 
       const expectedMs = data.time2.getTime() - data.time1.getTime() + data.time4.getTime() - data.time3.getTime()
       const expectedDays = expectedMs / 1000 / 3600 / 24
@@ -276,9 +321,25 @@ export default () => {
       const time = addTime(new Date(), 'days', -5)
       await db.twitchLivestream.create({ data: { start: time, streamerId: streamer1 }})
 
-      const result = await livestreamStore.getTwitchTotalDaysLivestreamed()
+      const result = await livestreamStore.getTwitchTotalDaysLivestreamed(0)
 
       expect(Math.round(result)).toBe(5)
+    })
+
+    test('Ignores livestreams before the since date', async () => {
+      await db.twitchLivestream.create({ data: { start: data.time1, end: data.time2, streamerId: streamer1 }})
+
+      const result = await livestreamStore.getTwitchTotalDaysLivestreamed(data.time3.getTime())
+
+      expect(result).toBe(0)
+    })
+
+    test('Considers only the partial livestream if it the since time intersects an ongoing livestream', async () => {
+      await db.twitchLivestream.create({ data: { start: data.time1, end: data.time3, streamerId: streamer1 }})
+
+      const result = await livestreamStore.getTwitchTotalDaysLivestreamed(data.time2.getTime())
+
+      expect(result).toBe((data.time3.getTime() - data.time2.getTime()) / 1000 / 3600 / 24)
     })
   })
 

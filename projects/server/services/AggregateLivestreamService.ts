@@ -30,9 +30,9 @@ export default class AggregateLivestreamService extends ContextClass {
   }
 
   /** Sorted in ascending order by start time. */
-  public async getAggregateLivestreams (streamerId: number): Promise<AggregateLivestream[]> {
-    const youtubeLivestreams = await this.livestreamStore.getYoutubeLivestreams(streamerId).then(streams => streams.filter(l => l.start != null))
-    const twitchLivestreams = await this.livestreamStore.getTwitchLivestreams(streamerId)
+  public async getAggregateLivestreams (streamerId: number, since: number): Promise<AggregateLivestream[]> {
+    const youtubeLivestreams = await this.livestreamStore.getYoutubeLivestreams(streamerId, since).then(streams => streams.filter(l => l.start != null))
+    const twitchLivestreams = await this.livestreamStore.getTwitchLivestreams(streamerId, since)
 
     // sanity check we only have at most one stream on each platform still in-progress.
     // if this is not true, something is wrong and we shouldn't continue in order to protect data integrity
@@ -54,6 +54,8 @@ export default class AggregateLivestreamService extends ContextClass {
 
     // make sure start time are monotonically increasing
     const allLivestreams = sortBy([...youtubeLivestreams, ...twitchLivestreams], l => l.start!.getTime())
+      .map(livestream => ({ ...livestream, start: pickGreater(livestream.start, since), end: pickGreater(livestream.end, since) }))
+      .filter(livestream => livestream.start == null || livestream.end == null || livestream.start < livestream.end) as (YoutubeLivestream | TwitchLivestream)[]
 
     let aggregateLivestreams: AggregateLivestream[] = []
     let currentLivestreams: (YoutubeLivestream | TwitchLivestream)[] = []
@@ -110,7 +112,7 @@ export default class AggregateLivestreamService extends ContextClass {
       .then(p => p.filter(l => l.participated))
     const participatedTwitchLivestreams = await this.livestreamStore.getTwitchLivestreamParticipation(streamerId, anyUserIds)
       .then(p => p.filter(l => l.participated))
-    const aggregateLivestreams = await this.getAggregateLivestreams(streamerId)
+    const aggregateLivestreams = await this.getAggregateLivestreams(streamerId, 0)
 
     let aggregateLivestreamParticipations: AggregateLivestreamParticipation[] = []
     let youtubeIndex = 0
@@ -140,4 +142,12 @@ export default class AggregateLivestreamService extends ContextClass {
 
     return aggregateLivestreamParticipations
   }
+}
+
+function pickGreater (date: Date | null, timestamp: number): Date | null {
+  if (date == null) {
+    return null
+  }
+
+  return date.getTime() > timestamp ? date : new Date(timestamp)
 }

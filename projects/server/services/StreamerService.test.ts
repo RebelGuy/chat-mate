@@ -85,7 +85,7 @@ describe(nameof(StreamerService, 'createStreamerApplication'), () => {
 
   test('Throws if the registered user is already a streamer', async () => {
     const registeredUserId = 1
-    mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue({ id: 1, registeredUserId })
+    mockStreamerStore.getStreamerByRegisteredUserId.calledWith(registeredUserId).mockResolvedValue({ id: 1, registeredUserId, time: new Date() })
 
     await expect(() => streamerService.createStreamerApplication(registeredUserId, '')).rejects.toThrowError(UserAlreadyStreamerError)
   })

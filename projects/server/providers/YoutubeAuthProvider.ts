@@ -49,6 +49,7 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
 
   public override async initialise (): Promise<void> {
     if (this.disableExternalApis) {
+      this.logService.logInfo(this, 'Skipping initialisation because external APIs are disabled.')
       return
     }
 

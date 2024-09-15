@@ -158,41 +158,105 @@ export default () => {
 
   describe(nameof(ChannelStore, 'getYoutubeChannelCount'), () => {
     test('Returns the number of Youtube channels', async () => {
+      await db.image.create({ data: { fingerprint: '', height: 0, width: 0, url: '' }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
-        user: { create: {}}
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, imageUrl: '', isVerified: false, name: '', imageId: 1 }}
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
-        user: { create: {}}
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, imageUrl: '', isVerified: false, name: '', imageId: 1 }}
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
-        user: { create: {}}
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, colour: '', displayName: '', userName: '', userType: '' }}
       }})
 
-      const result = await channelStore.getYoutubeChannelCount()
+      const result = await channelStore.getYoutubeChannelCount(0)
 
       expect(result).toBe(2)
+    })
+
+    test('Returns the number of Youtube channels since the given time', async () => {
+      await db.image.create({ data: { fingerprint: '', height: 0, width: 0, url: '' }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, imageUrl: '', isVerified: false, name: '', imageId: 1 }}
+      }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId2,
+        user: { create: {}},
+        globalInfoHistory: { createMany: { data: [{ time: data.time2, imageUrl: '', isVerified: false, name: '', imageId: 1 }, { time: data.time4, imageUrl: '', isVerified: false, name: '', imageId: 1 }] }}
+      }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId3,
+        user: { create: {}},
+        globalInfoHistory: { createMany: { data: [{ time: data.time4, imageUrl: '', isVerified: false, name: '', imageId: 1 }, { time: data.time5, imageUrl: '', isVerified: false, name: '', imageId: 1 }] }}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time3, colour: '', displayName: '', userName: '', userType: '' }}
+      }})
+
+      const result = await channelStore.getYoutubeChannelCount(data.time3.getTime())
+
+      expect(result).toBe(1)
     })
   })
 
   describe(nameof(ChannelStore, 'getTwitchChannelCount'), () => {
     test('Returns the number of Twitch channels', async () => {
+      await db.image.create({ data: { fingerprint: '', height: 0, width: 0, url: '' }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId1,
-        user: { create: {}}
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time3, imageUrl: '', isVerified: false, name: '', imageId: 1 }}
       }})
       await db.youtubeChannel.create({ data: {
         youtubeId: ytChannelId2,
-        user: { create: {}}
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, imageUrl: '', isVerified: false, name: '', imageId: 1 }}
       }})
       await db.twitchChannel.create({ data: {
         twitchId: extTwitchChannelId1,
-        user: { create: {}}
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, colour: '', displayName: '', userName: '', userType: '' }}
       }})
 
-      const result = await channelStore.getTwitchChannelCount()
+      const result = await channelStore.getTwitchChannelCount(0)
+
+      expect(result).toBe(1)
+    })
+
+    test('Returns the number of Twitch channels since the given time', async () => {
+      await db.image.create({ data: { fingerprint: '', height: 0, width: 0, url: '' }})
+      await db.youtubeChannel.create({ data: {
+        youtubeId: ytChannelId1,
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, imageUrl: '', isVerified: false, name: '', imageId: 1 }}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId1,
+        user: { create: {}},
+        globalInfoHistory: { create: { time: data.time1, colour: '', displayName: '', userName: '', userType: '' }}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId2,
+        user: { create: {}},
+        globalInfoHistory: { createMany: { data: [{ time: data.time2, colour: '', displayName: '', userName: '', userType: '' }, { time: data.time4, colour: '', displayName: '', userName: '', userType: '' }] }}
+      }})
+      await db.twitchChannel.create({ data: {
+        twitchId: extTwitchChannelId3,
+        user: { create: {}},
+        globalInfoHistory: { createMany: { data: [{ time: data.time4, colour: '', displayName: '', userName: '', userType: '' }, { time: data.time5, colour: '', displayName: '', userName: '', userType: '' }] }}
+      }})
+
+      const result = await channelStore.getTwitchChannelCount(data.time3.getTime())
 
       expect(result).toBe(1)
     })
