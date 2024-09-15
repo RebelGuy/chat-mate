@@ -8,7 +8,7 @@ import { compareArrays } from '@rebel/shared/util/arrays'
 import { AccessToken, AppTokenAuthProvider, RefreshingAuthProvider } from '@twurple/auth'
 import { TWITCH_SCOPE } from '@rebel/server/constants'
 import { waitUntil } from '@rebel/shared/util/typescript'
-import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
+import { AuthorisationExpiredError, ChatMateError, InconsistentScopesError, NotFoundError, TwitchNotAuthorisedError } from '@rebel/shared/util/error'
 
 type Deps = Dependencies<{
   disableExternalApis: boolean
@@ -52,6 +52,7 @@ export default class TwurpleAuthProvider extends SingletonContextClass {
 
   public override async initialise (): Promise<void> {
     if (this.disableExternalApis) {
+      this.logService.logInfo(this, 'Skipping initialisation because external APIs are disabled.')
       return
     }
 
@@ -99,8 +100,10 @@ export default class TwurpleAuthProvider extends SingletonContextClass {
         // is there a better way to do this? probably
         if (e instanceof AuthorisationExpiredError) {
           throw e
-        } else {
+        } else if (e instanceof NotFoundError) {
           throw new TwitchNotAuthorisedError(twitchUserId)
+        } else {
+          throw e
         }
       }
     }

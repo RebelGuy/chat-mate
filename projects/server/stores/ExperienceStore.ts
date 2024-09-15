@@ -127,10 +127,13 @@ export default class ExperienceStore extends ContextClass {
     return result._sum?.delta ?? 0
   }
 
-  public async getTotalGlobalExperience (): Promise<number> {
+  public async getTotalGlobalExperience (since: number): Promise<number> {
     const queryResult = await this.db.experienceTransaction.aggregate({
       _sum: { delta: true },
-      where: { NOT: { experienceDataChatMessage: null }}
+      where: {
+        NOT: { experienceDataChatMessage: null },
+        time: { gte: new Date(since) }
+      }
     })
 
     return queryResult._sum?.delta ?? 0

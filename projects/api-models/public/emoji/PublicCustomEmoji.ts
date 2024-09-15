@@ -7,8 +7,8 @@ export type PublicCustomEmoji = PublicObject<{
   /** The current emoji version. */
   version: number
 
-  /** Whether the emoji is currently active and accessible to users. */
-  isActive: boolean
+  /** The time at which the emoji was deleted, if any. If not null, the emoji is not currently active and is inaccessible to users. */
+  deletedAt: number | null
 
   /** The human readable name of the emoji. */
   name: string

@@ -2,22 +2,9 @@ import { startTestDb, DB_TEST_TIMEOUT, stopTestDb, expectRowCount } from '@rebel
 import { Db } from '@rebel/server/providers/DbProvider'
 import VisitorStore from '@rebel/server/stores/VisitorStore'
 import { Dependencies } from '@rebel/shared/context/context'
-import { expectObject, nameof } from '@rebel/shared/testUtils'
+import { nameof } from '@rebel/shared/testUtils'
 import { DbError } from '@rebel/shared/util/error'
-
-const DAY_MS = 24 * 3600 * 1000
-
-const day1 = new Date(0)
-day1.setUTCFullYear(2024, 6, 28)
-
-const day2 = new Date(0)
-day2.setUTCFullYear(2024, 6, 29)
-
-const day3 = new Date(0)
-day3.setUTCFullYear(2024, 6, 30)
-
-const day4 = new Date(0)
-day4.setUTCFullYear(2024, 6, 31)
+import * as data from '@rebel/server/_test/testData'
 
 const visitorId1 = 'visitor1'
 const visitorId2 = 'visitor2'
@@ -37,81 +24,62 @@ export default () => {
 
   describe(nameof(VisitorStore, 'addVisitor'), () => {
     test('Adds the visitor to the database', async () => {
-      const yesterday = Date.now() - DAY_MS
       await db.visitor.createMany({ data: [
-        { visitorId: visitorId1 },
-        { visitorId: visitorId2, date: new Date(yesterday) },
+        { visitorId: visitorId1, timeString: '1' },
+        { visitorId: visitorId2, timeString: '1' },
       ]})
 
-      await visitorStore.addVisitor(visitorId2)
+      await visitorStore.addVisitor(visitorId2, '2')
 
       await expectRowCount(db.visitor).toEqual(3)
     })
 
-    test('Throws if the same visitor already exists for today', async () => {
+    test('Throws if the same visitor with the same time string already exists', async () => {
       const visitorId = 'visitorId'
-      await db.visitor.create({ data: { visitorId: visitorId }})
+      await db.visitor.create({ data: { visitorId: visitorId, timeString: '1' }})
 
-      await expect(() => visitorStore.addVisitor(visitorId)).rejects.toThrowError(DbError)
-    })
-  })
-
-  describe(nameof(VisitorStore, 'getGroupedUniqueVisitors'), () => {
-    test(`Gets today's and yesterday's visitors`, async () => {
-      await db.visitor.createMany({ data: [
-        { visitorId: visitorId1, date: day1 }, // day 1 (1 visitor)
-        { visitorId: visitorId2, date: day2 }, { visitorId: visitorId3, date: day2 }, // day 2 (2 visitors)
-        // day 3 (no visitors)
-        { visitorId: visitorId1, date: day4 } // day 4 (1 visitor)
-      ]})
-
-      const result = await visitorStore.getGroupedUniqueVisitors(day2.getTime())
-
-      expect(result).toEqual(expectObject(result, [
-        { timestamp: day2.getTime(), visitors: 2 },
-        { timestamp: day4.getTime(), visitors: 1 }
-      ]))
+      await expect(() => visitorStore.addVisitor(visitorId, '1')).rejects.toThrowError(DbError)
     })
   })
 
   describe(nameof(VisitorStore, 'getUniqueVisitors'), () => {
     test('Returns the number of unique visitor ids', async () => {
       await db.visitor.createMany({ data: [
-        { visitorId: visitorId1, date: day1 }, // day 1 (1 visitor)
-        { visitorId: visitorId2, date: day2 }, { visitorId: visitorId3, date: day2 }, // day 2 (2 visitors)
+        { visitorId: visitorId1, timeString: '1', time: data.time1 }, // day 1 (1 visitor)
+        { visitorId: visitorId2, time: data.time2, timeString: '2' }, { visitorId: visitorId3, time: data.time2, timeString: '2' }, // day 2 (2 visitors)
         // day 3 (no visitors)
-        { visitorId: visitorId1, date: day4 } // day 4 (1 visitor)
+        { visitorId: visitorId1, time: data.time4, timeString: '4' } // day 4 (1 visitor)
       ]})
 
-      const result = await visitorStore.getUniqueVisitors()
+      const result = await visitorStore.getUniqueVisitors(0)
 
       expect(result).toBe(3)
     })
   })
 
-  describe(nameof(VisitorStore, 'getVisitorsForDay'), () => {
+  describe(nameof(VisitorStore, 'getVisitorsForTimeString'), () => {
     test('Returns the visitors of the given day', async () => {
       await db.visitor.createMany({ data: [
-        { visitorId: visitorId1, date: day1 }, // day 1 (1 visitor)
-        { visitorId: visitorId2, date: day2 }, { visitorId: visitorId3, date: day2 }, // day 2 (2 visitors)
+        { visitorId: visitorId1, time: data.time1, timeString: '1' }, // day 1 (1 visitor)
+        { visitorId: visitorId2, time: data.time2, timeString: '2' }, { visitorId: visitorId3, time: data.time2, timeString: '2' }, // day 2 (2 visitors)
         // day 3 (no visitors)
-        { visitorId: visitorId1, date: day4 } // day 4 (1 visitor)
+        { visitorId: visitorId1, time: data.time4, timeString: '4' } // day 4 (1 visitor)
       ]})
 
-      const result = await visitorStore.getVisitorsForDay(day2.getTime())
+      const result = await visitorStore.getVisitorsForTimeString('2')
 
       expect(result).toEqual([visitorId2, visitorId3])
     })
 
     test('Returns an empty array if no visitors are found', async () => {
       await db.visitor.createMany({ data: [
-        { visitorId: visitorId1, date: day1 }, // day 1 (1 visitor)
-        { visitorId: visitorId2, date: day2 }, { visitorId: visitorId3, date: day2 }, // day 2 (2 visitors)
+        { visitorId: visitorId1, time: data.time1, timeString: '1' }, // day 1 (1 visitor)
+        { visitorId: visitorId2, time: data.time2, timeString: '2' }, { visitorId: visitorId3, time: data.time2, timeString: '2' }, // day 2 (2 visitors)
         // day 3 (no visitors)
-        { visitorId: visitorId1, date: day4 } // day 4 (1 visitor)
+        { visitorId: visitorId1, time: data.time4, timeString: '4' } // day 4 (1 visitor)
       ]})
 
-      const result = await visitorStore.getVisitorsForDay(day3.getTime())
+      const result = await visitorStore.getVisitorsForTimeString('3')
 
       expect(result).toEqual([])
     })

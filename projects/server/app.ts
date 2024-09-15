@@ -117,6 +117,8 @@ import ImageStore from '@rebel/server/stores/ImageStore'
 import TaskService from '@rebel/server/services/task/TaskService'
 import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUpYoutubeContextTokensTask'
 import TaskStore from '@rebel/server/stores/TaskStore'
+import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
+import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -183,7 +185,7 @@ const main = async () => {
     .withProperty('dataPath', dataPath)
     .withProperty('nodeEnv', env('nodeEnv'))
     .withProperty('databaseUrl', env('databaseUrl'))
-    .withProperty('disableExternalApis', env('useFakeControllers') === true)
+    .withProperty('disableExternalApis', env('disableExternalApis') === true)
     .withProperty('twitchClientId', twitchClientId)
     .withProperty('twitchClientSecret', twitchClientSecret)
     .withProperty('dbLogLevel', dbLogLevel)
@@ -213,6 +215,7 @@ const main = async () => {
     .withHelpers('donationHelpers', DonationHelpers)
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
+    .withHelpers('visitorHelpers', VisitorHelpers)
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
@@ -298,6 +301,7 @@ const main = async () => {
     .withClass('streamerTwitchEventService', StreamerTwitchEventService)
     .withClass('visitorService', VisitorService)
     .withClass('cleanUpYoutubeContextTokensTask', CleanUpYoutubeContextTokensTask)
+    .withClass('cleanUpApiCallsTask', CleanUpApiCallsTask)
     .withClass('taskStore', TaskStore)
     .withClass('taskService', TaskService)
     .build()
@@ -488,8 +492,8 @@ const main = async () => {
     throw error
   })
 
-  if (env('useFakeControllers')) {
-    logContext.logInfo(`Using fake controllers`)
+  if (env('disableExternalApis')) {
+    logContext.logInfo(`Disabling external APIs`)
   }
 
   // ensure the server can still run if Twitch auth fails, so that we can re-authenticate via the Studio Twitch admin page

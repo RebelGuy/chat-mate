@@ -6,6 +6,7 @@ import LogService from '@rebel/server/services/LogService'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
 import { ApiResponse, API_ERRORS, ErrorCode, ResponseData, ApiResponseData } from '@rebel/api-models/types'
 import { Schema, SchemaType, validateObject } from '@rebel/server/controllers/schema'
+import { NotFoundError } from '@rebel/shared/util/error'
 
 export const BASE_PATH = '/api'
 
@@ -112,6 +113,11 @@ export class ResponseBuilder<T extends ResponseData<T>> {
   public failure (error: ErrorType): ApiResponse<any>
   public failure (errorCode: ErrorCode, error: ErrorType): ApiResponse<any>
   public failure (arg1: ErrorCode | ErrorType, arg2?: ErrorType): ApiResponse<any> {
+    if (arg1 instanceof NotFoundError) {
+      arg1 = 404
+      arg2 = 'Not found.'
+    }
+
     const errorCode: ErrorCode = typeof arg1 === 'number' ? arg1 : 500
     const error = this.getErrorObject(typeof arg1 === 'number' ? arg2! : arg1)
 

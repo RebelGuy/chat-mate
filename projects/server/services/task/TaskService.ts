@@ -2,12 +2,12 @@ import { Task, TaskType } from '@prisma/client'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import LogService from '@rebel/server/services/LogService'
+import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
 import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUpYoutubeContextTokensTask'
 import TaskStore from '@rebel/server/stores/TaskStore'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
 import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
-import { keysOf } from '@rebel/shared/util/objects'
 
 /** A potentially long-running task that is automatically scheduled periodically. */
 export interface ITask {
@@ -21,6 +21,7 @@ type Deps = Dependencies<{
   dateTimeHelpers: DateTimeHelpers
   timerHelpers: TimerHelpers
   cleanUpYoutubeContextTokensTask: CleanUpYoutubeContextTokensTask
+  cleanUpApiCallsTask: CleanUpApiCallsTask
 }>
 
 export default class TaskService extends SingletonContextClass {
@@ -42,12 +43,15 @@ export default class TaskService extends SingletonContextClass {
     this.timerHelpers = deps.resolve('timerHelpers')
 
     this.tasks = {
-      [TaskType.cleanUpYoutubeContextTokensTask]: deps.resolve('cleanUpYoutubeContextTokensTask')
+      [TaskType.cleanUpYoutubeContextTokensTask]: deps.resolve('cleanUpYoutubeContextTokensTask'),
+      [TaskType.cleanUpApiCallsTask]: deps.resolve('cleanUpApiCallsTask')
     }
   }
 
   public override async initialise (): Promise<void> {
-    for (const taskType of keysOf(this.tasks)) {
+    // for testing purposes, we get the task types from the db instead of hardcoding them
+    const taskTypes = await this.taskStore.getTaskTypes()
+    for (const taskType of taskTypes) {
       const task = await this.taskStore.getTask(taskType)
       const previousTime = await this.taskStore.getTimeSinceLastTaskExecution(taskType) ?? 0
       const newTime = previousTime + task.intervalMs

@@ -59,7 +59,6 @@ export default () => {
         streamerId: streamer1,
         sortOrder: 1,
         customEmojiVersions: { create: {
-          isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
           name: 'name',
@@ -152,7 +151,6 @@ export default () => {
       await db.chatCustomEmoji.create({ data: {
         text: { create: { isBold: false, isItalics: false, text: 'sample custom emoji' }},
         customEmojiVersion: { create: {
-          isActive: true,
           levelRequirement: 1,
           canUseInDonationMessage: true,
           name: 'name',
@@ -198,21 +196,21 @@ export default () => {
     })
 
     test(`Throws if donation doesn't exist`, async () => {
-      await expect(() => donationStore.getDonation(streamer1, 5)).rejects.toThrowError(DbError)
+      await expect(() => donationStore.getDonation(streamer1, 5)).rejects.toThrowError(NotFoundError)
     })
 
     test('Throws if donation is deleted', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ isDeleted: true }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrowError(DbError)
+      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrowError(NotFoundError)
     })
 
     test('Throws if donation is inaccessible', async () => {
       const user = await db.chatUser.create({ data: {}})
       const donation = await createDonation({ streamerId: streamer2 }, { userId: user.id, type: 'internal' })
 
-      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrowError(DbError)
+      await expect(() => donationStore.getDonation(streamer1, donation.id)).rejects.toThrowError(NotFoundError)
     })
   })
 

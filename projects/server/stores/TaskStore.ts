@@ -21,6 +21,14 @@ export default class TaskStore extends ContextClass {
     return await this.db.task.findUniqueOrThrow({ where: { taskType: taskType }})
   }
 
+  public async getTaskTypes (): Promise<TaskType[]> {
+    const result = await this.db.task.findMany({
+      select: { taskType: true }
+    })
+
+    return result.map(r => r.taskType)
+  }
+
   public async getTimeSinceLastTaskExecution (taskType: TaskType): Promise<number | null> {
     const result = await this.db.taskLog.findFirst({
       where: { task: { taskType: taskType }},

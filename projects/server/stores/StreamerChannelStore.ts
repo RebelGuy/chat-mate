@@ -3,12 +3,14 @@ import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import { channelQuery_includeLatestChannelInfo, TwitchChannelWithLatestInfo, UserChannel, YoutubeChannelWithLatestInfo } from '@rebel/server/stores/ChannelStore'
-import { PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
+import { ChatMateError, PrimaryChannelAlreadyExistsError, PrimaryChannelNotFoundError } from '@rebel/shared/util/error'
 
 export type PrimaryChannels = {
   streamerId: number
   youtubeChannel: UserChannel<'youtube'> | null
+  youtubeChannelSince: number | null
   twitchChannel: UserChannel<'twitch'> | null
+  twitchChannelSince: number | null
 }
 
 type Deps = Dependencies<{
@@ -82,11 +84,13 @@ export default class StreamerChannelStore extends ContextClass {
     return streamerIds.map<PrimaryChannels>(streamerId => {
       const youtubeLink = youtubeLinks.find(l => l.streamerId === streamerId)
       const youtubeChannel = youtubeLink != null ? youtubeLinkToUserChannel(youtubeLink) : null
+      const youtubeChannelSince = youtubeLink != null ? youtubeLink.timeAdded.getTime() : null
 
       const twitchLink = twitchLinks.find(l => l.streamerId === streamerId)
       const twitchChannel = twitchLink != null ? twitchLinkToUserChannel(twitchLink) : null
+      const twitchChannelSince = twitchLink != null ? twitchLink.timeAdded.getTime() : null
 
-      return { streamerId, youtubeChannel, twitchChannel }
+      return { streamerId, youtubeChannel, youtubeChannelSince, twitchChannel, twitchChannelSince }
     })
   }
 

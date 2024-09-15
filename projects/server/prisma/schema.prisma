@@ -257,6 +257,8 @@ model LoginToken {
 model Streamer {
   id Int @id @default(autoincrement())
 
+  time DateTime @default(now())
+
   registeredUserId Int // unique
   registeredUser   RegisteredUser @relation(fields: [registeredUserId], references: [id], map: "streamer_registeredUserId_fkey")
 
@@ -789,22 +791,21 @@ model CustomEmoji {
   // deliberately don't save this to the CustomEmojiVersion because it's display data that is not important to version-control, and we would be generating hundreds of versions otherwise
   sortOrder Int
 
+  deletedAt DateTime?
+
   streamerId Int
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "custom_emoji_streamerId_key")
 
-  customEmojiVersions      CustomEmojiVersion[]
-  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
+  customEmojiVersions CustomEmojiVersion[]
 
   @@unique([streamerId, symbol], map: "custom_emoji_streamerId_symbol_key")
   @@index([streamerId], map: "custom_emoji_streamerId_key")
   @@map("custom_emoji")
 }
 
-// this table has a BEFORE INSERT trigger `TRG_CHECK_EXISTING_ACTIVE_VERSION`
 model CustomEmojiVersion {
   id Int @id @default(autoincrement())
 
-  isActive   Boolean
   modifiedAt DateTime @default(now())
   version    Int
   name       String   @db.VarChar(63)
@@ -818,7 +819,8 @@ model CustomEmojiVersion {
   customEmojiId Int
   customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_customEmojiId_fkey")
 
-  chatCustomEmojis ChatCustomEmoji[]
+  chatCustomEmojis         ChatCustomEmoji[]
+  customEmojiRankWhitelist CustomEmojiRankWhitelist[]
 
   @@unique([customEmojiId, version], map: "custom_emoji_version_customEmojiId_version_key")
   @@index([imageId], map: "custom_emoji_imageId_key")
@@ -828,13 +830,13 @@ model CustomEmojiVersion {
 model CustomEmojiRankWhitelist {
   id Int @id @default(autoincrement())
 
-  customEmojiId Int
-  customEmoji   CustomEmoji @relation(fields: [customEmojiId], references: [id], map: "custom_emoji_rank_whitelist_customEmojiId_fkey")
+  customEmojiVersionId Int
+  customEmojiVersion   CustomEmojiVersion @relation(fields: [customEmojiVersionId], references: [id], map: "custom_emoji_rank_whitelist_customEmojiVersionId_fkey")
 
   rankId Int
   rank   Rank @relation(fields: [rankId], references: [id], map: "custom_emoji_rank_whitelist_rankId_fkey")
 
-  @@unique([customEmojiId, rankId])
+  @@unique([customEmojiVersionId, rankId])
   @@map("custom_emoji_rank_whitelist")
 }
 
@@ -1076,18 +1078,18 @@ model Image {
 model Visitor {
   id Int @id @default(autoincrement())
 
-  visitorId String @db.VarChar(127) // unique with the `date` column
+  visitorId  String @db.VarChar(127) // unique with the `timeString` column
+  timeString String @db.VarChar(31) // unique with the `visitorId` column
 
-  // the `dbgenerated` values have to be exactly this, otherwise things like "CURRENT_DATE" will be converted into curdate() and cause prisma to bitch about it
-  date DateTime @default(dbgenerated("(curdate())")) @db.Date() // unique with the `visitorId` column
-  time DateTime @default(dbgenerated("(curtime())")) @db.Time()
+  time DateTime @default(now())
 
-  @@unique([visitorId, date], map: "visitor_visitorId_date_key")
+  @@unique([visitorId, timeString], map: "visitor_visitorId_timeString_key")
   @@map("visitor")
 }
 
 enum TaskType {
   cleanUpYoutubeContextTokensTask
+  cleanUpApiCallsTask
 }
 
 model Task {

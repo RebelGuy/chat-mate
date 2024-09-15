@@ -3,8 +3,9 @@ import LogService from '@rebel/server/services/LogService'
 import { Prisma, PrismaClient } from '@prisma/client'
 import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import Semaphore from '@rebel/shared/util/Semaphore'
-import { DbError } from '@rebel/shared/util/error'
+import { DbError, NotFoundError } from '@rebel/shared/util/error'
 import { SafeOmit } from '@rebel/shared/types'
+import { PRISMA_CODE_DOES_NOT_EXIST, isKnownPrismaError } from '@rebel/server/prismaUtil'
 
 // remove properties from PrismaClient that we will never need
 type UnusedPrismaProperties = '$on' | '$queryRawUnsafe' | '$connect' | '$disconnect' | '$use' | '$extends'
@@ -67,11 +68,8 @@ export default class DbProvider extends SingletonContextClass {
       const startTime = Date.now()
 
       try {
-        const result = await next(params)
-        this.semaphore.exit()
-        return result
+        return await next(params)
       } catch (e: any) {
-        this.semaphore.exit()
         this.logService.logWarning(this, 'Prisma encountered an error while trying to execute a request. Params:', params, 'Error:', e)
 
         // CHAT-362 During periods of dense traffic, the db can timeout and will remain in a broken state
@@ -81,8 +79,16 @@ export default class DbProvider extends SingletonContextClass {
           this.logService.logWarning(this, 'Detected Prisma timeout, now reconnecting to the database.')
           await this.prismaClient.$disconnect()
         }
-        throw new DbError(e)
+
+
+        let error: Error = new DbError(e)
+        if (isKnownPrismaError(error) && error.innerError.code === PRISMA_CODE_DOES_NOT_EXIST) {
+          error = new NotFoundError(`Unable to find first ${params.model ?? '<model>'} record`)
+        }
+        throw error
       } finally {
+        this.semaphore.exit()
+
         const duration = Date.now() - startTime
         if (duration >= this.dbSlowQueryThreshold) {
           this.logService.logSlowQuery(duration, params)

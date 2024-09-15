@@ -97,7 +97,7 @@ export default class CustomEmojiService extends ContextClass {
       name: newEmoji.name,
       symbol: newEmoji.symbol,
       version: newEmoji.version,
-      isActive: newEmoji.isActive,
+      deletedAt: null,
       sortOrder: newEmoji.sortOrder,
       streamerId: newEmoji.streamerId,
       modifiedAt: newEmoji.modifiedAt,
@@ -161,7 +161,7 @@ export default class CustomEmojiService extends ContextClass {
       name: newEmoji.name,
       symbol: newEmoji.symbol,
       version: newEmoji.version,
-      isActive: newEmoji.isActive,
+      deletedAt: null,
       sortOrder: newEmoji.sortOrder,
       streamerId: newEmoji.streamerId,
       modifiedAt: newEmoji.modifiedAt,
@@ -301,7 +301,7 @@ export default class CustomEmojiService extends ContextClass {
 }
 
 // includes the troll hack, as above
-function getSymbolToMatch (customEmoji: CustomEmoji): string {
+function getSymbolToMatch (customEmoji: CurrentCustomEmoji): string {
   return customEmoji.symbol === '🧌' ? '🧌' : `:${customEmoji.symbol}:`
 }
 

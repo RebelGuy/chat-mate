@@ -1,5 +1,5 @@
 import { buildPath, ControllerBase, ControllerDependencies } from '@rebel/server/controllers/ControllerBase'
-import { GET, Path, PreProcessor } from 'typescript-rest'
+import { GET, Path, PreProcessor, QueryParam } from 'typescript-rest'
 import { requireRank } from '@rebel/server/controllers/preProcessors'
 import MasterchatService from '@rebel/server/services/MasterchatService'
 import StreamerStore from '@rebel/server/stores/StreamerStore'
@@ -75,30 +75,42 @@ export default class ChatMateController extends ControllerBase {
 
   @GET
   @Path('/stats')
-  public async getStats (): Promise<ChatMateStatsResponse> {
+  public async getStats (
+    @QueryParam('since') since?: number
+  ): Promise<ChatMateStatsResponse> {
     const builder = this.registerResponseBuilder<ChatMateStatsResponse>('GET /stats')
+
+    const validationError = builder.validateInput({
+      since: { type: 'number', optional: true }
+    }, { since })
+    if (validationError != null) {
+      return validationError
+    }
+
+    since = since ?? 0
+
     try {
-      const totalVisitors = await this.visitorStore.getUniqueVisitors()
+      const totalVisitors = await this.visitorStore.getUniqueVisitors(since)
       const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
-      const streamers = await this.streamerStore.getStreamers().then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
+      const streamers = await this.streamerStore.getStreamersSince(since).then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
       const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
-      const registeredUserCount = await this.accountStore.getRegisteredUserCount()
-      const youtubeChannelCount = await this.channelStore.getYoutubeChannelCount()
-      const twitchChannelCount = await this.channelStore.getTwitchChannelCount()
-      const youtubeMessageCount = await this.chatStore.getYoutubeChatMessageCount()
-      const twitchMessageCount = await this.chatStore.getTwitchChatMessageCount()
-      const youtubeLiveReactions = await this.liveReactionStore.getTotalLiveReactions()
-      const totalExperience = await this.experienceStore.getTotalGlobalExperience()
+      const registeredUserCount = await this.accountStore.getRegisteredUserCount(since)
+      const youtubeChannelCount = await this.channelStore.getYoutubeChannelCount(since)
+      const twitchChannelCount = await this.channelStore.getTwitchChannelCount(since)
+      const youtubeMessageCount = await this.chatStore.getYoutubeChatMessageCount(since)
+      const twitchMessageCount = await this.chatStore.getTwitchChatMessageCount(since)
+      const youtubeLiveReactions = await this.liveReactionStore.getTotalLiveReactions(since)
+      const totalExperience = await this.experienceStore.getTotalGlobalExperience(since)
       // todo: this is a big no-no, we should probably cache things that we know will never change (e.g. past livestreams)
-      const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id))).then(flatMap)
-      const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed()
-      const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed()
+      const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id, since!))).then(flatMap)
+      const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed(since)
+      const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed(since)
 
       return builder.success({
         totalVisitors: totalVisitors,
         streamerCount: streamers.length,
-        youtubeStreamerCount: primaryChannels.filter(pc => pc.youtubeChannel != null).length,
-        twitchStreamerCount: primaryChannels.filter(pc => pc.twitchChannel != null).length,
+        youtubeStreamerCount: primaryChannels.filter(pc => pc.youtubeChannel != null && pc.youtubeChannelSince! >= since!).length,
+        twitchStreamerCount: primaryChannels.filter(pc => pc.twitchChannel != null && pc.twitchChannelSince! >= since!).length,
         registeredUserCount: registeredUserCount,
         uniqueChannelCount: youtubeChannelCount + twitchChannelCount,
         uniqueYoutubeChannelCount: youtubeChannelCount,

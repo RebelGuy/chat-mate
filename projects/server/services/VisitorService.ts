@@ -1,10 +1,10 @@
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
+import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import LogService from '@rebel/server/services/LogService'
 import VisitorStore from '@rebel/server/stores/VisitorStore'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
-import { single } from '@rebel/shared/util/arrays'
 import { hashString } from '@rebel/shared/util/strings'
 
 type Deps = Dependencies<{
@@ -12,6 +12,7 @@ type Deps = Dependencies<{
   logService: LogService
   visitorStore: VisitorStore
   dateTimeHelpers: DateTimeHelpers
+  visitorHelpers: VisitorHelpers
 }>
 
 export default class VisitorService extends ContextClass {
@@ -21,6 +22,7 @@ export default class VisitorService extends ContextClass {
   private readonly logService: LogService
   private readonly visitorStore: VisitorStore
   private readonly dateTimeHelpers: DateTimeHelpers
+  private readonly visitorHelpers: VisitorHelpers
 
   constructor (deps: Deps) {
     super()
@@ -29,10 +31,12 @@ export default class VisitorService extends ContextClass {
     this.logService = deps.resolve('logService')
     this.visitorStore = deps.resolve('visitorStore')
     this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
+    this.visitorHelpers = deps.resolve('visitorHelpers')
   }
 
   public async addVisitor (ip: string): Promise<void> {
     const hashedIp = hashString(ip)
+    const timeString = this.visitorHelpers.getTimeString(this.dateTimeHelpers.now()) // get the timeString immediately since we might be waiting for the semaphore
     const semaphore = this.chatMateStateService.getVisitorCountSemaphore()
 
     try {
@@ -40,23 +44,17 @@ export default class VisitorService extends ContextClass {
 
       // we add the visitor to the cache regardless of whether the database request might fail,
       // because it's really not that important. as long as it's fast and about right, i'm
-      const newVisitor = this.chatMateStateService.cacheVisitor(hashedIp)
+      const newVisitor = this.chatMateStateService.cacheVisitor(hashedIp, timeString)
       if (!newVisitor) {
         return
       }
 
-      await this.visitorStore.addVisitor(hashedIp)
+      await this.visitorStore.addVisitor(hashedIp, timeString)
     } catch (e: any) {
       // todo: handle duplicate entry error
       this.logService.logError(this, `Unable to add visitor ${hashedIp} to the database:`, e)
     } finally {
       semaphore.exit(hashedIp)
     }
-  }
-
-  public async getUniqueVisitorsToday (): Promise<number> {
-    const startOfDay = this.dateTimeHelpers.getStartOfToday()
-    const grouped = await this.visitorStore.getGroupedUniqueVisitors(startOfDay)
-    return single(grouped).visitors
   }
 }

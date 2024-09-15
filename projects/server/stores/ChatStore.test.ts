@@ -9,7 +9,7 @@ import { mock, MockProxy } from 'jest-mock-extended'
 import { Author, ChatItem, PartialChatMessage, PartialCheerChatMessage, PartialCustomEmojiChatMessage, PartialEmojiChatMessage, PartialProcessedEmojiChatMessage, PartialTextChatMessage, TwitchAuthor } from '@rebel/server/models/chat'
 import { YoutubeChannelGlobalInfo, YoutubeLivestream, TwitchLivestream, TwitchChannelGlobalInfo } from '@prisma/client'
 import * as data from '@rebel/server/_test/testData'
-import { DbError, ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError } from '@rebel/shared/util/error'
+import { DbError, ChatMessageForStreamerNotFoundError, InvalidEmojiMessagePartError, NotFoundError } from '@rebel/shared/util/error'
 import { addTime } from '@rebel/shared/util/datetime'
 import { SafeOmit } from '@rebel/shared/types'
 
@@ -445,18 +445,17 @@ export default () => {
         { name: 'supporter', group: 'cosmetic', displayNameAdjective: 'rank2', displayNameNoun: 'rank2' },
         { name: 'member', group: 'cosmetic', displayNameAdjective: 'rank3', displayNameNoun: 'rank3' },
       ]})
-      await db.customEmojiVersion.create({ data: {
+      const emojiVersion = await db.customEmojiVersion.create({ data: {
         levelRequirement: 1,
         name: 'Test Emoji',
-        isActive: true,
         version: 0,
         canUseInDonationMessage: true,
         customEmoji: { create: { streamerId: streamer1, symbol: 'test', sortOrder: 1 }},
         image: { create: { url: '', fingerprint: '', width: 100, height: 200 }}
       }})
       await db.customEmojiRankWhitelist.createMany({ data: [
-        { customEmojiId: 1, rankId: 1 },
-        { customEmojiId: 1, rankId: 2 }
+        { customEmojiVersionId: emojiVersion.id, rankId: 1 },
+        { customEmojiVersionId: emojiVersion.id, rankId: 2 }
       ]})
       await chatStore.addChat(chatItem, streamer1, youtube1UserId, extYoutubeChannel1)
 
@@ -465,7 +464,7 @@ export default () => {
       const emojiResult = single(single(result).chatMessageParts).customEmoji!
       expect(emojiResult.text!.id).toBe(1)
       expect(emojiResult.customEmojiVersion.customEmojiId).toBe(1)
-      expect(emojiResult.customEmojiVersion.customEmoji.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
+      expect(emojiResult.customEmojiVersion.customEmojiRankWhitelist).toEqual([{ rankId: 1 }, { rankId: 2 }])
     })
 
     test('ignores donation messages', async () => {
@@ -571,7 +570,38 @@ export default () => {
         twitchLivestream: { connect: { id: 1 }},
       }})
 
-      const result = await chatStore.getYoutubeChatMessageCount()
+      const result = await chatStore.getYoutubeChatMessageCount(0)
+
+      expect(result).toBe(2)
+    })
+
+    test('Returns only messages after the specified time', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time1,
+        externalId: 'x1',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time2,
+        externalId: 'x2',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: youtube2UserId }},
+        time: data.time3,
+        externalId: 'x3',
+        youtubeChannel: { connect: { id: 2 }},
+        youtubeLivestream: { connect: { id: 1 }}
+      }})
+
+      const result = await chatStore.getYoutubeChatMessageCount(data.time2.getTime())
 
       expect(result).toBe(2)
     })
@@ -622,9 +652,40 @@ export default () => {
         twitchLivestream: { connect: { id: 1 }},
       }})
 
-      const result = await chatStore.getTwitchChatMessageCount()
+      const result = await chatStore.getTwitchChatMessageCount(0)
 
       expect(result).toBe(1)
+    })
+
+    test('Returns only messages after the specified time', async () => {
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time1,
+        externalId: 'x1',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time2,
+        externalId: 'x2',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }}
+      }})
+      await db.chatMessage.create({ data: {
+        streamer: { connect: { id: streamer1, }},
+        user: { connect: { id: twitchUserId }},
+        time: data.time3,
+        externalId: 'x3',
+        twitchChannel: { connect: { id: 1 }},
+        twitchLivestream: { connect: { id: 1 }}
+      }})
+
+      const result = await chatStore.getTwitchChatMessageCount(data.time2.getTime())
+
+      expect(result).toBe(2)
     })
   })
 
@@ -963,7 +1024,7 @@ export default () => {
       const chatItem1 = makeYtChatItem(text1)
       await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
 
-      await expect(() => chatStore.getChatById(2)).rejects.toThrowError(DbError)
+      await expect(() => chatStore.getChatById(2)).rejects.toThrowError(NotFoundError)
     })
   })
 
