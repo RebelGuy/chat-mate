@@ -78,6 +78,8 @@ Solution: If the streamer has set a socket access token and is still unable to r
   - Removed old unused code
   - Improved resilience of database errors
   - Data model improvements for more consistency
+  - Fixed offline server mode - if enabled, ChatMate will not make any requests to third-party services
+  - Fixed controller validations
 - Studio
   - The stats table on the homepage now shows either all-time stats, or today's stats
 
