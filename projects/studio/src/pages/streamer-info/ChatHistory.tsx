@@ -8,15 +8,26 @@ import { Primitive } from '@rebel/shared/types'
 import ApiError from '@rebel/studio/components/ApiError'
 import ApiLoading from '@rebel/studio/components/ApiLoading'
 import useRequest from '@rebel/studio/hooks/useRequest'
-import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import YouTube from '@rebel/studio/icons/YouTube'
 import TwitchIcon from '@rebel/studio/icons/Twitch'
 import { Level } from '@rebel/studio/pages/main/UserInfo'
 import { getChat } from '@rebel/studio/utility/api'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { sortBy } from '@rebel/shared/util/arrays'
+import { SERVER_URL } from '@rebel/studio/utility/global'
+import { useEffect, useState } from 'react'
+import { ClientMessage, ServerMessage } from '@rebel/api-models/websocket'
 
 const RANK_ORDER: PublicRank['name'][] = ['owner', 'admin', 'mod', 'member', 'supporter', 'donator']
+
+const uri = `${SERVER_URL.replace('http', 'ws')}/ws`
+const options = {
+  reconnection: true,
+  reconnectionDelay: 10000,
+  autoConnect: false
+}
+
+const webSocket = new WebSocket(uri)
 
 type Props = {
   streamer: string
@@ -24,11 +35,31 @@ type Props = {
 }
 
 export default function ChatHistory (props: Props) {
-  const getLivestreamsRequest = useRequest(getChat(undefined, 10), { updateKey: props.updateKey })
+  const [chat, setChat] = useState<PublicChatItem[]>([])
+  const getLivestreamsRequest = useRequest(getChat(undefined, 10), {
+    updateKey: props.updateKey,
+    onSuccess: (data) => setChat(data.chat)
+  })
+
+  useEffect(() => {
+    webSocket.onmessage = (event) => {
+      const message = JSON.parse(event.data) as ServerMessage
+      if (message.type === 'event' && message.data.topic === 'streamerChat') {
+        const newItems: PublicChatItem[] = [...chat, message.data.data]
+        setChat(newItems)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const msg: ClientMessage = { type: 'subscribe', data: { streamer: props.streamer, topic: 'streamerChat' }}
+    webSocket.send(JSON.stringify(msg))
+  }, [props.streamer])
 
   return (
     <Box>
-      {getLivestreamsRequest.data?.chat.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
+      {chat.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
       <ApiLoading requestObj={getLivestreamsRequest} />
       <ApiError requestObj={getLivestreamsRequest} />
     </Box>
