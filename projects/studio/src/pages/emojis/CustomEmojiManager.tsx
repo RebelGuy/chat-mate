@@ -289,6 +289,9 @@ export default function CustomEmojiManager () {
               />
             }
           />}
+          {!isLoggedIn && <Alert severity="info" sx={{ mb: 1 }}>
+            Log in and link your channel to see which emojis you are eligible for.
+          </Alert>}
 
           <Table
             stickyHeader

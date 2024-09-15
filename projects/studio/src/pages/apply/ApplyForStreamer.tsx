@@ -5,7 +5,7 @@ import { capitaliseWord } from '@rebel/shared/util/text'
 import { approveStreamerApplication, createStreamerApplication, getStreamerApplications, rejectStreamerApplication, withdrawStreamerApplication } from '@rebel/studio/utility/api'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import * as React from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import { PageLink } from '@rebel/studio/pages/navigation'
 import TextWithNewlines from '@rebel/studio/components/TextWithNewlines'
 import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
@@ -13,6 +13,8 @@ import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 import RefreshButton from '@rebel/studio/components/RefreshButton'
 import PanelHeader from '@rebel/studio/components/PanelHeader'
+import LinkToPage from '@rebel/studio/components/LinkToPage'
+import LinkInNewTab from '@rebel/studio/components/LinkInNewTab'
 
 export default function ApplyForStreamer () {
   const [updateKey, setUpdateKey] = React.useState(Date.now())
@@ -51,14 +53,21 @@ function ApplicationForm (props: ApplicationFormProps) {
   })
 
   return <>
-    <div>Use the form to request participation in the ChatMate Beta Program.</div>
-    <div>Once accepted, you will be able to indicate your primary YouTube and/or Twitch channel on the <b>{PageLink.title}</b> page.</div>
+    <Typography mb={1}>Use the form to request participation in the ChatMate Beta Program.</Typography>
+    <Typography mb={1}>Once accepted, you will be able to indicate your primary YouTube and/or Twitch channel on the <LinkToPage page={PageLink} label={PageLink.title} /> page. For more information, check out the <LinkInNewTab href="https://github.com/RebelGuy/chat-mate/blob/master/docs/streamer-guide.md">Streamer Guide</LinkInNewTab>.</Typography>
+    <Typography>Please note that ChatMate is currently in its early stages of public testing, and be aware of the following limitations:</Typography>
+    <ul>
+      <li>The ChatMate Minecraft integration is currently only available for Minecraft 1.8.9 - please refer to the <LinkInNewTab href="https://github.com/RebelGuy/chat-mate-client/blob/master/docs/streamer-guide.md">Streamer Guide (Minecraft Mod)</LinkInNewTab> for more details.</li>
+      <li>Bugs may be present and some features are not yet fully fledged out. The ChatMate experience is likely to change in the future.</li>
+      <li>I am happy to work with you to add new features to ChatMate.</li>
+      <li>If you have any questions at all, contact <code>rebel_guy</code> on Discord.</li>
+    </ul>
     <Box>
       <TextField
         value={message}
         multiline
         rows={5}
-        label={props.disabledMessage ?? 'Type your message here'}
+        label={props.disabledMessage ?? 'Type your message here. Ensure you provide contact details.'}
         disabled={props.disabled || createApplicationRequest.isLoading}
         style={{ width: '100%' }}
         onChange={e => setMessage(e.target.value)}

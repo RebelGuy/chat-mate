@@ -18,7 +18,6 @@ import LoginContext from '@rebel/studio/contexts/LoginContext'
 import ErrorMessage from '@rebel/studio/components/styled/ErrorMessage'
 import { Link } from 'react-router-dom'
 import { PageManager } from '@rebel/studio/pages/navigation'
-import { PublicStreamerSummary } from '@rebel/api-models/public/streamer/PublicStreamerSummary'
 
 type Props = {
   channelsRequestObj: RequestResult<SuccessfulResponseData<GetLinkedChannelsResponse>>
@@ -54,9 +53,9 @@ export default function LinkedChannels (props: Props) {
   const isPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && channel.channelId === primaryYoutubeChannel) || (channel.platform === 'twitch' && channel.channelId === primaryTwitchChannel)
   const canAddPrimaryChannel = (channel: PublicChannel) => (channel.platform === 'youtube' && primaryYoutubeChannel == null) || (channel.platform === 'twitch' && primaryTwitchChannel == null)
 
-  const streamerInfo = loginContext.allStreamers.find(streamer => streamer.username == loginContext.username)!
-  const isLive = streamerInfo.currentTwitchLivestream?.status === 'live' || streamerInfo.currentYoutubeLivestream?.status === 'live'
-  const activeYoutubeLivestream = streamerInfo.currentYoutubeLivestream?.status === 'not_started'
+  const streamerInfo = loginContext.allStreamers.find(streamer => streamer.username === loginContext.username)
+  const isLive = streamerInfo != null && (streamerInfo.currentTwitchLivestream?.status === 'live' || streamerInfo.currentYoutubeLivestream?.status === 'live')
+  const activeYoutubeLivestream = streamerInfo != null && streamerInfo.currentYoutubeLivestream?.status === 'not_started'
 
   return <>
     {header}

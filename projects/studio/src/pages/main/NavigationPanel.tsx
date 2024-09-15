@@ -1,11 +1,11 @@
 import { Box } from '@mui/material'
 import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinner'
+import LinkToPage, { PageProps } from '@rebel/studio/components/LinkToPage'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth, PageStreamerInfo, PageYoutubeAuth } from '@rebel/studio/pages/navigation'
-import { PathParam } from '@rebel/studio/utility/types'
 import { cloneElement, useContext } from 'react'
-import { Link, generatePath, useLocation, matchPath } from 'react-router-dom'
+import { useLocation, matchPath } from 'react-router-dom'
 
 export default function Navigation () {
   const loginContext = useContext(LoginContext)
@@ -29,18 +29,11 @@ export default function Navigation () {
   )
 }
 
-type NavItemProps<P extends Page> = {
-  page: P
-} & {
-  // path params are dynamically calculated and required as separate props to the component
-  //   :    -------      ))
-  [key in PathParam<P['path']>]: string | null
-}
-
-function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
+function NavItem<P extends Page> (props: PageProps<P>) {
   const loginContext = useContext(LoginContext)
   const { pathname: currentPath } = useLocation()
 
+  const page = props.page
   if (!loginContext.isHydrated && page.requireRanksProps != null ||
     loginContext.username == null && page.requiresLogin ||
     loginContext.streamer == null && page.requiresStreamer
@@ -49,11 +42,10 @@ function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
   }
 
   const isSelected = matchPath({ path: page.path }, currentPath)
-  const path = generatePath(page.path, params)
 
   const content = (
     <Box sx={{ m: 0.5 }}>
-      <Link to={path} style={{ color: 'black', textDecoration: 'none' }}>
+      <LinkToPage style={{ color: 'black', textDecoration: 'none' }} {...props}>
         <Box sx={{
           padding: 1,
           backgroundColor: 'rgba(0, 0, 255, 0.1)',
@@ -69,7 +61,7 @@ function NavItem<P extends Page> ({ page, ...params }: NavItemProps<P>) {
           {cloneElement(page.icon, { sx: { pr: 0.5 }})}
           <div style={{ marginTop: 1 }}>{page.title}</div>
         </Box>
-      </Link>
+      </LinkToPage>
     </Box>
   )
 
