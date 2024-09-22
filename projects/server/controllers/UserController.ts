@@ -77,7 +77,7 @@ export default class UserController extends ControllerBase {
     }
 
     try {
-      const matches = await this.channelService.searchChannelsByName(this.getStreamerId(), request.searchTerm)
+      const matches = await this.channelService.searchChannelsByName(this.getStreamerId(), request.searchTerm, false)
       const defaultUserIds = unique(matches.map(m => m.defaultUserId))
       const userChannels = await this.channelService.getConnectedUserChannels(defaultUserIds)
 

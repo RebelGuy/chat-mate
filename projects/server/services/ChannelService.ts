@@ -199,15 +199,20 @@ export default class ChannelService extends ContextClass {
     })
   }
 
-  /** Returns channels of the streamer whose current name matches the given name (case insensitive). */
-  public async searchChannelsByName (streamerId: number, name: string): Promise<UserChannel[]> {
+  /** Returns channels of the streamer whose current name matches the given name. If `exactMatch` is false, results with a case insensitive partial match will be included. */
+  public async searchChannelsByName (streamerId: number, name: string, exactMatch: boolean): Promise<UserChannel[]> {
     if (name == null || name.length === 0) {
       return []
     }
 
-    name = name.toLowerCase()
     const channels = await this.channelStore.getAllChannels(streamerId)
-    return channels.filter(channel => getUserName(channel).toLowerCase().includes(name))
+
+    if (exactMatch) {
+      return channels.filter(channel => getUserName(channel) === name)
+    } else {
+      name = name.toLowerCase()
+      return channels.filter(channel => getUserName(channel).toLowerCase().includes(name))
+    }
   }
 
   private async onGetImageInfo (originalImageUrl: string, channelId: number, channelGlobalInfoId: number): Promise<ImageInfo> {

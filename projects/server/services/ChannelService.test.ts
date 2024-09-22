@@ -355,7 +355,7 @@ describe(nameof(ChannelService, 'getConnectedUserChannels'), () => {
 })
 
 describe(nameof(ChannelService, 'searchChannelsByName'), () => {
-  test('returns best match', async () => {
+  test('Returns best match', async () => {
     const allChannels: UserChannel[] = cast<UserChannel[]>([
       { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'Mr Cool Guy' }] }} },
       { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'Rebel_Guy' }] }} },
@@ -364,11 +364,28 @@ describe(nameof(ChannelService, 'searchChannelsByName'), () => {
     ])
     mockChannelStore.getAllChannels.calledWith(streamerId).mockResolvedValue(allChannels)
 
-    const result = await channelService.searchChannelsByName(streamerId, 'rebel')
+    const result = await channelService.searchChannelsByName(streamerId, 'rebel', false)
 
     expect(result.length).toBe(2)
     expect(result).toEqual(expectObjectDeep(result, [
       allChannels[1], allChannels[2]
+    ]))
+  })
+
+  test('Returns exact match', async () => {
+    const allChannels: UserChannel[] = cast<UserChannel[]>([
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'Mr Cool Guy' }] }} },
+      { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'Rebel_Guy' }] }} },
+      { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: 'Rebel_Guy2' }] }} },
+      { platformInfo: { platform: 'twitch', channel: { globalInfoHistory: [{ displayName: 'Test' }] }} },
+    ])
+    mockChannelStore.getAllChannels.calledWith(streamerId).mockResolvedValue(allChannels)
+
+    const result = await channelService.searchChannelsByName(streamerId, 'Rebel_Guy', true)
+
+    expect(result.length).toBe(1)
+    expect(result).toEqual(expectObjectDeep(result, [
+      allChannels[1]
     ]))
   })
 })
