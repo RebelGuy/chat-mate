@@ -30,6 +30,13 @@ export function getLiveId (linkOrId: string): string {
     const path = url.pathname.split('/').filter(p => p.length > 0)
     id = path[1]
 
+  } else if (linkOrId.includes('youtube.com/live')) {
+    // e.g. https://www.youtube.com/live/V-Cxl_m47-M
+    const path = url.pathname.split('/').filter(p => p.length > 0)
+    if (path.length === 2) {
+      id = path[1]
+    }
+
   } else if (linkOrId.includes('youtu')) {
     const path = url.pathname.split('/').filter(p => p.length > 0)
 
