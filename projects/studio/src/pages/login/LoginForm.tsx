@@ -47,7 +47,7 @@ export default function LoginForm () {
   // we don't want to show the login page if the user is already logged in
   useEffect(() => {
     if (loginContext.loginToken != null) {
-      navigate(returnUrl ?? generatePath('/'))
+      navigate(returnUrl ?? generatePath('/'), { replace: returnUrl != null })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
