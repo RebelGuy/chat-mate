@@ -71,8 +71,8 @@ export default function StreamerInfo () {
 
     <Box display="inline">
       {/* we can only embed a youtube livestream, not a channel. there is supposedly a way to emebed a channel itself, but that is currently broken. */}
-      {/* {info.youtubeChannel != null && info.currentYoutubeLivestream && <EmbedYoutubeStream liveId={info.currentYoutubeLivestream.livestreamLink.split('/').at(-1)!} streamerName={info.youtubeChannel.displayName} />}
-      {info.twitchChannel != null && <EmbedTwitchStream channel={info.twitchChannel} />} */}
+      {info.youtubeChannel != null && info.currentYoutubeLivestream && <EmbedYoutubeStream liveId={info.currentYoutubeLivestream.livestreamLink.split('/').at(-1)!} streamerName={info.youtubeChannel.displayName} />}
+      {info.twitchChannel != null && <EmbedTwitchStream channel={info.twitchChannel} />}
     </Box>
 
     <Box>
@@ -138,7 +138,7 @@ function EmbedTwitchStream (props: EmbedTwitchStreamProps) {
       width: '100%',
       height: '100%',
       channel: channelName,
-      autoplay: true,
+      autoplay: false,
       muted: true,
       layout: 'video' // don't show chat
     })
@@ -168,7 +168,7 @@ function EmbedYoutubeStream (props: EmbedYoutubeStreamProps) {
         title={`${props.streamerName}'s Youtube Livestream`}
         width="100%"
         height="100%"
-        src={`https://www.youtube.com/embed/${props.liveId}?autoplay=1`}
+        src={`https://www.youtube.com/embed/${props.liveId}?autoplay=0`}
         allowFullScreen
         style={{ border: 0 }}
       >

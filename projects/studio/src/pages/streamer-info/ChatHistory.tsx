@@ -46,8 +46,6 @@ export default function ChatHistory (props: Props) {
   const chatRef = useRef<PublicChatItem[]>()
   chatRef.current = chat
 
-  const listRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     WEBSOCKET.onmessage = (event) => {
       const message = JSON.parse(event.data) as ServerMessage
@@ -69,18 +67,8 @@ export default function ChatHistory (props: Props) {
     }
   }, [props.streamer])
 
-  useEffect(() => {
-    if (listRef.current == null) {
-      return
-    }
-
-    const actualHeight = sum([...listRef.current.children].map(c => c.clientHeight))
-    const top = actualHeight - listRef.current.clientHeight
-    listRef.current.scroll({ behavior: 'smooth', top: top })
-  }, [chat])
-
   return (
-    <Box ref={listRef} sx={{ maxHeight: 300, overflowY: 'auto' }}>
+    <Box>
       {chat.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
       <ApiLoading requestObj={getLivestreamsRequest} />
       <ApiError requestObj={getLivestreamsRequest} />
