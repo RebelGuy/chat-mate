@@ -84,7 +84,7 @@ function UserName () {
   </Box>
 }
 
-function Level (props: { level: number | undefined }) {
+export function Level (props: { level: number | undefined }) {
   const level = props.level
 
   if (level == null) {

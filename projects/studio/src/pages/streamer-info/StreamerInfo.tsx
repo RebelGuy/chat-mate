@@ -1,4 +1,4 @@
-import { Alert, styled } from '@mui/material'
+import { Alert, Tab, Tabs, styled } from '@mui/material'
 import { Box } from '@mui/system'
 import { PublicChannel } from '@rebel/api-models/public/user/PublicChannel'
 import ApiError from '@rebel/studio/components/ApiError'
@@ -9,6 +9,7 @@ import StreamerLinks from '@rebel/studio/components/StreamerLinks'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import useRequest from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
+import ChatHistory from '@rebel/studio/pages/streamer-info/ChatHistory'
 import LivestreamHistory from '@rebel/studio/pages/streamer-info/LivestreamHistory'
 import { getLivestreams } from '@rebel/studio/utility/api'
 import { isStreamerLive } from '@rebel/studio/utility/misc'
@@ -16,6 +17,7 @@ import { useContext, useEffect, useRef, useState } from 'react'
 
 export default function StreamerInfo () {
   const loginContext = useContext(LoginContext)
+  const [tabValue, onSetTabValue] = useState<'chat' | 'livestreamHistory'>('chat')
   const [updateKey, onIncrementKey] = useUpdateKey()
   const getLivestreamsRequest = useRequest(getLivestreams(), { updateKey })
 
@@ -23,6 +25,10 @@ export default function StreamerInfo () {
     loginContext.refreshData('streamerList')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const onUpdateTabValue = (_: any, newValue: 'chat' | 'livestreamHistory') => {
+    onSetTabValue(newValue)
+  }
 
   const refreshButton = (
     <RefreshButton
@@ -69,9 +75,18 @@ export default function StreamerInfo () {
       {info.twitchChannel != null && <EmbedTwitchStream channel={info.twitchChannel} />}
     </Box>
 
-    {getLivestreamsRequest.data != null && <Box sx={{ mt: 2 }}>
-      <LivestreamHistory livestreams={getLivestreamsRequest.data!.aggregateLivestreams} />
-    </Box>}
+    <Box>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={tabValue} onChange={onUpdateTabValue}>
+          <Tab label="Chat" value="chat" />
+          <Tab label="Livestream History" value="livestreamHistory" />
+        </Tabs>
+      </Box>
+      {tabValue === 'chat' && loginContext.streamer != null && <ChatHistory streamer={loginContext.streamer} updateKey={updateKey} />}
+      {tabValue === 'livestreamHistory' && getLivestreamsRequest.data != null && <Box sx={{ mt: 2 }}>
+        <LivestreamHistory livestreams={getLivestreamsRequest.data!.aggregateLivestreams} />
+      </Box>}
+    </Box>
 
     <ApiError requestObj={getLivestreamsRequest} />
   </>
@@ -123,7 +138,7 @@ function EmbedTwitchStream (props: EmbedTwitchStreamProps) {
       width: '100%',
       height: '100%',
       channel: channelName,
-      autoplay: true,
+      autoplay: false,
       muted: true,
       layout: 'video' // don't show chat
     })
@@ -153,7 +168,7 @@ function EmbedYoutubeStream (props: EmbedYoutubeStreamProps) {
         title={`${props.streamerName}'s Youtube Livestream`}
         width="100%"
         height="100%"
-        src={`https://www.youtube.com/embed/${props.liveId}?autoplay=1`}
+        src={`https://www.youtube.com/embed/${props.liveId}?autoplay=0`}
         allowFullScreen
         style={{ border: 0 }}
       >

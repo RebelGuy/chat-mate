@@ -12,6 +12,7 @@ import { ApiResponse } from '@rebel/api-models/types'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
 import { PublicObject } from '@rebel/api-models/types'
 import { GetLivestreamsResponse } from '@rebel/api-models/schema/livestream'
+import { GetChatResponse } from '@rebel/api-models/schema/chat'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -223,6 +224,13 @@ export const releaseLinkAttempt = requestBuilder<ReleaseLinkAttemptResponse, fal
 )
 
 export const getLivestreams = requestBuilder<GetLivestreamsResponse>('GET', '/livestream', true, false)
+
+export const getChat = requestBuilder<GetChatResponse, false, [since?: number, limit?: number]>(
+  'GET',
+  (since, limit) => constructPath('/chat', { since, limit }),
+  true,
+  false
+)
 
 async function GET (path: string, loginToken?: string, streamer?: string): Promise<any> {
   return await request('GET', path, null, loginToken, streamer)
