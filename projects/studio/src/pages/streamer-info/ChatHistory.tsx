@@ -15,19 +15,19 @@ import { getChat } from '@rebel/studio/utility/api'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { sortBy } from '@rebel/shared/util/arrays'
 import { SERVER_URL } from '@rebel/studio/utility/global'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClientMessage, ServerMessage } from '@rebel/api-models/websocket'
+import { WEBSOCKET } from '@rebel/studio/contexts/LoginContext'
+import { addTime } from '@rebel/shared/util/datetime'
+import { sum } from '@rebel/shared/util/math'
 
 const RANK_ORDER: PublicRank['name'][] = ['owner', 'admin', 'mod', 'member', 'supporter', 'donator']
 
-const uri = `${SERVER_URL.replace('http', 'ws')}/ws`
 const options = {
   reconnection: true,
   reconnectionDelay: 10000,
   autoConnect: false
 }
-
-const webSocket = new WebSocket(uri)
 
 type Props = {
   streamer: string
@@ -36,16 +36,23 @@ type Props = {
 
 export default function ChatHistory (props: Props) {
   const [chat, setChat] = useState<PublicChatItem[]>([])
-  const getLivestreamsRequest = useRequest(getChat(undefined, 10), {
+  const getChatTimestamp = useRef(addTime(new Date(), 'hours', -1).getTime())
+
+  const getLivestreamsRequest = useRequest(getChat(getChatTimestamp.current, 30), {
     updateKey: props.updateKey,
     onSuccess: (data) => setChat(data.chat)
   })
 
+  const chatRef = useRef<PublicChatItem[]>()
+  chatRef.current = chat
+
+  const listRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    webSocket.onmessage = (event) => {
+    WEBSOCKET.onmessage = (event) => {
       const message = JSON.parse(event.data) as ServerMessage
       if (message.type === 'event' && message.data.topic === 'streamerChat') {
-        const newItems: PublicChatItem[] = [...chat, message.data.data]
+        const newItems: PublicChatItem[] = [...chatRef.current!, message.data.data]
         setChat(newItems)
       }
     }
@@ -54,11 +61,26 @@ export default function ChatHistory (props: Props) {
 
   useEffect(() => {
     const msg: ClientMessage = { type: 'subscribe', data: { streamer: props.streamer, topic: 'streamerChat' }}
-    webSocket.send(JSON.stringify(msg))
+    WEBSOCKET.send(JSON.stringify(msg))
+
+    return () => {
+      const unsubscribeMsg: ClientMessage = { type: 'unsubscribe', data: { streamer: props.streamer, topic: 'streamerChat' }}
+      WEBSOCKET.send(JSON.stringify(unsubscribeMsg))
+    }
   }, [props.streamer])
 
+  useEffect(() => {
+    if (listRef.current == null) {
+      return
+    }
+
+    const actualHeight = sum([...listRef.current.children].map(c => c.clientHeight))
+    const top = actualHeight - listRef.current.clientHeight
+    listRef.current.scroll({ behavior: 'smooth', top: top })
+  }, [chat])
+
   return (
-    <Box>
+    <Box ref={listRef} sx={{ maxHeight: 300, overflowY: 'auto' }}>
       {chat.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
       <ApiLoading requestObj={getLivestreamsRequest} />
       <ApiError requestObj={getLivestreamsRequest} />
