@@ -13,7 +13,8 @@
     "watch":                                                   "webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=true  SKIP_TESTS=false",
     "watch:check": "NODE_OPTIONS=\"--max-old-space-size=20000\" webpack --watch --progress --env NODE_ENV=local SKIP_TYPE_CHECKS=false SKIP_TESTS=false",
     "watch:tsc": "tsc --build --watch",
-    "start:local":  "cross-env NODE_ENV=local                           nodemon --watch ../../dist --ignore ../../dist/studio --inspect ../../dist/server/app.js",
+    "start:local":  "concurrently \"yarn start:minio\" \"yarn start:server\"",
+    "start:server": "cross-env NODE_ENV=local                           nodemon --watch ../../dist --ignore ../../dist/studio --inspect ../../dist/server/app.js",
     "start:mock":   "cross-env NODE_ENV=local USE_FAKE_CONTROLLERS=true nodemon --watch ../../dist --ignore ../../dist/studio --inspect ../../dist/server/app.js",
     "test":     "dotenv -e test.env jest --detectOpenHandles=true --verbose=true",
     "test:db":  "dotenv -e test.env yarn prisma migrate deploy",
@@ -43,7 +44,10 @@
     "migrate-youtube-channel-images:debug":   "cross-env NODE_ENV=debug   dotenv -e debug.env   node ../../dist/server/migrateYoutubeChannelImages.js",
     "migrate-youtube-channel-images:release": "cross-env NODE_ENV=release dotenv -e release.env node ../../dist/server/migrateYoutubeChannelImages.js",
 
-    "download-emoji-map": "node ../../dist/server/downloadEmojiMap.js"
+    "download-emoji-map": "node ../../dist/server/downloadEmojiMap.js",
+
+    "start:minio": "cross-env NODE_ENV=local node ../../dist/server/startMinio.js",
+    "stop:minio":  "cross-env NODE_ENV=local node ../../dist/server/stopMinio.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.511.0",
@@ -92,6 +96,7 @@
     "@types/listr": "^0.14.4",
     "@typescript-eslint/eslint-plugin": "^5.10.2",
     "@typescript-eslint/parser": "^5.10.2",
+    "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
     "dir-compare": "^3.3.0",
     "dotenv-cli": "^4.1.1",
