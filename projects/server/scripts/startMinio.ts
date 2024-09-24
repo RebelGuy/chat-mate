@@ -35,7 +35,7 @@ async function main () {
     return
   }
 
-  const minio = spawn(MINIO_PATH, ['server', 'data'], {
+  const minio = spawn(MINIO_PATH, ['server', '../../data/minio'], {
     stdio: 'inherit',
     shell: true,
   })
