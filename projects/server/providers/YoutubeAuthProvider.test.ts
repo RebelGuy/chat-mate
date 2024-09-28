@@ -6,14 +6,11 @@ import AuthStore from '@rebel/server/stores/AuthStore'
 import { Dependencies } from '@rebel/shared/context/context'
 import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
 import { InconsistentScopesError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
-import { CalledWithMock, MockProxy, mock } from 'jest-mock-extended'
+import { MockProxy, mock } from 'jest-mock-extended'
 import { OAuth2Client, Credentials } from 'google-auth-library'
 import { single, single2 } from '@rebel/shared/util/arrays'
-import { YOUTUBE_SCOPE } from '@rebel/server/constants'
-
-// jest is having trouble mocking the correct overload method, so we have to force it into the correct type
-type GetAuthToken = CalledWithMock<Promise<{ tokens: Credentials }>, [code: string]>
-type RevokeAuthToken = CalledWithMock<Promise<{ data: { success: boolean }}>, [token: string]>
+import { YOUTUBE_STREAMER_SCOPE } from '@rebel/server/constants'
+import AuthHelpers from '@rebel/server/helpers/AuthHelpers'
 
 const mockChannelId = 'channelId'
 const mockStudioUrl = 'studioUrl'
@@ -23,12 +20,14 @@ const streamerChannelId = 'streamerChannelId'
 let mockAuthStore: MockProxy<AuthStore>
 let mockYoutubeAuthClientFactory: MockProxy<YoutubeAuthClientFactory>
 let mockAuthClient: MockProxy<OAuth2Client>
+let mockAuthHelpers: MockProxy<AuthHelpers>
 let youtubeAuthProvider: YoutubeAuthProvider
 
 beforeEach(() => {
   mockAuthStore = mock()
   mockYoutubeAuthClientFactory = mock()
   mockAuthClient = mock()
+  mockAuthHelpers = mock()
 
   mockYoutubeAuthClientFactory.create.calledWith(mockYoutubeClientId, mockYoutubeClientSecret, expect.any(String)).mockReturnValue(mockAuthClient)
 
@@ -40,7 +39,8 @@ beforeEach(() => {
     studioUrl: mockStudioUrl,
     youtubeClientId: mockYoutubeClientId,
     youtubeClientSecret: mockYoutubeClientSecret,
-    youtubeAuthClientFactory: mockYoutubeAuthClientFactory
+    youtubeAuthClientFactory: mockYoutubeAuthClientFactory,
+    authHelpers: mockAuthHelpers
   }))
 })
 
@@ -67,38 +67,15 @@ describe(nameof(YoutubeAuthProvider, 'getAuthUrl'), () => {
     const url = 'testUrl'
     mockAuthClient.generateAuthUrl.calledWith(expectObject({ client_id: mockYoutubeClientId })).mockReturnValue(url)
 
-    const result = youtubeAuthProvider.getAuthUrl(false)
+    const result = youtubeAuthProvider.getAuthUrl('streamer')
 
     expect(result).toBe(url)
   })
 })
 
-describe(nameof(YoutubeAuthProvider, 'authoriseChannel'), () => {
-  test('Saves access token', async () => {
-    const code = 'code'
-    const token: Credentials = { scope: YOUTUBE_SCOPE.join(' '), access_token: 'test123' };
-    (mockAuthClient.getToken as any as GetAuthToken).calledWith(code).mockResolvedValue({ tokens: token })
-
-    await youtubeAuthProvider.authoriseChannel(code, streamerChannelId)
-
-    const savedToken = single2(mockAuthStore.saveYoutubeAccessToken.mock.calls)
-    expect(savedToken.accessToken).toBe(token.access_token)
-    expect(savedToken.externalYoutubeChannelId).toBe(streamerChannelId)
-  })
-
-  test(`Throws ${InconsistentScopesError.name} if the user's approved scopes don't match the expected ones`, async () => {
-    const code = 'code'
-    const token: Credentials = { scope: '', access_token: 'test123' };
-    (mockAuthClient.getToken as any as GetAuthToken).calledWith(code).mockResolvedValue({ tokens: token });
-    (mockAuthClient.revokeToken as any as RevokeAuthToken).calledWith(token.access_token!).mockResolvedValue({ data: { success: true }})
-
-    await expect(() => youtubeAuthProvider.authoriseChannel(code, streamerChannelId)).rejects.toThrowError(InconsistentScopesError)
-  })
-})
-
 describe(nameof(YoutubeAuthProvider, 'getAuth'), () => {
   test(`Returns the client with correct credentials and listening to token updates`, async () => {
-    const savedToken = cast<YoutubeAuth>({ scope: YOUTUBE_SCOPE.join(' '), accessToken: 'test123', expiryDate: new Date() })
+    const savedToken = cast<YoutubeAuth>({ scope: YOUTUBE_STREAMER_SCOPE.join(' '), accessToken: 'test123', expiryDate: new Date() })
     mockAuthStore.loadYoutubeAccessToken.calledWith(streamerChannelId).mockResolvedValue(savedToken)
 
     const result = await youtubeAuthProvider.getAuth(streamerChannelId)

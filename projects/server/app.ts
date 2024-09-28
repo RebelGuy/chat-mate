@@ -119,6 +119,8 @@ import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUp
 import TaskStore from '@rebel/server/stores/TaskStore'
 import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
 import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
+import AuthHelpers from '@rebel/server/helpers/AuthHelpers'
+import AuthService from '@rebel/server/services/AuthService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -216,6 +218,7 @@ const main = async () => {
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
     .withHelpers('visitorHelpers', VisitorHelpers)
+    .withHelpers('authHelpers', AuthHelpers)
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
@@ -304,6 +307,7 @@ const main = async () => {
     .withClass('cleanUpApiCallsTask', CleanUpApiCallsTask)
     .withClass('taskStore', TaskStore)
     .withClass('taskService', TaskService)
+    .withClass('authService', AuthService)
     .build()
 
   app.use((req, res, next) => {

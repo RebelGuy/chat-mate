@@ -19,8 +19,17 @@ export const TWITCH_SCOPE = [
   'moderator:read:followers'
 ]
 
-export const YOUTUBE_SCOPE = [
+export const YOUTUBE_ADMIN_SCOPE = [
   'https://www.googleapis.com/auth/youtube',
+  'https://www.googleapis.com/auth/youtube.readonly'
+]
+
+export const YOUTUBE_STREAMER_SCOPE = [
+  'https://www.googleapis.com/auth/youtube',
+  'https://www.googleapis.com/auth/youtube.readonly'
+]
+
+export const YOUTUBE_USER_SCOPE = [
   'https://www.googleapis.com/auth/youtube.readonly'
 ]
 

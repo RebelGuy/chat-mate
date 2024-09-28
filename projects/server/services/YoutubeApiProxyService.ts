@@ -9,6 +9,7 @@ import PlatformApiStore, { ApiPlatform } from '@rebel/server/stores/PlatformApiS
 import { Dependencies } from '@rebel/shared/context/context'
 import { ChatMateError } from '@rebel/shared/util/error'
 import { GaxiosError } from 'gaxios'
+import { Credentials } from 'google-auth-library'
 
 // note: the youtube api is absolutely disgusting. this took a lot of trial and error to figure out
 // - why do we need to provide a liveId for punishments/moderators, when these actions apply to the channel globally anyway?
@@ -27,7 +28,8 @@ type Endpoint =
   'youtube_v3.liveChatBans.insert' |
   'youtube_v3.liveChatBans.delete' |
   'youtube_v3.videos.list' |
-  'youtube_v3.liveBroadcasts.list'
+  'youtube_v3.liveBroadcasts.list' |
+  'youtube_v3.channels.list'
 
 // the nice devs over at youtube didn't think it was necessary to document these, so i took it upon myself to find these
 // via the API quota dashboard: console.cloud.google.com -> APIs and services -> YouTube Data API v3 -> Quotas.
@@ -41,7 +43,8 @@ const ENDPOINT_COSTS: Record<Endpoint, number> = {
   'youtube_v3.liveChatBans.insert': 200,
   'youtube_v3.liveChatBans.delete': 200,
   'youtube_v3.videos.list': 1,
-  'youtube_v3.liveBroadcasts.list': 1
+  'youtube_v3.liveBroadcasts.list': 1,
+  'youtube_v3.channels.list': 1
 }
 
 type Deps = Dependencies<{
@@ -74,6 +77,26 @@ export default class YoutubeApiProxyService extends ApiService {
     this.streamerChannelService = deps.resolve('streamerChannelService')
 
     this.wrappedApi = this.createApiWrapper()
+  }
+
+  public async getOwnedChannels (credentials: Credentials): Promise<{ id: string, name: string, image: string }[]> {
+    const client = this.youtubeApiClientProvider.getClientForCredentials(credentials)
+    const listChannels = this.wrapRequestWithErrorLogging((params: youtube_v3.Params$Resource$Channels$List) => client.channels.list(params), null, 'youtube_v3.channels.list')
+
+    const response = await listChannels({
+      part: ['id', 'snippet'],
+      mine: true
+    })
+
+    if (response.data.items == null) {
+      throw new ChatMateError(`Received no data`)
+    }
+
+    return response.data.items.map(item => ({
+      id: item.id!,
+      name: item.snippet!.title!,
+      image: item.snippet!.thumbnails!.default!.url!
+    }))
   }
 
   public async getBroadcastId (streamerId: number, ownerExternalChannelId: string): Promise<string | null> {
@@ -251,7 +274,7 @@ export default class YoutubeApiProxyService extends ApiService {
 
   // this is a wrapper around a wrapper because javascript serialisation of error objects is fucked,
   // and we need to intercept GaxiosErrors unless we want to log error info that is essentially empty
-  private wrapRequestWithErrorLogging<TParams, TResult> (request: (params: TParams) => Promise<TResult>, streamerId: number, endpoint: Endpoint): (params: TParams) => Promise<TResult> {
+  private wrapRequestWithErrorLogging<TParams, TResult> (request: (params: TParams) => Promise<TResult>, streamerId: number | null, endpoint: Endpoint): (params: TParams) => Promise<TResult> {
     return super.wrapRequest(async (params: TParams) => {
       try {
         return await request(params)
@@ -260,7 +283,7 @@ export default class YoutubeApiProxyService extends ApiService {
         if (e instanceof GaxiosError) {
           this.logService.logError(this, `Request ${endpoint} received an error response (code ${e.status}):`, e.response?.data)
 
-          if (e.message === 'invalid_grant') {
+          if (e.message === 'invalid_grant' && streamerId != null) {
             this.logService.logInfo(this, `Invalidating access token for streamer ${streamerId}...`)
             const externalChannelId = await this.streamerChannelService.getYoutubeExternalId(streamerId)
             if (externalChannelId == null) {

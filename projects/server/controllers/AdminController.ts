@@ -10,6 +10,7 @@ import { PublicLinkAttemptLog } from '@rebel/api-models/public/user/PublicLinkAt
 import { PublicLinkAttemptStep } from '@rebel/api-models/public/user/PublicLinkAttemptStep'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
+import AuthService from '@rebel/server/services/AuthService'
 
 type Deps = ControllerDependencies<{
   adminService: AdminService
@@ -18,6 +19,7 @@ type Deps = ControllerDependencies<{
   helixEventService: HelixEventService
   linkStore: LinkStore
   youtubeAuthProvider: YoutubeAuthProvider
+  authService: AuthService
 }>
 
 @Path(buildPath('admin'))
@@ -29,6 +31,7 @@ export default class AdminController extends ControllerBase {
   private readonly helixEventService: HelixEventService
   private readonly linkStore: LinkStore
   private readonly youtubeAuthProvider: YoutubeAuthProvider
+  private readonly authService: AuthService
 
   constructor (deps: Deps) {
     super(deps, 'admin')
@@ -38,6 +41,7 @@ export default class AdminController extends ControllerBase {
     this.helixEventService = deps.resolve('helixEventService')
     this.linkStore = deps.resolve('linkStore')
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
+    this.authService = deps.resolve('authService')
   }
 
   @GET
@@ -118,7 +122,7 @@ export default class AdminController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetYoutubeLoginUrlResponse>('GET /youtube/login')
 
     try {
-      const url = this.youtubeAuthProvider.getAuthUrl(true)
+      const url = this.youtubeAuthProvider.getAuthUrl('admin')
       const youtubeChannelName = await this.adminService.getYoutubeChannelName()
       return builder.success({ url, youtubeChannelName })
     } catch (e: any) {
@@ -139,7 +143,7 @@ export default class AdminController extends ControllerBase {
     }
 
     try {
-      await this.youtubeAuthProvider.authoriseChannel(code, 'admin')
+      await this.authService.authoriseYoutubeAdmin(code)
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

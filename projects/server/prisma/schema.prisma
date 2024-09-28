@@ -982,8 +982,8 @@ model PlatformApiCall {
   payload  String? @db.VarChar(1024)
   error    String? @db.VarChar(1024)
 
-  streamerId Int
-  streamer   Streamer @relation(fields: [streamerId], references: [id], map: "platform_api_call_streamerId_fkey")
+  streamerId Int?
+  streamer   Streamer? @relation(fields: [streamerId], references: [id], map: "platform_api_call_streamerId_fkey")
 
   @@index([streamerId], map: "platform_api_call_streamerId_fkey")
   @@map("platform_api_call")

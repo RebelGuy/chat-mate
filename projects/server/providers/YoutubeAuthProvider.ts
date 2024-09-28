@@ -1,15 +1,15 @@
 import { YoutubeAuth } from '@prisma/client'
-import { YOUTUBE_SCOPE } from '@rebel/server/constants'
 import { New } from '@rebel/server/models/entities'
 import LogService from '@rebel/server/services/LogService'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
-import { compareArrays } from '@rebel/shared/util/arrays'
 import { InconsistentScopesError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
 import { OAuth2Client, Credentials } from 'google-auth-library'
 import { GaxiosError } from 'gaxios'
 import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientFactory'
+import { assertUnreachable } from '@rebel/shared/util/typescript'
+import AuthHelpers, { YoutubeAuthType } from '@rebel/server/helpers/AuthHelpers'
 
 type Deps = Dependencies<{
   authStore: AuthStore
@@ -20,6 +20,7 @@ type Deps = Dependencies<{
   logService: LogService
   disableExternalApis: boolean
   youtubeAuthClientFactory: YoutubeAuthClientFactory
+  authHelpers: AuthHelpers
 }>
 
 // https://github.com/googleapis/google-api-nodejs-client#oauth2-client
@@ -34,6 +35,7 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
   private readonly logService: LogService
   private readonly disableExternalApis: boolean
   private readonly youtubeAuthClientFactory: YoutubeAuthClientFactory
+  private readonly authHelpers: AuthHelpers
 
   constructor (deps: Deps) {
     super()
@@ -45,6 +47,7 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
     this.logService = deps.resolve('logService')
     this.disableExternalApis = deps.resolve('disableExternalApis')
     this.youtubeAuthClientFactory = deps.resolve('youtubeAuthClientFactory')
+    this.authHelpers = deps.resolve('authHelpers')
   }
 
   public override async initialise (): Promise<void> {
@@ -56,7 +59,7 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
     const token = await this.authStore.loadYoutubeAccessToken(this.adminChannelId)
     if (token == null) {
       throw new YoutubeNotAuthorisedError(this.adminChannelId)
-    } else if (!compareScopes(YOUTUBE_SCOPE, token.scope.split(' '))) {
+    } else if (!this.authHelpers.compareYoutubeScopes('admin', token.scope.split(' '))) {
       await this.revokeYoutubeAccessToken(this.adminChannelId)
       this.logService.logError(this, 'The stored application scope differs from the expected scope. The stored authentication details have been removed and ChatMate must be re-authorised by the admin channel.')
       throw new InconsistentScopesError('stored')
@@ -66,44 +69,21 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
     }
   }
 
-  public getAuthUrl (isAdmin: boolean) {
-    const client = this.getClient(isAdmin)
+  public getAuthUrl (type: YoutubeAuthType) {
+    const client = this.getClient(type)
 
     return client.generateAuthUrl({
       client_id: this.clientId,
-      access_type: 'offline', // allow refreshing
-      redirect_uri: this.getRedirectUri(isAdmin),
-      scope: YOUTUBE_SCOPE
+      access_type: type === 'user' ? 'online' : 'offline', // allow refreshing streamer/admin tokens since we store these in the db
+      redirect_uri: this.getRedirectUri(type),
+      scope: this.authHelpers.getYoutubeScope(type)
     })
   }
 
-  public async authoriseChannel (code: string, externalChannelId: 'admin'): Promise<void>
-  public async authoriseChannel (code: string, externalChannelId: string): Promise<void>
-  public async authoriseChannel (code: string, externalChannelId: string | 'admin'): Promise<void> {
-    const isAdmin = externalChannelId === 'admin'
-
-    const client = this.getClient(isAdmin)
-    const token = await client.getToken(code).then(res => res.tokens)
-
-    if (!compareScopes(YOUTUBE_SCOPE, token.scope!.split(' '))) {
-      const result = await client.revokeToken(token.access_token!)
-      this.logService.logInfo(this, `User authorised ChatMate, but did not grant all requested permissions. Successfully revoked token: ${result.data.success}`)
-      throw new InconsistentScopesError('authenticated')
-    }
-
-    // note: we have no way of knowing what channel this code is actually for
-    // (technically it's not even for a channel, but a google user that might own multiple channels)
-    const youtubeAuth: New<YoutubeAuth> = {
-      externalYoutubeChannelId: isAdmin ? this.adminChannelId : externalChannelId,
-      accessToken: token.access_token!,
-      refreshToken: token.refresh_token!,
-      scope: token.scope!,
-      expiryDate: new Date(token.expiry_date!),
-      timeObtained: new Date()
-    }
-    await this.authStore.saveYoutubeAccessToken(youtubeAuth)
-
-    this.logService.logInfo(this, `Youtube channel ${externalChannelId} (isAdmin: ${isAdmin}) has authorised ChatMate.`)
+  public getAuthFromCredentials (credentials: Credentials): OAuth2Client {
+    const client = this.getClient('user')
+    client.setCredentials(credentials)
+    return client
   }
 
   public async getAuth (externalChannelId: string): Promise<OAuth2Client>
@@ -115,11 +95,11 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
     const existingToken = await this.authStore.loadYoutubeAccessToken(externalChannelId)
     if (existingToken == null) {
       throw new YoutubeNotAuthorisedError(externalChannelId)
-    } else if (!compareScopes(YOUTUBE_SCOPE, existingToken.scope.split(' '))) {
+    } else if (!this.authHelpers.compareYoutubeScopes(isAdmin ? 'admin' : 'streamer', existingToken.scope.split(' '))) {
       throw new InconsistentScopesError('stored')
     }
 
-    const client = this.getClient(isAdmin)
+    const client = this.getClient(isAdmin ? 'admin' : 'streamer')
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     client.on('tokens', tokens => this.onTokenUpdated(externalChannelId, tokens))
@@ -138,9 +118,10 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
   public async revokeYoutubeAccessToken (externalChannelId: 'admin'): Promise<void>
   public async revokeYoutubeAccessToken (externalChannelId: string): Promise<void>
   public async revokeYoutubeAccessToken (externalChannelId: string | 'admin'): Promise<void> {
-    externalChannelId = externalChannelId === 'admin' ? this.adminChannelId : externalChannelId
+    const isAdmin = externalChannelId === 'admin'
+    externalChannelId = isAdmin ? this.adminChannelId : externalChannelId
 
-    const client = this.getClient(true)
+    const client = this.getClient(isAdmin ? 'admin' : 'streamer')
     const token = await this.authStore.loadYoutubeAccessToken(externalChannelId)
     if (token == null) {
       throw new YoutubeNotAuthorisedError(externalChannelId)
@@ -178,17 +159,21 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
     }
   }
 
-  // the youtube api won't be used very often, there's no good reason to keep these clients in memorya
-  private getClient (isAdmin: boolean): OAuth2Client {
-    return this.youtubeAuthClientFactory.create(this.clientId, this.clientSecret, this.getRedirectUri(isAdmin))
+  // the youtube api won't be used very often, there's no good reason to keep these clients in memory
+  public getClient (type: YoutubeAuthType): OAuth2Client {
+    return this.youtubeAuthClientFactory.create(this.clientId, this.clientSecret, this.getRedirectUri(type))
   }
 
   // must match exactly what is set up in the google dev console
-  private getRedirectUri (isAdmin: boolean) {
-    return isAdmin ? this.studioUrl + '/admin/youtube' : this.studioUrl + '/manager'
+  private getRedirectUri (type: YoutubeAuthType) {
+    if (type === 'admin') {
+      return this.studioUrl + '/admin/youtube'
+    } else if (type === 'streamer') {
+      return this.studioUrl + '/manager'
+    } else if (type === 'user') {
+      return this.studioUrl + '/link'
+    } else {
+      assertUnreachable(type)
+    }
   }
-}
-
-function compareScopes (expected: string[], actual: string[]): boolean {
-  return compareArrays([...expected].sort(), [...actual].sort())
 }

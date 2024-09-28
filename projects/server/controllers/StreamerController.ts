@@ -27,7 +27,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { filterTypes, nonNull, single, unique, zipOnStrict } from '@rebel/shared/util/arrays'
-import { ForbiddenError, NotFoundError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { ForbiddenError, NotFoundError, PrimaryChannelNotFoundError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
 import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
@@ -41,6 +41,7 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import CacheService from '@rebel/server/services/CacheService'
 import { generateStringRangeValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 import { ONE_DAY } from '@rebel/shared/util/datetime'
+import AuthService from '@rebel/server/services/AuthService'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -59,6 +60,7 @@ type Deps = ControllerDependencies<{
   youtubeService: YoutubeService
   channelStore: ChannelStore
   cacheService: CacheService
+  authService: AuthService
 }>
 
 @Path(buildPath('streamer'))
@@ -79,6 +81,7 @@ export default class StreamerController extends ControllerBase {
   private readonly youtubeService: YoutubeService
   private readonly channelStore: ChannelStore
   private readonly cacheService: CacheService
+  private readonly authService: AuthService
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -98,6 +101,7 @@ export default class StreamerController extends ControllerBase {
     this.youtubeService = deps.resolve('youtubeService')
     this.channelStore = deps.resolve('channelStore')
     this.cacheService = deps.resolve('cacheService')
+    this.authService = deps.resolve('authService')
   }
 
   @GET
@@ -527,7 +531,7 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(400, 'User does not have a primary Youtube channel.')
       }
 
-      const url = this.youtubeAuthProvider.getAuthUrl(false)
+      const url = this.youtubeAuthProvider.getAuthUrl('streamer')
 
       return builder.success({ url })
     } catch (e: any) {
@@ -559,10 +563,14 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(400, 'User does not have a primary Youtube channel.')
       }
 
-      await this.youtubeAuthProvider.authoriseChannel(code, externalChannelId)
+      await this.authService.authoriseYoutubeStreamer(code, streamer.id)
       return builder.success({})
     } catch (e: any) {
-      return builder.failure(e)
+      if (e instanceof PrimaryChannelNotFoundError) {
+        return builder.failure(400, e)
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 

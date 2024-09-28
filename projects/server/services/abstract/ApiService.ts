@@ -33,7 +33,7 @@ export default abstract class ApiService extends ContextClass {
   public wrapRequest<TQuery extends any[], TResponse> (
     request: (...query: TQuery) => Promise<TResponse>,
     requestName: string,
-    streamerId: number,
+    streamerId: number | null,
     skipPlatformLogIfSuccessful?: boolean
   ): (...query: TQuery) => Promise<TResponse> {
     return async (...query: TQuery) => {
@@ -72,7 +72,7 @@ export default abstract class ApiService extends ContextClass {
         try {
           await this.platformApiStore.addApiRequest(streamerId, this.apiPlatform, startTime, finishTime, requestName, JSON.stringify(queryToLog), error?.message ?? null)
         } catch (e: any) {
-          this.logService.logError(this, `Unable to log API usage of ${this.apiPlatform} for streamer ${streamerId} for endpoint ${requestName}:`, e)
+          this.logService.logError(this, `Unable to log API usage of ${this.apiPlatform} for streamer ${streamerId ?? '<no streamer>'} for endpoint ${requestName}:`, e)
         }
       }
 
