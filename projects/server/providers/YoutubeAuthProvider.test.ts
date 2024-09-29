@@ -4,7 +4,7 @@ import YoutubeAuthClientFactory from '@rebel/server/factories/YoutubeAuthClientF
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { Dependencies } from '@rebel/shared/context/context'
-import { cast, expectObject, nameof } from '@rebel/shared/testUtils'
+import { cast, expectArray, expectObject, nameof } from '@rebel/shared/testUtils'
 import { InconsistentScopesError, YoutubeNotAuthorisedError } from '@rebel/shared/util/error'
 import { MockProxy, mock } from 'jest-mock-extended'
 import { OAuth2Client, Credentials } from 'google-auth-library'
@@ -75,8 +75,9 @@ describe(nameof(YoutubeAuthProvider, 'getAuthUrl'), () => {
 
 describe(nameof(YoutubeAuthProvider, 'getAuth'), () => {
   test(`Returns the client with correct credentials and listening to token updates`, async () => {
-    const savedToken = cast<YoutubeAuth>({ scope: YOUTUBE_STREAMER_SCOPE.join(' '), accessToken: 'test123', expiryDate: new Date() })
+    const savedToken = cast<YoutubeAuth>({ scope: 'scope', accessToken: 'test123', expiryDate: new Date() })
     mockAuthStore.loadYoutubeAccessToken.calledWith(streamerChannelId).mockResolvedValue(savedToken)
+    mockAuthHelpers.compareYoutubeScopes.calledWith('streamer', expectArray([savedToken.scope])).mockReturnValue(true)
 
     const result = await youtubeAuthProvider.getAuth(streamerChannelId)
 
@@ -101,8 +102,9 @@ describe(nameof(YoutubeAuthProvider, 'getAuth'), () => {
   })
 
   test(`Throws ${InconsistentScopesError.name} if the saved scope is invalid`, async () => {
-    const savedToken = cast<YoutubeAuth>({ scope: '' })
+    const savedToken = cast<YoutubeAuth>({ scope: 'scope' })
     mockAuthStore.loadYoutubeAccessToken.calledWith(streamerChannelId).mockResolvedValue(savedToken)
+    mockAuthHelpers.compareYoutubeScopes.calledWith('streamer', expectArray([savedToken.scope])).mockReturnValue(false)
 
     await expect(() => youtubeAuthProvider.getAuth(streamerChannelId)).rejects.toThrowError(InconsistentScopesError)
   })
