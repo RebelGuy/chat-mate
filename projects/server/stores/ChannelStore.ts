@@ -17,7 +17,7 @@ export type CreateOrUpdateGlobalTwitchChannelArgs = SafeOmit<New<TwitchChannelGl
 export type CreateOrUpdateStreamerYoutubeChannelArgs = SafeOmit<New<YoutubeChannelStreamerInfo>, 'channelId'>
 export type CreateOrUpdateStreamerTwitchChannelArgs = SafeOmit<New<TwitchChannelStreamerInfo>, 'channelId'>
 
-export type CreateOrUpdateYoutubeChannelArgs = SafeOmit<CreateOrUpdateGlobalYoutubeChannelArgs, 'imageId'> & CreateOrUpdateStreamerYoutubeChannelArgs
+export type CreateOrUpdateYoutubeChannelArgs = SafeOmit<CreateOrUpdateGlobalYoutubeChannelArgs, 'imageId'> & (CreateOrUpdateStreamerYoutubeChannelArgs | { streamerId: null })
 export type CreateOrUpdateTwitchChannelArgs = CreateOrUpdateGlobalTwitchChannelArgs & CreateOrUpdateStreamerTwitchChannelArgs
 
 export type YoutubeChannelWithLatestInfo = SafeOmit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLinks' | 'streamerInfoHistory'>
@@ -80,7 +80,7 @@ export default class ChannelStore extends ContextClass {
             height: 0
           }}
         }},
-        streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isOwner: channelInfo.isOwner, isModerator: channelInfo.isModerator } }
+        streamerInfoHistory: channelInfo.streamerId != null ? { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isOwner: channelInfo.isOwner, isModerator: channelInfo.isModerator } } : undefined
       },
       include: channelQuery_includeLatestChannelInfo
     })

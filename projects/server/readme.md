@@ -1160,6 +1160,21 @@ Returns data with the following properties:
 - `registeredUser` (`PublicRegisteredUser`): The registered user to which the channels are attached.
 - `channels` (`PublicChannelInfo[]`): The channels linked to the user.
 
+### `GET /link/youtube/login`
+
+Gets the URL for users to login to Youtube for linking their Youtube channel to ChatMate.
+
+Returns data with the following properties:
+- `registeredUser` (`PublicRegisteredUser`): The registered user to which the channels are attached.
+
+### `POST /link/youtube`
+
+Authenticates the provided code and links the authorising channel to the logged-in user.
+
+Query parameters:
+- `code` (`string`): Gets the list of channels linked to a particular user.
+
+
 ### `POST /link/channels/:aggregateUserId/:defaultUserId`
 
 Adds a link between the given default user and aggregate user.

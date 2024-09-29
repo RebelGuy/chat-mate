@@ -121,6 +121,7 @@ import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask
 import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
 import AuthHelpers from '@rebel/server/helpers/AuthHelpers'
 import AuthService from '@rebel/server/services/AuthService'
+import UserLinkService from '@rebel/server/services/UserLinkService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -308,6 +309,7 @@ const main = async () => {
     .withClass('taskStore', TaskStore)
     .withClass('taskService', TaskService)
     .withClass('authService', AuthService)
+    .withClass('userLinkService', UserLinkService)
     .build()
 
   app.use((req, res, next) => {

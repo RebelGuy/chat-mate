@@ -1,11 +1,10 @@
 import AdminLink from '@rebel/studio/pages/link/AdminLink'
-import { addLinkedChannel, getLinkedChannels, getOfficialChatMateStreamer, getPrimaryChannels } from '@rebel/studio/utility/api'
+import { addLinkedChannel, getLinkedChannels, getOfficialChatMateStreamer, getPrimaryChannels, getYoutubeLoginUrl, linkYoutubeChannel } from '@rebel/studio/utility/api'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LinkedChannels from '@rebel/studio/pages/link/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/pages/link/LinkHistory'
-import * as React from 'react'
 import { MAX_CHANNEL_LINKS_ALLOWED } from '@rebel/shared/constants'
-import { Alert, Button, TextField } from '@mui/material'
+import { Alert, Button, Link, TextField, Typography } from '@mui/material'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
 import { CreateLinkToken } from '@rebel/studio/pages/link/CreateLinkToken'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
@@ -14,20 +13,50 @@ import ApiLoading from '@rebel/studio/components/ApiLoading'
 import ApiError from '@rebel/studio/components/ApiError'
 import StreamerLinks from '@rebel/studio/components/StreamerLinks'
 import LinkAttemptLogs from '@rebel/studio/pages/link/LinkAttemptLogs'
+import { useSearchParams } from 'react-router-dom'
+import { getAuthTypeFromParams } from '@rebel/studio/utility/misc'
+import { useContext, useEffect, useState } from 'react'
+
+export const LEGACY_VIEW_QUERY_PARAM = 'legacyView'
 
 // props are the user details of the currently selected user in the admin context. changed by searching for another user
 export default function LinkUser (props: { admin_selectedAggregateUserId?: number, admin_selectedDefaultUserId?: number }) {
-  const loginContext = React.useContext(LoginContext)
+  const loginContext = useContext(LoginContext)
   const [key, updateKey] = useUpdateKey()
+  const [params, setParams] = useSearchParams()
 
   // the user to link to
-  const [selectedAggregateUserId, setSelectedAggregateUserId] = React.useState<number | null>()
+  const [selectedAggregateUserId, setSelectedAggregateUserId] = useState<number | null>()
 
   const getLinkedChannelsRequest = useRequest(getLinkedChannels(props.admin_selectedAggregateUserId), { updateKey: key })
   const getPrimaryChannelsRequest = useRequest(getPrimaryChannels(), { updateKey: key, blockAutoRequest: !loginContext.isStreamer })
   const getOfficialChatMateStreamerRequest = useRequest(getOfficialChatMateStreamer())
 
-  React.useEffect(() => {
+  const legacyView = params.get(LEGACY_VIEW_QUERY_PARAM) === 'true'
+
+  // when the user authenticated ChatMate to link their channel
+  const [isYoutubeAuth] = useState(getAuthTypeFromParams(params) === 'youtube')
+  const code = isYoutubeAuth ? params.get('code') : null
+  const [hasCode] = useState(code != null)
+
+  const getYoutubeLoginUrlRequest = useRequest(getYoutubeLoginUrl())
+  const linkYoutubeChannelRequest = useRequest(linkYoutubeChannel(code!), {
+    onDemand: true,
+    onDone: updateKey
+  })
+
+  useEffect(() => {
+    if (isYoutubeAuth) {
+      setParams({})
+    }
+
+    if (code != null) {
+      linkYoutubeChannelRequest.triggerRequest()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
     updateKey()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.admin_selectedAggregateUserId])
@@ -49,35 +78,68 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
         <Alert sx={{ mt: 1, mb: 1, width: 'fit-content' }} severity="warning">
           Each channel can only be linked to one ChatMate account - make sure <b>{loginContext.username}</b> is the account you want to link to, as it cannot be undone.
         </Alert>
+        {legacyView ? <>
+          How to link a channel:
+          <ol>
+            <li>
+              <b>Specify the channel. </b>
+                In the below input field, enter either the YouTube channel ID or Twitch channel name that you wish to link.
+            </li>
+            <li>
+              <b>Prove channel ownership. </b>
+              Ensure you are logged in to the channel you want to link.
+              Head over to a ChatMate-enabled livestream and paste the provided command shown in the Link History section to the chat.
+              The official ChatMate channels below can be used for this purpose, or the channel of the current streamer you are watching, if any.
+              {getOfficialChatMateStreamerRequest.data != null && <StreamerLinks streamerSummary={getOfficialChatMateStreamerRequest.data.chatMateStreamer} />}
+            </li>
+            <li>
+              <b>Wait for a few seconds. </b>
+                Once you have sent the link command to the stream chat, the link process will be initiated and should complete within a few seconds. Its status can be checked below.
+            </li>
+          </ol>
 
-        How to link a channel:
-        <ol>
-          <li>
-            <b>Specify the channel. </b>
-              In the below input field, enter either the YouTube channel ID or Twitch channel name that you wish to link.
-          </li>
-          <li>
-            <b>Prove channel ownership. </b>
-            Ensure you are logged in to the channel you want to link.
-            Head over to a ChatMate-enabled livestream and paste the provided command shown in the Link History section to the chat.
-            The official ChatMate channels below can be used for this purpose, or the channel of the current streamer you are watching, if any.
-            {getOfficialChatMateStreamerRequest.data != null && <StreamerLinks streamerSummary={getOfficialChatMateStreamerRequest.data.chatMateStreamer} />}
-          </li>
-          <li>
-            <b>Wait for a few seconds. </b>
-              Once you have sent the link command to the stream chat, the link process will be initiated and should complete within a few seconds. Its status can be checked below.
-          </li>
-        </ol>
+          {getLinkedChannelsRequest.data != null &&
+            <CreateLinkToken
+              isLoading={getLinkedChannelsRequest.isLoading || getPrimaryChannelsRequest.isLoading}
+              linkedCount={getLinkedChannelsRequest.data.channels.length}
+              onCreated={updateKey}
+            />
+          }
+          <ApiLoading requestObj={[getLinkedChannelsRequest, getOfficialChatMateStreamerRequest, getPrimaryChannelsRequest]} initialOnly />
+          <ApiError requestObj={[getLinkedChannelsRequest, getOfficialChatMateStreamerRequest, getPrimaryChannelsRequest]} />
 
-        {getLinkedChannelsRequest.data != null &&
-          <CreateLinkToken
-            isLoading={getLinkedChannelsRequest.isLoading || getPrimaryChannelsRequest.isLoading}
-            linkedCount={getLinkedChannelsRequest.data.channels.length}
-            onCreated={updateKey}
-          />
-        }
-        <ApiLoading requestObj={[getLinkedChannelsRequest, getOfficialChatMateStreamerRequest, getPrimaryChannelsRequest]} initialOnly />
-        <ApiError requestObj={[getLinkedChannelsRequest, getOfficialChatMateStreamerRequest, getPrimaryChannelsRequest]} />
+          <Alert severity="info" sx={{ width: 'fit-content' }}>
+            This is the legacy way of linking channels, which does not require you to trust ChatMate with your account information. <Link component="button" variant="body2" onClick={() => setParams()}>Switch to the modern way.</Link>
+          </Alert>
+        </> : <>
+          How to link a channel:
+          <ol>
+            <li>
+              Select your channel's platform using one of the below buttons.
+            </li>
+            <li>
+              Grant access for ChatMate to read your channel info. <Link component="button" variant="body1" onClick={() => setParams({ [LEGACY_VIEW_QUERY_PARAM]: 'true' })}>If you encounter issues, try using the old, trustless way of linking.</Link>
+            </li>
+            <li>
+              Confirm that your channel is now shown in the Linked Channels section.
+            </li>
+          </ol>
+
+          <Link href={getYoutubeLoginUrlRequest.data?.url ?? ''}><Button sx={{ mr: 2 }} disabled={getYoutubeLoginUrlRequest.data == null}>Link Youtube Channel</Button></Link>
+          <Button>Link Twitch Channel</Button>
+
+          {hasCode &&
+            <>
+              {linkYoutubeChannelRequest.data != null &&
+                <Alert sx={{ mt: 1 }} severity="success">
+                  Successfully linked your channel to ChatMate.
+                </Alert>
+              }
+              <ApiLoading requestObj={linkYoutubeChannelRequest}>Linking your channel. Please wait...</ApiLoading>
+              <ApiError requestObj={linkYoutubeChannelRequest} hideRetryButton />
+            </>
+          }
+        </>}
       </>}
 
       {/* allow admin to link an aggregate user to the selected default user */}

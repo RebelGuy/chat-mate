@@ -97,7 +97,7 @@ export default () => {
   afterEach(stopTestDb)
 
   describe(nameof(ChannelStore, 'createYoutubeChannel'), () => {
-    test('Creates the channel with the correct image data', async () => {
+    test('Creates the channel with streamer info and the correct image data', async () => {
       await db.chatUser.create({ data: {}})
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user', hashedPassword: 'password', aggregateChatUserId: 1 }}}})
       const externalId = 'externalId'
@@ -125,6 +125,33 @@ export default () => {
       const storedImage = await db.image.findMany({}).then(single)
       expect(storedImage).toEqual(expectObject(storedImage, { originalUrl: channelInfo.imageUrl, width: 40, height: 20 }))
       await expectRowCount(db.youtubeChannel, db.youtubeChannelGlobalInfo, db.youtubeChannelStreamerInfo).toEqual([1, 1, 1])
+    })
+
+    test.only('Creates the channel without streamer info and the correct image data', async () => {
+      await db.chatUser.create({ data: {}})
+      const externalId = 'externalId'
+      const channelInfo: CreateOrUpdateYoutubeChannelArgs = {
+        imageUrl: 'imageUrl',
+        isVerified: false,
+        name: 'name',
+        streamerId: null,
+        time: data.time1
+      }
+      const onGetImageInfo = (channelId: number, channelGlobalInfoId: number) => Promise.resolve<ImageInfo>({
+        relativeImageUrl: `${channelId}/${channelGlobalInfoId}.png`,
+        imageHeight: 20,
+        imageWidth: 40
+      })
+
+      const result = await channelStore.createYoutubeChannel(externalId, channelInfo, onGetImageInfo)
+
+      // check result is correct
+      expect(result).toEqual(expectObjectDeep(result, { youtubeId: externalId, globalInfoHistory: [{ imageUrl: channelInfo.imageUrl, imageId: 1, name: 'name' }]}))
+
+      // make sure we have persisted the expected data
+      const storedImage = await db.image.findMany({}).then(single)
+      expect(storedImage).toEqual(expectObject(storedImage, { originalUrl: channelInfo.imageUrl, width: 40, height: 20 }))
+      await expectRowCount(db.youtubeChannel, db.youtubeChannelGlobalInfo, db.youtubeChannelStreamerInfo).toEqual([1, 1, 0])
     })
   })
 

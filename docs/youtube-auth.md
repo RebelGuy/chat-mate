@@ -1,6 +1,6 @@
 # Overview
 
-Similar to [Twitch auth](./twitch-auth.md), we expose endpoints for authorising ChatMate to act on behalf of a user for both the admin channel and (separately) any other streamer channel. The authorisation flow is very similar to that of Twitch.
+Similar to [Twitch auth](./twitch-auth.md), we expose endpoints for authorising ChatMate to act on behalf of a user for both the admin channel and (separately) any other streamer channel. The authorisation flow is very similar to that of Twitch. Furthermore, we expose an endpoint for linking the currently logged-in user to a Youtube channel, authorised via an authorisation code.
 
 At startup, ChatMate will check that authorisation for the admin Youtube channel has been granted - if not, we enable administrative mode and authorisation must be completed as soon as possible, followed by a server restart. At the moment, we do not use the admin Youtube channel's access token for anything, but this might change in the future.
 
@@ -9,6 +9,8 @@ For regular streamers, requests to the API are made on behalf of the streamer fo
 - Getting and updating the list of mods
 
 In addition, streamers are expected to add the ChatMate Youtube channel as a moderator to their channel. This will allow ChatMate to listen to punishment events via Masterchat, which is not possible otherwise. Upon receiving a punishment event, ChatMate will be able to synchronise a user's punishments on all connected channels, as well as their ChatMate account's rank. If authorised, the moderation status can be checked reliably via the API. If not authorised, the moderation status can be checked with limited reliability via ChatMate (this is achieved by inspecting possible actions of the latest chat item via the context menu; if a moderator-exclusive action exists, we can infer that ChatMate is a moderator of the channel).
+
+User authorisation occurs when a ChatMate user wishes to link their account to a Youtube channel that they own. In that case, they perform the authorisation on the frontend (ChatMate Studio) and the linking happens automatically in the backend, where the server will verify the code, retrieve the Youtube channel that authorised ChatMate, create an internal channel if required, and finally link the channel to the user. Note that the read-only permission granted by the user is revoked immediately as we do not need to keep it around.
 
 The Youtube API quota is extremely limited (or API requests are extremely expensive). Should the API limit be reached, Masterchat could reasonably be used as a fallback, with the caveat that moderators will not be able to be added/removed, as this can only be done by the channel owner.
 

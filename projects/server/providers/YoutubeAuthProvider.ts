@@ -171,7 +171,7 @@ export default class YoutubeAuthProvider extends SingletonContextClass {
     } else if (type === 'streamer') {
       return this.studioUrl + '/manager'
     } else if (type === 'user') {
-      return this.studioUrl + '/link'
+      return this.studioUrl + '/link?platform=youtube'
     } else {
       assertUnreachable(type)
     }

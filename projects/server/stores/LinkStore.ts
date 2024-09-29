@@ -124,7 +124,7 @@ export default class LinkStore extends ContextClass {
     })
 
     if (defaultUser.aggregateChatUserId != null) {
-      throw new UserAlreadyLinkedToAggregateUserError(`Cannot link the user because it is already linked to ${defaultUser.aggregateChatUserId === aggregateChatUserId ? 'this' : 'another'} user.`, defaultUser.aggregateChatUserId, defaultUserId)
+      throw new UserAlreadyLinkedToAggregateUserError(`Cannot link the given channel because it is already linked to ${defaultUser.aggregateChatUserId === aggregateChatUserId ? 'this' : 'another'} user.`, defaultUser.aggregateChatUserId, defaultUserId)
     }
 
     await this.db.chatUser.update({

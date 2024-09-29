@@ -15,8 +15,11 @@ import { asGte, asLte } from '@rebel/shared/util/math'
 import { sleep } from '@rebel/shared/util/node'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse } from '@rebel/api-models/schema/user'
+import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, GetYoutubeLoginUrlResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse, LinkYoutubeChannelResponse } from '@rebel/api-models/schema/user'
 import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
+import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
+import UserService from '@rebel/server/services/UserService'
+import UserLinkService from '@rebel/server/services/UserLinkService'
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
@@ -25,6 +28,9 @@ type Deps = ControllerDependencies<{
   accountStore: AccountStore
   linkService: LinkService
   linkStore: LinkStore
+  youtubeAuthProvider: YoutubeAuthProvider
+  userService: UserService
+  userLinkService: UserLinkService
 }>
 
 @Path(buildPath('user'))
@@ -35,6 +41,9 @@ export default class UserController extends ControllerBase {
   private readonly accountStore: AccountStore
   private readonly linkService: LinkService
   private readonly linkStore: LinkStore
+  private readonly youtubeAuthProvider: YoutubeAuthProvider
+  private readonly userService: UserService
+  private readonly userLinkService: UserLinkService
 
   constructor (deps: Deps) {
     super(deps, 'user')
@@ -44,6 +53,9 @@ export default class UserController extends ControllerBase {
     this.accountStore = deps.resolve('accountStore')
     this.linkService = deps.resolve('linkService')
     this.linkStore = deps.resolve('linkStore')
+    this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
+    this.userService = deps.resolve('userService')
+    this.userLinkService = deps.resolve('userLinkService')
   }
 
   @GET
@@ -201,6 +213,42 @@ export default class UserController extends ControllerBase {
         registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
         channels: channels.channels.map(channelToPublicChannel)
       })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/link/youtube/login')
+  @PreProcessor(requireAuth)
+  public getYoutubeLoginUrl (): GetYoutubeLoginUrlResponse {
+    const builder = this.registerResponseBuilder<GetYoutubeLoginUrlResponse>('GET /link/youtube/login')
+
+    try {
+      const url = this.youtubeAuthProvider.getAuthUrl('user')
+
+      return builder.success({ url })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/link/youtube')
+  @PreProcessor(requireAuth)
+  public async linkYoutubeChannel (
+    @QueryParam('code') code: string
+  ): Promise<LinkYoutubeChannelResponse> {
+    const builder = this.registerResponseBuilder<LinkYoutubeChannelResponse>('POST /link/youtube')
+
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
+
+    try {
+      await this.userLinkService.linkYoutubeAccountToUser(code, this.getCurrentUser().aggregateChatUserId)
+      return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
     }

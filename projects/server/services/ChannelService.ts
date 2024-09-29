@@ -77,9 +77,10 @@ export default class ChannelService extends ContextClass {
 
   public async createOrUpdateYoutubeChannel (externalId: string, channelInfo: CreateOrUpdateYoutubeChannelArgs): Promise<YoutubeChannelWithLatestInfo> {
     const semaphore = this.chatMateStateService.getChannelSemaphore()
-    await semaphore.enter(externalId)
 
     try {
+      await semaphore.enter(externalId)
+
       let currentChannel = await this.channelStore.tryGetYoutubeChannelWithLatestInfo(externalId)
       if (currentChannel == null) {
         return await this.channelStore.createYoutubeChannel(externalId, channelInfo, (channelId, channelGlobalInfoId) => this.onGetImageInfo(channelInfo.imageUrl, channelId, channelGlobalInfoId))
@@ -98,10 +99,12 @@ export default class ChannelService extends ContextClass {
         )
       }
 
-      const storedStreamerInfo: YoutubeChannelStreamerInfo | null = await this.channelStore.getYoutubeChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
-      if (storedStreamerInfo == null || streamerChannelInfoHasChanged('youtube', storedStreamerInfo, channelInfo)) {
-        this.logService.logInfo(this, `Streamer info for youtube channel ${currentChannel.id} (streamer ${channelInfo.streamerId}) has changed and will be updated`)
-        await this.channelStore.updateYoutubeChannel_Streamer(externalId, channelInfo)
+      if (channelInfo.streamerId != null) {
+        const storedStreamerInfo: YoutubeChannelStreamerInfo | null = await this.channelStore.getYoutubeChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
+        if (storedStreamerInfo == null || streamerChannelInfoHasChanged('youtube', storedStreamerInfo, channelInfo)) {
+          this.logService.logInfo(this, `Streamer info for youtube channel ${currentChannel.id} (streamer ${channelInfo.streamerId}) has changed and will be updated`)
+          await this.channelStore.updateYoutubeChannel_Streamer(externalId, channelInfo)
+        }
       }
 
       return currentChannel
@@ -110,11 +113,37 @@ export default class ChannelService extends ContextClass {
     }
   }
 
-  public async createOrUpdateTwitchChannel (externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo> {
+  public async getOrCreateYoutubeChannel (externalId: string, channelName: string, imageUrl: string, isVerified: boolean): Promise<YoutubeChannelWithLatestInfo> {
     const semaphore = this.chatMateStateService.getChannelSemaphore()
-    await semaphore.enter(externalId)
 
     try {
+      await semaphore.enter(externalId)
+
+      const currentChannel = await this.channelStore.tryGetYoutubeChannelWithLatestInfo(externalId)
+      if (currentChannel != null) {
+        return currentChannel
+      }
+
+      const channelInfo: CreateOrUpdateYoutubeChannelArgs = {
+        name: channelName,
+        imageUrl: imageUrl,
+        isVerified: isVerified,
+        streamerId: null,
+        time: new Date()
+      }
+      return await this.channelStore.createYoutubeChannel(externalId, channelInfo, (channelId, channelGlobalInfoId) => this.onGetImageInfo(channelInfo.imageUrl, channelId, channelGlobalInfoId))
+
+    } finally {
+      semaphore.exit(externalId)
+    }
+  }
+
+  public async createOrUpdateTwitchChannel (externalId: string, channelInfo: CreateOrUpdateTwitchChannelArgs): Promise<TwitchChannelWithLatestInfo> {
+    const semaphore = this.chatMateStateService.getChannelSemaphore()
+
+    try {
+      await semaphore.enter(externalId)
+
       let currentChannel = await this.channelStore.tryGetTwitchChannelWithLatestInfo(externalId)
       if (currentChannel == null) {
         return await this.channelStore.createTwitchChannel(externalId, channelInfo)
@@ -233,7 +262,8 @@ export default class ChannelService extends ContextClass {
     // all images seem to conform to the format `...=s64-...`, where 64 represents the image size in pixels.
     // turns out we can increase this size - if we strip off characters url parts after the size, youtube
     // will return to us the original image, or, if larger than our number, the original image scaled down to our number.
-    const sizeStartIndex = originalUrl.indexOf('=s64-')
+    const sizeRegex = /=s\d+-/
+    const sizeStartIndex = originalUrl.search(sizeRegex)
     if (sizeStartIndex < 0) {
       this.logService.logError(this, 'Could not find sizing information in the original URL:', originalUrl)
       return originalUrl

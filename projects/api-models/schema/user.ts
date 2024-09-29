@@ -23,6 +23,10 @@ export type GetLinkedChannelsResponse = ApiResponse<{
   channels: PublicChannel[]
 }>
 
+export type GetYoutubeLoginUrlResponse = ApiResponse<{ url: string }>
+
+export type LinkYoutubeChannelResponse = ApiResponse<EmptyObject>
+
 export type AddLinkedChannelResponse = ApiResponse<EmptyObject>
 
 export type RemoveLinkedChannelResponse = ApiResponse<EmptyObject>
