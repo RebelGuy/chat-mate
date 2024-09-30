@@ -80,7 +80,7 @@ function UserName () {
   const level = loginContext.isLoading ? undefined : (loginContext.user?.levelInfo.level ?? 0)
 
   return <Box sx={{ textAlign: 'center' }}>
-    Hi, <Level level={level} /> <b>{loginContext.username}</b>!
+    Hi, <Level level={level} /> <b>{loginContext.displayName ?? loginContext.username}</b>!
   </Box>
 }
 

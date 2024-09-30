@@ -130,6 +130,7 @@ export default class StreamerController extends ControllerBase {
         const { youtubeChannel, twitchChannel } = primaryChannels.find(channels => channels.streamerId === streamer.id)!
         return {
           username: streamer.username,
+          displayName: streamer.displayName,
           currentYoutubeLivestream: youtubeLivestream == null ? null : youtubeLivestreamToPublic(youtubeLivestream),
           currentTwitchLivestream: twitchLivestream == null ? null : twitchLivestreamToPublic(twitchLivestream, twitchChannel != null ? getUserName(twitchChannel) : ''),
           youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),
@@ -163,6 +164,7 @@ export default class StreamerController extends ControllerBase {
       return builder.success({
         chatMateStreamer: {
           username: registeredUser.username,
+          displayName: registeredUser.displayName,
           currentYoutubeLivestream: youtubeLivestream == null ? null : youtubeLivestreamToPublic(youtubeLivestream),
           currentTwitchLivestream: twitchLivestream == null ? null : twitchLivestreamToPublic(twitchLivestream, youtubeChannel != null ? getUserName(youtubeChannel) : ''),
           youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),

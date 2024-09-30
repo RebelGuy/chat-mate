@@ -226,6 +226,7 @@ model RegisteredUser {
   id Int @id @default(autoincrement())
 
   username       String   @db.VarChar(32) // unique
+  displayName    String?  @db.VarChar(20)
   registeredAt   DateTime @default(now())
   hashedPassword String   @db.VarChar(64)
 

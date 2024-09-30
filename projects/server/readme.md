@@ -281,6 +281,8 @@ Request data (body):
 
 Returns data with the following properties:
 - `loginToken` (`string`): A token used to authenticate the user when making another API request.
+- `displayName` (`string | null`): The customisable display name of the now logged-in user. Null if not set.
+- `isStreamer` (`string`): Whether the now logged-in user is a streamer on ChatMate.
 
 Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
@@ -296,6 +298,8 @@ Authenticates the login token contained in the header. If successful, the login 
 
 Returns data with the following properties:
 - `username` (`string`): The username associated with the login token.
+- `displayName` (`string | null`): The customisable display name of the user. Null if not set.
+- `isStreamer` (`string`): Whether the user is a streamer on ChatMate.
 
 Can return the following errors:
 - `401`: When the login token is invalid.

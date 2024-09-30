@@ -31,7 +31,9 @@ export default function LoginForm () {
   const returnUrl = params.has(RETURN_URL_QUERY_PARAM) ? window.decodeURIComponent(params.get(RETURN_URL_QUERY_PARAM)!) : null
 
   const onSuccess = (data: SuccessfulResponseData<RegisterResponse | LoginResponse>) => {
-    loginContext.setLogin(username, data.loginToken, 'isStreamer' in data && data.isStreamer)
+    const displayName = 'displayName' in data ? data.displayName : null
+    const isStreamer = 'isStreamer' in data && data.isStreamer
+    loginContext.setLogin(username, displayName, data.loginToken, isStreamer)
 
     // redirect them to the previous page. if `replace` is true, the login page will not show up in the browser page history
     navigate(returnUrl ?? generatePath('/'), { replace: returnUrl != null })
