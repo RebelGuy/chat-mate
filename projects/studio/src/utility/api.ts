@@ -5,7 +5,7 @@ import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicatio
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse } from '@rebel/api-models/schema/account'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/api-models/schema/donation'
-import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, GetYoutubeLoginUrlResponse as GetYoutubeUserLoginUrlResponse, DeleteLinkTokenResponse, LinkYoutubeChannelResponse } from '@rebel/api-models/schema/user'
+import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, GetYoutubeLoginUrlResponse as GetYoutubeUserLoginUrlResponse, DeleteLinkTokenResponse, LinkYoutubeChannelResponse, LinkTwitchChannelResponse, GetTwitchLoginUrlResponse as GetTwitchUserLoginUrlResponse } from '@rebel/api-models/schema/user'
 import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, GetLinkAttemptLogsResponse, ReleaseLinkAttemptResponse, GetYoutubeLoginUrlResponse as GetYoutubeAdminLoginUrlResponse, YoutubeAuthorisationResponse as YoutubeAdminAuthorisationResponse, YoutubeRevocationResponse as YoutubeAdminRevocationResponse } from '@rebel/api-models/schema/admin'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse } from '@rebel/api-models/types'
@@ -165,6 +165,14 @@ export const getYoutubeLoginUrl = requestBuilder<GetYoutubeUserLoginUrlResponse>
 export const linkYoutubeChannel = requestBuilder<LinkYoutubeChannelResponse, false, [code: string]>(
   'POST',
   (code) => constructPath('/user/link/youtube', { code }),
+  false
+)
+
+export const getTwitchLoginUrl = requestBuilder<GetTwitchUserLoginUrlResponse>('GET', `/user/link/twitch/login`, false)
+
+export const linkTwitchChannel = requestBuilder<LinkTwitchChannelResponse, false, [code: string]>(
+  'POST',
+  (code) => constructPath('/user/link/twitch', { code }),
   false
 )
 

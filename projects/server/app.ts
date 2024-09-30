@@ -122,6 +122,7 @@ import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
 import AuthHelpers from '@rebel/server/helpers/AuthHelpers'
 import AuthService from '@rebel/server/services/AuthService'
 import UserLinkService from '@rebel/server/services/UserLinkService'
+import StaticAuthProviderFactory from '@rebel/server/factories/StaticAuthProviderFactory'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -241,6 +242,7 @@ const main = async () => {
     .withClass('chatStore', ChatStore)
     .withClass('platformApiStore', PlatformApiStore)
     .withClass('masterchatService', MasterchatService)
+    .withClass('staticAuthProviderFactory', StaticAuthProviderFactory)
     .withClass('twurpleAuthProvider', TwurpleAuthProvider)
     .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
     .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)

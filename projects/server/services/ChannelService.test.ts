@@ -1,7 +1,7 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import { ChatItemWithRelations } from '@rebel/server/models/chat'
 import ChannelService from '@rebel/server/services/ChannelService'
-import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
+import ChannelStore, { YoutubeChannelWithLatestInfo, TwitchChannelWithLatestInfo, UserChannel, UserOwnedChannels, CreateOrUpdateGlobalYoutubeChannelArgs, CreateOrUpdateStreamerYoutubeChannelArgs, CreateOrUpdateYoutubeChannelArgs, CreateOrUpdateTwitchChannelArgs, CreateOrUpdateStreamerTwitchChannelArgs } from '@rebel/server/stores/ChannelStore'
 import ChatStore from '@rebel/server/stores/ChatStore'
 import { cast, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
 import { single, sortBy } from '@rebel/shared/util/arrays'
@@ -266,7 +266,7 @@ describe(nameof(ChannelService, 'createOrUpdateTwitchChannel'), () => {
     expect(mockChannelStore.updateTwitchChannel_Global.mock.calls.length).toBe(0)
 
     const updateStreamerInfoArgs = single(mockChannelStore.updateTwitchChannel_Streamer.mock.calls)
-    expect(updateStreamerInfoArgs).toEqual<typeof updateStreamerInfoArgs>([externalId, channelInfo])
+    expect(updateStreamerInfoArgs).toEqual<typeof updateStreamerInfoArgs>([externalId, channelInfo as CreateOrUpdateStreamerTwitchChannelArgs])
   })
 
   test('Updates the streamer info if details have changed', async () => {
@@ -282,7 +282,34 @@ describe(nameof(ChannelService, 'createOrUpdateTwitchChannel'), () => {
     expect(mockChannelStore.updateTwitchChannel_Global.mock.calls.length).toBe(0)
 
     const updateStreamerInfoArgs = single(mockChannelStore.updateTwitchChannel_Streamer.mock.calls)
-    expect(updateStreamerInfoArgs).toEqual<typeof updateStreamerInfoArgs>([externalId, channelInfo])
+    expect(updateStreamerInfoArgs).toEqual<typeof updateStreamerInfoArgs>([externalId, channelInfo as CreateOrUpdateStreamerTwitchChannelArgs])
+  })
+})
+
+describe(nameof(ChannelService, 'getOrCreateTwitchChannel'), () => {
+  test('Returns the existing channel', async () => {
+    const existingChannel = {} as any
+    mockChannelStore.tryGetTwitchChannelWithLatestInfo.calledWith(externalId).mockResolvedValue(existingChannel)
+
+    const result = await channelService.getOrCreateTwitchChannel(externalId, '', '', '', '')
+
+    expect(result).toBe(existingChannel)
+  })
+
+  test(`Creates a new channel if it doesn't exist`, async () => {
+    const name = 'name'
+    const displayName = 'displayName'
+    const colour = 'colour'
+    const userType = 'userType'
+    mockChannelStore.tryGetTwitchChannelWithLatestInfo.calledWith(externalId).mockResolvedValue(null)
+
+    await channelService.getOrCreateTwitchChannel(externalId, name, displayName, colour, userType)
+
+    const args = single(mockChannelStore.createTwitchChannel.mock.calls)
+    expect(args).toEqual<typeof args>([
+      externalId,
+      expectObject({ userName: name, displayName: displayName, colour: colour, userType: userType, streamerId: null, time: expect.any(Date) })
+    ])
   })
 })
 

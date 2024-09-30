@@ -336,10 +336,10 @@ export default class HelixEventService extends ContextClass {
     const streamerId = await this.streamerChannelService.getStreamerFromTwitchChannelName(data.userName)
     if (streamerId == null) {
       // I don't know if this is possible
-      this.logService.logWarning(this, 'Could not find streamer associated with the authorization granter')
       return
     }
 
+    this.logService.logInfo(this, `Automatically subscribing to channel events for streamer ${streamerId}`)
     await this.subscribeToChannelEventsByChannelName(streamerId, data.userName)
   }
 

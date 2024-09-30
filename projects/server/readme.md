@@ -1165,15 +1165,28 @@ Returns data with the following properties:
 Gets the URL for users to login to Youtube for linking their Youtube channel to ChatMate.
 
 Returns data with the following properties:
-- `registeredUser` (`PublicRegisteredUser`): The registered user to which the channels are attached.
+- `url` (`string`): The URL to visit for starting the authentication flow.
 
 ### `POST /link/youtube`
 
 Authenticates the provided code and links the authorising channel to the logged-in user.
 
 Query parameters:
-- `code` (`string`): Gets the list of channels linked to a particular user.
+- `code` (`string`): The authorisation code returned by Youtube after the user has logged in.
 
+### `GET /link/twitch/login`
+
+Gets the URL for users to login to Twitch for linking their Twitch channel to ChatMate.
+
+Returns data with the following properties:
+- `url` (`string`): The URL to visit for starting the authentication flow.
+
+### `POST /link/twitch`
+
+Authenticates the provided code and links the authorising channel to the logged-in user.
+
+Query parameters:
+- `code` (`string`): The authorisation code returned by Twitch after the user has logged in.
 
 ### `POST /link/channels/:aggregateUserId/:defaultUserId`
 

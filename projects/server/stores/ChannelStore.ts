@@ -18,7 +18,7 @@ export type CreateOrUpdateStreamerYoutubeChannelArgs = SafeOmit<New<YoutubeChann
 export type CreateOrUpdateStreamerTwitchChannelArgs = SafeOmit<New<TwitchChannelStreamerInfo>, 'channelId'>
 
 export type CreateOrUpdateYoutubeChannelArgs = SafeOmit<CreateOrUpdateGlobalYoutubeChannelArgs, 'imageId'> & (CreateOrUpdateStreamerYoutubeChannelArgs | { streamerId: null })
-export type CreateOrUpdateTwitchChannelArgs = CreateOrUpdateGlobalTwitchChannelArgs & CreateOrUpdateStreamerTwitchChannelArgs
+export type CreateOrUpdateTwitchChannelArgs = CreateOrUpdateGlobalTwitchChannelArgs & (CreateOrUpdateStreamerTwitchChannelArgs | { streamerId: null })
 
 export type YoutubeChannelWithLatestInfo = SafeOmit<Entity.YoutubeChannel, 'chatMessages' | 'user' | 'streamerYoutubeChannelLinks' | 'streamerInfoHistory'>
 export type TwitchChannelWithLatestInfo = SafeOmit<Entity.TwitchChannel, 'chatMessages' | 'user' | 'streamerTwitchChannelLinks' | 'streamerInfoHistory'>
@@ -108,7 +108,7 @@ export default class ChannelStore extends ContextClass {
         twitchId: externalId,
         user: { create: {}},
         globalInfoHistory: { create: { time: channelInfo.time, userName: channelInfo.userName, displayName: channelInfo.displayName, userType: channelInfo.userType, colour: channelInfo.colour } },
-        streamerInfoHistory: { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isBroadcaster: channelInfo.isBroadcaster, isMod: channelInfo.isMod, isSubscriber: channelInfo.isSubscriber, isVip: channelInfo.isVip } }
+        streamerInfoHistory: channelInfo.streamerId != null ? { create: { streamerId: channelInfo.streamerId, time: channelInfo.time, isBroadcaster: channelInfo.isBroadcaster, isMod: channelInfo.isMod, isSubscriber: channelInfo.isSubscriber, isVip: channelInfo.isVip } } : undefined
       },
       include: channelQuery_includeLatestChannelInfo
     })

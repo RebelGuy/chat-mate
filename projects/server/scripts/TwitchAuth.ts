@@ -2,7 +2,7 @@
 import { app, BrowserWindow } from 'electron'
 import { URL } from 'url'
 import fetch from 'node-fetch'
-import { TWITCH_SCOPE } from '@rebel/server/constants'
+import { TWITCH_STREAMER_SCOPE } from '@rebel/server/constants'
 import { DB_PROVIDER, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_USERNAME } from '@rebel/server/scripts/consts'
 import AuthStore from '@rebel/server/stores/AuthStore'
 import { Dependencies } from '@rebel/shared/context/context'
@@ -89,11 +89,11 @@ async function createWindow () {
       const token: AccessToken = {
         accessToken,
         refreshToken,
-        scope: TWITCH_SCOPE,
+        scope: TWITCH_STREAMER_SCOPE,
         expiresIn: 0,
         obtainmentTimestamp: 0
       }
-      await authStore.saveTwitchAccessToken(null, TWITCH_USERNAME, token)
+      await authStore.saveTwitchAccessToken(null!, TWITCH_USERNAME, token)
 
       console.log('-------------------')
       console.log('Successfully saved Twitch credentials.')
@@ -103,7 +103,7 @@ async function createWindow () {
     }
   })
 
-  const scope = TWITCH_SCOPE.join('+')
+  const scope = TWITCH_STREAMER_SCOPE.join('+')
   await mainWindow.loadURL(`https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${scope}`)
 }
 

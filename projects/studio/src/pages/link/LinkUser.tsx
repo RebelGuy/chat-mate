@@ -1,5 +1,5 @@
 import AdminLink from '@rebel/studio/pages/link/AdminLink'
-import { addLinkedChannel, getLinkedChannels, getOfficialChatMateStreamer, getPrimaryChannels, getYoutubeLoginUrl, linkYoutubeChannel } from '@rebel/studio/utility/api'
+import { addLinkedChannel, getLinkedChannels, getOfficialChatMateStreamer, getPrimaryChannels, getTwitchLoginUrl, getYoutubeLoginUrl, linkTwitchChannel, linkYoutubeChannel } from '@rebel/studio/utility/api'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LinkedChannels from '@rebel/studio/pages/link/LinkedChannels'
 import { LinkHistory } from '@rebel/studio/pages/link/LinkHistory'
@@ -36,7 +36,8 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
 
   // when the user authenticated ChatMate to link their channel
   const [isYoutubeAuth] = useState(getAuthTypeFromParams(params) === 'youtube')
-  const code = isYoutubeAuth ? params.get('code') : null
+  const [isTwitchAuth] = useState(getAuthTypeFromParams(params) === 'twitch')
+  const code = isYoutubeAuth || isTwitchAuth ? params.get('code') : null
   const [hasCode] = useState(code != null)
 
   const getYoutubeLoginUrlRequest = useRequest(getYoutubeLoginUrl())
@@ -44,14 +45,25 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
     onDemand: true,
     onDone: updateKey
   })
+  const getTwitchLoginUrlRequest = useRequest(getTwitchLoginUrl())
+  const linkTwitchChannelRequest = useRequest(linkTwitchChannel(code!), {
+    onDemand: true,
+    onDone: updateKey
+  })
 
   useEffect(() => {
-    if (isYoutubeAuth) {
+    if (isYoutubeAuth || isTwitchAuth) {
       setParams({})
     }
 
     if (code != null) {
-      linkYoutubeChannelRequest.triggerRequest()
+      linkYoutubeChannelRequest.reset()
+      linkTwitchChannelRequest.reset()
+      if (isYoutubeAuth) {
+        linkYoutubeChannelRequest.triggerRequest()
+      } else if (isTwitchAuth) {
+        linkTwitchChannelRequest.triggerRequest()
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -126,17 +138,17 @@ export default function LinkUser (props: { admin_selectedAggregateUserId?: numbe
           </ol>
 
           <Link href={getYoutubeLoginUrlRequest.data?.url ?? ''}><Button sx={{ mr: 2 }} disabled={getYoutubeLoginUrlRequest.data == null}>Link Youtube Channel</Button></Link>
-          <Button>Link Twitch Channel</Button>
+          <Link href={getTwitchLoginUrlRequest.data?.url ?? ''}><Button sx={{ mr: 2 }} disabled={getTwitchLoginUrlRequest.data == null}>Link Twitch Channel</Button></Link>
 
           {hasCode &&
             <>
-              {linkYoutubeChannelRequest.data != null &&
+              {(linkYoutubeChannelRequest.data != null || linkTwitchChannelRequest.data != null) &&
                 <Alert sx={{ mt: 1 }} severity="success">
                   Successfully linked your channel to ChatMate.
                 </Alert>
               }
-              <ApiLoading requestObj={linkYoutubeChannelRequest}>Linking your channel. Please wait...</ApiLoading>
-              <ApiError requestObj={linkYoutubeChannelRequest} hideRetryButton />
+              <ApiLoading requestObj={[linkYoutubeChannelRequest, linkTwitchChannelRequest]}>Linking your channel. Please wait...</ApiLoading>
+              <ApiError requestObj={[linkYoutubeChannelRequest, linkTwitchChannelRequest]} hideRetryButton />
             </>
           }
         </>}

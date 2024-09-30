@@ -156,13 +156,41 @@ export default class ChannelService extends ContextClass {
         currentChannel = await this.channelStore.updateTwitchChannel_Global(externalId, channelInfo)
       }
 
-      const storedStreamerInfo: TwitchChannelStreamerInfo | null = await this.channelStore.getTwitchChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
-      if (storedStreamerInfo == null || streamerChannelInfoHasChanged('twitch', storedStreamerInfo, channelInfo)) {
-        this.logService.logInfo(this, `Streamer info for twitch channel ${currentChannel.id} (streamer ${channelInfo.streamerId}) has changed and will be updated`)
-        await this.channelStore.updateTwitchChannel_Streamer(externalId, channelInfo)
+      if (channelInfo.streamerId != null) {
+        const storedStreamerInfo: TwitchChannelStreamerInfo | null = await this.channelStore.getTwitchChannelHistoryForStreamer(channelInfo.streamerId, currentChannel.id, 1).then(history => history[0])
+        if (storedStreamerInfo == null || streamerChannelInfoHasChanged('twitch', storedStreamerInfo, channelInfo)) {
+          this.logService.logInfo(this, `Streamer info for twitch channel ${currentChannel.id} (streamer ${channelInfo.streamerId}) has changed and will be updated`)
+          await this.channelStore.updateTwitchChannel_Streamer(externalId, channelInfo)
+        }
       }
 
       return currentChannel
+    } finally {
+      semaphore.exit(externalId)
+    }
+  }
+
+  public async getOrCreateTwitchChannel (externalId: string, userName: string, displayName: string, colour: string, userType: string): Promise<TwitchChannelWithLatestInfo> {
+    const semaphore = this.chatMateStateService.getChannelSemaphore()
+
+    try {
+      await semaphore.enter(externalId)
+
+      const currentChannel = await this.channelStore.tryGetTwitchChannelWithLatestInfo(externalId)
+      if (currentChannel != null) {
+        return currentChannel
+      }
+
+      const channelInfo: CreateOrUpdateTwitchChannelArgs = {
+        userName: userName,
+        displayName: displayName,
+        colour: colour,
+        userType: userType,
+        streamerId: null,
+        time: new Date()
+      }
+      return await this.channelStore.createTwitchChannel(externalId, channelInfo)
+
     } finally {
       semaphore.exit(externalId)
     }

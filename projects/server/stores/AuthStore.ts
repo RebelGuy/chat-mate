@@ -68,19 +68,14 @@ export default class AuthStore extends ContextClass {
     return await this.dbProvider.get().youtubeWebAuth.findUnique({ where: { channelId }})
   }
 
-  /** Must provide a Twitch username when creating a new access token (not required when refreshing the token).
-   * The userId is also required when creating/refreshing, except for the ChatMate admin Twitch channel token. */
-  public async saveTwitchAccessToken (twitchUserId: string | null, twitchUsername: string | null, token: AccessToken) {
+  /** Must provide a Twitch username when creating a new access token, but it's not required when refreshing the token. */
+  public async saveTwitchAccessToken (twitchUserId: string, twitchUsername: string | null, token: AccessToken) {
     const tokenData = {
       accessToken: token.accessToken,
       refreshToken: token.refreshToken!,
       expiresIn: token.expiresIn!,
       obtainmentTimestamp: token.obtainmentTimestamp,
       scope: token.scope.join(',')
-    }
-
-    if (twitchUserId == null && twitchUsername == null) {
-      throw new ChatMateError('Must provide a Twitch user ID or username when saving an access token')
     }
 
     const existingToken = await this.dbProvider.get().twitchAuth.findFirst({
@@ -97,10 +92,8 @@ export default class AuthStore extends ContextClass {
         where: { id: existingToken.id },
         data: {
           ...tokenData,
-
-          // only updated non-null user data
           twitchUsername: twitchUsername ?? undefined,
-          twitchUserId: twitchUserId ?? undefined
+          twitchUserId: twitchUserId
         }
       })
     }

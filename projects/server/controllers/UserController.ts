@@ -15,11 +15,11 @@ import { asGte, asLte } from '@rebel/shared/util/math'
 import { sleep } from '@rebel/shared/util/node'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, GetYoutubeLoginUrlResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse, LinkYoutubeChannelResponse } from '@rebel/api-models/schema/user'
+import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, GetYoutubeLoginUrlResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse, LinkYoutubeChannelResponse, GetTwitchLoginUrlResponse, LinkTwitchChannelResponse } from '@rebel/api-models/schema/user'
 import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
-import UserService from '@rebel/server/services/UserService'
 import UserLinkService from '@rebel/server/services/UserLinkService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
@@ -29,7 +29,7 @@ type Deps = ControllerDependencies<{
   linkService: LinkService
   linkStore: LinkStore
   youtubeAuthProvider: YoutubeAuthProvider
-  userService: UserService
+  twurpleAuthProvider: TwurpleAuthProvider
   userLinkService: UserLinkService
 }>
 
@@ -42,7 +42,7 @@ export default class UserController extends ControllerBase {
   private readonly linkService: LinkService
   private readonly linkStore: LinkStore
   private readonly youtubeAuthProvider: YoutubeAuthProvider
-  private readonly userService: UserService
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly userLinkService: UserLinkService
 
   constructor (deps: Deps) {
@@ -54,7 +54,7 @@ export default class UserController extends ControllerBase {
     this.linkService = deps.resolve('linkService')
     this.linkStore = deps.resolve('linkStore')
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
-    this.userService = deps.resolve('userService')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.userLinkService = deps.resolve('userLinkService')
   }
 
@@ -248,6 +248,42 @@ export default class UserController extends ControllerBase {
 
     try {
       await this.userLinkService.linkYoutubeAccountToUser(code, this.getCurrentUser().aggregateChatUserId)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/link/twitch/login')
+  @PreProcessor(requireAuth)
+  public getTwitchLoginUrl (): GetTwitchLoginUrlResponse {
+    const builder = this.registerResponseBuilder<GetTwitchLoginUrlResponse>('GET /link/twitch/login')
+
+    try {
+      const url = this.twurpleAuthProvider.getLoginUrl('user')
+
+      return builder.success({ url })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/link/twitch')
+  @PreProcessor(requireAuth)
+  public async linkTwitchChannel (
+    @QueryParam('code') code: string
+  ): Promise<LinkTwitchChannelResponse> {
+    const builder = this.registerResponseBuilder<LinkTwitchChannelResponse>('POST /link/twitch')
+
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
+
+    try {
+      await this.userLinkService.linkTwitchAccountToUser(code, this.getCurrentUser().aggregateChatUserId)
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)

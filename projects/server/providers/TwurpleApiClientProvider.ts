@@ -49,7 +49,7 @@ export default class TwurpleApiClientProvider extends ContextClass {
       // inject custom logging
       logger: {
         custom: {
-          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
+          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, '[UserTokenClient] ' + message)
         }
       }
     })
@@ -60,7 +60,7 @@ export default class TwurpleApiClientProvider extends ContextClass {
       // inject custom logging
       logger: {
         custom: {
-          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, message)
+          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, '[AppTokenClient] ' + message)
         }
       }
     })
@@ -73,6 +73,19 @@ export default class TwurpleApiClientProvider extends ContextClass {
       await this.twurpleAuthProvider.getUserTokenAuthProvider(twitchUserId)
     }
     return this.apiClient
+  }
+
+  public getStaticClient (accessToken: string, scopes?: string[]) {
+    return new ApiClient({
+      authProvider: this.twurpleAuthProvider.getStaticAuthProvider(accessToken, scopes),
+
+      // inject custom logging
+      logger: {
+        custom: {
+          log: (level: LogLevel, message: string) => onTwurpleClientLog(this.logContext, level, '[StaticClient] ' + message)
+        }
+      }
+    })
   }
 
   /** Uses the app access token. Only required for event-based API access. */

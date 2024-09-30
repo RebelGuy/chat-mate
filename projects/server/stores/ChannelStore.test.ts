@@ -127,7 +127,7 @@ export default () => {
       await expectRowCount(db.youtubeChannel, db.youtubeChannelGlobalInfo, db.youtubeChannelStreamerInfo).toEqual([1, 1, 1])
     })
 
-    test.only('Creates the channel without streamer info and the correct image data', async () => {
+    test('Creates the channel without streamer info and the correct image data', async () => {
       await db.chatUser.create({ data: {}})
       const externalId = 'externalId'
       const channelInfo: CreateOrUpdateYoutubeChannelArgs = {
@@ -156,7 +156,7 @@ export default () => {
   })
 
   describe(nameof(ChannelStore, 'createTwitchChannel'), () => {
-    test('Creates the channel', async () => {
+    test('Creates the channel with streamer info', async () => {
       await db.chatUser.create({ data: {}})
       await db.streamer.create({ data: { registeredUser: { create: { username: 'user', hashedPassword: 'password', aggregateChatUserId: 1 }}}})
       const externalId = 'externalId'
@@ -180,6 +180,27 @@ export default () => {
 
       // make sure we have persisted the expected data
       await expectRowCount(db.twitchChannel, db.twitchChannelGlobalInfo, db.twitchChannelStreamerInfo).toEqual([1, 1, 1])
+    })
+
+    test('Creates the channel without streamer info', async () => {
+      await db.chatUser.create({ data: {}})
+      const externalId = 'externalId'
+      const channelInfo: CreateOrUpdateTwitchChannelArgs = {
+        colour: '',
+        displayName: 'name',
+        streamerId: null,
+        time: data.time1,
+        userName: 'name',
+        userType: ''
+      }
+
+      const result = await channelStore.createTwitchChannel(externalId, channelInfo)
+
+      // check result is correct
+      expect(result).toEqual(expectObjectDeep(result, { twitchId: externalId, globalInfoHistory: [{ displayName: 'name' }]}))
+
+      // make sure we have persisted the expected data
+      await expectRowCount(db.twitchChannel, db.twitchChannelGlobalInfo, db.twitchChannelStreamerInfo).toEqual([1, 1, 0])
     })
   })
 

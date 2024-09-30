@@ -42,6 +42,7 @@ import CacheService from '@rebel/server/services/CacheService'
 import { generateStringRangeValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 import { ONE_DAY } from '@rebel/shared/util/datetime'
 import AuthService from '@rebel/server/services/AuthService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -61,6 +62,7 @@ type Deps = ControllerDependencies<{
   channelStore: ChannelStore
   cacheService: CacheService
   authService: AuthService
+  twurpleAuthProvider: TwurpleAuthProvider
 }>
 
 @Path(buildPath('streamer'))
@@ -82,6 +84,7 @@ export default class StreamerController extends ControllerBase {
   private readonly channelStore: ChannelStore
   private readonly cacheService: CacheService
   private readonly authService: AuthService
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -102,6 +105,7 @@ export default class StreamerController extends ControllerBase {
     this.channelStore = deps.resolve('channelStore')
     this.cacheService = deps.resolve('cacheService')
     this.authService = deps.resolve('authService')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
   }
 
   @GET
@@ -442,7 +446,7 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(403, 'User is not a streamer.')
       }
 
-      const url = this.streamerService.getTwitchLoginUrl()
+      const url = this.twurpleAuthProvider.getLoginUrl('streamer')
       return builder.success({ url })
     } catch (e: any) {
       return builder.failure(e)
@@ -468,10 +472,14 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(403, 'User is not a streamer.')
       }
 
-      await this.streamerService.authoriseTwitchLogin(streamer.id, code)
+      await this.authService.authoriseTwitchStreamer(streamer.id, code)
       return builder.success({})
     } catch (e: any) {
-      return builder.failure(e)
+      if (e instanceof PrimaryChannelNotFoundError) {
+        return builder.failure(400, e)
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 

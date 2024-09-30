@@ -3,7 +3,7 @@
 // see docs/twitch-auth.md for more info
 // if you change the scopes here, streamers may be required to re-authorise the ChatMate Application in Studio to get access to the new events.
 // you will also need to re-authenticate the ChatMate admin channel on Twitch via Studio.
-export const TWITCH_SCOPE = [
+export const TWITCH_STREAMER_SCOPE = [
   'chat:read',
   'chat:edit',
 
@@ -18,6 +18,11 @@ export const TWITCH_SCOPE = [
   // for subscribing to follow events
   'moderator:read:followers'
 ]
+
+export const TWITCH_ADMIN_SCOPE = TWITCH_STREAMER_SCOPE
+
+// we only need to read the user info, which does not require any scopes
+export const TWITCH_USER_SCOPE = []
 
 export const YOUTUBE_ADMIN_SCOPE = [
   'https://www.googleapis.com/auth/youtube',

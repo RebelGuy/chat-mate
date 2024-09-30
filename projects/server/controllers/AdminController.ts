@@ -11,6 +11,7 @@ import { PublicLinkAttemptStep } from '@rebel/api-models/public/user/PublicLinkA
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 import AuthService from '@rebel/server/services/AuthService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 type Deps = ControllerDependencies<{
   adminService: AdminService
@@ -20,6 +21,7 @@ type Deps = ControllerDependencies<{
   linkStore: LinkStore
   youtubeAuthProvider: YoutubeAuthProvider
   authService: AuthService
+  twurpleAuthProvider: TwurpleAuthProvider
 }>
 
 @Path(buildPath('admin'))
@@ -31,6 +33,7 @@ export default class AdminController extends ControllerBase {
   private readonly helixEventService: HelixEventService
   private readonly linkStore: LinkStore
   private readonly youtubeAuthProvider: YoutubeAuthProvider
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly authService: AuthService
 
   constructor (deps: Deps) {
@@ -41,6 +44,7 @@ export default class AdminController extends ControllerBase {
     this.helixEventService = deps.resolve('helixEventService')
     this.linkStore = deps.resolve('linkStore')
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.authService = deps.resolve('authService')
   }
 
@@ -62,7 +66,7 @@ export default class AdminController extends ControllerBase {
     const builder = this.registerResponseBuilder<GetTwitchLoginUrlResponse>('GET /twitch/login')
 
     try {
-      const url = this.adminService.getTwitchLoginUrl()
+      const url = this.twurpleAuthProvider.getLoginUrl('admin')
       const twitchUsername = this.adminService.getTwitchUsername()
       return builder.success({ url, twitchUsername })
     } catch (e: any) {
@@ -83,7 +87,7 @@ export default class AdminController extends ControllerBase {
     }
 
     try {
-      await this.adminService.authoriseTwitchLogin(code)
+      await this.authService.authoriseTwitchAdmin(code)
       return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
