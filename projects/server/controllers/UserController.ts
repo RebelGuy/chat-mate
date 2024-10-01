@@ -15,11 +15,12 @@ import { asGte, asLte } from '@rebel/shared/util/math'
 import { sleep } from '@rebel/shared/util/node'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, GetYoutubeLoginUrlResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse, LinkYoutubeChannelResponse, GetTwitchLoginUrlResponse, LinkTwitchChannelResponse } from '@rebel/api-models/schema/user'
-import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
+import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, GetYoutubeLoginUrlResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse, LinkYoutubeChannelResponse, GetTwitchLoginUrlResponse, LinkTwitchChannelResponse, SetDisplayNameRequest, SetDisplayNameResponse } from '@rebel/api-models/schema/user'
+import { generateMaxStringLengthValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
 import UserLinkService from '@rebel/server/services/UserLinkService'
 import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
+import UserStore from '@rebel/server/stores/UserStore'
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
@@ -31,6 +32,7 @@ type Deps = ControllerDependencies<{
   youtubeAuthProvider: YoutubeAuthProvider
   twurpleAuthProvider: TwurpleAuthProvider
   userLinkService: UserLinkService
+  userStore: UserStore
 }>
 
 @Path(buildPath('user'))
@@ -44,6 +46,7 @@ export default class UserController extends ControllerBase {
   private readonly youtubeAuthProvider: YoutubeAuthProvider
   private readonly twurpleAuthProvider: TwurpleAuthProvider
   private readonly userLinkService: UserLinkService
+  private readonly userStore: UserStore
 
   constructor (deps: Deps) {
     super(deps, 'user')
@@ -56,6 +59,7 @@ export default class UserController extends ControllerBase {
     this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
     this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
     this.userLinkService = deps.resolve('userLinkService')
+    this.userStore = deps.resolve('userStore')
   }
 
   @GET
@@ -73,6 +77,27 @@ export default class UserController extends ControllerBase {
       } else {
         return builder.failure(e)
       }
+    }
+  }
+
+  @POST
+  @Path('/displayName')
+  @PreProcessor(requireAuth)
+  public async setDisplayName (request: SetDisplayNameRequest): Promise<SetDisplayNameResponse> {
+    const builder = this.registerResponseBuilder<SetDisplayNameResponse>('POST /displayName')
+
+    const validationError = builder.validateInput({
+      displayName: {type: 'string', nullable: true, validators: [generateMaxStringLengthValidator(20)] }
+    }, request)
+    if (validationError != null) {
+      return validationError
+    }
+
+    try {
+      await this.userStore.setDisplayName(this.getCurrentUser().id, request.displayName)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
     }
   }
 

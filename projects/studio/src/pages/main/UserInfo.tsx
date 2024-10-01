@@ -18,6 +18,7 @@ import RankHelpers from '@rebel/shared/helpers/RankHelpers'
 import { InvalidCustomRankNameError } from '@rebel/shared/util/error'
 import { RETURN_URL_QUERY_PARAM } from '@rebel/studio/pages/login/LoginForm'
 import Clickable from '@rebel/studio/components/Clickable'
+import ChangeNameDialog from '@rebel/studio/pages/main/ChangeNameDialog'
 
 const rankHelpers = new RankHelpers()
 
@@ -26,6 +27,7 @@ export default function UserInfo () {
   const navigate = useNavigate()
   const { pathname: currentPath } = useLocation()
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+  const [changeNameDialogOpen, setChangeNameDialogOpen] = useState(false)
 
   const onLoggedOut = () => {
     loginContext.logout()
@@ -33,6 +35,11 @@ export default function UserInfo () {
     setMenuAnchor(null)
   }
   const logoutRequest = useRequest(logout(), { onDemand: true, onDone: onLoggedOut })
+
+  const onChangeDisplayName = () => {
+    setMenuAnchor(null)
+    setChangeNameDialogOpen(true)
+  }
 
   const onChangePassword = () => {
     navigate(PageChangePassword.path)
@@ -70,8 +77,11 @@ export default function UserInfo () {
       anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
     >
       <MenuItem disabled={isLoading} onClick={logoutRequest.triggerRequest}>Log out</MenuItem>
+      <MenuItem disabled={isLoading} onClick={onChangeDisplayName}>Change display name</MenuItem>
       <MenuItem disabled={isLoading} onClick={onChangePassword}>Change password</MenuItem>
     </Popover>
+
+    <ChangeNameDialog open={changeNameDialogOpen} onClose={() => setChangeNameDialogOpen(false)} />
   </>
 }
 

@@ -14,6 +14,7 @@ import EmojiStoreSuite from '@rebel/server/stores/EmojiStore.test'
 import AccountStoreSuite from '@rebel/server/stores/AccountStore.test'
 import StreamerStoreSuite from '@rebel/server/stores/StreamerStore.test'
 import TaskStoreSuite from '@rebel/server/stores/TaskStore.test'
+import UserStoreSuite from '@rebel/server/stores/UserStore.test'
 import VisitorStoreSuite from '@rebel/server/stores/VisitorStore.test'
 import StreamerChannelStoreSuite from '@rebel/server/stores/StreamerChannelStore.test'
 import LinkStoreSuite from '@rebel/server/stores/LinkStore.test'
@@ -68,5 +69,7 @@ describeFn('StreamerChannelStore Suite', StreamerChannelStoreSuite)
 describeFn('StreamerStore Suite', StreamerStoreSuite)
 
 describeFn('TaskStore Suite', TaskStoreSuite)
+
+describeFn('UserStore Suite', UserStoreSuite)
 
 describeFn('VisitorStore Suite', VisitorStoreSuite)

@@ -1129,6 +1129,12 @@ Gets info about the logged-in user.
 Returns data with the following properties:
 - `user` (`PublicUser`): The data object of the currently logged-in user.
 
+### `POST /displayName`
+Set the display name of the logged-in user.
+
+Request data (body):
+- `displayName` (`string | null`): The display name that should be assigned to the user. Must be at most 20 characters long. If null, the display name will be removed.
+
 ### `POST /search`
 Search for a specific channel name.
 

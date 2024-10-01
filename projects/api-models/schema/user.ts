@@ -10,6 +10,10 @@ export type GetUserResponse = ApiResponse<{
   user: PublicUser
 }>
 
+export type SetDisplayNameRequest = ApiRequest<{ displayName: string | null }>
+
+export type SetDisplayNameResponse = ApiResponse<EmptyObject>
+
 export type SearchUserRequest = ApiRequest<{
   searchTerm: string
 }>

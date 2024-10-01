@@ -123,6 +123,7 @@ import AuthHelpers from '@rebel/server/helpers/AuthHelpers'
 import AuthService from '@rebel/server/services/AuthService'
 import UserLinkService from '@rebel/server/services/UserLinkService'
 import StaticAuthProviderFactory from '@rebel/server/factories/StaticAuthProviderFactory'
+import UserStore from '@rebel/server/stores/UserStore'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -312,6 +313,7 @@ const main = async () => {
     .withClass('taskService', TaskService)
     .withClass('authService', AuthService)
     .withClass('userLinkService', UserLinkService)
+    .withClass('userStore', UserStore)
     .build()
 
   app.use((req, res, next) => {

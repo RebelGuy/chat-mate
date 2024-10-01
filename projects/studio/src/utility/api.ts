@@ -5,7 +5,7 @@ import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicatio
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse } from '@rebel/api-models/schema/account'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/api-models/schema/donation'
-import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, GetYoutubeLoginUrlResponse as GetYoutubeUserLoginUrlResponse, DeleteLinkTokenResponse, LinkYoutubeChannelResponse, LinkTwitchChannelResponse, GetTwitchLoginUrlResponse as GetTwitchUserLoginUrlResponse } from '@rebel/api-models/schema/user'
+import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, GetYoutubeLoginUrlResponse as GetYoutubeUserLoginUrlResponse, DeleteLinkTokenResponse, LinkYoutubeChannelResponse, LinkTwitchChannelResponse, GetTwitchLoginUrlResponse as GetTwitchUserLoginUrlResponse, SetDisplayNameRequest, SetDisplayNameResponse } from '@rebel/api-models/schema/user'
 import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, GetLinkAttemptLogsResponse, ReleaseLinkAttemptResponse, GetYoutubeLoginUrlResponse as GetYoutubeAdminLoginUrlResponse, YoutubeAuthorisationResponse as YoutubeAdminAuthorisationResponse, YoutubeRevocationResponse as YoutubeAdminRevocationResponse } from '@rebel/api-models/schema/admin'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse } from '@rebel/api-models/types'
@@ -149,6 +149,8 @@ export const setStreamlabsSocketToken = requestBuilder<SetWebsocketTokenResponse
 export const getStreamlabsStatus = requestBuilder<GetStreamlabsStatusResponse>('GET', `/donation/streamlabs/status`, 'self')
 
 export const getUser = requestBuilder<GetUserResponse>('GET', `/user`)
+
+export const setDisplayName = requestBuilder<SetDisplayNameResponse, SetDisplayNameRequest>('POST', `/user/displayName`, false)
 
 export const searchUser = requestBuilder<SearchUserResponse, SearchUserRequest>('POST', `/user/search`)
 
