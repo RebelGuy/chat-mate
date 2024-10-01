@@ -34,8 +34,8 @@ export default class TaskController extends ControllerBase {
 
     try {
       const tasks = await this.taskStore.getAllTasks()
-      const successes = await Promise.all(tasks.map(t => this.taskStore.getLastSuccess(t.taskType)))
-      const failures = await Promise.all(tasks.map(t => this.taskStore.getLastFailure(t.taskType)))
+      const successes = await Promise.all(tasks.map(t => this.taskStore.getLastSuccessTime(t.taskType)))
+      const failures = await Promise.all(tasks.map(t => this.taskStore.getLastFailureTime(t.taskType)))
       return builder.success({ tasks: tasks.map((t, i) => taskToPublic(t, successes[i], failures[i])) })
     } catch (e: any) {
       return builder.failure(e)

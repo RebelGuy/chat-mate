@@ -8,7 +8,8 @@ import { DbError, NotFoundError } from '@rebel/shared/util/error'
 import * as data from '@rebel/server/_test/testData'
 
 const tasks: Task[] = [
-  { id: 1, intervalMs: 123, taskType: 'cleanUpYoutubeContextTokensTask' }
+  { id: 1, intervalMs: 123, taskType: 'cleanUpYoutubeContextTokensTask' },
+  { id: 2, intervalMs: 456, taskType: 'cleanUpApiCallsTask' }
 ]
 
 export default () => {
@@ -31,9 +32,22 @@ export default () => {
 
       expect(result.id).toBe(tasks[0].id)
     })
+  })
 
-    test('Throws if the specified task was not found', async () => {
-      await expect(() => taskStore.getTask('cleanUpApiCallsTask')).rejects.toThrowError(NotFoundError)
+  describe(nameof(TaskStore, 'getAllTasks'), () => {
+    test('Returns all tasks', async () => {
+      const result = await taskStore.getAllTasks()
+
+      expect(result).toEqual(tasks)
+    })
+  })
+
+  describe(nameof(TaskStore, 'updateTask'), () => {
+    test('Updates the interval of the specified task', async () => {
+      await taskStore.updateTask(tasks[1].taskType, 999)
+
+      const storedTasks = await db.task.findMany()
+      expect(storedTasks.map(t => t.intervalMs)).toEqual([tasks[0].intervalMs, 999])
     })
   })
 
@@ -45,22 +59,88 @@ export default () => {
     })
   })
 
-  describe(nameof(TaskStore, 'getTimeSinceLastTaskExecution'), () => {
+  describe(nameof(TaskStore, 'getLastExecutionTime'), () => {
     test('Returns the timestamp of the last execution', async () => {
       await db.taskLog.createMany({ data: [
         { startTime: data.time1, endTime: data.time2, taskId: 1 },
         { startTime: data.time3, endTime: data.time4, taskId: 1 }
       ]})
 
-      const result = await taskStore.getTimeSinceLastTaskExecution('cleanUpYoutubeContextTokensTask')
+      const result = await taskStore.getLastExecutionTime(tasks[0].taskType)
 
       expect(result).toBe(data.time3.getTime())
     })
 
     test('Returns null if the task was never executed', async () => {
-      const result = await taskStore.getTimeSinceLastTaskExecution('cleanUpYoutubeContextTokensTask')
+      const result = await taskStore.getLastExecutionTime(tasks[0].taskType)
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe(nameof(TaskStore, 'getLastSuccessTime'), () => {
+    test('Returns the timestamp of the last successful execution', async () => {
+      await db.taskLog.createMany({ data: [
+        { startTime: data.time1, endTime: data.time2, taskId: 1 },
+        { startTime: data.time3, endTime: data.time4, taskId: 1 },
+        { startTime: data.time5, endTime: data.time5, taskId: 1, errorMessage: 'error' },
+        { startTime: data.time5, endTime: data.time5, taskId: 2 }
+      ]})
+
+      const result = await taskStore.getLastSuccessTime(tasks[0].taskType)
+
+      expect(result).toBe(data.time3.getTime())
+    })
+
+    test('Returns null if the task never succeeded', async () => {
+      await db.taskLog.createMany({ data: [
+        { startTime: data.time5, endTime: data.time5, taskId: 1, errorMessage: 'error' },
+        { startTime: data.time5, endTime: data.time5, taskId: 2 }
+      ]})
+
+      const result = await taskStore.getLastSuccessTime(tasks[0].taskType)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe(nameof(TaskStore, 'getLastFailureTime'), () => {
+    test('Returns the timestamp of the last failed execution', async () => {
+      await db.taskLog.createMany({ data: [
+        { startTime: data.time1, endTime: data.time2, taskId: 1, errorMessage: 'error' },
+        { startTime: data.time3, endTime: data.time4, taskId: 1, errorMessage: 'error' },
+        { startTime: data.time5, endTime: data.time5, taskId: 1 },
+        { startTime: data.time5, endTime: data.time5, taskId: 2 }
+      ]})
+
+      const result = await taskStore.getLastFailureTime(tasks[0].taskType)
+
+      expect(result).toBe(data.time3.getTime())
+    })
+
+    test('Returns null if the task never failed', async () => {
+      await db.taskLog.createMany({ data: [
+        { startTime: data.time5, endTime: data.time5, taskId: 1 },
+        { startTime: data.time5, endTime: data.time5, taskId: 2 }
+      ]})
+
+      const result = await taskStore.getLastFailureTime(tasks[0].taskType)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe(nameof(TaskStore, 'getTaskLogs'), () => {
+    test('Returns the task logs of the specified task', async () => {
+      await db.taskLog.createMany({ data: [
+        { startTime: data.time1, endTime: data.time2, taskId: 1, errorMessage: 'error' },
+        { startTime: data.time5, endTime: data.time5, taskId: 1 },
+        { startTime: data.time5, endTime: data.time5, taskId: 2 }
+      ]})
+
+      const result = await taskStore.getTaskLogs(tasks[0].taskType)
+
+      expect(result.length).toBe(2)
     })
   })
 

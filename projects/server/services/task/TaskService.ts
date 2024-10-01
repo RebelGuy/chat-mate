@@ -60,7 +60,7 @@ export default class TaskService extends SingletonContextClass {
     const taskTypes = await this.taskStore.getTaskTypes()
     for (const taskType of taskTypes) {
       const task = await this.taskStore.getTask(taskType)
-      const previousTime = await this.taskStore.getTimeSinceLastTaskExecution(taskType) ?? 0
+      const previousTime = await this.taskStore.getLastExecutionTime(taskType) ?? 0
       const newTime = previousTime + task.intervalMs
       const timeout = newTime - this.dateTimeHelpers.ts()
 
@@ -81,7 +81,7 @@ export default class TaskService extends SingletonContextClass {
     this.timers[taskType]() // cancel
 
     await this.taskStore.updateTask(taskType, intervalMs)
-    const previousTime = await this.taskStore.getTimeSinceLastTaskExecution(taskType) ?? 0
+    const previousTime = await this.taskStore.getLastExecutionTime(taskType) ?? 0
     const newTime = previousTime + intervalMs
     const timeout = newTime - this.dateTimeHelpers.ts()
 

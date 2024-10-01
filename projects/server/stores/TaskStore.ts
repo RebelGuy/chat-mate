@@ -40,7 +40,7 @@ export default class TaskStore extends ContextClass {
     return result.map(r => r.taskType)
   }
 
-  public async getTimeSinceLastTaskExecution (taskType: TaskType): Promise<number | null> {
+  public async getLastExecutionTime (taskType: TaskType): Promise<number | null> {
     const result = await this.db.taskLog.findFirst({
       where: { task: { taskType: taskType }},
       orderBy: { startTime: 'desc' }
@@ -49,7 +49,7 @@ export default class TaskStore extends ContextClass {
     return result?.startTime.getTime() ?? null
   }
 
-  public async getLastSuccess (taskType: TaskType): Promise<number | null> {
+  public async getLastSuccessTime (taskType: TaskType): Promise<number | null> {
     const result = await this.db.taskLog.findFirst({
       where: { task: { taskType: taskType }, endTime: { not: null }, errorMessage: null },
       orderBy: { startTime: 'desc' }
@@ -58,7 +58,7 @@ export default class TaskStore extends ContextClass {
     return result?.startTime.getTime() ?? null
   }
 
-  public async getLastFailure (taskType: TaskType): Promise<number | null> {
+  public async getLastFailureTime (taskType: TaskType): Promise<number | null> {
     const result = await this.db.taskLog.findFirst({
       where: { task: { taskType: taskType }, endTime: { not: null }, errorMessage: { not: null } },
       orderBy: { startTime: 'desc' }
