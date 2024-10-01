@@ -7,6 +7,7 @@ import { getElapsedText, ONE_HOUR, ONE_MINUTE } from '@rebel/shared/util/datetim
 
 type Props = {
   time: number
+  maxDepth?: number
   prefix?: string
   suffix?: string
   useSentenceCase?: boolean
@@ -14,18 +15,19 @@ type Props = {
 }
 
 export default function RelativeTime (props: Props) {
+  const maxDepth = props.maxDepth ?? 0
   const [elapsed, setElapsed] = useState(Date.now() - props.time)
-  const [key] = useUpdateKey({ repeatInterval: getTimerInterval(elapsed) })
+  const [key] = useUpdateKey({ repeatInterval: getTimerInterval(Math.abs(elapsed), maxDepth) })
 
   useEffect(() => {
     setElapsed(Date.now() - props.time)
   }, [key, props.time])
 
-  const text = getElapsedText(elapsed)
+  const text = getElapsedText(Math.abs(elapsed), maxDepth)
 
   return <>
     {props.prefix}
-    <Tooltip title={new Date(props.time).toLocaleString()}>
+    <Tooltip title={new Date(props.time).toLocaleString()} disableInteractive>
       <Box sx={{ display: 'inline', ...(props.sx ?? {}) }}>
         {props.useSentenceCase ? toSentenceCase(text) : text}
       </Box>
@@ -34,12 +36,21 @@ export default function RelativeTime (props: Props) {
   </>
 }
 
-function getTimerInterval (elapsed: number) {
+function getTimerInterval (elapsed: number, maxDepth: number) {
+  let level: number
   if (elapsed < ONE_MINUTE) {
-    return 1000
-  } else if (elapsed < ONE_MINUTE * 10) {
-    return 5000
+    level = 0
   } else if (elapsed < ONE_HOUR) {
+    level = 1
+  } else {
+    level = 2
+  }
+
+  level -= maxDepth
+
+  if (level <= 0) {
+    return 1000
+  } else if (level === 1) {
     return ONE_MINUTE
   } else {
     return ONE_MINUTE * 10

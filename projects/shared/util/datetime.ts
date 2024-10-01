@@ -96,38 +96,69 @@ export function sortTimes (...times: Date[]): Date[] {
   return [...times].sort((a, b) => a.getTime() - b.getTime())
 }
 
-export function getElapsedText (elapsed: number, allowMs?: boolean) {
+// depth: how many extra parts of lower value we should include in the string. E.g. '4 hours' for depth 0, '4 hours, 20 minutes' for depth 1
+export function getElapsedText (elapsed: number, depth: number, allowMs?: boolean): string {
+  if (depth < 0) {
+    return ''
+  }
+
   let unit: string
   let amount: number
+  let availableDepth: number
 
   if (allowMs && elapsed < ONE_SECOND * 10) {
     unit = 'ms'
     amount = Math.floor(elapsed)
+    elapsed = 0
+    availableDepth = 0
   } else if (elapsed < ONE_MINUTE) {
     unit = 'second'
     amount = Math.floor(elapsed / 1000)
+    elapsed -= 1000 * amount
+    availableDepth = 1
   } else if (elapsed < ONE_HOUR) {
     unit = 'minute'
     amount = Math.floor(elapsed / ONE_MINUTE)
+    elapsed -= ONE_MINUTE * amount
+    availableDepth = 2
   } else if (elapsed < ONE_DAY) {
     unit = 'hour'
     amount = Math.floor(elapsed / ONE_HOUR)
+    elapsed -= ONE_HOUR * amount
+    availableDepth = 3
   } else if (elapsed < ONE_MONTH) {
     unit = 'day'
     amount = Math.floor(elapsed / ONE_DAY)
+    elapsed -= ONE_DAY * amount
+    availableDepth = 4
   } else if (elapsed < ONE_YEAR) {
     unit = 'month'
     amount = Math.floor(elapsed / ONE_MONTH)
+    elapsed -= ONE_MONTH * amount
+    availableDepth = 5
   } else {
     unit = 'year'
     amount = Math.floor(elapsed / ONE_YEAR)
+    elapsed -= ONE_YEAR * amount
+    availableDepth = 6
   }
 
   if (amount !== 1 && !allowMs) {
     unit += 's'
   }
 
-  return `${amount} ${unit}`
+  if (allowMs) {
+    depth--
+  }
+
+  const text = `${amount} ${unit}`
+
+  const reachedLimit = allowMs ? availableDepth === 0 : availableDepth === 1
+  if (depth <= 0 || reachedLimit || elapsed === 0) {
+    return text
+  } else {
+    return `${text}, ${getElapsedText(elapsed, depth - 1, allowMs)}`
+  }
 }
 
 /** Returns the duration in the form HH:mm:ss */

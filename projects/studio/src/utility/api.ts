@@ -12,6 +12,7 @@ import { ApiResponse } from '@rebel/api-models/types'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
 import { PublicObject } from '@rebel/api-models/types'
 import { GetLivestreamsResponse } from '@rebel/api-models/schema/livestream'
+import { ExecuteTaskResponse, GetTaskLogsResponse, GetTasksResponse, UpdateTaskRequest, UpdateTaskResponse } from '@rebel/api-models/schema/task'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
 const STREAMER_HEADER = 'X-Streamer'
@@ -238,6 +239,24 @@ export const releaseLinkAttempt = requestBuilder<ReleaseLinkAttemptResponse, fal
   'POST',
   linkAttemptId => constructPath('/admin/link/release', { linkAttemptId }),
   false
+)
+
+export const getTasks = requestBuilder<GetTasksResponse>('GET', '/task', false, true)
+
+export const updateTask = requestBuilder<UpdateTaskResponse, UpdateTaskRequest>('PATCH', '/task', false, true)
+
+export const getTaskLogs = requestBuilder<GetTaskLogsResponse, false, [taskType: string]>(
+  'GET',
+  taskType => constructPath('/task/log', { taskType }),
+  false,
+  true
+)
+
+export const executeTask = requestBuilder<ExecuteTaskResponse, false, [taskType: string]>(
+  'POST',
+  taskType => constructPath('/task/execute', { taskType }),
+  false,
+  true
 )
 
 export const getLivestreams = requestBuilder<GetLivestreamsResponse>('GET', '/livestream', true, false)
