@@ -31,6 +31,7 @@ export type ChatMateEvent = { timestamp: number } & ({
 } | {
   type: 'rankUpdate'
   primaryUserId: number
+  appliedByPrimaryUserId: number | null
   isAdded: boolean
   rankName: ExternalRank
   youtubeRankResults: YoutubeRankResult[]
@@ -132,6 +133,7 @@ export default class ChatMateEventService extends ContextClass {
         type: 'rankUpdate',
         timestamp: rankEvent.time.getTime(),
         primaryUserId: rankEvent.userId,
+        appliedByPrimaryUserId: rankEvent.appliedByUserId,
         rankName: rankEvent.rank.name as ExternalRank,
         isAdded: rankEvent.isAdded,
         youtubeRankResults: rankEvent.data?.youtubeRankResults ?? [],

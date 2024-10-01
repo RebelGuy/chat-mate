@@ -691,7 +691,10 @@ export default class StreamerController extends ControllerBase {
       const twitchChannelsPromise = this.channelStore.getTwitchChannelsFromChannelIds(twitchChannelIds)
 
       // pre-fetch user data for some of the events
-      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer', 'rankUpdate').map(e => e.primaryUserId)))
+      const primaryUserIds = unique(nonNull([
+        ...filterTypes(events, 'levelUp', 'donation', 'newViewer', 'rankUpdate').map(e => e.primaryUserId),
+        ...filterTypes(events, 'rankUpdate').map(e => e.appliedByPrimaryUserId)
+      ]))
       const allData = await this.apiService.getAllData(primaryUserIds)
 
       const [youtubeChannels, twitchChannels] = await Promise.all([youtubeChannelsPromise, twitchChannelsPromise])
@@ -739,6 +742,7 @@ export default class StreamerController extends ControllerBase {
           }
         } else if (event.type === 'rankUpdate') {
           const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
+          const appliedByUser: PublicUser | null = event.appliedByPrimaryUserId != null ? userDataToPublicUser(allData.find(d => d.primaryUserId === event.appliedByPrimaryUserId)!) : null
 
           let platformRanks: PublicPlatformRank[] = [
             ...event.youtubeRankResults.map<PublicPlatformRank>(r => {
@@ -763,6 +767,7 @@ export default class StreamerController extends ControllerBase {
             isAdded: event.isAdded,
             rankName: event.rankName,
             user: user,
+            appliedBy: appliedByUser,
             platformRanks: platformRanks
           }
         } else {

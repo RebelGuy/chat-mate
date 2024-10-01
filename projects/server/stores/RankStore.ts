@@ -127,13 +127,14 @@ export default class RankStore extends ContextClass {
     }
   }
 
-  public async addRankEvent (streamerId: number, primaryUserId: number, isAdded: boolean, rankName: RankName, data: RankEventData | null): Promise<ParsedRankEvent> {
+  public async addRankEvent (streamerId: number, primaryUserId: number, appliedByPrimaryUserId: number | null, isAdded: boolean, rankName: RankName, data: RankEventData | null): Promise<ParsedRankEvent> {
     const rank = await this.db.rank.findUnique({ where: { name: rankName }})
 
     const rankEvent = await this.db.rankEvent.create({
       data: {
         streamerId: streamerId,
         userId: primaryUserId,
+        appliedByUserId: appliedByPrimaryUserId,
         isAdded: isAdded,
         rankId: rank!.id,
 
@@ -155,6 +156,7 @@ export default class RankStore extends ContextClass {
       streamerId: rankEvent.streamerId,
       time: rankEvent.time,
       userId: rankEvent.userId,
+      appliedByUserId: rankEvent.appliedByUserId,
       data: rankEventData
     }
   }
@@ -268,6 +270,7 @@ export default class RankStore extends ContextClass {
         streamerId: event.streamerId,
         time: event.time,
         userId: event.userId,
+        appliedByUserId: event.appliedByUserId,
         data: data
       }
     })

@@ -153,7 +153,8 @@ model ChatUser {
   linkAttemptForDefaultUser      LinkAttempt[]           @relation("link_attempt_defaultChatUser")
   linkAttemptForAggregateUser    LinkAttempt[]           @relation("link_attempt_aggregateChatUser")
   customRankNames                CustomRankName[]
-  rankEvents                     RankEvent[]
+  rankEvents                     RankEvent[]             @relation("rank_event_user")
+  appliedRankEvents              RankEvent[]             @relation("rank_event_appliedByUser")
 
   // only used if this is an aggregate user
   linkTokensAggregateUser LinkToken[] @relation("link_token_aggregateChatUser")
@@ -958,7 +959,10 @@ model RankEvent {
   streamer   Streamer @relation(fields: [streamerId], references: [id], map: "rank_event_streamerId_fkey")
 
   userId Int
-  user   ChatUser @relation(fields: [userId], references: [id], map: "rank_event_userId_fkey")
+  user   ChatUser @relation(name: "rank_event_user", fields: [userId], references: [id], map: "rank_event_userId_fkey")
+
+  appliedByUserId Int?
+  appliedByUser   ChatUser? @relation(name: "rank_event_appliedByUser", fields: [appliedByUserId], references: [id], map: "rank_event_appliedByUserId_fkey")
 
   rankId Int
   rank   Rank @relation(fields: [rankId], references: [id], map: "rank_event_rankId_fkey")
@@ -966,6 +970,7 @@ model RankEvent {
   @@index([time], map: "rank_event_time_key")
   @@index([streamerId], map: "rank_event_streamerId_fkey")
   @@index([userId], map: "rank_event_userId_fkey")
+  @@index([userId], map: "rank_event_appliedByUserId_fkey")
   @@index([rankId], map: "rank_event_rankId_fkey")
   @@map("rank_event")
 }

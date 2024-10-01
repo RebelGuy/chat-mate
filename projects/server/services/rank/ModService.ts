@@ -76,7 +76,7 @@ export default class ModService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    await this.rankService.addRankEvent(streamerId, primaryUserId, isMod, 'mod', rankEventData)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, issuingModeratorPrimaryUserId, isMod, 'mod', rankEventData)
 
     return {
       rankResult: internalRankResult,
