@@ -1120,6 +1120,40 @@ Can return the following errors:
 - `400`: When the request data is not sent, or is formatted incorrectly.
 - `422`: When an active Youtube livestream already exists.
 
+## Task Endpoints
+Path: `/task`.
+
+These are admin-only endpoints for managing recurring tasks on the Server.
+
+### `GET /`
+Gets the list of all available tasks.
+
+Returns data with the following properties:
+- `tasks` (`PublicTask`): The list of available tasks.
+
+### `PATCH /`
+Update editable properties of a task object.
+
+Request data (body):
+- `taskType` (`string`): The task type to update.
+- `intervalMs` (`number`): The new task interval, in milliseconds, to apply. Must be between 1 hour and 1 year.
+
+### `GET /log`
+Gets the list of the recent task logs.
+
+Query parameters:
+- `taskType` (`string`): The task type for which to fetch the task logs.
+
+Returns data with the following properties:
+- `taskLogs` (`PublicTaskLog`): The list of task logs.
+
+### `POST /execute`
+Immediately executes a task. The response will only be sent once the task is completed.
+
+Query parameters:
+- `taskType` (`string`): The task type to execute.
+
+
 ## User Endpoints
 Path: `/user`.
 

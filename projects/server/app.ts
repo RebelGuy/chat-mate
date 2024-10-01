@@ -124,6 +124,7 @@ import AuthService from '@rebel/server/services/AuthService'
 import UserLinkService from '@rebel/server/services/UserLinkService'
 import StaticAuthProviderFactory from '@rebel/server/factories/StaticAuthProviderFactory'
 import UserStore from '@rebel/server/stores/UserStore'
+import TaskController from '@rebel/server/controllers/TaskController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -405,6 +406,7 @@ const main = async () => {
       .withClass('accountController', AccountController)
       .withClass('streamerController', StreamerController)
       .withClass('adminController', AdminController)
+      .withClass('taskController', TaskController)
       .build()
     await context.initialise()
     setContextProvider(req, context)
@@ -434,7 +436,8 @@ const main = async () => {
     LivestreamController,
     AccountController,
     StreamerController,
-    AdminController
+    AdminController,
+    TaskController
   )
 
 

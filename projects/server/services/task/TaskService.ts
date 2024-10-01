@@ -8,6 +8,8 @@ import TaskStore from '@rebel/server/stores/TaskStore'
 import { LogContext, createLogContext } from '@rebel/shared/ILogService'
 import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
+import { ChatMateError } from '@rebel/shared/util/error'
+import { NO_OP } from '@rebel/shared/util/typescript'
 
 /** A potentially long-running task that is automatically scheduled periodically. */
 export interface ITask {
@@ -33,6 +35,7 @@ export default class TaskService extends SingletonContextClass {
   private readonly timerHelpers: TimerHelpers
 
   private tasks: Record<TaskType, ITask>
+  private timers: Record<TaskType, () => void>
 
   constructor (deps: Deps) {
     super()
@@ -45,6 +48,10 @@ export default class TaskService extends SingletonContextClass {
     this.tasks = {
       [TaskType.cleanUpYoutubeContextTokensTask]: deps.resolve('cleanUpYoutubeContextTokensTask'),
       [TaskType.cleanUpApiCallsTask]: deps.resolve('cleanUpApiCallsTask')
+    }
+    this.timers = {
+      [TaskType.cleanUpYoutubeContextTokensTask]: NO_OP,
+      [TaskType.cleanUpApiCallsTask]: NO_OP
     }
   }
 
@@ -62,11 +69,33 @@ export default class TaskService extends SingletonContextClass {
       } else {
         this.logService.logInfo(this, `Scheduled task ${taskType} for ${newTime} (in ${timeout}ms)`)
       }
-      this.timerHelpers.setTimeout(() => this.executeTask(taskType), timeout > 0 ? timeout : 0)
+      this.timers[taskType] = this.timerHelpers.setTimeout(() => this.executeTask(taskType), timeout > 0 ? timeout : 0)
     }
   }
 
-  private async executeTask (taskType: TaskType): Promise<void> {
+  public getTaskTypes (): TaskType[] {
+    return Object.keys(this.tasks) as TaskType[]
+  }
+
+  public async updateTask (taskType: TaskType, intervalMs: number) {
+    this.timers[taskType]() // cancel
+
+    await this.taskStore.updateTask(taskType, intervalMs)
+    const previousTime = await this.taskStore.getTimeSinceLastTaskExecution(taskType) ?? 0
+    const newTime = previousTime + intervalMs
+    const timeout = newTime - this.dateTimeHelpers.ts()
+
+    if (timeout < 0) {
+      this.logService.logInfo(this, `Updated task ${taskType}. Executing immediately since the last execution time (${previousTime}) is longer ago than the newly scheduled interval (${intervalMs})`)
+    } else {
+      this.logService.logInfo(this, `Updated task ${taskType}. Scheduled for ${newTime} (in ${timeout}ms)`)
+    }
+    this.timers[taskType] = this.timerHelpers.setTimeout(() => this.executeTask(taskType), timeout > 0 ? timeout : 0)
+  }
+
+  public async executeTask (taskType: TaskType): Promise<void> {
+    this.timers[taskType]() // cancel
+
     const startTime = this.dateTimeHelpers.ts()
     const taskExecutor = new TaskExecutor(createLogContext(this.logService, this), taskType, this.tasks[taskType])
 
@@ -94,12 +123,14 @@ export default class TaskService extends SingletonContextClass {
       }
     }
 
-    if (task != null) {
-      const newTime = startTime + task.intervalMs
-      const timeout = newTime - this.dateTimeHelpers.ts()
-      this.timerHelpers.setTimeout(() => this.executeTask(taskType), timeout)
-      this.logService.logInfo(this, `Scheduled task ${taskType} for ${newTime} (in ${timeout}ms)`)
+    if (task == null) {
+      throw new ChatMateError('Task is null - cannot reschedule')
     }
+
+    const newTime = startTime + task.intervalMs
+    const timeout = newTime - this.dateTimeHelpers.ts()
+    this.timers[taskType] = this.timerHelpers.setTimeout(() => this.executeTask(taskType), timeout)
+    this.logService.logInfo(this, `Scheduled task ${taskType} for ${newTime} (in ${timeout}ms)`)
   }
 }
 
