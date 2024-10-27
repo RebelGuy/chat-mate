@@ -9,29 +9,13 @@ import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
 import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { authenticate, getCustomisableRankNames, getGlobalRanks, getRanksForStreamer, getStreamers, getUser } from '@rebel/studio/utility/api'
-import { DEFAULT_STREAMER, SERVER_URL } from '@rebel/studio/utility/global'
+import { DEFAULT_STREAMER } from '@rebel/studio/utility/global'
 import * as React from 'react'
 
 // null if unset, empty string if the empty row was selected
 const LOCAL_STORAGE_STREAMER = 'streamer'
 
 const LOCAL_STORAGE_LOGIN_TOKEN = 'loginToken'
-
-const WEBSOCKET_URI = `${SERVER_URL.replace('http', 'ws')}/ws`
-
-export const WEBSOCKET = new WebSocket(WEBSOCKET_URI)
-
-WEBSOCKET.onopen = (ev) => {
-  console.log('Connected to the Websocket', ev)
-}
-
-WEBSOCKET.onclose = (ev) => {
-  console.log('Disconnected to the Websocket', ev)
-}
-
-WEBSOCKET.onerror = (ev) => {
-  console.error('Connected to the Websocket', ev)
-}
 
 export type RankName = PublicRank['name']
 
