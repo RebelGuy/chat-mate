@@ -24,6 +24,7 @@ const RANK_ORDER: PublicRank['name'][] = ['owner', 'admin', 'mod', 'member', 'su
 type Props = {
   streamer: string
   updateKey: Primitive
+  direction: 'asc' | 'desc'
 }
 
 export default function ChatHistory (props: Props) {
@@ -45,7 +46,7 @@ export default function ChatHistory (props: Props) {
       const message = JSON.parse(event.data) as ServerMessage
       if (message.type === 'event' && message.data.topic === 'streamerChat') {
         const item: PublicChatItem = message.data.data
-        setChat(currentItems => [item, ...currentItems])
+        setChat(currentItems => [...currentItems, item])
       }
     })
   }, [websocketContext.state, websocketContext.websocket])
@@ -73,7 +74,7 @@ export default function ChatHistory (props: Props) {
 
   return (
     <Box>
-      {chat.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
+      {sortBy(chat, c => c.timestamp, props.direction).map((msg, i) => <ChatMessage key={i} msg={msg} />)}
       <ApiLoading requestObj={getLivestreamsRequest} />
       <ApiError requestObj={getLivestreamsRequest} />
     </Box>
