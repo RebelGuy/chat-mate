@@ -319,7 +319,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     expect(single(result)).toBe(part)
   })
@@ -332,7 +332,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       name: 'TestEmoji'
     }
 
-    const result = await customEmojiService.applyCustomEmojis(emojiPart, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([emojiPart], defaultUserId, streamerId)
 
     expect(single(result)).toBe(emojiPart)
   })
@@ -346,7 +346,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       name: 'cheer name'
     }
 
-    const result = await customEmojiService.applyCustomEmojis(cheerPart, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([cheerPart], defaultUserId, streamerId)
 
     expect(single(result)).toBe(cheerPart)
   })
@@ -359,7 +359,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       name: 'TestEmoji'
     }
 
-    const result = await customEmojiService.applyCustomEmojis(emojiPart, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([emojiPart], defaultUserId, streamerId)
 
     expect(single(result)).toEqual<PartialCustomEmojiChatMessage>({
       type: 'customEmoji',
@@ -379,7 +379,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     expect(single(result)).toEqual(expectedCustomEmojiPart(customEmoji1, customEmoji1Version, part))
   })
@@ -392,7 +392,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     expect(result.length).toBe(5)
     expect(result[0]).toEqual(expectedTextPart('abc ', part))
@@ -413,7 +413,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     expect(single(result)).toEqual(expectedTextPart(part.text, part))
   })
@@ -429,7 +429,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expectedCustomEmojiPart(customEmoji1, customEmoji1Version, part))
@@ -444,7 +444,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     const expectedResult = expectedCustomEmojiPart(customEmoji1, customEmoji1Version, part)
     expectedResult.text = part
@@ -467,7 +467,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     expect(result.length).toBe(2)
     expect(result[0]).toEqual(expectedCustomEmojiPart(trollEmoji, trollEmojiVersion, part))
@@ -487,7 +487,7 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       isItalics: false
     }
 
-    const result = await customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)
+    const result = await customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)
 
     expect(single(result)).toEqual(expectedTextPart(part.text, part))
   })
@@ -498,7 +498,34 @@ describe(nameof(CustomEmojiService, 'applyCustomEmojis'), () => {
       emojiId: 1
     }
 
-    await expect(() => customEmojiService.applyCustomEmojis(part, defaultUserId, streamerId)).rejects.toThrow(ChatMateError)
+    await expect(() => customEmojiService.applyCustomEmojis([part], defaultUserId, streamerId)).rejects.toThrow(ChatMateError)
+  })
+
+  test('Applies custom emojis to muliple partial message', async () => {
+    const part1: PartialTextChatMessage = {
+      type: 'text',
+      text: `abc :${customEmoji1.symbol}:def:${customEmoji2.symbol}: ghi`,
+      isBold: true,
+      isItalics: false
+    }
+    const part2: PartialTextChatMessage = {
+      type: 'text',
+      text: `jkl :${customEmoji3.symbol}:mno`,
+      isBold: true,
+      isItalics: false
+    }
+
+    const result = await customEmojiService.applyCustomEmojis([part1, part2], defaultUserId, streamerId)
+
+    expect(result.length).toBe(8)
+    expect(result[0]).toEqual(expectedTextPart('abc ', part1))
+    expect(result[1]).toEqual(expectedCustomEmojiPart(customEmoji1, customEmoji1Version, part1))
+    expect(result[2]).toEqual(expectedTextPart('def', part1))
+    expect(result[3]).toEqual(expectedCustomEmojiPart(customEmoji2, customEmoji2Version, part1))
+    expect(result[4]).toEqual(expectedTextPart(' ghi', part1))
+    expect(result[5]).toEqual(expectedTextPart('jkl ', part2))
+    expect(result[6]).toEqual(expectedCustomEmojiPart(customEmoji3, customEmoji3Version, part2))
+    expect(result[7]).toEqual(expectedTextPart('mno', part2))
   })
 })
 

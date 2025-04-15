@@ -202,7 +202,7 @@ export default class ChatService extends SingletonContextClass {
       }
 
       // inject custom emojis
-      const splitParts = await Promise.all(item.messageParts.map(part => this.customEmojiService.applyCustomEmojis(part, channel.userId, streamerId)))
+      const splitParts = await this.customEmojiService.applyCustomEmojis(item.messageParts, channel.userId, streamerId)
       item.messageParts = splitParts.flatMap(p => p)
 
       // process public emojis (this will replace all PartialEmojiChatMessage with PartialProcessEmojiChatMessage)
