@@ -625,6 +625,9 @@ model ChatMessage {
   externalId String   @db.VarChar(255) // unique
   time       DateTime
 
+  /// How long it took the ChatService to add this message and all related information to the database, if known.
+  debugDuration Int?
+
   /// The time at which the message was deleted by a moderator or retracted by the author. Null if the message has not been deleted.
   deletedTime DateTime?
 
