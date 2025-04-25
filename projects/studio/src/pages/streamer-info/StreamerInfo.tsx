@@ -1,4 +1,5 @@
-import { Alert, Tab, Tabs, styled } from '@mui/material'
+import { North, South } from '@mui/icons-material'
+import { Alert, Tab, Tabs, Typography, styled } from '@mui/material'
 import { Box } from '@mui/system'
 import { PublicChannel } from '@rebel/api-models/public/user/PublicChannel'
 import ApiError from '@rebel/studio/components/ApiError'
@@ -20,6 +21,7 @@ export default function StreamerInfo () {
   const [tabValue, onSetTabValue] = useState<'chat' | 'livestreamHistory'>('chat')
   const [updateKey, onIncrementKey] = useUpdateKey()
   const getLivestreamsRequest = useRequest(getLivestreams(), { updateKey })
+  const [chatDirection, setChatDirection] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     loginContext.refreshData('streamerList')
@@ -28,6 +30,14 @@ export default function StreamerInfo () {
 
   const onUpdateTabValue = (_: any, newValue: 'chat' | 'livestreamHistory') => {
     onSetTabValue(newValue)
+  }
+
+  const onClickChatTab = () => {
+    if (tabValue !== 'chat' || chatDirection === 'desc') {
+      setChatDirection('asc')
+    } else {
+      setChatDirection('desc')
+    }
   }
 
   const refreshButton = (
@@ -54,6 +64,12 @@ export default function StreamerInfo () {
     </>
   }
 
+  const chatDirectionArrow = tabValue === 'chat' ? (
+    <Box display="inline" sx={{ marginRight: '-16px', paddingLeft: '4px' }}>
+      {chatDirection === 'asc' ? <South sx={{ fontSize: 12 }} /> : <North sx={{ fontSize: 12 }} />}
+    </Box>
+  ) : null
+
   return <>
     {header}
 
@@ -78,11 +94,11 @@ export default function StreamerInfo () {
     <Box>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={onUpdateTabValue}>
-          <Tab label="Chat" value="chat" />
+          <Tab label={<Box display="flex">Chat {chatDirectionArrow}</Box>} value="chat" onClick={onClickChatTab} />
           <Tab label="Livestream History" value="livestreamHistory" />
         </Tabs>
       </Box>
-      {tabValue === 'chat' && loginContext.streamer != null && <ChatHistory streamer={loginContext.streamer} updateKey={updateKey} />}
+      {tabValue === 'chat' && loginContext.streamer != null && <ChatHistory streamer={loginContext.streamer} updateKey={updateKey} direction={chatDirection} />}
       {tabValue === 'livestreamHistory' && getLivestreamsRequest.data != null && <Box sx={{ mt: 2 }}>
         <LivestreamHistory livestreams={getLivestreamsRequest.data!.aggregateLivestreams} />
       </Box>}

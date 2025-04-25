@@ -14,62 +14,67 @@ import { Level } from '@rebel/studio/pages/main/UserInfo'
 import { getChat } from '@rebel/studio/utility/api'
 import { PublicRank } from '@rebel/api-models/public/rank/PublicRank'
 import { sortBy } from '@rebel/shared/util/arrays'
-import { SERVER_URL } from '@rebel/studio/utility/global'
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { ClientMessage, ServerMessage } from '@rebel/api-models/websocket'
-import { WEBSOCKET } from '@rebel/studio/contexts/LoginContext'
 import { addTime } from '@rebel/shared/util/datetime'
-import { sum } from '@rebel/shared/util/math'
+import WebsocketContext from '@rebel/studio/contexts/WebsocketContext'
 
 const RANK_ORDER: PublicRank['name'][] = ['owner', 'admin', 'mod', 'member', 'supporter', 'donator']
-
-const options = {
-  reconnection: true,
-  reconnectionDelay: 10000,
-  autoConnect: false
-}
 
 type Props = {
   streamer: string
   updateKey: Primitive
+  direction: 'asc' | 'desc'
 }
 
 export default function ChatHistory (props: Props) {
+  const websocketContext = useContext(WebsocketContext)
   const [chat, setChat] = useState<PublicChatItem[]>([])
-  const getChatTimestamp = useRef(addTime(new Date(), 'hours', -1).getTime())
+  const getChatTimestamp = useRef(addTime(new Date(), 'days', -1).getTime())
 
   const getLivestreamsRequest = useRequest(getChat(getChatTimestamp.current, 30), {
     updateKey: props.updateKey,
     onSuccess: (data) => setChat(data.chat)
   })
 
-  const chatRef = useRef<PublicChatItem[]>()
-  chatRef.current = chat
-
   useEffect(() => {
-    WEBSOCKET.onmessage = (event) => {
+    if (websocketContext.state !== 'connected') {
+      return
+    }
+
+    websocketContext.websocket.addEventListener('message', (event) => {
       const message = JSON.parse(event.data) as ServerMessage
       if (message.type === 'event' && message.data.topic === 'streamerChat') {
-        const newItems: PublicChatItem[] = [...chatRef.current!, message.data.data]
-        setChat(newItems)
+        const item: PublicChatItem = message.data.data
+        setChat(currentItems => [...currentItems, item])
       }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    })
+  }, [websocketContext.state, websocketContext.websocket])
 
   useEffect(() => {
-    const msg: ClientMessage = { type: 'subscribe', data: { streamer: props.streamer, topic: 'streamerChat' }}
-    WEBSOCKET.send(JSON.stringify(msg))
+    if (websocketContext.state !== 'connected') {
+      return
+    }
+
+    const subscribeMsg: ClientMessage = {
+      type: 'subscribe',
+      data: { topic: 'streamerChat', streamer: props.streamer }
+    }
+    websocketContext.websocket.send(JSON.stringify(subscribeMsg))
 
     return () => {
-      const unsubscribeMsg: ClientMessage = { type: 'unsubscribe', data: { streamer: props.streamer, topic: 'streamerChat' }}
-      WEBSOCKET.send(JSON.stringify(unsubscribeMsg))
+      const unsubscribeMsg: ClientMessage = {
+        type: 'unsubscribe',
+        data: { topic: 'streamerChat', streamer: props.streamer }
+      }
+      websocketContext.websocket.send(JSON.stringify(unsubscribeMsg))
     }
-  }, [props.streamer])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.streamer, websocketContext.state, websocketContext.websocket])
 
   return (
     <Box>
-      {chat.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
+      {sortBy(chat, c => c.timestamp, props.direction).map((msg, i) => <ChatMessage key={i} msg={msg} />)}
       <ApiLoading requestObj={getLivestreamsRequest} />
       <ApiError requestObj={getLivestreamsRequest} />
     </Box>

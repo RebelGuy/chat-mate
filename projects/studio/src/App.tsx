@@ -6,6 +6,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { Alert, GlobalStyles } from '@mui/material'
 import ErrorBoundary from '@rebel/studio/components/ErrorBoundary'
 import { RequestContextProvider } from '@rebel/studio/contexts/RequestContext'
+import { WebsocketProvider } from '@rebel/studio/contexts/WebsocketContext'
 
 // https://mui.com/material-ui/customization/theme-components/
 // https://zenoo.github.io/mui-theme-creator/#BottomNavigation
@@ -41,14 +42,16 @@ export default function App () {
         {globalStyles}
         <RequestContextProvider>
           <LoginProvider>
-            <Routes>
-              <Route path="/" element={<MainView />}>
-                {pages.map(page =>
-                  <Route key={page.id} path={page.path} element={page.element} />
-                )}
-                <Route path="*" element={<Alert severity="error">Page not found.</Alert>} />
-              </Route>
-            </Routes>
+            <WebsocketProvider>
+              <Routes>
+                <Route path="/" element={<MainView />}>
+                  {pages.map(page =>
+                    <Route key={page.id} path={page.path} element={page.element} />
+                  )}
+                  <Route path="*" element={<Alert severity="error">Page not found.</Alert>} />
+                </Route>
+              </Routes>
+            </WebsocketProvider>
           </LoginProvider>
         </RequestContextProvider>
       </ThemeProvider>
