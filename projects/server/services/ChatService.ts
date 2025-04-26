@@ -19,6 +19,7 @@ import { getPrimaryUserId } from '@rebel/server/services/AccountService'
 import { single } from '@rebel/shared/util/arrays'
 import ChannelService from '@rebel/server/services/ChannelService'
 import { SafeOmit } from '@rebel/shared/types'
+import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 
 export const INACCESSIBLE_EMOJI = '__INACCESSIBLE_EMOJI__'
 
@@ -41,6 +42,7 @@ type Deps = Dependencies<{
   channelEventService: ChannelEventService
   emojiService: EmojiService
   channelService: ChannelService
+  dateTimeHelpers: DateTimeHelpers
 }>
 
 export default class ChatService extends SingletonContextClass {
@@ -57,6 +59,7 @@ export default class ChatService extends SingletonContextClass {
   private readonly channelEventService: ChannelEventService
   private readonly emojiService: EmojiService
   private readonly channelService: ChannelService
+  private readonly dateTimeHelpers: DateTimeHelpers
 
   constructor (deps: Deps) {
     super()
@@ -72,6 +75,7 @@ export default class ChatService extends SingletonContextClass {
     this.channelEventService = deps.resolve('channelEventService')
     this.emojiService = deps.resolve('emojiService')
     this.channelService = deps.resolve('channelService')
+    this.dateTimeHelpers = deps.resolve('dateTimeHelpers')
   }
 
   public override initialise () {
@@ -159,6 +163,8 @@ export default class ChatService extends SingletonContextClass {
 
   /** Returns true if the chat item was new and added to the DB, and false if it wasn't because it already existed. Throws if something went wrong while adding the chat item. */
   public async onNewChatItem (item: ChatItem, streamerId: number): Promise<boolean> {
+    const startTime = this.dateTimeHelpers.ts()
+
     let message: AddedChatMessage | null = null
     let channel: YoutubeChannelWithLatestInfo | TwitchChannelWithLatestInfo
     let externalId: string
@@ -202,7 +208,7 @@ export default class ChatService extends SingletonContextClass {
       }
 
       // inject custom emojis
-      const splitParts = await Promise.all(item.messageParts.map(part => this.customEmojiService.applyCustomEmojis(part, channel.userId, streamerId)))
+      const splitParts = await this.customEmojiService.applyCustomEmojis(item.messageParts, channel.userId, streamerId)
       item.messageParts = splitParts.flatMap(p => p)
 
       // process public emojis (this will replace all PartialEmojiChatMessage with PartialProcessEmojiChatMessage)
@@ -224,6 +230,13 @@ export default class ChatService extends SingletonContextClass {
         }
 
         void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_ITEM, message)
+
+        try {
+          const duration = this.dateTimeHelpers.ts() - startTime
+          await this.chatStore.setChatMessageDebugDuration(message.id, duration)
+        } catch (innerError: any) {
+          this.logService.logError(this, 'Successfully added chat item, but failed to log duration.', item, message, innerError)
+        }
       }
     } catch (e: any) {
       this.logService.logError(this, 'Failed to add chat.', item, e)

@@ -84,13 +84,25 @@ export default class StreamerChannelStore extends ContextClass {
     return streamerIds.map<PrimaryChannels>(streamerId => {
       const youtubeLink = youtubeLinks.find(l => l.streamerId === streamerId)
       const youtubeChannel = youtubeLink != null ? youtubeLinkToUserChannel(youtubeLink) : null
-      const youtubeChannelSince = youtubeLink != null ? youtubeLink.timeAdded.getTime() : null
+      let youtubeChannelSince = youtubeLink != null ? youtubeLink.timeAdded : null
+      if (youtubeChannelSince != null && youtubeChannelSince < new Date(0)) {
+        youtubeChannelSince = new Date(0)
+      }
 
       const twitchLink = twitchLinks.find(l => l.streamerId === streamerId)
       const twitchChannel = twitchLink != null ? twitchLinkToUserChannel(twitchLink) : null
-      const twitchChannelSince = twitchLink != null ? twitchLink.timeAdded.getTime() : null
+      let twitchChannelSince = twitchLink != null ? twitchLink.timeAdded : null
+      if (twitchChannelSince != null && twitchChannelSince < new Date(0)) {
+        twitchChannelSince = new Date(0)
+      }
 
-      return { streamerId, youtubeChannel, youtubeChannelSince, twitchChannel, twitchChannelSince }
+      return {
+        streamerId,
+        youtubeChannel,
+        youtubeChannelSince: youtubeChannelSince?.getTime() ?? null,
+        twitchChannel,
+        twitchChannelSince: twitchChannelSince?.getTime() ?? null
+      }
     })
   }
 

@@ -48,6 +48,7 @@ type EnvironmentVariables = {
   disableExternalApis: OptionalLocalVariable<boolean, false>
 
   ngrokAuthToken: LocalVariable<string>
+  minioPath: LocalVariable<string>
 
   applicationinsightsConnectionString: DeploymentVariable<string>
   websiteHostname: DeploymentVariable<string>
@@ -96,6 +97,7 @@ const allChatMateEnvVariables: { [K in keyof EnvironmentVariables]: readonly Val
   twitchClientSecret: null,
   disableExternalApis: null,
   ngrokAuthToken: null,
+  minioPath: null,
   streamlabsAccessToken: null,
   twitchUsername: null,
   chatMateRegisteredUserName: null,
@@ -123,7 +125,8 @@ type ValueType<V extends keyof EnvironmentVariables> = EnvironmentVariables[V] e
 // local variables can only be accessed when running the server locally, and return null otherwise.
 const localVariables: Record<VariablesOfType<'local'>, true> = {
   disableExternalApis: true,
-  ngrokAuthToken: true
+  ngrokAuthToken: true,
+  minioPath: true
 }
 
 // deployment variables can only be accessed when running the server in Azure, and return null otherwise.

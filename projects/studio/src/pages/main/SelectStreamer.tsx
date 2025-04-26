@@ -57,7 +57,7 @@ export default function SelectStreamer () {
           <InputLabel>Streamer</InputLabel>
           <Select error={isUnknownStreamer} value={loginContext.streamer ?? ''} onChange={e => loginContext.setStreamer(e.target.value)} label="Streamer">
             <MenuItem value=""><em>None</em></MenuItem>
-            {allStreamers.map(streamer => <MenuItem key={streamer.username} value={streamer.username}>{streamer.username}{getLiveIndicator(streamer)}</MenuItem>)}
+            {allStreamers.map(streamer => <MenuItem key={streamer.username} value={streamer.username}>{streamer.displayName ?? streamer.username}{getLiveIndicator(streamer)}</MenuItem>)}
           </Select>
         </FormControl>
         <div style={{ padding: 8, paddingTop: 16, margin: 'auto' }}>

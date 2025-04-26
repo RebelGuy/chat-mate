@@ -54,7 +54,7 @@ export default class ExternalRankDataService extends ContextClass {
 
   /** Transforms data of the rank event into the internal data types. */
   public async getYoutubeDataForExternalRankEvent (streamerId: number, channelName: string, moderatorChannelName: string, getRanksForGroup: RankGroup): Promise<ExternalRankEventData | null> {
-    const channels = await this.channelService.searchChannelsByName(streamerId, channelName)
+    const channels = await this.channelService.searchChannelsByName(streamerId, channelName, true)
     if (channels.length !== 1) {
       return null
     }
@@ -69,7 +69,7 @@ export default class ExternalRankDataService extends ContextClass {
     // we can search a bit more intelligently for moderator channels by reducing the pool of potential matches to actual moderators instead of all users
     const administrationUserRanks = getRanksForGroup === 'administration' ? ranks : await this.rankStore.getUserRanksForGroup('administration', streamerId)
     const modPrimaryUserIds = administrationUserRanks.filter(ur => ur.rank.name === 'mod' || ur.rank.name === 'owner').map(ur => ur.primaryUserId)
-    const matchingChannelsForModerator = await this.channelService.searchChannelsByName(streamerId, moderatorChannelName)
+    const matchingChannelsForModerator = await this.channelService.searchChannelsByName(streamerId, moderatorChannelName, true)
     const moderatorChannels = matchingChannelsForModerator.filter(c => modPrimaryUserIds.includes(getPrimaryUserId(c)))
     if (moderatorChannels.length !== 1) {
       this.logService.logInfo(this, `Searched for moderator channel '${channelName}' for streamer ${streamerId} but found ${moderatorChannels.length} matches.`)

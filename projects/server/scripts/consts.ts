@@ -1,22 +1,24 @@
 import { PrismaClient } from '@prisma/client'
-import { NodeEnv } from '@rebel/server/globals'
+import env, { NodeEnv } from '@rebel/server/globals'
 import DbProvider from '@rebel/server/providers/DbProvider'
 import LogService from '@rebel/server/services/LogService'
 import { cast } from '@rebel/shared/testUtils'
 import { NO_OP } from '@rebel/shared/util/typescript'
 import path from 'node:path'
 
-export const NODE_ENV = process.env.NODE_ENV as NodeEnv
+export const NODE_ENV = env('nodeEnv')
 
-export const DATABASE_URL = process.env.DATABASE_URL!
+export const DATABASE_URL = env('databaseUrl')
 
-export const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID!
+export const TWITCH_CLIENT_ID = env('twitchClientId')
 
-export const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET!
+export const TWITCH_CLIENT_SECRET = env('twitchClientSecret')
 
-export const TWITCH_USERNAME = process.env.TWITCH_USERNAME!
+export const TWITCH_USERNAME = env('twitchUsername')
 
-export const CHANNEL_ID = process.env.CHANNEL_ID!
+export const CHANNEL_ID = env('channelId')
+
+export const MINIO_PATH = env('minioPath')!
 
 // required so we get the most up-to-date client, even if the schema changes during the lifespan of the process
 export const refreshDb = () => new PrismaClient({ datasources: { db: { url: DATABASE_URL }},  }) as PrismaClient

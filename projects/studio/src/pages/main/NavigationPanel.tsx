@@ -3,7 +3,7 @@ import CentredLoadingSpinner from '@rebel/studio/components/CentredLoadingSpinne
 import LinkToPage, { PageProps } from '@rebel/studio/components/LinkToPage'
 import RequireRank from '@rebel/studio/components/RequireRank'
 import LoginContext from '@rebel/studio/contexts/LoginContext'
-import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth, PageStreamerInfo, PageYoutubeAuth } from '@rebel/studio/pages/navigation'
+import { PageEmojis, PageManager, PageApply, PageLink, PageHome, Page, PageTwitchAuth, PageStreamerInfo, PageYoutubeAuth, PageTask } from '@rebel/studio/pages/navigation'
 import { cloneElement, useContext } from 'react'
 import { useLocation, matchPath } from 'react-router-dom'
 
@@ -21,10 +21,11 @@ export default function Navigation () {
       <NavItem page={PageEmojis} streamer={loginContext.streamer} />
       <NavItem page={PageStreamerInfo} streamer={loginContext.streamer} />
       <NavItem page={PageManager} />
+      <NavItem page={PageLink} />
       <NavItem page={PageApply} />
+      <NavItem page={PageTask} />
       <NavItem page={PageTwitchAuth} />
       <NavItem page={PageYoutubeAuth} />
-      <NavItem page={PageLink} />
     </nav>
   )
 }

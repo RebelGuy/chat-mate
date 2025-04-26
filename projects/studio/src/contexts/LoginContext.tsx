@@ -9,29 +9,13 @@ import { routeParams } from '@rebel/studio/components/RouteParamsObserver'
 import useRequest, { ApiRequestError } from '@rebel/studio/hooks/useRequest'
 import useUpdateKey from '@rebel/studio/hooks/useUpdateKey'
 import { authenticate, getCustomisableRankNames, getGlobalRanks, getRanksForStreamer, getStreamers, getUser } from '@rebel/studio/utility/api'
-import { DEFAULT_STREAMER, SERVER_URL } from '@rebel/studio/utility/global'
+import { DEFAULT_STREAMER } from '@rebel/studio/utility/global'
 import * as React from 'react'
 
 // null if unset, empty string if the empty row was selected
 const LOCAL_STORAGE_STREAMER = 'streamer'
 
 const LOCAL_STORAGE_LOGIN_TOKEN = 'loginToken'
-
-const WEBSOCKET_URI = `${SERVER_URL.replace('http', 'ws')}/ws`
-
-export const WEBSOCKET = new WebSocket(WEBSOCKET_URI)
-
-WEBSOCKET.onopen = (ev) => {
-  console.log('Connected to the Websocket', ev)
-}
-
-WEBSOCKET.onclose = (ev) => {
-  console.log('Disconnected to the Websocket', ev)
-}
-
-WEBSOCKET.onerror = (ev) => {
-  console.error('Connected to the Websocket', ev)
-}
 
 export type RankName = PublicRank['name']
 
@@ -44,6 +28,7 @@ type Props = {
 export function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
+  const [displayName, setDisplayName] = React.useState<string | null>(null)
   const [isStreamer, setIsStreamer] = React.useState(false)
   const [hasLoadedAuth, setHasLoadedAuth] = React.useState(false)
   const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
@@ -83,7 +68,7 @@ export function LoginProvider (props: Props) {
     onError: (error, type) => console.error(error)
   })
 
-  function onSetLogin (usernameToSet: string, token: string, isStreamerToSet: boolean) {
+  function onSetLogin (usernameToSet: string, displayNameToSet: string | null, token: string, isStreamerToSet: boolean) {
     try {
       window.localStorage.setItem(LOCAL_STORAGE_LOGIN_TOKEN, token)
     } catch (e: any) {
@@ -92,6 +77,7 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(token)
     setUsername(usernameToSet)
+    setDisplayName(displayNameToSet)
     setIsStreamer(isStreamerToSet)
     setAuthError(null)
   }
@@ -119,6 +105,7 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(null)
     setUsername(null)
+    setDisplayName(null)
     setIsStreamer(false)
   }
 
@@ -141,7 +128,9 @@ export function LoginProvider (props: Props) {
 
       if (response.success) {
         setLoginToken(storedLoginToken)
+        setDisplayName(response.data.displayName)
         setUsername(response.data.username)
+        setDisplayName(response.data.displayName)
         setIsStreamer(response.data.isStreamer)
 
         if (response.data.isStreamer && isNullOrEmpty(storedStreamer)) {
@@ -246,6 +235,7 @@ export function LoginProvider (props: Props) {
         isHydrated: hasLoadedAuth && isHydrated,
         loginToken,
         username,
+        displayName,
         user: getUserRequest.data?.user ?? null,
         isLoading: !hasLoadedAuth || isLoading,
         loadingData: nonNull([getStreamersRequest.isLoading ? 'streamerList' : null]),
@@ -279,6 +269,7 @@ export type LoginContextType = {
   /** The streamer context. */
   streamer: string | null
   username: string | null
+  displayName: string | null
   user: PublicUser | null
   isLoading: boolean
   loadingData: RefreshableDataType[]
@@ -287,7 +278,7 @@ export type LoginContextType = {
   allRanks: PublicUserRank[]
   customisableRanks: RankName[]
 
-  setLogin: (username: string, token: string, isStreamer: boolean) => void
+  setLogin: (username: string, displayName: string | null, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void
   logout: () => void
   hasRank: (rankName: RankName) => boolean

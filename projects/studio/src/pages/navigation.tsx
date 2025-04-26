@@ -5,7 +5,7 @@ import LinkUser from '@rebel/studio/pages/link/LinkUser'
 import LoginForm from '@rebel/studio/pages/login/LoginForm'
 import React from 'react'
 import Home from '@rebel/studio/pages/home/Home'
-import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Settings, StarBorder, Videocam } from '@mui/icons-material'
+import { AccountCircle, Camera, Home as HomeIcon, Link, Mood, Security, Settings, StarBorder, Videocam } from '@mui/icons-material'
 import TwitchAdminLogin from '@rebel/studio/pages/admin/twitch/TwitchAdminLogin'
 import { Props as RequireRankProps } from '@rebel/studio/components/RequireRank'
 import StreamerInfo from '@rebel/studio/pages/streamer-info/StreamerInfo'
@@ -13,6 +13,7 @@ import YouTube from '@rebel/studio/icons/YouTube'
 import YoutubeAdminLogin from '@rebel/studio/pages/admin/youtube/YoutubeAdminLogin'
 import ResetPasswordForm from '@rebel/studio/pages/login/ResetPasswordForm'
 import { SafeOmit } from '@rebel/shared/types'
+import TasksPage from '@rebel/studio/pages/admin/task/TasksPage'
 
 export type Page = {
   id: string
@@ -139,4 +140,15 @@ export const PageYoutubeAuth = {
   requireRanksProps: { admin: true }
 } as const
 
-export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageChangePassword, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth, PageYoutubeAuth]
+export const PageTask = {
+  id: 'task',
+  title: 'Tasks',
+  element: <TasksPage />,
+  icon: <Security />,
+  path: '/admin/task',
+  requiresLogin: true,
+  requiresStreamer: false,
+  requireRanksProps: { admin: true }
+} as const
+
+export const pages: ReadonlyArray<Page> = [PageHome, PageEmojis, PageApply, PageLogin, PageChangePassword, PageLink, PageStreamerInfo, PageManager, PageTwitchAuth, PageYoutubeAuth, PageTask]

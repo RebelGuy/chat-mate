@@ -1,4 +1,5 @@
 import { Task } from '@prisma/client'
+import { textRunToPlainText } from '@rebel/masterchat/utils'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
 import TimerHelpers from '@rebel/server/helpers/TimerHelpers'
 import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
@@ -43,7 +44,7 @@ describe(nameof(TaskService, 'initialise'), () => {
     const lastExecutionTime = now - 100
     mockDateTimeHelpers.ts.calledWith().mockReturnValue(now)
     mockTaskStore.getTask.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(cast<Task>({ intervalMs }))
-    mockTaskStore.getTimeSinceLastTaskExecution.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(lastExecutionTime)
+    mockTaskStore.getLastExecutionTime.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(lastExecutionTime)
 
     await taskService.initialise()
 
@@ -56,7 +57,7 @@ describe(nameof(TaskService, 'initialise'), () => {
     const now = 10000
     mockDateTimeHelpers.ts.calledWith().mockReturnValue(now)
     mockTaskStore.getTask.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(cast<Task>({ intervalMs }))
-    mockTaskStore.getTimeSinceLastTaskExecution.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(null)
+    mockTaskStore.getLastExecutionTime.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(null)
 
     await taskService.initialise()
 
@@ -69,6 +70,8 @@ describe(nameof(TaskService, 'initialise'), () => {
     const now = 10000
     mockDateTimeHelpers.ts.calledWith().mockReturnValue(now)
     mockTaskStore.getTask.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(cast<Task>({ intervalMs }))
+    let firstTaskCancelled = false
+    mockTimerHelpers.setTimeout.calledWith(expect.anything()).mockReturnValue(() => firstTaskCancelled = true)
 
     await taskService.initialise()
 
@@ -91,6 +94,7 @@ describe(nameof(TaskService, 'initialise'), () => {
     // we should have rescheduled the task
     const timeoutAmount = single(mockTimerHelpers.setTimeout.mock.calls)[1]
     expect(timeoutAmount).toBe(intervalMs)
+    expect(firstTaskCancelled).toBe(true)
   })
 
   test('Failing task is handled correctly', async () => {
@@ -98,6 +102,8 @@ describe(nameof(TaskService, 'initialise'), () => {
     const now = 10000
     mockDateTimeHelpers.ts.calledWith().mockReturnValue(now)
     mockTaskStore.getTask.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(cast<Task>({ intervalMs }))
+    let firstTaskCancelled = false
+    mockTimerHelpers.setTimeout.calledWith(expect.anything()).mockReturnValue(() => firstTaskCancelled = true)
 
     await taskService.initialise()
 
@@ -120,5 +126,34 @@ describe(nameof(TaskService, 'initialise'), () => {
     // we should have rescheduled the task
     const timeoutAmount = single(mockTimerHelpers.setTimeout.mock.calls)[1]
     expect(timeoutAmount).toBe(intervalMs)
+    expect(firstTaskCancelled).toBe(true)
+  })
+})
+
+describe(nameof(TaskService, 'getTaskTypes'), () => {
+  test('Returns values', () => {
+    const result = taskService.getTaskTypes()
+
+    expect(result.length).toBeGreaterThan(0)
+  })
+})
+
+describe(nameof(TaskService, 'updateTask'), () => {
+  test('Updates the task and correctly reschedules the next execution', async () => {
+    mockDateTimeHelpers.ts.calledWith().mockReturnValue(100)
+    mockTaskStore.getTask.calledWith('cleanUpYoutubeContextTokensTask').mockResolvedValue(cast<Task>({ intervalMs: 1 }))
+    let firstTaskCancelled = false
+    mockTimerHelpers.setTimeout.calledWith(expect.anything()).mockReturnValue(() => firstTaskCancelled = true)
+    const newInterval = 2
+
+    await taskService.initialise()
+    expect(mockTimerHelpers.setTimeout.mock.calls.length).toBe(1)
+
+    await taskService.updateTask('cleanUpYoutubeContextTokensTask', newInterval)
+
+    const args = single(mockTaskStore.updateTask.mock.calls)
+    expect(args).toEqual<typeof args>(['cleanUpYoutubeContextTokensTask', newInterval])
+    expect(mockTimerHelpers.setTimeout.mock.calls.length).toBe(2)
+    expect(firstTaskCancelled).toBe(true)
   })
 })

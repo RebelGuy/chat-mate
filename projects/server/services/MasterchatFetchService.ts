@@ -154,7 +154,6 @@ export default class MasterchatFetchService extends SingletonContextClass {
           this.logService.logInfo(this, `Adding ${chatItems.length} new chat items for streamer ${streamerId}`)
         }
 
-        let anyFailed = false
         for (const item of chatItems) {
           try {
             const addedNewChat = await this.chatService.onNewChatItem(item, streamerId)
@@ -162,16 +161,13 @@ export default class MasterchatFetchService extends SingletonContextClass {
               hasNewChat = true
             }
           } catch (e: any) {
-            anyFailed = true
+            // ignore - already logged
           }
         }
 
-        if (!anyFailed) {
-          // purposefully only set this AFTER everything has been added. if we set it before,
-          // and something goes wrong with adding chat, the chat messages will be lost forever.
-          // todo: maybe we want it to be lost forever - perhaps there was bad data in the chat message, and now we are stuck in an infinite loop...
-          await this.livestreamStore.setYoutubeContinuationToken(liveId, response.continuation.token)
-        }
+        // if any messages failed to be added, we will skip them with the assumption that the error would be recurring.
+        // otherwise, we may be stuck in an infinite loop.
+        await this.livestreamStore.setYoutubeContinuationToken(liveId, response.continuation.token)
       }
 
       for (const action of response.actions.filter(a => !isAddChatAction(a))) {

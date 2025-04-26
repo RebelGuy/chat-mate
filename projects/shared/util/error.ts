@@ -196,6 +196,12 @@ export class InconsistentScopesError extends ChatMateError {
   }
 }
 
+export class InvalidAuthenticatedChannelError extends ChatMateError {
+  constructor (expectedExternalChannelId: string, actualExternalChannelId: string) {
+    super(InvalidAuthenticatedChannelError.prototype, `ChatMate has been authorised with channel id ${actualExternalChannelId} but expected channel id ${expectedExternalChannelId}.`)
+  }
+}
+
 export class NoYoutubeChatMessagesError extends ChatMateError {
   constructor (message: string) {
     super(NoYoutubeChatMessagesError.prototype, message)

@@ -284,6 +284,13 @@ export default class ChatStore extends ContextClass {
       data: { deletedTime: new Date() }
     })
   }
+
+  public async setChatMessageDebugDuration (chatMessageId: number, debugDuration: number) {
+    await this.db.chatMessage.update({
+      where: { id: chatMessageId },
+      data: { debugDuration: debugDuration }
+    })
+  }
 }
 
 const includeChannelInfo = {

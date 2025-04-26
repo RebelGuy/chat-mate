@@ -92,7 +92,8 @@ export default class ChatMateController extends ControllerBase {
     try {
       const totalVisitors = await this.visitorStore.getUniqueVisitors(since)
       const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
-      const streamers = await this.streamerStore.getStreamersSince(since).then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
+      const allStreamers = await this.streamerStore.getStreamersSince(0).then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
+      const streamers = since === 0 ? allStreamers : await this.streamerStore.getStreamersSince(since).then(_streamers => _streamers.filter(s => s.id !== chatMateStreamerId))
       const primaryChannels = await this.streamerChannelStore.getPrimaryChannels(streamers.map(streamer => streamer.id))
       const registeredUserCount = await this.accountStore.getRegisteredUserCount(since)
       const youtubeChannelCount = await this.channelStore.getYoutubeChannelCount(since)
@@ -102,7 +103,7 @@ export default class ChatMateController extends ControllerBase {
       const youtubeLiveReactions = await this.liveReactionStore.getTotalLiveReactions(since)
       const totalExperience = await this.experienceStore.getTotalGlobalExperience(since)
       // todo: this is a big no-no, we should probably cache things that we know will never change (e.g. past livestreams)
-      const aggregateLivestreams = await Promise.all(streamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id, since!))).then(flatMap)
+      const aggregateLivestreams = await Promise.all(allStreamers.map(streamer => this.aggregateLivestreamService.getAggregateLivestreams(streamer.id, since!))).then(flatMap)
       const youtubeTotalDaysLivestreamed = await this.livestreamStore.getYoutubeTotalDaysLivestreamed(since)
       const twitchTotalDaysLivestreamed = await this.livestreamStore.getTwitchTotalDaysLivestreamed(since)
 

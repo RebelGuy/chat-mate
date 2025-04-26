@@ -6,6 +6,7 @@ import { getElapsedText } from '@rebel/shared/util/datetime'
 type Props = {
   start: number
   end: number
+  maxDepth?: number
   useSentenceCase?: boolean
   sx?: SxProps
 
@@ -16,7 +17,7 @@ type Props = {
 
 export default function TimeSpan (props: Props) {
   const elapsed = props.end - props.start
-  const text = getElapsedText(elapsed, props.allowMs)
+  const text = getElapsedText(elapsed, props.maxDepth ?? 0, props.allowMs)
 
   return <>
     <Box sx={{ display: 'inline', ...(props.sx ?? {}) }}>

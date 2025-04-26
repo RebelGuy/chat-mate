@@ -48,12 +48,12 @@ export default () => {
 
   describe(nameof(StreamerStore, 'addStreamerApplication'), () => {
     test('Adds the new streamer application', async () => {
-      const data: CreateApplicationArgs = {
+      const applicationData: CreateApplicationArgs = {
         message: 'test',
         registeredUserId: 2
       }
 
-      const result = await streamerStore.addStreamerApplication(data)
+      const result = await streamerStore.addStreamerApplication(applicationData)
 
       await expectRowCount(db.streamerApplication).toBe(1)
       expect(result.registeredUser.id).toBe(2)
@@ -65,9 +65,9 @@ export default () => {
     test('Pending streamer application is approved', async () => {
       const application = await db.streamerApplication.create({ data: { message: 'test', registeredUserId: 1 }})
       const message = 'approved'
-      const data: CloseApplicationArgs = { id: application.id, approved: true, message }
+      const applicationData: CloseApplicationArgs = { id: application.id, approved: true, message }
 
-      const result = await streamerStore.closeStreamerApplication(data)
+      const result = await streamerStore.closeStreamerApplication(applicationData)
 
       expect(result).toEqual(expectObject<StreamerApplicationWithUser>({ closeMessage: message, isApproved: true, registeredUser: expect.anything() }))
       expect(await db.streamerApplication.findFirst()).toEqual(expectObject<StreamerApplication>({ closeMessage: message, isApproved: true }))
@@ -76,9 +76,9 @@ export default () => {
     test('Pending streamer application is rejected', async () => {
       const application = await db.streamerApplication.create({ data: { message: 'test', registeredUserId: 1 }})
       const message = 'rejected'
-      const data: CloseApplicationArgs = { id: application.id, approved: false, message }
+      const applicationData: CloseApplicationArgs = { id: application.id, approved: false, message }
 
-      const result = await streamerStore.closeStreamerApplication(data)
+      const result = await streamerStore.closeStreamerApplication(applicationData)
 
       expect(result).toEqual(expectObject<StreamerApplicationWithUser>({ closeMessage: message, isApproved: false, registeredUser: expect.anything() }))
       expect(await db.streamerApplication.findFirst()).toEqual(expectObject<StreamerApplication>({ closeMessage: message, isApproved: false }))
@@ -87,9 +87,9 @@ export default () => {
     test('Pending streamer application is withdrawn', async () => {
       const application = await db.streamerApplication.create({ data: { message: 'test', registeredUserId: 1 }})
       const message = 'withdrawn'
-      const data: CloseApplicationArgs = { id: application.id, approved: null, message }
+      const applicationData: CloseApplicationArgs = { id: application.id, approved: null, message }
 
-      const result = await streamerStore.closeStreamerApplication(data)
+      const result = await streamerStore.closeStreamerApplication(applicationData)
 
       expect(result).toEqual(expectObject<StreamerApplicationWithUser>({ closeMessage: message, isApproved: null, registeredUser: expect.anything() }))
       expect(await db.streamerApplication.findFirst()).toEqual(expectObject<StreamerApplication>({ closeMessage: message, isApproved: null }))
@@ -97,9 +97,9 @@ export default () => {
 
     test('Throws if the application is already closed', async () => {
       const application = await db.streamerApplication.create({ data: { message: 'test', registeredUserId: 1, timeClosed: new Date() }})
-      const data: CloseApplicationArgs = { id: application.id, approved: true, message: 'throws' }
+      const applicationData: CloseApplicationArgs = { id: application.id, approved: true, message: 'throws' }
 
-      await expect(() => streamerStore.closeStreamerApplication(data)).rejects.toThrowError(StreamerApplicationAlreadyClosedError)
+      await expect(() => streamerStore.closeStreamerApplication(applicationData)).rejects.toThrowError(StreamerApplicationAlreadyClosedError)
     })
   })
 
