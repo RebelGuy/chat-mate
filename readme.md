@@ -56,11 +56,6 @@ For more info about the OAuth applications, refer to the docs for [Youtube](./do
 
 *YouTube appears to be prohibiting the word "mate" in the channel name.
 
-Passwords:
-- Email: `P`
-- Twitch: `T`
-- YouTube: `C`
-
 ## Common Problems And How To Fix Them
 
 ### Streamer
@@ -71,6 +66,23 @@ Problem: Streamlabs donations are not being received by ChatMate.
 Solution: If the streamer has set a socket access token and is still unable to receive donation events, it is likely that the access token has changed. Getting the new token and setting it on the /manager page should fix the problem.
 
 # Change Log
+## v1.35 - The Improvement Update [26/4/2025]
+- Server
+  - ChatMate now tracks who issued a punishment
+  - MinIO is now used as the S3 storage emulator when running ChatMate locally
+  - Required backend changes for the new linking authentication flow
+  - Improved speed and reliability of processing chat messages
+    - If a chat message fails to add, we no longer retry to avoid infinite loops of errors
+    - Chat messages with lots of emojis are now handled more efficiently
+    - ChatMate now keeps track of processing durations to help identify performance regressions in the future
+- Studio
+  - Simplified the channel linking experience
+    - The new flow presents an OAuth consent screen to the user as a means to confirm their identity to ChatMate
+    - The ability to paste a token into a ChatMate-supported livestream chat is kept as a legacy method for users that do not trust ChatMate
+  - Added support for custom display names
+  - Added UI for admins to manage ChatMate tasks
+  - Fixed back button not working properly when clicking on the "link" hyperlink on the homepage
+
 ## v1.34 - The Cleanup Update v3 [15/9/2024]
 - Server
   - More data is now timestamped

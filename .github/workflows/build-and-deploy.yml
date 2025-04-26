@@ -287,8 +287,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy-server, deploy-studio]
     steps:
-      - name: Remove Server artifacts
-        uses: geekyeggo/delete-artifact@v1
+      - name: Remove Server artifact
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: built-server-files
+          failOnError: false
+      - name: Remove Studio artifact
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: built-studio-files
           failOnError: false
