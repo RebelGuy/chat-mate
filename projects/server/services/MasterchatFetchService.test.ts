@@ -243,7 +243,11 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
 
     await masterchatFetchService.initialise()
 
-    expect(mockLivestreamStore.setYoutubeContinuationToken.mock.calls.length).toBe(1)
+    const continuationTokenCalls = mockLivestreamStore.setYoutubeContinuationToken.mock.calls
+    expect(continuationTokenCalls).toEqual<typeof continuationTokenCalls>([
+      [currentLivestreams[0].liveId, token2],
+      [currentLivestreams[1].liveId, token4]
+    ])
   })
 
   test('Persists hide/unhide/timeout user actions and notifies service', async () => {
