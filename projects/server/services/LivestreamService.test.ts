@@ -107,7 +107,8 @@ beforeEach(() => {
     cacheService: mockCacheService,
     chatMateStateService: mockChatMateStateService,
     authStore: mockAuthStore,
-    youtubeApiProxyService: mockYoutubeApiProxyService
+    youtubeApiProxyService: mockYoutubeApiProxyService,
+    isAdministrativeMode: () => false
   }))
 })
 
@@ -125,7 +126,30 @@ describe(nameof(LivestreamService, 'initialise'), () => {
       cacheService: mockCacheService,
       chatMateStateService: mockChatMateStateService,
       authStore: mockAuthStore,
-      youtubeApiProxyService: mockYoutubeApiProxyService
+      youtubeApiProxyService: mockYoutubeApiProxyService,
+      isAdministrativeMode: () => false
+    }))
+
+    await livestreamService.initialise()
+
+    expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
+    expect(mockMasterchatService.fetchMetadata.mock.calls.length).toBe(0)
+  })
+  test('ignores api if administrativeMode is true', async () => {
+    livestreamService = new LivestreamService(new Dependencies({
+      livestreamStore: mockLivestreamStore,
+      logService: mockLogService,
+      masterchatService: mockMasterchatService,
+      twurpleApiProxyService: mockTwurpleApiProxyService,
+      timerHelpers: mockTimerHelpers,
+      disableExternalApis: false,
+      dateTimeHelpers: mockDateTimeHelpers,
+      streamerChannelService: mockStreamerChannelService,
+      cacheService: mockCacheService,
+      chatMateStateService: mockChatMateStateService,
+      authStore: mockAuthStore,
+      youtubeApiProxyService: mockYoutubeApiProxyService,
+      isAdministrativeMode: () => true
     }))
 
     await livestreamService.initialise()
