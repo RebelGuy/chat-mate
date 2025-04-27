@@ -36,6 +36,7 @@ type Deps = Dependencies<{
   chatMateStateService: ChatMateStateService
   authStore: AuthStore
   youtubeApiProxyService: YoutubeApiProxyService
+  isAdministrativeMode: () => boolean
 }>
 
 export default class LivestreamService extends SingletonContextClass {
@@ -53,6 +54,7 @@ export default class LivestreamService extends SingletonContextClass {
   private readonly chatMateStateService: ChatMateStateService
   private readonly authStore: AuthStore
   private readonly youtubeApiProxyService: YoutubeApiProxyService
+  private readonly isAdministrativeMode: () => boolean
 
   constructor (deps: Deps) {
     super()
@@ -68,11 +70,15 @@ export default class LivestreamService extends SingletonContextClass {
     this.chatMateStateService = deps.resolve('chatMateStateService')
     this.authStore = deps.resolve('authStore')
     this.youtubeApiProxyService = deps.resolve('youtubeApiProxyService')
+    this.isAdministrativeMode = deps.resolve('isAdministrativeMode')
   }
 
   public override async initialise (): Promise<void> {
     if (this.disableExternalApis) {
       this.logService.logInfo(this, 'Skipping initialisation because external APIs are disabled.')
+      return
+    } else if (this.isAdministrativeMode()) {
+      this.logService.logInfo(this, 'Skipping initialisation because we are in administrative mode.')
       return
     }
 
