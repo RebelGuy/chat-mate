@@ -515,6 +515,7 @@ const main = async () => {
       (erroredClass instanceof TwurpleAuthProvider || erroredClass instanceof YoutubeAuthProvider)
     ) {
       isAdministrativeMode = true
+      logContext.logInfo(`Enabling administrative mode because ${erroredClass.name} errored on initialisation:`, e)
       return 'ignore'
     }
 
