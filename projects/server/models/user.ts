@@ -29,7 +29,8 @@ export function userDataToPublicUser (data: AllUserData): PublicUser {
 export function registeredUserToPublic (registeredUser: RegisteredUser | null): PublicRegisteredUser | null {
   return registeredUser == null ? null : {
     id: registeredUser.id,
-    displayName: registeredUser.username
+    username: registeredUser.username,
+    displayName: registeredUser.displayName
   }
 }
 

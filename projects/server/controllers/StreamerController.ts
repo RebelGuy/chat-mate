@@ -27,7 +27,7 @@ import LivestreamStore from '@rebel/server/stores/LivestreamStore'
 import StreamerChannelStore from '@rebel/server/stores/StreamerChannelStore'
 import StreamerStore, { CloseApplicationArgs } from '@rebel/server/stores/StreamerStore'
 import { filterTypes, nonNull, single, unique, zipOnStrict } from '@rebel/shared/util/arrays'
-import { ForbiddenError, NotFoundError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
+import { ForbiddenError, NotFoundError, PrimaryChannelNotFoundError, StreamerApplicationAlreadyClosedError, UserAlreadyStreamerError } from '@rebel/shared/util/error'
 import { keysOf } from '@rebel/shared/util/objects'
 import { getLiveId, getLivestreamLink } from '@rebel/shared/util/text'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
@@ -41,6 +41,8 @@ import ChannelStore from '@rebel/server/stores/ChannelStore'
 import CacheService from '@rebel/server/services/CacheService'
 import { generateStringRangeValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
 import { ONE_DAY } from '@rebel/shared/util/datetime'
+import AuthService from '@rebel/server/services/AuthService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
 
 type Deps = ControllerDependencies<{
   streamerStore: StreamerStore
@@ -59,6 +61,8 @@ type Deps = ControllerDependencies<{
   youtubeService: YoutubeService
   channelStore: ChannelStore
   cacheService: CacheService
+  authService: AuthService
+  twurpleAuthProvider: TwurpleAuthProvider
 }>
 
 @Path(buildPath('streamer'))
@@ -79,6 +83,8 @@ export default class StreamerController extends ControllerBase {
   private readonly youtubeService: YoutubeService
   private readonly channelStore: ChannelStore
   private readonly cacheService: CacheService
+  private readonly authService: AuthService
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
 
   constructor (deps: Deps) {
     super(deps, 'streamer')
@@ -98,6 +104,8 @@ export default class StreamerController extends ControllerBase {
     this.youtubeService = deps.resolve('youtubeService')
     this.channelStore = deps.resolve('channelStore')
     this.cacheService = deps.resolve('cacheService')
+    this.authService = deps.resolve('authService')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
   }
 
   @GET
@@ -122,6 +130,7 @@ export default class StreamerController extends ControllerBase {
         const { youtubeChannel, twitchChannel } = primaryChannels.find(channels => channels.streamerId === streamer.id)!
         return {
           username: streamer.username,
+          displayName: streamer.displayName,
           currentYoutubeLivestream: youtubeLivestream == null ? null : youtubeLivestreamToPublic(youtubeLivestream),
           currentTwitchLivestream: twitchLivestream == null ? null : twitchLivestreamToPublic(twitchLivestream, twitchChannel != null ? getUserName(twitchChannel) : ''),
           youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),
@@ -155,6 +164,7 @@ export default class StreamerController extends ControllerBase {
       return builder.success({
         chatMateStreamer: {
           username: registeredUser.username,
+          displayName: registeredUser.displayName,
           currentYoutubeLivestream: youtubeLivestream == null ? null : youtubeLivestreamToPublic(youtubeLivestream),
           currentTwitchLivestream: twitchLivestream == null ? null : twitchLivestreamToPublic(twitchLivestream, youtubeChannel != null ? getUserName(youtubeChannel) : ''),
           youtubeChannel: youtubeChannel == null ? null : channelToPublicChannel(youtubeChannel),
@@ -438,7 +448,7 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(403, 'User is not a streamer.')
       }
 
-      const url = this.streamerService.getTwitchLoginUrl()
+      const url = this.twurpleAuthProvider.getLoginUrl('streamer')
       return builder.success({ url })
     } catch (e: any) {
       return builder.failure(e)
@@ -464,10 +474,14 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(403, 'User is not a streamer.')
       }
 
-      await this.streamerService.authoriseTwitchLogin(streamer.id, code)
+      await this.authService.authoriseTwitchStreamer(streamer.id, code)
       return builder.success({})
     } catch (e: any) {
-      return builder.failure(e)
+      if (e instanceof PrimaryChannelNotFoundError) {
+        return builder.failure(400, e)
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 
@@ -527,7 +541,7 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(400, 'User does not have a primary Youtube channel.')
       }
 
-      const url = this.youtubeAuthProvider.getAuthUrl(false)
+      const url = this.youtubeAuthProvider.getAuthUrl('streamer')
 
       return builder.success({ url })
     } catch (e: any) {
@@ -559,10 +573,14 @@ export default class StreamerController extends ControllerBase {
         return builder.failure(400, 'User does not have a primary Youtube channel.')
       }
 
-      await this.youtubeAuthProvider.authoriseChannel(code, externalChannelId)
+      await this.authService.authoriseYoutubeStreamer(code, streamer.id)
       return builder.success({})
     } catch (e: any) {
-      return builder.failure(e)
+      if (e instanceof PrimaryChannelNotFoundError) {
+        return builder.failure(400, e)
+      } else {
+        return builder.failure(e)
+      }
     }
   }
 
@@ -673,7 +691,10 @@ export default class StreamerController extends ControllerBase {
       const twitchChannelsPromise = this.channelStore.getTwitchChannelsFromChannelIds(twitchChannelIds)
 
       // pre-fetch user data for some of the events
-      const primaryUserIds = unique(nonNull(filterTypes(events, 'levelUp', 'donation', 'newViewer', 'rankUpdate').map(e => e.primaryUserId)))
+      const primaryUserIds = unique(nonNull([
+        ...filterTypes(events, 'levelUp', 'donation', 'newViewer', 'rankUpdate').map(e => e.primaryUserId),
+        ...filterTypes(events, 'rankUpdate').map(e => e.appliedByPrimaryUserId)
+      ]))
       const allData = await this.apiService.getAllData(primaryUserIds)
 
       const [youtubeChannels, twitchChannels] = await Promise.all([youtubeChannelsPromise, twitchChannelsPromise])
@@ -721,6 +742,7 @@ export default class StreamerController extends ControllerBase {
           }
         } else if (event.type === 'rankUpdate') {
           const user: PublicUser = userDataToPublicUser(allData.find(d => d.primaryUserId === event.primaryUserId)!)
+          const appliedByUser: PublicUser | null = event.appliedByPrimaryUserId != null ? userDataToPublicUser(allData.find(d => d.primaryUserId === event.appliedByPrimaryUserId)!) : null
 
           let platformRanks: PublicPlatformRank[] = [
             ...event.youtubeRankResults.map<PublicPlatformRank>(r => {
@@ -745,6 +767,7 @@ export default class StreamerController extends ControllerBase {
             isAdded: event.isAdded,
             rankName: event.rankName,
             user: user,
+            appliedBy: appliedByUser,
             platformRanks: platformRanks
           }
         } else {

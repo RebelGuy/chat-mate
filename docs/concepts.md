@@ -85,11 +85,11 @@ The top white region marks registered accounts that users have explicitly create
 <img src="./assets/users.png" />
 
 # Channel linking
-YouTube and Twitch channels can be linked to a registered user. Internally, the link is established between the registered user's aggregate user, and each channel's default user. A conequence of the [relationship between user types](#users) is that a channel can only be linked to one registered user.
+YouTube and Twitch channels can be linked to a registered user. Internally, the link is established between the registered user's aggregate user, and each channel's default user. A consequence of the [relationship between user types](#users) is that a channel can only be linked to one registered user.
 
 The maximum channels that can be linked by a single user are currently limited to 3 until the feature has been properly tested. Links cannot be undone by users themselves, but can be undone by admins to rectify genuine user mistakes. The reason for this is that, despite best efforts, unlinking may lead to some data loss or data misassignment. Further, unlinking leads to unnecessary complexity (what happens if a streamer unlinks their primary channel?) and opens up the possibility of abuse (a malicious user may unlink their channel to avoid punishments propagating).
 
-Linking is achieved by generating a link token in Studio for the channel that is to be linked. The user is then required to paste the `/link <linkToken>` command in a ChatMate stream using their channel. This will trigger the `LinkCommand` to run. Admins have the ability to link users manually without the need for link tokens.
+Linking is achieved in Studio by presenting the user with a consent screen for reading their channel data, which generates an access code that can be used on the Server to retrieve the associated channel and link it to the user. The legacy trustless linking mechanism generates a link token in Studio for the channel that is to be linked. The user is then required to paste the `/link <linkToken>` command in a ChatMate stream using their channel. This will trigger the `LinkCommand` to run. Admins have the ability to link users manually without the need for link tokens. We keep the legacy linking mechanism around in case users are having issues with the new way (or do not trust ChatMate).
 
 During the linking (or unlinking) process, the following work will be done:
 - The entirety of the user's chat history (i.e. all linked default users) will be used to re-calculate experience amounts. This is required because the context used to calculate some experience parameters has changed, which may affect the earned experience.

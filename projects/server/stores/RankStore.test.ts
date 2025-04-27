@@ -106,7 +106,7 @@ export default () => {
         twitchRankResults: [{ twitchChannelId: 5, error: null }, { twitchChannelId: 6, error: 'test' }]
       }
 
-      const result = await rankStore.addRankEvent(streamer2, user2, true, 'ban', eventData)
+      const result = await rankStore.addRankEvent(streamer2, user2, user1, true, 'ban', eventData)
 
       expect(result).toEqual(expectObject(result, { id: 1, data: eventData }))
 
@@ -114,12 +114,14 @@ export default () => {
       expect(storedData).toEqual(expectObject(storedData, {
         isAdded: true,
         rankId: bannedRank.id,
+        userId: user2,
+        appliedByUserId: user1,
         serialisedData: expect.any(String)
       }))
     })
 
     test('Adds the rank event without data', async () => {
-      const result = await rankStore.addRankEvent(streamer2, user2, true, 'ban', null)
+      const result = await rankStore.addRankEvent(streamer2, user2, null, true, 'ban', null)
 
       expect(result).toEqual(expectObject(result, { id: 1, data: null }))
 
@@ -414,10 +416,10 @@ export default () => {
         youtubeRankResults: [{ youtubeChannelId: 5, error: null }, { youtubeChannelId: 6, error: 'test' }],
         twitchRankResults: [{ twitchChannelId: 5, error: null }, { twitchChannelId: 6, error: 'test' }]
       }
-      await rankStore.addRankEvent(streamer1, user1, true, 'ban', eventData)
-      await rankStore.addRankEvent(streamer1, user2, false, 'mute', null)
-      await rankStore.addRankEvent(streamer1, user1, true, 'mod', null) // too early
-      await rankStore.addRankEvent(streamer2, user1, true, 'mod', null) // wrong streamer
+      await rankStore.addRankEvent(streamer1, user1, null, true, 'ban', eventData)
+      await rankStore.addRankEvent(streamer1, user2, null, false, 'mute', null)
+      await rankStore.addRankEvent(streamer1, user1, null, true, 'mod', null) // too early
+      await rankStore.addRankEvent(streamer2, user1, null, true, 'mod', null) // wrong streamer
 
       await db.rankEvent.update({ where: { id: 1 }, data: { time: data.time2 }})
       await db.rankEvent.update({ where: { id: 2 }, data: { time: data.time3 }})

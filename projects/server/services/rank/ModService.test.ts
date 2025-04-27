@@ -79,7 +79,7 @@ describe(nameof(ModService, 'setModRank'), () => {
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mod', {
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, true, 'mod', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
       twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
@@ -129,7 +129,7 @@ describe(nameof(ModService, 'setModRank'), () => {
     expect(twitchCalls).toEqual([[streamerId1, 1], [streamerId1, 2]])
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'mod', {
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, false, 'mod', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
       twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]

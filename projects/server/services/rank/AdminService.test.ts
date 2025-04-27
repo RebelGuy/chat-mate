@@ -2,11 +2,8 @@ import { Rank, YoutubeChannel } from '@prisma/client'
 import { Dependencies } from '@rebel/shared/context/context'
 import AdminService from '@rebel/server/services/rank/AdminService'
 import RankStore, { UserRankWithRelations } from '@rebel/server/stores/RankStore'
-import { cast, expectArray, expectObject, expectObjectDeep, nameof } from '@rebel/shared/testUtils'
+import { cast, expectArray, nameof } from '@rebel/shared/testUtils'
 import { mock, MockProxy } from 'jest-mock-extended'
-import AuthStore from '@rebel/server/stores/AuthStore'
-import WebService from '@rebel/server/services/WebService'
-import { single } from '@rebel/shared/util/arrays'
 import ChannelStore, { UserChannel } from '@rebel/server/stores/ChannelStore'
 
 const primaryUser1 = 1
@@ -20,35 +17,19 @@ const ownerRank = cast<Rank>({ name: 'owner' })
 const twitchUsername = 'testUser'
 
 let mockRankStore: MockProxy<RankStore>
-let mockAuthStore: MockProxy<AuthStore>
-let mockWebService: MockProxy<WebService>
 let mockChannelStore: MockProxy<ChannelStore>
-let mockIsAdministrativeMode: MockProxy<() => boolean>
-const mockStudioUrl = 'studio'
-const mockTwitchClientId = 'clientId'
-const mockTwitchClientSecret = 'clientSecret'
 const mockChannelId = 'channelId'
 let adminService: AdminService
 
 beforeEach(() => {
   mockRankStore = mock()
-  mockAuthStore = mock()
-  mockWebService = mock()
   mockChannelStore = mock()
-  mockIsAdministrativeMode = mock()
 
   adminService = new AdminService(new Dependencies({
     rankStore: mockRankStore,
-    authStore: mockAuthStore,
-    webService: mockWebService,
-    logService: mock(),
-    studioUrl: mockStudioUrl,
-    twitchClientId: mockTwitchClientId,
-    twitchClientSecret: mockTwitchClientSecret,
     twitchUsername: twitchUsername,
     channelId: mockChannelId,
-    channelStore: mockChannelStore,
-    isAdministrativeMode: mockIsAdministrativeMode
+    channelStore: mockChannelStore
   }))
 })
 
@@ -67,15 +48,6 @@ describe(nameof(AdminService, 'getAdminUsers'), () => {
     const result = await adminService.getAdminUsers(streamerId)
 
     expect(result.map(r => r.chatUserId)).toEqual([primaryUser1, primaryUser2])
-  })
-})
-
-describe(nameof(AdminService, 'getTwitchLoginUrl'), () => {
-  test('Returns a URL', () => {
-    const url = adminService.getTwitchLoginUrl()
-
-    expect(url).toEqual(expect.stringContaining(mockStudioUrl))
-    expect(url).toEqual(expect.stringContaining(mockTwitchClientId))
   })
 })
 
@@ -99,21 +71,5 @@ describe(nameof(AdminService, 'getYoutubeChannelName'), () => {
     const result = await adminService.getYoutubeChannelName()
 
     expect(result).toBe(youtubeChannelName)
-  })
-})
-
-describe(nameof(AdminService, 'authoriseTwitchLogin'), () => {
-  test('Sends an authorisation request and saves the provided access token to the database', async () => {
-    const code = 'code123'
-    const access_token = 'access_token123'
-    const refresh_token = 'refresh_token123'
-    mockWebService.fetch
-      .calledWith(expect.stringContaining(code))
-      .mockResolvedValue(cast<Response>({ ok: true, json: () => Promise.resolve({ access_token, refresh_token }) }))
-
-    await adminService.authoriseTwitchLogin(code)
-
-    const args = single(mockAuthStore.saveTwitchAccessToken.mock.calls)
-    expect(args).toEqual(expectObjectDeep(args, [null, twitchUsername, { accessToken: access_token, refreshToken: refresh_token }]))
   })
 })

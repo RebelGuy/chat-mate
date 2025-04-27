@@ -1,17 +1,18 @@
 import { AddCustomEmojiRequest, AddCustomEmojiResponse, DeleteCustomEmojiResponse, GetCustomEmojisResponse, UpdateCustomEmojiRequest, UpdateCustomEmojiResponse, UpdateCustomEmojiSortOrderRequest, UpdateCustomEmojiSortOrderResponse } from '@rebel/api-models/schema/emoji'
 import { ChatMateStatsResponse, GetChatMateRegisteredUsernameResponse, GetMasterchatAuthenticationResponse, PingResponse } from '@rebel/api-models/schema/chatMate'
 import { DeleteCustomRankNameResponse, GetAccessibleRanksResponse, GetCustomisableRanksResponse, GetUserRanksResponse, SetCustomRankNameRequest, SetCustomRankNameResponse } from '@rebel/api-models/schema/rank'
-import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetOfficialChatMateStreamerResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
+import { ApproveApplicationRequest, ApproveApplicationResponse, CreateApplicationRequest, CreateApplicationResponse, GetApplicationsResponse, GetPrimaryChannelsResponse, GetStatusResponse, GetStreamersResponse, GetOfficialChatMateStreamerResponse, GetTwitchStatusResponse, GetYoutubeLoginUrlResponse as GetYoutubeStreamerLoginUrlResponse, GetYoutubeModeratorsResponse, GetYoutubeStatusResponse, RejectApplicationRequest, RejectApplicationResponse, SetActiveLivestreamRequest, SetActiveLivestreamResponse, SetPrimaryChannelResponse, UnsetPrimaryChannelResponse, WithdrawApplicationRequest, WithdrawApplicationResponse, YoutubeAuthorisationResponse, YoutubeRevocationResponse } from '@rebel/api-models/schema/streamer'
 import { SERVER_URL } from '@rebel/studio/utility/global'
 import { AuthenticateResponse, LoginRequest, LoginResponse, LogoutResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse } from '@rebel/api-models/schema/account'
 import { GetStreamlabsStatusResponse, SetWebsocketTokenRequest, SetWebsocketTokenResponse } from '@rebel/api-models/schema/donation'
-import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, DeleteLinkTokenResponse } from '@rebel/api-models/schema/user'
+import { GetLinkHistoryResponse, CreateLinkTokenResponse, GetLinkedChannelsResponse, RemoveLinkedChannelResponse, SearchUserResponse, SearchUserRequest, AddLinkedChannelResponse, GetUserResponse, GetYoutubeLoginUrlResponse as GetYoutubeUserLoginUrlResponse, DeleteLinkTokenResponse, LinkYoutubeChannelResponse, LinkTwitchChannelResponse, GetTwitchLoginUrlResponse as GetTwitchUserLoginUrlResponse, SetDisplayNameRequest, SetDisplayNameResponse } from '@rebel/api-models/schema/user'
 import { GetTwitchLoginUrlResponse, TwitchAuthorisationResponse, GetAdministrativeModeResponse, ReconnectTwitchChatClientResponse, ResetTwitchSubscriptionsResponse, GetLinkAttemptLogsResponse, ReleaseLinkAttemptResponse, GetYoutubeLoginUrlResponse as GetYoutubeAdminLoginUrlResponse, YoutubeAuthorisationResponse as YoutubeAdminAuthorisationResponse, YoutubeRevocationResponse as YoutubeAdminRevocationResponse } from '@rebel/api-models/schema/admin'
 import { GenericObject } from '@rebel/shared/types'
 import { ApiResponse } from '@rebel/api-models/types'
 import { Method, Request } from '@rebel/studio/hooks/useRequest'
 import { PublicObject } from '@rebel/api-models/types'
 import { GetLivestreamsResponse } from '@rebel/api-models/schema/livestream'
+import { ExecuteTaskResponse, GetTaskLogsResponse, GetTasksResponse, UpdateTaskRequest, UpdateTaskResponse } from '@rebel/api-models/schema/task'
 import { GetChatResponse } from '@rebel/api-models/schema/chat'
 
 const LOGIN_TOKEN_HEADER = 'X-Login-Token'
@@ -123,7 +124,7 @@ export const authoriseTwitchStreamer = requestBuilder<TwitchAuthorisationRespons
   false
 )
 
-export const getYoutubeStreamerLoginUrl = requestBuilder<GetYoutubeLoginUrlResponse>('GET', '/streamer/youtube/login', false)
+export const getYoutubeStreamerLoginUrl = requestBuilder<GetYoutubeStreamerLoginUrlResponse>('GET', '/streamer/youtube/login', false)
 
 export const authoriseYoutubeStreamer = requestBuilder<YoutubeAuthorisationResponse, false, [code: string]>(
   'POST',
@@ -151,6 +152,8 @@ export const getStreamlabsStatus = requestBuilder<GetStreamlabsStatusResponse>('
 
 export const getUser = requestBuilder<GetUserResponse>('GET', `/user`)
 
+export const setDisplayName = requestBuilder<SetDisplayNameResponse, SetDisplayNameRequest>('POST', `/user/displayName`, false)
+
 export const searchUser = requestBuilder<SearchUserResponse, SearchUserRequest>('POST', `/user/search`)
 
 export const searchRegisteredUser = requestBuilder<SearchUserResponse, SearchUserRequest>('POST', `/user/search/registered`)
@@ -158,6 +161,22 @@ export const searchRegisteredUser = requestBuilder<SearchUserResponse, SearchUse
 export const getLinkedChannels = requestBuilder<GetLinkedChannelsResponse, false, [admin_aggregateUserId?: number]>(
   'GET',
   (admin_aggregateUserId) => constructPath('/user/link/channels', { admin_aggregateUserId }),
+  false
+)
+
+export const getYoutubeLoginUrl = requestBuilder<GetYoutubeUserLoginUrlResponse>('GET', `/user/link/youtube/login`, false)
+
+export const linkYoutubeChannel = requestBuilder<LinkYoutubeChannelResponse, false, [code: string]>(
+  'POST',
+  (code) => constructPath('/user/link/youtube', { code }),
+  false
+)
+
+export const getTwitchLoginUrl = requestBuilder<GetTwitchUserLoginUrlResponse>('GET', `/user/link/twitch/login`, false)
+
+export const linkTwitchChannel = requestBuilder<LinkTwitchChannelResponse, false, [code: string]>(
+  'POST',
+  (code) => constructPath('/user/link/twitch', { code }),
   false
 )
 
@@ -221,6 +240,24 @@ export const releaseLinkAttempt = requestBuilder<ReleaseLinkAttemptResponse, fal
   'POST',
   linkAttemptId => constructPath('/admin/link/release', { linkAttemptId }),
   false
+)
+
+export const getTasks = requestBuilder<GetTasksResponse>('GET', '/task', false, true)
+
+export const updateTask = requestBuilder<UpdateTaskResponse, UpdateTaskRequest>('PATCH', '/task', false, true)
+
+export const getTaskLogs = requestBuilder<GetTaskLogsResponse, false, [taskType: string]>(
+  'GET',
+  taskType => constructPath('/task/log', { taskType }),
+  false,
+  true
+)
+
+export const executeTask = requestBuilder<ExecuteTaskResponse, false, [taskType: string]>(
+  'POST',
+  taskType => constructPath('/task/execute', { taskType }),
+  false,
+  true
 )
 
 export const getLivestreams = requestBuilder<GetLivestreamsResponse>('GET', '/livestream', true, false)

@@ -19,7 +19,7 @@ export default function LoginForm () {
   const navigate = useNavigate()
 
   const onSuccess = (data: SuccessfulResponseData<ResetPasswordResponse>) => {
-    loginContext.setLogin(loginContext.username!, data.loginToken, loginContext.isStreamer)
+    loginContext.setLogin(loginContext.username!, loginContext.displayName, data.loginToken, loginContext.isStreamer)
     navigate(generatePath('/'))
   }
 

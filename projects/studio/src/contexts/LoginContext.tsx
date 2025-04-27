@@ -28,6 +28,7 @@ type Props = {
 export function LoginProvider (props: Props) {
   const [loginToken, setLoginToken] = React.useState<string | null>(null)
   const [username, setUsername] = React.useState<string | null>(null)
+  const [displayName, setDisplayName] = React.useState<string | null>(null)
   const [isStreamer, setIsStreamer] = React.useState(false)
   const [hasLoadedAuth, setHasLoadedAuth] = React.useState(false)
   const [selectedStreamer, setSelectedStreamer] = React.useState<string | null>(null)
@@ -67,7 +68,7 @@ export function LoginProvider (props: Props) {
     onError: (error, type) => console.error(error)
   })
 
-  function onSetLogin (usernameToSet: string, token: string, isStreamerToSet: boolean) {
+  function onSetLogin (usernameToSet: string, displayNameToSet: string | null, token: string, isStreamerToSet: boolean) {
     try {
       window.localStorage.setItem(LOCAL_STORAGE_LOGIN_TOKEN, token)
     } catch (e: any) {
@@ -76,6 +77,7 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(token)
     setUsername(usernameToSet)
+    setDisplayName(displayNameToSet)
     setIsStreamer(isStreamerToSet)
     setAuthError(null)
   }
@@ -103,6 +105,7 @@ export function LoginProvider (props: Props) {
 
     setLoginToken(null)
     setUsername(null)
+    setDisplayName(null)
     setIsStreamer(false)
   }
 
@@ -125,7 +128,9 @@ export function LoginProvider (props: Props) {
 
       if (response.success) {
         setLoginToken(storedLoginToken)
+        setDisplayName(response.data.displayName)
         setUsername(response.data.username)
+        setDisplayName(response.data.displayName)
         setIsStreamer(response.data.isStreamer)
 
         if (response.data.isStreamer && isNullOrEmpty(storedStreamer)) {
@@ -230,6 +235,7 @@ export function LoginProvider (props: Props) {
         isHydrated: hasLoadedAuth && isHydrated,
         loginToken,
         username,
+        displayName,
         user: getUserRequest.data?.user ?? null,
         isLoading: !hasLoadedAuth || isLoading,
         loadingData: nonNull([getStreamersRequest.isLoading ? 'streamerList' : null]),
@@ -263,6 +269,7 @@ export type LoginContextType = {
   /** The streamer context. */
   streamer: string | null
   username: string | null
+  displayName: string | null
   user: PublicUser | null
   isLoading: boolean
   loadingData: RefreshableDataType[]
@@ -271,7 +278,7 @@ export type LoginContextType = {
   allRanks: PublicUserRank[]
   customisableRanks: RankName[]
 
-  setLogin: (username: string, token: string, isStreamer: boolean) => void
+  setLogin: (username: string, displayName: string | null, token: string, isStreamer: boolean) => void
   setStreamer: (streamer: string | null) => void
   logout: () => void
   hasRank: (rankName: RankName) => boolean

@@ -42,6 +42,7 @@ export function LinkHistory (props: Props) {
   const items = getLinkHistoryRequest.data?.items ?? []
   const maxDate = Math.max(...items.filter(item => item.dateCompleted != null).map(item => item.dateCompleted!))
   const tokens = sortBy(items, t => t.status === 'processing' || t.status === 'pending' ? 1 : t.status === 'waiting' ? 0 : maxDate + 1 - t.dateCompleted!)
+  const showLinkTokenColumn = items.some(link => link.token != null)
 
   return <>
     {header}
@@ -57,14 +58,14 @@ export function LinkHistory (props: Props) {
             <TableCell>Platform</TableCell>
             <TableCell>Type</TableCell>
             <TableCell>Link status</TableCell>
-            <TableCell>Link token</TableCell>
+            {showLinkTokenColumn && <TableCell>Link token</TableCell>}
             <TableCell>Message</TableCell>
             <TableCell>Date</TableCell>
             <TableCell></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {tokens.map((item, i) => <LinkTokenRow key={i} item={item} chatMateStreamer={props.chatMateStreamer} onRefresh={props.onRefresh} />)}
+          {tokens.map((item, i) => <LinkTokenRow key={i} item={item} chatMateStreamer={props.chatMateStreamer} showLinkTokenColumn={showLinkTokenColumn} onRefresh={props.onRefresh} />)}
         </TableBody>
       </Table>
     }
@@ -74,7 +75,7 @@ export function LinkHistory (props: Props) {
   </>
 }
 
-function LinkTokenRow (props: { item: PublicLinkHistoryItem, chatMateStreamer: PublicStreamerSummary | null, onRefresh: () => void }) {
+function LinkTokenRow (props: { item: PublicLinkHistoryItem, chatMateStreamer: PublicStreamerSummary | null, showLinkTokenColumn: boolean, onRefresh: () => void }) {
   const item = props.item
   const { data, isLoading, triggerRequest } = useRequest(deleteLinkToken(item.token!), {
     onDemand: true,
@@ -89,7 +90,7 @@ function LinkTokenRow (props: { item: PublicLinkHistoryItem, chatMateStreamer: P
       <TableCell>{item.platform === 'youtube' ? 'YouTube' : item.platform === 'twitch' ? 'Twitch' : assertUnreachable(item.platform)}</TableCell>
       <TableCell>{capitaliseWord(item.type)}</TableCell>
       <TableCell>{item.status}</TableCell>
-      <TableCell>{item.token ?? 'Initiated by admin'}</TableCell>
+      {props.showLinkTokenColumn && <TableCell>{item.token ?? 'Initiated manually'}</TableCell>}
       <TableCell><ItemMessage item={item} chatMateStreamer={props.chatMateStreamer} /></TableCell>
       <TableCell>{item.dateCompleted == null ? '' : new Date(item.dateCompleted).toLocaleString()}</TableCell>
       <TableCell>

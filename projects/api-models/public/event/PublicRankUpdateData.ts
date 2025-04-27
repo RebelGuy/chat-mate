@@ -11,6 +11,9 @@ export type PublicRankUpdateData = PublicObject<{
   /** Whether the rank was added to or removed from the user. */
   isAdded: boolean
 
+  /** The user that applied the rank update, if known. */
+  appliedBy: PublicUser | null
+
   /** The user that was affected by this rank update. */
   user: PublicUser
 

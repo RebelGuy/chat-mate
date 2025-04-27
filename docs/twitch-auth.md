@@ -28,3 +28,6 @@ The authorisation flow is the same as for the admin authorisation outlined above
 Once authorisation is granted, ChatMate will automatically re-attempt subscribing to the streamer's failed events. Whenever requests for the streamer's data are made using the TwurpleClient, the streamer's saved access token will be loaded into memory (if it doesn't exist already) and used under the hood by the client in its requests.
 
 Authorisation is required by any new streamers, and whenever the scopes have changed. Note that, in the case of changed scopes, everything _may_ continue to work correctly for the streamer.
+
+# Authentication by a user
+Users can use the OAuth2 flow to easily link their Twitch channel to their ChatMate account on the `/link` page on Studio. No scopes are necessary.

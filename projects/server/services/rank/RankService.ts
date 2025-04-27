@@ -100,8 +100,8 @@ export default class RankService extends ContextClass {
     await this.rankStore.addOrUpdateCustomRankName(streamerId, primaryUserId, rankName, name, isActive)
   }
 
-  public async addRankEvent (streamerId: number, primaryUserId: number, isAdded: boolean, rankName: RankName, data: RankEventData | null): Promise<void> {
-    const rankEvent = await this.rankStore.addRankEvent(streamerId, primaryUserId, isAdded, rankName, data)
+  public async addRankEvent (streamerId: number, primaryUserId: number, appliedByPrimaryUserId: number | null, isAdded: boolean, rankName: RankName, data: RankEventData | null): Promise<void> {
+    const rankEvent = await this.rankStore.addRankEvent(streamerId, primaryUserId, appliedByPrimaryUserId, isAdded, rankName, data)
 
     void this.eventDispatchService.addData(EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, { streamerId, rankEvent })
   }

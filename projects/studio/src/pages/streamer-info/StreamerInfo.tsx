@@ -74,7 +74,7 @@ export default function StreamerInfo () {
     {header}
 
     <Box sx={{ mb: 2 }}>
-      <b>{loginContext.streamer}</b> is {isStreamerLive(info) ? <>
+      <b>{info.displayName ?? info.username}</b> is {isStreamerLive(info) ? <>
         livestreaming on {info.youtubeChannel != null && info.twitchChannel != null ? 'YouTube and Twitch' : info.youtubeChannel != null ? 'YouTube' : 'Twitch'} since <RelativeTime time={info.currentYoutubeLivestream?.startTime ?? info.currentTwitchLivestream!.startTime!} /> ago.
       </> : <>
         not currently livestreaming. Please check back later.

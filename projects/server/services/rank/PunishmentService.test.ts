@@ -169,7 +169,7 @@ describe(nameof(PunishmentService, 'banUser'), () => {
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1, 'test'], [streamerId1, 2, 'test']])
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'ban', {
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, true, 'ban', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: error2 }],
       twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
@@ -251,7 +251,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
     expect(result).toBe(newPunishment)
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mute', null]))
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, true, 'mute', null]))
   })
 
   test('mute is permanent if duration is null', async () => {
@@ -265,7 +265,7 @@ describe(nameof(PunishmentService, 'muteUser'), () => {
     expect(result).toBe(newPunishment)
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'mute', null]))
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, true, 'mute', null]))
   })
 
   test('Rethrows store error', async () => {
@@ -324,7 +324,7 @@ describe(nameof(PunishmentService, 'timeoutUser'), () => {
     expect(timeoutCalls).toEqual<typeof timeoutCalls>([[streamerId1, 1, 'test', 1000], [streamerId1, 2, 'test', 1000]])
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, true, 'timeout', {
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, true, 'timeout', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: error1 }, { youtubeChannelId: 4, error: null }],
       twitchRankResults: [{ twitchChannelId: 1, error: error3 }, { twitchChannelId: 2, error: null }]
@@ -429,7 +429,7 @@ describe(nameof(PunishmentService, 'unbanUser'), () => {
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1], [streamerId1, 2]])
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'ban', {
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, false, 'ban', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
       twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]
@@ -464,7 +464,7 @@ describe(nameof(PunishmentService, 'unmuteUser'), () => {
     expect(result).toBe(expectedResult)
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'mute', null]))
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, false, 'mute', null]))
   })
 
   test('Rethrows store error', async () => {
@@ -514,7 +514,7 @@ describe(nameof(PunishmentService, 'untimeoutUser'), () => {
     expect(twitchCalls).toEqual<typeof twitchCalls>([[streamerId1, 1], [streamerId1, 2]])
 
     const rankEventCalls = single(mockRankService.addRankEvent.mock.calls)
-    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, false, 'timeout', {
+    expect(rankEventCalls).toEqual(expectObjectDeep(rankEventCalls, [streamerId1, primaryUserId, loggedInRegisteredUserId, false, 'timeout', {
       ignoreOptions: ignoreOptions,
       youtubeRankResults: [{ youtubeChannelId: 3, error: null }, { youtubeChannelId: 4, error: null }],
       twitchRankResults: [{ twitchChannelId: 1, error: null }, { twitchChannelId: 2, error: null }]

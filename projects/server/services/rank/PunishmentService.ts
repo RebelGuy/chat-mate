@@ -97,7 +97,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    await this.rankService.addRankEvent(streamerId, primaryUserId, true, 'ban', rankEventData)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, moderatorPrimaryUserId, true, 'ban', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -134,7 +134,7 @@ export default class PunishmentService extends ContextClass {
     }
     const rank = await this.rankStore.addUserRank(args)
 
-    await this.rankService.addRankEvent(streamerId, primaryUserId, true, 'mute', null)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, moderatorPrimaryUserId, true, 'mute', null)
 
     return rank
   }
@@ -170,7 +170,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    await this.rankService.addRankEvent(streamerId, primaryUserId, true, 'timeout', rankEventData)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, moderatorPrimaryUserId, true, 'timeout', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -213,7 +213,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    await this.rankService.addRankEvent(streamerId, primaryUserId, false, 'ban', rankEventData)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, moderatorPrimaryUserId, false, 'ban', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }
@@ -232,7 +232,7 @@ export default class PunishmentService extends ContextClass {
     }
     const rank = await this.rankStore.removeUserRank(args)
 
-    await this.rankService.addRankEvent(streamerId, primaryUserId, false, 'mute', null)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, moderatorPrimaryUserId, false, 'mute', null)
 
     return rank
   }
@@ -265,7 +265,7 @@ export default class PunishmentService extends ContextClass {
       twitchRankResults: twitchResults,
       ignoreOptions: ignoreOptions
     }
-    await this.rankService.addRankEvent(streamerId, primaryUserId, false, 'timeout', rankEventData)
+    await this.rankService.addRankEvent(streamerId, primaryUserId, moderatorPrimaryUserId, false, 'timeout', rankEventData)
 
     return { rankResult, youtubeResults, twitchResults }
   }

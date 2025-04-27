@@ -33,14 +33,14 @@ export default function StreamerLinks (props: Props) {
       {streamerSummary.youtubeChannel != null && <>
         <LinkInNewTab href={streamerSummary.currentYoutubeLivestream?.livestreamLink ?? streamerSummary.youtubeChannel.channelUrl} hideTextDecoration sx={{ mr: 2 }}>
           <Button>
-            {streamerName} on YouTube
+            {streamerSummary.displayName ?? streamerSummary.username} on YouTube
           </Button>
         </LinkInNewTab>
       </>}
       {streamerSummary.twitchChannel != null && <>
         <LinkInNewTab href={streamerSummary.twitchChannel.channelUrl} hideTextDecoration>
           <Button>
-            {streamerName} on Twitch
+            {streamerSummary.displayName ?? streamerSummary.username} on Twitch
           </Button>
         </LinkInNewTab>
       </>}

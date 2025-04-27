@@ -1,4 +1,4 @@
-import { Task, TaskType } from '@prisma/client'
+import { Task, TaskLog, TaskType } from '@prisma/client'
 import DbProvider, { Db } from '@rebel/server/providers/DbProvider'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import { Dependencies } from '@rebel/shared/context/context'
@@ -21,6 +21,17 @@ export default class TaskStore extends ContextClass {
     return await this.db.task.findUniqueOrThrow({ where: { taskType: taskType }})
   }
 
+  public async getAllTasks (): Promise<Task[]> {
+    return await this.db.task.findMany()
+  }
+
+  public async updateTask (taskType: TaskType, newIntervalMs: number): Promise<void> {
+    await this.db.task.update({
+      where: { taskType: taskType },
+      data: { intervalMs: newIntervalMs }
+    })
+  }
+
   public async getTaskTypes (): Promise<TaskType[]> {
     const result = await this.db.task.findMany({
       select: { taskType: true }
@@ -29,13 +40,39 @@ export default class TaskStore extends ContextClass {
     return result.map(r => r.taskType)
   }
 
-  public async getTimeSinceLastTaskExecution (taskType: TaskType): Promise<number | null> {
+  public async getLastExecutionTime (taskType: TaskType): Promise<number | null> {
     const result = await this.db.taskLog.findFirst({
       where: { task: { taskType: taskType }},
       orderBy: { startTime: 'desc' }
     })
 
     return result?.startTime.getTime() ?? null
+  }
+
+  public async getLastSuccessTime (taskType: TaskType): Promise<number | null> {
+    const result = await this.db.taskLog.findFirst({
+      where: { task: { taskType: taskType }, endTime: { not: null }, errorMessage: null },
+      orderBy: { startTime: 'desc' }
+    })
+
+    return result?.startTime.getTime() ?? null
+  }
+
+  public async getLastFailureTime (taskType: TaskType): Promise<number | null> {
+    const result = await this.db.taskLog.findFirst({
+      where: { task: { taskType: taskType }, endTime: { not: null }, errorMessage: { not: null } },
+      orderBy: { startTime: 'desc' }
+    })
+
+    return result?.startTime.getTime() ?? null
+  }
+
+  public async getTaskLogs (taskType: TaskType): Promise<TaskLog[]> {
+    return await this.db.taskLog.findMany({
+      where: { task: { taskType: taskType }},
+      orderBy: { startTime: 'desc' },
+      take: 50
+    })
   }
 
   public async startTask (taskType: TaskType): Promise<number> {

@@ -119,6 +119,12 @@ import CleanUpYoutubeContextTokensTask from '@rebel/server/services/task/CleanUp
 import TaskStore from '@rebel/server/stores/TaskStore'
 import CleanUpApiCallsTask from '@rebel/server/services/task/CleanUpApiCallsTask'
 import VisitorHelpers from '@rebel/server/helpers/VisitorHelpers'
+import AuthHelpers from '@rebel/server/helpers/AuthHelpers'
+import AuthService from '@rebel/server/services/AuthService'
+import UserLinkService from '@rebel/server/services/UserLinkService'
+import StaticAuthProviderFactory from '@rebel/server/factories/StaticAuthProviderFactory'
+import UserStore from '@rebel/server/stores/UserStore'
+import TaskController from '@rebel/server/controllers/TaskController'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -216,6 +222,7 @@ const main = async () => {
     .withHelpers('accountHelpers', AccountHelpers)
     .withHelpers('commandHelpers', CommandHelpers)
     .withHelpers('visitorHelpers', VisitorHelpers)
+    .withHelpers('authHelpers', AuthHelpers)
     .withClass('refreshingAuthProviderFactory', RefreshingAuthProviderFactory)
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
@@ -237,6 +244,7 @@ const main = async () => {
     .withClass('chatStore', ChatStore)
     .withClass('platformApiStore', PlatformApiStore)
     .withClass('masterchatService', MasterchatService)
+    .withClass('staticAuthProviderFactory', StaticAuthProviderFactory)
     .withClass('twurpleAuthProvider', TwurpleAuthProvider)
     .withClass('twurpleChatClientProvider', TwurpleChatClientProvider)
     .withClass('twurpleApiClientProvider', TwurpleApiClientProvider)
@@ -304,6 +312,9 @@ const main = async () => {
     .withClass('cleanUpApiCallsTask', CleanUpApiCallsTask)
     .withClass('taskStore', TaskStore)
     .withClass('taskService', TaskService)
+    .withClass('authService', AuthService)
+    .withClass('userLinkService', UserLinkService)
+    .withClass('userStore', UserStore)
     .build()
 
   app.use((req, res, next) => {
@@ -395,6 +406,7 @@ const main = async () => {
       .withClass('accountController', AccountController)
       .withClass('streamerController', StreamerController)
       .withClass('adminController', AdminController)
+      .withClass('taskController', TaskController)
       .build()
     await context.initialise()
     setContextProvider(req, context)
@@ -424,7 +436,8 @@ const main = async () => {
     LivestreamController,
     AccountController,
     StreamerController,
-    AdminController
+    AdminController,
+    TaskController
   )
 
 
@@ -502,6 +515,7 @@ const main = async () => {
       (erroredClass instanceof TwurpleAuthProvider || erroredClass instanceof YoutubeAuthProvider)
     ) {
       isAdministrativeMode = true
+      logContext.logInfo(`Enabling administrative mode because ${erroredClass.name} errored on initialisation:`, e)
       return 'ignore'
     }
 

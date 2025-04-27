@@ -21,7 +21,7 @@ export default class PlatformApiStore extends ContextClass {
     this.db = deps.resolve('dbProvider').get()
   }
 
-  public async addApiRequest (streamerId: number, platform: ApiPlatform, startTime: number, endTime: number, endpoint: string, payload: string | null, error: string | null) {
+  public async addApiRequest (streamerId: number | null, platform: ApiPlatform, startTime: number, endTime: number, endpoint: string, payload: string | null, error: string | null) {
     await this.db.platformApiCall.create({ data: {
       streamerId: streamerId,
       start: new Date(startTime),

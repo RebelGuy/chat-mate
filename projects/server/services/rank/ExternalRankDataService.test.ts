@@ -90,7 +90,7 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
       { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'a' }]}} },
       { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: 'b' }]}} }
     ])
-    mockChannelService.searchChannelsByName.calledWith(streamerId, userName).mockResolvedValue(allChannels)
+    mockChannelService.searchChannelsByName.calledWith(streamerId, userName, true).mockResolvedValue(allChannels)
 
     const result = await externalRankDataService.getYoutubeDataForExternalRankEvent(streamerId, userName, 'mod', 'punishment')
 
@@ -103,7 +103,7 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
       { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: userName }]}} },
       { platformInfo: { platform: 'youtube', channel: { globalInfoHistory: [{ name: userName }]}} }
     ])
-    mockChannelService.searchChannelsByName.calledWith(streamerId, userName).mockResolvedValue(matchedChannels)
+    mockChannelService.searchChannelsByName.calledWith(streamerId, userName, true).mockResolvedValue(matchedChannels)
 
     const result = await externalRankDataService.getYoutubeDataForExternalRankEvent(streamerId, userName, 'mod', 'punishment')
 
@@ -128,8 +128,8 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
       { primaryUserId: primaryUserId - 2, rank: { name: 'owner' } }
     ])
 
-    mockChannelService.searchChannelsByName.calledWith(streamerId, userName).mockResolvedValue([userChannel])
-    mockChannelService.searchChannelsByName.calledWith(streamerId, moderatorName).mockResolvedValue([])
+    mockChannelService.searchChannelsByName.calledWith(streamerId, userName, true).mockResolvedValue([userChannel])
+    mockChannelService.searchChannelsByName.calledWith(streamerId, moderatorName, true).mockResolvedValue([])
     mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(punishmentRanks)
     mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue(administrationRanks)
 
@@ -171,8 +171,8 @@ describe(nameof(ExternalRankDataService, 'getYoutubeDataForExternalRankEvent'), 
       { primaryUserId: ownerPrimaryUserId, rank: { name: 'owner' } }
     ])
 
-    mockChannelService.searchChannelsByName.calledWith(streamerId, userName).mockResolvedValue([userChannel])
-    mockChannelService.searchChannelsByName.calledWith(streamerId, ownerName).mockResolvedValue([userWithOwnerName1, userWithOwnerName2])
+    mockChannelService.searchChannelsByName.calledWith(streamerId, userName, true).mockResolvedValue([userChannel])
+    mockChannelService.searchChannelsByName.calledWith(streamerId, ownerName, true).mockResolvedValue([userWithOwnerName1, userWithOwnerName2])
     mockRankStore.getUserRanksForGroup.calledWith('punishment', streamerId).mockResolvedValue(punishmentRanks)
     mockRankStore.getUserRanksForGroup.calledWith('administration', streamerId).mockResolvedValue(administrationRanks)
 

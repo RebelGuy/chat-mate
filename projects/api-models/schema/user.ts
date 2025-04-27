@@ -10,6 +10,10 @@ export type GetUserResponse = ApiResponse<{
   user: PublicUser
 }>
 
+export type SetDisplayNameRequest = ApiRequest<{ displayName: string | null }>
+
+export type SetDisplayNameResponse = ApiResponse<EmptyObject>
+
 export type SearchUserRequest = ApiRequest<{
   searchTerm: string
 }>
@@ -22,6 +26,14 @@ export type GetLinkedChannelsResponse = ApiResponse<{
   registeredUser: PublicRegisteredUser
   channels: PublicChannel[]
 }>
+
+export type GetYoutubeLoginUrlResponse = ApiResponse<{ url: string }>
+
+export type LinkYoutubeChannelResponse = ApiResponse<EmptyObject>
+
+export type GetTwitchLoginUrlResponse = ApiResponse<{ url: string }>
+
+export type LinkTwitchChannelResponse = ApiResponse<EmptyObject>
 
 export type AddLinkedChannelResponse = ApiResponse<EmptyObject>
 

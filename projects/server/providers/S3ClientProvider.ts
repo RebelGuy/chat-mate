@@ -15,8 +15,9 @@ export default class S3ClientProvider extends SingletonContextClass {
   constructor (deps: Deps) {
     super()
 
+    const domain = deps.resolve('s3Domain')
     this.client = new AWS.S3Client({
-      endpoint: `https://${deps.resolve('s3Domain')}`,
+      endpoint: domain.startsWith('http') ? domain : `https://${domain}`,
       region: deps.resolve('s3Region'),
       credentials: {
         accessKeyId: deps.resolve('s3Key'),

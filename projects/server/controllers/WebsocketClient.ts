@@ -429,6 +429,7 @@ export default class WebsocketClient extends ContextClass {
 
       const rankEvent = event.rankEvent
       const userData = await this.apiService.getAllData([rankEvent.userId], event.streamerId).then(single)
+      const appliedByUserData = rankEvent.appliedByUserId == null ? null : await this.apiService.getAllData([rankEvent.appliedByUserId], event.streamerId).then(single)
       const youtubeRankResults = rankEvent.data?.youtubeRankResults ?? []
       const twitchRankResults = rankEvent.data?.twitchRankResults ?? []
       const ignoreOptions = rankEvent.data?.ignoreOptions ?? null
@@ -478,6 +479,7 @@ export default class WebsocketClient extends ContextClass {
               rankName: rankEvent.rank.name as ExternalRank,
               isAdded: rankEvent.isAdded,
               user: userDataToPublicUser(userData),
+              appliedBy: appliedByUserData != null ? userDataToPublicUser(appliedByUserData) : null,
               platformRanks: platformRanks
             }
           }

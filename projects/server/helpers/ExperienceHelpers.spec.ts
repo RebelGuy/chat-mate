@@ -156,6 +156,7 @@ describe(nameof(ExperienceHelpers, 'calculateRepetitionPenalty'), () => {
       donationId: null,
       chatCommand: null,
       user: null,
+      debugDuration: null,
       chatMessageParts: [{
         id: 1,
         chatMessageId: 1,

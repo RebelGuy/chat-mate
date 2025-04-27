@@ -15,8 +15,12 @@ import { asGte, asLte } from '@rebel/shared/util/math'
 import { sleep } from '@rebel/shared/util/node'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
 import { DELETE, GET, Path, PathParam, POST, PreProcessor, QueryParam } from 'typescript-rest'
-import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse } from '@rebel/api-models/schema/user'
-import { nonEmptyStringValidator } from '@rebel/server/controllers/validation'
+import { AddLinkedChannelResponse, CreateLinkTokenResponse, DeleteLinkTokenResponse, GetLinkedChannelsResponse, GetLinkHistoryResponse, GetUserResponse, GetYoutubeLoginUrlResponse, RemoveLinkedChannelResponse, SearchUserRequest, SearchUserResponse, LinkYoutubeChannelResponse, GetTwitchLoginUrlResponse, LinkTwitchChannelResponse, SetDisplayNameRequest, SetDisplayNameResponse } from '@rebel/api-models/schema/user'
+import { generateMaxStringLengthValidator, nonEmptyStringValidator } from '@rebel/server/controllers/validation'
+import YoutubeAuthProvider from '@rebel/server/providers/YoutubeAuthProvider'
+import UserLinkService from '@rebel/server/services/UserLinkService'
+import TwurpleAuthProvider from '@rebel/server/providers/TwurpleAuthProvider'
+import UserStore from '@rebel/server/stores/UserStore'
 
 type Deps = ControllerDependencies<{
   channelService: ChannelService,
@@ -25,6 +29,10 @@ type Deps = ControllerDependencies<{
   accountStore: AccountStore
   linkService: LinkService
   linkStore: LinkStore
+  youtubeAuthProvider: YoutubeAuthProvider
+  twurpleAuthProvider: TwurpleAuthProvider
+  userLinkService: UserLinkService
+  userStore: UserStore
 }>
 
 @Path(buildPath('user'))
@@ -35,6 +43,10 @@ export default class UserController extends ControllerBase {
   private readonly accountStore: AccountStore
   private readonly linkService: LinkService
   private readonly linkStore: LinkStore
+  private readonly youtubeAuthProvider: YoutubeAuthProvider
+  private readonly twurpleAuthProvider: TwurpleAuthProvider
+  private readonly userLinkService: UserLinkService
+  private readonly userStore: UserStore
 
   constructor (deps: Deps) {
     super(deps, 'user')
@@ -44,6 +56,10 @@ export default class UserController extends ControllerBase {
     this.accountStore = deps.resolve('accountStore')
     this.linkService = deps.resolve('linkService')
     this.linkStore = deps.resolve('linkStore')
+    this.youtubeAuthProvider = deps.resolve('youtubeAuthProvider')
+    this.twurpleAuthProvider = deps.resolve('twurpleAuthProvider')
+    this.userLinkService = deps.resolve('userLinkService')
+    this.userStore = deps.resolve('userStore')
   }
 
   @GET
@@ -65,6 +81,27 @@ export default class UserController extends ControllerBase {
   }
 
   @POST
+  @Path('/displayName')
+  @PreProcessor(requireAuth)
+  public async setDisplayName (request: SetDisplayNameRequest): Promise<SetDisplayNameResponse> {
+    const builder = this.registerResponseBuilder<SetDisplayNameResponse>('POST /displayName')
+
+    const validationError = builder.validateInput({
+      displayName: {type: 'string', nullable: true, validators: [generateMaxStringLengthValidator(20)] }
+    }, request)
+    if (validationError != null) {
+      return validationError
+    }
+
+    try {
+      await this.userStore.setDisplayName(this.getCurrentUser().id, request.displayName)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
   @Path('search')
   @PreProcessor(requireStreamer)
   @PreProcessor(requireRank('owner'))
@@ -77,7 +114,7 @@ export default class UserController extends ControllerBase {
     }
 
     try {
-      const matches = await this.channelService.searchChannelsByName(this.getStreamerId(), request.searchTerm)
+      const matches = await this.channelService.searchChannelsByName(this.getStreamerId(), request.searchTerm, false)
       const defaultUserIds = unique(matches.map(m => m.defaultUserId))
       const userChannels = await this.channelService.getConnectedUserChannels(defaultUserIds)
 
@@ -201,6 +238,78 @@ export default class UserController extends ControllerBase {
         registeredUser: registeredUserToPublic(registeredUser.registeredUser)!,
         channels: channels.channels.map(channelToPublicChannel)
       })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/link/youtube/login')
+  @PreProcessor(requireAuth)
+  public getYoutubeLoginUrl (): GetYoutubeLoginUrlResponse {
+    const builder = this.registerResponseBuilder<GetYoutubeLoginUrlResponse>('GET /link/youtube/login')
+
+    try {
+      const url = this.youtubeAuthProvider.getAuthUrl('user')
+
+      return builder.success({ url })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/link/youtube')
+  @PreProcessor(requireAuth)
+  public async linkYoutubeChannel (
+    @QueryParam('code') code: string
+  ): Promise<LinkYoutubeChannelResponse> {
+    const builder = this.registerResponseBuilder<LinkYoutubeChannelResponse>('POST /link/youtube')
+
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
+
+    try {
+      await this.userLinkService.linkYoutubeAccountToUser(code, this.getCurrentUser().aggregateChatUserId)
+      return builder.success({})
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @GET
+  @Path('/link/twitch/login')
+  @PreProcessor(requireAuth)
+  public getTwitchLoginUrl (): GetTwitchLoginUrlResponse {
+    const builder = this.registerResponseBuilder<GetTwitchLoginUrlResponse>('GET /link/twitch/login')
+
+    try {
+      const url = this.twurpleAuthProvider.getLoginUrl('user')
+
+      return builder.success({ url })
+    } catch (e: any) {
+      return builder.failure(e)
+    }
+  }
+
+  @POST
+  @Path('/link/twitch')
+  @PreProcessor(requireAuth)
+  public async linkTwitchChannel (
+    @QueryParam('code') code: string
+  ): Promise<LinkTwitchChannelResponse> {
+    const builder = this.registerResponseBuilder<LinkTwitchChannelResponse>('POST /link/twitch')
+
+    const validationError = builder.validateInput({ code: { type: 'string', validators: [nonEmptyStringValidator] }}, { code })
+    if (validationError != null) {
+      return validationError
+    }
+
+    try {
+      await this.userLinkService.linkTwitchAccountToUser(code, this.getCurrentUser().aggregateChatUserId)
+      return builder.success({})
     } catch (e: any) {
       return builder.failure(e)
     }

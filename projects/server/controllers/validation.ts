@@ -20,6 +20,13 @@ export function generateStringLengthValidator (minLength: number): Validator<str
   }
 }
 
+export function generateMaxStringLengthValidator (maxLength: number): Validator<string> {
+  return {
+    onValidate: s => s.length <= maxLength,
+    errorMessage: `Value must be at most ${maxLength} characters long`
+  }
+}
+
 export function generateExclusiveNumberRangeValidator (minNumber: number | undefined, maxNumber: number | undefined): Validator<number> {
   return {
     onValidate: n => (minNumber == null || n > minNumber) && (maxNumber == null || n < maxNumber),

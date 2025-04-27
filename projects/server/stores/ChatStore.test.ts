@@ -1063,4 +1063,17 @@ export default () => {
       expect(storedMessage!.deletedTime).toEqual(data.time1)
     })
   })
+
+  describe(nameof(ChatStore, 'setChatMessageDebugDuration'), () => {
+    test('Sets the duration of the specified chat item', async () => {
+      const chatItem1 = makeYtChatItem(text1)
+      const chatMessage = await chatStore.addChat(chatItem1, youtubeLivestream.streamerId, youtube1UserId, extYoutubeChannel1)
+      const duration = 123456
+
+      await chatStore.setChatMessageDebugDuration(chatMessage!.id, duration)
+
+      const storedMessage = await db.chatMessage.findFirst()
+      expect(storedMessage?.debugDuration).toBe(duration)
+    })
+  })
 }

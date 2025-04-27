@@ -49,13 +49,14 @@ describe(nameof(RankService, 'addRankEvent'), () => {
   test('Adds the rank event and emits an event', async () => {
     const streamerId = 5
     const primaryUserId = 5123
+    const appliedByUserId = 515
     const isAdded = true
     const rankName = 'mod'
     const eventData = cast<RankEventData>({})
     const rankEvent = cast<ParsedRankEvent>({ id: 51})
-    mockRankStore.addRankEvent.calledWith(streamerId, primaryUserId, isAdded, rankName, eventData).mockResolvedValue(rankEvent)
+    mockRankStore.addRankEvent.calledWith(streamerId, primaryUserId, appliedByUserId, isAdded, rankName, eventData).mockResolvedValue(rankEvent)
 
-    await rankService.addRankEvent(streamerId, primaryUserId, isAdded, rankName, eventData)
+    await rankService.addRankEvent(streamerId, primaryUserId, appliedByUserId, isAdded, rankName, eventData)
 
     const eventDispatchCall = single(mockEventDispatchService.addData.mock.calls)
     expect(eventDispatchCall).toEqual(expectObject([EVENT_PUBLIC_CHAT_MATE_EVENT_RANK_UPDATE, { streamerId, rankEvent }]))
