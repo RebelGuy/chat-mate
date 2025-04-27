@@ -185,8 +185,14 @@ export default class AuthService extends ContextClass {
 
     // check scopes
     if (!this.authHelpers.compareTwitchScopes('admin', response.scope ?? [])) {
-      const revokeResult = await this.twurpleAuthProvider.revokeAccessToken(response.access_token)
-      this.logService.logInfo(this, `Admin has authorised ChatMate on Twitch, but did not grant all requested permissions. Successfully revoked token: ${revokeResult}`)
+      let revokeResult: boolean
+      try {
+        revokeResult = await this.twurpleAuthProvider.revokeAccessToken(response.access_token)
+      } catch (e: any) {
+        this.logService.logError(this, 'Failed to revoke authorisation token for admin:', e)
+        revokeResult = false
+      }
+      this.logService.logInfo(this, `Admin has authorised ChatMate on Twitch, but did not grant all requested permissions. Successfully revoked token: ${revokeResult}. Granted scopes:`, response.scope)
       throw new InconsistentScopesError('authenticated')
     }
 
@@ -240,8 +246,14 @@ export default class AuthService extends ContextClass {
 
     // check scopes
     if (!this.authHelpers.compareTwitchScopes('streamer', response.scope ?? [])) {
-      const revokeResult = await this.twurpleAuthProvider.revokeAccessToken(response.access_token)
-      this.logService.logInfo(this, `Streamer ${streamerId} has authorised ChatMate on Twitch, but did not grant all requested permissions. Successfully revoked token: ${revokeResult}`)
+      let revokeResult: boolean
+      try {
+        revokeResult = await this.twurpleAuthProvider.revokeAccessToken(response.access_token)
+      } catch (e: any) {
+        this.logService.logError(this, 'Failed to revoke authorisation token for admin:', e)
+        revokeResult = false
+      }
+      this.logService.logInfo(this, `Streamer ${streamerId} has authorised ChatMate on Twitch, but did not grant all requested permissions. Successfully revoked token: ${revokeResult}. Granted scopes:`, response.scope)
       throw new InconsistentScopesError('authenticated')
     }
 
@@ -291,8 +303,14 @@ export default class AuthService extends ContextClass {
 
     // check scopes
     if (!this.authHelpers.compareTwitchScopes('user', response.scope ?? [])) {
-      const revokeResult = await this.twurpleAuthProvider.revokeAccessToken(response.access_token)
-      this.logService.logInfo(this, `User has authorised ChatMate on Twitch, but did not grant all requested permissions. Successfully revoked token: ${revokeResult}`)
+      let revokeResult: boolean
+      try {
+        revokeResult = await this.twurpleAuthProvider.revokeAccessToken(response.access_token)
+      } catch (e: any) {
+        this.logService.logError(this, 'Failed to revoke authorisation token for admin:', e)
+        revokeResult = false
+      }
+      this.logService.logInfo(this, `User has authorised ChatMate on Twitch, but did not grant all requested permissions. Successfully revoked token: ${revokeResult}. Granted scopes:`, response.scope)
       throw new InconsistentScopesError('authenticated')
     }
 
