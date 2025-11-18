@@ -150,11 +150,17 @@ export default class MasterchatFetchService extends SingletonContextClass {
       if (response.continuation?.token == null) {
         this.logService.logWarning(this, `Fetched ${chatItems.length} new chat items but continuation token is null. Ignoring chat items.`)
       } else {
-        if (chatItems.length > 0) {
-          this.logService.logInfo(this, `Adding ${chatItems.length} new chat items for streamer ${streamerId}`)
+        const filteredIds = await this.chatStore.filterNewChatItemsByExternalId(chatItems.map(c => c.id))
+        const filteredChatItems = chatItems.filter(c => filteredIds.includes(c.id))
+        if (chatItems.length !== filteredChatItems.length) {
+          this.logService.logInfo(this, `Filtered ${chatItems.length - filteredChatItems.length} new chat items because they were already in the database.`)
         }
 
-        for (const item of chatItems) {
+        if (filteredChatItems.length > 0) {
+          this.logService.logInfo(this, `Adding ${filteredChatItems.length} new chat items for streamer ${streamerId}`)
+        }
+
+        for (const item of filteredChatItems) {
           try {
             const addedNewChat = await this.chatService.onNewChatItem(item, streamerId)
             if (addedNewChat) {

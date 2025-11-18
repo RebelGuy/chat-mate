@@ -79,6 +79,7 @@ model YoutubeLivestream {
 
   @@unique([liveId], map: "youtube_livestream_liveId_key")
   @@index([streamerId], map: "youtube_livestream_streamerId_fkey")
+  @@index([isActive], map: "youtube_livestream_isActive_key")
   @@map("youtube_livestream")
 }
 
@@ -107,6 +108,7 @@ model TwitchLivestream {
   chatMessages      ChatMessage[]
 
   @@index([streamerId], map: "twitch_livestream_streamerId_fkey")
+  @@index([end], map: "twitch_livestream_end_key")
   @@map("twitch_livestream")
 }
 
@@ -345,6 +347,7 @@ model YoutubeChannelStreamerInfo {
 
   @@index([channelId], map: "youtube_channel_streamer_info_channelId_fkey")
   @@index([streamerId], map: "youtube_channel_streamer_info_streamerId_fkey")
+  @@index([time], map: "youtube_channel_streamer_info_time_key")
   @@map("youtube_channel_streamer_info")
 }
 
@@ -455,6 +458,7 @@ model StreamerYoutubeChannelLink {
 
   @@index([streamerId], map: "streamer_youtube_channel_link_streamerId_fkey")
   @@index([youtubeChannelId], map: "streamer_youtube_channel_link_youtubeChannelId_fkey")
+  @@index([timeRemoved], map: "streamer_youtube_channel_link_timeRemoved_key")
   @@map("streamer_youtube_channel_link")
 }
 

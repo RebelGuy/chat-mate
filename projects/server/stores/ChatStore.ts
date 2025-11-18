@@ -285,6 +285,22 @@ export default class ChatStore extends ContextClass {
     })
   }
 
+  /** Out of the given external message ids, returns the ids that are not already in the database. */
+  public async filterNewChatItemsByExternalId (externalMessageIds: string[]): Promise<string[]> {
+    if (externalMessageIds.length === 0) {
+      return []
+    }
+
+    const existingMessageIds = await this.db.chatMessage.findMany({
+      select: { externalId: true },
+      where: {
+        externalId: { in: externalMessageIds }
+      }
+    }).then(result => result.map(r => r.externalId))
+
+    return externalMessageIds.filter(id => !existingMessageIds.includes(id))
+  }
+
   public async setChatMessageDebugDuration (chatMessageId: number, debugDuration: number) {
     await this.db.chatMessage.update({
       where: { id: chatMessageId },
