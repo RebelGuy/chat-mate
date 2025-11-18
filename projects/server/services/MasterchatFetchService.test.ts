@@ -212,6 +212,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
   test('Passes ordered chat items to ChatService and updates continuation token', async () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction2, chatAction1]))
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
+    mockChatStore.filterNewChatItemsByExternalId.mockImplementation(ids => Promise.resolve(ids))
     mockChatService.onNewChatItem.calledWith(expect.anything(), expect.anything()).mockResolvedValue(true)
     mockEmojiService.analyseYoutubeTextForEmojis.mockImplementation(run => [run])
 
@@ -237,6 +238,7 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
   test('Does not update continuation token if chat service throws error', async () => {
     mockMasterchatService.fetch.calledWith(currentLivestreams[0].streamerId, currentLivestreams[0].continuationToken!).mockResolvedValue(createChatResponse(token2, [chatAction1]))
     mockMasterchatService.fetch.calledWith(currentLivestreams[1].streamerId, currentLivestreams[1].continuationToken!).mockResolvedValue(createChatResponse(token4, [chatAction3]))
+    mockChatStore.filterNewChatItemsByExternalId.mockImplementation(ids => Promise.resolve(ids))
     mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction1.id }), streamer1).mockRejectedValue(new Error())
     mockChatService.onNewChatItem.calledWith(expectObject<ChatItem>({ id: chatAction3.id }), streamer2).mockResolvedValue(true)
     mockEmojiService.analyseYoutubeTextForEmojis.mockImplementation(run => [run])
