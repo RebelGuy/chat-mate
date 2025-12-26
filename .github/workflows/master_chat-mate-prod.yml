@@ -17,7 +17,7 @@ jobs:
       server: ${{ !contains(github.event.head_commit.message, '--skip-server') }}
       studio: ${{ !contains(github.event.head_commit.message, '--skip-studio') }}
       STUDIO_URL: 'https://www.chat-mate.com'
-      SERVER_URL: 'https://chat-mate-prod.azurewebsites.net'
+      SERVER_URL: 'https://server.chat-mate.com'
     secrets:
       publishProfile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8650F90DDD1E477C9336809BAAEEE87F }}
       STATIC_WEB_APPS_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_KIND_ROCK_0D2509E10 }}
