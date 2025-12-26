@@ -187,6 +187,7 @@ function EmbedYoutubeStream (props: EmbedYoutubeStreamProps) {
         src={`https://www.youtube.com/embed/${props.liveId}?autoplay=0`}
         allowFullScreen
         style={{ border: 0 }}
+        referrerPolicy="strict-origin-when-cross-origin"
       >
       </iframe>
     </EmbedContainer>

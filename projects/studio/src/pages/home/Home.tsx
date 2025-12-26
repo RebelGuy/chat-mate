@@ -115,6 +115,7 @@ export default function Home () {
           title="ChatMate Demonstration"
           frameBorder={0}
           allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
         />
       </Box>
       <Box>
