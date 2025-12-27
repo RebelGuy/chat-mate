@@ -6,12 +6,19 @@ const WEBSOCKET_URI = `${SERVER_URL.replace('http', 'ws')}/ws`
 function createWebsocket () {
   const websocket = new WebSocket(WEBSOCKET_URI)
 
+  let pingInterval: NodeJS.Timeout | null = null
+
   websocket.addEventListener('open', (ev) => {
     console.log(new Date().toLocaleString(), 'Connected to the Websocket', ev)
+    
+    pingInterval = setInterval(() => {
+      websocket.send('')
+    }, 20_000)
   })
 
   websocket.addEventListener('close', (ev) => {
     console.log(new Date().toLocaleString(), 'Disconnected from the Websocket', ev)
+    clearInterval(pingInterval!)
   })
 
   websocket.addEventListener('error', (ev) => {
