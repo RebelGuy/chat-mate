@@ -221,6 +221,6 @@ export default class ApiService extends ContextClass {
   }
 
   public getClientIp (): string {
-    return (this.request.get('x-client-ip') as string | undefined) ?? this.request.ip ?? '<unknown IP>'
+    return this.request.ip ?? '<unknown IP>'
   }
 }
