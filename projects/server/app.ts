@@ -43,7 +43,6 @@ import PunishmentController from '@rebel/server/controllers/PunishmentController
 import EventDispatchService from '@rebel/server/services/EventDispatchService'
 import MasterchatFactory from '@rebel/server/factories/MasterchatFactory'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
-import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import { Express } from 'express-serve-static-core'
 import { ChatMateError, TimeoutError } from '@rebel/shared/util/error'
 import RankStore from '@rebel/server/stores/RankStore'
@@ -107,7 +106,6 @@ import EmojiStore from '@rebel/server/stores/EmojiStore'
 import expressWs from 'express-ws'
 import WebsocketClient from '@rebel/server/controllers/WebsocketClient'
 import FollowerService from '@rebel/server/services/FollowerService'
-import * as AI from 'applicationinsights'
 import S3ClientProvider from '@rebel/server/providers/S3ClientProvider'
 import LiveReactionService from '@rebel/server/services/LiveReactionService'
 import LiveReactionStore from '@rebel/server/stores/LiveReactionStore'
@@ -146,7 +144,6 @@ const main = async () => {
   const dataPath = path.resolve(__dirname, `../../data/`)
   const twitchClientId = env('twitchClientId')
   const twitchClientSecret = env('twitchClientSecret')
-  const applicationInsightsConnectionString = env('applicationinsightsConnectionString')
   const dbLogLevel = env('dbLogLevel')
   const apiLogLevel = env('apiLogLevel')
   const debugLogOutput = env('debugLogOutput')
@@ -169,24 +166,10 @@ const main = async () => {
   let isAdministrativeMode = false
   let isContextInitialised = false
 
-  let appInsightsClient: AI.TelemetryClient | null
-  if (applicationInsightsConnectionString == null) {
-    appInsightsClient = null
-  } else {
-    console.debug('Starting ApplicationInsights client...')
-    AI.setup(applicationInsightsConnectionString)
-      .setAutoCollectConsole(false) // doesn't seem to work properly - instead, we manually track these via `trackTrace()` for better control
-      .setSendLiveMetrics(true) // so we can monitor the app in real-time
-      .start()
-    appInsightsClient = AI.defaultClient
-    console.debug('Successfully started ApplicationInsights client')
-  }
-
   const globalContext = ContextProvider.create()
     .withVariable('isAdministrativeMode', () => isAdministrativeMode)
     .withVariable('isContextInitialised', () => isContextInitialised)
     .withObject('app', app)
-    .withObject('appInsightsClient', appInsightsClient)
     .withProperty('port', port)
     .withProperty('studioUrl', studioUrl)
     .withProperty('channelId', env('channelId'))
@@ -231,7 +214,6 @@ const main = async () => {
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
     .withClass('fileService', FileService)
-    .withClass('applicationInsightsService', ApplicationInsightsService)
     .withClass('logService', LogService)
     .withClass('dbProvider', DbProvider)
     .withClass('visitorStore', VisitorStore)

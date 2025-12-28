@@ -50,7 +50,6 @@ type EnvironmentVariables = {
   ngrokAuthToken: LocalVariable<string>
   minioPath: LocalVariable<string>
 
-  applicationinsightsConnectionString: DeploymentVariable<string>
   websiteHostname: DeploymentVariable<string>
 
   dbLogLevel: OptionalVariable<LogLevel, 'info'>
@@ -74,7 +73,6 @@ type EnvironmentVariables = {
 
 // includes the variable name and allowed values. set the allowed values to null to not restrict the values to a set.
 const allChatMateEnvVariables: { [K in keyof EnvironmentVariables]: readonly ValueType<K>[] | null } = {
-  applicationinsightsConnectionString: null,
   channelId: null,
   youtubeClientId: null,
   youtubeClientSecret: null,
@@ -131,7 +129,6 @@ const localVariables: Record<VariablesOfType<'local'>, true> = {
 
 // deployment variables can only be accessed when running the server in Azure, and return null otherwise.
 const deploymentVariables: Record<VariablesOfType<'deployment'>, true> = {
-  applicationinsightsConnectionString: true,
   websiteHostname: true,
 }
 

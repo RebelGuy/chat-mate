@@ -191,12 +191,6 @@ module.exports = (env) => {
       // this is in the node_modules/ws/lib/validation.js file, and is safe to ignore as there is a fallback mechanism for when the module doesn't exist
       'utf-8-validate': 'utf-8-validate',
 
-      // webpack is unable to find some modules required by applicationinsights, but everything seems to work fine so make it shut up 
-      'applicationinsights-native-metrics': 'commonjs applicationinsights-native-metrics',
-      '@azure/opentelemetry-instrumentation-azure-sdk': 'commonjs @azure/opentelemetry-instrumentation-azure-sdk',
-      '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
-      '@azure/identity-vscode': 'commonjs @azure/identity-vscode',
-
       // required otherwise it doesn't work lol. seems that it's because ngrok is `require()`ing the ngrok executables, which webpack doesn't like
       '@ngrok/ngrok': 'commonjs @ngrok/ngrok',
 

@@ -1,7 +1,6 @@
 import { Dependencies } from '@rebel/shared/context/context'
 import ContextClass from '@rebel/shared/context/ContextClass'
 import DbProvider from '@rebel/server/providers/DbProvider'
-import ApplicationInsightsService from '@rebel/server/services/ApplicationInsightsService'
 import FileService from '@rebel/server/services/FileService'
 import { deconstructDate, formatDate, formatTime } from '@rebel/shared/util/datetime'
 import { assertUnreachable } from '@rebel/shared/util/typescript'
@@ -16,7 +15,6 @@ type LoggerType = 'db' | 'api' | 'standard'
 
 type Deps = Dependencies<{
   fileService: FileService
-  applicationInsightsService: ApplicationInsightsService
   dbLogLevel: LogLevel
   apiLogLevel: LogLevel
   debugLogOutput: LogOutput
@@ -27,7 +25,6 @@ type Deps = Dependencies<{
 
 export default class LogService extends ContextClass implements ILogService {
   private readonly fileService: FileService
-  private readonly applicationInsightsService: ApplicationInsightsService
   private readonly dbLogLevel: LogLevel
   private readonly apiLogLevel: LogLevel
   private readonly debugLogOutput: LogOutput
@@ -38,7 +35,6 @@ export default class LogService extends ContextClass implements ILogService {
   constructor (deps: Deps) {
     super()
     this.fileService = deps.resolve('fileService')
-    this.applicationInsightsService = deps.resolve('applicationInsightsService')
     this.dbLogLevel = deps.resolve('dbLogLevel')
     this.apiLogLevel = deps.resolve('apiLogLevel')
     this.debugLogOutput = deps.resolve('debugLogOutput')
@@ -81,7 +77,6 @@ export default class LogService extends ContextClass implements ILogService {
       this.fileService.writeLine(this.getSlowQueryLogFile(), message, { append: true })
     } catch (e: any) {
       console.error('LogService encountered an error while logging a slow query:', e)
-      this.applicationInsightsService.trackException(['LogService failed to log a slow query message.', message, e])
     }
   }
 
@@ -105,18 +100,9 @@ export default class LogService extends ContextClass implements ILogService {
     const message = `${prefix} ${content}`
 
     try {
-      if (logType === 'error') {
-        this.applicationInsightsService.trackException(args)
-      }
-
       this.fileService.writeLine(this.getLogFile(), message, { append: true })
-
-      if (logType === 'info') {
-        this.applicationInsightsService.trackTrace(logType, message)
-      }
     } catch (e: any) {
       console.error('LogService encountered an error:', e)
-      this.applicationInsightsService.trackException(['LogService failed to log a message.', message, e])
     }
   }
 

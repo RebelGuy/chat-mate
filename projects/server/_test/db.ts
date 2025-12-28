@@ -13,7 +13,6 @@ export const DB_TEST_TIMEOUT = 30000
 const logServiceWithConsoleOutput = new LogService(new Dependencies({
   apiLogLevel: 'disable',
   dbLogLevel: 'full',
-  applicationInsightsService: mock(),
   debugLogOutput: 'full',
   errorLogOutput: 'full',
   fileService: mock(),

@@ -35,11 +35,6 @@ When running the Server for the first time, it will be placed into "maintenance 
 
 Important: The application scope is hardcoded in [`constants.ts`](./constants.ts) at the moment. Making any changes to the scope will require that you repeat the authentication process described above.
 
-## Logging
-When deployed, we use Application Insights to track all error and warning messages via the Trace event.
-
-At all times, we are logging all messages to the file system. On Azure, the data folder lives under `/site/data` and can be accessed via FileZilla.
-
 ## Local EventSub
 Twitch's EventSub notifies us of new events via a webhook. To [set up the listener locally](https://twurple.js.org/docs/getting-data/eventsub/listener-setup.html), we use [`ngrok`](https://ngrok.com/download). If you get an `EACCESS` error on Linux when the local server is starting up, right click the `/dist/bin/ngrok` file and, in the Permissions tab, ensure you are allowing the file to be executed as a program.
 
@@ -105,7 +100,6 @@ The following environment variables are available only for **local development**
 - `DISABLE_EXTERNAL_APIS`: [Optional, defaults to `false`] If true, communication with external APIs is disabled (that is, ChatMate is run entirely offline).
 
 The following environmnet variables are available only for **deployed instances** (that is, where `NODE_ENV`=`debug` || `NODE_ENV`=`release`):
-- `APPLICATIONINSIGHTS_CONNECTION_STRING`: The connection string to use for connecting to the Azure Application Insights service. *This is set automatically by Azure.*
 - `HOST_NAME`: The host name at which the deployed server is reachable, e.g. `example.com`. *This is set automatically by Azure.*
 
 In addition, the following environment variables must be injected into the node instance using the `cross-env` package:

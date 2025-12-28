@@ -63,7 +63,6 @@
     "@types/express-ws": "^3.0.4",
     "@types/node": "^20.2.5",
     "@types/socket.io-client": "^1.4.36",
-    "applicationinsights": "^2.3.3",
     "bufferutil": "^4.0.8",
     "copy-webpack-plugin": "^10.2.0",
     "cors": "^2.8.5",
