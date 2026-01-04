@@ -4,7 +4,8 @@
     { "pattern": "http://127.0.0.1" },
     { "pattern": "github\\.com" },
     { "pattern": "twitter\\.com" },
-    { "pattern": "https://chat-mate" }
+    { "pattern": "https://chat-mate" },
+    { "pattern": "https://console\\.cloud\\.google\\.com/apis/library"}
   ],
   "aliveStatusCodes": [200, 403]
 }

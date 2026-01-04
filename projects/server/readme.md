@@ -75,7 +75,7 @@ The following environment variables must be set in the `.env` file:
 - `TWITCH_CLIENT_SECRET`: The client secret for Twitch auth.
 - `TWITCH_USERNAME`: The channel name of the ChatMate Twitch account. This will be used to connect to streamers' chat rooms and perform moderation operations.
 - `STREAMLABS_ACCESS_TOKEN`: [currently unused] The access token for the Streamlabs account associated with the broadcaster's account. It can be found at https://streamlabs.com/dashboard#/settings/api-settings
-- `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/concepts/database-connectors/mysql
+- `DATABASE_URL`: The connection string to the MySQL database that Prisma should use. **Please ensure you append `?pool_timeout=30&connect_timeout=30` to the connection string (after the database name)** to prevent timeouts during busy times. More options can be found at https://www.prisma.io/docs/orm/overview/databases/mysql
   - The local database connection string for the debug database is `mysql://root:root@localhost:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
   - The remote database connection string for the debug database is `mysql://chatmateadmin:{{password}}@chat-mate.mysql.database.azure.com:3306/chat_mate_debug?connection_limit=5&pool_timeout=30&connect_timeout=30`
 - `S3_REGION`: The region code in which the storage container is hosted.
@@ -119,7 +119,7 @@ The `local` and `debug` MySQL database is named `chat_mate_debug`, while the `re
 
 `Prisma` is used as both the ORM and typesafe interface to manage communications with the underlying MySQL database. Run `yarn migrate:debug` to sync the local DB with the checked-out migrations and generate an up-to-date Prisma Client.
 
-At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. This should also be run if the project structure changes in some way. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, refer to the [Prisma docs](https://www.prisma.io/docs/concepts/components/prisma-client).
+At any point where the prisma file (`prisma.schema` - the database schema) is modified, `yarn generate` can be run to immediately regenerate the Prisma Client for up-to-date typings. This should also be run if the project structure changes in some way. No actual database changes are performed as part of this command. For more help and examples with using the Prisma Client and querying, refer to the [Prisma docs](https://www.prisma.io/docs/orm/prisma-client).
 
 For more predictable handling of `datetime` entries, you may want to set your database timezone to UTC. This way, any dates you enter into the database will not have to be converted into UTC. You will also be able to use Javascript `Date`s' timestamps and the database's timestamps interchangeably without having to worry about conversions, plus, the deployed database uses a UTC timezone as well.
 
