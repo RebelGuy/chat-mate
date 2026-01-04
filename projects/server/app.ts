@@ -1,8 +1,9 @@
 import 'source-map-support/register' // so our stack traces are converted to the typescript equivalent files/lines
+import env from './globals'
+import newrelic from 'newrelic'
 import express, { NextFunction, Request, Response } from 'express'
 import { Server } from 'typescript-rest'
 import ChatController from '@rebel/server/controllers/ChatController'
-import env from './globals'
 import { ContextProvider, setContextProvider } from '@rebel/shared/context/context'
 import ChatService from '@rebel/server/services/ChatService'
 import ServiceFactory from '@rebel/shared/context/CustomServiceFactory'
@@ -123,6 +124,7 @@ import UserLinkService from '@rebel/server/services/UserLinkService'
 import StaticAuthProviderFactory from '@rebel/server/factories/StaticAuthProviderFactory'
 import UserStore from '@rebel/server/stores/UserStore'
 import TaskController from '@rebel/server/controllers/TaskController'
+import MonitoringService from '@rebel/server/services/MonitoringService'
 
 //
 // "Over-engineering is the best thing since sliced bread."
@@ -214,6 +216,7 @@ const main = async () => {
     .withClass('appTokenAuthProviderFactory', AppTokenAuthProviderFactory)
     .withClass('websocketFactory', WebsocketFactory)
     .withClass('fileService', FileService)
+    .withClass('monitoringService', MonitoringService)
     .withClass('logService', LogService)
     .withClass('dbProvider', DbProvider)
     .withClass('visitorStore', VisitorStore)
@@ -313,6 +316,11 @@ const main = async () => {
     } else {
       next()
     }
+  })
+
+  app.use((req, res, next) => {
+    newrelic.setTransactionName(req.method + ' ' + req.path)
+    next()
   })
 
   app.use((req, res, next) => {

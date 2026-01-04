@@ -83,6 +83,8 @@ The following environment variables must be set in the `.env` file:
 - `S3_KEY`: The access key for interacting with the storage container.
 - `S3_SECRET`: The secret key for interacting the storage container.
 - `S3_BUCKET`: The ChatMate bucket name to use for storing files.
+- `NEW_RELIC_APP_NAME`: The name of the New Relic application.
+- `NEW_RELIC_LICENSE_KEY`: The New Relic license key.
 - `DB_LOG_LEVEL`: [Optional, defaults to `info`] The minimum log level to include for database logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
 - `API_LOG_LEVEL`: [Optional, defaults to `warning`] The minimum log level to include for API logs. Must be either `full`, `error`, `warning`, `info`, or `disable`. For the allowed levels, the type of logging that will occur is set for each level individually via the other environment variables below.
 - `DEBUG_LOG_OUTPUT`: [Optional, defaults to `disable`] The log output method for debug messages. A value of `full` logs the message to the console and file, `file` logs the message to the file only, and `disable` skips logging the message.

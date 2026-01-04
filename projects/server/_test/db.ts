@@ -17,7 +17,8 @@ const logServiceWithConsoleOutput = new LogService(new Dependencies({
   errorLogOutput: 'full',
   fileService: mock(),
   infoLogOutput: 'full',
-  warningLogOutput: 'full'
+  warningLogOutput: 'full',
+  monitoringService: mock()
 }))
 
 const semaphore: Semaphore = new Semaphore()

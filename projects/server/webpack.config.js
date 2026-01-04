@@ -89,6 +89,9 @@ module.exports = (env) => {
     },
     { from: path.resolve(__dirname, `./favicon_${nodeEnv}.ico`),
       to: outPath
+    },
+    { from: path.resolve(__dirname, `./newrelic.js`),
+      to: outPath
     }
   ])
 
@@ -197,7 +200,9 @@ module.exports = (env) => {
       // I also don't understand why this is required but there is a parsing runtime error otherwise: https://github.com/lovell/sharp/issues/2350#issuecomment-762977956
       'sharp': 'commonjs sharp',
 
-      electron: 'require("electron")'
+      electron: 'require("electron")',
+
+      'newrelic': 'commonjs newrelic'
     },
     target: 'node',
 

@@ -9,3 +9,4 @@ projects/server/test.env
 projects/server/thunder-tests/thunderActivity.json
 projects/server/local.env
 emojiMap.json
+newrelic_agent.log

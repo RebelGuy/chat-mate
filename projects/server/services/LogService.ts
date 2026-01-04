@@ -8,6 +8,7 @@ import { LogLevel as TwurpleLogLevel } from '@twurple/chat'
 import ILogService, { ILoggable, LogContext } from '@rebel/shared/ILogService'
 import { Prisma } from '@prisma/client'
 import { LogLevel, LogOutput } from '@rebel/server/globals'
+import MonitoringService from '@rebel/server/services/MonitoringService'
 
 type LogType = 'debug' | 'info' | 'warning' | 'error'
 
@@ -21,6 +22,7 @@ type Deps = Dependencies<{
   infoLogOutput: LogOutput
   warningLogOutput: LogOutput
   errorLogOutput: LogOutput
+  monitoringService: MonitoringService
 }>
 
 export default class LogService extends ContextClass implements ILogService {
@@ -31,6 +33,7 @@ export default class LogService extends ContextClass implements ILogService {
   private readonly infoLogOutput: LogOutput
   private readonly warningLogOutput: LogOutput
   private readonly errorLogOutput: LogOutput
+  private readonly monitoringService: MonitoringService
 
   constructor (deps: Deps) {
     super()
@@ -41,6 +44,7 @@ export default class LogService extends ContextClass implements ILogService {
     this.infoLogOutput = deps.resolve('infoLogOutput')
     this.warningLogOutput = deps.resolve('warningLogOutput')
     this.errorLogOutput = deps.resolve('errorLogOutput')
+    this.monitoringService = deps.resolve('monitoringService')
   }
 
   public logDebug (logger: ILoggable, ...args: any[]) {
@@ -77,6 +81,7 @@ export default class LogService extends ContextClass implements ILogService {
       this.fileService.writeLine(this.getSlowQueryLogFile(), message, { append: true })
     } catch (e: any) {
       console.error('LogService encountered an error while logging a slow query:', e)
+      this.monitoringService.trackException(['LogService failed to log a slow query message.', message, e])
     }
   }
 
@@ -100,9 +105,14 @@ export default class LogService extends ContextClass implements ILogService {
     const message = `${prefix} ${content}`
 
     try {
+      if (logType === 'error') {
+        this.monitoringService.trackException(args)
+      }
+
       this.fileService.writeLine(this.getLogFile(), message, { append: true })
     } catch (e: any) {
       console.error('LogService encountered an error:', e)
+      this.monitoringService.trackException(['LogService failed to log a message.', message, e])
     }
   }
 
