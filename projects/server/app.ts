@@ -136,8 +136,8 @@ const STARTUP_TIME = Date.now()
 const main = async () => {
   const app: Express = express()
 
-  // requests are forwarded by nginx, which runs on the same server. by trusting the proxy, we can get the real client IP
-  app.set('trust proxy', '127.0.0.1')
+  // requests are forwarded by nginx, which runs on the same server. by trusting the first proxy hop, we can get the real client IP in request.ip
+  app.set('trust proxy', 1)
 
   const wsApp = expressWs(app, undefined, { wsOptions: { }})
 
