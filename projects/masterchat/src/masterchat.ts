@@ -589,6 +589,7 @@ export class Masterchat extends EventEmitter {
   }
   
   // pre-v0.15.0
+  /** @deprecated This is known to cause issues with Youtube's rate-limiting. Use `YoutubeApiProxyservice.getLivestreamMetadata` instead. */
   async fetchMetadata(): Promise<Metadata> {
     const res = await this.get("/watch?v=" + this.videoId);
 

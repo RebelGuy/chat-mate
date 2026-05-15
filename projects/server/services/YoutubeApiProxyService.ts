@@ -47,6 +47,12 @@ const ENDPOINT_COSTS: Record<Endpoint, number> = {
   'youtube_v3.channels.list': 1
 }
 
+export type YoutubeStreamMetadata = {
+  liveStatus: 'not_started' | 'live' | 'finished'
+  viewerCount: number
+  youtubeChannelId: string
+}
+
 type Deps = Dependencies<{
   logService: LogService
   youtubeStatusService: StatusService
@@ -220,6 +226,41 @@ export default class YoutubeApiProxyService extends ApiService {
     await api.liveChatBans.delete({
       id: externalPunishmentId
     })
+  }
+
+  public async getLivestreamMetadata (streamerId: number, ownerExternalChannelId: string, liveId: string): Promise<YoutubeStreamMetadata | null> {
+    const api = await this.wrappedApi(streamerId, ownerExternalChannelId)
+
+    const result = await api.videos.list({
+      part: ['snippet', 'liveStreamingDetails'],
+      id: [liveId]
+    })
+
+    const video = result.data.items?.at(0) ?? null
+    if (video == null || video.liveStreamingDetails == null || video.snippet?.channelId == null) {
+      return null
+    }
+
+    let status: YoutubeStreamMetadata['liveStatus']
+    if (video.liveStreamingDetails.actualEndTime != null) {
+      status = 'finished'
+    } else if (video.liveStreamingDetails.actualStartTime != null) {
+      status = 'live'
+    } else {
+      status = 'not_started'
+    }
+
+    let viewerCount = Number(video.liveStreamingDetails.concurrentViewers ?? 0)
+    if (isNaN(viewerCount)) {
+      this.logService.logWarning(this, `Unable to determine viewer count for livestream ${liveId} for streamer ${streamerId}. Defaulting to 0.`, video)
+      viewerCount = 0
+    }
+
+    return {
+      liveStatus: status,
+      viewerCount: Number(video.liveStreamingDetails.concurrentViewers ?? 0),
+      youtubeChannelId: video.snippet.channelId
+    }
   }
 
   // confusingly we can't use the video id (`liveId`) when making requests to the API, we have to first fetch the associated `liveChatId` :(

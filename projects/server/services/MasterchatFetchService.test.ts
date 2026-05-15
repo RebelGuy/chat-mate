@@ -167,7 +167,6 @@ describe(nameof(MasterchatFetchService, 'initialise'), () => {
     await masterchatFetchService.initialise()
 
     expect(mockTimerHelpers.createRepeatingTimer.mock.calls.length).toBe(0)
-    expect(mockMasterchatService.fetchMetadata.mock.calls.length).toBe(0)
   })
 
   test('Schedules chat fetch for each active livestream', async () => {

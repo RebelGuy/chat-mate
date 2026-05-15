@@ -1,4 +1,4 @@
-import { ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
+import { ChatResponse, Masterchat } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
 import StatusService from '@rebel/server/services/StatusService'
@@ -23,7 +23,7 @@ export type MasterchatAuthentication = {
   lastUpdated: Date | null
 }
 
-type PartialMasterchat = Pick<Masterchat, 'fetch' | 'fetchMetadata' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'> & {
+type PartialMasterchat = Pick<Masterchat, 'fetch' | 'hide' | 'unhide' | 'timeout' | 'addModerator' | 'removeModerator'> & {
   // underlying instance
   masterchat: Masterchat
 }
@@ -104,18 +104,6 @@ export default class MasterchatService extends ApiService {
     } else {
       return await masterchat.fetch(continuationToken)
     }
-  }
-
-  public async fetchMetadata (streamerId: number): Promise<Metadata> {
-    const masterchat = await this.getMasterchatForStreamer(streamerId)
-    return await masterchat.fetchMetadata()
-  }
-
-  /** Returns the YouTube external channel ID to which the livestream belongs. LiveId does not have to belong to a ChatMate streamer. */
-  public async getChannelIdFromAnyLiveId (liveId: string): Promise<string> {
-    const masterchat = await this.masterchatFactory.create(liveId)
-    const metadata = await masterchat.fetchMetadata()
-    return metadata.channelId
   }
 
   /** Gets the moderation status at the time of the last chat message received to the streamer's livestream. It may have changed since then.
@@ -208,13 +196,12 @@ export default class MasterchatService extends ApiService {
     // it is important that we wrap the `request` param as an anonymous function itself, because
     // masterchat.* are methods, and so not doing the wrapping would lead to `this` changing context.
     const fetch = super.wrapRequest((...args) => masterchat.fetch(...args), `masterchat[${liveId}].fetch`, streamerId, true)
-    const fetchMetadata = super.wrapRequest(() => masterchat.fetchMetadata(), `masterchat[${liveId}].fetchMetadata`, streamerId, true)
     const hide = super.wrapRequest((arg) => masterchat.hide(arg), `masterchat[${liveId}].hide`, streamerId)
     const unhide = super.wrapRequest((arg) => masterchat.unhide(arg), `masterchat[${liveId}].unhide`, streamerId)
     const timeout = super.wrapRequest((arg) => masterchat.timeout(arg), `masterchat[${liveId}].timeout`, streamerId)
     const addModerator = super.wrapRequest((arg) => masterchat.addModerator(arg), `masterchat[${liveId}].addModerator`, streamerId)
     const removeModerator = super.wrapRequest((arg) => masterchat.removeModerator(arg), `masterchat[${liveId}].removeModerator`, streamerId)
 
-    return { masterchat, fetch, fetchMetadata, hide, unhide, timeout, addModerator, removeModerator }
+    return { masterchat, fetch, hide, unhide, timeout, addModerator, removeModerator }
   }
 }

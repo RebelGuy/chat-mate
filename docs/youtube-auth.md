@@ -40,6 +40,7 @@ Youtube access tokens are valid for only 1 hour, and are automatically refreshed
   - redirect URIs:
     - {chat-mate-studio}/admin/youtube
     - {chat-mate-studio}/manager
+    - {chat-mate-studio}/link?platform=youtube
 - After testing the app and ensuring everything works, publish the application on the OAuth consent screen page
 
 ## Verification

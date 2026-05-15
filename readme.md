@@ -50,7 +50,7 @@ For more info about the OAuth applications, refer to the docs for [Youtube](./do
 
 | Environment | Email | YouTube Name* | YouTube Channel ID | Youtube App Client ID | Twitch Name | Twitch App Name | Twitch App Client ID |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Local | chat_mate_local@proton.me | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig)* | UCobq78RdXWvXlG1jcRjkTig | 419723469636-bnl40h64tppr2ag795od7ruvsispjfsu.apps.googleusercontent.com | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
+| Local | chat.mate.local@gmail.com | [Chat M8 Local](https://www.youtube.com/channel/UCobq78RdXWvXlG1jcRjkTig)* | UCobq78RdXWvXlG1jcRjkTig | 419723469636-mbeis1r2385b2nfrmkeotvifl99toihc.apps.googleusercontent.com | [chat_mate_local](https://www.twitch.tv/chat_mate_local) | chat_mate_local | ffgmiebh7yve5mq6tgbvvgj4kbl0cn |
 | Sandbox | chat_mate_sandbox@proton.me | [Chat M8 Sandbox](https://www.youtube.com/channel/UCEM2zbU-YVO6BMF_fukrdUA)* | UCEM2zbU-YVO6BMF_fukrdUA | 54178587733-gnkp3m4mrkh5hmic2gb680gqlrfiqo2h.apps.googleusercontent.com | [chat_mate_sandbox](https://www.twitch.tv/chat_mate_sandbox) | chat_mate_sandbox | k6aeajd6dwopc9whkz9s5z56h3f1es |
 | Production | chat_mate_prod@proton.me | [Chat M8](https://www.youtube.com/channel/UCY-5SHtJqoKGqm2YmOMOm_g)* | UCY-5SHtJqoKGqm2YmOMOm_g | 909444975820-bmvfuvu7a1qee34acn75gmtn0e39lk0b.apps.googleusercontent.com | [chat_mate](https://www.twitch.tv/chat_mate) | chat_mate | c20n7hpbuhwcaqjx9424xoy63765wg |
 

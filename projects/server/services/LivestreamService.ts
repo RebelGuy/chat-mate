@@ -1,4 +1,3 @@
-import { LiveStatus, MasterchatError, Metadata } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import { SingletonContextClass } from '@rebel/shared/context/ContextClass'
 import DateTimeHelpers from '@rebel/server/helpers/DateTimeHelpers'
@@ -15,9 +14,10 @@ import CacheService from '@rebel/server/services/CacheService'
 import ChatMateStateService from '@rebel/server/services/ChatMateStateService'
 import { ChatMateError } from '@rebel/shared/util/error'
 import AuthStore from '@rebel/server/stores/AuthStore'
-import YoutubeApiProxyService from '@rebel/server/services/YoutubeApiProxyService'
+import YoutubeApiProxyService, { YoutubeStreamMetadata } from '@rebel/server/services/YoutubeApiProxyService'
 
-export const METADATA_SYNC_INTERVAL_MS = 12_000
+// this can't be too low as we only get 10000 API credits per day. at this rate, it uses up 7200 credits per day (which is acceptable since we barely use the API for anything else).
+const METADATA_SYNC_INTERVAL_MS = 12_000
 
 const STREAM_CONTINUITY_ALLOWANCE = 5 * 60_000
 
@@ -121,8 +121,8 @@ export default class LivestreamService extends SingletonContextClass {
       throw new ChatMateError('No primary YouTube channel has been set for the streamer.')
     }
 
-    const livestreamYoutubeChannelId = await this.masterchatService.getChannelIdFromAnyLiveId(liveId)
-    if (streamerYoutubeChannelId !== livestreamYoutubeChannelId) {
+    const metadata = await this.youtubeApiProxyService.getLivestreamMetadata(streamerId, streamerYoutubeChannelId, liveId)
+    if (metadata == null || streamerYoutubeChannelId !== metadata.youtubeChannelId) {
       throw new ChatMateError(`The given Youtube livestream does not belong to the streamer's primary YouTube channel.`)
     }
 
@@ -168,7 +168,15 @@ export default class LivestreamService extends SingletonContextClass {
     }
 
     const activeYoutubeLivestreams = await this.livestreamStore.getActiveYoutubeLivestreams()
-    await Promise.all(activeYoutubeLivestreams.map(l => this.updateYoutubeLivestreamMetadata(l)))
+    const streamerChannels = await this.streamerChannelService.getAllYoutubeStreamerChannels()
+    await Promise.all(activeYoutubeLivestreams.map(l => {
+      const channel = streamerChannels.find(c => c.streamerId === l.streamerId) ?? null
+      if (channel == null) {
+        return
+      }
+
+      return this.updateYoutubeLivestreamMetadata(l, channel)
+    }))
 
     const currentTwitchLivestreams = await this.livestreamStore.getCurrentTwitchLivestreams()
     if (isInitialFetch) {
@@ -180,14 +188,14 @@ export default class LivestreamService extends SingletonContextClass {
     }
   }
 
-  private async updateYoutubeLivestreamMetadata (livestream: YoutubeLivestream) {
+  private async updateYoutubeLivestreamMetadata (livestream: YoutubeLivestream, streamerChannel: YoutubeStreamerChannel) {
     // no point in fetching metadata for the official ChatMate streamer since it will never go live
     const chatMateStreamerId = await this.cacheService.chatMateStreamerId.resolve()
     if (chatMateStreamerId === livestream.streamerId) {
       return
     }
 
-    const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.streamerId)
+    const youtubeMetadata = await this.fetchYoutubeMetadata(livestream.streamerId, streamerChannel.externalChannelId, livestream.liveId)
     if (youtubeMetadata == null) {
       // failed to fetch metadata
       return
@@ -217,26 +225,17 @@ export default class LivestreamService extends SingletonContextClass {
   }
 
   /** Returns null if something went wrong. */
-  private async fetchYoutubeMetadata (streamerId: number): Promise<Metadata | null> {
+  private async fetchYoutubeMetadata (streamerId: number, streamerExternalChannelId: string, liveId: string): Promise<YoutubeStreamMetadata | null> {
     try {
-      return await this.masterchatService.fetchMetadata(streamerId)
+      return await this.youtubeApiProxyService.getLivestreamMetadata(streamerId, streamerExternalChannelId, liveId)
     } catch (e: any) {
-      if (e instanceof MasterchatError) {
-        this.logService.logError(this, `Cannot fetch Youtube metadata for streamer ${streamerId} because of a masterchat error.`, e)
-        await this.deactivateYoutubeLivestream(streamerId)
-      } else {
-        this.logService.logError(this, `Encountered error while fetching Youtube metadata for streamer ${streamerId}.`, e)
-      }
+      this.logService.logError(this, `Encountered error while fetching Youtube metadata for streamer ${streamerId}.`, e)
       return null
     }
   }
 
-  private getUpdatedYoutubeLivestreamTimes (existingLivestream: YoutubeLivestream, metadata: Metadata): Pick<YoutubeLivestream, 'start' | 'end'> | null {
+  private getUpdatedYoutubeLivestreamTimes (existingLivestream: YoutubeLivestream, metadata: YoutubeStreamMetadata): Pick<YoutubeLivestream, 'start' | 'end'> | null {
     const newStatus = metadata.liveStatus
-    if (newStatus === 'unknown') {
-      this.logService.logWarning(this, `Tried to update livestream times, but current live status was reported as 'unkown'. Won't attempt to update livestream times.`)
-      return null
-    }
 
     const existingStatus = LivestreamService.getYoutubeLivestreamStatus(existingLivestream)
     if (existingStatus === 'live' && newStatus === 'not_started') {
@@ -276,7 +275,7 @@ export default class LivestreamService extends SingletonContextClass {
     }
   }
 
-  private static getYoutubeLivestreamStatus (livestream: YoutubeLivestream): Exclude<LiveStatus, 'unknown'> {
+  private static getYoutubeLivestreamStatus (livestream: YoutubeLivestream): YoutubeStreamMetadata['liveStatus'] {
     if (livestream.start == null && livestream.end == null) {
       return 'not_started'
     } else if (livestream.start != null && livestream.end == null) {

@@ -1,4 +1,4 @@
-import { ActionCatalog, ChatResponse, Masterchat, Metadata } from '@rebel/masterchat'
+import { ActionCatalog, ChatResponse, Masterchat } from '@rebel/masterchat'
 import { Dependencies } from '@rebel/shared/context/context'
 import LogService from '@rebel/server/services/LogService'
 import MasterchatService, { MasterchatAuthentication } from '@rebel/server/services/MasterchatService'
@@ -115,33 +115,6 @@ describe(nameof(MasterchatService, 'fetch'), () => {
   })
 })
 
-describe(nameof(MasterchatService, 'fetchMetadata'), () => {
-  test('successful request', async () => {
-    const expectedResponse: Metadata = {} as any
-    mockMasterchat.fetchMetadata.calledWith().mockResolvedValue(expectedResponse)
-
-    await testSuccessful(() => masterchatService.fetchMetadata(streamerId), expectedResponse)
-  })
-
-  test('failed request', async () => {
-    const expectedResponse = new Error()
-    mockMasterchat.fetchMetadata.calledWith().mockRejectedValue(expectedResponse)
-
-    await testFailing(() => masterchatService.fetchMetadata(streamerId), expectedResponse)
-  })
-})
-
-describe(nameof(MasterchatService, 'getChannelIdFromAnyLiveId'), () => {
-  test('Gets the channel ID from the livestream', async () => {
-    const youtubeId = 'testYoutubeId'
-    mockMasterchat.fetchMetadata.calledWith().mockResolvedValue(cast<Metadata>({ channelId: youtubeId }))
-
-    const result = await masterchatService.getChannelIdFromAnyLiveId(liveId)
-
-    expect(result).toBe(youtubeId)
-  })
-})
-
 describe(nameof(MasterchatService, 'getChatMateModeratorStatus'), () => {
   test('Returns true if the action catalog for the last chat message contains moderator actions', async () => {
     const time = new Date()
@@ -252,10 +225,6 @@ describe(nameof(MasterchatService, 'unbanYoutubeChannel'), () => {
     mockMasterchat.unhide.calledWith(contextMenuEndpointParams).mockRejectedValue(error)
 
     await testFailing(() => masterchatService.unbanYoutubeChannel(streamerId, contextMenuEndpointParams), error)
-  })
-
-  test('throws if invalid liveId', async () => {
-    await expect(masterchatService.fetchMetadata(123456)).rejects.toThrowError(ChatMateError)
   })
 })
 
